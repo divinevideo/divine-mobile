@@ -232,4 +232,71 @@ void main() {
       expect(relay.wraps.hasListener, isTrue);
     });
   });
+  group('error reporting', () {
+    late BlocObserver previousObserver;
+    late _Errors observer;
+    late StreamController<void> changes;
+    late _Repo repo;
+    setUp(() {
+      previousObserver = Bloc.observer;
+      observer = _Errors();
+      Bloc.observer = observer;
+      changes = StreamController<void>.broadcast();
+      repo = _Repo();
+      when(() => repo.changes).thenAnswer((_) => changes.stream);
+      when(() => repo.pendingIds).thenReturn([]);
+      when(
+        () => repo.timeline(now: any(named: 'now')),
+      ).thenReturn(FoldedThread([], {}));
+      when(
+        () => repo.startChannel(
+          channelId: any(named: 'channelId'),
+          epoch: any(named: 'epoch'),
+          streamSeedHex: any(named: 'streamSeedHex'),
+          streamPubkey: any(named: 'streamPubkey'),
+        ),
+      ).thenAnswer((_) async {});
+    });
+    tearDown(() async {
+      Bloc.observer = previousObserver;
+      await changes.close();
+    });
+
+    test('reports a room that fails to start', () async {
+      when(
+        () => repo.startChannel(
+          channelId: any(named: 'channelId'),
+          epoch: any(named: 'epoch'),
+          streamSeedHex: any(named: 'streamSeedHex'),
+          streamPubkey: any(named: 'streamPubkey'),
+        ),
+      ).thenThrow(StateError('restore failed'));
+      final cubit = _cubitOver(repo, ownsRepository: false);
+      addTearDown(cubit.close);
+      await cubit.start();
+      expect(cubit.state.loadFailed, isTrue);
+      expect(observer.errors, [isA<StateError>()]);
+    });
+
+    test('reports an error from a running room', () async {
+      final cubit = _cubitOver(repo, ownsRepository: false);
+      addTearDown(cubit.close);
+      await cubit.start();
+      changes.addError(StateError('room failed'));
+      await pumpEventQueue();
+      expect(cubit.state.loadFailed, isTrue);
+      expect(observer.errors, [isA<StateError>()]);
+    });
+
+    test('reports a retry that fails', () async {
+      when(
+        () => repo.retryPending(messageId: any(named: 'messageId')),
+      ).thenThrow(StateError('relay rejected'));
+      final cubit = _cubitOver(repo, ownsRepository: false);
+      addTearDown(cubit.close);
+      await cubit.retry('05' * 32);
+      expect(cubit.state.sendFailed, isTrue);
+      expect(observer.errors, [isA<StateError>()]);
+    });
+  });
 }
