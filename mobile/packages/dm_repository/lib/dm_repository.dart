@@ -16,3 +16,5 @@ export 'src/dm_verify_isolate.dart';
 export 'src/gift_wrap_build_worker.dart';
 export 'src/nip17_message_service.dart'
     hide GiftWrapBuilder, IsolateGiftWrapBatchBuilder;
+export 'src/sound_request_message.dart';
+export 'src/sound_request_clients.dart';
