@@ -629,7 +629,10 @@ class _AudioSelectionBottomSheetState
               if (widget.categoryBarLeading case final leading?)
                 Row(
                   children: [
-                    Padding(padding: const .only(left: 12), child: leading),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 12),
+                      child: leading,
+                    ),
                     Expanded(child: categoryBar),
                   ],
                 )

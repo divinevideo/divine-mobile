@@ -71,6 +71,7 @@ void main() {
       List<DivineVideoClip>? clips,
       GoRouter? router,
       TrendingSounds Function() trendingSounds = _FakeTrendingSounds.new,
+      TextDirection textDirection = TextDirection.ltr,
     }) {
       when(() => recorderBloc.isClosed).thenReturn(false);
       when(() => recorderBloc.state).thenReturn(
@@ -107,10 +108,13 @@ void main() {
             BlocProvider<SoundWaveformBloc>(create: (_) => SoundWaveformBloc()),
           ],
           child: router == null
-              ? const MaterialApp(
+              ? MaterialApp(
                   localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
-                  home: Scaffold(body: VideoRecorderLipSyncStack()),
+                  home: Directionality(
+                    textDirection: textDirection,
+                    child: const Scaffold(body: VideoRecorderLipSyncStack()),
+                  ),
                 )
               : MaterialApp.router(
                   localizationsDelegates: appLocalizationsDelegates,
@@ -171,6 +175,29 @@ void main() {
         expect(find.text('feed'), findsOneWidget);
 
         handle.dispose();
+      });
+
+      testWidgets('insets the close button from the leading screen edge in '
+          'right-to-left layouts', (tester) async {
+        // Disposed in `finally`, not `addTearDown`: flutter_test checks for
+        // live handles before tear-downs run.
+        final handle = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            buildWidget(textDirection: TextDirection.rtl),
+          );
+          await tester.pumpAndSettle();
+          final screenWidth =
+              tester.view.physicalSize.width / tester.view.devicePixelRatio;
+
+          final close = find.bySemanticsIdentifier(
+            SemanticIds.cameraCloseButton,
+          );
+
+          expect(tester.getTopRight(close).dx, screenWidth - 12);
+        } finally {
+          handle.dispose();
+        }
       });
 
       testWidgets('pauses remote recording while the picker shows', (
