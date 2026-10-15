@@ -130,6 +130,24 @@ void main() {
       await cubit.close();
     });
 
+    test('reads the sound of a clip detached onto a layer', () async {
+      final reads = <AudioExtractConfigs>[];
+      final cubit = buildCubit(reads: reads)
+        ..syncSources(
+          sounds: const [],
+          clips: [mutedClip],
+          detachedClips: [
+            DetachedClipSound(clip: mutedClip.copyWith(volume: 1)),
+          ],
+        )
+        ..setActive(isActive: true);
+      final state = await settled(cubit);
+
+      expect(state.status, VideoEditorAudioLevelStatus.ready);
+      expect(reads.single.video, mutedClip.video);
+      await cubit.close();
+    });
+
     test('passes on the map from the editor timeline to the video', () async {
       final cubit = buildCubit()
         ..syncSources(sounds: const [], clips: [mutedClip]);

@@ -7,11 +7,21 @@ import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, EqualizerSettings;
+import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/audio_fade.dart';
+import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/services/video_editor/detached_clip_composite.dart';
+import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
+import 'package:openvine/utils/equalizer_response.dart';
 import 'package:openvine/utils/wav_decoding.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show EditorAudio, ExportedLayer, Layer;
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -22,6 +32,9 @@ class AudioLevelPart extends Equatable {
     this.volume = 1,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
+    this.equalizer = EqualizerSettings.none,
+    this.blendIn,
+    this.blendOut,
   });
 
   /// Where the sound comes from and where it plays.
@@ -36,18 +49,96 @@ class AudioLevelPart extends Equatable {
   /// How long the stretch takes to fade out to silence at its end.
   final Duration fadeOut;
 
+  /// The equalizer the stretch plays through.
+  final EqualizerSettings equalizer;
+
+  /// The overlap transition the stretch is blended in through, or `null` for
+  /// none: over the transition's first [ClipTransition.duration] it rises
+  /// from silence along the transition's curve.
+  final ClipTransition? blendIn;
+
+  /// The overlap transition the stretch is blended out through, or `null` for
+  /// none: over its last [ClipTransition.duration] it falls to silence along
+  /// the transition's curve.
+  final ClipTransition? blendOut;
+
+  /// This stretch, played from [source] instead.
+  AudioLevelPart withSource(BeatSourcePart source) => AudioLevelPart(
+    source: source,
+    volume: volume,
+    fadeIn: fadeIn,
+    fadeOut: fadeOut,
+    equalizer: equalizer,
+    blendIn: blendIn,
+    blendOut: blendOut,
+  );
+
   @override
-  List<Object?> get props => [source, volume, fadeIn, fadeOut];
+  List<Object?> get props => [
+    source,
+    volume,
+    fadeIn,
+    fadeOut,
+    equalizer,
+    blendIn,
+    blendOut,
+  ];
+}
+
+/// A clip detached onto a layer of its own, which plays its sound over the
+/// timeline while the layer is on screen.
+class DetachedClipSound {
+  const DetachedClipSound({
+    required this.clip,
+    this.sourceOffset = Duration.zero,
+    this.startTime,
+    this.endTime,
+  });
+
+  /// The detached clips among [layers], whose clip files are resolved against
+  /// [documentsPath], as [DetachedClipLayerData.fromMeta] does.
+  static List<DetachedClipSound> inLayers(
+    Iterable<Layer> layers, {
+    required String documentsPath,
+  }) => [
+    for (final layer in layers)
+      if (DetachedClipLayerData.fromMeta(
+            DetachedClipLayerData.metaOf(layer),
+            documentsPath,
+          )
+          case final data?)
+        DetachedClipSound(
+          clip: data.clip,
+          sourceOffset: data.sourceOffset,
+          startTime: layer.startTime,
+          endTime: layer.endTime,
+        ),
+  ];
+
+  /// The clip, with its trim, speed, volume and equalizer.
+  final DivineVideoClip clip;
+
+  /// Where the layer starts inside the clip, in playback time.
+  final Duration sourceOffset;
+
+  /// Where the layer starts on the editor's timeline, or `null` for its start.
+  final Duration? startTime;
+
+  /// Where the layer ends on the editor's timeline, or `null` when it plays
+  /// the clip to its end.
+  final Duration? endTime;
 }
 
 /// Everything that plays on a video ending at [videoEnd]: every sound among
-/// [sounds], voice-overs included, and the clips' own sound, each as loud as
-/// it plays in the export.
+/// [sounds], voice-overs included, the clips' own sound and that of the
+/// [detachedClips], each as loud as it plays in the export.
 List<AudioLevelPart> audioLevelSourcesFor({
   required List<AudioEvent> sounds,
   required List<DivineVideoClip> clips,
   required Duration videoEnd,
+  List<DetachedClipSound> detachedClips = const [],
 }) {
+  final timelineMap = TransitionTimelineMap.fromClips(clips);
   return [
     for (final sound in sounds)
       if (soundSourcePartFor(sound, videoEnd: videoEnd) case final part?)
@@ -56,10 +147,140 @@ List<AudioLevelPart> audioLevelSourcesFor({
           volume: sound.volume,
           fadeIn: sound.fadeInDuration,
           fadeOut: sound.fadeOutDuration,
+          equalizer: sound.equalizer,
         ),
-    for (final (:clip, :part) in clipSoundSourcePartsWithClips(clips))
-      if (part.at < videoEnd) AudioLevelPart(source: part, volume: clip.volume),
+    for (final part in _clipParts(clips, timelineMap))
+      if (part.source.at < videoEnd) part,
+    for (final detached in detachedClips)
+      if (_detachedClipPart(detached, timelineMap) case final part?
+          when part.source.at < videoEnd)
+        part,
   ];
+}
+
+/// The clips' own sound on the exported video.
+///
+/// Across an overlap transition the export blends the two clips: the one
+/// going out falls from its volume to silence along the transition's curve
+/// while the one coming in rises, and a muted clip leaves the other to fade
+/// against silence. The loop-restart blend at the end of the video does the
+/// same with the head of the first clip, moved there. Freeze frames play no
+/// sound of their own.
+List<AudioLevelPart> _clipParts(
+  List<DivineVideoClip> clips,
+  TransitionTimelineMap timelineMap,
+) {
+  if (clips.isEmpty) return const [];
+  final transitions = clampTransitions(clips);
+  ClipTransition? overlapAfter(DivineVideoClip clip) {
+    final transition = transitions[clip.id];
+    return transition == null ||
+            transition.type == ClipTransitionType.fadeToBlack ||
+            transition.type == ClipTransitionType.fadeToWhite
+        ? null
+        : transition;
+  }
+
+  final wrap = overlapAfter(clips.last);
+  final wrapLength = wrap?.duration ?? Duration.zero;
+  final parts = <AudioLevelPart>[];
+  // Where the clip starts on the video, before its head moves into the
+  // loop-restart blend.
+  var clipStart = -wrapLength;
+  for (var i = 0; i < clips.length; i++) {
+    final clip = clips[i];
+    final video = clip.video;
+    if (video != null && clip.volume > 0 && !clip.isFreezeFrame) {
+      final speed = clip.playbackSpeed ?? 1;
+      AudioLevelPart part({
+        required Duration from,
+        required Duration to,
+        required Duration at,
+        ClipTransition? blendIn,
+        ClipTransition? blendOut,
+      }) => AudioLevelPart(
+        source: BeatSourcePart(
+          media: video,
+          fileLength: clip.duration,
+          from: from,
+          to: to,
+          at: at,
+          speed: speed,
+          // Reverse is baked into clip.video; its samples are already in
+          // playback order, including the rewritten trims.
+        ),
+        volume: clip.volume,
+        equalizer: clip.equalizer,
+        blendIn: blendIn,
+        blendOut: blendOut,
+      );
+
+      var from = clip.trimStart;
+      var at = clipStart;
+      if (i == 0 && wrap != null) {
+        // The first head is the incoming side of the loop-restart blend.
+        final head = Duration(
+          microseconds: (wrapLength.inMicroseconds * speed).round(),
+        );
+        parts.add(
+          part(
+            from: from,
+            to: from + head,
+            at: timelineMap.outputDuration - wrapLength,
+            blendIn: wrap,
+          ),
+        );
+        from += head;
+        at += wrapLength;
+      }
+      parts.add(
+        part(
+          from: from,
+          to: clip.trimStart + clip.trimmedDuration,
+          at: at,
+          blendIn: i == 0 ? null : overlapAfter(clips[i - 1]),
+          blendOut: i == clips.length - 1 ? wrap : overlapAfter(clip),
+        ),
+      );
+    }
+    clipStart += clip.playbackDuration;
+    if (i < clips.length - 1) {
+      clipStart -= overlapAfter(clip)?.duration ?? Duration.zero;
+    }
+  }
+  return parts;
+}
+
+/// The sound of [detached] on the exported video, as the export composites
+/// it over the timeline, or `null` when it plays none.
+AudioLevelPart? _detachedClipPart(
+  DetachedClipSound detached,
+  TransitionTimelineMap timelineMap,
+) {
+  final clip = detached.clip;
+  final video = clip.video;
+  if (video == null || clip.volume <= 0 || clip.isFreezeFrame) return null;
+  final (:start, :trimStart, :span) = detachedClipWindow(
+    clip: clip,
+    sourceOffset: detached.sourceOffset,
+    layerStart: detached.startTime,
+    layerEnd: detached.endTime,
+    timelineMap: timelineMap,
+    speedFlattened: false,
+  );
+  if (span <= Duration.zero) return null;
+  return AudioLevelPart(
+    source: BeatSourcePart(
+      media: video,
+      fileLength: clip.duration,
+      from: trimStart,
+      to: trimStart + span,
+      at: start ?? Duration.zero,
+      speed: clip.playbackSpeed ?? 1,
+    ),
+    volume: clip.volume,
+    equalizer: clip.equalizer,
+  );
 }
 
 /// [parts] with every sound that streams from the network read from the local
@@ -89,8 +310,8 @@ Future<List<AudioLevelPart>> withLocalNetworkSounds(
       continue;
     }
     local.add(
-      AudioLevelPart(
-        source: BeatSourcePart(
+      part.withSource(
+        BeatSourcePart(
           media: EditorVideo.file(File(path)),
           fileLength: part.source.fileLength,
           from: part.source.from,
@@ -98,18 +319,16 @@ Future<List<AudioLevelPart>> withLocalNetworkSounds(
           at: part.source.at,
           speed: part.source.speed,
         ),
-        volume: part.volume,
-        fadeIn: part.fadeIn,
-        fadeOut: part.fadeOut,
       ),
     );
   }
   return local;
 }
 
-/// The band energies of everything among [sounds] and [clips] that plays on
-/// an exported video ending at [videoEnd], or `null` when none could be read;
-/// see [VideoEditorAudioLevelResolver.energiesOnOutput].
+/// The band energies of everything among [sounds], [clips] and
+/// [detachedClips] that plays on an exported video ending at [videoEnd], or
+/// `null` when none could be read; see
+/// [VideoEditorAudioLevelResolver.energiesOnOutput].
 ///
 /// A network sound is read from the local copy [localPathFor] returns, see
 /// [withLocalNetworkSounds]. A sound that cannot be downloaded or read is
@@ -121,6 +340,7 @@ Future<Float32List?> audioEnergiesOnExport({
   required List<DivineVideoClip> clips,
   required Duration videoEnd,
   required Future<String> Function(String url) localPathFor,
+  List<DetachedClipSound> detachedClips = const [],
   VideoEditorAudioLevelResolver? resolver,
 }) async {
   void logFailure(Object error, StackTrace stackTrace) => Log.error(
@@ -132,7 +352,12 @@ Future<Float32List?> audioEnergiesOnExport({
   );
   final reader = resolver ?? VideoEditorAudioLevelResolver();
   final parts = await withLocalNetworkSounds(
-    audioLevelSourcesFor(sounds: sounds, clips: clips, videoEnd: videoEnd),
+    audioLevelSourcesFor(
+      sounds: sounds,
+      clips: clips,
+      videoEnd: videoEnd,
+      detachedClips: detachedClips,
+    ),
     localPathFor: localPathFor,
     onDownloadFailed: logFailure,
   );
@@ -143,6 +368,52 @@ Future<Float32List?> audioEnergiesOnExport({
     return null;
   }
   return reader.energiesOnOutput(parts, videoEnd: videoEnd);
+}
+
+/// [audioEnergiesOnExport] for the audio visualizers among [capturedLayers],
+/// or `null` when it holds none: the [sounds] and [clips] of a render cut at
+/// [maxOutputDuration], and the [detached] clips it composites over them.
+/// Downloads go through [audioFetcher], which the mux reuses, into
+/// [tempFilePaths].
+Future<Float32List?> audioVisualizerEnergiesForRender({
+  required List<ExportedLayer> capturedLayers,
+  required List<AudioEvent> sounds,
+  required List<DivineVideoClip> clips,
+  required List<DetachedClipExportLayer> detached,
+  required Duration? maxOutputDuration,
+  required RenderAudioFetcher audioFetcher,
+  required List<String> tempFilePaths,
+}) async {
+  if (!capturedLayers.any(
+    (item) => AudioVisualizerLayerData.isAudioVisualizerLayer(item.layer),
+  )) {
+    return null;
+  }
+  final outputDuration = TransitionTimelineMap.fromClips(clips).outputDuration;
+  return audioEnergiesOnExport(
+    sounds: sounds,
+    clips: clips,
+    detachedClips: [
+      for (final item in detached)
+        DetachedClipSound(
+          clip: item.clip,
+          sourceOffset: item.sourceOffset,
+          startTime: item.layer.startTime,
+          endTime: item.layer.endTime,
+        ),
+    ],
+    videoEnd: maxOutputDuration != null && maxOutputDuration < outputDuration
+        ? maxOutputDuration
+        : outputDuration,
+    localPathFor: (url) async {
+      final path = await audioFetcher.localPathFor(
+        EditorAudio.network(url),
+        logName: 'VideoEditorRenderService',
+      );
+      if (!tempFilePaths.contains(path)) tempFilePaths.add(path);
+      return path;
+    },
+  );
 }
 
 /// Why sound could not be read for an audio visualizer: [cause] is the
@@ -294,21 +565,16 @@ class VideoEditorAudioLevelResolver {
     final length =
         (source.to - source.from).inMicroseconds / 1e6 / source.speed;
     final end = start + length;
-    final fadeIn = part.fadeIn.inMicroseconds / 1e6;
-    final fadeOut = part.fadeOut.inMicroseconds / 1e6;
     final firstRow = math.max(0, (start * audioBandFrameRate).ceil());
     final lastRow = math.min(rows, (end * audioBandFrameRate).ceil());
+    final bandGains = equalizerBandPowerGains(part.equalizer);
     for (var row = firstRow; row < lastRow; row++) {
       final time = row / audioBandFrameRate;
       if (time < start || time >= end) continue;
-      var gain = part.volume;
-      if (fadeIn > 0 && time - start < fadeIn) {
-        gain *= (time - start) / fadeIn;
-      }
-      if (fadeOut > 0 && end - time < fadeOut) {
-        gain *= (end - time) / fadeOut;
-      }
-      if (gain <= 0) continue;
+      final gain = part.volume * _envelope(part, time - start, length);
+      // A bounce or elastic blend overshoots below silence, which still
+      // sounds: its power is the square.
+      if (gain == 0) continue;
       // Where this moment of the video plays in the file, as a row of what
       // was read of it.
       final fileSeconds =
@@ -326,9 +592,38 @@ class VideoEditorAudioLevelResolver {
       for (var band = 0; band < audioBandCount; band++) {
         final a = energies.values[low * audioBandCount + band];
         final b = energies.values[high * audioBandCount + band];
-        mix[row * audioBandCount + band] += power * (a + (b - a) * mixOfHigh);
+        mix[row * audioBandCount + band] +=
+            power * (bandGains?[band] ?? 1) * (a + (b - a) * mixOfHigh);
       }
     }
+  }
+
+  /// How loud [part] plays [position] seconds into its [length] seconds, as
+  /// a share of its volume: faded as the export fades a sound, and blended
+  /// in and out across an overlap transition as the export blends a clip.
+  static double _envelope(AudioLevelPart part, double position, double length) {
+    Duration duration(double seconds) =>
+        Duration(microseconds: (seconds * 1e6).round());
+    var gain = audioFadeGain(
+      position: duration(position),
+      length: duration(length),
+      fadeIn: part.fadeIn,
+      fadeOut: part.fadeOut,
+    );
+    if (part.blendIn case final blend?) {
+      final blendLength = blend.duration.inMicroseconds / 1e6;
+      if (position < blendLength) {
+        gain *= blend.curve.ease(position / blendLength);
+      }
+    }
+    if (part.blendOut case final blend?) {
+      final blendLength = blend.duration.inMicroseconds / 1e6;
+      final left = length - position;
+      if (left < blendLength) {
+        gain *= 1 - blend.curve.ease(1 - left / blendLength);
+      }
+    }
+    return gain;
   }
 
   /// The band energies of [source]'s file around the stretch that plays,

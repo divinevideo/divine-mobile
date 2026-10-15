@@ -9,7 +9,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, EqualizerSettings;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
@@ -23,6 +23,18 @@ Duration _ms(int milliseconds) => Duration(milliseconds: milliseconds);
 /// The band a 1 kHz tone falls into.
 const _toneBand = 25;
 
+/// A cross-dissolve that eases in, so its blend is easy to work out.
+const _dissolve = ClipTransition(
+  type: ClipTransitionType.dissolve,
+  curve: AnimationCurve.easeIn,
+);
+
+/// Raises the 1 kHz band of the equalizer by 12 dB.
+final EqualizerSettings _boostAt1kHz = EqualizerSettings.none.withGain(
+  5,
+  12,
+);
+
 AudioEvent _sound(
   String id, {
   Duration startTime = Duration.zero,
@@ -30,6 +42,7 @@ AudioEvent _sound(
   double volume = 1,
   Duration fadeIn = Duration.zero,
   Duration fadeOut = Duration.zero,
+  EqualizerSettings equalizer = EqualizerSettings.none,
 }) => AudioEvent(
   id: id,
   pubkey: 'a' * 64,
@@ -41,12 +54,15 @@ AudioEvent _sound(
   volume: volume,
   fadeInDuration: fadeIn,
   fadeOutDuration: fadeOut,
+  equalizer: equalizer,
 );
 
 DivineVideoClip _clip(
   String id, {
   Duration duration = const Duration(seconds: 2),
   double volume = 1,
+  EqualizerSettings equalizer = EqualizerSettings.none,
+  ClipTransition? transition,
 }) => DivineVideoClip(
   id: id,
   video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
@@ -55,6 +71,8 @@ DivineVideoClip _clip(
   targetAspectRatio: model.AspectRatio.vertical,
   originalAspectRatio: 9 / 16,
   volume: volume,
+  equalizer: equalizer,
+  transition: transition,
 );
 
 /// A part of a file holding a steady 1 kHz tone, from [from] to [to] in the
@@ -67,6 +85,9 @@ AudioLevelPart _part({
   double volume = 1,
   Duration fadeIn = Duration.zero,
   Duration fadeOut = Duration.zero,
+  EqualizerSettings equalizer = EqualizerSettings.none,
+  ClipTransition? blendIn,
+  ClipTransition? blendOut,
   String file = 'tone',
 }) => AudioLevelPart(
   source: BeatSourcePart(
@@ -80,6 +101,9 @@ AudioLevelPart _part({
   volume: volume,
   fadeIn: fadeIn,
   fadeOut: fadeOut,
+  equalizer: equalizer,
+  blendIn: blendIn,
+  blendOut: blendOut,
 );
 
 /// Extracts a steady 1 kHz tone of the stretch it is asked for, and records
@@ -134,6 +158,90 @@ void main() {
       );
 
       expect(parts, isEmpty);
+    });
+
+    test('plays every sound and clip through its own equalizer', () {
+      final parts = audioLevelSourcesFor(
+        sounds: [_sound('music', equalizer: _boostAt1kHz)],
+        clips: [_clip('a', equalizer: _boostAt1kHz.withGain(0, -6))],
+        videoEnd: _ms(2000),
+      );
+
+      expect(parts[0].equalizer, _boostAt1kHz);
+      expect(parts[1].equalizer, _boostAt1kHz.withGain(0, -6));
+    });
+
+    test('follows a detached clip from where its layer plays', () {
+      final parts = audioLevelSourcesFor(
+        sounds: const [],
+        clips: [_clip('a', volume: 0)],
+        videoEnd: _ms(2000),
+        detachedClips: [
+          DetachedClipSound(
+            clip: _clip('detached', volume: 0.5, equalizer: _boostAt1kHz),
+            sourceOffset: _ms(200),
+            startTime: _ms(500),
+            endTime: _ms(1500),
+          ),
+        ],
+      );
+
+      expect(parts, hasLength(1));
+      expect(parts.single.source.at, _ms(500));
+      expect(parts.single.source.from, _ms(200));
+      expect(parts.single.source.to, _ms(1200));
+      expect(parts.single.volume, 0.5);
+      expect(parts.single.equalizer, _boostAt1kHz);
+    });
+
+    test('blends one clip out and the next in across an overlap', () {
+      final parts = audioLevelSourcesFor(
+        sounds: const [],
+        clips: [
+          _clip('a', transition: _dissolve),
+          _clip('b'),
+        ],
+        videoEnd: _ms(3500),
+      );
+
+      expect(parts, hasLength(2));
+      expect(parts[0].source.to, _ms(2000));
+      expect(parts[0].blendOut, _dissolve);
+      expect(parts[1].source.at, _ms(1500));
+      expect(parts[1].blendIn, _dissolve);
+    });
+
+    test('fades a clip against silence across an overlap with a muted '
+        'one', () {
+      final parts = audioLevelSourcesFor(
+        sounds: const [],
+        clips: [
+          _clip('a', transition: _dissolve),
+          _clip('b', volume: 0),
+        ],
+        videoEnd: _ms(3500),
+      );
+
+      expect(parts.single.source.to, _ms(2000));
+      expect(parts.single.blendOut, _dissolve);
+    });
+
+    test('blends the first clip in at the loop restart', () {
+      final parts = audioLevelSourcesFor(
+        sounds: const [],
+        clips: [_clip('a', duration: _ms(3000), transition: _dissolve)],
+        videoEnd: _ms(2500),
+      );
+
+      expect(parts, hasLength(2));
+      // The head of the clip plays at the end of the video, blended in.
+      expect(parts[0].source.from, Duration.zero);
+      expect(parts[0].source.to, _ms(500));
+      expect(parts[0].source.at, _ms(2000));
+      expect(parts[0].blendIn, _dissolve);
+      expect(parts[1].source.from, _ms(500));
+      expect(parts[1].source.at, Duration.zero);
+      expect(parts[1].blendOut, _dissolve);
     });
   });
 
@@ -301,6 +409,38 @@ void main() {
         );
         expect(_energy(faded, 30), closeTo(_energy(steady, 30), 1e-3));
         expect(_energy(faded, 55), lessThan(_energy(steady, 55) / 10));
+      });
+
+      test('weighs the bands by the equalizer of the part', () async {
+        final flat = _part();
+        await resolver.read([flat]);
+        final plain = resolver.energiesOnOutput([flat], videoEnd: _ms(1000));
+        final boosted = resolver.energiesOnOutput([
+          _part(equalizer: _boostAt1kHz),
+        ], videoEnd: _ms(1000));
+
+        final lift = _energy(boosted, 30) / _energy(plain, 30);
+        expect(10 * math.log(lift) / math.ln10, closeTo(12, 0.5));
+      });
+
+      test('blends a part in and out along its transition', () async {
+        final steady = _part();
+        await resolver.read([steady]);
+        final plain = resolver.energiesOnOutput([steady], videoEnd: _ms(1000));
+        final blended = resolver.energiesOnOutput([
+          _part(blendIn: _dissolve, blendOut: _dissolve),
+        ], videoEnd: _ms(1000));
+
+        expect(_energy(plain, 15), greaterThan(0));
+        // Halfway into the blend in, easing in puts the part at a quarter of
+        // its volume, a sixteenth of its energy.
+        expect(_energy(blended, 15), closeTo(_energy(plain, 15) / 16, 1e-4));
+        // Halfway through the blend out it has lost that quarter.
+        expect(
+          _energy(blended, 45),
+          closeTo(_energy(plain, 45) * 9 / 16, 1e-4),
+        );
+        expect(_energy(blended, 30), closeTo(_energy(plain, 30), 1e-4));
       });
 
       test('is silent past the end of what was read', () async {

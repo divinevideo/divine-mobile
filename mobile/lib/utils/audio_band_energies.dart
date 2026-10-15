@@ -178,6 +178,15 @@ Float32List audioVisualizerLevels(
   return levels;
 }
 
+/// The middle of [band] of the [audioBandCount] bands [bandEnergies]
+/// measures, in hertz: halfway in pitch between its edges.
+double audioBandFrequency(int band) =>
+    _lowestFrequency *
+    math.pow(
+      _highestFrequency / _lowestFrequency,
+      (band + 0.5) / audioBandCount,
+    );
+
 /// How many octaves the bands span.
 final double _octaves =
     math.log(_highestFrequency / _lowestFrequency) / math.ln2;

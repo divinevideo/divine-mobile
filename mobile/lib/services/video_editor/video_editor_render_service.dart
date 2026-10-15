@@ -617,10 +617,11 @@ class VideoEditorRenderService {
       final audioFetcher = RenderAudioFetcher();
       // Read once for both passes: an audio visualizer can sit below or above
       // a detached clip.
-      final audioEnergies = await _audioEnergiesOnOutput(
+      final audioEnergies = await audioVisualizerEnergiesForRender(
         capturedLayers: parameters?.capturedLayers ?? const [],
-        parameters: parameters,
+        sounds: parameters?.audioTracksFromMeta ?? const [],
         clips: clips,
+        detached: detachedPass.partitioned.detached,
         maxOutputDuration: maxOutputDuration,
         audioFetcher: audioFetcher,
         tempFilePaths: tempFilePaths,
@@ -1334,42 +1335,6 @@ class VideoEditorRenderService {
       );
       return const [];
     }
-  }
-
-  /// [audioEnergiesOnExport] for the audio visualizers, or `null` when
-  /// [capturedLayers] holds none. Downloads go through [audioFetcher], which
-  /// the mux reuses, into [tempFilePaths].
-  static Future<Float32List?> _audioEnergiesOnOutput({
-    required List<ExportedLayer> capturedLayers,
-    required CompleteParameters? parameters,
-    required List<DivineVideoClip> clips,
-    required Duration? maxOutputDuration,
-    required RenderAudioFetcher audioFetcher,
-    required List<String> tempFilePaths,
-  }) async {
-    if (!capturedLayers.any(
-      (item) => AudioVisualizerLayerData.isAudioVisualizerLayer(item.layer),
-    )) {
-      return null;
-    }
-    final outputDuration = TransitionTimelineMap.fromClips(
-      clips,
-    ).outputDuration;
-    return audioEnergiesOnExport(
-      sounds: parameters?.audioTracksFromMeta ?? const [],
-      clips: clips,
-      videoEnd: maxOutputDuration != null && maxOutputDuration < outputDuration
-          ? maxOutputDuration
-          : outputDuration,
-      localPathFor: (url) async {
-        final path = await audioFetcher.localPathFor(
-          EditorAudio.network(url),
-          logName: _logName,
-        );
-        if (!tempFilePaths.contains(path)) tempFilePaths.add(path);
-        return path;
-      },
-    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -112,14 +112,8 @@ BeatSourcePart? soundSourcePartFor(
 
 /// The stretches of the clips' own sound that play on the exported video,
 /// leaving out muted clips and freeze frames.
-List<BeatSourcePart> clipSoundSourceParts(List<DivineVideoClip> clips) => [
-  for (final (:part, clip: _) in clipSoundSourcePartsWithClips(clips)) part,
-];
-
-/// [clipSoundSourceParts], each with the clip it comes from.
-List<({DivineVideoClip clip, BeatSourcePart part})>
-clipSoundSourcePartsWithClips(List<DivineVideoClip> clips) {
-  final parts = <({DivineVideoClip clip, BeatSourcePart part})>[];
+List<BeatSourcePart> clipSoundSourceParts(List<DivineVideoClip> clips) {
+  final parts = <BeatSourcePart>[];
   final transitions = clampTransitions(clips);
   Duration overlapAfter(DivineVideoClip clip) {
     final transition = transitions[clip.id];
@@ -161,9 +155,8 @@ clipSoundSourcePartsWithClips(List<DivineVideoClip> clips) {
       );
       if (i == 0 && head > Duration.zero && headSounds) {
         // The first head is the incoming side of the final wrap blend.
-        parts.add((
-          clip: clip,
-          part: BeatSourcePart(
+        parts.add(
+          BeatSourcePart(
             media: video,
             fileLength: clip.duration,
             from: clip.trimStart,
@@ -171,11 +164,10 @@ clipSoundSourcePartsWithClips(List<DivineVideoClip> clips) {
             at: outputDuration - wrap,
             speed: speed,
           ),
-        ));
+        );
       }
-      parts.add((
-        clip: clip,
-        part: BeatSourcePart(
+      parts.add(
+        BeatSourcePart(
           media: video,
           fileLength: clip.duration,
           from: clip.trimStart + head,
@@ -187,7 +179,7 @@ clipSoundSourcePartsWithClips(List<DivineVideoClip> clips) {
           // Reverse is baked into clip.video; its samples are already in
           // playback order, including the rewritten trims.
         ),
-      ));
+      );
     }
     clipStart += clip.playbackDuration;
     if (i < clips.length - 1) clipStart -= overlapAfter(clip);

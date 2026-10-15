@@ -33,10 +33,12 @@ class VideoEditorAudioVisualizerCubit
 
   final VideoEditorAudioLevelResolver _resolver;
 
-  /// Mirrors what plays in the video: [sounds] over [clips].
+  /// Mirrors what plays in the video: [sounds] over [clips], and the clips
+  /// detached onto layers of their own, [detachedClips].
   void syncSources({
     required List<AudioEvent> sounds,
     required List<DivineVideoClip> clips,
+    List<DetachedClipSound> detachedClips = const [],
   }) {
     final timelineMap = TransitionTimelineMap.fromClips(clips);
     final outputDuration = timelineMap.outputDuration;
@@ -48,6 +50,7 @@ class VideoEditorAudioVisualizerCubit
         sounds: sounds,
         clips: clips,
         videoEnd: videoEnd,
+        detachedClips: detachedClips,
       ),
       videoEnd: videoEnd,
     );
