@@ -312,6 +312,19 @@ void main() {
     );
 
     test(
+      'eligibility excludes self and blocked without reading any stores',
+      () {
+        expect(loader.isEligible(viewer), isFalse);
+        expect(loader.isEligible(blocked), isFalse);
+        expect(loader.isEligible(mutual), isTrue);
+        expect(loader.isEligible(stranger), isTrue);
+        verifyZeroInteractions(dms);
+        verifyZeroInteractions(follows);
+        verifyZeroInteractions(profiles);
+      },
+    );
+
+    test(
       'excludes self and blocked accounts, deduplicating candidates',
       () async {
         expect((await loader.load([viewer, blocked, mutual, mutual])).keys, [

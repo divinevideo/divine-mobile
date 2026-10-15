@@ -83,7 +83,7 @@ class NewMessageSearchBloc
     }
     if (isClosed) return;
     final eligiblePubkeys = signals == null
-        ? pubkeys
+        ? pubkeys.where(_rankingSignalsLoader.isEligible)
         : pubkeys.where(signals.containsKey);
     final results = await Future.wait(
       eligiblePubkeys.map(
@@ -93,7 +93,8 @@ class NewMessageSearchBloc
     if (isClosed) return;
     final profiles = {
       for (final profile in results.whereType<UserProfile>())
-        profile.pubkey: profile,
+        if (signals != null || _rankingSignalsLoader.isEligible(profile.pubkey))
+          profile.pubkey: profile,
     };
     final rankedPubkeys = rankUsers(
       [

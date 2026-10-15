@@ -1519,6 +1519,9 @@ void main() {
       setUp(() {
         l10n = lookupAppLocalizations(const Locale('en'));
         rankingSignalsLoader = _MockRankingSignalsLoader();
+        when(() => rankingSignalsLoader.isEligible(any())).thenAnswer(
+          (invocation) => invocation.positionalArguments.first != currentPubkey,
+        );
         when(() => rankingSignalsLoader.load(any())).thenAnswer(
           (invocation) async => {
             for (final pubkey
