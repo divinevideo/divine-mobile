@@ -39,6 +39,7 @@ feed_tuning_repository 100
 follow_repository 100
 funnelcake_api_client 44
 hashtag_repository 30
+hashtag_subscription_repository 100
 iap_repository 90
 image_metadata_stripper 100
 infinite_video_feed 100

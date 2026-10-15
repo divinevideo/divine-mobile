@@ -44,6 +44,7 @@ workspace:
   - packages/creator_sync
   - packages/curated_list_repository
   - packages/curation_repository
+  - packages/hashtag_subscription_repository
   - packages/divine_blurhash
   - packages/divine_ui
   - packages/db_client
@@ -264,6 +265,9 @@ dependencies:
 
   # Curated List Repository - NIP-51 kind 30005 curated video lists
   curated_list_repository:
+
+  # Account-scoped, device-local hashtag subscriptions
+  hashtag_subscription_repository:
 
   # Curation Repository - NIP-51 video curation sets and content discovery
   curation_repository:
