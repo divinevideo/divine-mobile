@@ -647,11 +647,7 @@ class _AudioSelectionBottomSheetState
                       animationStyle: context.reduceMotion
                           ? AnimationStyle.noAnimation
                           : null,
-                      // Opaque, since it floats in over the list.
-                      child: ColoredBox(
-                        color: context.vineColors.surface,
-                        child: searchInput,
-                      ),
+                      child: searchInput,
                     ),
                   ],
                   body: lists,
