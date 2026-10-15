@@ -384,10 +384,8 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
 
   @override
   Widget build(BuildContext context) {
-    if (_profileRepoMissing) {
-      return const _ProfileRepoUnavailable();
-    }
-
+    // Keep identity current through profile unavailability: a replacement
+    // Cubit inherits this snapshot when the same owner's profiles return.
     // One subscription for the whole sheet rather than one per row: the rows
     // are unbounded and every one of them asks the same question.
     // The sort and the filter need the whole set; each row watches its own
@@ -396,6 +394,10 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     ref.listen(vanishedProfilePubkeysProvider, (_, next) {
       _updateLocalIdentity(next.value ?? const {});
     });
+
+    if (_profileRepoMissing) {
+      return const _ProfileRepoUnavailable();
+    }
 
     final hintText =
         widget.configuration.searchHint ??
