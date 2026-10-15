@@ -143,6 +143,9 @@ void main() {
         );
         await store.batchStarted.future;
         final deletion = repo.close().then((_) => store.clearAccount());
+        // Let close and the deletion run as far as they can before the
+        // migration batch finishes, so only close draining it keeps order.
+        await pumpEventQueue();
         store.resumeBatch.complete();
         await Future.wait([starting, deletion]);
         expect(await store.get('sealed:index'), isNull);
