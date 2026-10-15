@@ -5,7 +5,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:follow_repository/follow_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -19,10 +18,8 @@ import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/providers/user_ranking_providers.dart';
-import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:openvine/providers/people_picker_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:profile_repository/profile_repository.dart';
 
 /// Full-screen picker that lets the authenticated user batch-add candidate
 /// pubkeys to an existing people list.
@@ -54,8 +51,7 @@ class AddPeopleToListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final followRepository = ref.watch(followRepositoryProvider);
-    final profileRepository = ref.watch(profileRepositoryProvider);
-    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
+    final factory = ref.watch(addPeopleToListCubitFactoryProvider);
     final ownerPubkey = ref.watch(
       nostrSessionProvider.select((session) => session.pubkey),
     );
@@ -73,9 +69,7 @@ class AddPeopleToListScreen extends ConsumerWidget {
         return _AddPeopleToListScope(
           key: ValueKey((ownerPubkey, userList.id, followRepository)),
           userList: userList,
-          followRepository: followRepository,
-          profileRepository: profileRepository,
-          rankingSignalsLoader: rankingSignalsLoader,
+          factory: factory,
         );
       },
     );
@@ -86,16 +80,12 @@ class AddPeopleToListScreen extends ConsumerWidget {
 class _AddPeopleToListScope extends StatefulWidget {
   const _AddPeopleToListScope({
     required this.userList,
-    required this.followRepository,
-    required this.profileRepository,
-    required this.rankingSignalsLoader,
+    required this.factory,
     super.key,
   });
 
   final UserList userList;
-  final FollowRepository followRepository;
-  final ProfileRepository? profileRepository;
-  final UserRankingSignalsLoader rankingSignalsLoader;
+  final AddPeopleToListCubitFactory factory;
 
   @override
   State<_AddPeopleToListScope> createState() => _AddPeopleToListScopeState();
@@ -113,11 +103,7 @@ class _AddPeopleToListScopeState extends State<_AddPeopleToListScope> {
   @override
   void didUpdateWidget(covariant _AddPeopleToListScope oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (identical(oldWidget.profileRepository, widget.profileRepository) &&
-        identical(
-          oldWidget.rankingSignalsLoader,
-          widget.rankingSignalsLoader,
-        )) {
+    if (identical(oldWidget.factory, widget.factory)) {
       return;
     }
     final previous = _cubit;
@@ -128,10 +114,7 @@ class _AddPeopleToListScopeState extends State<_AddPeopleToListScope> {
   AddPeopleToListCubit _createCubit([
     AddPeopleToListState initialState = const AddPeopleToListState(),
   ]) {
-    final cubit = AddPeopleToListCubit(
-      followRepository: widget.followRepository,
-      profileRepository: widget.profileRepository,
-      rankingSignalsLoader: widget.rankingSignalsLoader,
+    final cubit = widget.factory.create(
       existingMemberPubkeys: widget.userList.pubkeys,
       initialState: initialState,
     );
