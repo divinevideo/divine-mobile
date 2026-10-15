@@ -210,6 +210,55 @@ void main() {
     );
 
     testWidgets(
+      'a sort picked after the bloc is replaced reaches the replacement',
+      (tester) async {
+        final version = StateProvider<int>((ref) => 0);
+        await pumpScreen(
+          tester,
+          rankingOverride: userRankingSignalsLoaderProvider.overrideWith((ref) {
+            ref.watch(version);
+            final loader = _MockRankingLoader();
+            when(() => loader.isEligible(any())).thenReturn(true);
+            when(() => loader.loadCachedDisplayNames(any()))
+                .thenAnswer((_) async => {});
+            when(() => loader.load(any())).thenAnswer(
+              (call) async => {
+                for (final key
+                    in call.positionalArguments.single as Iterable<String>)
+                  key: UserRankingSignals(pubkey: key),
+              },
+            );
+            return loader;
+          }),
+        );
+        final old = tester
+            .element(find.byType(UserProfileTile).first)
+            .read<MyFollowersBloc>();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.followersSortSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+        ProviderScope.containerOf(
+          tester.element(find.byType(MyFollowersScreen)),
+        ).read(version.notifier).state++;
+        await tester.pumpAndSettle();
+        expect(old.isClosed, isTrue);
+
+        await tester.tap(find.text(l10n.followSortOldest));
+        await tester.pumpAndSettle();
+
+        final next = tester
+            .element(find.byType(UserProfileTile).first)
+            .read<MyFollowersBloc>();
+        expect(next.state.sortOrder, FollowListSort.oldestFirst);
+        expect(
+          visibleOrder(tester),
+          equals([oldestFollower, newestFollower, undatedFollower]),
+        );
+      },
+    );
+
+    testWidgets(
       'client readiness preserves same-owner sort and query but owner changes reset them',
       (tester) async {
         final version = StateProvider<int>((ref) => 0);

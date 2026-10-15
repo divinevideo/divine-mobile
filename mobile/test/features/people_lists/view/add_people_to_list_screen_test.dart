@@ -306,6 +306,77 @@ void main() {
       },
     );
 
+    testWidgets(
+      'confirmed people reach a cubit that replaced the original mid-submit',
+      (tester) async {
+        final list = _buildList(id: 'crew', name: 'Crew');
+        final follow = _MockFollowRepository();
+        when(() => follow.followingPubkeys).thenReturn([_candidateA]);
+        when(
+          () => follow.followingStream,
+        ).thenAnswer((_) => const Stream.empty());
+        when(follow.watchMyFollowers).thenAnswer((_) => const Stream.empty());
+        final loader = _MockRankingSignalsLoader();
+        when(() => loader.isEligible(any())).thenReturn(true);
+        when(() => loader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final key
+                in invocation.positionalArguments.single as Iterable<String>)
+              key: UserRankingSignals(pubkey: key),
+          },
+        );
+        when(
+          () => loader.loadCachedDisplayNames(any()),
+        ).thenAnswer((_) async => {});
+        AddPeopleToListCubit picker([
+          AddPeopleToListState initialState = const AddPeopleToListState(),
+        ]) => AddPeopleToListCubit(
+          rankingSignalsLoader: loader,
+          followRepository: follow,
+          profileRepository: null,
+          existingMemberPubkeys: [],
+          initialState: initialState,
+        );
+        Widget subject(AddPeopleToListCubit cubit) => MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MockGoRouterProvider(
+            goRouter: router,
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider<PeopleListsBloc>.value(value: bloc),
+                BlocProvider<AddPeopleToListCubit>.value(value: cubit),
+              ],
+              child: AddPeopleToListView(userList: list),
+            ),
+          ),
+        );
+        final original = picker();
+        await original.started();
+        original.candidateToggled(_candidateA);
+        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+        final pending = Completer<PeopleListsOperationResult>();
+        when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
+        await tester.pumpWidget(subject(original));
+        await tester.tap(find.widgetWithText(DivineButton, 'Add 1'));
+        await tester.pump();
+
+        final replacement = picker(original.state);
+        addTearDown(replacement.close);
+        await replacement.started();
+        // Like the screen, close the replaced cubit without awaiting it. No
+        // teardown close: one started in the fake-async body never completes.
+        unawaited(original.close());
+        await tester.pumpWidget(subject(replacement));
+        expect(replacement.state.selectedPubkeys, {_candidateA});
+        pending.complete(PeopleListsOperationResult.succeeded);
+        await tester.pumpAndSettle();
+
+        expect(replacement.state.selectedPubkeys, isEmpty);
+        expect(replacement.state.candidates.single.isAlreadyInList, isTrue);
+      },
+    );
+
     group('after a confirmed add', () {
       Future<void> addSelected(WidgetTester tester) async {
         final list = _buildList(id: 'list-42', name: 'Close Friends');

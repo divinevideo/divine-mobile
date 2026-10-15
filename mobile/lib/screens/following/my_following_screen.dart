@@ -174,14 +174,15 @@ class _MyFollowingView extends ConsumerWidget {
   }
 
   Future<void> _openSortMenu(BuildContext context) async {
-    final bloc = context.read<MyFollowingBloc>();
     final selected = await showFollowSortMenu(
       context: context,
-      current: bloc.state.sortOrder,
+      current: context.read<MyFollowingBloc>().state.sortOrder,
     );
 
-    if (selected == null) return;
-    bloc.add(MyFollowingSortOrderChanged(selected));
+    if (selected == null || !context.mounted) return;
+    // Read again: a dependency refresh can replace the bloc while the sheet
+    // is open, and the replaced one is already closed.
+    context.read<MyFollowingBloc>().add(MyFollowingSortOrderChanged(selected));
   }
 }
 
