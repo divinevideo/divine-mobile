@@ -146,106 +146,20 @@ List<AudioLevelPart> audioLevelSourcesFor({
           fadeOut: sound.fadeOutDuration,
           equalizer: sound.equalizer,
         ),
-    for (final part in _clipParts(clips, timelineMap))
-      if (part.source.at < videoEnd) part,
+    for (final (:clip, :part, :blendIn, :blendOut) in clipSoundParts(clips))
+      if (part.at < videoEnd)
+        AudioLevelPart(
+          source: part,
+          volume: clip.volume,
+          equalizer: clip.equalizer,
+          blendIn: blendIn,
+          blendOut: blendOut,
+        ),
     for (final detached in detachedClips)
       if (_detachedClipPart(detached, timelineMap) case final part?
           when part.source.at < videoEnd)
         part,
   ];
-}
-
-/// The clips' own sound on the exported video.
-///
-/// Across an overlap transition the export blends the two clips: the one
-/// going out falls from its volume to silence along the transition's curve
-/// while the one coming in rises, and a muted clip leaves the other to fade
-/// against silence. The loop-restart blend at the end of the video does the
-/// same with the head of the first clip, moved there. Freeze frames play no
-/// sound of their own.
-List<AudioLevelPart> _clipParts(
-  List<DivineVideoClip> clips,
-  TransitionTimelineMap timelineMap,
-) {
-  if (clips.isEmpty) return const [];
-  final transitions = clampTransitions(clips);
-  ClipTransition? overlapAfter(DivineVideoClip clip) {
-    final transition = transitions[clip.id];
-    return transition == null ||
-            transition.type == ClipTransitionType.fadeToBlack ||
-            transition.type == ClipTransitionType.fadeToWhite
-        ? null
-        : transition;
-  }
-
-  final wrap = overlapAfter(clips.last);
-  final wrapLength = wrap?.duration ?? Duration.zero;
-  final parts = <AudioLevelPart>[];
-  // Where the clip starts on the video, before its head moves into the
-  // loop-restart blend.
-  var clipStart = -wrapLength;
-  for (var i = 0; i < clips.length; i++) {
-    final clip = clips[i];
-    final video = clip.video;
-    if (video != null && clip.volume > 0 && !clip.isFreezeFrame) {
-      final speed = clip.playbackSpeed ?? 1;
-      AudioLevelPart part({
-        required Duration from,
-        required Duration to,
-        required Duration at,
-        ClipTransition? blendIn,
-        ClipTransition? blendOut,
-      }) => AudioLevelPart(
-        source: BeatSourcePart(
-          media: video,
-          fileLength: clip.duration,
-          from: from,
-          to: to,
-          at: at,
-          speed: speed,
-          // Reverse is baked into clip.video; its samples are already in
-          // playback order, including the rewritten trims.
-        ),
-        volume: clip.volume,
-        equalizer: clip.equalizer,
-        blendIn: blendIn,
-        blendOut: blendOut,
-      );
-
-      var from = clip.trimStart;
-      var at = clipStart;
-      if (i == 0 && wrap != null) {
-        // The first head is the incoming side of the loop-restart blend.
-        final head = Duration(
-          microseconds: (wrapLength.inMicroseconds * speed).round(),
-        );
-        parts.add(
-          part(
-            from: from,
-            to: from + head,
-            at: timelineMap.outputDuration - wrapLength,
-            blendIn: wrap,
-          ),
-        );
-        from += head;
-        at += wrapLength;
-      }
-      parts.add(
-        part(
-          from: from,
-          to: clip.trimStart + clip.trimmedDuration,
-          at: at,
-          blendIn: i == 0 ? null : overlapAfter(clips[i - 1]),
-          blendOut: i == clips.length - 1 ? wrap : overlapAfter(clip),
-        ),
-      );
-    }
-    clipStart += clip.playbackDuration;
-    if (i < clips.length - 1) {
-      clipStart -= overlapAfter(clip)?.duration ?? Duration.zero;
-    }
-  }
-  return parts;
 }
 
 /// The sound of [detached] on the exported video, as the export composites

@@ -340,10 +340,10 @@ void main() {
       );
     });
 
-    // On the iPhone 12 Pro, a muted last clip left the end of the export
-    // silent while a strobe on the beat still flashed there.
-    test('leaves the first head out of a loop-restart blend that a muted last '
-        'clip silences', () async {
+    // Since pro_video_editor 2.32.0 the export fades the first head in
+    // against silence when the last clip is muted, so its kick still plays.
+    test('blends the first head in at the loop restart after a muted last '
+        'clip', () async {
       final clips = [
         _clip('a'),
         _clip(
@@ -363,16 +363,23 @@ void main() {
       await resolver.read(parts);
       final beats = resolver.beatsOnOutput(parts, videoEnd: _ms(5700));
 
-      // The first clip still starts 300 ms in, where the blend took its head
-      // from, but the kick at 0.25 s does not fire at the end.
+      // The first clip starts 300 ms in, where the blend took its head from,
+      // and the kick at 0.25 s fires in the blend at the end.
       expect(
-        worstMiss(beats, [_ms(450), _ms(950), _ms(1450), _ms(1950), _ms(2450)]),
+        worstMiss(beats, [
+          _ms(450),
+          _ms(950),
+          _ms(1450),
+          _ms(1950),
+          _ms(2450),
+          _ms(5650),
+        ]),
         lessThanOrEqualTo(_ms(15)),
       );
     });
 
     test(
-      'leaves the last tail out of a loop blend with a muted first clip',
+      'fades the last tail out at the loop restart before a muted first clip',
       () async {
         final clips = [
           _clip('a', volume: 0),
@@ -398,6 +405,7 @@ void main() {
             _ms(3950),
             _ms(4450),
             _ms(4950),
+            _ms(5450),
           ]),
           lessThanOrEqualTo(_ms(15)),
         );
@@ -405,7 +413,7 @@ void main() {
     );
 
     test(
-      'leaves both sides of an internal blend silent next to a muted clip',
+      'fades the audible side of an internal blend against a muted clip',
       () async {
         for (final muteFirst in [false, true]) {
           final clips = [
@@ -427,8 +435,22 @@ void main() {
           await resolver.read(parts);
           final beats = resolver.beatsOnOutput(parts, videoEnd: _ms(5700));
           final expected = muteFirst
-              ? [_ms(3450), _ms(3950), _ms(4450), _ms(4950), _ms(5450)]
-              : [_ms(250), _ms(750), _ms(1250), _ms(1750), _ms(2250)];
+              ? [
+                  _ms(2950),
+                  _ms(3450),
+                  _ms(3950),
+                  _ms(4450),
+                  _ms(4950),
+                  _ms(5450),
+                ]
+              : [
+                  _ms(250),
+                  _ms(750),
+                  _ms(1250),
+                  _ms(1750),
+                  _ms(2250),
+                  _ms(2750),
+                ];
           expect(worstMiss(beats, expected), lessThanOrEqualTo(_ms(15)));
         }
       },
