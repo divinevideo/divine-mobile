@@ -1754,6 +1754,17 @@ void main() {
             isNull,
           );
         });
+
+        test('does not render while a post is in flight', () async {
+          postDetails
+              .read(videoEditorProvider.notifier)
+              .setPosting(value: true);
+
+          landTakeProof();
+          await pumpEventQueue();
+
+          expect(renderedHistories, hasLength(1));
+        });
       });
     });
 
