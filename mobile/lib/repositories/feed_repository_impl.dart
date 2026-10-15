@@ -283,9 +283,16 @@ class _GlobalFeedBridge {
   }
 
   void dispose() {
+    // close() fails only by throwing synchronously (during an addStream), so
+    // each subject is guarded on its own and still closes if the other throws.
     runProviderDetached(
-      Future.wait([_videos.close(), _hasMore.close()]),
-      'close global feed bridge streams',
+      Future.sync(_videos.close),
+      'close global feed bridge videos stream',
+      logName: 'RiverpodFeedRepository',
+    );
+    runProviderDetached(
+      Future.sync(_hasMore.close),
+      'close global feed bridge hasMore stream',
       logName: 'RiverpodFeedRepository',
     );
   }
