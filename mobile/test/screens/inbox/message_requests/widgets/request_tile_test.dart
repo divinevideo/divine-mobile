@@ -330,7 +330,7 @@ void main() {
               body: RequestTile(
                 conversation: DmConversation(
                   id: 'e' * 64,
-                  participantPubkeys: [
+                  participantPubkeys: const [
                     currentPubkey,
                     kModerationPubkeyHex,
                     otherPubkey,

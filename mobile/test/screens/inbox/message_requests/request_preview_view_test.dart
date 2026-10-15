@@ -603,9 +603,6 @@ void main() {
             buildModerationSubject(
               retired,
               extraOverrides: [retiredKeyCustody(custody)],
-              // What the cubit reports for a one-to-one with this key: the
-              // removal policy is keyed on the pubkey, never on custody.
-              isRemovalProtected: true,
               // The key's holder controls its kind-0, so the test gives it one
               // that tries to look official.
               profile: UserProfile(
@@ -674,16 +671,10 @@ void main() {
         }
 
         for (final custody in RetiredKeyCustody.values) {
-          testWidgets('${custody.name}: still closed, and still no removal', (
-            tester,
-          ) async {
+          testWidgets('${custody.name}: still closed', (tester) async {
             await pumpPreviewFor(tester, custody);
 
             expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
-            expect(
-              find.text(l10n.messageRequestDeclineAndRemoveButton),
-              findsNothing,
-            );
           });
         }
       });
@@ -701,8 +692,9 @@ void main() {
 
       // #6971. Removal here is permanent — it writes a tombstone that
       // suppresses relay replay for the account's lifetime — and the notice is
-      // the user's only copy of why they were actioned.
-      testWidgets('a retired moderation notice offers no removal', (
+      // the user's only copy of why they were actioned. Which conversations
+      // are protected is the repository's answer, which the cubit carries.
+      testWidgets('a notice the repository protects offers no removal', (
         tester,
       ) async {
         await tester.pumpWidget(
@@ -720,25 +712,6 @@ void main() {
         expect(
           find.text(l10n.messageRequestViewMessagesButton),
           findsOneWidget,
-        );
-      });
-
-      testWidgets('the current moderation key offers no removal either', (
-        tester,
-      ) async {
-        // The pin lifts a current-key thread out of Requests today, so this is
-        // insurance for the next rotation rather than a live path.
-        await tester.pumpWidget(
-          buildModerationSubject(
-            kModerationPubkeyHex,
-            isRemovalProtected: true,
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text(l10n.messageRequestDeclineAndRemoveButton),
-          findsNothing,
         );
       });
 

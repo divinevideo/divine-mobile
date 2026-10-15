@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/models/moderation_presentation.dart';
 
 const _labels = DmPeerLabels(
   deletedAccount: 'Deleted account',
