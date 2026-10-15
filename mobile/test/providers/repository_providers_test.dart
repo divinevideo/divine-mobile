@@ -2,7 +2,8 @@
 // ABOUTME: Pins the vanish-source priming that keeps #8208 from regressing
 // ABOUTME: and the contact-list flush when relays come back (#8331).
 
-import 'package:db_client/db_client.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,15 +11,40 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/models/environment_config.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
+import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _MockMyFollowersDao extends Mock implements MyFollowersDao {}
+
+class _MockAuthService extends Mock implements AuthService {}
+
+class _MockPersonalEventCache extends Mock
+    implements PersonalEventCacheService {}
+
+class _MockEnvironmentConfig extends Mock implements EnvironmentConfig {}
+
+class _TestEnvironment extends CurrentEnvironmentNotifier {
+  _TestEnvironment(this.config);
+  final EnvironmentConfig config;
+  @override
+  EnvironmentConfig build() => config;
+}
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -49,6 +75,83 @@ class _TestNostrSession extends NostrSession {
 void main() {
   const pubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+  group('followRepositoryProvider follower persistence', () {
+    setUpAll(() => registerFallbackValue(<Filter>[]));
+
+    test(
+      'hydrates relationships from the injected database follower DAO',
+      () async {
+        final follower = '1' * 64;
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final database = _MockAppDatabase();
+        final followersDao = _MockMyFollowersDao();
+        when(() => database.profileStatsDao).thenReturn(_MockProfileStatsDao());
+        when(() => database.myFollowersDao).thenReturn(followersDao);
+        when(() => followersDao.followersOf(pubkey)).thenAnswer(
+          (_) async => [
+            (pubkey: follower, followedAt: 100),
+          ],
+        );
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(pubkey);
+        when(() => client.hasKeys).thenReturn(false);
+        when(
+          () => client.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((_) => const Stream<Event>.empty());
+        when(() => client.unsubscribe(any())).thenAnswer((_) async {});
+        final personalCache = _MockPersonalEventCache();
+        when(() => personalCache.isInitialized).thenReturn(false);
+        final environment = _MockEnvironmentConfig();
+        when(() => environment.indexerRelays).thenReturn(const []);
+        final connectionStatus = ConnectionStatusService();
+        addTearDown(connectionStatus.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            nostrServiceProvider.overrideWithValue(client),
+            nostrSessionProvider.overrideWith(
+              () => _TestNostrSession(
+                const NostrSessionReadiness.identityKnown(pubkey: pubkey),
+              ),
+            ),
+            personalEventCacheServiceProvider.overrideWithValue(personalCache),
+            pendingActionServiceProvider.overrideWithValue(null),
+            authServiceProvider.overrideWithValue(_MockAuthService()),
+            connectionStatusServiceProvider.overrideWithValue(connectionStatus),
+            databaseProvider.overrideWithValue(database),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            funnelcakeApiClientProvider.overrideWithValue(
+              FunnelcakeApiClient(baseUrl: ''),
+            ),
+            currentEnvironmentProvider.overrideWith(
+              () => _TestEnvironment(environment),
+            ),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              ContentBlocklistRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final repository = container.read(followRepositoryProvider);
+        expect(repository.relationshipTo(follower), FollowRelationship.none);
+        when(() => client.hasKeys).thenReturn(true);
+        await repository.initialize();
+        expect(
+          repository.relationshipTo(follower),
+          FollowRelationship.followsYou,
+        );
+        verify(() => followersDao.followersOf(pubkey)).called(1);
+        verifyNever(() => client.queryEvents(any()));
+        verifyNever(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        );
+      },
+    );
+  });
 
   group('profileReadRepositoryProvider vanish priming (#8208)', () {
     // Builds a container wired for the REAL _buildProfileRepository. Overriding

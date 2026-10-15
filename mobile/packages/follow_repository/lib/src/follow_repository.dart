@@ -1834,16 +1834,23 @@ class FollowRepository {
     final apiFuture = (_funnelcakeApiClient?.isAvailable ?? false)
         ? _funnelcakeApiClient!
               .getFollowers(pubkey: pubkey, limit: 5000)
-              .then<List<_FollowerRef>>(
-                (r) => [
-                  for (final follower in r.pubkeys)
-                    (pubkey: follower, followedAt: null),
-                ],
+              .then<_FollowerBatch>(
+                (page) => (
+                  refs: [
+                    for (final follower in page.pubkeys)
+                      (pubkey: follower, followedAt: null),
+                  ],
+                  anySourceFailed:
+                      page.hasMore || page.total > page.pubkeys.length,
+                ),
               )
-        : Future<List<_FollowerRef>>.value(const []);
+        : Future<_FollowerBatch>.value((
+            refs: const <_FollowerRef>[],
+            anySourceFailed: false,
+          ));
 
     return [
-      apiFuture.then((refs) => (refs: refs, anySourceFailed: false)),
+      apiFuture,
       _fetchFollowersFromRelays(pubkey),
       _fetchFollowerRefsFromIndexers(pubkey),
     ];
@@ -1955,33 +1962,23 @@ class FollowRepository {
   /// Carries each event's `created_at` through so [_newestFirst] can order
   /// the merged list; duplicates are collapsed there.
   Future<_FollowerBatch> _fetchFollowersFromRelays(String pubkey) async {
-    var failed = false;
     try {
-      final events = await _nostrClient
-          .queryEvents([
+      final result = await _nostrClient
+          .readEvents([
             Filter(kinds: const [EventKind.contactList], p: [pubkey]),
-          ])
-          .timeout(
-            _fetchFollowersTimeout,
-            onTimeout: () {
-              failed = true;
-              Log.warning(
-                'Followers relay query timed out for ${pubkeyForLogs(pubkey)}',
-                name: 'FollowRepository',
-                category: LogCategory.system,
-              );
-              return <Event>[];
-            },
-          );
+          ], requireAllRelaysSettled: true)
+          .timeout(_fetchFollowersTimeout);
       return (
         refs: [
-          for (final event in events)
+          for (final event in result.events)
             (
               pubkey: event.pubkey,
               followedAt: _datableFollowedAt(event.createdAt),
             ),
         ],
-        anySourceFailed: failed,
+        // EOSE can finish a capped read. Neither an early return nor a cap
+        // proves that a missing follower has unfollowed.
+        anySourceFailed: !result.isComplete || result.possiblyCapped,
       );
     } on TimeoutException {
       Log.warning(
