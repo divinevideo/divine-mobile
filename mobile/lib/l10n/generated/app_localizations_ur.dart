@@ -13723,4 +13723,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'محفوظ ہو گیا';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time پوسٹ کی گئی';
+  }
 }

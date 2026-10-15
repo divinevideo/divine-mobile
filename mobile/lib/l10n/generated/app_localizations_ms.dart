@@ -13728,4 +13728,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Disimpan';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Disiarkan $time';
+  }
 }

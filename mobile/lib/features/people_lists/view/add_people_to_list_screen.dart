@@ -391,6 +391,10 @@ class _CandidateList extends StatelessWidget {
       (AddPeopleToListCubit c) => c.state.selectedPubkeys,
     );
 
+    final rankingSignals = context.select(
+      (AddPeopleToListCubit c) => c.state.rankingSignals,
+    );
+
     return ListView.builder(
       padding: EdgeInsets.zero,
       itemCount: candidates.length,
@@ -401,6 +405,8 @@ class _CandidateList extends StatelessWidget {
 
         return PersonPickableRow(
           candidate: candidate,
+          videoCount: rankingSignals[candidate.pubkey]?.videoCount,
+          lastPostedAt: rankingSignals[candidate.pubkey]?.lastPostedAt,
           isSelected: isSelected,
           enabled: !isMember,
           onTap: () => context.read<AddPeopleToListCubit>().candidateToggled(

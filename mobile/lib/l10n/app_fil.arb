@@ -4115,5 +4115,14 @@
   "soundReadyDescription": "Gamitin ito sa susunod mong video o i-save sa library ng mga tunog mo.",
   "soundReadyUse": "Gamitin ang tunog na ito",
   "soundReadySave": "I-save sa Mga Tunog Ko",
-  "soundRequestSaved": "Na-save"
+  "soundRequestSaved": "Na-save",
+    "@userRowPosted": {
+        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "userRowPosted": "Na-post {time}"
 }

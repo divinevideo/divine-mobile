@@ -13802,4 +13802,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Opgeslagen';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Geplaatst $time';
+  }
 }

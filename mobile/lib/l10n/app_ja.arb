@@ -5109,5 +5109,14 @@
   "soundReadyDescription": "次の動画で使うか、サウンドライブラリに保存しましょう。",
   "soundReadyUse": "このサウンドを使う",
   "soundReadySave": "マイサウンドに保存",
-  "soundRequestSaved": "保存済み"
+  "soundRequestSaved": "保存済み",
+    "@userRowPosted": {
+        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "userRowPosted": "{time}に投稿"
 }

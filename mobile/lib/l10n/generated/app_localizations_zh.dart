@@ -12900,4 +12900,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '已保存';
+
+  @override
+  String userRowPosted(String time) {
+    return '发布于$time';
+  }
 }

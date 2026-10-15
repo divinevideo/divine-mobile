@@ -565,6 +565,13 @@ Widget testProviderScope({
         mockModerationLabelService: mockModerationLabelService,
         mockFollowRepository: mockFollowRepository,
         rankingSignalsLoader: rankingSignalsLoader,
+      ).where(
+        (override) =>
+            !_overridesProvider(
+              additionalOverrides,
+              userRankingSignalsLoaderProvider,
+            ) ||
+            !_overridesProvider([override], userRankingSignalsLoaderProvider),
       ),
       if (!_overridesProvider(additionalOverrides, videoEventServiceProvider))
         videoEventServiceProvider.overrideWithValue(

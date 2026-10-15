@@ -13385,4 +13385,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'ተቀምጧል';
+
+  @override
+  String userRowPosted(String time) {
+    return 'የተለጠፈው $time';
+  }
 }

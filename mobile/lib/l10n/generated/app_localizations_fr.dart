@@ -13941,4 +13941,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Enregistré';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publié $time';
+  }
 }

@@ -5,6 +5,7 @@ import 'dart:async';
 
 // Riverpod 3 exports `Override` from `misc.dart`, not the main entry point.
 import 'package:bloc/bloc.dart';
+import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -601,6 +602,32 @@ void main() {
         }
       }
 
+      testWidgets('local picker displays cached count and recent post', (
+        tester,
+      ) async {
+        when(() => rankingLoader.load(any())).thenAnswer(
+          (_) async => {
+            a: UserRankingSignals(
+              pubkey: a,
+              videoCount: 18,
+              lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+            ),
+          },
+        );
+        await pumpLocal(tester, profiles: [profile(a, 'Ada')]);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.textContaining(l10n.searchUserVideoCount(18, '18')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(
+            l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2))),
+          ),
+          findsOneWidget,
+        );
+      });
+
       List<String> rows(WidgetTester tester) => tester
           .widgetList<Text>(
             find.descendant(
@@ -630,7 +657,12 @@ void main() {
           tester,
           profiles: [profile(a, 'Alice'), profile(b, 'Zoe')],
         );
-        expect(rows(tester), ['Zoe', 'Alice']);
+        expect(rows(tester), [
+          'Zoe',
+          lookupAppLocalizations(const Locale('en')).socialProofMutual,
+          'Alice',
+          lookupAppLocalizations(const Locale('en')).socialProofMutual,
+        ]);
       });
 
       testWidgets('vanished update keeps positions', (tester) async {

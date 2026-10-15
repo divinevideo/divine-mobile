@@ -22916,6 +22916,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saved'**
   String get soundRequestSaved;
+
+  /// Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as "2h ago".
+  ///
+  /// In en, this message translates to:
+  /// **'Posted {time}'**
+  String userRowPosted(String time);
 }
 
 class _AppLocalizationsDelegate

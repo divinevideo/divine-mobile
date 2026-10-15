@@ -13859,4 +13859,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Запазено';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Публикувано $time';
+  }
 }

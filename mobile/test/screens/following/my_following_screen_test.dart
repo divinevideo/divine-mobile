@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:cache_sync/cache_sync.dart';
+import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -151,6 +152,36 @@ void main() {
         .widgetList<UserProfileTile>(find.byType(UserProfileTile))
         .map((tile) => tile.pubkey)
         .toList();
+
+    testWidgets('renders cached activity from the list ranking state', (
+      tester,
+    ) async {
+      final loader = _MockRankingLoader();
+      when(() => loader.isEligible(any())).thenReturn(true);
+      when(() => loader.loadCachedDisplayNames(any()))
+          .thenAnswer((_) async => {});
+      when(() => loader.load(any())).thenAnswer(
+        (_) async => {
+          firstFollowed: UserRankingSignals(
+            pubkey: firstFollowed,
+            videoCount: 18,
+            lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+          ),
+        },
+      );
+      await pumpScreen(tester, loader: loader);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2))),
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets(
       'lists equal-score follows in deterministic Smart order',

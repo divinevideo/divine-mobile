@@ -13895,4 +13895,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Gespeichert';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Gepostet $time';
+  }
 }

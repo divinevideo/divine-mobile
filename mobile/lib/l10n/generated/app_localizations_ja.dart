@@ -13055,4 +13055,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '保存済み';
+
+  @override
+  String userRowPosted(String time) {
+    return '$timeに投稿';
+  }
 }

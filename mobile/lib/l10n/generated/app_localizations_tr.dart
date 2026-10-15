@@ -13653,4 +13653,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Kaydedildi';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time paylaşıldı';
+  }
 }

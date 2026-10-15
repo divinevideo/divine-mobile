@@ -6873,5 +6873,14 @@
   "soundReadyDescription": "Gunakannya dalam video seterusnya atau simpan ke pustaka bunyi anda.",
   "soundReadyUse": "Gunakan bunyi ini",
   "soundReadySave": "Simpan ke Bunyi Saya",
-  "soundRequestSaved": "Disimpan"
+  "soundRequestSaved": "Disimpan",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "userRowPosted": "Disiarkan {time}"
 }

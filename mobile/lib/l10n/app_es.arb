@@ -5109,5 +5109,14 @@
   "soundReadyDescription": "Úsalo en tu próximo video o guárdalo en tu biblioteca de sonidos.",
   "soundReadyUse": "Usar este sonido",
   "soundReadySave": "Guardar en Mis sonidos",
-  "soundRequestSaved": "Guardado"
+  "soundRequestSaved": "Guardado",
+    "@userRowPosted": {
+        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "userRowPosted": "Publicado {time}"
 }

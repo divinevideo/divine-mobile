@@ -13734,4 +13734,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Sparat';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publicerat $time';
+  }
 }

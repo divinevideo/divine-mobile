@@ -13847,4 +13847,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Salvo';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publicado $time';
+  }
 }

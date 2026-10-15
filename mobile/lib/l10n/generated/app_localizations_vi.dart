@@ -13670,4 +13670,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Đã lưu';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Đã đăng $time';
+  }
 }

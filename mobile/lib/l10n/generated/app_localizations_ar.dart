@@ -13716,4 +13716,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'تم الحفظ';
+
+  @override
+  String userRowPosted(String time) {
+    return 'نُشر $time';
+  }
 }

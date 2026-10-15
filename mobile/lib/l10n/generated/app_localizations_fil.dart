@@ -13849,4 +13849,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Na-save';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Na-post $time';
+  }
 }

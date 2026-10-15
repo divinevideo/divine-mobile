@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for PersonPickableRow tap-to-select affordance.
 // ABOUTME: Covers enabled/disabled states, checkbox rendering, and tap wiring.
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -20,16 +21,24 @@ void main() {
       VoidCallback? onTap,
       String? displayName = 'Ada Lovelace',
       String? handle = '@ada',
+      int? videoCount,
+      DateTime? lastPostedAt,
+      bool isFollowing = false,
+      bool isFollower = false,
     }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PersonPickableRow(
+            videoCount: videoCount,
+            lastPostedAt: lastPostedAt,
             candidate: PeopleListCandidate(
               pubkey: _pubkey,
               displayName: displayName,
               handle: handle,
+              isFollowing: isFollowing,
+              isFollower: isFollower,
             ),
             isSelected: isSelected,
             enabled: enabled,
@@ -38,6 +47,30 @@ void main() {
         ),
       );
     }
+
+    testWidgets(
+      'renders relationship, count and recent post from supplied facts',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(
+          buildSubject(
+            isSelected: false,
+            enabled: true,
+            isFollowing: true,
+            isFollower: true,
+            videoCount: 18,
+            lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+          ),
+        );
+        expect(
+          find.text(
+            '${l10n.socialProofMutual} · @ada · ${l10n.searchUserVideoCount(18, '18')} · '
+            '${l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2)))}',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('renders display name and handle', (tester) async {
       await tester.pumpWidget(

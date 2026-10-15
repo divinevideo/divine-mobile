@@ -6873,5 +6873,14 @@
   "soundReadyDescription": "اسے اپنی اگلی ویڈیو میں استعمال کریں یا اپنی آوازوں کی لائبریری میں محفوظ کریں۔",
   "soundReadyUse": "یہ آواز استعمال کریں",
   "soundReadySave": "میری آوازوں میں محفوظ کریں",
-  "soundRequestSaved": "محفوظ ہو گیا"
+  "soundRequestSaved": "محفوظ ہو گیا",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "userRowPosted": "{time} پوسٹ کی گئی"
 }

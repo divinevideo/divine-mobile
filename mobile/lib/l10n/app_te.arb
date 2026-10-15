@@ -8608,5 +8608,14 @@
   "soundReadyDescription": "దీన్ని మీ తదుపరి వీడియోలో ఉపయోగించండి లేదా మీ సౌండ్ లైబ్రరీలో సేవ్ చేయండి.",
   "soundReadyUse": "ఈ సౌండ్‌ను ఉపయోగించండి",
   "soundReadySave": "నా సౌండ్స్‌లో సేవ్ చేయండి",
-  "soundRequestSaved": "సేవ్ చేయబడింది"
+  "soundRequestSaved": "సేవ్ చేయబడింది",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "userRowPosted": "{time} పోస్ట్ చేయబడింది"
 }
