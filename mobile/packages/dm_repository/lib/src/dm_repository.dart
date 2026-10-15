@@ -3664,8 +3664,9 @@ class DmRepository {
                 isSentByMe || (existing?.currentUserHasSent ?? false),
             ownerPubkey: ownerPubkey,
             // A peer's NIP-17 proves they read it. Our own proves nothing
-            // about them: a send held pending stores no message, so its
-            // self-wrap lands here first, and writing 'nip17' for it would
+            // about them, and our copy can arrive before any local row (sent
+            // from another device, or by a build that still published the
+            // copy of a held send, #10012). Writing 'nip17' for it would
             // unlatch a legacy peer for good (#8506).
             dmProtocol: isSentByMe
                 ? (existing?.dmProtocol ?? 'nip17')
@@ -5824,6 +5825,9 @@ class DmRepository {
       targetRelays: inbox.relays,
       selfWrapTargetRelays: selfWrapRelays,
       awaitRecipientOk: true,
+      // Held by the downgrade below, so no self-copy yet (#10012).
+      withholdSelfWrap:
+          outgoingDao != null && inbox.state == DmInboxResolution.unreadable,
     );
 
     // An `OK` from the DEFAULT POOL is not delivery when we never read the
@@ -6588,6 +6592,8 @@ class DmRepository {
       targetRelays: inbox.relays,
       selfWrapTargetRelays: selfWrapRelays,
       awaitRecipientOk: true,
+      // Held by the downgrade below, so no self-copy yet (#10012).
+      withholdSelfWrap: inbox.state == DmInboxResolution.unreadable,
     );
 
     // Same rule as the initial send: a default-pool `OK` is not delivery when
@@ -7514,12 +7520,19 @@ class DmRepository {
   /// `Future.timeout` does NOT cancel the underlying publish — it may still
   /// land after the cap, which is why the timeout result is classified
   /// retryable-pending (receiver-side rumor-id dedup absorbs the overlap).
+  ///
+  /// [withholdSelfWrap] is for an attempt [downgradeFallbackPoolDelivery]
+  /// will hold. Its confirmed pool `OK` is not delivery, so the sender's copy
+  /// waits for the attempt that is (#10012): a copy published here shows the
+  /// message as sent on every other device while this row may still exhaust
+  /// to failed, and each sweep pass would publish another.
   Future<NIP17SendResult> _sendRumorWithTimeout({
     required Event rumor,
     required String recipientPubkey,
     List<String>? targetRelays,
     List<String>? selfWrapTargetRelays,
     bool awaitRecipientOk = false,
+    bool withholdSelfWrap = false,
   }) {
     return _messageService!
         .sendRumor(
@@ -7535,6 +7548,14 @@ class DmRepository {
           // a sent-looking row for a message the recipient may never have
           // received (#6046). Reactions keep the service default.
           selfWrapOnSoftUnconfirmed: false,
+          onSelfWrapDue: withholdSelfWrap
+              ? (_) => Log.info(
+                  'Withholding the self-wrap for rumor ${rumor.id}: the '
+                  'inbox of ${pubkeyForLogs(recipientPubkey)} is unreadable, '
+                  'so this attempt is held, not delivered (#10012)',
+                  category: LogCategory.system,
+                )
+              : null,
         )
         .timeout(
           _messagePublishTimeout,
@@ -7929,6 +7950,10 @@ class DmRepository {
             targetRelays: inbox?.relays,
             selfWrapTargetRelays: selfWrapRelays,
             awaitRecipientOk: true,
+            // Held by the downgrade below, so no self-copy yet (#10012).
+            withholdSelfWrap:
+                outgoingDao != null &&
+                inbox?.state == DmInboxResolution.unreadable,
           );
           // An `OK` from the DEFAULT POOL is not delivery for a recipient
           // whose inbox we never read: their wrap may sit on relays they never

@@ -955,6 +955,7 @@ void main() {
           selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer((inv) async {
         final rumorEvent = inv.namedArguments[#rumorEvent] as Event;
@@ -1198,6 +1199,7 @@ void main() {
             targetRelays: any(named: 'targetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
             selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       });
@@ -1252,6 +1254,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -1292,6 +1295,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -1342,6 +1346,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -1901,6 +1906,7 @@ void main() {
             targetRelays: any(named: 'targetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
             selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       });
@@ -1978,6 +1984,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -12685,6 +12692,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -14801,6 +14809,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -15035,6 +15044,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -16601,6 +16611,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -16675,6 +16686,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -16765,6 +16777,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -17238,6 +17251,7 @@ void main() {
                       selfWrapOnSoftUnconfirmed: any(
                         named: 'selfWrapOnSoftUnconfirmed',
                       ),
+                      onSelfWrapDue: any(named: 'onSelfWrapDue'),
                     ),
                   ).captured.single
                   as Event;
@@ -17416,6 +17430,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -17469,6 +17484,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -17889,6 +17905,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -18015,6 +18032,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -18035,6 +18053,7 @@ void main() {
                     rumorEvent: captureAny(named: 'rumorEvent'),
                     recipientPubkey: any(named: 'recipientPubkey'),
                     awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -18051,6 +18070,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) => publish.future);
 
@@ -18063,6 +18083,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
         publish.complete(
@@ -18085,6 +18106,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -18101,6 +18123,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       });
@@ -18113,6 +18136,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('no relay'));
 
@@ -18137,6 +18161,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.blocked('blocked'));
 
@@ -18208,6 +18233,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: _validPubkeyB,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -18221,6 +18247,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: _validPubkeyC,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer((_) async => const NIP17SendResult.blocked('blocked'));
 
@@ -18278,6 +18305,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: any(named: 'recipientPubkey'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -18298,6 +18326,7 @@ void main() {
                       rumorEvent: captureAny(named: 'rumorEvent'),
                       recipientPubkey: any(named: 'recipientPubkey'),
                       awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                      onSelfWrapDue: any(named: 'onSelfWrapDue'),
                     ),
                   ).captured.single
                   as Event;
@@ -18339,6 +18368,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       });
@@ -18370,6 +18400,7 @@ void main() {
               targetRelays: any(named: 'targetRelays'),
               selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (invocation) async => NIP17SendResult.success(
@@ -18427,6 +18458,7 @@ void main() {
                 targetRelays: captureAny(named: 'targetRelays'),
                 selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
                 awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                onSelfWrapDue: any(named: 'onSelfWrapDue'),
               ),
             ).captured;
             expect(
@@ -22924,6 +22956,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -23026,6 +23059,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(2);
 
@@ -23182,6 +23216,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).captured.cast<Event>();
           expect(sentRumors, hasLength(2));
@@ -23360,6 +23395,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).captured.cast<Event>();
           expect(sentRumors, hasLength(2));
@@ -23419,6 +23455,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).captured.cast<Event>();
           expect(sentRumors, hasLength(2));
@@ -24377,6 +24414,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -25787,6 +25825,7 @@ void main() {
                 selfWrapOnSoftUnconfirmed: any(
                   named: 'selfWrapOnSoftUnconfirmed',
                 ),
+                onSelfWrapDue: any(named: 'onSelfWrapDue'),
               ),
             ).called(1);
           }
@@ -26159,6 +26198,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -26267,6 +26307,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           expect(
@@ -27640,6 +27681,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -28371,6 +28413,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -28388,6 +28431,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -29081,6 +29125,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -29117,6 +29162,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -29393,6 +29439,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -29454,6 +29501,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -29530,6 +29578,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },

@@ -132,6 +132,7 @@ void main() {
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           recipientWrapBuildTimeout: any(named: 'recipientWrapBuildTimeout'),
           selfWrapBuildTimeout: any(named: 'selfWrapBuildTimeout'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer(
         (_) async => NIP17SendResult.success(

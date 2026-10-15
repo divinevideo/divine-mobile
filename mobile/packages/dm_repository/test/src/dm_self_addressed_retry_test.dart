@@ -150,6 +150,7 @@ void main() {
         selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
         recipientWrapBuildTimeout: any(named: 'recipientWrapBuildTimeout'),
         selfWrapBuildTimeout: any(named: 'selfWrapBuildTimeout'),
+        onSelfWrapDue: any(named: 'onSelfWrapDue'),
       );
 
   /// A replay of the sender's own copy alone.

@@ -167,6 +167,7 @@ void main() {
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           recipientWrapBuildTimeout: any(named: 'recipientWrapBuildTimeout'),
           selfWrapBuildTimeout: any(named: 'selfWrapBuildTimeout'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer((invocation) {
         final rumor = invocation.namedArguments[#rumorEvent] as Event;
