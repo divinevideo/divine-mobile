@@ -348,7 +348,7 @@ class ConversationListBloc
             (c) =>
                 !known.contains(c.id) &&
                 !state.profileNames.containsKey(
-                  _otherParticipant(c, userPubkey),
+                  _namedParticipant(c, userPubkey),
                 ),
           );
           if (hasNewUnresolved) {
@@ -516,7 +516,7 @@ class ConversationListBloc
     // fallback while the row rendered the real kind-0 name. Searching for the
     // name on screen found nothing.
     final unresolved = [...state.conversations, ...state.blockedConversations]
-        .map((c) => _otherParticipant(c, userPubkey))
+        .map((c) => _namedParticipant(c, userPubkey))
         .where((pk) => !profileNames.containsKey(pk))
         .toSet()
         .toList();
@@ -620,6 +620,15 @@ class ConversationListBloc
     return rows
       ..sort((a, b) => b.effectiveTimestamp.compareTo(a.effectiveTimestamp));
   }
+
+  /// The member a row is named for, whose name search has to resolve to
+  /// match what the row renders (#10151).
+  String _namedParticipant(DmConversation conversation, String self) =>
+      dmConversationNamedPeer(
+        participantPubkeys: conversation.participantPubkeys,
+        currentUserPubkey: self,
+        moderationPresentation: _moderationPresentation,
+      ).pubkey;
 
   static String _otherParticipant(DmConversation conversation, String self) {
     return dmConversationFirstPeer(

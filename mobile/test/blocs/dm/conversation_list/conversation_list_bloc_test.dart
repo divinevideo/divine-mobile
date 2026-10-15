@@ -2781,6 +2781,43 @@ void main() {
         expect(state.visibleConversations, isEmpty);
       });
 
+      // The row resolves the named member's profile, so search has to resolve
+      // that member too, not the first one listed.
+      test('is found by the real name of the member it is named for', () async {
+        when(
+          () => mockProfileRepository.fetchBatchProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer(
+          (_) async => {
+            _testPubkey2: UserProfile(
+              pubkey: _testPubkey2,
+              displayName: 'Alice',
+              rawData: const {},
+              createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+              eventId: _testConversationId1,
+            ),
+          },
+        );
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        bloc.add(const ConversationListStarted());
+        await bloc.stream.firstWhere(
+          (s) => s.status == ConversationListStatus.loaded,
+        );
+        bloc.add(const ConversationListSearchQueryChanged('alice'));
+        final state = await firstMatch(
+          bloc,
+          (s) => s.searchQuery == 'alice' && s.visibleConversations.isNotEmpty,
+        );
+
+        expect(state.visibleConversations.map((c) => c.id).toList(), [
+          'room',
+        ]);
+      });
+
       test('is found by the member it is named for', () async {
         _stubStreams(mockDmRepository, accepted: [room()]);
         final bloc = createBloc(withLabels: labels);
