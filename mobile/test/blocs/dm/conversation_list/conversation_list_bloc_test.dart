@@ -2759,6 +2759,44 @@ void main() {
       });
     });
 
+    // #10151. The index matches the string the row renders, and a room is
+    // never named for the moderation account in it.
+    group('a room that includes the moderation account', () {
+      setUp(stubPeerSearchDependencies);
+      setUp(() => stubVanished(const {}));
+
+      DmConversation room() => _createConversation(
+        id: 'room',
+        isGroup: true,
+        participantPubkeys: [_testPubkey1, kModerationPubkeyHex, _testPubkey2],
+      );
+
+      test("is not found by Divine's name", () async {
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        final state = await search(bloc, labels.moderation);
+
+        expect(state.visibleConversations, isEmpty);
+      });
+
+      test('is found by the member it is named for', () async {
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels);
+        addTearDown(bloc.close);
+
+        final state = await search(
+          bloc,
+          UserProfile.defaultDisplayNameFor(_testPubkey2),
+        );
+
+        expect(state.visibleConversations.map((c) => c.id).toList(), [
+          'room',
+        ]);
+      });
+    });
+
     group('a retired Divine Moderation key', () {
       setUp(stubPeerSearchDependencies);
       // Rotated away from, so `_extractPinnedSupport` leaves it in the list as

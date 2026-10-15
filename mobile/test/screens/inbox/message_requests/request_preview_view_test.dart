@@ -821,6 +821,58 @@ void main() {
         expect(find.text(l10n.dmRetiredThreadClosedBody), findsNothing);
       });
 
+      // #10151. A room's members are whoever its author listed, so a room
+      // is never named, pictured or badged for the moderation account in it,
+      // even in production, where that account's own profile carries Divine's
+      // name.
+      testWidgets('a group that includes the moderation account is named for '
+          'another member, without the wordmark', (tester) async {
+        final subject = buildModerationSubject(
+          otherPubkey,
+          extraOverrides: [
+            userProfileReactiveProvider(kModerationPubkeyHex).overrideWith(
+              (ref) => Stream.value(
+                UserProfile(
+                  pubkey: kModerationPubkeyHex,
+                  displayName: l10n.inboxSupportRowTitle,
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: 'f' * 64,
+                ),
+              ),
+            ),
+          ],
+        );
+        when(() => mockPreviewCubit.state).thenReturn(
+          const RequestPreviewState(
+            status: RequestPreviewStatus.loaded,
+            messageCount: 1,
+            participantPubkeys: [kModerationPubkeyHex, otherPubkey],
+          ),
+        );
+
+        await tester.pumpWidget(subject);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            l10n.inboxGroupConversationTitle(
+              UserProfile.defaultDisplayNameFor(otherPubkey),
+              1,
+            ),
+          ),
+          findsWidgets,
+        );
+        expect(find.textContaining(l10n.inboxSupportRowTitle), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.logo,
+          ),
+          findsNothing,
+        );
+      });
+
       testWidgets('an ordinary request keeps the overture framing', (
         tester,
       ) async {

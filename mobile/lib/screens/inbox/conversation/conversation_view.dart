@@ -19,6 +19,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
     show LibraryClipTypeFilter;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/dm_thread_writability.dart';
 import 'package:openvine/blocs/dm/encrypted_video_save/encrypted_video_save_cubit.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
@@ -275,9 +276,10 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
 
     final otherPubkey = _otherPubkey;
     // A group is titled for the room, and `otherPubkey` is then whichever
-    // member sorted first — so the title, the line under it and the empty
-    // state must not describe or link to that one member. (`_onOptions`
-    // documents why its sheet still may.)
+    // member sorted first — so the line under the title and the empty state
+    // must not describe or link to that one member, and the title names the
+    // room for another member when that one is a moderation key (#10151).
+    // (`_onOptions` documents why its sheet still may.)
     final isGroup = widget.participantPubkeys.length > 1;
     // A thread reached from the Blocked chip is readable but not writable:
     // the block stays in force, so the composer and the reaction affordance
@@ -320,17 +322,29 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       claimedNip05 = null;
       handle = '';
     } else {
-      final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
+      // The member the title names: the counterparty of a one-to-one, and a
+      // room's first member that is not a moderation key, without Divine's
+      // branding (#10151). Sends, blocking and the options sheet still act on
+      // `otherPubkey`.
+      final named = dmConversationNamedPeer(
+        participantPubkeys: widget.participantPubkeys,
+        currentUserPubkey: currentPubkey,
+        moderationPresentation: ref.watch(
+          moderationPresentationResolverProvider,
+        ),
+      );
+      final namedPubkey = named.pubkey;
+      final profileAsync = ref.watch(fetchUserProfileProvider(namedPubkey));
       profile = profileAsync.asData?.value;
-      isResolving = ref.watch(profileIdentityResolvingProvider(otherPubkey));
+      isResolving = ref.watch(profileIdentityResolvingProvider(namedPubkey));
       // The conversation and its history remain readable — they are the
       // viewer's own copy of messages a NIP-62 vanish cannot retract. Only
       // the header identity changes.
-      isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
-      moderation = ref.watch(moderationPresentationProvider(otherPubkey));
+      isDeleted = ref.watch(profileVanishedProvider(namedPubkey));
+      moderation = named.moderation;
       final displayName = dmPeerDisplayName(
         context,
-        pubkeyHex: otherPubkey,
+        pubkeyHex: namedPubkey,
         isVanished: isDeleted,
         moderation: moderation,
         profile: profile,
@@ -349,12 +363,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       // one is named for its peer and must.
       isIdentityResolving = isResolving && conversationDisplayName.isEmpty;
       visualDisplayName = conversationDisplayName.isEmpty
-          ? UserProfile.defaultDisplayNameFor(otherPubkey)
+          ? UserProfile.defaultDisplayNameFor(namedPubkey)
           : conversationDisplayName;
       if (isGroup) {
         // No identity line under a room's name, and none of the per-member
         // lookups that feed one. The profile above is still needed: an
-        // untitled room is named for its first member.
+        // untitled room is named for one of its members.
         claimedNip05 = null;
         handle = '';
       } else {

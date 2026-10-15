@@ -55,9 +55,10 @@ DmPeerLabels dmPeerLabels(BuildContext context) => DmPeerLabels(
 /// there so `ConversationListBloc` can index rows by the string they render
 /// (#8204).
 ///
-/// [peerName] is what [dmPeerDisplayName] resolved for the row's first peer. It
-/// is passed in rather than resolved here because a 1:1 name needs a profile
-/// lookup this function has no business performing.
+/// [peerName] is what [dmPeerDisplayName] resolved for the member
+/// [dmConversationNamedPeer] names the conversation for. It is passed in rather
+/// than resolved here because a 1:1 name needs a profile lookup this function
+/// has no business performing.
 String dmConversationDisplayTitle(
   BuildContext context, {
   required List<String> participantPubkeys,

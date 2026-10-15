@@ -66,10 +66,15 @@ class ConversationTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final otherPubkey = dmConversationFirstPeer(
+    // The member the row is named and pictured for: the peer of a one-to-one,
+    // and a room's first member that is not a moderation key, without
+    // Divine's branding (#10151).
+    final named = dmConversationNamedPeer(
       participantPubkeys: conversation.participantPubkeys,
       currentUserPubkey: currentUserPubkey,
+      moderationPresentation: ref.watch(moderationPresentationResolverProvider),
     );
+    final namedPubkey = named.pubkey;
     // Any member, not the named one: a room is refused whole when any member
     // is, so a room that includes a retired key is closed wherever it sorts.
     final isClosedThread = dmConversationPeerPubkeys(
@@ -77,29 +82,28 @@ class ConversationTile extends ConsumerWidget {
       currentUserPubkey: currentUserPubkey,
     ).any(isRetiredModerationAccount);
 
-    final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
+    final profileAsync = ref.watch(fetchUserProfileProvider(namedPubkey));
     final isResolving = ref.watch(
-      profileIdentityResolvingProvider(otherPubkey),
+      profileIdentityResolvingProvider(namedPubkey),
     );
 
     // The thread and its history stay — the messages are the viewer's own copy
     // and a NIP-62 vanish cannot retract them. Only the counterparty's identity
     // is replaced.
-    final isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
-    final moderation = ref.watch(moderationPresentationProvider(otherPubkey));
+    final isDeleted = ref.watch(profileVanishedProvider(namedPubkey));
+    final moderation = named.moderation;
 
     final peerName = dmPeerDisplayName(
       context,
-      pubkeyHex: otherPubkey,
+      pubkeyHex: namedPubkey,
       isVanished: isDeleted,
       moderation: moderation,
       displayNameOverride: displayNameOverride,
       profile: profileAsync.asData?.value,
       isResolving: isResolving,
     );
-    // A group is named for the room, not for whichever peer happens to sort
-    // first: `otherPubkey` above is an arbitrary member, and naming the row
-    // after them hides that anyone else is in it.
+    // A group is named for the room, not for one member: naming the row after
+    // `namedPubkey` alone would hide that anyone else is in it.
     final displayName = dmConversationDisplayTitle(
       context,
       participantPubkeys: conversation.participantPubkeys,
@@ -116,7 +120,7 @@ class ConversationTile extends ConsumerWidget {
         ? context.l10n.commonLoading
         : displayName;
     final visualDisplayName = displayName.isEmpty
-        ? UserProfile.defaultDisplayNameFor(otherPubkey)
+        ? UserProfile.defaultDisplayNameFor(namedPubkey)
         : displayName;
 
     // The name above and the artwork here resolve through the same pair of
@@ -193,7 +197,7 @@ class ConversationTile extends ConsumerWidget {
                       // icon matches the room title beside it.
                       imageUrl: conversation.isGroup ? null : avatar.imageUrl,
                       name: visualDisplayName,
-                      placeholderSeed: otherPubkey,
+                      placeholderSeed: namedPubkey,
                       size: 40,
                       // Bundled artwork for an official moderation account,
                       // whose kind-0 picture does not survive the SVG parser.

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -102,19 +103,29 @@ class RequestPreviewView extends ConsumerWidget {
     final currentPubkey =
         ref.watch(authServiceProvider).currentPublicKeyHex ?? '';
 
-    final profileAsync = ref.watch(userProfileReactiveProvider(otherPubkey));
+    // The member the card describes and links to: the peer of a one-to-one,
+    // and a room's first member that is not a moderation key, without
+    // Divine's branding (#10151).
+    final named = dmConversationNamedPeer(
+      participantPubkeys: participantPubkeys,
+      currentUserPubkey: currentPubkey,
+      moderationPresentation: ref.watch(moderationPresentationResolverProvider),
+    );
+    final namedPubkey = named.pubkey;
+
+    final profileAsync = ref.watch(userProfileReactiveProvider(namedPubkey));
 
     final profile = profileAsync.asData?.value;
     final isResolving = ref.watch(
-      profileIdentityResolvingProvider(otherPubkey),
+      profileIdentityResolvingProvider(namedPubkey),
     );
 
     // Same treatment as [ConversationTile]. This screen also links straight
     // through to [OtherProfileScreen], which already names a vanished account
     // for the state — so without this the same tap sequence showed a generated
     // handle and then "Deleted account" (#8185).
-    final isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
-    final moderation = ref.watch(moderationPresentationProvider(otherPubkey));
+    final isDeleted = ref.watch(profileVanishedProvider(namedPubkey));
+    final moderation = named.moderation;
 
     // Suppressing the profile object as well as the name matches
     // [OtherProfileScreen], which nulls its own header profile on a vanish
@@ -134,13 +145,13 @@ class RequestPreviewView extends ConsumerWidget {
     final stats = isDeleted
         ? null
         : ref
-              .watch(userProfileStatsReactiveProvider(otherPubkey))
+              .watch(userProfileStatsReactiveProvider(namedPubkey))
               .asData
               ?.value;
 
     final peerName = dmPeerDisplayName(
       context,
-      pubkeyHex: otherPubkey,
+      pubkeyHex: namedPubkey,
       isVanished: isDeleted,
       moderation: moderation,
       profile: visibleProfile,
@@ -159,7 +170,7 @@ class RequestPreviewView extends ConsumerWidget {
     // for its peer and must.
     final isIdentityResolving = isResolving && displayName.isEmpty;
     final visualDisplayName = displayName.isEmpty
-        ? UserProfile.defaultDisplayNameFor(otherPubkey)
+        ? UserProfile.defaultDisplayNameFor(namedPubkey)
         : displayName;
 
     return Scaffold(
@@ -200,7 +211,7 @@ class RequestPreviewView extends ConsumerWidget {
                 // A vanished account shows no counts and no shimmer waiting
                 // for counts that will never arrive.
                 statsPending: !isDeleted && stats == null,
-                otherPubkey: otherPubkey,
+                otherPubkey: namedPubkey,
                 currentPubkey: currentPubkey,
                 messageCount: messageCount,
                 messages: messages,

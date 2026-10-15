@@ -1393,6 +1393,43 @@ void main() {
         );
       });
 
+      // #10151. A room's members are whoever its author listed, so a room is
+      // never titled for the moderation account in it, even in production,
+      // where that account's own profile carries Divine's name.
+      testWidgets('titles a room that includes the moderation account for '
+          'another member', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: [kModerationPubkeyHex, otherPubkey],
+            extraOverrides: [
+              fetchUserProfileProvider(kModerationPubkeyHex).overrideWith(
+                (ref) => Future.value(
+                  UserProfile(
+                    pubkey: kModerationPubkeyHex,
+                    displayName: l10n.inboxSupportRowTitle,
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: 'f' * 64,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.text(
+            l10n.inboxGroupConversationTitle(
+              UserProfile.defaultDisplayNameFor(otherPubkey),
+              1,
+            ),
+          ),
+          findsWidgets,
+        );
+        expect(find.textContaining(l10n.inboxSupportRowTitle), findsNothing);
+      });
+
       testWidgets('leaves an ordinary thread on its generated name', (
         tester,
       ) async {

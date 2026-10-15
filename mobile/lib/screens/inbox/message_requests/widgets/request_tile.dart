@@ -35,25 +35,30 @@ class RequestTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final otherPubkey = dmConversationFirstPeer(
+    // The member the row is named and pictured for: the peer of a one-to-one,
+    // and a room's first member that is not a moderation key, without
+    // Divine's branding (#10151).
+    final named = dmConversationNamedPeer(
       participantPubkeys: conversation.participantPubkeys,
       currentUserPubkey: currentUserPubkey,
+      moderationPresentation: ref.watch(moderationPresentationResolverProvider),
     );
+    final namedPubkey = named.pubkey;
 
-    final profileAsync = ref.watch(userProfileReactiveProvider(otherPubkey));
+    final profileAsync = ref.watch(userProfileReactiveProvider(namedPubkey));
     final isResolving = ref.watch(
-      profileIdentityResolvingProvider(otherPubkey),
+      profileIdentityResolvingProvider(namedPubkey),
     );
 
     // Same treatment as [ConversationTile]: a request from an account that
     // later vanished is named for the state, not for the generated handle the
     // eviction leaves behind (#8185).
-    final isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
-    final moderation = ref.watch(moderationPresentationProvider(otherPubkey));
+    final isDeleted = ref.watch(profileVanishedProvider(namedPubkey));
+    final moderation = named.moderation;
 
     final peerName = dmPeerDisplayName(
       context,
-      pubkeyHex: otherPubkey,
+      pubkeyHex: namedPubkey,
       isVanished: isDeleted,
       moderation: moderation,
       profile: profileAsync.asData?.value,
@@ -62,7 +67,7 @@ class RequestTile extends ConsumerWidget {
 
     // A group reaches this list like any other unfollowed thread —
     // `classifyPotentialRequests` routes "1:1 or group alike" — so the row has
-    // to name the room, not whichever member `otherPubkey` picked.
+    // to name the room, not the one member `namedPubkey` names it for.
     final displayName = dmConversationDisplayTitle(
       context,
       participantPubkeys: conversation.participantPubkeys,
@@ -76,7 +81,7 @@ class RequestTile extends ConsumerWidget {
     // for its peer and must.
     final isIdentityResolving = isResolving && displayName.isEmpty;
     final visualDisplayName = displayName.isEmpty
-        ? UserProfile.defaultDisplayNameFor(otherPubkey)
+        ? UserProfile.defaultDisplayNameFor(namedPubkey)
         : displayName;
 
     // The name above and the artwork here resolve through the same pair of
@@ -140,7 +145,7 @@ class RequestTile extends ConsumerWidget {
                       // icon matches the room title beside it.
                       imageUrl: conversation.isGroup ? null : avatar.imageUrl,
                       name: visualDisplayName,
-                      placeholderSeed: otherPubkey,
+                      placeholderSeed: namedPubkey,
                       size: 40,
                       contentOverride: conversation.isGroup
                           ? DivineIcon(

@@ -31,6 +31,47 @@ String dmConversationFirstPeer({
     ).firstOrNull ??
     participantPubkeys.first;
 
+/// The member a conversation is named and pictured for, and how it is
+/// presented there.
+///
+/// A one-to-one is its peer, presented as that key is. A room's members are
+/// whoever its author listed, so a room never borrows Divine's identity from
+/// one of them (#10151): it is named for its first member that is not a
+/// moderation key, and official branding is withdrawn from whoever names it.
+///
+/// A room with no such member is named for a [ModerationPresentation.former]
+/// key ahead of an official one, keeping that key's neutral name: its author
+/// may be whoever holds the former key, and naming the room for an official
+/// key would show Divine's own profile (#9963).
+({String pubkey, ModerationPresentation moderation}) dmConversationNamedPeer({
+  required List<String> participantPubkeys,
+  required String currentUserPubkey,
+  required ModerationPresentationResolver moderationPresentation,
+}) {
+  final peers = dmConversationPeerPubkeys(
+    participantPubkeys: participantPubkeys,
+    currentUserPubkey: currentUserPubkey,
+  );
+  if (peers.length <= 1) {
+    final peer = peers.firstOrNull ?? participantPubkeys.first;
+    return (pubkey: peer, moderation: moderationPresentation(peer));
+  }
+  String? firstPresentedAs(ModerationPresentation presentation) => peers
+      .where((pubkey) => moderationPresentation(pubkey) == presentation)
+      .firstOrNull;
+  final named =
+      firstPresentedAs(ModerationPresentation.ordinary) ??
+      firstPresentedAs(ModerationPresentation.former) ??
+      peers.first;
+  return (
+    pubkey: named,
+    moderation: switch (moderationPresentation(named)) {
+      ModerationPresentation.official => ModerationPresentation.ordinary,
+      final presentation => presentation,
+    },
+  );
+}
+
 /// The localized strings [dmPeerName] substitutes for a peer whose own name
 /// must not be shown.
 ///
