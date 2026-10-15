@@ -51,7 +51,9 @@ class _FollowedHashtagsView extends StatelessWidget {
                 child: Text(
                   context.l10n.followedHashtagsEmpty,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: context.vineColors.primaryText),
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
                 ),
               ),
             );
@@ -66,7 +68,9 @@ class _FollowedHashtagsView extends StatelessWidget {
                   '#${tag.displayTag}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.vineColors.primaryText),
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
                 ),
                 onTap: () => context.push(
                   HashtagScreenRouter.pathForTag(tag.displayTag),

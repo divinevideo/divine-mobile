@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hashtag_subscription_repository/hashtag_subscription_repository.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/hashtag_follows/cubit/hashtag_follows_cubit.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,8 +26,34 @@ class TestStore implements HashtagSubscriptionStore {
   }
 }
 
+class FailedPreferences extends Mock implements SharedPreferences {}
+
 void main() {
   group('hashtag_follows_cubit_test', () {
+    test('adapter rejects an unconfirmed preference write', () async {
+      final prefs = FailedPreferences();
+      when(() => prefs.setString(any(), any())).thenAnswer((_) async => false);
+      final store = SharedPreferencesHashtagSubscriptionStore(
+        prefs: prefs,
+        pubkey: 'a' * 64,
+      );
+      await expectLater(store.write('[]'), throwsException);
+    });
+    test(
+      'adapter reports corrupt preference types without overwriting',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'followed_hashtags_${'a' * 64}': 12,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final store = SharedPreferencesHashtagSubscriptionStore(
+          prefs: prefs,
+          pubkey: 'a' * 64,
+        );
+        await expectLater(store.read(), throwsFormatException);
+        expect(prefs.get('followed_hashtags_${'a' * 64}'), 12);
+      },
+    );
     test('preference adapter separates full account keys', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();

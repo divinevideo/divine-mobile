@@ -173,5 +173,30 @@ void main() {
         },
       );
     }
+    testWidgets(
+      'switching accounts during a save keeps the new account separate',
+      (tester) async {
+        final storeA = TestStore()..gate = Completer<void>();
+        final repositoryA = HashtagSubscriptionRepository(store: storeA);
+        final repositoryB = HashtagSubscriptionRepository(store: TestStore());
+        addTearDown(repositoryA.dispose);
+        addTearDown(repositoryB.dispose);
+        await tester.pumpWidget(
+          app(repositoryA, const HashtagFollowButton(hashtag: 'LNIC')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Follow'));
+        await tester.pump();
+        await tester.pumpWidget(
+          app(repositoryB, const HashtagFollowButton(hashtag: 'LNIC')),
+        );
+        await tester.pumpAndSettle();
+        storeA.gate!.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('Follow'), findsOneWidget);
+        expect(repositoryB.subscriptions, isEmpty);
+        expect(repositoryA.subscriptions.single.canonicalTag, 'lnic');
+      },
+    );
   });
 }

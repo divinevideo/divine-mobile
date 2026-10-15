@@ -465,6 +465,37 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('scrolls a long list of followed hashtags', (tester) async {
+        final state = VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          followedHashtags: List.generate(
+            50,
+            (i) => HashtagSubscription.fromTag('tag$i'),
+          ),
+        );
+        when(() => mockBloc.state).thenReturn(state);
+        await tester.pumpWidget(
+          createTestWidget(overrides: getStandardTestOverrides()),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('For You'));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text('#tag49'), 300);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('#tag49'));
+        await tester.pumpAndSettle();
+        verify(
+          () => mockBloc.add(
+            const VideoFeedSourceChanged(
+              VideoFeedSource.subscribedHashtag(
+                hashtag: 'tag49',
+                displayTag: 'tag49',
+              ),
+            ),
+          ),
+        ).called(1);
+      });
+
       testWidgets('does not dispatch event when bottom sheet dismissed', (
         tester,
       ) async {
