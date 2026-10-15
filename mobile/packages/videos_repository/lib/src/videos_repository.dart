@@ -2371,8 +2371,9 @@ class VideosRepository {
         limit: 50,
       ).timeout(timeout);
       if (videos.isNotEmpty && _inMemoryFeedCache != null) {
-        _cachedHashtagKeys.remove(cacheKey);
-        _cachedHashtagKeys.add(cacheKey);
+        _cachedHashtagKeys
+          ..remove(cacheKey)
+          ..add(cacheKey);
         if (_cachedHashtagKeys.length > 20) {
           final oldest = _cachedHashtagKeys.first;
           _cachedHashtagKeys.remove(oldest);
