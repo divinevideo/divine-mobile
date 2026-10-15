@@ -21,6 +21,8 @@ import 'package:openvine/features/people_lists/models/people_list_candidate.dart
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -30,6 +32,9 @@ class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
 
 class _MockAddPeopleToListCubit extends MockCubit<AddPeopleToListState>
     implements AddPeopleToListCubit {}
+
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -155,7 +160,19 @@ void main() {
         when(() => follow.followingStream)
             .thenAnswer((_) => const Stream.empty());
         when(follow.watchMyFollowers).thenAnswer((_) => const Stream.empty());
+        final loader = _MockRankingSignalsLoader();
+        when(() => loader.isEligible(any())).thenReturn(true);
+        when(() => loader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final key
+                in invocation.positionalArguments.single as Iterable<String>)
+              key: UserRankingSignals(pubkey: key),
+          },
+        );
+        when(() => loader.loadCachedDisplayNames(any()))
+            .thenAnswer((_) async => {});
         final picker = AddPeopleToListCubit(
+          rankingSignalsLoader: loader,
           followRepository: follow,
           profileRepository: null,
           existingMemberPubkeys: [],

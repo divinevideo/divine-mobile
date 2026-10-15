@@ -8,8 +8,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/follow_list_ranking.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 /// Cubit backing the full-screen add-people picker for a people list.
@@ -33,14 +36,17 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// the target list. Pass an empty list for a fresh list.
   AddPeopleToListCubit({
     required FollowRepository followRepository,
+    required UserRankingSignalsLoader rankingSignalsLoader,
     required ProfileRepository? profileRepository,
     required List<String> existingMemberPubkeys,
   }) : _followRepository = followRepository,
+       _rankingSignalsLoader = rankingSignalsLoader,
        _profileRepository = profileRepository,
        _existingMembers = existingMemberPubkeys.toSet(),
        super(const AddPeopleToListState());
 
   final FollowRepository _followRepository;
+  final UserRankingSignalsLoader _rankingSignalsLoader;
   final ProfileRepository? _profileRepository;
   final Set<String> _existingMembers;
 
@@ -55,47 +61,92 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// Load candidates. Emits [AddPeopleToListStatus.ready] on success and
   /// [AddPeopleToListStatus.failure] on error.
   Future<void> started() async {
-    emitIfOpen(state.copyWith(status: AddPeopleToListStatus.loading));
+    if (isClosed) return;
+    final revision = state.loadRevision + 1;
+    emitIfOpen(
+      state.copyWith(
+        status: AddPeopleToListStatus.loading,
+        candidates: const [],
+        rankingSignals: const {},
+        candidatePositions: const {},
+        rankingCandidatePubkeys: const {},
+        loadRevision: revision,
+      ),
+    );
     try {
+      await _followingSub?.cancel();
+      if (!_isCurrent(revision)) return;
+      await _followerSub?.cancel();
+      if (!_isCurrent(revision)) return;
       _candidatesByPubkey.clear();
-
-      // 1. Seed from cached following list so candidates appear immediately.
       final initialFollowing = _followRepository.followingPubkeys;
-      for (final pubkey in initialFollowing) {
+      final signals = await loadFollowListRankingSignals(
+        pubkeys: initialFollowing,
+        loader: _rankingSignalsLoader,
+        logName: 'AddPeopleToListCubit',
+        onError: (error, stackTrace) =>
+            _reportRankingError(error, stackTrace, revision),
+      );
+      if (!_isCurrent(revision)) return;
+      final names = await loadFollowListRankingNames(
+        pubkeys: signals.keys,
+        loader: _rankingSignalsLoader,
+        logName: 'AddPeopleToListCubit',
+        onError: (error, stackTrace) =>
+            _reportRankingError(error, stackTrace, revision),
+      );
+      if (!_isCurrent(revision)) return;
+      final ranked = rankFollowListSnapshot(
+        pubkeys: initialFollowing,
+        signals: signals,
+        names: names,
+        isEligible: _rankingSignalsLoader.isEligible,
+        isSmartOrderReady: false,
+        previousSmartOrder: const [],
+        now: DateTime.now(),
+      );
+      for (final pubkey in ranked.smartOrder) {
         _upsertCandidate(pubkey, isFollowing: true);
       }
-
-      // 2. Subscribe to the following stream for live updates. The stream
-      // replays the current value for late subscribers (BehaviorSubject),
-      // so later follow/unfollow deltas flow through the same sink.
-      await _followingSub?.cancel();
-      _followingSub = _followRepository.followingStream.listen(
-        _applyFollowingDelta,
-        onError: _onStreamError,
-      );
-
-      // 3. Subscribe to my-followers stream. watchMyFollowers() yields
-      // cached data instantly (when available) and then fresh data from
-      // network sources.
-      await _followerSub?.cancel();
-      _followerSub = _followRepository.watchMyFollowers().listen(
-        _applyFollowerDelta,
-        onError: _onStreamError,
-      );
-
-      // Resolve profile metadata for seeded pubkeys off the critical path.
-      unawaited(_hydrateProfiles(_candidatesByPubkey.keys.toList()));
-
       emitIfOpen(
         state.copyWith(
-          status: AddPeopleToListStatus.ready,
-          candidates: _sortedCandidates(),
+          rankingSignals: Map.unmodifiable(signals),
+          rankingCandidatePubkeys: Set.unmodifiable(initialFollowing),
+          candidatePositions: Map.unmodifiable({
+            for (final (index, key) in ranked.smartOrder.indexed) key: index,
+          }),
         ),
       );
+      _followingSub = _followRepository.followingStream.listen(
+        (pubkeys) {
+          if (_isCurrent(revision)) _applyFollowingDelta(pubkeys);
+        },
+        onError: _onStreamError,
+      );
+      _followerSub = _followRepository.watchMyFollowers().listen(
+        (snapshot) {
+          if (_isCurrent(revision)) _applyFollowerDelta(snapshot);
+        },
+        onError: _onStreamError,
+      );
+      _emitCandidates();
+      unawaited(_hydrateProfiles(_candidatesByPubkey.keys.toList(), revision));
     } catch (error, stackTrace) {
+      if (!_isCurrent(revision)) return;
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: AddPeopleToListStatus.failure));
     }
+  }
+
+  bool _isCurrent(int revision) => !isClosed && state.loadRevision == revision;
+
+  void _reportRankingError(Object error, StackTrace stackTrace, int revision) {
+    if (!_isCurrent(revision)) return;
+    addError(
+      asReportableError(error, context: 'AddPeopleToListCubit.ranking') ??
+          error,
+      stackTrace,
+    );
   }
 
   /// Update the current search query.
@@ -172,7 +223,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   }
 
   void _applyFollowingDelta(List<String> followingPubkeys) {
-    final newSet = followingPubkeys.toSet();
+    final newSet = followingPubkeys.where(_isEligibleCandidate).toSet();
     final newlyAdded = <String>[];
 
     // Set isFollowing=true for everyone in the new set; add missing
@@ -190,18 +241,15 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       }
     }
 
-    if (newlyAdded.isNotEmpty) unawaited(_hydrateProfiles(newlyAdded));
+    if (newlyAdded.isNotEmpty) {
+      unawaited(_hydrateProfiles(newlyAdded, state.loadRevision));
+    }
 
-    emitIfOpen(
-      state.copyWith(
-        status: AddPeopleToListStatus.ready,
-        candidates: _sortedCandidates(),
-      ),
-    );
+    _emitCandidates();
   }
 
   void _applyFollowerDelta(FollowersSnapshot result) {
-    final followerSet = result.pubkeys.toSet();
+    final followerSet = result.pubkeys.where(_isEligibleCandidate).toSet();
     final newlyAdded = <String>[];
 
     for (final pk in followerSet) {
@@ -216,14 +264,11 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       }
     }
 
-    if (newlyAdded.isNotEmpty) unawaited(_hydrateProfiles(newlyAdded));
+    if (newlyAdded.isNotEmpty) {
+      unawaited(_hydrateProfiles(newlyAdded, state.loadRevision));
+    }
 
-    emitIfOpen(
-      state.copyWith(
-        status: AddPeopleToListStatus.ready,
-        candidates: _sortedCandidates(),
-      ),
-    );
+    _emitCandidates();
   }
 
   void _onStreamError(Object error, StackTrace stackTrace) {
@@ -238,7 +283,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// a background [ProfileRepository.fetchFreshProfile] — when that
   /// completes (or fails), the candidate row is updated and a new state
   /// is emitted.
-  Future<void> _hydrateProfiles(List<String> pubkeys) async {
+  Future<void> _hydrateProfiles(List<String> pubkeys, int revision) async {
     final repo = _profileRepository;
     if (repo == null) return;
 
@@ -246,26 +291,29 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     for (final pk in pubkeys) {
       try {
         final cached = await repo.getCachedProfile(pubkey: pk);
+        if (!_isCurrent(revision)) return;
         if (cached != null && _applyProfile(pk, cached)) {
           changed = true;
         } else {
-          unawaited(_fetchFreshAndApply(pk));
+          unawaited(_fetchFreshAndApply(pk, revision));
         }
       } catch (error, stackTrace) {
+        if (!_isCurrent(revision)) return;
         addError(error, stackTrace);
       }
     }
 
-    if (changed) {
+    if (changed && _isCurrent(revision)) {
       emitIfOpen(state.copyWith(candidates: _sortedCandidates()));
     }
   }
 
-  Future<void> _fetchFreshAndApply(String pubkey) async {
+  Future<void> _fetchFreshAndApply(String pubkey, int revision) async {
     final repo = _profileRepository;
     if (repo == null) return;
     try {
       final profile = await repo.fetchFreshProfile(pubkey: pubkey);
+      if (!_isCurrent(revision)) return;
       if (profile != null && _applyProfile(pubkey, profile)) {
         emitIfOpen(state.copyWith(candidates: _sortedCandidates()));
       }
@@ -273,7 +321,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       // Deliberate fallback: if the fetch fails, the candidate keeps its
       // null display metadata so the UI can render a pubkey-derived
       // fallback. The failure is still surfaced via addError for logging.
-      addError(error, stackTrace);
+      if (_isCurrent(revision)) addError(error, stackTrace);
     }
   }
 
@@ -302,14 +350,43 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     return true;
   }
 
+  bool _isEligibleCandidate(String key) =>
+      _rankingSignalsLoader.isEligible(key) &&
+      (!state.rankingCandidatePubkeys.contains(key) ||
+          state.rankingSignals.containsKey(key));
+
   /// Deterministic, stable sort used for [AddPeopleToListState.candidates].
   List<PeopleListCandidate> _sortedCandidates() {
-    final list = _candidatesByPubkey.values.toList();
+    final list = _candidatesByPubkey.values
+        .where((candidate) => _isEligibleCandidate(candidate.pubkey))
+        .toList();
     list.sort(_compareCandidates);
     return List.unmodifiable(list);
   }
 
-  static int _compareCandidates(PeopleListCandidate a, PeopleListCandidate b) {
+  void _emitCandidates() {
+    final candidates = _sortedCandidates();
+    final positions = Map<String, int>.of(state.candidatePositions);
+    for (final candidate in candidates) {
+      positions.putIfAbsent(candidate.pubkey, () => positions.length);
+    }
+    emitIfOpen(
+      state.copyWith(
+        status: AddPeopleToListStatus.ready,
+        candidates: candidates,
+        candidatePositions: Map.unmodifiable(positions),
+      ),
+    );
+  }
+
+  int _compareCandidates(PeopleListCandidate a, PeopleListCandidate b) {
+    final positionA = state.candidatePositions[a.pubkey];
+    final positionB = state.candidatePositions[b.pubkey];
+    if (positionA != null || positionB != null) {
+      if (positionA == null) return 1;
+      if (positionB == null) return -1;
+      return positionA.compareTo(positionB);
+    }
     final rankA = _relationshipRank(a);
     final rankB = _relationshipRank(b);
     if (rankA != rankB) return rankA.compareTo(rankB);
