@@ -36,6 +36,22 @@ class _PendingCrashReporter implements CrashReporter {
   }
 }
 
+/// Fails every non-fatal report, as a crash reporter that is down would.
+class _FailingCrashReporter implements CrashReporter {
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) => Future.error(StateError('Crash reporter is down'));
+}
+
 /// The coordinator's warning and error lines in the unified log, which is
 /// what a bug report carries.
 List<LogEntry> _coordinatorFailureLogs() => LogCaptureService()
@@ -509,6 +525,41 @@ void main() {
           crashReporter.finishReports();
           async.flushMicrotasks();
         });
+      });
+
+      test('rethrows a required failure when its report fails', () async {
+        final failure = Exception('Required service failed');
+        final coordinator =
+            StartupCoordinator(crashReporter: _FailingCrashReporter())
+              ..registerService(
+                name: 'RequiredService',
+                phase: StartupPhase.critical,
+                initialize: () async {
+                  throw failure;
+                },
+              );
+
+        await expectLater(coordinator.initialize(), throwsA(same(failure)));
+      });
+
+      test('finishes initialization when an optional service failure cannot '
+          'be reported', () async {
+        final coordinator =
+            StartupCoordinator(crashReporter: _FailingCrashReporter())
+              ..registerService(
+                name: 'OptionalService',
+                phase: StartupPhase.deferred,
+                initialize: () async {
+                  throw Exception('Optional service failed');
+                },
+                optional: true,
+              );
+
+        await expectLater(coordinator.initialize(), completes);
+        expect(
+          _coordinatorFailureLogs().map((entry) => entry.message),
+          contains('Failed to report the OptionalService failure'),
+        );
       });
     });
 

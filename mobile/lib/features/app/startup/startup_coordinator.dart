@@ -185,11 +185,21 @@ class StartupCoordinator {
         );
       }
 
-      await _crashReporter.recordError(
-        error,
-        stackTrace,
-        reason: 'Service initialization failed: ${service.name}',
-      );
+      try {
+        await _crashReporter.recordError(
+          error,
+          stackTrace,
+          reason: 'Service initialization failed: ${service.name}',
+        );
+      } catch (reportError, reportStackTrace) {
+        // A failed report must not replace the service's own failure.
+        Log.error(
+          'Failed to report the ${service.name} failure',
+          name: 'StartupCoordinator',
+          error: reportError,
+          stackTrace: reportStackTrace,
+        );
+      }
       _crashReporter.log('✗ ${service.name} failed: $error');
 
       if (!service.optional) {
