@@ -850,6 +850,12 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
         // Issue #3936 requires the NIP-39 identity caches to clear on logout
         // and account switches rather than persisting across identities.
         if (!preserveActiveSession) {
+          if (userPubkey != null) {
+            await requiredCleanup(
+              'myFollowers',
+              () => db.myFollowersDao.clearAllForUser(userPubkey),
+            );
+          }
           await safeCleanup('identityEvents', db.identityEventsDao.clearAll);
           await safeCleanup(
             'identityVerifications',

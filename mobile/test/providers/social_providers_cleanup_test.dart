@@ -223,6 +223,66 @@ void main() {
     );
 
     test(
+      'account switch clears the departing owner my_followers rows and keeps the other owner',
+      () async {
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyA,
+          followers: [(pubkey: _reactionIdA, followedAt: 100)],
+          seenAt: 200,
+        );
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyB,
+          followers: [(pubkey: _reactionIdB, followedAt: 150)],
+          seenAt: 200,
+        );
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), [
+          (pubkey: _reactionIdA, followedAt: 100),
+        ]);
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+      },
+    );
+
+    test('preserveActiveSession keeps my_followers rows', () async {
+      await db.myFollowersDao.upsertAll(
+        ownerPubkey: _pubkeyA,
+        followers: [(pubkey: _reactionIdA, followedAt: 100)],
+        seenAt: 200,
+      );
+      expect(await db.myFollowersDao.followersOf(_pubkeyA), [
+        (pubkey: _reactionIdA, followedAt: 100),
+      ]);
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await subscription.read().onDatabaseCleanup!(
+        userPubkey: _pubkeyA,
+        deleteUserData: true,
+        preserveActiveSession: true,
+      );
+
+      expect(await db.myFollowersDao.followersOf(_pubkeyA), [
+        (pubkey: _reactionIdA, followedAt: 100),
+      ]);
+    });
+
+    test(
       'an account switch clears the departing account watch history',
       () async {
         // seen_videos has no owner column, so whatever is in it belongs to
