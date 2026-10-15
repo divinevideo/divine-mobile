@@ -199,7 +199,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         return [
           // Preserve the first visible order, including recipients selected
           // while the cache read or hydration was in flight. Identity-less
-          // misses disappear after hydration; newly identified rows append.
+          // misses disappear after hydration; a miss that hydration identifies
+          // keeps its place, and only rows not shown before append.
           for (final contact in state.contacts)
             if (!_isSelf(contact.pubkey) &&
                 !excludedPubkeys.contains(contact.pubkey) &&

@@ -232,9 +232,9 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     final trackedSources = <SearchSource>{};
 
     // Snapshot the follow graph once for this query so every progressive
-    // yield uses the same boost set. Boost ordering is applied inside the
-    // repository (see ProfileRepository.searchUsersProgressive), keeping
-    // ranking logic out of the BLoC.
+    // yield uses the same boost set. The follow boost is applied inside the
+    // repository (see ProfileRepository.searchUsersProgressive); [_rankPage]
+    // then promotes locally known accounts within each page.
     final followedPubkeys = _followRepository?.followingPubkeys.toSet();
     final cancellationToken = SearchCancellationToken(
       'user-search-${++_nextSearchCorrelationId}',
