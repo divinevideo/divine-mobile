@@ -12,6 +12,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
+import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
@@ -27,6 +28,8 @@ class _MockRelayPublisher extends Mock implements SignedEventRelayPublisher {}
 class _FakeEvent extends Fake implements Event {}
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
+
+class _MockExtraction extends Mock implements AudioExtractionService {}
 
 Event _signedAudioEvent() => Event.fromJson({
   'id': _soundEventId,
@@ -80,6 +83,49 @@ AudioEvent _providerSound() => AudioEvent(
 );
 
 void main() {
+  test(
+    'closing the request session during extraction stops the upload',
+    () async {
+      final auth = _MockAuthService();
+      final extraction = _MockExtraction();
+      final blossom = _MockBlossomUploadService();
+      var active = true;
+      when(() => auth.currentPublicKeyHex).thenReturn(_self);
+      when(() => extraction.extractAudio(videoPath: '/source.mp4'))
+          .thenAnswer((_) async {
+            active = false;
+            return AudioExtractionResult(
+              audioFilePath: '/sound.wav',
+              duration: 1,
+              fileSize: 4,
+              sha256Hash: 'a' * 64,
+              mimeType: 'audio/wav',
+            );
+          });
+      final nostr = _MockNostrClient();
+      when(() => nostr.connectedRelays).thenReturn(const []);
+      when(() => nostr.configuredRelays).thenReturn(const []);
+      when(() => extraction.cleanupAudioFile('/sound.wav'))
+          .thenAnswer((_) async {});
+      final publisher = VideoAudioPublisher(
+        nostrClient: nostr,
+        relayPublisher: _MockRelayPublisher(),
+        authService: auth,
+        blossomUploadService: blossom,
+        audioExtractionService: extraction,
+      );
+      final result = await publisher.publishOriginalSound(
+        videoPath: '/source.mp4',
+        videoDTag: 'clip',
+        videoTitle: 'Clip',
+        ownerPubkey: _self,
+        isOperationCurrent: () => active,
+      );
+      expect(result, isNull);
+      verifyZeroInteractions(blossom);
+    },
+  );
+
   late _MockNostrClient nostrClient;
   late _MockAuthService authService;
   late _MockRelayPublisher relayPublisher;

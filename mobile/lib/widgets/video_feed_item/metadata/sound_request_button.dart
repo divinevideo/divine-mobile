@@ -44,13 +44,19 @@ class _SoundRequestButtonState extends State<SoundRequestButton> {
     final creator = soundRequestCreator(widget.videoAddress);
     if (creator == null) return;
     final existing = cubit.state.snapshot.requests.values.any(
-      (r) => r.videoAddress == widget.videoAddress && r.requester == owner,
+      (r) =>
+          r.videoAddress == widget.videoAddress &&
+          r.requester == owner &&
+          r.isPending,
     );
     if (!existing) {
       await cubit.request(widget.videoAddress);
       if (!mounted || cubit.state.ownerPubkey != owner) return;
       if (!cubit.state.snapshot.requests.values.any(
-        (r) => r.videoAddress == widget.videoAddress && r.requester == owner,
+        (r) =>
+            r.videoAddress == widget.videoAddress &&
+            r.requester == owner &&
+            r.isPending,
       )) {
         return;
       }
@@ -58,6 +64,7 @@ class _SoundRequestButtonState extends State<SoundRequestButton> {
     if (!mounted) return;
     final host = Navigator.of(context, rootNavigator: true).context;
     if (ModalRoute.of(context) is PopupRoute) Navigator.of(context).pop();
+    if (!host.mounted) return;
     await host.pushWithVideoPause(
       ConversationPage.pathForId(
         DmRepository.computeConversationId([owner, creator]),

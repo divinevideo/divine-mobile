@@ -105,7 +105,7 @@ void main() {
           GoRoute(
             path: VideoRecorderScreen.path,
             builder: (_, state) {
-              selection = (state.extra! as RecorderSoundSelection)!;
+              selection = state.extra! as RecorderSoundSelection;
               return const Scaffold(body: Text('Creation'));
             },
           ),

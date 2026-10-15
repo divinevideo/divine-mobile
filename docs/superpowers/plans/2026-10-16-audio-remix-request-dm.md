@@ -31,6 +31,14 @@
 
 ---
 
+## Execution status
+
+Tasks 1–5 are implemented and committed. Task 6 validation is in progress.
+The native transport scenario also has a host runner that exercises real NIP-17
+messages over loopback WebSockets with durable Drift storage. Full camera/media
+backend E2E is unrun: the local stack preflight reports occupied ClickHouse
+ports belonging to another task; no other task's services were stopped.
+
 ## File and responsibility map
 
 - `mobile/packages/dm_repository/lib/src/sound_request_message.dart`: shared wire metadata, builders, strict parser.

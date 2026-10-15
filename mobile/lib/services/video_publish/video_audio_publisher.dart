@@ -558,8 +558,12 @@ class VideoAudioPublisher {
     required String videoTitle,
     required String ownerPubkey,
     int videoKind = 34236,
+    bool Function()? isOperationCurrent,
   }) async {
-    if (_authService?.currentPublicKeyHex != ownerPubkey) return null;
+    if (isOperationCurrent?.call() == false ||
+        _authService?.currentPublicKeyHex != ownerPubkey) {
+      return null;
+    }
     return _publishExtractedAudioEvent(
       videoPath: videoPath,
       videoDTag: videoDTag,
@@ -568,6 +572,7 @@ class VideoAudioPublisher {
       relayHint: _relayHint(),
       sourceVideoKind: videoKind,
       enforceOwner: true,
+      isOperationCurrent: isOperationCurrent,
     );
   }
 
@@ -587,6 +592,7 @@ class VideoAudioPublisher {
     AudioShareAttribution? attribution,
     int? sourceVideoKind,
     bool enforceOwner = false,
+    bool Function()? isOperationCurrent,
   }) async {
     Log.info(
       'Starting audio extraction and publishing flow',
@@ -639,7 +645,9 @@ class VideoAudioPublisher {
       );
 
       final audioFile = File(extractionResult.audioFilePath);
-      if (enforceOwner && _authService?.currentPublicKeyHex != pubkey) {
+      if (enforceOwner &&
+          (isOperationCurrent?.call() == false ||
+              _authService?.currentPublicKeyHex != pubkey)) {
         return null;
       }
       final uploadResult = await blossomService.uploadAudio(
@@ -737,7 +745,9 @@ class VideoAudioPublisher {
         return null;
       }
 
-      if (enforceOwner && authService.currentPublicKeyHex != pubkey) {
+      if (enforceOwner &&
+          (isOperationCurrent?.call() == false ||
+              authService.currentPublicKeyHex != pubkey)) {
         return null;
       }
       final signedAudioEvent = await authService.createAndSignEvent(
@@ -753,7 +763,8 @@ class VideoAudioPublisher {
 
       if (signedAudioEvent == null ||
           (enforceOwner &&
-              (signedAudioEvent.pubkey != pubkey ||
+              (isOperationCurrent?.call() == false ||
+                  signedAudioEvent.pubkey != pubkey ||
                   authService.currentPublicKeyHex != pubkey))) {
         Log.error(
           'Failed to create and sign audio event',
@@ -794,6 +805,9 @@ class VideoAudioPublisher {
         category: LogCategory.video,
       );
 
+      if (enforceOwner && isOperationCurrent?.call() == false) {
+        return signedAudioEvent.id;
+      }
       final savedSoundsService = _savedSoundsService;
       if (savedSoundsService != null) {
         final publishedAudioEvent = AudioEvent.fromNostrEvent(signedAudioEvent);

@@ -29,10 +29,10 @@ void main() {
         await tester.pumpWidget(
           BlocProvider.value(
             value: cubit,
-            child: MaterialApp(
+            child: const MaterialApp(
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: const Scaffold(
+              home: Scaffold(
                 body: SoundRequestButton(videoAddress: address),
               ),
             ),

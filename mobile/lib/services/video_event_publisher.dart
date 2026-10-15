@@ -819,15 +819,6 @@ class VideoEventPublisher {
     );
   }
 
-  /// Republish a video event with added text-track tags for subtitles.
-  ///
-  /// Strips any existing text-track tags from the original event, then emits
-  /// one tag per ref ([textTrackRef] followed by each entry in
-  /// [extraTextTrackRefs]) for read-time redundancy. Returns the updated
-  /// video event after relay acceptance, or `null` if publishing failed.
-  ///
-  /// Throws [AccountRestrictedPublishException] when the configured Divine
-  /// relay reports that the account is suspended or banned.
   /// Publishes the owner's original sound without uploading another video.
   Future<String?> publishOriginalSound({
     required String videoPath,
@@ -835,12 +826,14 @@ class VideoEventPublisher {
     required String videoTitle,
     required String ownerPubkey,
     int videoKind = 34236,
+    bool Function()? isOperationCurrent,
   }) => _audioPublisher.publishOriginalSound(
     videoPath: videoPath,
     videoDTag: videoDTag,
     videoTitle: videoTitle,
     ownerPubkey: ownerPubkey,
     videoKind: videoKind,
+    isOperationCurrent: isOperationCurrent,
   );
 
   /// Replaces only audio-sharing tags on a signed, addressable owner video.
@@ -848,15 +841,18 @@ class VideoEventPublisher {
     required VideoEvent existingEvent,
     required String audioEventId,
     required String audioRelayHint,
+    bool Function()? isOperationCurrent,
   }) async {
     final auth = _authService;
     final owner = existingEvent.pubkey;
     final kind = existingEvent.eventKind;
-    if (auth == null ||
+    if (isOperationCurrent?.call() == false ||
+        auth == null ||
         auth.currentPublicKeyHex != owner ||
         !NostrHexUtils.isValidEventId(audioEventId) ||
-        (kind != 34236 && kind != 34235))
+        (kind != 34236 && kind != 34235)) {
       return null;
+    }
     final originalTags = sourceOriginalVideoTags(
       video: existingEvent,
       personalEventCache: _personalEventCache,
@@ -866,8 +862,9 @@ class VideoEventPublisher {
         .toList();
     if (dTags.length != 1 ||
         dTags.single.length != 2 ||
-        dTags.single[1].isEmpty)
+        dTags.single[1].isEmpty) {
       return null;
+    }
     final tags =
         originalTags
             .where(
@@ -886,13 +883,16 @@ class VideoEventPublisher {
       tags: tags,
       createdAt: nextReplacementCreatedAt(existingEvent),
     );
-    if (event == null ||
+    if (isOperationCurrent?.call() == false ||
+        event == null ||
         event.pubkey != owner ||
-        auth.currentPublicKeyHex != owner)
+        auth.currentPublicKeyHex != owner) {
       return null;
+    }
     if (await _relayPublisher.publishViaWebSocket(event) !=
-        EventPublishOutcome.published)
+        EventPublishOutcome.published) {
       return null;
+    }
     final updated = VideoEvent.fromNostrEvent(event, permissive: true);
     if (auth.currentPublicKeyHex == owner) {
       _personalEventCache?.cacheUserEvent(event);
@@ -901,6 +901,15 @@ class VideoEventPublisher {
     return updated;
   }
 
+  /// Republish a video event with added text-track tags for subtitles.
+  ///
+  /// Strips any existing text-track tags from the original event, then emits
+  /// one tag per ref ([textTrackRef] followed by each entry in
+  /// [extraTextTrackRefs]) for read-time redundancy. Returns the updated
+  /// video event after relay acceptance, or `null` if publishing failed.
+  ///
+  /// Throws [AccountRestrictedPublishException] when the configured Divine
+  /// relay reports that the account is suspended or banned.
   Future<VideoEvent?> republishWithSubtitles({
     required VideoEvent existingEvent,
     required String textTrackRef,

@@ -11,8 +11,9 @@ class SoundRequestDmClient implements SoundRequestTransport {
   final DmRepository _repository;
   final String ownerPubkey;
   void _checkAccount() {
-    if (_repository.userPubkey != ownerPubkey)
+    if (_repository.userPubkey != ownerPubkey) {
       throw StateError('DM account changed');
+    }
   }
 
   @override
@@ -53,8 +54,9 @@ class SoundRequestDmClient implements SoundRequestTransport {
     _checkAccount();
     final history = await _repository.watchSoundRequestMessages().first;
     _checkAccount();
-    if (history.any((m) => m.id == rumorId && m.senderPubkey == ownerPubkey))
+    if (history.any((m) => m.id == rumorId && m.senderPubkey == ownerPubkey)) {
       return;
+    }
     final result = await _repository.recoverFullSend(rumorId: rumorId);
     _checkAccount();
     if (!result.success) throw StateError('Sound request delivery pending');

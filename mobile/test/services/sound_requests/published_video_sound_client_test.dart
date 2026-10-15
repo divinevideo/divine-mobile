@@ -80,7 +80,6 @@ void main() {
           createdAt: 1,
           url: 'https://example.com/sound.wav',
           sourceVideoReference: address,
-          allowsReuse: true,
           hasExplicitReuseConsent: true,
         ),
       );

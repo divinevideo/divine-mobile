@@ -32,7 +32,7 @@ class SoundRequestPreferencesStore implements SoundRequestStore {
         throw StateError('Sound request state could not be persisted');
       }
     });
-    _writes = write.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _writes = write.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return write;
   }
 }

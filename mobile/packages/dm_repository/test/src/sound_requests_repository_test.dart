@@ -22,7 +22,7 @@ DmMessage requestMessage(String who, String id) => DmMessage(
   createdAt: 1,
   giftWrapId: sound,
   tags: [
-    ['p', creator],
+    const ['p', creator],
     ...soundRequestTags(videoAddress: address),
   ],
 );
@@ -47,6 +47,7 @@ class Transport implements SoundRequestTransport {
   final List<DmMessage> messages;
   final intents = <String, SoundRequestSendIntent>{};
   bool failDelivery = false;
+  int attempts = 0;
   final delivered = <String>{};
   @override
   Stream<List<DmMessage>> watchMessages() => Stream.value(messages);
@@ -58,6 +59,7 @@ class Transport implements SoundRequestTransport {
 
   @override
   Future<void> retry(String id) async {
+    attempts++;
     if (failDelivery) throw StateError('offline');
     delivered.add(id);
   }
@@ -118,6 +120,64 @@ SoundRequestsRepository repository(
   now: () => DateTime.utc(2026, 10, 16),
 );
 void main() {
+  test('a fulfilled requester can ask again after reuse is disabled', () async {
+    final transport = Transport([]);
+    final store = MemoryStore();
+    final publisher = Publisher();
+    final repo = repository(viewer, transport, store, publisher);
+    await repo.start();
+    final first = await repo.request(address);
+    await repo.close();
+    final snapshot = store.data[viewer]!;
+    store.data[viewer] = snapshot.copyWith(
+      requests: {
+        first: snapshot.requests[first]!.copyWith(
+          status: SoundRequestStatus.ready,
+        ),
+      },
+    );
+    final resumed = repository(viewer, transport, store, publisher);
+    addTearDown(resumed.close);
+    await resumed.start();
+    final next = await resumed.request(address);
+    expect(next, isNot(first));
+    expect(transport.intents, hasLength(2));
+  });
+
+  test(
+    'completed approval cannot enable reuse again for a later request',
+    () async {
+      final first = requestMessage(viewer, '1' * 64);
+      final transport = Transport([first]);
+      final store = MemoryStore();
+      final publisher = Publisher();
+      final repo = repository(creator, transport, store, publisher);
+      await repo.start();
+      await repo.approve(first.id);
+      await repo.close();
+      publisher.enabled = false;
+      transport.messages.add(requestMessage(second, '2' * 64));
+      final resumed = repository(creator, transport, store, publisher);
+      addTearDown(resumed.close);
+      await resumed.start();
+      expect(publisher.enabled, isFalse);
+      expect(transport.delivered, hasLength(1));
+    },
+  );
+  test('repeated approval does not send another ready reply', () async {
+    final first = requestMessage(viewer, '1' * 64);
+    final transport = Transport([first]);
+    final store = MemoryStore();
+    final publisher = Publisher();
+    final repo = repository(creator, transport, store, publisher);
+    addTearDown(repo.close);
+    await repo.start();
+    await repo.approve(first.id);
+    await repo.approve(first.id);
+    expect(publisher.audioPublishes, 1);
+    expect(transport.attempts, 1);
+  });
+
   test(
     'one approval publishes once and replies to all pending requesters',
     () async {

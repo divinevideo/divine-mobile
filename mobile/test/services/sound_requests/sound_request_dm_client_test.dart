@@ -18,7 +18,7 @@ void main() {
     () async {
       final repository = _Repository();
       when(() => repository.userPubkey).thenReturn(owner);
-      when(() => repository.watchSoundRequestMessages())
+      when(repository.watchSoundRequestMessages)
           .thenAnswer((_) => Stream.value([]));
       when(
         () => repository.enqueueSend(
@@ -42,16 +42,16 @@ void main() {
         videoAddress: '34236:$recipient:clip',
       );
       expect(await client.enqueue(intent), rumor);
-      when(() => repository.watchSoundRequestMessages()).thenAnswer(
+      when(repository.watchSoundRequestMessages).thenAnswer(
         (_) => Stream.value([
-          DmMessage(
+          const DmMessage(
             id: rumor,
             conversationId: 'conversation',
             senderPubkey: owner,
             content: 'Please enable',
             createdAt: 1,
             giftWrapId: rumor,
-            tags: const [
+            tags: [
               ['batch', 'stable'],
             ],
           ),

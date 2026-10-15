@@ -59,7 +59,7 @@ class SoundRequestsRepository {
       _checkOpen();
       return action();
     });
-    _tail = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return result;
   }
 
@@ -133,16 +133,20 @@ class SoundRequestsRepository {
     for (final m in parsed.where(
       (m) => m.kind == SoundRequestMessageKind.request,
     )) {
+      if (requests.containsKey(m.messageId)) continue;
       final known = requests.values.any(
         (r) =>
-            r.videoAddress == m.videoAddress && r.requester == m.senderPubkey,
+            r.videoAddress == m.videoAddress &&
+            r.requester == m.senderPubkey &&
+            r.isPending,
       );
-      if (!known)
+      if (!known) {
         requests[m.messageId] = SoundRequestEntry(
           id: m.messageId,
           requester: m.senderPubkey,
           videoAddress: m.videoAddress,
         );
+      }
     }
     for (final m in parsed.where(
       (m) => m.kind == SoundRequestMessageKind.ready,
@@ -158,8 +162,9 @@ class SoundRequestsRepository {
         );
       }
     }
-    if (!_sameRequests(requests))
+    if (!_sameRequests(requests)) {
       await _save(_state.copyWith(requests: requests));
+    }
     try {
       await _drain();
     } on Object catch (e, s) {
@@ -218,11 +223,15 @@ class SoundRequestsRepository {
   /// Sends one request per source, joining an existing pending request.
   Future<String> request(String videoAddress) => _run(() async {
     final creator = soundRequestCreator(videoAddress);
-    if (creator == null || creator == ownerPubkey)
+    if (creator == null || creator == ownerPubkey) {
       throw StateError('Invalid sound request target');
+    }
     final existing = _state.requests.values
         .where(
-          (r) => r.videoAddress == videoAddress && r.requester == ownerPubkey,
+          (r) =>
+              r.videoAddress == videoAddress &&
+              r.requester == ownerPubkey &&
+              r.isPending,
         )
         .firstOrNull;
     final pendingJob = _state.jobs.values
@@ -232,17 +241,26 @@ class SoundRequestsRepository {
       await _drain();
       return _state.requests.values
           .firstWhere(
-            (r) => r.videoAddress == videoAddress && r.requester == ownerPubkey,
+            (r) =>
+                r.videoAddress == videoAddress &&
+                r.requester == ownerPubkey &&
+                r.isPending,
           )
           .id;
     }
     if (existing != null) return existing.id;
     final source = await _publisher.resolve(videoAddress);
     _checkOpen();
-    if (!source.requestable || source.allowReuse)
+    if (!source.requestable || source.allowReuse) {
       throw StateError('Sound is not requestable');
+    }
+    final generation = _state.requests.values
+        .where(
+          (r) => r.videoAddress == videoAddress && r.requester == ownerPubkey,
+        )
+        .length;
     final intent = SoundRequestSendIntent(
-      key: 'sound-request:$ownerPubkey:$videoAddress',
+      key: 'sound-request:$ownerPubkey:$videoAddress:$generation',
       recipient: creator,
       content: _requestBody(videoAddress),
       tags: soundRequestTags(videoAddress: videoAddress),
@@ -253,7 +271,10 @@ class SoundRequestsRepository {
     await _drain();
     return _state.requests.values
         .firstWhere(
-          (r) => r.videoAddress == videoAddress && r.requester == ownerPubkey,
+          (r) =>
+              r.videoAddress == videoAddress &&
+              r.requester == ownerPubkey &&
+              r.isPending,
         )
         .id;
   });
@@ -265,6 +286,10 @@ class SoundRequestsRepository {
         soundRequestCreator(request.videoAddress) != ownerPubkey ||
         request.requester == ownerPubkey) {
       throw StateError('This account cannot approve the request');
+    }
+    if (request.status == SoundRequestStatus.ready) {
+      await _drain();
+      return;
     }
     await _save(
       _state.copyWith(
@@ -283,6 +308,14 @@ class SoundRequestsRepository {
     try {
       final source = await _publisher.resolve(address);
       _checkOpen();
+      final checkpoint = _state.audioByVideo[address];
+      if (soundRequestCreator(address) == ownerPubkey &&
+          checkpoint != null &&
+          source.audioEventId == checkpoint) {
+        await _fulfill(address, checkpoint);
+        await _drain();
+        return;
+      }
       if (soundRequestCreator(address) != ownerPubkey || !source.requestable) {
         throw StateError('Video cannot enable sound reuse');
       }
@@ -330,8 +363,9 @@ class SoundRequestsRepository {
       if (request.videoAddress != address ||
           request.requester == ownerPubkey ||
           request.status == SoundRequestStatus.dismissed ||
-          request.status == SoundRequestStatus.ready)
+          request.status == SoundRequestStatus.ready) {
         continue;
+      }
       requests[request.id] = request.copyWith(
         status: valid
             ? SoundRequestStatus.ready
@@ -358,7 +392,20 @@ class SoundRequestsRepository {
         );
       }
     }
-    await _save(_state.copyWith(requests: requests, jobs: jobs));
+    final approvals = Set<String>.of(_state.approvedVideos);
+    final checkpoints = Map<String, String>.of(_state.audioByVideo);
+    if (valid) {
+      approvals.remove(address);
+      checkpoints.remove(address);
+    }
+    await _save(
+      _state.copyWith(
+        requests: requests,
+        jobs: jobs,
+        approvedVideos: approvals,
+        audioByVideo: checkpoints,
+      ),
+    );
   }
 
   Future<void> _drain() async {
@@ -411,8 +458,9 @@ class SoundRequestsRepository {
   Future<void> dismiss(String requestId) => _run(() async {
     final request = _state.requests[requestId];
     if (request == null ||
-        soundRequestCreator(request.videoAddress) != ownerPubkey)
+        soundRequestCreator(request.videoAddress) != ownerPubkey) {
       throw StateError('Invalid dismissal');
+    }
     await _save(
       _state.copyWith(
         requests: {
@@ -431,8 +479,13 @@ class SoundRequestsRepository {
       await _drain();
       return;
     }
-    if (!_state.approvedVideos.contains(request.videoAddress))
+    if (request.status == SoundRequestStatus.ready) {
+      await _drain();
+      return;
+    }
+    if (!_state.approvedVideos.contains(request.videoAddress)) {
       throw StateError('Request has not been approved');
+    }
     await _publishFor(request.videoAddress);
   });
 
@@ -445,8 +498,9 @@ class SoundRequestsRepository {
         request.requester != ownerPubkey ||
         request.videoAddress != message.videoAddress ||
         message.senderPubkey != soundRequestCreator(request.videoAddress) ||
-        message.audioEventId == null)
+        message.audioEventId == null) {
       return null;
+    }
     final audio = await _publisher.resolveReady(
       message.videoAddress,
       message.audioEventId!,

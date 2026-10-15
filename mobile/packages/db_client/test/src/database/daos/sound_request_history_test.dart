@@ -5,6 +5,37 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'application history excludes a two-person group conversation',
+    () async {
+      final db = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(db.close);
+      await db.conversationsDao.upsertConversation(
+        id: 'group',
+        participantPubkeys: '["owner","peer"]',
+        isGroup: true,
+        createdAt: 1,
+        ownerPubkey: 'owner',
+      );
+      await db.directMessagesDao.insertMessage(
+        id: 'group-message',
+        conversationId: 'group',
+        senderPubkey: 'peer',
+        content: 'request',
+        createdAt: 1,
+        giftWrapId: 'wrap',
+        ownerPubkey: 'owner',
+        tagsJson: jsonEncode([
+          ['divine', 'sound-request', '1'],
+        ]),
+      );
+      final rows = await db.directMessagesDao
+          .watchApplicationMessages(ownerPubkey: 'owner', marker: 'divine')
+          .first;
+      expect(rows, isEmpty);
+    },
+  );
+
+  test(
     'application history is owner-scoped and excludes deleted messages',
     () async {
       final db = AppDatabase.test(NativeDatabase.memory());

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 
 class _Repository extends Mock implements SoundRequestsRepository {}
@@ -16,7 +15,7 @@ void main() {
     when(() => first.ownerPubkey).thenReturn('first');
     when(() => second.ownerPubkey).thenReturn('second');
     for (final repo in [first, second]) {
-      when(() => repo.watchState()).thenAnswer((_) => const Stream.empty());
+      when(repo.watchState).thenAnswer((_) => const Stream.empty());
       when(repo.start).thenAnswer((_) async {});
     }
     when(() => first.request('address')).thenAnswer((_) => pending.future);

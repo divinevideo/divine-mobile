@@ -1,6 +1,6 @@
 # Request a video's sound through DMs
 
-Status: Product flow approved in conversation; written design awaiting review.
+Status: Approved for implementation on 2026-10-16.
 
 ## Intent and agreed behavior
 

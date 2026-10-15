@@ -125,6 +125,11 @@ class SoundRequestEntry extends Equatable {
   /// Full published Kind 1063 event ID, when known.
   final String? audioEventId;
 
+  /// Whether this request is still awaiting a terminal creator outcome.
+  bool get isPending =>
+      status != SoundRequestStatus.ready &&
+      status != SoundRequestStatus.dismissed;
+
   /// Returns an updated immutable value.
   SoundRequestEntry copyWith({
     SoundRequestStatus? status,

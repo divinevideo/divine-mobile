@@ -58,7 +58,7 @@ void main() {
             createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((call) async {
-          signed = Event.fromJson({
+          return signed = Event.fromJson({
             'id': 'e' * 64,
             'pubkey': owner,
             'kind': call.namedArguments[#kind],
@@ -67,7 +67,6 @@ void main() {
             'tags': call.namedArguments[#tags],
             'sig': 'f' * 128,
           });
-          return signed;
         });
         when(() => nostr.isInitialized).thenReturn(true);
         when(() => nostr.configuredRelayCount).thenReturn(1);

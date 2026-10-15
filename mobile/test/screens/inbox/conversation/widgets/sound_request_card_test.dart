@@ -63,8 +63,8 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(
-              body: const SoundRequestCard(message: message, isSent: false),
+            home: Scaffold(
+              body: SoundRequestCard(message: message, isSent: false),
             ),
           ),
         ),

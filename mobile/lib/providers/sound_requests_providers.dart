@@ -25,6 +25,10 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
   final session = ref.watch(nostrSessionProvider);
   if (!session.isReadyForActiveClient) return null;
   final owner = session.pubkey!;
+  var disposed = false;
+  ref.onDispose(() {
+    disposed = true;
+  });
   final auth = ref.watch(authServiceProvider);
   final dm = ref.watch(dmRepositoryProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
@@ -34,7 +38,7 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
   final cache = ref.watch(mediaCacheProvider);
   final publisher = PublishedVideoSoundClient(
     ownerPubkey: owner,
-    currentOwner: () => auth.currentPublicKeyHex,
+    currentOwner: () => disposed ? null : auth.currentPublicKeyHex,
     readSource: (address) async {
       final candidates = await videos.getVideosByAddressableIds([address]);
       final matching =
@@ -64,8 +68,9 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
     },
     acquireMedia: (video) async {
       final url = await video.getPlayableUrl();
-      if (url == null || url.isEmpty)
+      if (url == null || url.isEmpty) {
         throw StateError('Source media unavailable');
+      }
       final file = await cache.cacheFile(url, key: video.id);
       if (file == null) throw StateError('Source media download failed');
       return file.path;
@@ -76,12 +81,15 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
       videoTitle: video.title ?? '',
       ownerPubkey: owner,
       videoKind: video.eventKind!,
+      isOperationCurrent: () => !disposed && auth.currentPublicKeyHex == owner,
     ),
     replaceMetadata: (video, audio) async =>
         await publish.republishWithAudioReuse(
           existingEvent: video,
           audioEventId: audio,
           audioRelayHint: AppConstants.defaultRelayUrl,
+          isOperationCurrent: () =>
+              !disposed && auth.currentPublicKeyHex == owner,
         ) !=
         null,
     fetchSound: sounds.fetchSoundById,

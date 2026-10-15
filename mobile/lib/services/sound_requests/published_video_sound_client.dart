@@ -89,8 +89,9 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
         audio.pubkey != source.video.pubkey ||
         audio.sourceVideoReference != videoAddress ||
         !audio.hasExplicitReuseConsent ||
-        !audio.allowsReuse)
+        !audio.allowsReuse) {
       return null;
+    }
     return audio;
   }
 
