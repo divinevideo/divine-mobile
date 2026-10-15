@@ -7545,6 +7545,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get followSortTitle => '정렬 기준';
 
   @override
+  String get followSortSmart => '스마트';
+
+  @override
   String get followSortNewest => '최신순';
 
   @override

@@ -110,6 +110,69 @@ void main() {
       loader = createLoader();
     });
 
+    test(
+      'cached display names use one eligible local batch and no network',
+      () async {
+        when(() => profiles.getCachedProfiles(pubkeys: [mutual, stranger]))
+            .thenAnswer(
+              (_) async => [
+                UserProfile(
+                  pubkey: mutual,
+                  rawData: const {},
+                  displayName: 'Zulu',
+                  name: 'ignored',
+                  createdAt: now,
+                  eventId: _key(90),
+                ),
+                UserProfile(
+                  pubkey: stranger,
+                  rawData: const {},
+                  name: 'alice',
+                  createdAt: now,
+                  eventId: _key(91),
+                ),
+                UserProfile(
+                  pubkey: blocked,
+                  rawData: const {},
+                  displayName: 'hidden',
+                  createdAt: now,
+                  eventId: _key(92),
+                ),
+              ],
+            );
+        expect(
+          await loader.loadCachedDisplayNames([
+            viewer,
+            mutual,
+            blocked,
+            stranger,
+            mutual,
+          ]),
+          {
+            mutual: 'Zulu',
+            stranger: 'alice',
+          },
+        );
+        verify(() => profiles.getCachedProfiles(pubkeys: [mutual, stranger]))
+            .called(1);
+        verifyNoMoreInteractions(profiles);
+        verifyZeroInteractions(dms);
+        verifyZeroInteractions(follows);
+      },
+    );
+
+    test(
+      'cached display names tolerate an unavailable profile repository',
+      () async {
+        expect(
+          await createLoader(withProfiles: false)
+              .loadCachedDisplayNames([mutual]),
+          isEmpty,
+        );
+        verifyZeroInteractions(profiles);
+      },
+    );
+
     tearDown(() async => database.close());
 
     test(

@@ -8037,6 +8037,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get followSortTitle => 'Sortieren nach';
 
   @override
+  String get followSortSmart => 'Intelligent';
+
+  @override
   String get followSortNewest => 'Neueste zuerst';
 
   @override

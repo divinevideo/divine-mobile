@@ -7453,6 +7453,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get followSortTitle => '排序方式';
 
   @override
+  String get followSortSmart => '智能';
+
+  @override
   String get followSortNewest => '最新优先';
 
   @override

@@ -9,7 +9,11 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/follow_list_sort.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 part 'my_following_event.dart';
 part 'my_following_state.dart';
@@ -21,12 +25,15 @@ part 'my_following_state.dart';
 /// live stream catches up.
 ///
 /// Filters out blocked users before emitting state.
-class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
+class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
+    with CloseGuardedEmit<MyFollowingState> {
   MyFollowingBloc({
     required FollowRepository followRepository,
+    required UserRankingSignalsLoader rankingSignalsLoader,
     required ContentBlocklistRepository contentBlocklistRepository,
   }) : _followRepository = followRepository,
        _blocklistRepository = contentBlocklistRepository,
+       _rankingSignalsLoader = rankingSignalsLoader,
        super(
          MyFollowingState(
            status: followRepository.followingPubkeys.isEmpty
@@ -47,11 +54,18 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       _onEditRequested,
       transformer: droppable(),
     );
-    on<MyFollowingBlocklistChanged>(_onBlocklistChanged);
+    on<MyFollowingBlocklistChanged>(
+      _onBlocklistChanged,
+      transformer: restartable(),
+    );
     on<MyFollowingSortOrderChanged>(_onSortOrderChanged);
-    on<_MyFollowingRepositoryUpdated>(_onRepositoryUpdated);
+    on<_MyFollowingRepositoryUpdated>(
+      _onRepositoryUpdated,
+      transformer: restartable(),
+    );
   }
 
+  final UserRankingSignalsLoader _rankingSignalsLoader;
   final FollowRepository _followRepository;
   final ContentBlocklistRepository _blocklistRepository;
   StreamSubscription<List<String>>? _followingSubscription;
@@ -66,9 +80,19 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
   /// blocklist can never disturb the sort.
   List<String> _visiblePubkeys(
     List<String> rawPubkeys, {
-    FollowSortOrder? sortOrder,
+    FollowListSort? sortOrder,
   }) => _filterPubkeys(
-    (sortOrder ?? state.sortOrder).fromFollowOrder(rawPubkeys),
+    ((sortOrder ?? state.sortOrder).followSortOrder?.fromFollowOrder(
+              rawPubkeys,
+            ) ??
+            state.smartOrder.where(rawPubkeys.toSet().contains).toList())
+        .where(
+          (pubkey) =>
+              !state.isSmartOrderReady ||
+              state.rankingSignals.containsKey(pubkey),
+        )
+        .where(_rankingSignalsLoader.isEligible)
+        .toList(),
   );
 
   /// Re-order the loaded following list without refetching it.
@@ -97,37 +121,39 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
     Emitter<MyFollowingState> emit,
   ) async {
     _ensureFollowingSubscription();
+    if (!state.isSmartOrderReady && state.rawFollowingPubkeys.isNotEmpty) {
+      final revision = state.repositoryRevision;
+      final ranked = await _rankedState(
+        state.rawFollowingPubkeys,
+        isCurrent: () => !emit.isDone && revision == state.repositoryRevision,
+        isRefreshing: false,
+      );
+      if (emit.isDone || isClosed) return;
+      if (revision == state.repositoryRevision) emitIfOpen(ranked);
+    }
     try {
-      await emit.forEach<CacheResult<FollowingSnapshot>>(
-        _followRepository.watchMyFollowingCached(),
-        onData: (result) {
-          // Once the user has followed or unfollowed here, the repository's
-          // in-memory list is the authority. The mount-time load can still be
-          // in flight when the user taps Follow; its revalidation read
-          // resolves with the relay-lagged pre-edit snapshot and would
-          // otherwise revert the button (#5144). Defer to the repository
-          // instead of the stale emission; let the emission only drive the
-          // refreshing indicator.
-          //
-          // The same holds for any cached (not live) snapshot once the
-          // repository has loaded its authoritative list: the cache outlives
-          // its 30 second TTL across restarts, and the button decides between
-          // follow and unfollow from this state, so a stale snapshot here
-          // would turn a tap into a silent, published unfollow. Cached data
-          // only paints the first frame, while the repository has no list.
+      await emit.forEach<(MyFollowingState, int)>(
+        _followRepository.watchMyFollowingCached().asyncMap((result) async {
+          final revision = state.repositoryRevision;
+          // Initialized repository state takes precedence over stale cache.
           final repositoryIsAuthority =
               state.hasLocalFollowEdit ||
               (!result.isLive && _followRepository.isInitialized);
           final pubkeys = repositoryIsAuthority
               ? _followRepository.followingPubkeys
               : result.data.pubkeys;
-          return state.copyWith(
-            status: MyFollowingStatus.success,
-            rawFollowingPubkeys: pubkeys,
-            followingPubkeys: _visiblePubkeys(pubkeys),
-            isRefreshing: result.isStale,
+          return (
+            await _rankedState(
+              pubkeys,
+              isRefreshing: result.isStale,
+              isCurrent: () =>
+                  !emit.isDone && revision == state.repositoryRevision,
+            ),
+            revision,
           );
-        },
+        }),
+        onData: (result) =>
+            result.$2 == state.repositoryRevision ? result.$1 : state,
         onError: (error, stackTrace) {
           Log.error(
             'Error in following stream: $error',
@@ -152,12 +178,17 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       );
       addError(e, stackTrace);
       if (_hasVisibleData) {
-        emit(state.copyWith(isRefreshing: false));
+        if (!emit.isDone) emitIfOpen(state.copyWith(isRefreshing: false));
         return;
       }
-      emit(
-        state.copyWith(status: MyFollowingStatus.failure, isRefreshing: false),
-      );
+      if (!emit.isDone) {
+        emitIfOpen(
+          state.copyWith(
+            status: MyFollowingStatus.failure,
+            isRefreshing: false,
+          ),
+        );
+      }
     }
   }
 
@@ -226,45 +257,142 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       );
       addError(e, stackTrace);
       if (isClosed || emit.isDone) return;
-      emit(state.copyWith(status: MyFollowingStatus.toggleFailure));
+      emitIfOpen(state.copyWith(status: MyFollowingStatus.toggleFailure));
     }
   }
 
-  void _onRepositoryUpdated(
+  Future<void> _onRepositoryUpdated(
     _MyFollowingRepositoryUpdated event,
     Emitter<MyFollowingState> emit,
-  ) {
+  ) async {
     if (state.status == MyFollowingStatus.initial && event.pubkeys.isEmpty) {
       return;
     }
     if (_samePubkeys(state.rawFollowingPubkeys, event.pubkeys) &&
-        state.status == MyFollowingStatus.success &&
+        state.isSmartOrderReady &&
         !state.isRefreshing) {
+      return;
+    }
+    // Ranking crosses an async boundary. Invalidate a cache ranking already
+    // in flight, even though it belongs to another event-handler bucket.
+    emit(state.copyWith(repositoryRevision: state.repositoryRevision + 1));
+    final revision = state.repositoryRevision;
+    final next = await _rankedState(
+      event.pubkeys,
+      isRefreshing: false,
+      isCurrent: () => !emit.isDone && revision == state.repositoryRevision,
+    );
+    if (!emit.isDone) emitIfOpen(next);
+  }
+
+  Future<MyFollowingState> _rankedState(
+    List<String> pubkeys, {
+    required bool isRefreshing,
+    required bool Function() isCurrent,
+  }) async {
+    while (!isClosed && isCurrent()) {
+      final eligibilityRevision = state.eligibilityRevision;
+      Map<String, UserRankingSignals> signals;
+      try {
+        signals = await _rankingSignalsLoader.load(pubkeys);
+      } catch (error, stackTrace) {
+        Log.error(
+          'Failed to load follow ranking: $error',
+          name: 'MyFollowingBloc',
+          category: LogCategory.system,
+        );
+        addError(error, stackTrace);
+        signals = {
+          for (final pubkey in pubkeys.where(_rankingSignalsLoader.isEligible))
+            pubkey: UserRankingSignals(pubkey: pubkey),
+        };
+      }
+      if (isClosed || !isCurrent()) return state;
+      var names = const <String, String>{};
+      if (!state.isSmartOrderReady) {
+        try {
+          names = await _rankingSignalsLoader.loadCachedDisplayNames(
+            signals.keys,
+          );
+        } catch (error, stackTrace) {
+          Log.error(
+            'Failed to load cached follow names: $error',
+            name: 'MyFollowingBloc',
+            category: LogCategory.system,
+          );
+          addError(error, stackTrace);
+        }
+      }
+      if (isClosed || !isCurrent()) return state;
+      if (eligibilityRevision != state.eligibilityRevision) continue;
+      // Successful loader output is authoritative: an omitted row is ineligible.
+      final eligible = pubkeys
+          .where(signals.containsKey)
+          .where(_rankingSignalsLoader.isEligible)
+          .toSet();
+      final previousOrder = state.smartOrder.toSet();
+      final smartOrder = state.isSmartOrderReady
+          ? <String>[
+              ...state.smartOrder.where(eligible.contains),
+              ...pubkeys
+                  .where(
+                    (key) =>
+                        eligible.contains(key) && !previousOrder.contains(key),
+                  )
+                  .toSet(),
+            ]
+          : rankUsers(
+              signals.values.where(
+                (signal) => eligible.contains(signal.pubkey),
+              ),
+              now: DateTime.now(),
+              nameOf: (pubkey) => names[pubkey] ?? pubkey,
+            );
+      final ordered =
+          (state.sortOrder.followSortOrder?.fromFollowOrder(pubkeys) ??
+                  smartOrder)
+              .where(eligible.contains)
+              .toList();
+      return state.copyWith(
+        status: MyFollowingStatus.success,
+        rawFollowingPubkeys: pubkeys,
+        followingPubkeys: _filterPubkeys(ordered),
+        smartOrder: smartOrder,
+        rankingSignals: signals,
+        isSmartOrderReady: true,
+        isRefreshing: isRefreshing,
+      );
+    }
+    return state;
+  }
+
+  /// Re-filter following when blocklist changes.
+  Future<void> _onBlocklistChanged(
+    MyFollowingBlocklistChanged event,
+    Emitter<MyFollowingState> emit,
+  ) async {
+    final eligibilityRevision = state.eligibilityRevision + 1;
+    if (state.status != MyFollowingStatus.success) {
+      emit(state.copyWith(eligibilityRevision: eligibilityRevision));
       return;
     }
 
     emit(
       state.copyWith(
-        status: MyFollowingStatus.success,
-        rawFollowingPubkeys: event.pubkeys,
-        followingPubkeys: _visiblePubkeys(event.pubkeys),
-        isRefreshing: false,
-      ),
-    );
-  }
-
-  /// Re-filter following when blocklist changes.
-  void _onBlocklistChanged(
-    MyFollowingBlocklistChanged event,
-    Emitter<MyFollowingState> emit,
-  ) {
-    if (state.status != MyFollowingStatus.success) return;
-
-    emit(
-      state.copyWith(
+        eligibilityRevision: eligibilityRevision,
         followingPubkeys: _visiblePubkeys(state.rawFollowingPubkeys),
       ),
     );
+    final rawPubkeys = state.rawFollowingPubkeys;
+    final refreshed = await _rankedState(
+      rawPubkeys,
+      isCurrent: () =>
+          !emit.isDone && identical(rawPubkeys, state.rawFollowingPubkeys),
+      isRefreshing: state.isRefreshing,
+    );
+    if (!emit.isDone && identical(rawPubkeys, state.rawFollowingPubkeys)) {
+      emitIfOpen(refreshed);
+    }
   }
 
   bool get _hasVisibleData =>
@@ -282,7 +410,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       pubkeys,
     ) {
       if (isClosed) return;
-      add(_MyFollowingRepositoryUpdated(pubkeys));
+      addIfOpen(_MyFollowingRepositoryUpdated(pubkeys));
     });
   }
 

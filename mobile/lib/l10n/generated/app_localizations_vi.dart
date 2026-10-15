@@ -7899,6 +7899,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get followSortTitle => 'Sắp xếp theo';
 
   @override
+  String get followSortSmart => 'Thông minh';
+
+  @override
   String get followSortNewest => 'Mới nhất trước';
 
   @override

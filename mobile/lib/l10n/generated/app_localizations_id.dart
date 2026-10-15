@@ -7849,6 +7849,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get followSortTitle => 'Urutkan menurut';
 
   @override
+  String get followSortSmart => 'Cerdas';
+
+  @override
   String get followSortNewest => 'Terbaru dulu';
 
   @override

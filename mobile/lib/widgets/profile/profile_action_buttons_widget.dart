@@ -13,6 +13,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/follow_from_profile_button.dart';
 import 'package:openvine/widgets/profile/profile_notify_bell_button.dart';
@@ -63,6 +64,7 @@ class ProfileActionButtons extends ConsumerWidget {
       return _ActionButtonsRow(children: _buildOwnProfileButtons(context));
     }
 
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final contentBlocklistRepository = ref.watch(
       contentBlocklistRepositoryProvider,
@@ -105,6 +107,7 @@ class ProfileActionButtons extends ConsumerWidget {
       providers: [
         BlocProvider(
           create: (_) => MyFollowingBloc(
+            rankingSignalsLoader: rankingSignalsLoader,
             followRepository: followRepository,
             contentBlocklistRepository: contentBlocklistRepository,
           )..add(const MyFollowingListLoadRequested()),

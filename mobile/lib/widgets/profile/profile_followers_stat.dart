@@ -9,6 +9,7 @@ import 'package:openvine/blocs/my_followers/my_followers_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 
@@ -36,6 +37,7 @@ class ProfileFollowersStat extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
 
@@ -43,6 +45,7 @@ class ProfileFollowersStat extends ConsumerWidget {
       return BlocProvider(
         key: ValueKey((followRepository, blocklistRepository, pubkey)),
         create: (_) => MyFollowersBloc(
+          rankingSignalsLoader: rankingSignalsLoader,
           followRepository: followRepository,
           contentBlocklistRepository: blocklistRepository,
         )..add(const MyFollowersListLoadRequested()),

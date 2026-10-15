@@ -1,12 +1,17 @@
 // ABOUTME: BLoC for displaying current user's followers list
 // ABOUTME: Fetches Kind 3 events that mention current user in 'p' tags
 
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/blocs/followers/follower_visibility.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 part 'my_followers_event.dart';
 part 'my_followers_state.dart';
@@ -19,18 +24,28 @@ part 'my_followers_state.dart';
 /// Filters out blocked and follow-severed users before emitting state.
 /// Uses [FollowRepository.watchMyFollowersCached] for stale-while-revalidate:
 /// cached pubkeys are served immediately while fresh data loads from relays.
-class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState> {
+class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
+    with CloseGuardedEmit<MyFollowersState> {
   MyFollowersBloc({
     required FollowRepository followRepository,
+    required UserRankingSignalsLoader rankingSignalsLoader,
     required ContentBlocklistRepository contentBlocklistRepository,
   }) : _followRepository = followRepository,
        _blocklistRepository = contentBlocklistRepository,
+       _rankingSignalsLoader = rankingSignalsLoader,
        super(const MyFollowersState()) {
-    on<MyFollowersListLoadRequested>(_onLoadRequested);
-    on<MyFollowersBlocklistChanged>(_onBlocklistChanged);
+    on<MyFollowersListLoadRequested>(
+      _onLoadRequested,
+      transformer: restartable(),
+    );
+    on<MyFollowersBlocklistChanged>(
+      _onBlocklistChanged,
+      transformer: restartable(),
+    );
     on<MyFollowersSortOrderChanged>(_onSortOrderChanged);
   }
 
+  final UserRankingSignalsLoader _rankingSignalsLoader;
   final FollowRepository _followRepository;
   final ContentBlocklistRepository _blocklistRepository;
 
@@ -41,12 +56,21 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState> {
   List<String> _visiblePubkeys({
     required List<String> rawPubkeys,
     required int datedCount,
-    required FollowSortOrder sortOrder,
+    required FollowListSort sortOrder,
   }) => filterMyFollowerPubkeys(
-    pubkeys: sortOrder.fromNewestFirst(
-      rawPubkeys,
-      datedCount: datedCount,
-    ),
+    pubkeys:
+        (sortOrder.followSortOrder?.fromNewestFirst(
+                  rawPubkeys,
+                  datedCount: datedCount,
+                ) ??
+                state.smartOrder.where(rawPubkeys.toSet().contains).toList())
+            .where(
+              (pubkey) =>
+                  !state.isSmartOrderReady ||
+                  state.rankingSignals.containsKey(pubkey),
+            )
+            .where(_rankingSignalsLoader.isEligible)
+            .toList(),
     blocklistRepository: _blocklistRepository,
   );
 
@@ -67,42 +91,132 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState> {
     }
 
     try {
-      await emit.forEach<CacheResult<FollowersSnapshot>>(
-        _followRepository.watchMyFollowersCached(),
-        onData: (result) {
-          final visiblePubkeys = _visiblePubkeys(
-            rawPubkeys: result.data.pubkeys,
-            datedCount: result.data.datedCount,
-            sortOrder: state.sortOrder,
-          );
-          return state.copyWith(
-            status: MyFollowersStatus.success,
-            rawFollowersPubkeys: result.data.pubkeys,
-            rawDatedCount: result.data.datedCount,
-            followersPubkeys: visiblePubkeys,
-            authoritativeFollowerCount: result.data.count,
+      await emit.forEach<MyFollowersState>(
+        _followRepository.watchMyFollowersCached().asyncMap(
+          (result) => _rankedState(
+            result.data.pubkeys,
+            isCurrent: () => !emit.isDone,
             isRefreshing: result.isStale,
-          );
-        },
+            datedCount: result.data.datedCount,
+            count: result.data.count,
+          ),
+        ),
+        onData: (next) => next,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.error(
         'Failed to load followers list: $e',
         name: 'MyFollowersBloc',
         category: LogCategory.system,
       );
-      if (state.status != MyFollowersStatus.success) {
-        emit(state.copyWith(status: MyFollowersStatus.failure));
+      addError(e, stackTrace);
+      if (!emit.isDone && state.status != MyFollowersStatus.success) {
+        emitIfOpen(state.copyWith(status: MyFollowersStatus.failure));
       }
     }
   }
 
+  Future<MyFollowersState> _rankedState(
+    List<String> pubkeys, {
+    required bool isRefreshing,
+    required bool Function() isCurrent,
+    int datedCount = 0,
+    int count = 0,
+  }) async {
+    while (!isClosed && isCurrent()) {
+      final eligibilityRevision = state.eligibilityRevision;
+      Map<String, UserRankingSignals> signals;
+      try {
+        signals = await _rankingSignalsLoader.load(pubkeys);
+      } catch (error, stackTrace) {
+        Log.error(
+          'Failed to load follow ranking: $error',
+          name: 'MyFollowersBloc',
+          category: LogCategory.system,
+        );
+        addError(error, stackTrace);
+        signals = {
+          for (final pubkey in pubkeys.where(_rankingSignalsLoader.isEligible))
+            pubkey: UserRankingSignals(pubkey: pubkey),
+        };
+      }
+      if (isClosed || !isCurrent()) return state;
+      var names = const <String, String>{};
+      if (!state.isSmartOrderReady) {
+        try {
+          names = await _rankingSignalsLoader.loadCachedDisplayNames(
+            signals.keys,
+          );
+        } catch (error, stackTrace) {
+          Log.error(
+            'Failed to load cached follow names: $error',
+            name: 'MyFollowersBloc',
+            category: LogCategory.system,
+          );
+          addError(error, stackTrace);
+        }
+      }
+      if (isClosed || !isCurrent()) return state;
+      if (eligibilityRevision != state.eligibilityRevision) continue;
+      // Successful loader output is authoritative: an omitted row is ineligible.
+      final eligible = pubkeys
+          .where(signals.containsKey)
+          .where(_rankingSignalsLoader.isEligible)
+          .toSet();
+      final previousOrder = state.smartOrder.toSet();
+      final smartOrder = state.isSmartOrderReady
+          ? <String>[
+              ...state.smartOrder.where(eligible.contains),
+              ...pubkeys
+                  .where(
+                    (key) =>
+                        eligible.contains(key) && !previousOrder.contains(key),
+                  )
+                  .toSet(),
+            ]
+          : rankUsers(
+              signals.values.where(
+                (signal) => eligible.contains(signal.pubkey),
+              ),
+              now: DateTime.now(),
+              nameOf: (pubkey) => names[pubkey] ?? pubkey,
+            );
+      final ordered =
+          (state.sortOrder.followSortOrder?.fromNewestFirst(
+                    pubkeys,
+                    datedCount: datedCount,
+                  ) ??
+                  smartOrder)
+              .where(eligible.contains)
+              .toList();
+      return state.copyWith(
+        status: MyFollowersStatus.success,
+        rawFollowersPubkeys: pubkeys,
+        followersPubkeys: filterMyFollowerPubkeys(
+          pubkeys: ordered,
+          blocklistRepository: _blocklistRepository,
+        ),
+        smartOrder: smartOrder,
+        rankingSignals: signals,
+        isSmartOrderReady: true,
+        isRefreshing: isRefreshing,
+        rawDatedCount: datedCount,
+        authoritativeFollowerCount: count,
+      );
+    }
+    return state;
+  }
+
   /// Re-filter followers when blocklist changes.
-  void _onBlocklistChanged(
+  Future<void> _onBlocklistChanged(
     MyFollowersBlocklistChanged event,
     Emitter<MyFollowersState> emit,
-  ) {
-    if (state.status != MyFollowersStatus.success) return;
+  ) async {
+    final eligibilityRevision = state.eligibilityRevision + 1;
+    if (state.status != MyFollowersStatus.success) {
+      emit(state.copyWith(eligibilityRevision: eligibilityRevision));
+      return;
+    }
     final visiblePubkeys = _visiblePubkeys(
       rawPubkeys: state.rawFollowersPubkeys,
       datedCount: state.rawDatedCount,
@@ -112,9 +226,22 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState> {
     // re-filtering alone updates it.
     emit(
       state.copyWith(
+        eligibilityRevision: eligibilityRevision,
         followersPubkeys: visiblePubkeys,
       ),
     );
+    final rawPubkeys = state.rawFollowersPubkeys;
+    final refreshed = await _rankedState(
+      rawPubkeys,
+      isCurrent: () =>
+          !emit.isDone && identical(rawPubkeys, state.rawFollowersPubkeys),
+      isRefreshing: state.isRefreshing,
+      datedCount: state.rawDatedCount,
+      count: state.authoritativeFollowerCount,
+    );
+    if (!emit.isDone && identical(rawPubkeys, state.rawFollowersPubkeys)) {
+      emitIfOpen(refreshed);
+    }
   }
 
   /// Re-order the loaded followers without refetching them.

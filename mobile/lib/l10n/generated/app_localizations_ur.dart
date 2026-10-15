@@ -7935,6 +7935,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get followSortTitle => 'ترتیب بلحاظ';
 
   @override
+  String get followSortSmart => 'ذہین';
+
+  @override
   String get followSortNewest => 'پہلے نئے';
 
   @override

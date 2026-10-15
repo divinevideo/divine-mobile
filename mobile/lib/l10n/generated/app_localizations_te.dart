@@ -8174,6 +8174,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get followSortTitle => 'క్రమబద్ధీకరించండి';
 
   @override
+  String get followSortSmart => 'తెలివైన క్రమం';
+
+  @override
   String get followSortNewest => 'కొత్తది మొదటిది';
 
   @override

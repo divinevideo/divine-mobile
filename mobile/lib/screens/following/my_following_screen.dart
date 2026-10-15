@@ -13,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile/follow_sort_menu.dart';
@@ -30,22 +31,28 @@ class MyFollowingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
     final currentUserPubkey = ref.watch(nostrServiceProvider).publicKey;
 
     return MultiBlocProvider(
+      key: ValueKey((
+        followRepository,
+        blocklistRepository,
+        rankingSignalsLoader,
+      )),
       providers: [
         BlocProvider(
           create: (_) => MyFollowingBloc(
+            rankingSignalsLoader: rankingSignalsLoader,
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
           )..add(const MyFollowingListLoadRequested()),
         ),
-        // Deliberately not keyed on profileRepository: it resolves from null
-        // shortly after mount, and a ValueKey here would re-inflate the whole
-        // view. The late instance is pushed in by the ref.listen below.
+        // Search also accepts late profile repositories through the view's
+        // listener, alongside the account-scoped ranking dependencies above.
         BlocProvider(
           create: (_) => FollowListSearchBloc(
             followRepository: followRepository,
@@ -135,6 +142,12 @@ class _MyFollowingView extends ConsumerWidget {
           }
         },
         builder: (context, state) {
+          // Cached relationship state remains synchronous for buttons/counts;
+          // this list waits for its local ranking before exposing any rows.
+          if (!state.isSmartOrderReady &&
+              state.status != MyFollowingStatus.failure) {
+            return const Center(child: BrandedLoadingIndicator());
+          }
           final body = switch (state.status) {
             MyFollowingStatus.initial => const Center(
               child: BrandedLoadingIndicator(),

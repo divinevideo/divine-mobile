@@ -7922,6 +7922,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get followSortTitle => 'Sortera efter';
 
   @override
+  String get followSortSmart => 'Smart';
+
+  @override
   String get followSortNewest => 'Nyaste först';
 
   @override

@@ -8117,6 +8117,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get followSortTitle => 'Sortează după';
 
   @override
+  String get followSortSmart => 'Inteligent';
+
+  @override
   String get followSortNewest => 'Cei mai noi primii';
 
   @override

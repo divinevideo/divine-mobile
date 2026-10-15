@@ -4736,6 +4736,7 @@
   "@followSortTitle": {
     "description": "Header of the bottom sheet listing sort options. Shared by the followers and following lists."
   },
+  "followSortSmart": "తెలివైన క్రమం",
   "followSortNewest": "కొత్తది మొదటిది",
   "@followSortNewest": {
     "description": "Sort option showing the most recent follow at the top of the list. Shared by the followers and following lists."

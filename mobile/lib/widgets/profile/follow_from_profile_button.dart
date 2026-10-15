@@ -13,6 +13,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/widgets/unfollow_confirmation_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -36,6 +37,7 @@ class FollowFromProfileButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final nostrClient = ref.watch(nostrServiceProvider);
     final currentUserPubkey = nostrClient.publicKey;
@@ -50,6 +52,7 @@ class FollowFromProfileButton extends ConsumerWidget {
 
     return BlocProvider(
       create: (_) => MyFollowingBloc(
+        rankingSignalsLoader: rankingSignalsLoader,
         followRepository: followRepository,
         contentBlocklistRepository: blocklistRepository,
       )..add(const MyFollowingListLoadRequested()),

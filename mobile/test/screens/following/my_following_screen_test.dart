@@ -1,8 +1,11 @@
 // ABOUTME: Widget tests for MyFollowingScreen's sort control
 // ABOUTME: Ensures the app bar button opens the sheet and re-orders the list
 
+import 'dart:async';
+
 import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -12,9 +15,15 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/following/my_following_screen.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:openvine/widgets/profile/follow_from_profile_button.dart';
+import 'package:openvine/widgets/profile/profile_following_stat.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+
+class _MockRankingLoader extends Mock implements UserRankingSignalsLoader {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -77,6 +86,15 @@ void main() {
 
       mockFollowRepository = _MockFollowRepository();
       mockBlocklistRepository = _MockContentBlocklistRepository();
+      when(() => mockBlocklistRepository.currentState).thenReturn(
+        const ContentPolicyState(
+          currentUserPubkey: currentUserPubkey,
+          mutedPubkeys: {},
+          blockedPubkeys: {},
+          pubkeysBlockingUs: {},
+          pubkeysMutingUs: {},
+        ),
+      );
       mockNostrClient = _MockNostrClient();
 
       when(() => mockBlocklistRepository.isBlocked(any())).thenReturn(false);
@@ -107,10 +125,14 @@ void main() {
       );
     });
 
-    Future<void> pumpScreen(WidgetTester tester) async {
+    Future<void> pumpScreen(
+      WidgetTester tester, {
+      UserRankingSignalsLoader? loader,
+    }) async {
       await tester.pumpWidget(
         testMaterialApp(
           home: const MyFollowingScreen(displayName: 'Alice'),
+          rankingSignalsLoader: loader,
           mockProfileRepository: createMockProfileRepository(),
           mockNostrService: mockNostrClient,
           mockFollowRepository: mockFollowRepository,
@@ -131,7 +153,7 @@ void main() {
         .toList();
 
     testWidgets(
-      'lists the most recent follow first before any sort is picked',
+      'lists equal-score follows in deterministic Smart order',
       (
         tester,
       ) async {
@@ -139,8 +161,115 @@ void main() {
 
         expect(
           visibleOrder(tester),
-          equals([thirdFollowed, secondFollowed, firstFollowed]),
+          equals([firstFollowed, secondFollowed, thirdFollowed]),
         );
+      },
+    );
+
+    testWidgets(
+      'does not flash cached rows before the local ranking resolves',
+      (tester) async {
+        final loaded = Completer<Map<String, UserRankingSignals>>();
+        final loader = _MockRankingLoader();
+        when(() => loader.loadCachedDisplayNames(any()))
+            .thenAnswer((_) async => {});
+        when(() => loader.isEligible(any())).thenReturn(true);
+        when(() => loader.load(any())).thenAnswer((_) => loaded.future);
+        await pumpScreen(tester, loader: loader);
+        expect(find.byType(UserProfileTile), findsNothing);
+        loaded.complete({
+          firstFollowed: const UserRankingSignals(pubkey: firstFollowed),
+          secondFollowed: const UserRankingSignals(
+            pubkey: secondFollowed,
+            youFollow: true,
+          ),
+          thirdFollowed: const UserRankingSignals(pubkey: thirdFollowed),
+        });
+        await tester.pumpAndSettle();
+        expect(visibleOrder(tester), [
+          secondFollowed,
+          firstFollowed,
+          thirdFollowed,
+        ]);
+      },
+    );
+
+    testWidgets('cached following button and count render on the first frame', (
+      tester,
+    ) async {
+      final loaded = Completer<Map<String, UserRankingSignals>>();
+      final loader = _MockRankingLoader();
+      when(() => loader.loadCachedDisplayNames(any()))
+          .thenAnswer((_) async => {});
+      when(() => loader.isEligible(any())).thenReturn(true);
+      when(() => loader.load(any())).thenAnswer((_) => loaded.future);
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: const Scaffold(
+            body: Column(
+              children: [
+                FollowFromProfileButton(
+                  pubkey: firstFollowed,
+                  displayName: 'Alice',
+                ),
+                ProfileFollowingStat(
+                  pubkey: currentUserPubkey,
+                  displayName: 'Alice',
+                  isOwnProfile: true,
+                ),
+              ],
+            ),
+          ),
+          rankingSignalsLoader: loader,
+          mockProfileRepository: createMockProfileRepository(),
+          mockNostrService: mockNostrClient,
+          mockFollowRepository: mockFollowRepository,
+          additionalOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklistRepository,
+            ),
+          ],
+        ),
+      );
+      expect(
+        find.bySemanticsLabel(l10n.unfollowUserSemanticLabel),
+        findsOneWidget,
+      );
+      expect(find.text('3'), findsOneWidget);
+      loaded.complete({
+        for (final key in [firstFollowed, secondFollowed, thirdFollowed])
+          key: UserRankingSignals(pubkey: key),
+      });
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+      'recreates the list when account-scoped ranking dependencies change',
+      (tester) async {
+        final first = _MockRankingLoader();
+        final second = _MockRankingLoader();
+        when(() => first.loadCachedDisplayNames(any()))
+            .thenAnswer((_) async => {});
+        when(() => second.loadCachedDisplayNames(any()))
+            .thenAnswer((_) async => {});
+        when(() => first.isEligible(any())).thenReturn(true);
+        when(() => second.isEligible(any())).thenReturn(true);
+        when(() => first.load(any())).thenAnswer(
+          (_) async => {
+            firstFollowed: const UserRankingSignals(pubkey: firstFollowed),
+          },
+        );
+        when(() => second.load(any())).thenAnswer(
+          (_) async => {
+            secondFollowed: const UserRankingSignals(pubkey: secondFollowed),
+          },
+        );
+        await pumpScreen(tester, loader: first);
+        await tester.pumpAndSettle();
+        expect(visibleOrder(tester), [firstFollowed]);
+        await pumpScreen(tester, loader: second);
+        await tester.pumpAndSettle();
+        expect(visibleOrder(tester), [secondFollowed]);
       },
     );
 
@@ -150,6 +279,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel(l10n.followingSortSemanticLabel));
       await tester.pumpAndSettle();
 
+      expect(find.text(l10n.followSortSmart), findsOneWidget);
       expect(find.text(l10n.followSortTitle), findsOneWidget);
       expect(find.text(l10n.followSortNewest), findsOneWidget);
       expect(find.text(l10n.followSortOldest), findsOneWidget);
@@ -182,7 +312,7 @@ void main() {
 
       expect(
         visibleOrder(tester),
-        equals([thirdFollowed, secondFollowed, firstFollowed]),
+        equals([firstFollowed, secondFollowed, thirdFollowed]),
       );
     });
 

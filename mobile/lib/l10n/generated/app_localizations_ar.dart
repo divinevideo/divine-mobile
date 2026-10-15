@@ -7911,6 +7911,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get followSortTitle => 'الترتيب حسب';
 
   @override
+  String get followSortSmart => 'ذكي';
+
+  @override
   String get followSortNewest => 'الأحدث أولاً';
 
   @override

@@ -8030,6 +8030,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get followSortTitle => 'Sort by';
 
   @override
+  String get followSortSmart => 'Smart';
+
+  @override
   String get followSortNewest => 'Newest first';
 
   @override
