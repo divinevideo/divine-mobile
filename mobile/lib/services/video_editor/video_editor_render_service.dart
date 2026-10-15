@@ -29,10 +29,10 @@ import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
+import 'package:openvine/services/video_editor/render_audio_visualizer_energies.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
-import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -625,6 +625,7 @@ class VideoEditorRenderService {
         maxOutputDuration: maxOutputDuration,
         audioFetcher: audioFetcher,
         tempFilePaths: tempFilePaths,
+        logName: _logName,
       );
 
       await _concatenateSegments(

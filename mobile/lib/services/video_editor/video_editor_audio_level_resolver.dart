@@ -11,17 +11,14 @@ import 'package:models/models.dart' show AudioEvent, EqualizerSettings;
 import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/audio_fade.dart';
-import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
-import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
 import 'package:openvine/utils/equalizer_response.dart';
 import 'package:openvine/utils/wav_decoding.dart';
-import 'package:pro_image_editor/pro_image_editor.dart'
-    show EditorAudio, ExportedLayer, Layer;
+import 'package:pro_image_editor/pro_image_editor.dart' show Layer;
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -368,52 +365,6 @@ Future<Float32List?> audioEnergiesOnExport({
     return null;
   }
   return reader.energiesOnOutput(parts, videoEnd: videoEnd);
-}
-
-/// [audioEnergiesOnExport] for the audio visualizers among [capturedLayers],
-/// or `null` when it holds none: the [sounds] and [clips] of a render cut at
-/// [maxOutputDuration], and the [detached] clips it composites over them.
-/// Downloads go through [audioFetcher], which the mux reuses, into
-/// [tempFilePaths].
-Future<Float32List?> audioVisualizerEnergiesForRender({
-  required List<ExportedLayer> capturedLayers,
-  required List<AudioEvent> sounds,
-  required List<DivineVideoClip> clips,
-  required List<DetachedClipExportLayer> detached,
-  required Duration? maxOutputDuration,
-  required RenderAudioFetcher audioFetcher,
-  required List<String> tempFilePaths,
-}) async {
-  if (!capturedLayers.any(
-    (item) => AudioVisualizerLayerData.isAudioVisualizerLayer(item.layer),
-  )) {
-    return null;
-  }
-  final outputDuration = TransitionTimelineMap.fromClips(clips).outputDuration;
-  return audioEnergiesOnExport(
-    sounds: sounds,
-    clips: clips,
-    detachedClips: [
-      for (final item in detached)
-        DetachedClipSound(
-          clip: item.clip,
-          sourceOffset: item.sourceOffset,
-          startTime: item.layer.startTime,
-          endTime: item.layer.endTime,
-        ),
-    ],
-    videoEnd: maxOutputDuration != null && maxOutputDuration < outputDuration
-        ? maxOutputDuration
-        : outputDuration,
-    localPathFor: (url) async {
-      final path = await audioFetcher.localPathFor(
-        EditorAudio.network(url),
-        logName: 'VideoEditorRenderService',
-      );
-      if (!tempFilePaths.contains(path)) tempFilePaths.add(path);
-      return path;
-    },
-  );
 }
 
 /// Why sound could not be read for an audio visualizer: [cause] is the
