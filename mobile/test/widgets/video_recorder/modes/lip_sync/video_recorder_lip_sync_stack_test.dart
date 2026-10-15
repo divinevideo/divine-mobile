@@ -200,6 +200,21 @@ void main() {
         }
       });
 
+      testWidgets('leaves the home-indicator inset to the mode wheel below '
+          'it', (tester) async {
+        tester.view
+          ..padding = const FakeViewPadding(bottom: 102)
+          ..viewPadding = const FakeViewPadding(bottom: 102);
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        final picker = tester.element(find.byType(AudioSelectionBottomSheet));
+
+        expect(MediaQuery.paddingOf(picker).bottom, 0);
+        expect(MediaQuery.viewPaddingOf(picker).bottom, 0);
+      });
+
       testWidgets('pauses remote recording while the picker shows', (
         tester,
       ) async {

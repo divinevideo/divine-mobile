@@ -93,26 +93,30 @@ class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: ClipRRect(
-        borderRadius: const .vertical(bottom: .circular(32)),
-        // A Material rather than a ColoredBox: the sound rows are ListTiles,
-        // which paint their ink on the nearest Material.
-        child: Material(
-          color: context.vineColors.surface,
-          child: AudioSelectionBottomSheet(
-            scrollController: _scrollController,
-            onSoundPicked: _onSoundPicked,
-            // The viewfinder's top bar, and its close button, only shows once
-            // a sound is picked.
-            categoryBarLeading: DivineIconButton(
-              icon: .x,
-              semanticLabel: context.l10n.videoRecorderCloseLabel,
-              semanticIdentifier: SemanticIds.cameraCloseButton,
-              type: .secondary,
-              size: .small,
-              onPressed: () => closeVideoRecorder(context, ref),
+    return MediaQuery.removePadding(
+      context: context,
+      // The mode wheel below the picker keeps clear of the home indicator.
+      removeBottom: true,
+      child: SafeArea(
+        child: ClipRRect(
+          borderRadius: const .vertical(bottom: .circular(32)),
+          // A Material rather than a ColoredBox: the sound rows are ListTiles,
+          // which paint their ink on the nearest Material.
+          child: Material(
+            color: context.vineColors.surface,
+            child: AudioSelectionBottomSheet(
+              scrollController: _scrollController,
+              onSoundPicked: _onSoundPicked,
+              // The viewfinder's top bar, and its close button, only shows once
+              // a sound is picked.
+              categoryBarLeading: DivineIconButton(
+                icon: .x,
+                semanticLabel: context.l10n.videoRecorderCloseLabel,
+                semanticIdentifier: SemanticIds.cameraCloseButton,
+                type: .secondary,
+                size: .small,
+                onPressed: () => closeVideoRecorder(context, ref),
+              ),
             ),
           ),
         ),
