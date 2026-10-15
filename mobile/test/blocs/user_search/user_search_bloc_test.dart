@@ -390,6 +390,9 @@ void main() {
             profiles[3],
             profiles[2],
           ]);
+          // UserProfile equality ignores the display name, so the list match
+          // above cannot tell the updated row from the stale one.
+          expect(bloc.state.results[1].displayName, 'Updated');
           verify(() => loader.load([profiles[2].pubkey, profiles[3].pubkey]))
               .called(1);
         },
