@@ -9,11 +9,13 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/video_editor_audio_chip.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_audio_progress_bar.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Lip-sync mode stack.
 ///
@@ -61,6 +63,10 @@ class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
   final _scrollController = ScrollController();
   late final VideoRecorderBloc _recorderBloc;
 
+  /// The pick being adopted. Clearing the recorded clips for it keeps the
+  /// picker on screen, so a second pick meanwhile is dropped.
+  Future<void>? _adoption;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +81,16 @@ class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
     super.dispose();
   }
 
+  void _onSoundPicked(AudioEvent sound) {
+    if (_adoption != null) return;
+    final adoption = _adoptLipSyncSound(
+      ref,
+      sound,
+    ).whenComplete(() => _adoption = null);
+    _adoption = adoption;
+    _runAdoption(adoption);
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -87,7 +103,7 @@ class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
           color: context.vineColors.surface,
           child: AudioSelectionBottomSheet(
             scrollController: _scrollController,
-            onSoundPicked: (sound) => _adoptLipSyncSound(ref, sound),
+            onSoundPicked: _onSoundPicked,
             // The viewfinder's top bar, and its close button, only shows once
             // a sound is picked.
             categoryBarLeading: DivineIconButton(
@@ -125,6 +141,13 @@ Future<void> _adoptLipSyncSound(WidgetRef ref, AudioEvent? sound) async {
   editor.selectRecorderAudioTrack(sound);
 }
 
+void _runAdoption(Future<void> adoption) => runDetached(
+  adoption,
+  'adopt the lip-sync sound',
+  logName: 'VideoRecorderLipSyncStack',
+  category: LogCategory.video,
+);
+
 /// Audio-select chip wired to the recorder's selected sound.
 ///
 /// Pauses remote-triggered recording while the selection sheet is open so a
@@ -142,7 +165,7 @@ class _LipSyncAudioButton extends ConsumerWidget {
     return Flexible(
       child: VideoEditorAudioChip(
         selectedSound: selectedSound,
-        onSoundChanged: (sound) => _adoptLipSyncSound(ref, sound),
+        onSoundChanged: (sound) => _runAdoption(_adoptLipSyncSound(ref, sound)),
         onSelectionStarted: () => context.read<VideoRecorderBloc>().add(
           const VideoRecorderRemoteRecordPaused(),
         ),

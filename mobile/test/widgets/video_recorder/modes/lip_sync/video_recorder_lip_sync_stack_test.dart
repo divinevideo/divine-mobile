@@ -250,6 +250,39 @@ void main() {
         expect(find.textContaining('picked'), findsOneWidget);
       });
 
+      testWidgets('drops a second pick while the clips are cleared for the '
+          'first', (tester) async {
+        await tester.pumpWidget(buildWidget(clips: [_clip()]));
+        await tester.pumpAndSettle();
+        final draftDeletion = Completer<void>();
+        clipNotifier.draftDeletion = draftDeletion;
+
+        await pickInlineSound(tester, sound('first'));
+        await pickInlineSound(tester, sound('second'));
+        draftDeletion.complete();
+        await tester.pumpAndSettle();
+
+        expect(clipNotifier.clearAllCallCount, 1);
+        expect(editorNotifier.selectRecorderAudioTrackCalls, [sound('first')]);
+      });
+
+      testWidgets('stays on the picker and takes a new pick when adopting '
+          'the sound fails', (tester) async {
+        await tester.pumpWidget(buildWidget(clips: [_clip()]));
+        await tester.pumpAndSettle();
+        clipNotifier.clearAllError = Exception('draft deletion failed');
+
+        await pickInlineSound(tester, sound('first'));
+
+        expect(editorNotifier.selectRecorderAudioTrackCalls, isEmpty);
+        expect(find.byType(AudioSelectionBottomSheet), findsOneWidget);
+
+        clipNotifier.clearAllError = null;
+        await pickInlineSound(tester, sound('second'));
+
+        expect(editorNotifier.selectRecorderAudioTrackCalls, [sound('second')]);
+      });
+
       testWidgets('brings the picker back when the sound is removed', (
         tester,
       ) async {
@@ -315,15 +348,6 @@ void main() {
     });
 
     group('changing the sound selection', () {
-      DivineVideoClip clip() => DivineVideoClip(
-        id: 'clip1',
-        video: EditorVideo.file('/test/clip1.mp4'),
-        duration: const Duration(seconds: 2),
-        recordedAt: DateTime.now(),
-        targetAspectRatio: .vertical,
-        originalAspectRatio: 9 / 16,
-      );
-
       Future<void> changeSound(WidgetTester tester, AudioEvent? next) async {
         final chip = tester.widget<VideoEditorAudioChip>(
           find.byType(VideoEditorAudioChip),
@@ -336,7 +360,7 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          buildWidget(selectedSound: sound('a'), clips: [clip()]),
+          buildWidget(selectedSound: sound('a'), clips: [_clip()]),
         );
         await tester.pumpAndSettle();
 
@@ -349,7 +373,7 @@ void main() {
       testWidgets('adopts the new sound when clearing the clips outlasts the '
           'swap to the picker', (tester) async {
         await tester.pumpWidget(
-          buildWidget(selectedSound: sound('a'), clips: [clip()]),
+          buildWidget(selectedSound: sound('a'), clips: [_clip()]),
         );
         await tester.pumpAndSettle();
         final draftDeletion = Completer<void>();
@@ -370,7 +394,7 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          buildWidget(selectedSound: sound('a'), clips: [clip()]),
+          buildWidget(selectedSound: sound('a'), clips: [_clip()]),
         );
         await tester.pumpAndSettle();
 
@@ -394,6 +418,15 @@ void main() {
     });
   });
 }
+
+DivineVideoClip _clip() => DivineVideoClip(
+  id: 'clip1',
+  video: EditorVideo.file('/test/clip1.mp4'),
+  duration: const Duration(seconds: 2),
+  recordedAt: DateTime.now(),
+  targetAspectRatio: .vertical,
+  originalAspectRatio: 9 / 16,
+);
 
 class _FakeSoundLibraryService extends SoundLibraryService {
   @override
@@ -437,6 +470,9 @@ class _TestClipManagerNotifier extends ClipManagerNotifier {
   /// does, until it completes.
   Completer<void>? draftDeletion;
 
+  /// Thrown by [clearAll] before it clears anything.
+  Object? clearAllError;
+
   @override
   ClipManagerState build() {
     return ClipManagerState(clips: clips);
@@ -447,6 +483,7 @@ class _TestClipManagerNotifier extends ClipManagerNotifier {
   @override
   Future<void> clearAll({bool keepAutosavedDraft = false}) async {
     clearAllCallCount++;
+    if (clearAllError case final error?) throw error;
     state = ClipManagerState();
     (ref.read(videoEditorProvider.notifier) as _TestVideoEditorNotifier)
         .resetForClearAll();
