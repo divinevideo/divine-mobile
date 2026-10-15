@@ -907,7 +907,9 @@ void main() {
       QueryEnd.complete,
     ]) {
       test(
-        'returned $outcome relay outcome preserves known followers',
+        // The complete case is capped: an uncapped complete read reconciles.
+        'returned ${outcome == QueryEnd.complete ? 'capped ' : ''}$outcome '
+        'relay outcome preserves known followers',
         () async {
           dao.rows[owner] = {stale: 50};
           final events = outcome == QueryEnd.noRelay
