@@ -828,6 +828,79 @@ class VideoEventPublisher {
   ///
   /// Throws [AccountRestrictedPublishException] when the configured Divine
   /// relay reports that the account is suspended or banned.
+  /// Publishes the owner's original sound without uploading another video.
+  Future<String?> publishOriginalSound({
+    required String videoPath,
+    required String videoDTag,
+    required String videoTitle,
+    required String ownerPubkey,
+    int videoKind = 34236,
+  }) => _audioPublisher.publishOriginalSound(
+    videoPath: videoPath,
+    videoDTag: videoDTag,
+    videoTitle: videoTitle,
+    ownerPubkey: ownerPubkey,
+    videoKind: videoKind,
+  );
+
+  /// Replaces only audio-sharing tags on a signed, addressable owner video.
+  Future<VideoEvent?> republishWithAudioReuse({
+    required VideoEvent existingEvent,
+    required String audioEventId,
+    required String audioRelayHint,
+  }) async {
+    final auth = _authService;
+    final owner = existingEvent.pubkey;
+    final kind = existingEvent.eventKind;
+    if (auth == null ||
+        auth.currentPublicKeyHex != owner ||
+        !NostrHexUtils.isValidEventId(audioEventId) ||
+        (kind != 34236 && kind != 34235))
+      return null;
+    final originalTags = sourceOriginalVideoTags(
+      video: existingEvent,
+      personalEventCache: _personalEventCache,
+    );
+    final dTags = originalTags
+        .where((t) => t.isNotEmpty && t[0] == 'd')
+        .toList();
+    if (dTags.length != 1 ||
+        dTags.single.length != 2 ||
+        dTags.single[1].isEmpty)
+      return null;
+    final tags =
+        originalTags
+            .where(
+              (t) =>
+                  t.isEmpty ||
+                  (t[0] != 'allow_audio_reuse' &&
+                      !(t[0] == 'e' && t.length >= 4 && t[3] == 'audio')),
+            )
+            .map(List<String>.from)
+            .toList()
+          ..add(['allow_audio_reuse', 'true'])
+          ..add(['e', audioEventId, audioRelayHint, 'audio']);
+    final event = await auth.createAndSignEvent(
+      kind: kind!,
+      content: existingEvent.content,
+      tags: tags,
+      createdAt: nextReplacementCreatedAt(existingEvent),
+    );
+    if (event == null ||
+        event.pubkey != owner ||
+        auth.currentPublicKeyHex != owner)
+      return null;
+    if (await _relayPublisher.publishViaWebSocket(event) !=
+        EventPublishOutcome.published)
+      return null;
+    final updated = VideoEvent.fromNostrEvent(event, permissive: true);
+    if (auth.currentPublicKeyHex == owner) {
+      _personalEventCache?.cacheUserEvent(event);
+      _videoEventService?.updateVideoEvent(updated);
+    }
+    return updated;
+  }
+
   Future<VideoEvent?> republishWithSubtitles({
     required VideoEvent existingEvent,
     required String textTrackRef,

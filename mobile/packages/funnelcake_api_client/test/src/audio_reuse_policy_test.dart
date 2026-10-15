@@ -47,6 +47,8 @@ void main() {
       }, elapsed: Duration.zero);
 
       expect(policy.allowAudioReuse, isFalse);
+      expect(policy.videoFound, isFalse);
+      expect(policy.audioReuseSuppressed, isFalse);
     });
 
     test(
