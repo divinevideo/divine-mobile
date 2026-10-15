@@ -1,19 +1,21 @@
 # Group-signed Nostr events
 
-Date: 2026-10-16. Status: proposed design; custody decision and written-spec approval pending.
+Date: 2026-10-16. Status: revised after product feedback. One authorized admin may publish normal content; custody and written-spec approval pending.
 
 ## Outcome and evidence
 
-A group controls one Nostr identity. A threshold of its members approves an exact
-event, producing the ordinary NIP-01 event ID and 64-byte BIP-340 signature.
+A group controls one Nostr identity. For most content, **any one authorized admin
+may publish**, including in a three-admin group. Other admins need not be online.
+Higher quorums are an optional group capability, not the default content workflow.
+Every mode produces the ordinary NIP-01 event ID and 64-byte BIP-340 signature.
 Existing clients and relays need no threshold awareness. Relay events are the
 source of truth; Funnelcake can index them but is never required to reconstruct a list.
 
 The throwaway [spike](../../../tools/group_signing_spike/README.md) ran real
-ZF FROST DKG and signing through flutter_rust_bridge on macOS ARM64. Six tests
+ZF FROST DKG and signing through flutter_rust_bridge on macOS ARM64. Seven tests
 cover 2-of-2, all three 2-of-3 subsets, 3-of-3, insufficient signing quorum and
-incomplete DKG. Verification uses independent Bitcoin Core secp256k1, bip340
-0.3.0, and the actual Divine `nostr_sdk` Event class (`isValid` and `isSigned`).
+incomplete DKG, plus rejection of threshold one by the tested FROST API.
+Verification uses independent Bitcoin Core secp256k1, bip340 0.3.0, and the actual Divine `nostr_sdk` Event class (`isValid` and `isSigned`).
 Fresh approvals have distinct public nonce commitments and immutable message bytes.
 Changed messages/content fail validation. The probe guards against signing twice
 with an approval and destroys its nonce even on failure.
@@ -36,8 +38,8 @@ acceptance gates. Do not ship the probe as a key-management implementation.
 | secp256k1-zkp | Inspected upstream tree exposes MuSig2, with no FROST/DKG module found. MuSig2 alone does not supply t-of-n dealerless DKG. | Do not assume an experimental fork is a supported release. |
 | Pure Dart | `pqthreshold` exists, but its documented FROST profile is Ed25519; no compatible pure-Dart implementation was established. | Does not meet BIP-340 requirement. |
 
-Recommend a small direct Rust/FRB bridge for the app, exposing opaque participant,
-key-share and single-use signing handles. Rust keeps long-lived shares and nonce
+For opt-in threshold custody, recommend a small direct Rust/FRB bridge exposing
+opaque participant, key-share and single-use signing handles. Rust keeps long-lived shares and nonce
 material; Dart receives public protocol objects and final events. Pin exact Rust
 and bridge versions and review the Taproot suite's audit coverage separately:
 the ZF site's listed NCC audit did not include frost-secp256k1-tr. The probe
@@ -51,33 +53,66 @@ or threshold arithmetic should be implemented in Dart.
 
 ## Ownership between mobile and Keycast
 
-Recommended first prototype: three independent device participants, threshold two.
-Mobile owns proposal review, participant identity binding, local share storage and
-signing approval. A reusable crypto/protocol package owns deterministic event
-serialization, ceremony/signing validation and the native crypto client. The app
-flow is Page/View → BLoC → repository → transport/native clients, with constructor
-injection and no Flutter types in repositories or protocol models.
+**Confirmed product policy:** one of the authorized admins can publish ordinary
+content. “1-of-3” here describes one human approval among three admins; it does
+not require a distributed cryptographic ceremony for each edit.
 
-Keycast can coordinate delivery without a share. An optional later participant
-adapter can hold **one** share using the same Rust ciphersuite. Its current
-`SigningSession` owns a complete `nostr::Keys` and canonicalizes the event author
-to that key; it cannot sign as a FROST group unchanged. Implement threshold
-sessions separately; keep ordinary NIP-46 signing behavior intact. Standard
-NIP-46 has no DKG/partial-signature RPC: any new API must be explicitly versioned,
-authenticated application protocol, not represented as an existing standard.
+Recommended default: a Keycast-hosted group key, with separately authenticated,
+revocable signing authorizations for each admin. Mobile owns editing and the
+single-admin publish action; Keycast checks authorization and signs as the group.
+Keycast already models teams, team-owned stored keys, policies and authorizations
+and can issue NIP-46 access to a team's stored key. These are reusable primitives,
+not evidence that the required mobile group flow or complete revocation semantics
+already work. Verify binding to the current admin identity and revocation of
+existing connections before implementing the group adapter. Do not share one
+bunker connection secret between admins.
 
-A 2-of-3 group with two device shares and one Keycast share can sign with one
-human device plus the service. It cannot sign with zero devices. If the desired
-policy is two independent humans on every event, that arrangement does not meet
-it. If Keycast holds shares for several people, those are one custody domain;
-separate account approvals are service policy, not cryptographic independence.
-Hosted full-key approval is a valid simpler option, but must be described as
-custodial signing rather than FROST's independent-custody guarantee.
+This gives a stable group pubkey while the service changes authorized admins,
+without distributing the group private key. Public content remains ordinary relay
+events. The service is a signing dependency; it is not the only source of list
+state. Hosted custody remains a product choice to confirm, not a consequence of
+choosing one-admin approval.
 
-**User decision:** devices only, one Keycast share, or hosted approvals first.
-No live Keycast changes or custody enrollment before this is settled.
+The alternatives are:
+
+| Custody | Ordinary-content approval | Consequence |
+| --- | --- | --- |
+| Keycast group key (recommended default) | One authorized admin | Reuses team/authorization primitives; service controls the key and enforces policy. |
+| Full group key on every admin device | Any one key holder | Works without a signing service; removing an admin cannot revoke their retained key without rotation. |
+| Independent FROST shares | An actual t-of-n signing quorum | Keep for groups choosing threshold custody; the tested implementation requires t >= 2. |
+| FROST with an automatic Keycast co-signer | One human admin plus the service | Potentially preserves one-admin UX with threshold custody; a separate design, not literal 1-of-n FROST. |
+
+The tested `frosty` 4 API rejects threshold one, and frost-core 2.2.0 also returns
+`InvalidMinSigners` for it. Do not patch out that validation. With degree-zero
+Shamir sharing, threshold one would give every participant the complete signing
+secret; it would not provide the independence obtained with t >= 2.
+
+For three admins plus one Keycast share, a 2-of-4 setup could let any admin sign
+with an automatic service contribution, while two admins could sign with the
+service offline. Whether that additional infrastructure is useful is a custody
+choice; it must not add a second human prompt to routine content.
+
+For a **single pubkey**, a fixed FROST threshold cannot become 1 for posts and 2
+for admin changes just by changing event tags or UI. Event-specific approval
+counts are service policy unless a separate cryptographic construction enforces
+them. No higher quorum for any particular action is assumed in this prototype.
+
+Keep a signer interface for hosted and threshold modes. Shared event/protocol
+logic belongs in a package, with Page/View → BLoC → repository → signing/transport
+clients and constructor injection. Introduce the native threshold package only
+for the opt-in FROST path; the hosted path should reuse ordinary NIP-46 signing.
+Keycast's current full-key `SigningSession` is suitable for a hosted group key;
+threshold participation would need a separate path. Standard NIP-46 does not
+supply DKG/partial-signature RPCs.
+
+**Remaining user decision:** use the existing Keycast custody model for the
+one-admin default, or require device-held group keys. Live Keycast changes and
+custody enrollment wait for that choice.
 
 ## Ceremony transport and approval
+
+This section applies only to opt-in FROST groups. The recommended hosted mode
+has no all-admin DKG or multi-round publish ceremony.
 
 Start with authenticated, confidential per-recipient delivery over existing
 NIP-17 gift wraps. Pin a roster, threshold, participant-ID mapping, protocol
@@ -115,16 +150,20 @@ message alone enrolls a participant or publishes a contribution. Network rounds
 and these human approval gates are distinct; do not copy ChillDKG round labels
 onto ZF's algorithm.
 
-Each later event gets one approval showing exact author, kind, target list,
-additions/removals and complete resulting event before nonce commitment. Fix the
+In threshold mode, each participating signer approves the event once, showing
+exact author, kind, target list, additions/removals and complete resulting event before nonce commitment. Fix the
 event bytes and signer set; use two FROST signing rounds. Changing timestamp,
 content, tags, message, signer set or derivation means a fresh session and fresh
 nonces. Never generate new partials from an old approval after a crash/retry.
 
 ## Shares, recovery and nonce lifecycle
 
-Provision a fresh threshold identity; existing NIP-46 account keys do not expose
-secret material from which mobile can derive a share. Do not reconstruct or export
+In hosted mode, Keycast retains the group key and mobile stores each admin
+authorization through its existing secure credential storage. Reuse the hosted
+key recovery policy; do not add local FROST-share backup to that mode.
+
+For threshold mode, provision a fresh threshold identity; existing NIP-46 account
+keys do not expose secret material from which mobile can derive a share. Do not reconstruct or export
 the group secret. No nsec, share, DKG private contribution, nonce or secret-bearing
 exception reaches logs, analytics, crash reports or a clipboard.
 
@@ -154,9 +193,13 @@ an encrypted backup/recovery flow before enrolling persistent groups.
 
 ## Membership and identity rotation
 
-First prototype uses a fixed roster. Adding/removing a signer requires a new
-ceremony and new public key. Update list coordinates and show the replacement
-identity explicitly. Where the old quorum is available, publish a quorum-signed
+In hosted mode, admin changes update signing permissions while retaining the
+group pubkey. Revocation must terminate the removed admin's effective signing
+access, including previously established sessions.
+
+In threshold mode, the first prototype uses a fixed roster. Adding/removing a
+signer requires a new ceremony and new public key. Update list coordinates and
+show the replacement identity explicitly. Where the old quorum is available, publish a quorum-signed
 handover to the new coordinate and confirmation from the new key; clients still
 need migration support and old follows/addresses do not automatically move.
 If the old quorum is lost, no authentic old-key handover can be fabricated.
@@ -170,7 +213,7 @@ cannot make `(kind, pubkey, d)` stable across pubkey changes.
 ## Union and the first real use case
 
 Recommend a group-owned **kind 30005 public video curation set**, already supported
-in Divine, with one fixed roster and ordinary full-list replaceable writes. Media
+in Divine, with one-admin approval for normal full-list replaceable writes. Media
 starter packs (39092) are the next candidate. Never encode editors in NIP-51 `p`
 tags: those mean list members. Use existing non-`p` collaborator metadata where
 appropriate. No new kind-30000 writes: Funnelcake issue 867 is still open and
@@ -193,33 +236,38 @@ A materialized fold-in must not recursively become the owner's independent
 contribution: otherwise a removed item can survive forever in the previous merged
 anchor. Separate the owner's authored contribution from the derived snapshot in
 the eventual union protocol, and define removal/conflict behavior before building
-it. The first FROST prototype signs an explicit full snapshot and does not silently
-invent union deletion semantics. Funnelcake's eventual union index is disposable:
+it. The first group-signing prototype signs an explicit full snapshot and does
+not silently invent union deletion semantics. Funnelcake's eventual union index is disposable:
 rebuild from verified relay events without privileged state.
 
 ## Prototype gates and decisions
 
 1. Approve custody/recovery choice and this written spec, then review the concrete
-   implementation plan. The spike is not authorization to settle those choices.
-2. Add `mobile/packages/group_signing` for protocol/native interfaces, with its own
-   analysis options and package CI; BLoC and Page/View in the app; an internal flag
-   defaulting off, including guarded routes and no startup work when disabled.
-3. Test authenticated transcript agreement, tampered/replayed/wrong-roster messages,
+   implementation plan. One-admin approval for ordinary content is confirmed;
+   requiring two human approvers by default would contradict that decision.
+2. Add `mobile/packages/group_signing` for shared group/signing interfaces, with
+   native crypto only for threshold mode, its own analysis options and package CI;
+   BLoC and Page/View in the app; an internal flag defaulting off, including guarded routes and no startup work when disabled.
+3. In hosted mode, prove every authorized admin can publish alone, unauthorized
+   and revoked admins cannot, and other admins may be offline. In threshold mode,
+   test authenticated transcript agreement, tampered/replayed/wrong-roster messages,
    exact-event approval, below-quorum signing, durable nonce consumption, process
    death/retry, lost/offline members and altered bytes after approval.
-4. Run DKG/signing on 2–3 physical devices across supported platforms. Publish a
-   group list to a test relay, read it back by ID and coordinate, verify locally,
+4. For threshold mode, run DKG/signing on 2–3 physical devices across supported
+   platforms. In both modes, publish a group list to a test relay, read it back by ID and coordinate, verify locally,
    and record another independent Nostr client's visible rendering with client
    version/relay/event IDs. A library verifier is not that UI acceptance test.
-5. Keep server support optional; no Funnelcake migration, production enrollment,
-   custom public group protocol, membership migration or deployment is implied.
+5. Require server support only for groups choosing hosted custody; no Funnelcake
+   migration, production enrollment, custom public group protocol, membership
+   migration or deployment is implied.
 
 ## Sources
 
 - Local source snapshots: Divine mobile base `d8c01c405c`; Keycast `9927597e8455ec835c11d98fd1ef23900b397188`; Mantra `99f48d176974cf064a292fa6dae7ae18712dda4c`.
 - Divine: `mobile/packages/nostr_sdk/lib/event.dart`; `mobile/lib/services/curated_list_service.dart` (`canCollaborate` has no external callers found); `mobile/packages/curated_list_repository/lib/src/curated_list_converter.dart`; `mobile/packages/people_lists_repository`; `mobile/lib/features/feature_flags`; `docs/ARCHITECTURE.md`.
-- Keycast: `core/src/signing_session.rs`, `api/src/handlers/http_rpc_handler.rs`, `Cargo.toml`. No FROST dependency found in its lockfile.
+- Keycast: `core/src/signing_session.rs`, `core/src/types/team.rs`, `core/src/types/authorization.rs`, `core/src/repositories/team.rs`, `api/src/api/http/teams.rs`, `core/src/custom_permissions/allowed_kinds.rs`, `api/src/handlers/http_rpc_handler.rs`, `Cargo.toml`. No FROST dependency found in its lockfile.
 - Mantra: `docs/README.md`, `shared-key-ceremony.md`, `shared-key-derivation.md`, `frost-batch-signing.md`, `marmot-membership.md`, `subgroups.md`, `project-feature.md`, `curated-to-mantra.md`; `ChillDkgRitualManager.kt`, `FrostSigningManager.kt`, `composeApp/build.gradle.kts`. Removed `CuratedSchemaEvent.kt`, `CuratedEntryEvent.kt`, `CuratedSchema.kt` inspected via `git show 776455ec^:<path>` under `composeApp/src/commonMain/kotlin/press/mantra/compose/nostr/curated/`.
+- [Tested threshold validation](https://github.com/ZcashFoundation/frost/blob/3ffc19d8f473d5bc4e07ed41bc884bdb42d6c29f/frost-core/src/keys.rs), `frosty` 4 `lib/src/dkg/part1.dart`.
 - [ZF suite and audit scope](https://frost.zfnd.org/), [BIP-340 suite choice](https://frost.zfnd.org/tutorial.html), [DKG channel requirements](https://frost.zfnd.org/tutorial/dkg.html), [3.0.0 API](https://docs.rs/frost-secp256k1-tr/3.0.0/frost_secp256k1_tr/).
 - [Frosty 4 source](https://github.com/peercoin/frosty/tree/0457225a54dd36dcfff86268206f16cc42f59a07), [Frosty package](https://pub.dev/packages/frosty), [pure-Dart Ed25519 profile](https://github.com/turkananation/pqthreshold/blob/main/doc/FROST_PROFILE.md), [ACINQ](https://github.com/ACINQ/bitcoin-kmp), [secp256k1-zkp](https://github.com/BlockstreamResearch/secp256k1-zkp).
 - Draft proposals checked open/unmerged: [2235: collaborative pointer / latest editor](https://github.com/nostr-protocol/nips/pull/2235), [1228: encrypted event-owned key](https://github.com/nostr-protocol/nips/pull/1228), [1192: owner-bearing d-tag](https://github.com/nostr-protocol/nips/pull/1192), [1015: trusted signing service](https://github.com/nostr-protocol/nips/pull/1015), [2354: reader-specific trust directories](https://github.com/nostr-protocol/nips/pull/2354). None supplies the required independent threshold authorization by itself.

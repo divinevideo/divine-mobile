@@ -5,9 +5,11 @@ It generates fresh dealerless FROST keys, signs real NIP-01 event hashes through
 Dart → flutter_rust_bridge → ZF Rust, and verifies ordinary BIP-340 signatures.
 No full group secret is constructed, persisted, logged or exported.
 
-Six tests cover 2-of-2, every 2-of-3 pair, 3-of-3, insufficient signing quorum,
+Seven tests cover 2-of-2, every 2-of-3 pair, 3-of-3, insufficient signing quorum,
 incomplete DKG, changed message/content rejection, immutable approval bytes,
-distinct fresh nonce commitments, and one-use approval rejection.
+distinct fresh nonce commitments, one-use approval rejection, and the tested
+FROST API rejecting threshold one. That boundary does not imply the product
+requires two human approvals: normal content uses one authorized admin.
 The tests use Bitcoin Core secp256k1 through coinlib, bip340 0.3.0, and the actual
 Divine Event class imported directly from its source. They simulate participants
 in one process; confidential delivery and broadcast agreement are supplied by the
@@ -87,7 +89,7 @@ docker stop divine-group-signing-spike
 docker rm divine-group-signing-spike
 ```
 
-Validation on 2026-10-16: six spike tests, `dart analyze`, the relay probe,
+Validation on 2026-10-16: seven spike tests, `dart analyze`, the relay probe,
 `flutter analyze --no-pub lib test integration_test tools` and all 12 tests in
 `mobile/packages/nostr_sdk/test/unit/event_test.dart` passed. Flutter commands
 used Flutter 3.47.2 / Dart 3.13.2. The system-default Dart was 3.12.2.

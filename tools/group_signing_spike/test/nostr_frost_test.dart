@@ -176,6 +176,13 @@ void main() {
     await loadFrosty();
   });
 
+  test('tested FROST API rejects threshold one', () {
+    expect(
+      () => DkgPart1(identifier: Identifier.fromUint16(1), threshold: 1, n: 3),
+      throwsArgumentError,
+    );
+  });
+
   test('2-of-2 dealerless DKG signs a Nostr event', () {
     signEvent(ceremony(2, 2), [0, 1]);
   });
