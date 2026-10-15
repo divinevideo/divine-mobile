@@ -13886,4 +13886,14 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Nie ma jeszcze pokoi';
+
+  @override
+  String get followedHashtagsTitle => 'Obserwowane hashtagi';
+
+  @override
+  String get manageHashtags => 'Zarządzaj hashtagami';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Obserwuj hashtag na jego stronie, aby znaleźć go tutaj.';
 }

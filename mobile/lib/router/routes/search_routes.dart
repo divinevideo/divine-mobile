@@ -4,6 +4,7 @@
 import 'package:categories_repository/categories_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' show VideoCategory;
+import 'package:openvine/features/hashtag_follows/view/followed_hashtags_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/route_error_screen.dart';
@@ -15,6 +16,11 @@ import 'package:openvine/screens/search_results/view/search_results_page.dart';
 
 List<RouteBase> searchRoutes() {
   return [
+    GoRoute(
+      path: FollowedHashtagsPage.path,
+      parentNavigatorKey: NavigatorKeys.root,
+      builder: (context, state) => const FollowedHashtagsPage(),
+    ),
     // HASHTAG route - standalone screen (no bottom nav)
     GoRoute(
       path: HashtagScreenRouter.path,

@@ -1,0 +1,27 @@
+# ABOUTME: CI workflow for the hashtag_subscription_repository package.
+# ABOUTME: Runs tests, formatting, and analysis only when hashtag_subscription_repository files change.
+
+name: Hashtag Subscription Repository CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/hashtag_subscription_repository/**"
+      - ".github/workflows/hashtag_subscription_repository.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/hashtag_subscription_repository/**"
+      - ".github/workflows/hashtag_subscription_repository.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/hashtag_subscription_repository"
+      flutter_version: "3.47.2"

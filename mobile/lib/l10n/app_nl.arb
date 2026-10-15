@@ -5071,5 +5071,8 @@
   "messagesRooms": "Kamers",
   "messagesPublicTestRooms": "Openbare testkamers",
   "messagesPublicTestDisclosure": "Deze testkamers zijn openbaar. Iedereen met toegang kan je berichten lezen.",
-  "messagesNoRooms": "Nog geen kamers"
+  "messagesNoRooms": "Nog geen kamers",
+  "followedHashtagsTitle": "Gevolgde hashtags",
+  "manageHashtags": "Hashtags beheren",
+  "followedHashtagsEmpty": "Volg een hashtag op de bijbehorende pagina om die hier te vinden."
 }

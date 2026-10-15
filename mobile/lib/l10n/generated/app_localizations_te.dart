@@ -13948,4 +13948,14 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'ఇంకా గదులు లేవు';
+
+  @override
+  String get followedHashtagsTitle => 'అనుసరిస్తున్న హ్యాష్‌ట్యాగ్‌లు';
+
+  @override
+  String get manageHashtags => 'హ్యాష్‌ట్యాగ్‌లను నిర్వహించండి';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.';
 }

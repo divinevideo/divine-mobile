@@ -5071,5 +5071,8 @@
   "messagesRooms": "ルーム",
   "messagesPublicTestRooms": "公開テストルーム",
   "messagesPublicTestDisclosure": "これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。",
-  "messagesNoRooms": "まだルームはありません"
+  "messagesNoRooms": "まだルームはありません",
+  "followedHashtagsTitle": "フォロー中のハッシュタグ",
+  "manageHashtags": "ハッシュタグを管理",
+  "followedHashtagsEmpty": "ハッシュタグのページでフォローすると、ここに表示されます。"
 }

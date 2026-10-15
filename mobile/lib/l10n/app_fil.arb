@@ -4077,5 +4077,8 @@
   "messagesRooms": "Mga silid",
   "messagesPublicTestRooms": "Mga pampublikong silid para sa pagsubok",
   "messagesPublicTestDisclosure": "Pampubliko ang mga silid na ito para sa pagsubok. Mababasa ng sinumang may access ang mga mensahe mo.",
-  "messagesNoRooms": "Wala pang mga silid"
+  "messagesNoRooms": "Wala pang mga silid",
+  "followedHashtagsTitle": "Mga sinusundang hashtag",
+  "manageHashtags": "Pamahalaan ang mga hashtag",
+  "followedHashtagsEmpty": "Sundan ang isang hashtag sa pahina nito para makita ito rito."
 }

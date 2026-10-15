@@ -13596,4 +13596,14 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'ابھی کوئی کمرہ نہیں';
+
+  @override
+  String get followedHashtagsTitle => 'فالو کیے گئے ہیش ٹیگز';
+
+  @override
+  String get manageHashtags => 'ہیش ٹیگز کا نظم کریں';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔';
 }

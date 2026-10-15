@@ -5071,5 +5071,8 @@
   "messagesRooms": "Camere",
   "messagesPublicTestRooms": "Camere publice de test",
   "messagesPublicTestDisclosure": "Aceste camere de test sunt publice. Oricine are acces îți poate citi mesajele.",
-  "messagesNoRooms": "Încă nu există camere"
+  "messagesNoRooms": "Încă nu există camere",
+  "followedHashtagsTitle": "Hashtaguri urmărite",
+  "manageHashtags": "Gestionează hashtagurile",
+  "followedHashtagsEmpty": "Urmărește un hashtag de pe pagina sa pentru a-l găsi aici."
 }

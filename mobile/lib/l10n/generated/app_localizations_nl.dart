@@ -13675,4 +13675,14 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Nog geen kamers';
+
+  @override
+  String get followedHashtagsTitle => 'Gevolgde hashtags';
+
+  @override
+  String get manageHashtags => 'Hashtags beheren';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Volg een hashtag op de bijbehorende pagina om die hier te vinden.';
 }

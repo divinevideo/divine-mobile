@@ -6835,5 +6835,8 @@
   "messagesRooms": "Bilik",
   "messagesPublicTestRooms": "Bilik ujian awam",
   "messagesPublicTestDisclosure": "Bilik ujian ini terbuka kepada umum. Sesiapa yang mempunyai akses boleh membaca mesej anda.",
-  "messagesNoRooms": "Belum ada bilik"
+  "messagesNoRooms": "Belum ada bilik",
+  "followedHashtagsTitle": "Hashtag yang diikuti",
+  "manageHashtags": "Urus hashtag",
+  "followedHashtagsEmpty": "Ikuti hashtag dari halamannya untuk menemuinya di sini."
 }

@@ -13527,4 +13527,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Henüz oda yok';
+
+  @override
+  String get followedHashtagsTitle => 'Takip edilen etiketler';
+
+  @override
+  String get manageHashtags => 'Etiketleri yönet';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Bir etiketi burada bulmak için kendi sayfasından takip et.';
 }

@@ -5071,5 +5071,8 @@
   "messagesRooms": "Salons",
   "messagesPublicTestRooms": "Salons de test publics",
   "messagesPublicTestDisclosure": "Ces salons de test sont publics. Toute personne y ayant accès peut lire vos messages.",
-  "messagesNoRooms": "Aucun salon pour le moment"
+  "messagesNoRooms": "Aucun salon pour le moment",
+  "followedHashtagsTitle": "Hashtags suivis",
+  "manageHashtags": "Gérer les hashtags",
+  "followedHashtagsEmpty": "Suivez un hashtag depuis sa page pour le retrouver ici."
 }

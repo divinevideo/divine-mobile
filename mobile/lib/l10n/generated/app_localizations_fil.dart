@@ -13722,4 +13722,14 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Wala pang mga silid';
+
+  @override
+  String get followedHashtagsTitle => 'Mga sinusundang hashtag';
+
+  @override
+  String get manageHashtags => 'Pamahalaan ang mga hashtag';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Sundan ang isang hashtag sa pahina nito para makita ito rito.';
 }

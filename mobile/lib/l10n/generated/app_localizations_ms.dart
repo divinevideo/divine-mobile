@@ -13601,4 +13601,14 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Belum ada bilik';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtag yang diikuti';
+
+  @override
+  String get manageHashtags => 'Urus hashtag';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Ikuti hashtag dari halamannya untuk menemuinya di sini.';
 }

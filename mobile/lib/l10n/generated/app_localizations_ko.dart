@@ -12953,4 +12953,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get messagesNoRooms => '아직 채팅방이 없어요';
+
+  @override
+  String get followedHashtagsTitle => '팔로우 중인 해시태그';
+
+  @override
+  String get manageHashtags => '해시태그 관리';
+
+  @override
+  String get followedHashtagsEmpty => '해시태그 페이지에서 팔로우하면 여기에 표시됩니다.';
 }

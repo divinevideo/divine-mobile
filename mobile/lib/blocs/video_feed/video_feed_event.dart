@@ -210,3 +210,11 @@ final class VideoFeedTuningUndoRequested extends VideoFeedEvent {
   @override
   List<Object?> get props => [feedTuningEventId];
 }
+
+/// Confirmed followed hashtags changed for this account.
+final class VideoFeedHashtagsChanged extends VideoFeedEvent {
+  const VideoFeedHashtagsChanged(this.hashtags);
+  final List<HashtagSubscription> hashtags;
+  @override
+  List<Object?> get props => [hashtags];
+}

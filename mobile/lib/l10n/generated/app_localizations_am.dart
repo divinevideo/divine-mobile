@@ -13261,4 +13261,13 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'ገና ምንም ክፍሎች የሉም';
+
+  @override
+  String get followedHashtagsTitle => 'የተከተሏቸው ሃሽታጎች';
+
+  @override
+  String get manageHashtags => 'ሃሽታጎችን ያስተዳድሩ';
+
+  @override
+  String get followedHashtagsEmpty => 'እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።';
 }

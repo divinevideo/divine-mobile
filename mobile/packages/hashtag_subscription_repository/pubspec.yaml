@@ -1,0 +1,13 @@
+name: hashtag_subscription_repository
+description: Account-scoped local hashtag subscriptions.
+version: 0.1.0+1
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.11.0
+dependencies:
+  equatable: ^2.0.7
+  rxdart: ^0.28.0
+dev_dependencies:
+  test: ^1.29.0
+  very_good_analysis: ^10.2.0

@@ -4617,5 +4617,8 @@
   "messagesRooms": "채팅방",
   "messagesPublicTestRooms": "공개 테스트 채팅방",
   "messagesPublicTestDisclosure": "이 테스트 채팅방은 공개되어 있어요. 접근할 수 있는 사람은 누구나 메시지를 읽을 수 있어요.",
-  "messagesNoRooms": "아직 채팅방이 없어요"
+  "messagesNoRooms": "아직 채팅방이 없어요",
+  "followedHashtagsTitle": "팔로우 중인 해시태그",
+  "manageHashtags": "해시태그 관리",
+  "followedHashtagsEmpty": "해시태그 페이지에서 팔로우하면 여기에 표시됩니다."
 }

@@ -7,10 +7,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/hashtag_subscription_repository_provider.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockHashtagService extends Mock implements HashtagService {}
 
@@ -28,6 +32,8 @@ void main() {
     setUp(() {
       mockHashtagService = _MockHashtagService();
       mockVideosRepository = _MockVideosRepository();
+      when(() => mockHashtagService.subscribeToHashtagVideos(any()))
+          .thenAnswer((_) async {});
 
       when(() => mockHashtagService.getVideosByHashtags(any())).thenReturn([]);
     });
@@ -35,6 +41,8 @@ void main() {
     Widget buildTestWidget(String hashtag) {
       return ProviderScope(
         overrides: [
+          videoEventServiceProvider.overrideWithValue(_MockVideoEventService()),
+          hashtagSubscriptionRepositoryProvider.overrideWithValue(null),
           hashtagServiceProvider.overrideWith((ref) => mockHashtagService),
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
         ],
@@ -80,6 +88,9 @@ void main() {
 
         expect(find.text('Loading videos about #nostr...'), findsOneWidget);
         expect(find.text('No videos found for #nostr'), findsNothing);
+        // Relay startup must not sit behind the pending REST request.
+        verify(() => mockHashtagService.subscribeToHashtagVideos(['nostr']))
+            .called(1);
 
         feedCompleter.complete(
           const HashtagFeedVideosResult.success(<VideoEvent>[]),
@@ -92,6 +103,34 @@ void main() {
         expect(find.text('No videos found for #nostr'), findsOneWidget);
       },
     );
+
+    testWidgets('failed request shows retry instead of claiming no videos', (
+      tester,
+    ) async {
+      when(
+        () => mockVideosRepository.getHashtagFeedVideos(
+          hashtag: any(named: 'hashtag'),
+        ),
+      ).thenAnswer((_) async => const HashtagFeedVideosResult.failure());
+      when(() => mockHashtagService.subscribeToHashtagVideos(any()))
+          .thenAnswer((_) async {});
+      await tester.pumpWidget(buildTestWidget('nostr'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('No videos found for #nostr'), findsNothing);
+      expect(find.text('Failed to load videos'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      when(
+        () => mockVideosRepository.getHashtagFeedVideos(
+          hashtag: any(named: 'hashtag'),
+        ),
+      ).thenAnswer((_) async => const HashtagFeedVideosResult.success([]));
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Failed to load videos'), findsNothing);
+      expect(find.text('No videos found for #nostr'), findsOneWidget);
+    });
 
     testWidgets('logs a failed initial load instead of leaking it', (
       tester,

@@ -13543,4 +13543,14 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Chưa có phòng nào';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtag đang theo dõi';
+
+  @override
+  String get manageHashtags => 'Quản lý hashtag';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Theo dõi hashtag từ trang của nó để tìm thấy ở đây.';
 }

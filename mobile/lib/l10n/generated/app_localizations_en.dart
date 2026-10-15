@@ -13693,4 +13693,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'No rooms yet';
+
+  @override
+  String get followedHashtagsTitle => 'Followed hashtags';
+
+  @override
+  String get manageHashtags => 'Manage hashtags';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Follow a hashtag from its page to find it here.';
 }

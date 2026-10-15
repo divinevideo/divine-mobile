@@ -143,6 +143,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     );
   });
 
+  // A pushed hashtag (and other full-screen routes) must be shareable and
+  // reloadable at its visible URL while retaining the source page for Back.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   final router = GoRouter(
     navigatorKey: NavigatorKeys.root,
     // Start at /welcome - redirect logic will navigate to appropriate route.

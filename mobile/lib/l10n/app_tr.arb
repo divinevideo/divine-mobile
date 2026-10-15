@@ -5071,5 +5071,8 @@
   "messagesRooms": "Odalar",
   "messagesPublicTestRooms": "Herkese açık test odaları",
   "messagesPublicTestDisclosure": "Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.",
-  "messagesNoRooms": "Henüz oda yok"
+  "messagesNoRooms": "Henüz oda yok",
+  "followedHashtagsTitle": "Takip edilen etiketler",
+  "manageHashtags": "Etiketleri yönet",
+  "followedHashtagsEmpty": "Bir etiketi burada bulmak için kendi sayfasından takip et."
 }

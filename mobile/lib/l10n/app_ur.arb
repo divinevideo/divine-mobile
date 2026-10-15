@@ -6835,5 +6835,8 @@
   "messagesRooms": "کمرے",
   "messagesPublicTestRooms": "عوامی آزمائشی کمرے",
   "messagesPublicTestDisclosure": "یہ آزمائشی کمرے عوامی ہیں۔ رسائی رکھنے والا کوئی بھی شخص آپ کے پیغامات پڑھ سکتا ہے۔",
-  "messagesNoRooms": "ابھی کوئی کمرہ نہیں"
+  "messagesNoRooms": "ابھی کوئی کمرہ نہیں",
+  "followedHashtagsTitle": "فالو کیے گئے ہیش ٹیگز",
+  "manageHashtags": "ہیش ٹیگز کا نظم کریں",
+  "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔"
 }

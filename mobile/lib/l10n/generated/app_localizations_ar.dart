@@ -13593,4 +13593,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'لا توجد غرف بعد';
+
+  @override
+  String get followedHashtagsTitle => 'الوسوم التي تتابعها';
+
+  @override
+  String get manageHashtags => 'إدارة الوسوم';
+
+  @override
+  String get followedHashtagsEmpty => 'تابع وسمًا من صفحته لتجده هنا.';
 }

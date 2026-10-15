@@ -6835,5 +6835,8 @@
   "messagesRooms": "聊天室",
   "messagesPublicTestRooms": "公开测试聊天室",
   "messagesPublicTestDisclosure": "这些测试聊天室是公开的。任何有访问权限的人都可以阅读你的消息。",
-  "messagesNoRooms": "暂无聊天室"
+  "messagesNoRooms": "暂无聊天室",
+  "followedHashtagsTitle": "已关注的话题标签",
+  "manageHashtags": "管理话题标签",
+  "followedHashtagsEmpty": "在话题标签页面关注后，即可在这里找到。"
 }

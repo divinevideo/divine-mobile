@@ -13768,4 +13768,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Noch keine Räume';
+
+  @override
+  String get followedHashtagsTitle => 'Abonnierte Hashtags';
+
+  @override
+  String get manageHashtags => 'Hashtags verwalten';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Folge einem Hashtag auf seiner Seite, um ihn hier zu finden.';
 }

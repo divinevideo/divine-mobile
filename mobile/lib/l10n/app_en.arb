@@ -9957,5 +9957,17 @@
   },
   "@messagesNoRooms": {
     "description": "Empty state of the room list in Messages when there is no room to show."
+  },
+  "followedHashtagsTitle": "Followed hashtags",
+  "@followedHashtagsTitle": {
+    "description": "Title of the account-scoped followed hashtags screen."
+  },
+  "manageHashtags": "Manage hashtags",
+  "@manageHashtags": {
+    "description": "Home source picker action opening followed hashtag management."
+  },
+  "followedHashtagsEmpty": "Follow a hashtag from its page to find it here.",
+  "@followedHashtagsEmpty": {
+    "description": "Empty state explaining how to follow a hashtag."
   }
 }

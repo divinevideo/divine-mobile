@@ -13607,4 +13607,14 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get messagesNoRooms => 'Inga rum ännu';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtaggar du följer';
+
+  @override
+  String get manageHashtags => 'Hantera hashtaggar';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Följ en hashtagg på dess sida för att hitta den här.';
 }

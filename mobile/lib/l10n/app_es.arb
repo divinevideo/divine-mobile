@@ -5071,5 +5071,8 @@
   "messagesRooms": "Salas",
   "messagesPublicTestRooms": "Salas públicas de prueba",
   "messagesPublicTestDisclosure": "Estas salas de prueba son públicas. Cualquiera con acceso puede leer tus mensajes.",
-  "messagesNoRooms": "Todavía no hay salas"
+  "messagesNoRooms": "Todavía no hay salas",
+  "followedHashtagsTitle": "Hashtags que sigues",
+  "manageHashtags": "Gestionar hashtags",
+  "followedHashtagsEmpty": "Sigue un hashtag desde su página para encontrarlo aquí."
 }

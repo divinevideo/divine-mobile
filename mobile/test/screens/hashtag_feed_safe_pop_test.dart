@@ -7,12 +7,16 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/hashtag_subscription_repository_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockHashtagService extends Mock implements HashtagService {}
 
@@ -62,6 +66,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            videoEventServiceProvider.overrideWithValue(
+              _MockVideoEventService(),
+            ),
+            hashtagSubscriptionRepositoryProvider.overrideWithValue(null),
             videosRepositoryProvider.overrideWithValue(videosRepository),
             hashtagServiceProvider.overrideWith((ref) => hashtagService),
             contentBlocklistRepositoryProvider.overrideWithValue(
