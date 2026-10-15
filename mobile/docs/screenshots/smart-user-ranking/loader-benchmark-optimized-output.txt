@@ -1,0 +1,82 @@
+Measured production code SHA: 7c93bdbc3467b3a6ac60d6d7b2ccfbcf6b9fa64f
+00:00 +0: loading /Users/rabble/code/divine/divine-mobile/.worktrees/smart-user-ranking/mobile/test/task17_loader_benchmark_test.dart
+00:00 +0: manual host benchmark real SQLite loader and cached name read
+Shell: Warm stage medians: loader.load 71.9155 ms; names 23.48 ms (separately computed medians).
+Shell: SQLite indexes: [{name: idx_clip_category_id, sql: CREATE INDEX idx_clip_category_id
+Shell:       ON clips (category_id)
+Shell:     }, {name: idx_clip_category_owner_pubkey, sql: CREATE INDEX idx_clip_category_owner_pubkey
+Shell:       ON clip_categories (owner_pubkey)
+Shell:     }, {name: idx_clip_deleted_at, sql: CREATE INDEX idx_clip_deleted_at
+Shell:       ON clips (deleted_at)
+Shell:     }, {name: idx_clip_file_path, sql: CREATE INDEX idx_clip_file_path
+Shell:       ON clips (file_path)
+Shell:     }, {name: idx_clip_library, sql: CREATE INDEX idx_clip_library
+Shell:       ON clips (draft_id) WHERE draft_id IS NULL
+Shell:     }, {name: idx_clip_owner_pubkey, sql: CREATE INDEX idx_clip_owner_pubkey
+Shell:       ON clips (owner_pubkey)
+Shell:     }, {name: idx_clip_thumbnail_path, sql: CREATE INDEX idx_clip_thumbnail_path
+Shell:       ON clips (thumbnail_path)
+Shell:     }, {name: idx_conversation_owner_pubkey, sql: CREATE INDEX idx_conversation_owner_pubkey
+Shell:       ON conversations (owner_pubkey)
+Shell:     }, {name: idx_dm_gift_wrap_id, sql: CREATE UNIQUE INDEX idx_dm_gift_wrap_id
+Shell:       ON direct_messages (gift_wrap_id)
+Shell:     }, {name: idx_dm_owner_conversation, sql: CREATE INDEX idx_dm_owner_conversation
+Shell:       ON direct_messages (owner_pubkey, conversation_id, created_at DESC)
+Shell:     }, {name: idx_dm_owner_pubkey, sql: CREATE INDEX idx_dm_owner_pubkey
+Shell:       ON direct_messages (owner_pubkey)
+Shell:     }, {name: idx_dm_reactions_owner_created, sql: CREATE INDEX idx_dm_reactions_owner_created
+Shell:       ON dm_message_reactions (owner_pubkey, created_at)
+Shell:     }, {name: idx_dm_reactions_reactor, sql: CREATE INDEX idx_dm_reactions_reactor
+Shell:       ON dm_message_reactions (target_message_id, reactor_pubkey)
+Shell:       WHERE is_deleted = 0
+Shell:     }, {name: idx_dm_reactions_target_live, sql: CREATE INDEX idx_dm_reactions_target_live
+Shell:       ON dm_message_reactions (conversation_id, target_message_id)
+Shell:       WHERE is_deleted = 0
+Shell:     }, {name: idx_dm_reactions_unique_live, sql: CREATE UNIQUE INDEX idx_dm_reactions_unique_live
+Shell:       ON dm_message_reactions (target_message_id, reactor_pubkey, owner_pubkey)
+Shell:       WHERE is_deleted = 0
+Shell:     }, {name: idx_draft_custom_thumbnail_path, sql: CREATE INDEX idx_draft_custom_thumbnail_path
+Shell:       ON drafts (custom_thumbnail_path)
+Shell:     }, {name: idx_draft_owner_pubkey, sql: CREATE INDEX idx_draft_owner_pubkey
+Shell:       ON drafts (owner_pubkey)
+Shell:     }, {name: idx_draft_rendered_file_path, sql: CREATE INDEX idx_draft_rendered_file_path
+Shell:       ON drafts (rendered_file_path)
+Shell:     }, {name: idx_draft_rendered_thumbnail_path, sql: CREATE INDEX idx_draft_rendered_thumbnail_path
+Shell:       ON drafts (rendered_thumbnail_path)
+Shell:     }, {name: idx_event_created_at, sql: CREATE INDEX idx_event_created_at
+Shell:       ON event (created_at)
+Shell:     }, {name: idx_event_expire_at, sql: CREATE INDEX idx_event_expire_at
+Shell:       ON event (expire_at)
+Shell:     }, {name: idx_event_kind_created_at, sql: CREATE INDEX idx_event_kind_created_at
+Shell:       ON event (kind, created_at)
+Shell:     }, {name: idx_event_pubkey_created_at, sql: CREATE INDEX idx_event_pubkey_created_at
+Shell:       ON event (pubkey, created_at)
+Shell:     }, {name: idx_event_pubkey_kind_d_tag_created_at, sql: CREATE INDEX idx_event_pubkey_kind_d_tag_created_at
+Shell:       ON event (pubkey, kind, d_tag, created_at)
+Shell:     }, {name: idx_metrics_likes, sql: CREATE INDEX idx_metrics_likes ON video_metrics (likes)}, {name: idx_metrics_loop_count, sql: CREATE INDEX idx_metrics_loop_count ON video_metrics (loop_count)}, {name: idx_metrics_views, sql: CREATE INDEX idx_metrics_views ON video_metrics (views)}, {name: idx_notification_is_read, sql: CREATE INDEX idx_notification_is_read ON notifications (is_read)}, {name: idx_notification_owner_timestamp, sql: CREATE INDEX idx_notification_owner_timestamp ON notifications (owner_pubkey, timestamp DESC)}, {name: idx_notification_timestamp, sql: CREATE INDEX idx_notification_timestamp ON notifications (timestamp DESC)}, {name: idx_outgoing_dms_owner_conversation, sql: CREATE INDEX idx_outgoing_dms_owner_conversation
+Shell:       ON outgoing_dms (owner_pubkey, conversation_id, created_at DESC)
+Shell:     }, {name: idx_outgoing_dms_owner_recipient_status, sql: CREATE INDEX idx_outgoing_dms_owner_recipient_status
+Shell:       ON outgoing_dms (owner_pubkey, recipient_wrap_status)
+Shell:     }, {name: idx_outgoing_dms_owner_self_status, sql: CREATE INDEX idx_outgoing_dms_owner_self_status
+Shell:       ON outgoing_dms (owner_pubkey, self_wrap_status)
+Shell:     }, {name: idx_outgoing_dms_queued_at, sql: CREATE INDEX idx_outgoing_dms_queued_at
+Shell:       ON outgoing_dms (queued_at)
+Shell:     }, {name: idx_pending_gift_wraps_owner_attempts, sql: CREATE INDEX idx_pending_gift_wraps_owner_attempts
+Shell:       ON pending_gift_wraps (owner_pubkey, attempts)
+Shell:     }, {name: idx_pending_product_events_created_at, sql: CREATE INDEX idx_pending_product_events_created_at
+Shell:       ON pending_product_events (created_at)
+Shell:     }, {name: idx_pending_product_events_owner, sql: CREATE INDEX idx_pending_product_events_owner
+Shell:       ON pending_product_events (owner_pubkey, status, next_attempt_at)
+Shell:     }, {name: idx_pending_product_events_status_next_attempt, sql: CREATE INDEX idx_pending_product_events_status_next_attempt
+Shell:       ON pending_product_events (status, next_attempt_at)
+Shell:     }, {name: idx_pending_upload_created, sql: CREATE INDEX idx_pending_upload_created ON pending_uploads (created_at DESC)}, {name: idx_pending_upload_status, sql: CREATE INDEX idx_pending_upload_status ON pending_uploads (status)}, {name: idx_pending_view_events_created_at, sql: CREATE INDEX idx_pending_view_events_created_at
+Shell:       ON pending_view_events (created_at)
+Shell:     }, {name: idx_pending_view_events_user_status, sql: CREATE INDEX idx_pending_view_events_user_status
+Shell:       ON pending_view_events (user_pubkey, status)
+Shell:     }, {name: idx_personal_events_pubkey_created_at, sql: CREATE INDEX idx_personal_events_pubkey_created_at ON personal_events (pubkey, created_at DESC)}, {name: idx_personal_events_pubkey_kind_created_at, sql: CREATE INDEX idx_personal_events_pubkey_kind_created_at ON personal_events (pubkey, kind, created_at DESC)}, {name: idx_personal_reactions_addressable_id, sql: CREATE INDEX idx_personal_reactions_addressable_id ON personal_reactions (addressable_id)}, {name: idx_personal_reactions_reaction_id, sql: CREATE INDEX idx_personal_reactions_reaction_id ON personal_reactions (reaction_event_id)}, {name: idx_personal_reactions_user, sql: CREATE INDEX idx_personal_reactions_user ON personal_reactions (user_pubkey)}, {name: idx_personal_reposts_repost_id, sql: CREATE INDEX idx_personal_reposts_repost_id ON personal_reposts (repost_event_id)}, {name: idx_personal_reposts_user, sql: CREATE INDEX idx_personal_reposts_user ON personal_reposts (user_pubkey)}, {name: idx_personal_reposts_user_created, sql: CREATE INDEX idx_personal_reposts_user_created ON personal_reposts (user_pubkey, created_at DESC)}, {name: idx_saved_caption_style_owner_pubkey, sql: CREATE INDEX idx_saved_caption_style_owner_pubkey ON saved_caption_styles (owner_pubkey)}, {name: idx_saved_title_style_owner_pubkey, sql: CREATE INDEX idx_saved_title_style_owner_pubkey ON saved_title_styles (owner_pubkey)}, {name: idx_scheduled_posts_owner_status, sql: CREATE INDEX idx_scheduled_posts_owner_status ON scheduled_posts (owner_pubkey, status)}, {name: idx_seen_videos_last_seen_at, sql: CREATE INDEX idx_seen_videos_last_seen_at
+Shell:       ON seen_videos (last_seen_at DESC)
+Shell:     }, {name: sqlite_autoindex_clip_categories_1, sql: null}, {name: sqlite_autoindex_clips_1, sql: null}, {name: sqlite_autoindex_conversations_1, sql: null}, {name: sqlite_autoindex_direct_messages_1, sql: null}, {name: sqlite_autoindex_dm_message_reactions_1, sql: null}, {name: sqlite_autoindex_drafts_1, sql: null}, {name: sqlite_autoindex_event_1, sql: null}, {name: sqlite_autoindex_identity_events_1, sql: null}, {name: sqlite_autoindex_identity_verifications_1, sql: null}, {name: sqlite_autoindex_my_followers_1, sql: null}, {name: sqlite_autoindex_nip05_verifications_1, sql: null}, {name: sqlite_autoindex_notifications_1, sql: null}, {name: sqlite_autoindex_outgoing_dms_1, sql: null}, {name: sqlite_autoindex_pending_actions_1, sql: null}, {name: sqlite_autoindex_pending_gift_wraps_1, sql: null}, {name: sqlite_autoindex_pending_product_events_1, sql: null}, {name: sqlite_autoindex_pending_profile_saves_1, sql: null}, {name: sqlite_autoindex_pending_reports_1, sql: null}, {name: sqlite_autoindex_pending_uploads_1, sql: null}, {name: sqlite_autoindex_pending_view_events_1, sql: null}, {name: sqlite_autoindex_personal_events_1, sql: null}, {name: sqlite_autoindex_personal_reactions_1, sql: null}, {name: sqlite_autoindex_personal_reposts_1, sql: null}, {name: sqlite_autoindex_processed_gift_wraps_1, sql: null}, {name: sqlite_autoindex_profile_statistics_1, sql: null}, {name: sqlite_autoindex_removed_conversations_1, sql: null}, {name: sqlite_autoindex_removed_message_ids_1, sql: null}, {name: sqlite_autoindex_saved_caption_styles_1, sql: null}, {name: sqlite_autoindex_saved_title_styles_1, sql: null}, {name: sqlite_autoindex_scheduled_posts_1, sql: null}, {name: sqlite_autoindex_seen_videos_1, sql: null}, {name: sqlite_autoindex_user_profiles_1, sql: null}, {name: sqlite_autoindex_vanished_profiles_1, sql: null}, {name: sqlite_autoindex_video_metrics_1, sql: null}]
+Shell: HOST REAL SQLITE: 5000 profiles/stats/videos/follows; 2500 followers, 1000 accepted DMs, 715 verifications.
+Shell: Full loader.load + loadCachedDisplayNames; reopen-first 273.953 ms; warm 10 median 95.3955 ms min 76.121 max 116.731.
+Shell: Flutter-test host JIT, not profile-device; seeded OS caches; mock follow repository returns a list; production loader snapshots its Set inside each measured load; DM adapter maps real DAO rows, no repository decryption overhead. Does NOT verify 50 ms phone budget.
+00:03 +1: All tests passed!

@@ -158,9 +158,7 @@ void main() {
                   home: switch (surface) {
                     'following' => const MyFollowingScreen(displayName: 'Alex'),
                     'dm-picker' => Scaffold(
-                      body: NewMessageSheet(
-                        profileRepository: profiles,
-                        followRepository: follows,
+                      body: const NewMessageSheet(
                         currentUserPubkey: owner,
                         allowGroups: true,
                       ),

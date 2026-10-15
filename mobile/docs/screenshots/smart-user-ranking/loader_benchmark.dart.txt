@@ -105,9 +105,7 @@ void main() {
       );
       final dms = _Dm();
       final follows = _Follow();
-      final followed = keys.toSet();
-      when(() => follows.isFollowing(any()))
-          .thenAnswer((i) => followed.contains(i.positionalArguments.first));
+      when(() => follows.followingPubkeys).thenReturn(keys);
       when(() => dms.watchAcceptedConversations()).thenAnswer(
         (_) => db.conversationsDao
             .watchAcceptedConversations(ownerPubkey: owner)
@@ -172,7 +170,7 @@ void main() {
         'Full loader.load + loadCachedDisplayNames; reopen-first ${samples.first / 1000} ms; warm 10 median ${(warm[4] + warm[5]) / 2000} ms min ${warm.first / 1000} max ${warm.last / 1000}.',
       );
       stdout.writeln(
-        'Flutter-test host JIT, not profile-device; seeded OS caches; follow membership mock uses real in-memory set; DM adapter maps real DAO rows, no repository decryption overhead. Does NOT verify 50 ms phone budget.',
+        'Flutter-test host JIT, not profile-device; seeded OS caches; mock follow repository returns a list; production loader snapshots its Set inside each measured load; DM adapter maps real DAO rows, no repository decryption overhead. Does NOT verify 50 ms phone budget.',
       );
       await db.close();
       client.close();
