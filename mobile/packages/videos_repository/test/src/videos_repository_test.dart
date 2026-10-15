@@ -2571,6 +2571,89 @@ void main() {
           },
         );
 
+        group('when Funnelcake reports more but stops paging', () {
+          // Page one hands out a cursor and the page after it is stuck. The
+          // walk must end there, and page one's cursor must not leak out as
+          // the next page's start. A third request fails the test instead of
+          // hanging it.
+          late List<int?> requestedBefore;
+
+          Future<HomeFeedResult> fetchWithSecondPage(
+            HomeFeedResponse secondPage,
+          ) {
+            requestedBefore = [];
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer((invocation) async {
+              final before = invocation.namedArguments[#before] as int?;
+              requestedBefore.add(before);
+              if (requestedBefore.length > 2) {
+                throw StateError('Funnelcake walk did not stop');
+              }
+              if (before != null) return secondPage;
+              return HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'first-video',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-1',
+                    videoUrl: 'https://example.com/1.mp4',
+                    createdAt: 2900,
+                  ),
+                ],
+                hasMore: true,
+                nextCursor: 2900,
+              );
+            });
+
+            return VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            ).getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 2,
+            );
+          }
+
+          test('ends without a cursor when the next page repeats it', () async {
+            final result = await fetchWithSecondPage(
+              const HomeFeedResponse(
+                videos: [],
+                hasMore: true,
+                nextCursor: 2900,
+              ),
+            );
+
+            expect(requestedBefore, equals([null, 2900]));
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['first-video']),
+            );
+            expect(result.paginationCursor, isNull);
+            expect(result.hasMore, isFalse);
+          });
+
+          test('ends without a cursor when the next page has none', () async {
+            final result = await fetchWithSecondPage(
+              const HomeFeedResponse(videos: [], hasMore: true),
+            );
+
+            expect(requestedBefore, equals([null, 2900]));
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['first-video']),
+            );
+            expect(result.paginationCursor, isNull);
+            expect(result.hasMore, isFalse);
+          });
+        });
+
         test(
           'falls back to the revision-time cursor when the feed omits one',
           () async {
