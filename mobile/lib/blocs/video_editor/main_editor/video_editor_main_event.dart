@@ -224,6 +224,20 @@ class VideoEditorSlidePointPlacementChanged extends VideoEditorMainEvent {
   List<Object?> get props => [isPlacing];
 }
 
+/// Enters or exits the shape mask editor.
+///
+/// Like placing a slide point, the editor gives the canvas the whole screen
+/// while it is open, so the mask is shaped on the video as large as it gets;
+/// the mask editor brings its own controls.
+class VideoEditorMaskEditingChanged extends VideoEditorMainEvent {
+  const VideoEditorMaskEditingChanged({required this.isEditing});
+
+  final bool isEditing;
+
+  @override
+  List<Object?> get props => [isEditing];
+}
+
 /// Shows [preview] on a detached clip's layer without touching the editor
 /// history, or ends the preview when it is `null`.
 class VideoEditorDetachedClipOpacityPreviewChanged

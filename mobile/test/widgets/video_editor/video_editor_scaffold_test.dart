@@ -24,6 +24,7 @@ import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/video_editor_scaffold.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -240,6 +241,40 @@ void main() {
 
         expect(find.byType(VideoEditorMainOverlayActions), findsOneWidget);
         expect(collapseSection().sizeFactor.value, 1);
+      },
+    );
+
+    testWidgets(
+      'keeps the canvas above the mask editor panel while a mask is edited',
+      (tester) async {
+        // Created inside the test, as in the voice-over test above.
+        final mainBloc = VideoEditorMainBloc();
+        addTearDown(mainBloc.close);
+
+        await tester.pumpWidget(
+          buildWidget(isLoading: true, mainBlocOverride: mainBloc),
+        );
+        await tester.pump();
+
+        mainBloc.add(const VideoEditorMaskEditingChanged(isEditing: true));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // The timeline steps aside, and the canvas ends where the panel the
+        // mask editor draws over this space begins, so a shape dragged down
+        // can never slip under it.
+        expect(find.byType(VideoEditorMainOverlayActions), findsNothing);
+        final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+        expect(
+          tester.getRect(find.byType(BrandedLoadingScaffold)).bottom,
+          screen.height - videoEditorMaskPanelHeight,
+        );
+
+        mainBloc.add(const VideoEditorMaskEditingChanged(isEditing: false));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byType(VideoEditorMainOverlayActions), findsOneWidget);
       },
     );
 

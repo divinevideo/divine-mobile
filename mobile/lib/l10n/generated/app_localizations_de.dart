@@ -9701,6 +9701,53 @@ class AppLocalizationsDe extends AppLocalizations {
       'Festlegen, wie durchsichtig die ausgewählte Ebene ist';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Formmaske';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Ausgewähltes Element in einer Form zeigen';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Zieh, um die Form zu verschieben. Mit zwei Fingern änderst du ihre Größe oder drehst sie, an einem Griff ziehst du sie in die Länge.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Keine';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Kreis';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rechteck';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Herz';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Umkehren';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Weichheit';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Scharf';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Weich';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Ecken';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Eckig';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Rund';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch erkennen';
 
   @override

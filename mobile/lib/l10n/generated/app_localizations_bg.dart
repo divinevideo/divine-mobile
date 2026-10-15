@@ -9664,6 +9664,53 @@ class AppLocalizationsBg extends AppLocalizations {
       'Задай колко прозрачен да е избраният слой';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Маска с форма';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Покажи избрания елемент във форма';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Плъзни, за да преместиш формата. Събери или разтвори два пръста, за да я оразмериш или завъртиш, или плъзни дръжка, за да я разтегнеш.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Без';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Кръг';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Правоъгълник';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Сърце';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Линейна';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Обърни';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Мекота';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Остра';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Мека';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Ъгли';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Прави';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Заоблени';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
 
   @override

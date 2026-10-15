@@ -20,7 +20,13 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show ImportStateHistory, ProImageEditorState, ProVideoController, SubEditor;
+    show
+        ImportStateHistory,
+        LayerMask,
+        LayerMaskShape,
+        ProImageEditorState,
+        ProVideoController,
+        SubEditor;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 void main() {
@@ -215,6 +221,24 @@ void main() {
           previous: ClipEditorState(clips: [clip]),
           current: ClipEditorState(
             clips: [clip.copyWith(thumbnailPath: '/thumbs/end.jpg')],
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('skips a shape-mask change, which is drawn over the frame', () {
+      final clip = _createClip(id: 'end');
+
+      expect(
+        VideoEditorCanvas.shouldSyncPlayerForClipStateChange(
+          previous: ClipEditorState(clips: [clip]),
+          current: ClipEditorState(
+            clips: [
+              clip.copyWith(
+                mask: const LayerMask(shape: LayerMaskShape.heart),
+              ),
+            ],
           ),
         ),
         isFalse,
@@ -791,6 +815,13 @@ void main() {
     test('detects a deleted frame', () {
       final a = _createStopMotionClip(id: 'sm', holds: [hold2, hold2]);
       final b = _createStopMotionClip(id: 'sm', holds: [hold2]);
+
+      expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
+    });
+
+    test('detects a shape-mask change, so undo and redo restore it', () {
+      final a = _createClip(id: 'c');
+      final b = a.copyWith(mask: const LayerMask(shape: LayerMaskShape.heart));
 
       expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
     });

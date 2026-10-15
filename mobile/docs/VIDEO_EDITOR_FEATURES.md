@@ -48,6 +48,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Reverse**, as a toggle.
 - **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider, with one-tap presets for 0.25×, 0.5×, 1×, 1.5×, 2× and 3×.
 - **Transform:** crop (locked to the video's aspect ratio), rotate by 90°, flip.
+- **Shape mask:** show the clip only inside a shape (see [Shape mask](#shape-mask)). Freeze frames take one too.
 - **Extract audio:** moves the clip's sound to its own track and mutes the clip.
 - **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and every sound track (music, voice-over, extracted audio) are left out, so a clip whose sound was extracted is saved silent.
 - **Add clips** from the library or the camera.
@@ -66,8 +67,8 @@ Detach (picture-in-picture):
 
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
-- A detached layer can be moved, resized and rotated on the canvas, split, duplicated, deleted, cropped to any aspect ratio, turned by 90° or flipped (Transform), made see-through (opacity 0–100 %), moved with keyframes, and color-masked. It has no enter or leave animation.
-- Back to timeline puts the clip back as a timeline clip, into the color or photo slot it left if that is still there. Otherwise it goes in at the playhead: at the clip boundary under it, or right after the clip the playhead is inside. Only the part its layer showed comes back, as trim. Its placement, opacity and live color mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
+- A detached layer can be moved, resized and rotated on the canvas, split, duplicated, deleted, cropped to any aspect ratio, turned by 90° or flipped (Transform), made see-through (opacity 0–100 %), moved with keyframes, color-masked and shape-masked. It has no enter or leave animation. A clip detached with a shape mask takes the mask onto its layer.
+- Back to timeline puts the clip back as a timeline clip, into the color or photo slot it left if that is still there. Otherwise it goes in at the playhead: at the clip boundary under it, or right after the clip the playhead is inside. Only the part its layer showed comes back, as trim. Its placement, opacity, live color mask and shape mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
 
 Color mask (chroma key, formerly "Green screen"):
 
@@ -75,6 +76,14 @@ Color mask (chroma key, formerly "Green screen"):
 - Controls for amount, edge softness and color spill.
 - Background on a timeline clip: transparent (black in the exported video), a color, a camera photo, or a library clip. On a detached layer, transparent shows whatever is underneath, and a library clip is not offered.
 - On a timeline clip the key is baked into the clip; on a detached layer it is applied live.
+
+Shape mask:
+
+- Shows a timeline clip, a detached clip, a text, a sticker or a drawing only inside a circle (stretchable into an oval), a rectangle with rounded corners or a heart, or on one side of a straight line (linear). Not offered for a blurred or pixelated area or an audio visualizer, which the export draws from their own settings.
+- The mask is shaped in a full-screen editor over the paused video: one finger moves it, two resize and turn it, and the handles on its right and bottom sides stretch it. Softness fades its edge over up to half the item's shorter side, so a soft linear mask fades the item out; corners round the rectangle; invert shows the item outside the shape instead. The change is one undo step, and cancelling leaves the item as it was.
+- It moves, scales and turns with its item, keyframes included.
+- On a timeline clip, what the mask hides is black in both the preview and the export, and across a dissolve, slide, push or wipe the black fades with the clip. On a detached clip or an overlay, it shows what lies underneath.
+- A masked sticker or drawing is not combined with others, since the combined layer would carry one mask at most.
 
 Timeline:
 

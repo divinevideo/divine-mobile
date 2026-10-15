@@ -32,6 +32,7 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
@@ -58,6 +59,7 @@ import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_sheet.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
@@ -185,6 +187,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// The volume being dragged in the timeline, which the canvas previews.
   final _liveVolumeNotifier = ValueNotifier<LiveVolume?>(null);
   final _liveEqualizerNotifier = ValueNotifier<LiveEqualizer?>(null);
+
+  /// The timeline clip mask being changed, which the canvas previews.
+  final _liveClipMaskNotifier = ValueNotifier<LiveClipMask?>(null);
+
+  /// The box the preview frame fills, which a clip mask is measured in.
+  final _clipFrameTracker = VideoEditorFrameTracker();
 
   /// Track ids whose missing duration we already tried to backfill, so a
   /// failed probe isn't retried on every audio-track change.
@@ -412,6 +420,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _playheadAdvancingNotifier.dispose();
     _liveVolumeNotifier.dispose();
     _liveEqualizerNotifier.dispose();
+    _liveClipMaskNotifier.dispose();
     super.dispose();
   }
 
@@ -1197,6 +1206,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               liveVolumeNotifier: _liveVolumeNotifier,
               cancelLiveVolumePreview: _cancelLiveVolumePreview,
               liveEqualizerNotifier: _liveEqualizerNotifier,
+              liveClipMaskNotifier: _liveClipMaskNotifier,
+              clipFrameTracker: _clipFrameTracker,
               fromLibrary: widget.fromLibrary,
               onOpenCamera: () => _runDetached(
                 _openCamera(

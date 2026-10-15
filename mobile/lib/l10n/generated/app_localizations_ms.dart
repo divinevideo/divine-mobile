@@ -9586,6 +9586,53 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tetapkan tahap lutsinar lapisan yang dipilih';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Topeng bentuk';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Tunjukkan item yang dipilih di dalam bentuk';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Seret untuk mengalihkan bentuk. Cubit untuk mengubah saiz atau memutarnya, atau seret pemegang untuk meregangkannya.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Tiada';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Bulatan';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Segi empat tepat';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Hati';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Songsangkan';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Kelembutan';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Tajam';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Lembut';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Penjuru';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Bersegi';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Bulat';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Kesan automatik';
 
   @override

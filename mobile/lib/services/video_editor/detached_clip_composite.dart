@@ -14,7 +14,13 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show ExportedLayer, Layer;
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, SegmentFit, SegmentTransform, VideoLayer, VideoSegment;
+    show
+        EditorLayerImage,
+        EditorVideo,
+        SegmentFit,
+        SegmentTransform,
+        VideoLayer,
+        VideoSegment;
 
 /// One detached clip, paired with the layer that places it on the canvas.
 class DetachedClipExportLayer {
@@ -108,6 +114,28 @@ PartitionedLayers partitionDetachedClipLayers(
   return (below: below, detached: detached, above: above);
 }
 
+/// The size, in pixels of a frame of [videoSize], of the box [item] is placed
+/// in before it is turned — the box its clip is stretched over, and so the
+/// size its mask matte is rendered at.
+Size detachedClipExportSize({
+  required DetachedClipExportLayer item,
+  required Size bodySize,
+  required Size videoSize,
+  required double targetAspectRatio,
+}) {
+  final mapping = ExportLayerMapping(
+    bodySize: bodySize,
+    frameSize: videoSize,
+    targetAspectRatio: targetAspectRatio,
+  );
+  final box = unrotatedLayerBox(
+    boundingBox: item.logicalSize,
+    rotation: item.layer.rotation,
+    aspectRatio: item.clip.originalAspectRatio,
+  );
+  return Size(box.width * mapping.scale, box.height * mapping.scale);
+}
+
 /// Builds the composition layer that places [item] over the base track.
 ///
 /// Placement uses the same [ExportLayerMapping] and centre-relative offset
@@ -129,6 +157,11 @@ PartitionedLayers partitionDetachedClipLayers(
 /// travels inside the key itself. A library-clip backdrop has no second track
 /// to play on here and is not offered for a detached clip — were one to arrive
 /// anyway, its key is transparent and the track shows through instead.
+///
+/// [mask] is the layer's shape mask rendered as an alpha matte over its box
+/// (see [detachedClipExportSize]). The composition stretches it over the
+/// clip's own frame after the key and before placing it, so what the mask
+/// hides shows the track underneath, as the canvas does.
 VideoLayer buildDetachedClipVideoLayer({
   required DetachedClipExportLayer item,
   required EditorVideo resolvedVideo,
@@ -137,6 +170,7 @@ VideoLayer buildDetachedClipVideoLayer({
   required double targetAspectRatio,
   required TransitionTimelineMap timelineMap,
   required bool speedFlattened,
+  EditorLayerImage? mask,
 }) {
   final mapping = ExportLayerMapping(
     bodySize: bodySize,
@@ -174,6 +208,7 @@ VideoLayer buildDetachedClipVideoLayer({
 
   return VideoLayer(
     chromaKey: item.chromaKey?.key,
+    mask: mask,
     // The whole layer fades, so a keyed clip's fill fades with it — the
     // composition applies the opacity after the key, as the canvas does.
     // Keyframes carry the opacity of a keyframed clip instead.

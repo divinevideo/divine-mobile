@@ -22,6 +22,7 @@ import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/clip_mask_render.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/clip_normalization_render.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
@@ -984,7 +985,7 @@ class VideoEditorRenderService {
     );
 
     await renderWithEncoderFallback(
-      baseTask: task,
+      baseTask: await withClipMaskCovers(task, clips, aspectRatio),
       encode: (attemptTask) => cancelAndRender(outputPath, attemptTask),
       fallbackAspectRatio: aspectRatio,
     );

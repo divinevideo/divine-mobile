@@ -9026,6 +9026,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '设置所选图层的透明程度';
 
   @override
+  String get videoEditorShapeMaskLabel => '形状蒙版';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => '将所选项目显示在形状内';
+
+  @override
+  String get videoEditorShapeMaskHint => '拖动可移动形状。双指捏合可调整大小或旋转，拖动控制点可拉伸形状。';
+
+  @override
+  String get videoEditorShapeMaskNone => '无';
+
+  @override
+  String get videoEditorShapeMaskCircle => '圆形';
+
+  @override
+  String get videoEditorShapeMaskRectangle => '矩形';
+
+  @override
+  String get videoEditorShapeMaskHeart => '心形';
+
+  @override
+  String get videoEditorShapeMaskLinear => '线性';
+
+  @override
+  String get videoEditorShapeMaskInvert => '反转';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => '柔和度';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => '锐利';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => '柔和';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => '边角';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => '直角';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => '圆角';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
 
   @override

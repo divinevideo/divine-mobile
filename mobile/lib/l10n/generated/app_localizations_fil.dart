@@ -9653,6 +9653,53 @@ class AppLocalizationsFil extends AppLocalizations {
       'I-set kung gaano ka-transparent ang napiling layer';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Shape mask';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Ipakita ang napiling item sa loob ng isang hugis';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'I-drag para ilipat ang hugis. I-pinch para baguhin ang laki o iikot ito, o i-drag ang isang handle para i-stretch ito.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Wala';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Bilog';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Parihaba';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Puso';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Baligtarin';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Lambot';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Matalas';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Malambot';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Mga sulok';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Kuwadrado';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Pabilog';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override

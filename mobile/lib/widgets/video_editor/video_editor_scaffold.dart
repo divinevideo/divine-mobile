@@ -22,6 +22,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.da
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_preview_overlay.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
+import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_overlay_controls.dart';
@@ -87,11 +88,38 @@ class _ScaffoldBody extends StatelessWidget {
               ),
             ),
             const _TimelineSection(),
+            const _MaskEditorPanelSpace(),
           ],
         ),
 
         const ClipOperationProgressOverlays(),
       ],
+    );
+  }
+}
+
+/// Keeps the mask editor's panel clear of the canvas.
+///
+/// The timeline steps aside while the mask editor is open, as it does for
+/// every full-screen canvas tool; without this the canvas would grow under the
+/// panel, and a shape dragged there could be neither seen nor grabbed again.
+class _MaskEditorPanelSpace extends StatelessWidget {
+  const _MaskEditorPanelSpace();
+
+  @override
+  Widget build(BuildContext context) {
+    final isEditingMask = context.select(
+      (VideoEditorMainBloc bloc) => bloc.state.isEditingMask,
+    );
+    return AnimatedContainer(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : _switchDuration,
+      curve: Curves.easeInOut,
+      color: context.vineColors.surfaceContainerHigh,
+      height: isEditingMask
+          ? videoEditorMaskPanelHeight + MediaQuery.paddingOf(context).bottom
+          : 0,
     );
   }
 }
@@ -221,10 +249,13 @@ class _OverlayControls extends StatelessWidget {
           previous.isLayerInteractionActive !=
               current.isLayerInteractionActive ||
           previous.openSubEditor != current.openSubEditor ||
-          previous.isPlacingSlidePoint != current.isPlacingSlidePoint,
+          previous.isPlacingSlidePoint != current.isPlacingSlidePoint ||
+          previous.isEditingMask != current.isEditingMask,
       builder: (context, state) => switch (state) {
-        // The point picker brings its own toolbar and owns the whole screen.
-        _ when state.isPlacingSlidePoint => const SizedBox.shrink(),
+        // The point picker and the mask editor bring their own controls and
+        // own the whole screen.
+        _ when state.isPlacingSlidePoint || state.isEditingMask =>
+          const SizedBox.shrink(),
         _ when state.isLayerInteractionActive => const SizedBox(),
         // Text-Editor
         VideoEditorMainState(openSubEditor: .text) => const SizedBox.shrink(),

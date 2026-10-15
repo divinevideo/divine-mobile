@@ -9129,6 +9129,52 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '선택한 레이어가 비쳐 보이는 정도 설정';
 
   @override
+  String get videoEditorShapeMaskLabel => '모양 마스크';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => '선택한 항목을 모양 안에 표시';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      '드래그해서 모양을 옮기세요. 핀치하면 크기를 바꾸거나 돌릴 수 있고, 핸들을 드래그하면 늘릴 수 있어요.';
+
+  @override
+  String get videoEditorShapeMaskNone => '없음';
+
+  @override
+  String get videoEditorShapeMaskCircle => '원';
+
+  @override
+  String get videoEditorShapeMaskRectangle => '직사각형';
+
+  @override
+  String get videoEditorShapeMaskHeart => '하트';
+
+  @override
+  String get videoEditorShapeMaskLinear => '선형';
+
+  @override
+  String get videoEditorShapeMaskInvert => '반전';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => '부드러움';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => '선명하게';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => '부드럽게';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => '모서리';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => '각지게';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => '둥글게';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';
 
   @override

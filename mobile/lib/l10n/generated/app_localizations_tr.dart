@@ -9497,6 +9497,53 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili katmanın ne kadar saydam olacağını ayarla';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Şekil maskesi';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Seçili öğeyi bir şeklin içinde göster';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Şekli taşımak için sürükle. Boyutunu değiştirmek ya da döndürmek için iki parmağınla sıkıştır, uzatmak için bir tutamacı sürükle.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Yok';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Daire';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Dikdörtgen';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Kalp';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Doğrusal';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Tersine çevir';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Yumuşaklık';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Keskin';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Yumuşak';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Köşeler';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Köşeli';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Yuvarlak';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
 
   @override

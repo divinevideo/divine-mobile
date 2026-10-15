@@ -9113,6 +9113,52 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '選択したレイヤーの透け具合を設定';
 
   @override
+  String get videoEditorShapeMaskLabel => 'シェイプマスク';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => '選択した項目を図形の中に表示';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'ドラッグして図形を移動します。ピンチでサイズの変更や回転ができ、ハンドルをドラッグすると引き伸ばせます。';
+
+  @override
+  String get videoEditorShapeMaskNone => 'なし';
+
+  @override
+  String get videoEditorShapeMaskCircle => '円';
+
+  @override
+  String get videoEditorShapeMaskRectangle => '長方形';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'ハート';
+
+  @override
+  String get videoEditorShapeMaskLinear => '線形';
+
+  @override
+  String get videoEditorShapeMaskInvert => '反転';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => '柔らかさ';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'シャープ';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'ソフト';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => '角';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => '四角';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => '丸';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
 
   @override

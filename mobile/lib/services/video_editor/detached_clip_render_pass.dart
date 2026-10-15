@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui show ImageByteFormat;
 import 'dart:ui' show Size;
 
 import 'package:models/models.dart' as model show AspectRatio;
@@ -154,6 +155,15 @@ class DetachedClipRenderPass {
           targetAspectRatio: aspectRatio.value,
           timelineMap: timelineMap,
           speedFlattened: flattened,
+          mask: await _maskMatte(
+            item,
+            detachedClipExportSize(
+              item: item,
+              bodySize: bodySize,
+              videoSize: videoSize,
+              targetAspectRatio: aspectRatio.value,
+            ),
+          ),
         ),
       );
     }
@@ -235,6 +245,33 @@ class DetachedClipRenderPass {
       reuseActiveCancellation: true,
     );
     return (EditorVideo.file(File(flattenedPath)), true);
+  }
+
+  /// The shape mask of [item] as an alpha matte of [size], or `null` when the
+  /// layer has none.
+  ///
+  /// Rendered by the same painter the canvas masks the layer with, at the size
+  /// the clip is placed at, so the soft edge is as wide in the file as on the
+  /// canvas.
+  static Future<EditorLayerImage?> _maskMatte(
+    DetachedClipExportLayer item,
+    Size size,
+  ) async {
+    final mask = item.layer.mask;
+    if (mask == null || size.isEmpty) return null;
+    final image = await mask.toImage(size);
+    try {
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (data == null) {
+        throw StateError(
+          'The mask of detached clip ${item.clip.id} could not '
+          'be encoded',
+        );
+      }
+      return EditorLayerImage.memory(data.buffer.asUint8List());
+    } finally {
+      image.dispose();
+    }
   }
 
   static void _throwIfCancelled(String taskId) {

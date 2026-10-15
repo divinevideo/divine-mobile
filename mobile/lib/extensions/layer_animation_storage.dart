@@ -128,8 +128,8 @@ class ExportLayerMapping {
     required Size frameSize,
     required double targetAspectRatio,
   }) {
-    final bodyRect = _centredRect(bodySize, targetAspectRatio);
-    final frameRect = _centredRect(frameSize, targetAspectRatio);
+    final bodyRect = keptRect(bodySize, targetAspectRatio);
+    final frameRect = keptRect(frameSize, targetAspectRatio);
     final scale = frameRect.width / bodyRect.width;
     return ExportLayerMapping._(
       scale: scale,
@@ -145,8 +145,9 @@ class ExportLayerMapping {
   /// Where the body's top-left corner lands in the frame.
   final Offset origin;
 
-  /// Largest rect of [aspectRatio] centred in [size].
-  static Rect _centredRect(Size size, double aspectRatio) {
+  /// Largest rect of [aspectRatio] centred in [size]: the part of a body or
+  /// frame of [size] an export cropped to [aspectRatio] keeps.
+  static Rect keptRect(Size size, double aspectRatio) {
     final fitted = size.aspectRatio > aspectRatio
         ? Size(size.height * aspectRatio, size.height)
         : Size(size.width, size.width / aspectRatio);

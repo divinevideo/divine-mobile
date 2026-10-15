@@ -9725,6 +9725,53 @@ class AppLocalizationsFr extends AppLocalizations {
       'Régler la transparence du calque sélectionné';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Masque de forme';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Afficher l\'élément sélectionné dans une forme';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Fais glisser pour déplacer la forme. Pince pour la redimensionner ou la faire pivoter, ou fais glisser une poignée pour l\'étirer.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Aucun';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Cercle';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rectangle';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Cœur';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linéaire';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Inverser';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Douceur';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Net';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Doux';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Coins';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Carrés';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Arrondis';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Détection auto';
 
   @override

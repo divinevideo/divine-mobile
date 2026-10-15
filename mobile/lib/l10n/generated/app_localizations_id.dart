@@ -9490,6 +9490,53 @@ class AppLocalizationsId extends AppLocalizations {
       'Atur seberapa transparan lapisan yang dipilih';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Masking bentuk';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Tampilkan item yang dipilih di dalam bentuk';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Seret untuk memindahkan bentuk. Cubit untuk mengubah ukuran atau memutarnya, atau seret pegangan untuk merentangkannya.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Tidak ada';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Lingkaran';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Persegi panjang';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Hati';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Balikkan';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Kelembutan';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Tajam';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Lembut';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Sudut';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Siku';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Bulat';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
 
   @override
