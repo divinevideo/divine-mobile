@@ -43,6 +43,8 @@ class MockNostrServiceWithHeldEose implements NostrClient {
     void Function()? onEose,
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
+    void Function()? onStoredEventsStart,
+    void Function(int deliveredEventCount)? onStoredEventsEnd,
   }) {
     // The test releases EOSE after observing cache delivery.
     if (onEose != null) _pendingEose.add(onEose);

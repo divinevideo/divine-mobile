@@ -2664,6 +2664,49 @@ void main() {
         ).called(1);
       });
 
+      test('hands the stored-events callbacks to the relay pool', () {
+        void Function()? start;
+        void Function(int)? end;
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+            onEose: any(named: 'onEose'),
+            onClosed: any(named: 'onClosed'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+          ),
+        ).thenAnswer((invocation) {
+          start =
+              invocation.namedArguments[#onStoredEventsStart]
+                  as void Function()?;
+          end =
+              invocation.namedArguments[#onStoredEventsEnd]
+                  as void Function(int)?;
+          return invocation.namedArguments[#id] as String;
+        });
+        var starts = 0;
+        final ends = <int>[];
+
+        client.subscribe(
+          [
+            Filter(kinds: [EventKind.giftWrap]),
+          ],
+          onStoredEventsStart: () => starts++,
+          onStoredEventsEnd: ends.add,
+        );
+        start!();
+        end!(7);
+
+        expect(starts, 1);
+        expect(ends, [7]);
+      });
+
       test(
         'closeOnEose releases the relay subscription and closes the stream',
         () async {

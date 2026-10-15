@@ -113,6 +113,17 @@ abstract class Relay {
   bool get isSocketConnecting =>
       relayStatus.connected == ClientConnected.connecting;
 
+  /// Identifies the socket this relay is currently on.
+  ///
+  /// A new socket starts every subscription over: the relay replays its
+  /// stored events for each saved REQ. Callers compare generations to tell
+  /// an answer given on the current socket from one given on an earlier one.
+  /// Unique across relay objects, because a reconnect can replace the object
+  /// for a URL rather than reopen it (`RelayManager` does on app resume).
+  int get connectionGeneration => _connectionGeneration;
+  int _connectionGeneration = 0;
+  static int _lastConnectionGeneration = 0;
+
   /// The medhod called after relay connect success.
   ///
   /// Flushes whatever was queued while the socket was down, then — when the
@@ -125,6 +136,7 @@ abstract class Relay {
   /// `RelayPool`.
   Future onConnected({String? source}) async {
     final isFresh = connectionIsFresh;
+    if (isFresh) _connectionGeneration = ++_lastConnectionGeneration;
     final saved = isFresh
         ? [..._subscriptions.values, ..._queries.values]
         : const <Subscription>[];

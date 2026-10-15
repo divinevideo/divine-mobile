@@ -36,6 +36,8 @@ class _StreamingNostrService implements NostrClient {
     void Function()? onEose,
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
+    void Function()? onStoredEventsStart,
+    void Function(int deliveredEventCount)? onStoredEventsEnd,
   }) {
     if (onEose != null) {
       unawaited(Future.microtask(onEose));

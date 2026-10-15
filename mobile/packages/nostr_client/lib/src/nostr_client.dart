@@ -1874,6 +1874,16 @@ class NostrClient {
   ///
   /// The stream emits a [RelaySubscriptionRefusedException] if every serving
   /// relay ends the REQ with `CLOSED`.
+  ///
+  /// [onStoredEventsEnd] fires when every relay that can still send stored
+  /// events has finished, with the number of events this subscription has
+  /// received so far; unlike [onEose], an unreachable relay does not hold it
+  /// up. [onStoredEventsStart] fires when a relay sends them again, after a
+  /// reconnect or a REQ re-sent after AUTH. See
+  /// [Subscription.onStoredEventsEnd].
+  /// Like [onEose], both belong to the call that opens the subscription: a
+  /// call that gets an already-open [subscriptionId]'s stream back does not
+  /// register them.
   Stream<Event> subscribe(
     List<Filter> filters, {
     String? subscriptionId,
@@ -1884,6 +1894,8 @@ class NostrClient {
     void Function()? onEose,
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
+    void Function()? onStoredEventsStart,
+    void Function(int deliveredEventCount)? onStoredEventsEnd,
   }) {
     final effectiveTempRelays = _allowedRelays(tempRelays);
     final effectiveTargetRelays = _allowedRelays(targetRelays);
@@ -1957,6 +1969,8 @@ class NostrClient {
         onEose?.call();
         if (closeOnEose) cleanupSubscription();
       },
+      onStoredEventsStart: onStoredEventsStart,
+      onStoredEventsEnd: onStoredEventsEnd,
       onClosed: (reason) {
         if (!controller.isClosed) {
           controller.addError(RelaySubscriptionRefusedException(reason));
