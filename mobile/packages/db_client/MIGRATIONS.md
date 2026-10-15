@@ -4,7 +4,13 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 23** (see `app_database.dart`).
+**Version: 25** (see `app_database.dart`).
+
+Version 25 adds `my_followers`, an owner-scoped durable follower cache. The
+composite primary key `(owner_pubkey, follower_pubkey)` isolates accounts and
+covers owner lookups without an extra index. Sync merges retain the newest
+known `followed_at`; full reconciliation replaces one owner's snapshot
+transactionally. Account cleanup clears that owner's rows.
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -190,6 +196,9 @@ Earlier chat previews also reported version 22, but had Concord storage without
 creating the Concord table idempotently, preserving both queues for either v22
 shape. Migration tests cover fresh v23 databases, the full legacy upgrade chain,
 main's v22, and the chat preview's v22 with queued data.
+
+Version 24 adds owner-scoped `sound_request_states` for sound-reuse requests.
+Version 25 preserves that workflow state while adding the follower cache.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

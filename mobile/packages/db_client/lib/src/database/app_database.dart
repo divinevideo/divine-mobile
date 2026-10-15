@@ -87,6 +87,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ProcessedGiftWraps,
     RemovedConversations,
     RemovedMessageIds,
+    MyFollowers,
     PendingProfileSaves,
     IdentityEvents,
     IdentityVerifications,
@@ -124,6 +125,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ProcessedGiftWrapsDao,
     RemovedConversationsDao,
     RemovedMessageIdsDao,
+    MyFollowersDao,
     PendingProfileSavesDao,
     IdentityEventsDao,
     IdentityVerificationsDao,
@@ -144,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -279,6 +281,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 24 && to >= 24) {
         await m.createTable(soundRequestStates);
+      }
+      if (from < 25 && to >= 25) {
+        await m.createTable(myFollowers);
       }
     },
     beforeOpen: (details) async {

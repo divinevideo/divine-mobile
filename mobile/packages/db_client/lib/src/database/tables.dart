@@ -1829,6 +1829,28 @@ class RemovedMessageIds extends Table {
   Set<Column> get primaryKey => {ownerPubkey, rumorId};
 }
 
+/// Durable owner-scoped followers, bounded by each account's follower count.
+///
+/// Full reconciles prune missing followers through `MyFollowersDao.replaceAll`.
+/// Account cleanup and switching clear the departing owner's rows through
+/// `MyFollowersDao.clearAllForUser`, called by `UserDataCleanupService`.
+class MyFollowers extends Table {
+  @override
+  String get tableName => 'my_followers';
+
+  TextColumn get ownerPubkey => text().named('owner_pubkey')();
+  TextColumn get followerPubkey => text().named('follower_pubkey')();
+
+  /// Unix seconds of the newest known contact list including this owner.
+  IntColumn get followedAt => integer().nullable().named('followed_at')();
+
+  /// Unix seconds when the follower was last observed during a sync.
+  IntColumn get lastSeenAt => integer().named('last_seen_at')();
+
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, followerPubkey};
+}
+
 /// Cache of the NIP-39 identity-claims source event per profile.
 ///
 /// One row per viewed profile, mirroring the latest identity event seen on
