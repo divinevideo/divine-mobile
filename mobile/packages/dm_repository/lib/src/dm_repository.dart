@@ -564,6 +564,7 @@ class DmRepository {
     List<String> dmInboxTaggedRelays = const <String>[],
     Duration readMarkerDebounceDelay = _defaultReadMarkerDebounceDelay,
     String Function()? sendBatchIdGenerator,
+    String? environment,
   }) : _nostrClient = nostrClient,
        _readMarkerDebounceDelay = readMarkerDebounceDelay,
        _directMessagesDao = directMessagesDao,
@@ -589,7 +590,8 @@ class DmRepository {
        _dmInboxDiscoveryRelays = dmInboxDiscoveryRelays,
        _dmInboxLookupRelays = dmInboxLookupRelays,
        _dmInboxTaggedRelays = dmInboxTaggedRelays,
-       _newSendBatchId = sendBatchIdGenerator ?? _defaultSendBatchId;
+       _newSendBatchId = sendBatchIdGenerator ?? _defaultSendBatchId,
+       _environment = environment;
 
   final NostrClient _nostrClient;
   final DirectMessagesDao _directMessagesDao;
@@ -701,6 +703,11 @@ class DmRepository {
   /// none and the pool's answer decides (#10148).
   final List<String> _dmInboxLookupRelays;
   final List<String> _dmInboxTaggedRelays;
+
+  /// The app environment this repository sends in, stamped on every queued
+  /// DM so the retry service never resends it in another one (#10148). Null
+  /// leaves the rows unstamped, as before.
+  final String? _environment;
 
   /// Mints the durable, collision-proof identity for one send invocation.
   /// Group sends share it across the fan-out. Injected so tests can pin a
@@ -5623,6 +5630,7 @@ class DmRepository {
           // bubble's cancellation match by exact value instead of falling
           // back to the collision-prone `(createdAt, content)` tuple.
           sendBatchId: sendBatchId,
+          environment: _environment,
         ),
       );
     }
@@ -7803,6 +7811,7 @@ class DmRepository {
               queuedAt: DateTime.now(),
               ownerPubkey: _userPubkey,
               sendBatchId: sendBatchId,
+              environment: _environment,
             ),
           );
         } on Object catch (e, stackTrace) {

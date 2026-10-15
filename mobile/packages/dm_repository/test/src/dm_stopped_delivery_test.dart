@@ -185,6 +185,7 @@ void main() {
         outgoingDmsDao: outgoingDao,
         userPubkey: _owner,
         signer: LocalNostrSigner(_privateKey),
+        environment: 'staging',
       );
     });
 
@@ -875,6 +876,15 @@ void main() {
     });
 
     group('sendGroupMessage', () {
+      test('stamps each member row with the environment it was sent in '
+          '(#10148)', () async {
+        final sent = await sendReachingOnlyA();
+
+        final forB = await outgoingDao.getById(sent.rowForB);
+        expect(forB, isNotNull);
+        expect(forB!.environment, equals('staging'));
+      });
+
       test('does not publish to a member stopped while the batch was still '
           'sending', () async {
         final conversationId = DmRepository.computeConversationId([

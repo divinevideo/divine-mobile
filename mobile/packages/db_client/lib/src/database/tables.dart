@@ -1387,6 +1387,13 @@ class OutgoingDms extends Table {
   /// `DirectMessages.sendBatchId`.
   TextColumn get sendBatchId => text().nullable().named('send_batch_id')();
 
+  /// The app environment the DM was queued in: `production`, `staging`,
+  /// `poc` or `local`. The retry service resends only rows from the current
+  /// environment, so a DM still held when someone switches environment is
+  /// never sent to, or scored as delivered on, the other environment's
+  /// relays (#10148). Null for rows queued before v22; those retry anywhere.
+  TextColumn get environment => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 

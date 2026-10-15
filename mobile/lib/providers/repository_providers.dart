@@ -893,6 +893,11 @@ DmRepository dmRepository(Ref ref) {
     dmInboxTaggedRelays: IndexerRelayConfig.dmInboxTaggedRelays,
     dmInboxDiscoveryRelays: IndexerRelayConfig.dmInboxDiscoveryRelays,
     dmInboxLookupRelays: IndexerRelayConfig.dmInboxLookupRelays,
+    // Stamped on every queued DM, so a retry after an environment switch
+    // never resends it on the other environment's relays (#10148).
+    environment: ref
+        .watch(currentEnvironmentProvider.select((env) => env.environment))
+        .name,
     errorReporter: (error, stackTrace, {required site}) {
       unawaited(
         ref

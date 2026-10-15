@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 21** (see `app_database.dart`).
+**Version: 22** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -170,6 +170,18 @@ lifetime like `removed_conversations` and are cleared with it when the
 account's data is deleted. A plain account switch keeps them. The step is a
 plain `createTable`, which needs no index step because the composite primary
 key is the only lookup, and it is not added to the `beforeOpen` recovery chain.
+
+Version 22 adds the nullable `environment` column to `outgoing_dms` (#10148):
+the app environment a DM was queued in. Switching environment in developer
+options keeps the queue, and the retry service used to resend every row on the
+new environment's relays, where a DM queued in production could be scored as
+delivered while its recipient never saw it. The retry service now resends only
+rows from the current environment. Rows queued before v22 keep a null
+environment and retry anywhere, as before. The step adds the column through the
+idempotent `_addColumnIfMissing` and checks `to` as well as `from`, like the
+v20 step. The legacy normalization adds it as well, and the repair probe lists
+it, because the schema-parity test requires the recovery path to rebuild every
+column a fresh install has.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
