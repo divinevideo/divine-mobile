@@ -257,7 +257,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
       );
       await _maybeShowWhySixSeconds();
       if (!mounted) return;
-      _checkAutosavedChanges();
+      await _checkAutosavedChanges();
     });
     Log.info('📹 Initialized', name: 'VideoRecorderScreen', category: .video);
   }
