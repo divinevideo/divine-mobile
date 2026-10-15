@@ -6,6 +6,7 @@ part of '../curated_list_service.dart';
 extension CuratedListPublication on CuratedListService {
   Future<bool> _publishListToNostr(
     CuratedList sourceList, {
+    Event? signedRetry,
     bool confirmed = false,
     bool duringInitialization = false,
     bool explicitDefaultIntent = false,
@@ -25,6 +26,7 @@ extension CuratedListPublication on CuratedListService {
     }
     final published = await _publisher.publish(
       sourceList,
+      signedRetry: signedRetry,
       confirmed: confirmed,
       onPublicationUnconfirmed: onPublicationUnconfirmed,
     );
@@ -58,4 +60,48 @@ extension CuratedListPublication on CuratedListService {
     }
     return false;
   }
+
+  /// Retries this list's pending publication without changing its members.
+  Future<bool> _retryListSync(String listId) => _serializeListOperation(
+    listId,
+    () async {
+      final list = getListById(listId);
+      if (!isCurrentSession) return false;
+      if (list == null) {
+        final owner = _relayGateway.currentAuthenticatedPubkey();
+        if (owner == null || !listId.startsWith('$owner:')) return false;
+        final id = listId.substring(owner.length + 1);
+        if (_recovery.record(owner, id) == null) return false;
+        return _publisher.retryPlaintextRedactions(listId);
+      }
+      if (!isOwnedList(listId)) return false;
+      Event? signedRetry;
+      if (list.id == defaultListId) {
+        final signed = await _defaultSignedIntentStore?.read(list.pubkey!);
+        if (signed != null) {
+          final items = await _relayGateway.unsealItemTags(signed);
+          if (!isCurrentSession || getListById(listId) != list) return false;
+          if (_defaultAuthority.restoreSignedRetry(signed, items, list)) {
+            signedRetry = signed;
+          }
+        }
+      }
+      if (!_defaultAuthority.canRetrySavedPublication(list)) {
+        return false;
+      }
+      if (list.nostrEventId != null &&
+          !list.pendingRepublish &&
+          list.pendingVisibility == null &&
+          list.pendingPlaintextEventIds.isNotEmpty) {
+        return _publisher.retryPlaintextRedactions(list.authorScopedId);
+      }
+      return _publishListToNostr(
+        list,
+        signedRetry: signedRetry,
+        confirmed: true,
+        explicitDefaultIntent: true,
+      );
+    },
+    cancelled: false,
+  );
 }

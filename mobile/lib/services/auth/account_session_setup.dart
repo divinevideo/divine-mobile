@@ -50,11 +50,8 @@ extension _AccountSessionSetup on AuthService {
     } on FormatException {
       // Malformed JSON enters the existing typed cleanup-failure path.
       return false;
-      // PendingAccountCleanup.read deliberately rejects persisted invalid
-      // intent shapes with StateError; only that parser contract is handled.
-      // ignore: avoid_catching_errors
-    } on StateError {
-      // read() rejects null/invalid intent shape with StateError.
+    } on AccountStorageException {
+      // Invalid persisted cleanup intent must remain fail-closed.
       return false;
     }
   }
@@ -228,7 +225,9 @@ extension _AccountSessionSetup on AuthService {
       );
       ensureCurrent();
       if (!storedOwner) {
-        throw StateError('Could not persist the active account');
+        throw const AccountStorageException(
+          'Could not persist the active account',
+        );
       }
 
       if (claimLegacyRows) {
@@ -273,7 +272,9 @@ extension _AccountSessionSetup on AuthService {
       if (prefs.getString('current_user_pubkey_hex') != pubkeyHex ||
           prefs.getString(kAuthenticationSourceKey) != source.code ||
           prefs.getString(kLastUsedNpubKey) != keyContainer.npub) {
-        throw StateError('Account session readback did not match');
+        throw const AccountStorageException(
+          'Account session readback did not match',
+        );
       }
       _activation.metadataIsCurrent = () =>
           prefs.get('current_user_pubkey_hex') == pubkeyHex &&

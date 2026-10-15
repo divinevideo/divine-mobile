@@ -1422,34 +1422,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'لا توجد فيديوهات متاحة';
 
   @override
-  String get exploreDiscoverLists => 'اكتشف القوائم';
-
-  @override
-  String get exploreAboutLists => 'عن القوائم';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'القوائم تساعدك في تنظيم محتوى Divine بطريقتين:';
-
-  @override
   String get explorePeopleLists => 'قوائم الأشخاص';
 
   @override
-  String get explorePeopleListsDescription =>
-      'تابع مجموعات من الصناع وشاهد أحدث فيديوهاتهم';
-
-  @override
   String get exploreVideoLists => 'قوائم الفيديو';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'أنشئ قوائم تشغيل لفيديوهاتك المفضلة لمشاهدتها لاحقًا';
-
-  @override
-  String get exploreMyLists => 'قوائمي';
-
-  @override
-  String get exploreSubscribedLists => 'القوائم المشترك بها';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -3998,14 +3974,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'حاول مجددًا';
 
   @override
-  String get peopleListsAddButton => 'إضافة';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'إضافة $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4943,21 +4911,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count شخص',
-      many: '$count شخصًا',
-      few: '$count أشخاص',
-      two: 'شخصان',
-      one: 'شخص واحد',
-      zero: 'لا أحد',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'بقلم ';
 
   @override
@@ -4977,13 +4930,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'الوصف (اختياري)';
-
-  @override
-  String get listPublicList => 'قائمة عامة';
-
-  @override
-  String get listPublicListSubtitle =>
-      'يمكن للآخرين متابعة هذه القائمة ورؤيتها';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5094,9 +5040,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name على Divine';
   }
-
-  @override
-  String get listCancel => 'إلغاء';
 
   @override
   String get listCreate => 'إنشاء';
@@ -6155,32 +6098,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'فشل تحديث الاشتراك. يرجى المحاولة مرّة أخرى.';
-
-  @override
-  String get discoverListsTitle => 'اكتشف القوائم';
-
-  @override
-  String get discoverListsFailedToLoad => 'فشل تحميل القوائم';
-
-  @override
-  String get discoverListsLoading => 'جاري اكتشاف القوائم العامة...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'لم يُرجع الريلاي القوائم في الوقت المناسب. حاول مرة أخرى.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'الخدمة غير متاحة.';
-
-  @override
-  String get discoverListsEmptyTitle => 'لم يتم العثور على قوائم عامة';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'عاود التحقق لاحقًا لرؤية قوائم جديدة';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'بقلم';
 
   @override
   String get curatedListEmptyTitle => 'لا فيديوهات في هذه القائمة';
@@ -13626,4 +13543,91 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => 'تابع وسمًا من صفحته لتجده هنا.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'جارٍ تحميل القوائم';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.';
+
+  @override
+  String get listSearchPeopleUnavailable => 'قوائم الأشخاص غير متاحة الآن.';
+
+  @override
+  String get listSearchVideosUnavailable => 'قوائم الفيديو غير متاحة الآن.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'إزالة $name من القائمة';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'تعذّر تحديث القائمة. يرجى المحاولة مجددًا.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'إضافة $name إلى القائمة';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'إضافة متعاون';
+
+  @override
+  String get listMakePublicLabel => 'جعل القائمة عامة';
+
+  @override
+  String get listCollaboratorSearchHint => 'ابحث في Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'لا أحد';
+
+  @override
+  String get listMakePublicSubtitle => 'السماح للآخرين برؤية هذه القائمة';
+
+  @override
+  String get listVideoNotAdded =>
+      'تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.';
+
+  @override
+  String get listVideoPendingSync =>
+      'تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.';
+
+  @override
+  String get listRetrySync => 'زامن الآن';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'تعذّر تأكيد هذا التغيير. حاول مرة أخرى.';
+
+  @override
+  String get listRecoveryPending =>
+      'تحتوي هذه القائمة على تغييرات بانتظار المزامنة.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.';
+
+  @override
+  String get listAddToLists => 'إضافة إلى القوائم';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.';
 }

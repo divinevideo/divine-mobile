@@ -30,6 +30,7 @@ import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth/known_accounts_registry.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
@@ -64,11 +65,11 @@ export 'package:openvine/models/key_import_failed_exception.dart';
 export 'package:openvine/services/auth/relay_discovery_orchestrator.dart'
     show BootstrapRelayListCallback, UserRelaysDiscoveredCallback;
 
-part 'auth/account_cleanup_failure.dart';
 part 'auth/account_activation.dart';
-part 'auth/account_sign_out.dart';
-part 'auth/account_session_setup.dart';
+part 'auth/account_cleanup_failure.dart';
 part 'auth/account_local_removal.dart';
+part 'auth/account_session_setup.dart';
+part 'auth/account_sign_out.dart';
 
 const _accountDeletionSessionExpiryMargin = Duration(minutes: 10);
 
@@ -749,7 +750,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         }
         // Same-pubkey re-emission: retain the live client's signer (#5909).
         _setKeycastSigner(_newKeycastSigner(refreshed), closePrevious: false);
-        _currentIdentity = _buildIdentity();
+        _rebuildCurrentSessionIdentity();
         _hasExpiredOAuthSession = false;
         _setRpcCapability(AuthRpcCapability.rpcReady);
         didUpgrade = true;
@@ -1540,7 +1541,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Deletes one local account without disturbing another active account.
-  Future<void> deleteLocalAccount(String pubkeyHex) {
+  ///
+  /// Invalid pubkeys complete the returned Future with [ArgumentError].
+  /// Storage and cleanup failures propagate through that Future for retry.
+  Future<void> deleteLocalAccount(String pubkeyHex) async {
     if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(pubkeyHex)) {
       throw ArgumentError.value(pubkeyHex, 'pubkeyHex');
     }
@@ -1654,12 +1658,16 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       );
       ensureCurrent();
       if (!written) {
-        throw StateError('Could not persist the restored signer source');
+        throw const AccountStorageException(
+          'Could not persist the restored signer source',
+        );
       }
       await prefs.reload();
       ensureCurrent();
       if (prefs.get(kAuthenticationSourceKey) != source.code) {
-        throw StateError('Restored signer source readback did not match');
+        throw const AccountStorageException(
+          'Restored signer source readback did not match',
+        );
       }
     }
 
@@ -3315,11 +3323,32 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     }
   }
 
+  /// A verified same-owner signer refresh replaces the signer object, not the
+  /// account activation. Retired receipts and arbitrary identity changes gain
+  /// no authority through this private path.
+  void _rebuildCurrentSessionIdentity() {
+    final state = _activation;
+    final receipt = _committedAccountActivationReceipt;
+    final previous = _currentIdentity;
+    final keys = _currentKeyContainer;
+    final next = _buildIdentity();
+    final retainsProof =
+        receipt?.isCurrent == true &&
+        identical(previous, state.boundIdentity) &&
+        identical(keys, state.boundKeys) &&
+        next.pubkey == receipt?.ownerPubkey;
+    _currentIdentity = next;
+    if (retainsProof) state.boundIdentity = next;
+  }
+
   /// Signs out the current user.
   ///
-  /// [abortOnKeyDeletionFailure] keeps the session active if key deletion
-  /// fails. Otherwise destructive cleanup finishes before throwing
-  /// [SecureKeyStorageException] or [UserDataCleanupException].
+  /// Non-destructive sign-out retains restorable keys. Native credential,
+  /// activation, or cleanup verification can fail before or after teardown.
+  /// Throws [AccountStorageException], [AccountActivationRetiredException],
+  /// [SecureKeyStorageException], or [UserDataCleanupException]; callers must
+  /// surface incomplete sign-out and retain recovery evidence for retry.
+  /// [abortOnKeyDeletionFailure] keeps the session active on key deletion failure.
   Future<void> signOut({
     bool deleteKeys = false,
     bool abortOnKeyDeletionFailure = false,
@@ -4166,7 +4195,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           await clearDismissedDivineLoginBannerForCurrentUser();
           if (!resumeContextStillCurrent()) return;
           _setKeycastSigner(_newKeycastSigner(session));
-          _currentIdentity = _buildIdentity();
+          _rebuildCurrentSessionIdentity();
           _hasExpiredOAuthSession = false;
           _setRpcCapability(AuthRpcCapability.rpcReady);
           _authStateController.add(_authState);

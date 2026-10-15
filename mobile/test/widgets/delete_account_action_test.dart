@@ -21,6 +21,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/widgets/delete_account_action.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -92,7 +93,7 @@ void main() {
       when(authService.signOut).thenAnswer((_) async {});
     });
 
-    for (final unmountDuring in [null, 'submission', 'sign-out']) {
+    for (final unmountDuring in [null, 'submission', 'sign-out', 'failure']) {
       testWidgets(
         'records the recovery receipt when caller ${unmountDuring == null ? 'stays mounted' : 'unmounts during $unmountDuring'}',
         (tester) async {
@@ -148,7 +149,11 @@ void main() {
           );
           addTearDown(router.dispose);
           final pendingOperation = Completer<void>();
-          if (unmountDuring == 'submission') {
+          if (unmountDuring == 'failure') {
+            when(authService.signOut).thenThrow(
+              const UserDataCleanupException('Could not verify sign out'),
+            );
+          } else if (unmountDuring == 'submission') {
             when(
               () => repository.submit(
                 attemptId: any(named: 'attemptId'),
@@ -190,7 +195,7 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          if (unmountDuring != null) {
+          if (unmountDuring != null && unmountDuring != 'failure') {
             try {
               expect(find.byKey(const Key('delete')), findsNothing);
               expect(find.text('Finished'), findsOneWidget);
@@ -224,6 +229,26 @@ void main() {
           expect(current, same(_processing));
           verifyNever(repository.fetchCurrent);
           verify(authService.signOut).called(1);
+          if (unmountDuring == 'failure') {
+            final owner = container.read(
+              submittedAccountDeletionMonitorProvider,
+            )!;
+            expect(
+              owner.state.status,
+              AccountDeletionRecoveryStatus.signOutFailed,
+            );
+            when(authService.signOut).thenAnswer((_) async {});
+            await owner.retrySignOut();
+            expect(
+              owner.state.status,
+              AccountDeletionRecoveryStatus.processing,
+            );
+            expect(
+              container.read(submittedAccountDeletionAttemptProvider),
+              isNotNull,
+            );
+            verify(authService.signOut).called(1);
+          }
           await container
               .read(submittedAccountDeletionMonitorProvider)
               ?.close();

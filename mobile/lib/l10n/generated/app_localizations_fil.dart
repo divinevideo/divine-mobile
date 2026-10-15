@@ -1419,34 +1419,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Walang available na video';
 
   @override
-  String get exploreDiscoverLists => 'Tuklasin ang mga List';
-
-  @override
-  String get exploreAboutLists => 'Tungkol sa mga List';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Tinutulungan ka ng mga list na ayusin at i-curate ang Divine content sa dalawang paraan:';
-
-  @override
   String get explorePeopleLists => 'Mga People List';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Sundan ang mga grupo ng creator at tingnan ang kanilang mga pinakabagong video';
-
-  @override
   String get exploreVideoLists => 'Mga Video List';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Gumawa ng playlist ng iyong mga paboritong video para mapanood mamaya';
-
-  @override
-  String get exploreMyLists => 'Mga List Ko';
-
-  @override
-  String get exploreSubscribedLists => 'Mga Subscribed List';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4043,14 +4019,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Subukan ulit';
 
   @override
-  String get peopleListsAddButton => 'Idagdag';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Idagdag ang $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5000,17 +4968,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count tao',
-      one: '$count tao',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Ni ';
 
   @override
@@ -5030,13 +4987,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Description (opsyonal)';
-
-  @override
-  String get listPublicList => 'Public na Listahan';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Puwedeng i-follow at makita ng iba ang listahang ito';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5148,9 +5098,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name sa Divine';
   }
-
-  @override
-  String get listCancel => 'Kanselahin';
 
   @override
   String get listCreate => 'Gumawa';
@@ -6220,32 +6167,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Hindi na-update ang subscription. Subukan ulit.';
-
-  @override
-  String get discoverListsTitle => 'Tuklasin ang mga Listahan';
-
-  @override
-  String get discoverListsFailedToLoad => 'Hindi na-load ang mga listahan';
-
-  @override
-  String get discoverListsLoading => 'Naghahanap ng mga public list...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Hindi nagbalik ng mga list ang relay sa oras. Subukan ulit.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hindi available ang serbisyo.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Walang nakitang public list';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Bumalik mamaya para sa mga bagong listahan';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'ni';
 
   @override
   String get curatedListEmptyTitle => 'Walang video sa listahang ito';
@@ -13757,4 +13678,93 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Sundan ang isang hashtag sa pahina nito para makita ito rito.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Naglo-load ng mga list';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Hindi available ang mga listahan ng tao ngayon.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Hindi available ang mga listahan ng video ngayon.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Hindi ma-clear ang data ng nakaraang account. Subukan ulit.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Maghanap ng tao';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Alisin si $name sa list';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Hindi na-update ang list. Subukan ulit.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Idagdag si $name sa list';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Magdagdag ng collaborator';
+
+  @override
+  String get listMakePublicLabel => 'Gawing public';
+
+  @override
+  String get listCollaboratorSearchHint => 'Maghanap sa Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Wala';
+
+  @override
+  String get listMakePublicSubtitle => 'Hayaang makita ng iba ang list na ito';
+
+  @override
+  String get listVideoNotAdded =>
+      'Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.';
+
+  @override
+  String get listRetrySync => 'I-sync ngayon';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Hindi makumpirma ang pagbabagong ito. Subukan ulit.';
+
+  @override
+  String get listRecoveryPending =>
+      'May mga pagbabago sa listahang ito na naghihintay ma-sync.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.';
+
+  @override
+  String get listAddToLists => 'Idagdag sa mga list';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit.';
 }

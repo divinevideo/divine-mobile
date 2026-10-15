@@ -5078,5 +5078,6 @@
   "listRecoveryPending": "Bu listede eşitlenmeyi bekleyen değişiklikler var.",
   "listPermissionsRecoveryPending": "Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.",
   "listRecoveryReadOnly": "Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.",
-  "listAddToLists": "Listelere ekle"
+  "listAddToLists": "Listelere ekle",
+  "accountDeletionProcessingSignOutFailed": "Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene."
 }

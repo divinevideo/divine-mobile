@@ -46,6 +46,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_default_signed_intent_store.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
@@ -676,6 +677,9 @@ class CuratedListsState extends _$CuratedListsState {
     ref.watch(currentAccountActivationReceiptProvider);
 
     final service = CuratedListService(
+      defaultSignedIntentStore: CuratedDefaultSignedIntentStore(
+        ref.watch(databaseProvider).personalEventsDao,
+      ),
       nostrService: nostrService,
       authService: authService,
       prefs: prefs,

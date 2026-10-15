@@ -34,8 +34,8 @@ void main() {
 
         await CacheSync.invalidatePrefix(alice);
 
-        expect(await store.dao.read('$alice:home_feed'), isNull);
-        expect(await store.dao.read('$alice:video_lists'), isNull);
+        expect(await store.dao.readEntry('$alice:home_feed'), isNull);
+        expect(await store.dao.readEntry('$alice:video_lists'), isNull);
         expect(
           await CacheSync.read<String>(
             key: '$bob:home_feed',
@@ -58,7 +58,10 @@ void main() {
           value: 'previous scope',
           toJson: (value) => value,
         );
-        expect(await first.dao.read('scope:list'), 'previous scope');
+        expect(
+          (await first.dao.readEntry('scope:list'))?.payload,
+          'previous scope',
+        );
 
         await first.close();
 
@@ -67,7 +70,7 @@ void main() {
           throwsA(isA<StateError>()),
         );
         await expectLater(
-          first.dao.read('scope:list'),
+          first.dao.readEntry('scope:list'),
           throwsA(isA<StateError>()),
         );
 
@@ -86,7 +89,10 @@ void main() {
           value: 'fresh scope',
           toJson: (value) => value,
         );
-        expect(await second.dao.read('scope:list'), 'fresh scope');
+        expect(
+          (await second.dao.readEntry('scope:list'))?.payload,
+          'fresh scope',
+        );
       },
     );
 
@@ -103,7 +109,7 @@ void main() {
         value: '123456789',
         toJson: (value) => value,
       );
-      expect(await store.dao.read('oversized'), isNull);
+      expect(await store.dao.readEntry('oversized'), isNull);
       expect(await store.dao.totalPayloadBytes(), 0);
 
       await CacheSync.write(
@@ -111,7 +117,7 @@ void main() {
         value: '12345678',
         toJson: (value) => value,
       );
-      expect(await store.dao.read('within-budget'), '12345678');
+      expect((await store.dao.readEntry('within-budget'))?.payload, '12345678');
       expect(await store.dao.totalPayloadBytes(), 8);
     });
 
@@ -129,7 +135,7 @@ void main() {
         toJson: (value) => value,
       );
 
-      expect(await store.dao.read('unbounded'), '123456789');
+      expect((await store.dao.readEntry('unbounded'))?.payload, '123456789');
       expect(await store.dao.totalPayloadBytes(), 9);
     });
   });

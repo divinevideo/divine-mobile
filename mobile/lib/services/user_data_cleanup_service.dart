@@ -32,6 +32,7 @@ import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -265,6 +266,7 @@ class UserDataCleanupService {
           userPubkey: userPubkey,
           isIdentityChange: false,
           deleteUserData: true,
+          preserveActiveSession: preserveActiveSession,
         )) {
       throw const CuratedListRecoveryException();
     }
@@ -274,6 +276,7 @@ class UserDataCleanupService {
           userPubkey: userPubkey,
           isIdentityChange: false,
           deleteUserData: true,
+          preserveActiveSession: preserveActiveSession,
         );
     try {
       await requiredCleanup.record(_prefs);
@@ -389,22 +392,54 @@ class UserDataCleanupService {
     bool deleteUserData = false,
   }) async {
     try {
-      return await _listSessions.clearCaches(() async {
+      final expectedPending = _prefs.get(PendingAccountCleanup.storageKey);
+      PendingAccountCleanup? pendingAtEntry;
+      try {
+        pendingAtEntry = PendingAccountCleanup.read(_prefs);
+      } on Object catch (error, stackTrace) {
+        // Malformed intent still retires every old list writer before failing.
+        return await _listSessions.clearCaches<int>(
+          () => Future<int>.error(error, stackTrace),
+        );
+      }
+      Future<int> runCleanup() async {
+        if (_prefs.get(PendingAccountCleanup.storageKey) != expectedPending) {
+          throw const UserDataCleanupException(
+            'Required account cleanup scope changed',
+          );
+        }
         final pending = PendingAccountCleanup.read(_prefs);
         var resumedCount = 0;
         if (pending != null) {
+          final activeOwner = _prefs.get('current_user_pubkey_hex');
+          if (pending.deleteUserData &&
+              !pending.preserveActiveSession &&
+              activeOwner != null &&
+              activeOwner != pending.userPubkey) {
+            // Legacy destructive intent does not prove it may wipe this account.
+            throw const UserDataCleanupException(
+              'Required cleanup needs owner verification',
+            );
+          }
           // Resume the original scope first. A later identity change must not
           // silently downgrade a failed destructive sweep to another owner.
-          resumedCount = await _clearUserSpecificData(
-            reason: 'resume_required_cleanup',
-            isIdentityChange: pending.isIdentityChange,
-            userPubkey: pending.userPubkey,
-            deleteUserData: pending.deleteUserData,
-          );
+          resumedCount = pending.preserveActiveSession
+              ? await _deleteAccountData(
+                  pending.userPubkey!,
+                  userNpub: NostrKeyUtils.encodePubKey(pending.userPubkey!),
+                  preserveActiveSession: true,
+                )
+              : await _clearUserSpecificData(
+                  reason: 'resume_required_cleanup',
+                  isIdentityChange: pending.isIdentityChange,
+                  userPubkey: pending.userPubkey,
+                  deleteUserData: pending.deleteUserData,
+                );
           if (pending.covers(
             userPubkey: userPubkey,
             isIdentityChange: isIdentityChange,
             deleteUserData: deleteUserData,
+            preserveActiveSession: pending.preserveActiveSession,
           )) {
             return resumedCount;
           }
@@ -416,7 +451,20 @@ class UserDataCleanupService {
               userPubkey: userPubkey,
               deleteUserData: deleteUserData,
             );
-      });
+      }
+
+      // Replaying an inactive removal retains the active account's write lease.
+      final preservesScope =
+          pendingAtEntry?.preserveActiveSession == true &&
+          pendingAtEntry!.covers(
+            userPubkey: userPubkey,
+            isIdentityChange: isIdentityChange,
+            deleteUserData: deleteUserData,
+            preserveActiveSession: true,
+          );
+      return preservesScope
+          ? await _listSessions.writes.runExclusive(runCleanup)
+          : await _listSessions.clearCaches(runCleanup);
     } on UserDataCleanupException {
       rethrow;
     } on Object catch (e, stackTrace) {

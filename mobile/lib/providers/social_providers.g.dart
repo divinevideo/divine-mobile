@@ -562,4 +562,197 @@ final class UserDataCleanupServiceProvider
 }
 
 String _$userDataCleanupServiceHash() =>
-    r'd32fdbd205c695faa14985e5045d508421fd7841';
+    r'e3974acc25bc1aec4070ecc4636db8f81ca293b1';
+
+/// Hashtag service depends on Video event service
+
+@ProviderFor(hashtagService)
+final hashtagServiceProvider = HashtagServiceProvider._();
+
+/// Hashtag service depends on Video event service
+
+final class HashtagServiceProvider
+    extends $FunctionalProvider<HashtagService, HashtagService, HashtagService>
+    with $Provider<HashtagService> {
+  /// Hashtag service depends on Video event service
+  HashtagServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'hashtagServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$hashtagServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<HashtagService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  HashtagService create(Ref ref) {
+    return hashtagService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(HashtagService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<HashtagService>(value),
+    );
+  }
+}
+
+String _$hashtagServiceHash() => r'415d7fb987653ec757d0aed2295e1820edb43008';
+
+/// Content reporting service for NIP-56 compliance
+
+@ProviderFor(contentReportingService)
+final contentReportingServiceProvider = ContentReportingServiceProvider._();
+
+/// Content reporting service for NIP-56 compliance
+
+final class ContentReportingServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ContentReportingService>,
+          ContentReportingService,
+          FutureOr<ContentReportingService>
+        >
+    with
+        $FutureModifier<ContentReportingService>,
+        $FutureProvider<ContentReportingService> {
+  /// Content reporting service for NIP-56 compliance
+  ContentReportingServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'contentReportingServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$contentReportingServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ContentReportingService> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ContentReportingService> create(Ref ref) {
+    return contentReportingService(ref);
+  }
+}
+
+String _$contentReportingServiceHash() =>
+    r'fd8248bb3b21d83eec8d2e1860a9a14b5b8dcb77';
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] for every delivery attempt after local save.
+
+@ProviderFor(reportRetryService)
+final reportRetryServiceProvider = ReportRetryServiceProvider._();
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] for every delivery attempt after local save.
+
+final class ReportRetryServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ReportRetryService?>,
+          ReportRetryService?,
+          FutureOr<ReportRetryService?>
+        >
+    with
+        $FutureModifier<ReportRetryService?>,
+        $FutureProvider<ReportRetryService?> {
+  /// Auto-sweep service for the durable `pending_reports` queue.
+  ///
+  /// Uses [ContentReportingService] for every delivery attempt after local save.
+  ReportRetryServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'reportRetryServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$reportRetryServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ReportRetryService?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ReportRetryService?> create(Ref ref) {
+    return reportRetryService(ref);
+  }
+}
+
+String _$reportRetryServiceHash() =>
+    r'580e5f54ac229632f4b5712952c1a2126660befb';
+
+/// Content deletion service for NIP-09 delete events
+
+@ProviderFor(contentDeletionService)
+final contentDeletionServiceProvider = ContentDeletionServiceProvider._();
+
+/// Content deletion service for NIP-09 delete events
+
+final class ContentDeletionServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ContentDeletionService>,
+          ContentDeletionService,
+          FutureOr<ContentDeletionService>
+        >
+    with
+        $FutureModifier<ContentDeletionService>,
+        $FutureProvider<ContentDeletionService> {
+  /// Content deletion service for NIP-09 delete events
+  ContentDeletionServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'contentDeletionServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$contentDeletionServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ContentDeletionService> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ContentDeletionService> create(Ref ref) {
+    return contentDeletionService(ref);
+  }
+}
+
+String _$contentDeletionServiceHash() =>
+    r'de8df8e0106036b306b61ef2970e6b43ce1be68f';

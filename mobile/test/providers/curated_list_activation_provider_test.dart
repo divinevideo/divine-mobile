@@ -21,6 +21,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/curated_list_service.dart';
@@ -418,7 +419,7 @@ void main() {
             auth.commitAccountSwitchActivation(
               hostIsCurrent: () => frame.isCurrent,
             ),
-            throwsStateError,
+            throwsA(isA<AccountStorageException>()),
           );
           await pumpEventQueue();
         });

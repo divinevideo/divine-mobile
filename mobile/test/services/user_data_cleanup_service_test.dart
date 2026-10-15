@@ -1,6 +1,8 @@
 // ABOUTME: Tests for UserDataCleanupService identity change detection and cleanup
 // ABOUTME: Validates that user-specific data is cleared when switching accounts
 
+import 'dart:async';
+
 import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -8,8 +10,10 @@ import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashta
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/messages_preference_service.dart';
@@ -1040,6 +1044,91 @@ void main() {
           );
           expect(await deletedStore.read(), isNull);
           expect(await otherStore.read(), '["two"]');
+        },
+      );
+
+      test(
+        'a queued inactive retry cannot broaden changed cleanup intent',
+        () async {
+          final removed = 'a' * 64;
+          final active = 'b' * 64;
+          await prefs.setString('current_user_pubkey_hex', active);
+          await prefs.setString('vine_drafts', 'active drafts');
+          await PendingAccountCleanup(
+            userPubkey: removed,
+            isIdentityChange: false,
+            deleteUserData: true,
+            preserveActiveSession: true,
+          ).record(prefs);
+          final gate = Completer<int>();
+          final held = CuratedListSessionCoordinator.forPreferences(prefs)
+              .writes
+              .runExclusive(() => gate.future);
+          final pending = service.clearUserSpecificData(
+            userPubkey: removed,
+            deleteUserData: true,
+          );
+          final failsClosed = expectLater(
+            pending,
+            throwsA(isA<UserDataCleanupException>()),
+          );
+          await PendingAccountCleanup(
+            userPubkey: active,
+            isIdentityChange: false,
+            deleteUserData: true,
+          ).record(prefs);
+          gate.complete(0);
+          await held;
+          await failsClosed;
+          expect(prefs.getString('vine_drafts'), 'active drafts');
+          expect(PendingAccountCleanup.read(prefs)!.userPubkey, active);
+        },
+      );
+
+      test(
+        'resuming inactive removal preserves the active account scope',
+        () async {
+          final removed = 'a' * 64;
+          final active = 'b' * 64;
+          await prefs.setString('current_user_pubkey_hex', active);
+          await prefs.setString('vine_drafts', '{"drafts": ["active"]}');
+          await service.markOwnerScopedLegacyDataForUser(active);
+          var failDatabase = true;
+          final scopes = <bool>[];
+          service.onDatabaseCleanup =
+              ({
+                userPubkey,
+                deleteUserData = false,
+                preserveActiveSession = false,
+              }) async {
+                scopes.add(preserveActiveSession);
+                if (failDatabase) throw StateError('database unavailable');
+              };
+          await expectLater(
+            service.deleteAccountData(
+              removed,
+              userNpub: NostrKeyUtils.encodePubKey(removed),
+              preserveActiveSession: true,
+            ),
+            throwsStateError,
+          );
+          final storedIntent = prefs.getString(
+            PendingAccountCleanup.storageKey,
+          )!;
+          expect(storedIntent, contains('"version":2'));
+          expect(
+            PendingAccountCleanup.read(prefs)!.preserveActiveSession,
+            isTrue,
+          );
+          failDatabase = false;
+          await service.clearUserSpecificData(
+            userPubkey: removed,
+            deleteUserData: true,
+          );
+          expect(scopes, [true, true]);
+          expect(prefs.getString('current_user_pubkey_hex'), active);
+          expect(prefs.getString('vine_drafts'), '{"drafts": ["active"]}');
+          expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);
         },
       );
 

@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A required sweep must remain discoverable after its cache keys disappear.
@@ -13,6 +14,7 @@ class PendingAccountCleanup {
     required this.userPubkey,
     required this.isIdentityChange,
     required this.deleteUserData,
+    this.preserveActiveSession = false,
   });
 
   static const storageKey = 'pending_account_data_cleanup';
@@ -31,25 +33,43 @@ class PendingAccountCleanup {
   final bool isIdentityChange;
   final bool deleteUserData;
 
+  /// An inactive-account removal never authorizes device-wide teardown.
+  final bool preserveActiveSession;
+
   static PendingAccountCleanup? read(SharedPreferences preferences) {
     if (!preferences.containsKey(storageKey)) return null;
-    final raw = preferences.getString(storageKey);
-    if (raw == null) throw StateError('Account cleanup intent is unreadable');
+    final raw = preferences.get(storageKey);
+    if (raw is! String) {
+      throw const AccountStorageException(
+        'Account cleanup intent is unreadable',
+      );
+    }
     final decoded = jsonDecode(raw);
     if (decoded is! Map<String, dynamic> ||
-        decoded['version'] != 1 ||
+        (decoded['version'] != 1 && decoded['version'] != 2) ||
+        (decoded['version'] == 2 && decoded['preserveActiveSession'] != true) ||
+        (decoded['version'] == 1 && decoded['preserveActiveSession'] == true) ||
         !decoded.containsKey('userPubkey') ||
         decoded['userPubkey'] is! String? ||
         decoded['isIdentityChange'] is! bool ||
         decoded['deleteUserData'] is! bool ||
+        (decoded.containsKey('preserveActiveSession') &&
+            decoded['preserveActiveSession'] is! bool) ||
+        (decoded['preserveActiveSession'] == true &&
+            (decoded['deleteUserData'] != true ||
+                decoded['isIdentityChange'] != false ||
+                decoded['userPubkey'] is! String ||
+                !RegExp(r'^[0-9a-f]{64}$')
+                    .hasMatch(decoded['userPubkey'] as String))) ||
         (decoded['isIdentityChange'] != true &&
             decoded['deleteUserData'] != true)) {
-      throw StateError('Account cleanup intent is invalid');
+      throw const AccountStorageException('Account cleanup intent is invalid');
     }
     return PendingAccountCleanup(
       userPubkey: decoded['userPubkey'] as String?,
       isIdentityChange: decoded['isIdentityChange'] as bool,
       deleteUserData: decoded['deleteUserData'] as bool,
+      preserveActiveSession: decoded['preserveActiveSession'] == true,
     );
   }
 
@@ -57,8 +77,10 @@ class PendingAccountCleanup {
     required String? userPubkey,
     required bool isIdentityChange,
     required bool deleteUserData,
+    bool preserveActiveSession = false,
   }) =>
       this.userPubkey == userPubkey &&
+      this.preserveActiveSession == preserveActiveSession &&
       (!isIdentityChange || this.isIdentityChange) &&
       (!deleteUserData || this.deleteUserData);
 
@@ -74,11 +96,15 @@ class PendingAccountCleanup {
       } on Object {
         // No destructive work is authorized without verified readback.
       }
-      throw StateError('Could not record required account cleanup');
+      throw const AccountStorageException(
+        'Could not record required account cleanup',
+      );
     }
     await _reload(preferences);
     if (!saved || preferences.get(storageKey) != encoded) {
-      throw StateError('Could not record required account cleanup');
+      throw const AccountStorageException(
+        'Could not record required account cleanup',
+      );
     }
   }
 
@@ -99,11 +125,15 @@ class PendingAccountCleanup {
       } on Object {
         // The caller remains failed closed when restoration is unverified.
       }
-      throw StateError('Could not verify completed account cleanup');
+      throw const AccountStorageException(
+        'Could not verify completed account cleanup',
+      );
     }
     if (!removed || preferences.containsKey(storageKey)) {
       if (!preferences.containsKey(storageKey)) await record(preferences);
-      throw StateError('Could not finish required account cleanup');
+      throw const AccountStorageException(
+        'Could not finish required account cleanup',
+      );
     }
   }
 
@@ -113,14 +143,18 @@ class PendingAccountCleanup {
       _unknownReadbacks[preferences] = false;
     } on Object {
       _unknownReadbacks[preferences] = true;
-      throw StateError('Could not verify required account cleanup');
+      throw const AccountStorageException(
+        'Could not verify required account cleanup',
+      );
     }
   }
 
   String get _encoded => jsonEncode({
-    'version': 1,
+    // Older builds reject v2 instead of widening an inactive-account removal.
+    'version': preserveActiveSession ? 2 : 1,
     'userPubkey': userPubkey,
     'isIdentityChange': isIdentityChange,
     'deleteUserData': deleteUserData,
+    if (preserveActiveSession) 'preserveActiveSession': true,
   });
 }

@@ -33,6 +33,7 @@ class CuratedListPublisher {
     required bool Function() isCurrentSession,
     required CuratedListPublicationAuthorization isPublicationAuthorized,
     void Function(CuratedList target, Event event)? onPublicationAccepted,
+    Future<bool> Function(Event event)? persistSignedDefault,
   }) : _client = client,
        _gateway = gateway,
        _clock = publishClock,
@@ -41,7 +42,8 @@ class CuratedListPublisher {
        _recovery = recoveryJournal,
        _isCurrentSession = isCurrentSession,
        _isPublicationAuthorized = isPublicationAuthorized,
-       _onPublicationAccepted = onPublicationAccepted;
+       _onPublicationAccepted = onPublicationAccepted,
+       _persistSignedDefault = persistSignedDefault;
 
   final NostrClient _client;
   final CuratedListRelayGateway _gateway;
@@ -54,11 +56,14 @@ class CuratedListPublisher {
   final CuratedListPublicationAuthorization _isPublicationAuthorized;
   final void Function(CuratedList target, Event event)? _onPublicationAccepted;
 
+  final Future<bool> Function(Event event)? _persistSignedDefault;
+
   bool _owns(String owner) =>
       _isCurrentSession() && _gateway.currentAuthenticatedPubkey() == owner;
 
   Future<bool> publish(
     CuratedList source, {
+    Event? signedRetry,
     bool confirmed = false,
     void Function()? onPublicationUnconfirmed,
   }) async {
@@ -81,17 +86,28 @@ class CuratedListPublisher {
           _recovery.needsRepair(owner)) {
         return false;
       }
-      final event = await _gateway.signList(
-        target,
-        ownerPubkey: owner,
-        createdAt: () => _clock.next(ownerPubkey: owner, listId: target.id),
-      );
+      final event =
+          signedRetry ??
+          await _gateway.signList(
+            target,
+            ownerPubkey: owner,
+            createdAt: () => _clock.next(ownerPubkey: owner, listId: target.id),
+          );
       if (event == null ||
           event.pubkey != owner ||
           !_owns(owner) ||
           !_isPublicationAuthorized(target)) {
         return false;
       }
+
+      // Preserve owner-signed retry evidence before dispatch. A restart may
+      // repeat only this payload, never infer permission from a cached row.
+      if (target.id == defaultListId &&
+          _persistSignedDefault != null &&
+          !await _persistSignedDefault(event)) {
+        return false;
+      }
+      if (!_owns(owner) || !_isPublicationAuthorized(target)) return false;
 
       var current = _findList(target.authorScopedId);
       if (current == null || current.pubkey != owner) return false;

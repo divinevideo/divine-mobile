@@ -23,6 +23,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/auth/auth_hero_section.dart';
 import 'package:openvine/widgets/error_message.dart';
+import 'package:openvine/widgets/recovery_support_button.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -98,6 +99,9 @@ class WelcomeScreen extends ConsumerWidget {
           ),
       child: _WelcomeView(
         isAuthLoading: isAuthLoading,
+        cleanupRequired:
+            authService.lastFailureReason ==
+            AuthFailureReason.accountCleanupFailed,
         lastError:
             authService.lastFailureReason ==
                 AuthFailureReason.accountCleanupFailed
@@ -110,7 +114,13 @@ class WelcomeScreen extends ConsumerWidget {
 
 /// Welcome screen — View that consumes [WelcomeBloc] state.
 class _WelcomeView extends ConsumerWidget {
-  const _WelcomeView({required this.isAuthLoading, required this.lastError});
+  const _WelcomeView({
+    required this.isAuthLoading,
+    required this.lastError,
+    required this.cleanupRequired,
+  });
+
+  final bool cleanupRequired;
 
   /// Whether the global auth state is in a loading state.
   final bool isAuthLoading;
@@ -217,8 +227,17 @@ class _WelcomeView extends ConsumerWidget {
                       state: state,
                       isLoading: isLoading,
                       lastError: lastError,
+                      cleanupRequired:
+                          cleanupRequired ||
+                          state.status == WelcomeStatus.accountCleanupFailed,
                     )
-                  : _NewUserLayout(isLoading: isLoading, lastError: lastError),
+                  : _NewUserLayout(
+                      isLoading: isLoading,
+                      lastError: lastError,
+                      cleanupRequired:
+                          cleanupRequired ||
+                          state.status == WelcomeStatus.accountCleanupFailed,
+                    ),
             ),
           ),
         );
@@ -229,7 +248,13 @@ class _WelcomeView extends ConsumerWidget {
 
 /// Default layout for new users — AuthHeroSection with create/login buttons.
 class _NewUserLayout extends StatelessWidget {
-  const _NewUserLayout({required this.isLoading, required this.lastError});
+  const _NewUserLayout({
+    required this.isLoading,
+    required this.lastError,
+    required this.cleanupRequired,
+  });
+
+  final bool cleanupRequired;
 
   final bool isLoading;
   final String? lastError;
@@ -242,6 +267,11 @@ class _NewUserLayout extends StatelessWidget {
 
         if (lastError != null) ...[
           ErrorMessage(message: lastError),
+          const SizedBox(height: 16),
+        ],
+
+        if (cleanupRequired) ...[
+          const RecoverySupportButton(),
           const SizedBox(height: 16),
         ],
 
@@ -290,8 +320,10 @@ class _ReturningUserLayout extends StatelessWidget {
     required this.state,
     required this.isLoading,
     required this.lastError,
+    required this.cleanupRequired,
   });
 
+  final bool cleanupRequired;
   final WelcomeState state;
   final bool isLoading;
   final String? lastError;
@@ -329,6 +361,11 @@ class _ReturningUserLayout extends StatelessWidget {
 
               if (lastError != null) ...[
                 ErrorMessage(message: lastError),
+                const SizedBox(height: 16),
+              ],
+
+              if (cleanupRequired) ...[
+                const RecoverySupportButton(),
                 const SizedBox(height: 16),
               ],
 

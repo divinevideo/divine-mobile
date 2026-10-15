@@ -52,3 +52,47 @@ jobs:
           # Preview builds expose the public test rooms directly in Messages.
           FF_CONCORD_CHAT: "true"
           DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
+        run: |
+          python3 scripts/write_public_people_list_defines.py --output build/public_people_list_defines.json
+          flutter build web \
+            --release \
+            --tree-shake-icons \
+            --optimization-level=4 \
+            --pwa-strategy=none \
+            --dart-define=BACKEND_URL=https://api.divine.video \
+            --dart-define=ENVIRONMENT=production \
+            --dart-define="FF_CONCORD_CHAT=$FF_CONCORD_CHAT" \
+            --dart-define-from-file=build/public_people_list_defines.json \
+            --no-source-maps
+
+      - name: Check web bundle file sizes
+        run: bash scripts/check_web_bundle_file_size.sh build/web
+
+      - name: Bundle preview artifact
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          tar -C build -czf pr-web-preview-site.tar.gz web
+          python3 - <<'PY'
+          import json
+          import os
+
+          with open("pr-web-preview-metadata.json", "w") as output:
+              json.dump({
+                  "pr_number": os.environ["PR_NUMBER"],
+                  "head_ref": os.environ["PR_HEAD_REF"],
+                  "head_sha": os.environ["PR_HEAD_SHA"],
+              }, output)
+          PY
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-pr-preview
+          path: |
+            mobile/pr-web-preview-site.tar.gz
+            mobile/pr-web-preview-metadata.json
+          if-no-files-found: error
+          retention-days: 7

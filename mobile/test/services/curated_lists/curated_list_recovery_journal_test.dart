@@ -365,7 +365,7 @@ void main() {
         expect(journal.record(owner, 'same-id')!.visibility!.isPublic, isFalse);
         await expectLater(
           CuratedListRecoveryJournal.migrateEmbeddedRecords(prefs),
-          throwsStateError,
+          throwsA(isA<CuratedListRecoveryException>()),
         );
         backing.reject = false;
         await CuratedListRecoveryJournal.migrateEmbeddedRecords(prefs);
@@ -479,7 +479,7 @@ void main() {
           prefs,
           legacyOwner: owner,
         ),
-        throwsStateError,
+        throwsA(isA<CuratedListRecoveryException>()),
       );
       expect(prefs.containsKey('curated_lists'), isTrue);
     });

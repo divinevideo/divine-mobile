@@ -50,7 +50,8 @@ typedef EnrichVideos = Future<List<VideoEvent>> Function(
 /// - Pagination via cursor-based loading
 /// - Following list changes for home feed
 /// - Pull-to-refresh functionality
-class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
+class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
+    with CloseGuardedEmit<VideoFeedBlocState> {
   VideoFeedBloc({
     required VideosRepository videosRepository,
     required FollowRepository followRepository,
@@ -150,26 +151,64 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   _curatedListsSubscription;
   StreamSubscription<List<PeopleListSearchResult>>?
   _followedPeopleListsSubscription;
-  int _sourceSelectionSequence = 0;
-  int _firstPageRequestSequence = 0;
-  int? _activeSourceSelection;
-  VideoFeedCuratedListsChanged? _deferredCuratedSnapshot;
-  VideoFeedFollowedPeopleListsChanged? _deferredFollowedPeopleLists;
-  int _followedListsSequence = 0;
-  bool _isClosing = false;
-  FollowedPeopleListRef? _pendingRestoredPeopleList;
-  String? _pendingRestoredCuratedList;
+  int get _sourceSelectionSequence =>
+      state.coordination.sourceSelectionSequence;
+  set _sourceSelectionSequence(int value) => _setCoordination(
+    state.coordination.copyWith(sourceSelectionSequence: value),
+  );
+  int? get _activeSourceSelection => state.coordination.activeSourceSelection;
+  set _activeSourceSelection(int? value) => _setCoordination(
+    state.coordination.copyWith(activeSourceSelection: value),
+  );
+  VideoFeedCuratedListsChanged? get _deferredCuratedSnapshot =>
+      state.coordination.deferredCuratedSnapshot;
+  set _deferredCuratedSnapshot(VideoFeedCuratedListsChanged? value) =>
+      _setCoordination(
+        state.coordination.copyWith(deferredCuratedSnapshot: value),
+      );
+  VideoFeedFollowedPeopleListsChanged? get _deferredFollowedPeopleLists =>
+      state.coordination.deferredFollowedPeopleLists;
+  set _deferredFollowedPeopleLists(
+    VideoFeedFollowedPeopleListsChanged? value,
+  ) => _setCoordination(
+    state.coordination.copyWith(deferredFollowedPeopleLists: value),
+  );
+  int get _followedListsSequence => state.coordination.followedListsSequence;
+  set _followedListsSequence(int value) => _setCoordination(
+    state.coordination.copyWith(followedListsSequence: value),
+  );
+  bool get _isClosing => state.coordination.isClosing;
+  set _isClosing(bool value) => _setCoordination(
+    state.coordination.copyWith(isClosing: value),
+  );
+  FollowedPeopleListRef? get _pendingRestoredPeopleList =>
+      state.coordination.pendingRestoredPeopleList;
+  set _pendingRestoredPeopleList(FollowedPeopleListRef? value) =>
+      _setCoordination(
+        state.coordination.copyWith(pendingRestoredPeopleList: value),
+      );
+  String? get _pendingRestoredCuratedList =>
+      state.coordination.pendingRestoredCuratedList;
+  set _pendingRestoredCuratedList(String? value) => _setCoordination(
+    state.coordination.copyWith(pendingRestoredCuratedList: value),
+  );
+  int get _paginationGeneration => state.coordination.paginationGeneration;
+  set _paginationGeneration(int value) => _setCoordination(
+    state.coordination.copyWith(paginationGeneration: value),
+  );
+  int get _loadGeneration => state.coordination.loadGeneration;
+  set _loadGeneration(int value) => _setCoordination(
+    state.coordination.copyWith(loadGeneration: value),
+  );
+
+  void _setCoordination(VideoFeedCoordination coordination) {
+    if (coordination == state.coordination) return;
+    emitIfOpen(state.copyWith(coordination: coordination));
+  }
 
   /// Tracks when the last successful load completed, used by
   /// [_onAutoRefreshRequested] to skip refreshes when data is fresh.
   DateTime? _lastRefreshedAt;
-
-  // Installing a fresh first page invalidates any continuation of the old
-  // window, even when both requests belong to the same feed source.
-  int _paginationGeneration = 0;
-
-  // A refresh of the same source must invalidate its previous first page.
-  int _loadGeneration = 0;
 
   /// Whether [source] participates in the cross-restart [HomeFeedCache].
   ///
@@ -1198,9 +1237,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     final ProvisionalFeedModeWrite write;
     try {
       write = await _modePreferences._prepare(source);
-      // The coordinator reports a refused native write as a StateError.
-      // ignore: avoid_catching_errors
-    } on StateError catch (error, stackTrace) {
+    } on FeedModePersistenceException catch (error, stackTrace) {
       Log.warning(
         'Home could not save the restored feed source',
         name: 'VideoFeedBloc',

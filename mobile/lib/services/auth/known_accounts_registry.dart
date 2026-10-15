@@ -11,6 +11,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart' show SecureKeyStorage;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/signer_secure_store.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -306,7 +307,11 @@ class KnownAccountsRegistry {
       jsonEncode(accounts.map((a) => a.toJson()).toList()),
     );
     ensureCurrent?.call();
-    if (!written) throw StateError('Could not persist account migration');
+    if (!written) {
+      throw const AccountStorageException(
+        'Could not persist account migration',
+      );
+    }
   }
 
   /// Adds or updates an account in the known accounts registry.
@@ -351,11 +356,15 @@ class KnownAccountsRegistry {
     final json = jsonEncode(accounts.map((a) => a.toJson()).toList());
     final written = await prefs.setString(kKnownAccountsKey, json);
     ensureCurrent?.call();
-    if (!written) throw StateError('Could not persist known accounts');
+    if (!written) {
+      throw const AccountStorageException('Could not persist known accounts');
+    }
     await prefs.reload();
     ensureCurrent?.call();
     if (prefs.getString(kKnownAccountsKey) != json) {
-      throw StateError('Known accounts readback did not match');
+      throw const AccountStorageException(
+        'Known accounts readback did not match',
+      );
     }
   }
 
@@ -389,7 +398,7 @@ class KnownAccountsRegistry {
 
     final json = jsonEncode(accounts.map((a) => a.toJson()).toList());
     if (!await prefs.setString(kKnownAccountsKey, json)) {
-      throw StateError('Could not persist known accounts');
+      throw const AccountStorageException('Could not persist known accounts');
     }
 
     Log.info(
@@ -411,7 +420,7 @@ class KnownAccountsRegistry {
       kKnownAccountsKey,
       jsonEncode(accounts.map((a) => a.toJson()).toList()),
     )) {
-      throw StateError('Could not persist known accounts');
+      throw const AccountStorageException('Could not persist known accounts');
     }
   }
 
@@ -429,11 +438,15 @@ class KnownAccountsRegistry {
       kAuthenticationSourceKey,
       AuthenticationSource.none.code,
     )) {
-      throw StateError('Could not reset the authentication source');
+      throw const AccountStorageException(
+        'Could not reset the authentication source',
+      );
     }
     if (prefs.containsKey(lastUsedNpubKey) &&
         !await prefs.remove(lastUsedNpubKey)) {
-      throw StateError('Could not clear the last-used account');
+      throw const AccountStorageException(
+        'Could not clear the last-used account',
+      );
     }
     return restorable.length;
   }

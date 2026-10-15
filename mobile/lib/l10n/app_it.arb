@@ -5078,5 +5078,6 @@
   "listRecoveryPending": "Questa lista ha modifiche in attesa di sincronizzazione.",
   "listPermissionsRecoveryPending": "La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.",
   "listRecoveryReadOnly": "Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.",
-  "listAddToLists": "Aggiungi alle liste"
+  "listAddToLists": "Aggiungi alle liste",
+  "accountDeletionProcessingSignOutFailed": "L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova."
 }

@@ -144,13 +144,17 @@ extension _AccountLocalRemoval on AuthService {
       if (prefs.get(key) != npub) continue;
       if (!await prefs.remove(key)) {
         ensureCurrent();
-        throw StateError('Could not remove the retired account reference');
+        throw const AccountStorageException(
+          'Could not remove the retired account reference',
+        );
       }
       ensureCurrent();
       await prefs.reload();
       ensureCurrent();
       if (prefs.get(key) != null) {
-        throw StateError('Retired account reference removal did not persist');
+        throw const AccountStorageException(
+          'Retired account reference removal did not persist',
+        );
       }
     }
     if (wasLastUsed) {
@@ -159,14 +163,16 @@ extension _AccountLocalRemoval on AuthService {
         AuthenticationSource.none.code,
       )) {
         ensureCurrent();
-        throw StateError('Could not reset the retired authentication source');
+        throw const AccountStorageException(
+          'Could not reset the retired authentication source',
+        );
       }
       ensureCurrent();
       await prefs.reload();
       ensureCurrent();
       if (prefs.get(kAuthenticationSourceKey) !=
           AuthenticationSource.none.code) {
-        throw StateError(
+        throw const AccountStorageException(
           'Retired authentication source readback did not match',
         );
       }
@@ -189,34 +195,44 @@ extension _AccountLocalRemoval on AuthService {
     await prefs.reload();
     ensureCurrent();
     if (prefs.get(kKnownAccountsKey) != raw) {
-      throw StateError('The account registry changed during removal');
+      throw const AccountStorageException(
+        'The account registry changed during removal',
+      );
     }
     final encoded = jsonEncode(filtered.toList());
     if (!await prefs.setString(kKnownAccountsKey, encoded)) {
-      throw StateError('Could not persist account removal');
+      throw const AccountStorageException('Could not persist account removal');
     }
     ensureCurrent();
     await prefs.reload();
     ensureCurrent();
     if (prefs.get(kKnownAccountsKey) != encoded) {
-      throw StateError('Account removal readback did not match');
+      throw const AccountStorageException(
+        'Account removal readback did not match',
+      );
     }
   }
 
   List<Map<String, dynamic>> _readKnownAccountRemovalRows(Object? raw) {
     if (raw == null) return [];
-    if (raw is! String) throw StateError('The account registry is unreadable');
+    if (raw is! String) {
+      throw const AccountStorageException('The account registry is unreadable');
+    }
     final decoded = raw.isEmpty ? <dynamic>[] : jsonDecode(raw);
     if (decoded is! List<dynamic>) {
-      throw StateError('The account registry is unreadable');
+      throw const AccountStorageException('The account registry is unreadable');
     }
     return decoded.map((value) {
       if (value is! Map<String, dynamic>) {
-        throw StateError('The account registry is unreadable');
+        throw const AccountStorageException(
+          'The account registry is unreadable',
+        );
       }
       final account = KnownAccount.fromJson(value);
       if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(account.pubkeyHex)) {
-        throw StateError('The account registry owner is unreadable');
+        throw const AccountStorageException(
+          'The account registry owner is unreadable',
+        );
       }
       // Preserve every field of another owner's entry instead of rewriting it
       // through a model serializer while removing the target entry.

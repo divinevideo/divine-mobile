@@ -22,6 +22,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/swap_account.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -536,7 +537,7 @@ void main() {
             isIdentityChange: true,
             deleteUserData: false,
           ).record(prefs),
-          throwsA(isA<StateError>()),
+          throwsA(isA<AccountStorageException>()),
         );
         await prefs.remove(PendingAccountCleanup.storageKey);
         expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);

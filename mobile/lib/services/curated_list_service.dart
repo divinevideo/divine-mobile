@@ -15,6 +15,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/curated_list_account_authority.dart';
 import 'package:openvine/services/curated_lists/curated_list_default_publication_authority.dart';
+import 'package:openvine/services/curated_lists/curated_list_default_signed_intent_store.dart';
 import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
@@ -67,11 +68,13 @@ class CuratedListService extends ChangeNotifier {
     CuratedListSessionCoordinator? sessionCoordinator,
     OnListSubscribedCallback? onListSubscribed,
     OnListUnsubscribedCallback? onListUnsubscribed,
+    CuratedDefaultSignedIntentStore? defaultSignedIntentStore,
     Duration relaySyncTimeout = const Duration(seconds: 10),
     Duration maxPublishClockDrift = const Duration(seconds: 60),
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
+       _defaultSignedIntentStore = defaultSignedIntentStore,
        _sessions =
            sessionCoordinator ??
            CuratedListSessionCoordinator.forPreferences(
@@ -137,6 +140,13 @@ class CuratedListService extends ChangeNotifier {
       persistList: _persistPublication,
       isPublicationAuthorized: _defaultAuthority.canPublish,
       onPublicationAccepted: _defaultAuthority.accepted,
+      persistSignedDefault: defaultSignedIntentStore == null
+          ? null
+          : (event) => _sessions.runCurrent<bool>(
+              _sessionLease,
+              () => defaultSignedIntentStore.save(event),
+              cancelled: false,
+            ),
       recoveryJournal: _recovery,
       isCurrentSession: () => isCurrentSession,
     );
@@ -150,6 +160,7 @@ class CuratedListService extends ChangeNotifier {
   final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
+  final CuratedDefaultSignedIntentStore? _defaultSignedIntentStore;
   late final CuratedListAccountAuthority _accountAuthority;
   late final CuratedDefaultPublicationAuthority _defaultAuthority;
   late final PrefsCuratedListStore _cacheStore;
@@ -786,36 +797,7 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Retries this list's pending publication without changing its members.
-  Future<bool> retryListSync(String listId) => _serializeListOperation(
-    listId,
-    () async {
-      final list = getListById(listId);
-      if (!isCurrentSession) return false;
-      if (list == null) {
-        final owner = _relayGateway.currentAuthenticatedPubkey();
-        if (owner == null || !listId.startsWith('$owner:')) return false;
-        final id = listId.substring(owner.length + 1);
-        if (_recovery.record(owner, id) == null) return false;
-        return _publisher.retryPlaintextRedactions(listId);
-      }
-      if (!isOwnedList(listId) ||
-          !_defaultAuthority.canRetrySavedPublication(list)) {
-        return false;
-      }
-      if (list.nostrEventId != null &&
-          !list.pendingRepublish &&
-          list.pendingVisibility == null &&
-          list.pendingPlaintextEventIds.isNotEmpty) {
-        return _publisher.retryPlaintextRedactions(list.authorScopedId);
-      }
-      return _publishListToNostr(
-        list,
-        confirmed: true,
-        explicitDefaultIntent: true,
-      );
-    },
-    cancelled: false,
-  );
+  Future<bool> retryListSync(String listId) => _retryListSync(listId);
 
   /// Check if video is in a specific list
   bool isVideoInList(String listId, String videoEventId) {

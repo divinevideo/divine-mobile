@@ -32,6 +32,7 @@ import 'package:openvine/providers/swap_account.dart' as switching;
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -865,7 +866,7 @@ void main() {
             account: account,
             signIn: (_, _) async => signInAttempted = true,
           ),
-          expected: throwsA(isA<StateError>()),
+          expected: throwsA(isA<AccountStorageException>()),
         );
         expect(signInAttempted, isFalse);
         expect(controller.currentContainer, same(initial));

@@ -5,6 +5,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show NostrRemoteSignerInfo;
 import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'signer_account_removal.dart';
@@ -45,7 +46,9 @@ class SignerSecureStore {
         final stored = await _storage.read(key: _kBunkerInfoKey);
         ensureCurrent();
         if (stored != bunkerUrl) {
-          throw StateError('Bunker credentials readback did not match');
+          throw const AccountStorageException(
+            'Bunker credentials readback did not match',
+          );
         }
       }
       Log.info(
@@ -130,7 +133,9 @@ class SignerSecureStore {
         final storedPackage = await _storage.read(key: _kAmberPackageKey);
         ensureCurrent();
         if (storedPubkey != pubkey || storedPackage != package) {
-          throw StateError('Amber credentials readback did not match');
+          throw const AccountStorageException(
+            'Amber credentials readback did not match',
+          );
         }
       }
       Log.info(
@@ -207,7 +212,9 @@ class SignerSecureStore {
     final stored = await KeycastSession.load(storage);
     ensureCurrent();
     if (jsonEncode(stored?.toJson()) != jsonEncode(session.toJson())) {
-      throw StateError('OAuth credentials readback did not match');
+      throw const AccountStorageException(
+        'OAuth credentials readback did not match',
+      );
     }
 
     Future<void> commitSlot(String key, String? value) async {
@@ -221,7 +228,9 @@ class SignerSecureStore {
       final persisted = await storage.read(key: key);
       ensureCurrent();
       if (persisted != value) {
-        throw StateError('OAuth credential slot readback did not match');
+        throw const AccountStorageException(
+          'OAuth credential slot readback did not match',
+        );
       }
     }
 

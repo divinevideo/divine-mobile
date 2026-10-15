@@ -5078,5 +5078,6 @@
   "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.",
   "listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
   "listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
-  "listAddToLists": "Toevoegen aan lijsten"
+  "listAddToLists": "Toevoegen aan lijsten",
+  "accountDeletionProcessingSignOutFailed": "Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw."
 }

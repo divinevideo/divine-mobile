@@ -311,6 +311,7 @@ final class VideoFeedBlocState extends Equatable {
     this.enrichmentRevision = 0,
     this.tuningActionSequence = 0,
     this.lastTuningAction,
+    this.coordination = const VideoFeedCoordination(),
   }) : source =
            source ??
            (mode == FeedMode.following
@@ -320,6 +321,9 @@ final class VideoFeedBlocState extends Equatable {
                : mode == FeedMode.classic
                ? const VideoFeedSource.classic()
                : const VideoFeedSource.forYou());
+
+  /// Observable ordering and deferred work for overlapping feed operations.
+  final VideoFeedCoordination coordination;
 
   /// The current loading status.
   final VideoFeedStatus status;
@@ -456,8 +460,10 @@ final class VideoFeedBlocState extends Equatable {
     int? enrichmentRevision,
     int? tuningActionSequence,
     VideoFeedTuningAction? lastTuningAction,
+    VideoFeedCoordination? coordination,
   }) {
     return VideoFeedBlocState(
+      coordination: coordination ?? this.coordination,
       status: status ?? this.status,
       videos: videos ?? this.videos,
       source:
@@ -501,5 +507,90 @@ final class VideoFeedBlocState extends Equatable {
     enrichmentRevision,
     tuningActionSequence,
     lastTuningAction,
+    coordination,
+  ];
+}
+
+/// Immutable operation ownership and deferred snapshots for Home.
+final class VideoFeedCoordination extends Equatable {
+  const VideoFeedCoordination({
+    this.sourceSelectionSequence = 0,
+    this.activeSourceSelection,
+    this.deferredCuratedSnapshot,
+    this.deferredFollowedPeopleLists,
+    this.followedListsSequence = 0,
+    this.isClosing = false,
+    this.pendingRestoredPeopleList,
+    this.pendingRestoredCuratedList,
+    this.paginationGeneration = 0,
+    this.loadGeneration = 0,
+  });
+
+  final int sourceSelectionSequence;
+  final int? activeSourceSelection;
+  final VideoFeedCuratedListsChanged? deferredCuratedSnapshot;
+  final VideoFeedFollowedPeopleListsChanged? deferredFollowedPeopleLists;
+  final int followedListsSequence;
+  final bool isClosing;
+  final FollowedPeopleListRef? pendingRestoredPeopleList;
+  final String? pendingRestoredCuratedList;
+
+  /// A fresh first page invalidates continuations of the old window.
+  final int paginationGeneration;
+
+  /// Refreshing the same source invalidates its previous first page.
+  final int loadGeneration;
+
+  VideoFeedCoordination copyWith({
+    int? sourceSelectionSequence,
+    Object? activeSourceSelection = _unchanged,
+    Object? deferredCuratedSnapshot = _unchanged,
+    Object? deferredFollowedPeopleLists = _unchanged,
+    int? followedListsSequence,
+    bool? isClosing,
+    Object? pendingRestoredPeopleList = _unchanged,
+    Object? pendingRestoredCuratedList = _unchanged,
+    int? paginationGeneration,
+    int? loadGeneration,
+  }) => VideoFeedCoordination(
+    sourceSelectionSequence:
+        sourceSelectionSequence ?? this.sourceSelectionSequence,
+    activeSourceSelection: identical(activeSourceSelection, _unchanged)
+        ? this.activeSourceSelection
+        : activeSourceSelection as int?,
+    deferredCuratedSnapshot: identical(deferredCuratedSnapshot, _unchanged)
+        ? this.deferredCuratedSnapshot
+        : deferredCuratedSnapshot as VideoFeedCuratedListsChanged?,
+    deferredFollowedPeopleLists:
+        identical(deferredFollowedPeopleLists, _unchanged)
+        ? this.deferredFollowedPeopleLists
+        : deferredFollowedPeopleLists as VideoFeedFollowedPeopleListsChanged?,
+    followedListsSequence: followedListsSequence ?? this.followedListsSequence,
+    isClosing: isClosing ?? this.isClosing,
+    pendingRestoredPeopleList: identical(pendingRestoredPeopleList, _unchanged)
+        ? this.pendingRestoredPeopleList
+        : pendingRestoredPeopleList as FollowedPeopleListRef?,
+    pendingRestoredCuratedList:
+        identical(pendingRestoredCuratedList, _unchanged)
+        ? this.pendingRestoredCuratedList
+        : pendingRestoredCuratedList as String?,
+    paginationGeneration: paginationGeneration ?? this.paginationGeneration,
+    loadGeneration: loadGeneration ?? this.loadGeneration,
+  );
+
+  static const _unchanged = Object();
+
+  @override
+  List<Object?> get props => [
+    sourceSelectionSequence,
+    activeSourceSelection,
+    deferredCuratedSnapshot,
+    deferredFollowedPeopleLists,
+    followedListsSequence,
+    isClosing,
+    pendingRestoredPeopleList,
+    pendingRestoredCuratedList,
+    paginationGeneration,
+    loadGeneration,
   ];
 }

@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:db_client/db_client.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -53,7 +54,10 @@ class _GatedLegacyRemoval extends InMemorySharedPreferencesStore {
       started.complete();
       await release.future;
       if (result == _RemovalResult.throwsError) {
-        throw StateError('The native legacy clear failed.');
+        throw PlatformException(
+          code: 'write_failed',
+          message: 'The native legacy clear failed.',
+        );
       }
       if (result == _RemovalResult.returnsFalse) return false;
     }
@@ -90,7 +94,12 @@ class _GatedPreferences extends InMemorySharedPreferencesStore {
       _blocked = true;
       started.complete();
       await release.future;
-      if (throwBlockedWrite) throw StateError('The platform write failed.');
+      if (throwBlockedWrite) {
+        throw PlatformException(
+          code: 'write_failed',
+          message: 'The platform write failed.',
+        );
+      }
       if (rejectBlockedWrite) return false;
     }
     if (key == 'flutter.$_key' && value == blockedRepairValue) {

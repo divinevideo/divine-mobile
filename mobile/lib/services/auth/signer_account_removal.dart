@@ -159,7 +159,9 @@ extension _SignerAccountRemoval on SignerSecureStore {
         final current = await storage.read(key: entry.key);
         ensureCurrent?.call();
         if (current != entry.value) {
-          throw StateError('Signer evidence changed during account removal');
+          throw const AccountStorageException(
+            'Signer evidence changed during account removal',
+          );
         }
       }
     }
@@ -174,7 +176,9 @@ extension _SignerAccountRemoval on SignerSecureStore {
           final remaining = await storage.read(key: key);
           ensureCurrent?.call();
           if (remaining != null) {
-            throw StateError('Account signer removal did not persist');
+            throw const AccountStorageException(
+              'Account signer removal did not persist',
+            );
           }
           values[key] = null;
         }
@@ -187,7 +191,9 @@ extension _SignerAccountRemoval on SignerSecureStore {
     // owned selected records must remain absent on actual native readback.
     await verifyUnchanged();
     if (incomplete) {
-      throw StateError('Account signer removal is incomplete');
+      throw const AccountStorageException(
+        'Account signer removal is incomplete',
+      );
     }
   }
 }

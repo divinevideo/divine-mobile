@@ -15,6 +15,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -207,7 +208,9 @@ Future<void> swapAccount({
     final current = controller.currentContainer;
     final outgoingCommit = controller.currentCommit;
     if (outgoingCommit == null || !outgoingCommit.isCurrent) {
-      throw StateError('The outgoing account container has not committed');
+      throw const AccountStorageException(
+        'The outgoing account container has not committed',
+      );
     }
     void ensureOutgoingCurrent() {
       if (!outgoingCommit.isCurrent) {
@@ -258,7 +261,9 @@ Future<void> swapAccount({
       rollbackAuthority.ensureCurrent();
       if (previousPrimary != null &&
           previousPrimary.publicKeyHex != rollbackAuthority.ownerPubkey) {
-        throw StateError('Outgoing primary identity does not match its owner');
+        throw const AccountStorageException(
+          'Outgoing primary identity does not match its owner',
+        );
       }
       rollbackAuthority.retireForSwitch();
       await incomingAuth.prepareAccountSwitchActivation(
@@ -365,7 +370,7 @@ Future<void> swapAccount({
           final restoredKeys = await keyStorage.getKeyContainer();
           ensureRollbackCurrent();
           if (restoredKeys?.publicKeyHex != previousPrimary?.publicKeyHex) {
-            throw StateError(
+            throw const AccountStorageException(
               'Outgoing primary identity readback did not match',
             );
           }

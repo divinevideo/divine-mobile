@@ -4,6 +4,7 @@
 import 'package:clock/clock.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -41,12 +42,18 @@ class AccountSessionSnapshot {
           ? await prefs.remove(entry.key)
           : await prefs.setString(entry.key, value);
       ensureCurrent();
-      if (!restored) throw StateError('Could not restore the outgoing session');
+      if (!restored) {
+        throw const AccountStorageException(
+          'Could not restore the outgoing session',
+        );
+      }
     }
     await prefs.reload();
     ensureCurrent();
     if (_values.entries.any((entry) => prefs.get(entry.key) != entry.value)) {
-      throw StateError('Outgoing session readback did not match');
+      throw const AccountStorageException(
+        'Outgoing session readback did not match',
+      );
     }
   }
 }
@@ -70,7 +77,9 @@ class AccountSessionStore {
     );
     ensureCurrent?.call();
     if (!sourceWritten) {
-      throw StateError('Could not persist authentication source');
+      throw const AccountStorageException(
+        'Could not persist authentication source',
+      );
     }
     final identityWritten = await _preferences.setString(
       kLastUsedNpubKey,
@@ -78,17 +87,25 @@ class AccountSessionStore {
     );
     ensureCurrent?.call();
     if (!identityWritten) {
-      throw StateError('Could not persist restoration identity');
+      throw const AccountStorageException(
+        'Could not persist restoration identity',
+      );
     }
     final anchorRemoved = await _preferences.remove(kSessionRecoveryAnchorKey);
     ensureCurrent?.call();
-    if (!anchorRemoved) throw StateError('Could not clear the recovery anchor');
+    if (!anchorRemoved) {
+      throw const AccountStorageException(
+        'Could not clear the recovery anchor',
+      );
+    }
     await _preferences.reload();
     ensureCurrent?.call();
     if (_preferences.getString(kAuthenticationSourceKey) != source.code ||
         _preferences.getString(kLastUsedNpubKey) != npub ||
         _preferences.containsKey(kSessionRecoveryAnchorKey)) {
-      throw StateError('Authentication metadata readback did not match');
+      throw const AccountStorageException(
+        'Authentication metadata readback did not match',
+      );
     }
   }
 
@@ -106,19 +123,25 @@ class AccountSessionStore {
       acceptedAt,
     );
     ensureCurrent?.call();
-    if (!accepted) throw StateError('Could not persist terms acceptance');
+    if (!accepted) {
+      throw const AccountStorageException('Could not persist terms acceptance');
+    }
     final verified = await _preferences.setBool(
       TermsAcceptanceKeys.ageVerified16Plus,
       true,
     );
     ensureCurrent?.call();
-    if (!verified) throw StateError('Could not persist age verification');
+    if (!verified) {
+      throw const AccountStorageException('Could not persist age verification');
+    }
     await _preferences.reload();
     ensureCurrent?.call();
     if (_preferences.getString(TermsAcceptanceKeys.termsAcceptedAt) !=
             acceptedAt ||
         _preferences.getBool(TermsAcceptanceKeys.ageVerified16Plus) != true) {
-      throw StateError('Terms acceptance readback did not match');
+      throw const AccountStorageException(
+        'Terms acceptance readback did not match',
+      );
     }
   }
 }

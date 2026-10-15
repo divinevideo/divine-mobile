@@ -434,6 +434,7 @@ void main() {
             status: AccountDeletionRecoveryStatus.signOutFailed,
           ),
         );
+        when(cubit.retrySignOut).thenAnswer((_) async {});
         await tester.pumpWidget(_app(cubit));
 
         final l10n = lookupAppLocalizations(const Locale('en'));
@@ -449,9 +450,36 @@ void main() {
         await tester.tap(
           find.widgetWithText(DivineButton, l10n.accountDeletionSignOut),
         );
-        verify(cubit.signOut).called(1);
+        verify(cubit.retrySignOut).called(1);
       },
     );
+
+    testWidgets('accepted deletion explains incomplete sign-out and retries', (
+      tester,
+    ) async {
+      when(() => cubit.state).thenReturn(
+        const AccountDeletionRecoveryState(
+          status: AccountDeletionRecoveryStatus.signOutFailed,
+          attempt: AccountDeletionAttempt(
+            id: 'accepted',
+            status: AccountDeletionAttemptStatus.processing,
+          ),
+          failure: AccountDeletionRecoveryFailure.signOut,
+        ),
+      );
+      when(cubit.retrySignOut).thenAnswer((_) async {});
+      await tester.pumpWidget(_app(cubit));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(l10n.accountDeletionProcessingSignOutFailed),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.widgetWithText(DivineButton, l10n.accountDeletionSignOut),
+      );
+      verify(cubit.retrySignOut).called(1);
+      verifyNever(cubit.cancel);
+    });
 
     testWidgets('fail-closed loading keeps sign out reachable', (tester) async {
       when(() => cubit.state).thenReturn(
