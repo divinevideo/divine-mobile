@@ -453,7 +453,6 @@ class _AddButtonBarState extends State<_AddButtonBar> {
 
   Future<void> _submit(Set<String> selected) async {
     final bloc = context.read<PeopleListsBloc>();
-    final cubit = context.read<AddPeopleToListCubit>();
     if (_pending) return;
     if (_owner == null || _owner != bloc.state.activeOwnerPubkey) {
       setState(() => _result = PeopleListsOperationResult.cancelled);
@@ -471,7 +470,9 @@ class _AddButtonBarState extends State<_AddButtonBar> {
         ),
     ]);
     if (!mounted) return;
-    cubit.additionsConfirmed({
+    // Read after the submit: a dependency refresh can replace the cubit while
+    // it runs, and the replaced one drops this confirmation.
+    context.read<AddPeopleToListCubit>().additionsConfirmed({
       for (var i = 0; i < pubkeys.length; i++)
         if (results[i] == PeopleListsOperationResult.succeeded) pubkeys[i],
     });
