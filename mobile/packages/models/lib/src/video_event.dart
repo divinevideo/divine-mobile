@@ -1185,48 +1185,54 @@ class VideoEvent {
   String? get captionTitle =>
       isOriginalVine && displayContent.trim().isNotEmpty ? null : displayTitle;
 
-  /// Description to show in surfaces that render [allHashtags] as chips.
-  ///
-  /// Drops hashtags that end a line when each is already a chip, and the line
-  /// itself once nothing else is left on it. The Vine archive import repeats
-  /// the caption's hashtags on a line of their own, so the raw description
-  /// would show them as text twice above the chips. Hashtags inside a
-  /// sentence stay, since removing them would break the sentence. A dropped
-  /// line between two blank lines takes one of them along; everything else
-  /// is returned trimmed and otherwise as written.
-  late final String chipCaptionDescription = _withoutTrailingChipHashtags(
-    displayContent,
-  );
-
+  static final _lineBreak = RegExp('\r\n?|\n');
   static final _lineToken = RegExp(r'\S+');
   static final _hashtagToken = RegExp(r'^#([^#]+)$');
 
-  String _withoutTrailingChipHashtags(String text) {
-    final chips = {for (final tag in allHashtags) tag.toLowerCase()};
-    final lines = <String>[];
+  /// [displayContent] without the lines made up entirely of [chips], for
+  /// surfaces that show those hashtags as chips.
+  ///
+  /// The Vine archive import repeats the caption's hashtags on a line of their
+  /// own, so the raw description would show them as text twice above the
+  /// chips. Only a line holding nothing but [chips] is dropped, which includes
+  /// a caption written entirely in them; any other line is kept as written. A
+  /// dropped line between two blank lines takes one of them along; everything
+  /// else is returned trimmed and otherwise as written.
+  String descriptionWithoutChipLines(Iterable<String> chips) {
+    final chipSet = {for (final tag in chips) tag.toLowerCase()};
+    final kept = StringBuffer();
     var lastKeptBlank = false;
     var dropBlankLine = false;
-    for (final line in text.split('\n')) {
-      final tokens = _lineToken.allMatches(line).toList();
-      var keep = tokens.length;
-      while (keep > 0 && _isChipHashtag(tokens[keep - 1][0]!, chips)) {
-        keep--;
-      }
-      if (keep == 0 && tokens.isNotEmpty) {
+    for (final (line, lineBreak) in _linesOf(displayContent)) {
+      final tokens = _lineToken.allMatches(line);
+      final isBlank = tokens.isEmpty;
+      if (!isBlank &&
+          tokens.every((token) => _isChipHashtag(token[0]!, chipSet))) {
         dropBlankLine = lastKeptBlank;
         continue;
       }
-      if (dropBlankLine && tokens.isEmpty) {
+      if (dropBlankLine && isBlank) {
         dropBlankLine = false;
         continue;
       }
       dropBlankLine = false;
-      lastKeptBlank = tokens.isEmpty;
-      lines.add(
-        keep < tokens.length ? line.substring(0, tokens[keep - 1].end) : line,
-      );
+      lastKeptBlank = isBlank;
+      kept
+        ..write(line)
+        ..write(lineBreak);
     }
-    return lines.join('\n').trim();
+    return kept.toString().trim();
+  }
+
+  /// Each line of [text] with the break that ends it, so kept lines can be
+  /// joined back exactly as written.
+  static Iterable<(String, String)> _linesOf(String text) sync* {
+    var start = 0;
+    for (final lineBreak in _lineBreak.allMatches(text)) {
+      yield (text.substring(start, lineBreak.start), lineBreak[0]!);
+      start = lineBreak.end;
+    }
+    yield (text.substring(start), '');
   }
 
   static bool _isChipHashtag(String token, Set<String> chips) {
