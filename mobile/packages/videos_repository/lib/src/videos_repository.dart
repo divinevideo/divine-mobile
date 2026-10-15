@@ -514,12 +514,17 @@ class VideosRepository {
       // A read that runs out of time still returns what arrived, so only a
       // read that finished can say the feed has nothing older.
       final read = await _nostrClient.queryEventsDetailed([filter]);
-      final events = read.events;
-      if (events.isEmpty) {
+      if (read.events.isEmpty) {
         // Ask for the same window again on the next page.
         if (read.timedOut) nextBefore = pageBefore;
         break;
       }
+
+      // Each relay, and the local cache, answers with its own newest [limit]
+      // events, so only the newest [limit] of the merged answer are complete:
+      // below them a dense source stopped returning rows a sparse one reached.
+      // The page ends there and the older rows come back on the next page.
+      final events = _newestEventsWithTies(read.events, limit);
 
       // Order on the clock this walk pages on, as Funnelcake does.
       final videos = _transformAndFilter(events, sortByCreatedAt: false)
@@ -530,7 +535,7 @@ class VideosRepository {
         seenVideoKeys: seenVideoKeys,
       );
       final oldest = events.map((event) => event.createdAt).reduce(min);
-      if (events.length < limit) {
+      if (read.events.length < limit) {
         if (read.timedOut) nextBefore = oldest;
         break;
       }
@@ -2003,6 +2008,17 @@ class VideosRepository {
       if (!seenVideoKeys.add(video.feedDedupKey)) continue;
       target.add(video);
     }
+  }
+
+  /// The newest [limit] of [events], plus any older event that shares the
+  /// [limit]-th one's `created_at`: the next page starts strictly before that
+  /// second, so an event left out at it would never be read.
+  List<Event> _newestEventsWithTies(List<Event> events, int limit) {
+    if (events.length <= limit) return events;
+    final sorted = [...events]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final boundary = sorted[limit - 1].createdAt;
+    return sorted.where((event) => event.createdAt >= boundary).toList();
   }
 
   /// The oldest revision time (`created_at`, in seconds) in [stats], or

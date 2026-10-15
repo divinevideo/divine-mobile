@@ -3896,6 +3896,77 @@ void main() {
       );
 
       test(
+        'ends a relay page at the newest events of the merged answer',
+        () async {
+          // A dense relay's two newest, plus the newest of a sparse relay
+          // that reaches far further back.
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _createVideoEvent(
+                id: 'sparse-relay-video',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/sparse.mp4',
+                createdAt: 1786800000,
+              ),
+              _createVideoEvent(
+                id: 'dense-relay-video-1',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/dense-1.mp4',
+                createdAt: 1792000000,
+              ),
+              _createVideoEvent(
+                id: 'dense-relay-video-2',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/dense-2.mp4',
+                createdAt: 1791990000,
+              ),
+            ],
+          );
+
+          final result = await repository.getHomeFeedVideos(
+            authors: ['followed-user'],
+            limit: 2,
+          );
+
+          expect(
+            result.videos.map((video) => video.id),
+            equals(['dense-relay-video-1', 'dense-relay-video-2']),
+          );
+          expect(result.paginationCursor, equals('1791990000'));
+        },
+      );
+
+      test('keeps relay events that share the page boundary second', () async {
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            for (final (id, createdAt) in [
+              ('newest', 1792000000),
+              ('boundary-a', 1791990000),
+              ('boundary-b', 1791990000),
+              ('older', 1786800000),
+            ])
+              _createVideoEvent(
+                id: id,
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/$id.mp4',
+                createdAt: createdAt,
+              ),
+          ],
+        );
+
+        final result = await repository.getHomeFeedVideos(
+          authors: ['followed-user'],
+          limit: 2,
+        );
+
+        expect(
+          result.videos.map((video) => video.id),
+          unorderedEquals(['newest', 'boundary-a', 'boundary-b']),
+        );
+        expect(result.paginationCursor, equals('1791990000'));
+      });
+
+      test(
         'pages and orders relay results on event created_at, not '
         'published_at',
         () async {
@@ -4009,60 +4080,54 @@ void main() {
       test(
         'accumulates visible relay home videos across mixed reply-heavy pages',
         () async {
+          const replyTags = [
+            ['E', 'root-event-id', '', 'root-author'],
+            ['K', '34236'],
+            ['P', 'root-author'],
+            ['e', 'root-event-id', '', 'root-author'],
+            ['k', '34236'],
+            ['p', 'root-author'],
+          ];
+          final relayHistory = [
+            _createVideoEvent(
+              id: 'video-reply-1',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/reply-1.mp4',
+              createdAt: 1704070000,
+              extraTags: replyTags,
+            ),
+            _createVideoEvent(
+              id: 'video-reply-2',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/reply-2.mp4',
+              createdAt: 1704069999,
+              extraTags: replyTags,
+            ),
+            _createVideoEvent(
+              id: 'feed-video-1',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/feed-1.mp4',
+              createdAt: 1704069998,
+            ),
+            _createVideoEvent(
+              id: 'feed-video-2',
+              pubkey: 'followed-user',
+              videoUrl: 'https://example.com/feed-2.mp4',
+              createdAt: 1704068000,
+            ),
+          ];
+          // Answers like a relay: the newest `limit` events at or before
+          // `until`.
           when(() => mockNostrClient.queryEvents(any())).thenAnswer((
             invocation,
           ) async {
-            final filters =
-                invocation.positionalArguments.first as List<Filter>;
-            final filter = filters.single;
-
-            if (filter.until == null) {
-              return [
-                _createVideoEvent(
-                  id: 'video-reply-1',
-                  pubkey: 'followed-user',
-                  videoUrl: 'https://example.com/reply-1.mp4',
-                  createdAt: 1704070000,
-                  extraTags: const [
-                    ['E', 'root-event-id', '', 'root-author'],
-                    ['K', '34236'],
-                    ['P', 'root-author'],
-                    ['e', 'root-event-id', '', 'root-author'],
-                    ['k', '34236'],
-                    ['p', 'root-author'],
-                  ],
-                ),
-                _createVideoEvent(
-                  id: 'video-reply-2',
-                  pubkey: 'followed-user',
-                  videoUrl: 'https://example.com/reply-2.mp4',
-                  createdAt: 1704069999,
-                  extraTags: const [
-                    ['E', 'root-event-id', '', 'root-author'],
-                    ['K', '34236'],
-                    ['P', 'root-author'],
-                    ['e', 'root-event-id', '', 'root-author'],
-                    ['k', '34236'],
-                    ['p', 'root-author'],
-                  ],
-                ),
-                _createVideoEvent(
-                  id: 'feed-video-1',
-                  pubkey: 'followed-user',
-                  videoUrl: 'https://example.com/feed-1.mp4',
-                  createdAt: 1704069998,
-                ),
-              ];
-            }
-
-            return [
-              _createVideoEvent(
-                id: 'feed-video-2',
-                pubkey: 'followed-user',
-                videoUrl: 'https://example.com/feed-2.mp4',
-                createdAt: 1704068000,
-              ),
-            ];
+            final filter =
+                (invocation.positionalArguments.first as List<Filter>).single;
+            final until = filter.until;
+            return relayHistory
+                .where((event) => until == null || event.createdAt <= until)
+                .take(filter.limit!)
+                .toList();
           });
 
           final result = await repository.getHomeFeedVideos(
