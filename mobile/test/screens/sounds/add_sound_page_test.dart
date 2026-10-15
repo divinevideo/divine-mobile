@@ -475,6 +475,44 @@ void main() {
         expect(librarySounds(), isEmpty);
       });
 
+      testWidgets('takes the keyboard off the credit while sharing', (
+        tester,
+      ) async {
+        final gate = Completer<LocalAudioPublishResult>();
+        when(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+          ),
+        ).thenAnswer((_) => gate.future);
+        await pumpView(tester);
+        await pickFile(tester);
+        await sharePublicly(tester);
+        final title = find.byKey(const Key('audio_credit_title'));
+        await tester.showKeyboard(title);
+        expect(tester.testTextInput.hasAnyClients, isTrue);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pump();
+
+        // Typing now would change the field but not the credit being shared,
+        // so a retry would publish a credit other than the one on screen.
+        expect(tester.testTextInput.hasAnyClients, isFalse);
+
+        gate.complete(
+          const LocalAudioPublishFailed(LocalAudioPublishFailure.relayRejected),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.showKeyboard(title);
+        expect(
+          tester.testTextInput.hasAnyClients,
+          isTrue,
+          reason: 'a failed share hands the credit back for editing',
+        );
+      });
+
       testWidgets('offers a save-only retry when Sounds fails after sharing', (
         tester,
       ) async {
