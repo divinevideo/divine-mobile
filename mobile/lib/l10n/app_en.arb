@@ -5267,6 +5267,9 @@
     "description": "Header of the bottom sheet listing sort options. Shared by the followers and following lists."
   },
   "followSortSmart": "Smart",
+  "@followSortSmart": {
+    "description": "Sort option that puts people you are closer to first, using recent interactions, follow relationships, and locally cached activity. Shared by your followers and following lists."
+  },
   "followSortNewest": "Newest first",
   "@followSortNewest": {
     "description": "Sort option showing the most recent follow at the top of the list. Shared by the followers and following lists."

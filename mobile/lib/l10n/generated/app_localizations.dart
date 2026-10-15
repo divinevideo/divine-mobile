@@ -13405,7 +13405,7 @@ abstract class AppLocalizations {
   /// **'Sort by'**
   String get followSortTitle;
 
-  /// No description provided for @followSortSmart.
+  /// Sort option that puts people you are closer to first, using recent interactions, follow relationships, and locally cached activity. Shared by your followers and following lists.
   ///
   /// In en, this message translates to:
   /// **'Smart'**

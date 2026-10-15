@@ -4,6 +4,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
@@ -46,7 +47,12 @@ void main() {
         initialCount: 7,
       );
 
+      final followRepository = createMockFollowRepository();
+      when(followRepository.watchMyFollowersCached).thenAnswer(
+        (_) => const Stream<CacheResult<FollowersSnapshot>>.empty(),
+      );
       return testMaterialApp(
+        mockFollowRepository: followRepository,
         home: Scaffold(
           body: SizedBox(
             width: 120,
