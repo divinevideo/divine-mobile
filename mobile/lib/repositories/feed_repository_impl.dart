@@ -11,11 +11,11 @@ import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/providers/popular_videos_feed_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/state/video_feed_state.dart';
-import 'package:openvine/utils/detached_future.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// Identifies one of the four global, keepAlive Riverpod feed providers that
@@ -283,11 +283,10 @@ class _GlobalFeedBridge {
   }
 
   void dispose() {
-    runDetached(
+    runProviderDetached(
       Future.wait([_videos.close(), _hasMore.close()]),
       'close global feed bridge streams',
       logName: 'RiverpodFeedRepository',
-      category: LogCategory.ui,
     );
   }
 }
