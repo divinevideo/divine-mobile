@@ -21,6 +21,8 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -29,6 +31,7 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
@@ -67,6 +70,25 @@ class _NonAutosaveVideoEditorNotifier extends VideoEditorNotifier {
 class _AutosaveVideoEditorNotifier extends VideoEditorNotifier {
   @override
   VideoEditorProviderState build() => VideoEditorProviderState();
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
 }
 
 /// Mock for CameraPermissionBloc
@@ -984,11 +1006,14 @@ void main() {
         required bool autoRecord,
         required VideoEditorNotifier Function() videoEditor,
         DivineVideoDraft? autosavedDraft,
+        Object? autosaveLookupError,
       }) async {
         final mockDraftStorage = _MockDraftStorageService();
-        when(
-          mockDraftStorage.getAutosaveDraft,
-        ).thenAnswer((_) async => autosavedDraft);
+        when(mockDraftStorage.getAutosaveDraft).thenAnswer(
+          (_) => autosaveLookupError == null
+              ? Future.value(autosavedDraft)
+              : Future.error(autosaveLookupError),
+        );
         final mockClipLibrary = _MockClipLibraryService();
         when(mockClipLibrary.getAllClips).thenAnswer((_) async => []);
 
@@ -1099,6 +1124,49 @@ void main() {
           verifyNever(() => recorderBloc.add(autoStartInit));
         },
       );
+
+      group('when the autosave check fails', () {
+        late CrashReporter originalReporter;
+        late _RecordingCrashReporter reporter;
+
+        setUp(() {
+          originalReporter = detachedFailureReporter;
+          reporter = _RecordingCrashReporter();
+          detachedFailureReporter = reporter;
+        });
+
+        tearDown(() {
+          detachedFailureReporter = originalReporter;
+        });
+
+        testWidgets(
+          'reports a programming error from the autosave check to crash '
+          'reporting instead of leaking it',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            final failure = StateError('draft store unavailable');
+
+            await pumpOpen(
+              tester,
+              autoRecord: false,
+              videoEditor: _AutosaveVideoEditorNotifier.new,
+              autosaveLookupError: failure,
+            );
+
+            expect(tester.takeException(), isNull);
+            expect(
+              reporter.recordedErrors,
+              [
+                isA<Reportable<Object>>().having(
+                  (error) => error.unwrap(),
+                  'unwrap',
+                  same(failure),
+                ),
+              ],
+            );
+          },
+        );
+      });
     });
 
     group('Autosave Restore Flow', () {
