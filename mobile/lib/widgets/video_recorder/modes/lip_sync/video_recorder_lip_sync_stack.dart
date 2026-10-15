@@ -111,12 +111,18 @@ class _LipSyncSoundPickerState extends ConsumerState<_LipSyncSoundPicker> {
 /// the selection invalidates them. Clips are cleared before the new sound is
 /// stored because [ClipManagerNotifier.clearAll] resets the editor (which
 /// would otherwise wipe the just-selected sound).
+///
+/// The notifiers are read before clearing: the reset drops the sound, which
+/// swaps the viewfinder for the picker and can dispose [ref] before the
+/// clearing finishes.
 Future<void> _adoptLipSyncSound(WidgetRef ref, AudioEvent? sound) async {
+  final editor = ref.read(videoEditorProvider.notifier);
+  final clipManager = ref.read(clipManagerProvider.notifier);
   final previousSound = ref.read(videoEditorProvider).selectedSound;
   if (sound != previousSound && ref.read(clipManagerProvider).hasClips) {
-    await ref.read(clipManagerProvider.notifier).clearAll();
+    await clipManager.clearAll();
   }
-  ref.read(videoEditorProvider.notifier).selectRecorderAudioTrack(sound);
+  editor.selectRecorderAudioTrack(sound);
 }
 
 /// Audio-select chip wired to the recorder's selected sound.

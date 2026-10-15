@@ -346,6 +346,26 @@ void main() {
         expect(editorNotifier.selectRecorderAudioTrackCalls, [sound('b')]);
       });
 
+      testWidgets('adopts the new sound when clearing the clips outlasts the '
+          'swap to the picker', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(selectedSound: sound('a'), clips: [clip()]),
+        );
+        await tester.pumpAndSettle();
+        final draftDeletion = Completer<void>();
+        clipNotifier.draftDeletion = draftDeletion;
+
+        await changeSound(tester, sound('b'));
+        // The reset dropped the sound, so the chip that changed it is gone.
+        expect(find.byType(VideoEditorAudioChip), findsNothing);
+
+        draftDeletion.complete();
+        await tester.pumpAndSettle();
+
+        expect(editorNotifier.selectRecorderAudioTrackCalls, [sound('b')]);
+        expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
+      });
+
       testWidgets('does not clear clips when the same sound is reselected', (
         tester,
       ) async {
@@ -413,14 +433,24 @@ class _TestClipManagerNotifier extends ClipManagerNotifier {
 
   int clearAllCallCount = 0;
 
+  /// Holds [clearAll] after the editor reset, as deleting the autosave draft
+  /// does, until it completes.
+  Completer<void>? draftDeletion;
+
   @override
   ClipManagerState build() {
     return ClipManagerState(clips: clips);
   }
 
+  /// Clears the clips and resets the editor first, as the real one does, so
+  /// the selected sound is gone while the draft is deleted.
   @override
   Future<void> clearAll({bool keepAutosavedDraft = false}) async {
     clearAllCallCount++;
+    state = ClipManagerState();
+    (ref.read(videoEditorProvider.notifier) as _TestVideoEditorNotifier)
+        .resetForClearAll();
+    await draftDeletion?.future;
   }
 }
 
@@ -434,6 +464,8 @@ class _TestVideoEditorNotifier extends VideoEditorNotifier {
   VideoEditorProviderState build() {
     return VideoEditorProviderState(selectedSound: selectedSound);
   }
+
+  void resetForClearAll() => state = VideoEditorProviderState();
 
   @override
   void selectRecorderAudioTrack(AudioEvent? sound) {
