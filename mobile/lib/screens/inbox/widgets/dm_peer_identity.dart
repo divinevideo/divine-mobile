@@ -87,8 +87,10 @@ String dmConversationDisplayTitle(
 ///
 /// [isVanished] and [moderation] are required rather than defaulted so every
 /// caller has to decide what to pass. Reactive widgets read them from
-/// `profileVanishedProvider` and `moderationPresentationProvider`, with
-/// `ConversationTile` as the reference call site.
+/// `profileVanishedProvider` and `moderationPresentationProvider`; a
+/// conversation surface takes the member and presentation from
+/// `dmConversationNamedPeer`, with `ConversationTile` as the reference call
+/// site.
 String dmPeerDisplayName(
   BuildContext context, {
   required String pubkeyHex,

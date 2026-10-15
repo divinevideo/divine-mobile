@@ -2328,13 +2328,12 @@ void main() {
           expect(find.text(l10n.inboxActionBlockVanishedAccount), findsNothing);
         });
 
-        // Report and Block are withheld from every group and Remove from a
-        // removal-protected thread (#8391), so a group holding a protected
-        // member has no action left. Its row takes no long-press handler, so
-        // it neither opens an empty sheet nor advertises a gesture it cannot
-        // honour.
+        // Report and Block are withheld from every group, so a group that
+        // cannot be removed has no action left. Its row takes no long-press
+        // handler, so it neither opens an empty sheet nor advertises a gesture
+        // it cannot honour.
         testWidgets(
-          'a group holding a removal-protected member has no long-press',
+          'a group that cannot be removed has no long-press',
           (tester) async {
             final actionsCubit = _MockConversationActionsCubit();
             final conversation = groupConversation(subject: 'Weekend trip');

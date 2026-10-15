@@ -238,9 +238,8 @@ void main() {
     });
 
     // A group sheet has no way to say WHICH account Report and Block would
-    // act on, so it offers neither, and a removal-protected thread (#8391)
-    // loses Remove. A group holding a protected member therefore has nothing
-    // left, and the caller must not open the sheet for it.
+    // act on, so it offers neither. A group that cannot be removed therefore
+    // has nothing left, and the caller must not open the sheet for it.
     group('hasActions', () {
       test('is false for a group with nothing removable', () {
         expect(
