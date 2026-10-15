@@ -29,10 +29,9 @@ class BuildConfiguration {
       case FeatureFlag.profileListFeatures:
         return const bool.fromEnvironment('FF_PROFILE_LIST_FEATURES');
       case FeatureFlag.videoReplies:
-        const isReleaseBuild = bool.fromEnvironment('dart.vm.product');
         return const bool.fromEnvironment(
           'FF_VIDEO_REPLIES',
-          defaultValue: !isReleaseBuild,
+          defaultValue: true,
         );
       case FeatureFlag.advancedRelaySettings:
         return const bool.fromEnvironment('FF_ADVANCED_RELAY_SETTINGS');
