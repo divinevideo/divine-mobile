@@ -69,7 +69,16 @@ class _SharedAudioSection extends ConsumerWidget {
         }
         return MetadataSection(
           label: context.l10n.metadataSoundsLabel,
-          child: _SoundListItem(audio: audio, sourceVideo: video),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SoundListItem(audio: audio, sourceVideo: video),
+              if (video.addressableId != null &&
+                  context.read<SoundRequestsCubit?>() != null)
+                SoundRequestButton(videoAddress: video.addressableId!),
+            ],
+          ),
         );
       },
       loading: () => MetadataSection(

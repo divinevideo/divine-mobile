@@ -10,10 +10,12 @@ import '../helpers/sound_request_transport_scenario.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  testWidgets(
-    'sound request and ready reply survive real encrypted transport',
-    (tester) async {
-      await tester.runAsync(runSoundRequestTransportScenario);
-    },
-  );
+  group('interactions', () {
+    testWidgets(
+      'sound request and ready reply survive real encrypted transport',
+      (tester) async {
+        await tester.runAsync(runSoundRequestTransportScenario);
+      },
+    );
+  });
 }

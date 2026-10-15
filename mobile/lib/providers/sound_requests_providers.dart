@@ -57,8 +57,7 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
           !video.isVerifiedArchive &&
           video.nostrEventTags.isNotEmpty &&
           video.eventKind == 34236 &&
-          video.audioReuseConsent != AudioReuseConsent.invalid &&
-          (!video.hasAudioReference || policy.allowAudioReuse);
+          video.audioReuseConsent != AudioReuseConsent.invalid;
       return SoundRequestSource(
         video: video,
         allowReuse: policy.allowAudioReuse,
@@ -83,15 +82,16 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
       videoKind: video.eventKind!,
       isOperationCurrent: () => !disposed && auth.currentPublicKeyHex == owner,
     ),
-    replaceMetadata: (video, audio) async =>
-        await publish.republishWithAudioReuse(
-          existingEvent: video,
-          audioEventId: audio,
-          audioRelayHint: AppConstants.defaultRelayUrl,
-          isOperationCurrent: () =>
-              !disposed && auth.currentPublicKeyHex == owner,
-        ) !=
-        null,
+    replaceMetadata: (video, audio) async {
+      await publish.republishWithAudioReuse(
+        existingEvent: video,
+        audioEventId: audio,
+        audioRelayHint: AppConstants.defaultRelayUrl,
+        isOperationCurrent: () =>
+            !disposed && auth.currentPublicKeyHex == owner,
+      );
+      return true;
+    },
     fetchSound: sounds.fetchSoundById,
   );
   String link(String address) =>

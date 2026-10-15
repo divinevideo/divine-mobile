@@ -34,6 +34,18 @@
 ## Execution status
 
 Tasks 1–5 are implemented and committed. Task 6 validation is in progress.
+Independent review findings are resolved: newest signed source revisions,
+repeat request cycles, retained original sounds, and consent-safe recovery across
+metadata acknowledgement/checkpoint failures. New regressions reproduced each
+finding before its fix.
+
+Validation so far: 1,674 tests in the expanded affected suite; 71 affected app and
+feature tests after review fixes; 27 addressable-video lookup tests; 18 request
+lifecycle tests including final consent recovery. Real NIP-17 socket transport
+passed on the host. Full native media extraction/upload/recording E2E remains
+unrun: the local stack preflight found required ports occupied by another task.
+No existing services were stopped. The native DM service runner is registered
+in the Linux service workflow.
 The native transport scenario also has a host runner that exercises real NIP-17
 messages over loopback WebSockets with durable Drift storage. Full camera/media
 backend E2E is unrun: the local stack preflight reports occupied ClickHouse
@@ -69,13 +81,13 @@ ports belonging to another task; no other task's services were stopped.
 - DAO: `Stream<List<DirectMessageRow>> watchApplicationMessages({required String ownerPubkey, required String marker})`.
 - DM repository: `Stream<List<DmMessage>> watchSoundRequestMessages()`; fail closed when no owner, use existing row decoding and exclude group conversations.
 
-- [ ] Write parser tests asserting request marker `['divine', 'sound-request', '1']`, ready marker `['divine', 'sound-ready', '1']`, exact source coordinate, reply marker, and audio marker round-trip.
-- [ ] Assert null for duplicate/conflicting required tags, invalid IDs, unsupported video kinds/versions, a missing reply/audio on ready, wrong ready author, group context, or missing recipient ownership. Preserve d-tags containing colons.
-- [ ] Add DAO tests for two owners with matching messages, deleted rows, unrelated markers, and stream updates. Filtering is a coarse data query followed by strict shared parsing, never substring-based authorization.
-- [ ] Run the new tests and record expected red failures before implementing.
-- [ ] Implement these interfaces and exports, keeping request ownership checks separate from creator-author checks on ready messages.
-- [ ] Run `flutter test packages/dm_repository/test/src/sound_request_message_test.dart` and the DAO suite from `mobile/`; expect all tests to pass.
-- [ ] Commit only Task 1 files with `feat(audio): add typed sound request messages`.
+- [x] Write parser tests asserting request marker `['divine', 'sound-request', '1']`, ready marker `['divine', 'sound-ready', '1']`, exact source coordinate, reply marker, and audio marker round-trip.
+- [x] Assert null for duplicate/conflicting required tags, invalid IDs, unsupported video kinds/versions, a missing reply/audio on ready, wrong ready author, group context, or missing recipient ownership. Preserve d-tags containing colons.
+- [x] Add DAO tests for two owners with matching messages, deleted rows, unrelated markers, and stream updates. Filtering is a coarse data query followed by strict shared parsing, never substring-based authorization.
+- [x] Run the new tests and record expected red failures before implementing.
+- [x] Implement these interfaces and exports, keeping request ownership checks separate from creator-author checks on ready messages.
+- [x] Run `flutter test packages/dm_repository/test/src/sound_request_message_test.dart` and the DAO suite from `mobile/`; expect all tests to pass.
+- [x] Commit only Task 1 files with `feat(audio): add typed sound request messages`.
 
 ### Task 2: Publish audio and replace the source video's metadata
 
@@ -92,13 +104,13 @@ ports belonging to another task; no other task's services were stopped.
 - `Future<VideoEvent?> VideoEventPublisher.republishWithAudioReuse({required VideoEvent existingEvent, required String audioEventId, required String audioRelayHint})`.
 - `PublishedVideoSoundClient` implements Task 3's `SoundRequestPublisher` via injected source lookup, media acquisition, audio publishing, video replacement, and policy verification adapters. It receives a fixed owner and a current-owner callback.
 
-- [ ] Write tests for a remote video with no local original and verify extraction uses the published media without uploading the video again.
-- [ ] Assert the replacement preserves kind, author, d-tag (including colons), content, and every unrelated original tag, removes conflicting reuse/audio markers, adds `['allow_audio_reuse', 'true']` plus the marked audio reference, and advances the replacement timestamp.
-- [ ] Assert latest signed metadata is fetched before replacement; changed owner, revoked eligibility, unrelated linked sound, unavailable media, no audio, upload failure, and relay rejection cannot report success.
-- [ ] Assert an account switch across each awaited publication boundary stops further writes. Retain only feature-owned temporary files for cleanup; never mutate content-addressed media.
-- [ ] Run tests red, implement the methods and adapter, then run the affected audio/subtitle/publish-confirmation tests green.
-- [ ] Preserve a successfully published audio ID in the Task 3 store before replacing the video, so retries reuse it. Do not reuse the initial-upload degradation path that permits video-only success.
-- [ ] Commit with `feat(audio): enable sound reuse on published videos`.
+- [x] Write tests for a remote video with no local original and verify extraction uses the published media without uploading the video again.
+- [x] Assert the replacement preserves kind, author, d-tag (including colons), content, and every unrelated original tag, removes conflicting reuse/audio markers, adds `['allow_audio_reuse', 'true']` plus the marked audio reference, and advances the replacement timestamp.
+- [x] Assert latest signed metadata is fetched before replacement; changed owner, revoked eligibility, unrelated linked sound, unavailable media, no audio, upload failure, and relay rejection cannot report success.
+- [x] Assert an account switch across each awaited publication boundary stops further writes. Retain only feature-owned temporary files for cleanup; never mutate content-addressed media.
+- [x] Run tests red, implement the methods and adapter, then run the affected audio/subtitle/publish-confirmation tests green.
+- [x] Preserve a successfully published audio ID in the Task 3 store before replacing the video, so retries reuse it. Do not reuse the initial-upload degradation path that permits video-only success.
+- [x] Commit with `feat(audio): enable sound reuse on published videos`.
 
 ### Task 3: Durable requests, publication checkpoints, and reply jobs
 
@@ -119,14 +131,14 @@ ports belonging to another task; no other task's services were stopped.
 - `SoundRequestsRepository({required String ownerPubkey, required SoundRequestTransport transport, required SoundRequestStore store, required SoundRequestPublisher publisher})` exposes `start()`, `close()`, `watchState()`, `request(String videoAddress)`, `approve(String requestId)`, `dismiss(String requestId)`, and `retry(String requestId)`.
 - Immutable snapshot values contain pending/dismissed/publishing/awaitingPolicy/ready states, canonical request IDs, per-video audio checkpoints, and per-recipient reply intents including fixed content, idempotency key, createdAt, and rumor ID.
 
-- [ ] Write state-machine tests for repeated request taps, duplicate history, several requesters, dismiss/replay, already-enabled sound, and history arriving after approval.
-- [ ] Assert every publish boundary is persisted before proceeding, video failure emits no ready reply, and reply failure/restart never repeats audio publication.
-- [ ] Simulate crash after `enqueueSend` but before checkpoint: the exact persisted key/timestamp/content/tags reproduce the same rumor. Assert locale changes during recovery do not alter the saved message content.
-- [ ] Assert all state is owner-scoped, concurrent writes serialize, invalid persisted data fails visibly without overwriting recoverable records, write failures stop publication, and closing aborts future work.
-- [ ] Run tests red, then implement ports/state/repository and adapters. Use `DmRepository.enqueueSend` with both `idempotencyKey` and `createdAt`, then `recoverFullSend`; do not build another queue or use fresh `sendMessage` calls for retries.
-- [ ] Ensure structured sends suppress legacy NIP-04 fallback during both the initial attempt and recovery; pin this with an integration test in the DM repository before changing shared recovery behavior.
-- [ ] Run all new tests plus DM idempotency/outbox recovery tests; expect green.
-- [ ] Commit with `feat(audio): persist sound requests and fulfillment replies`.
+- [x] Write state-machine tests for repeated request taps, duplicate history, several requesters, dismiss/replay, already-enabled sound, and history arriving after approval.
+- [x] Assert every publish boundary is persisted before proceeding, video failure emits no ready reply, and reply failure/restart never repeats audio publication.
+- [x] Simulate crash after `enqueueSend` but before checkpoint: the exact persisted key/timestamp/content/tags reproduce the same rumor. Assert locale changes during recovery do not alter the saved message content.
+- [x] Assert all state is owner-scoped, concurrent writes serialize, invalid persisted data fails visibly without overwriting recoverable records, write failures stop publication, and closing aborts future work.
+- [x] Run tests red, then implement ports/state/repository and adapters. Use `DmRepository.enqueueSend` with both `idempotencyKey` and `createdAt`, then `recoverFullSend`; do not build another queue or use fresh `sendMessage` calls for retries.
+- [x] Ensure structured sends suppress legacy NIP-04 fallback during both the initial attempt and recovery; pin this with an integration test in the DM repository before changing shared recovery behavior.
+- [x] Run all new tests plus DM idempotency/outbox recovery tests; expect green.
+- [x] Commit with `feat(audio): persist sound requests and fulfillment replies`.
 
 ### Task 4: Account lifecycle and request entry point
 
@@ -143,12 +155,12 @@ ports belonging to another task; no other task's services were stopped.
 - `SoundRequestsScope` composes one repository per current account and disposes it on logout/account switch. Lifecycle work starts with the DM system, independent of opened conversation routes.
 - Cubit state uses status enums and canonical identifiers, not localized strings, exceptions, Flutter objects, or other blocs.
 
-- [ ] Install the scope in `mobile/lib/startup/app_composition_root.dart`, mirroring the account-change stream lifecycle in `SavedSoundsScope`. Existing DM credentials/listening remain in `mobile/lib/providers/repository_providers.dart`; do not introduce another transport listener per conversation.
-- [ ] Add tests for request entry with sharing off, already reusable, owner, classic policy, missing address, referenced third-party audio, unknown consent, blocked DM, queued request, and failed request.
-- [ ] Add lifecycle tests switching owner during a request and during publication; callbacks from the previous scope cannot update state or sign as the next account.
-- [ ] Run tests red, implement Cubit and scope, then add the localized **Request this sound** affordance using shared Divine components.
-- [ ] Verify repeated queued/pending request taps navigate to the canonical conversation without minting another request.
-- [ ] Run new Cubit/scope and affected metadata tests green; commit with `feat(audio): request unavailable sounds from video metadata`.
+- [x] Install the scope in `mobile/lib/startup/app_composition_root.dart`, mirroring the account-change stream lifecycle in `SavedSoundsScope`. Existing DM credentials/listening remain in `mobile/lib/providers/repository_providers.dart`; do not introduce another transport listener per conversation.
+- [x] Add tests for request entry with sharing off, already reusable, owner, classic policy, missing address, referenced third-party audio, unknown consent, blocked DM, queued request, and failed request.
+- [x] Add lifecycle tests switching owner during a request and during publication; callbacks from the previous scope cannot update state or sign as the next account.
+- [x] Run tests red, implement Cubit and scope, then add the localized **Request this sound** affordance using shared Divine components.
+- [x] Verify repeated queued/pending request taps navigate to the canonical conversation without minting another request.
+- [x] Run new Cubit/scope and affected metadata tests green; commit with `feat(audio): request unavailable sounds from video metadata`.
 
 ### Task 5: Creator approval and requester use/save cards
 
@@ -167,13 +179,13 @@ ports belonging to another task; no other task's services were stopped.
 - `SoundReadyActionsCubit` receives pure async callbacks for sound resolution and current consent; `prepareUse()` and `prepareSave()` emit a validated `AudioEvent` for their respective UI action. Saving is dispatched to the existing `SavedSoundsBloc`, and saved state is selected from its live state.
 - A typed recorder-route extra carries the validated `AudioEvent`; the route's composition adapter selects it through existing editor wiring before recorder initialization reads `videoEditorProvider.selectedSound`.
 
-- [ ] Write tests asserting the creator sees the public-effect copy and **Enable sound reuse** / **Dismiss**, while sender-side and group cards cannot approve.
-- [ ] Assert malformed/unsupported messages retain readable text, wrong-sender ready cards expose no actions, and duplicate replies collapse by canonical request identity without hiding ordinary messages.
-- [ ] Assert **Use this sound** opens creation with the resolved sound selected; it must not simply call `SoundDetailScreen._onUseSound`, which currently only saves.
-- [ ] Assert **Save to My Sounds** saves without starting recording, becomes **Saved**, reflects later removal, and reports save errors without a false saved state. The ready message alone does not save.
-- [ ] Assert takedown, permission revocation, expired/unavailable source, and account switch between verification and action stop use/save.
-- [ ] Run tests red, implement the cards/actions/route wiring, then run affected conversation, saved-sounds, and recorder-route tests green.
-- [ ] Commit with `feat(audio): act on sound requests and ready replies`.
+- [x] Write tests asserting the creator sees the public-effect copy and **Enable sound reuse** / **Dismiss**, while sender-side and group cards cannot approve.
+- [x] Assert malformed/unsupported messages retain readable text, wrong-sender ready cards expose no actions, and duplicate replies collapse by canonical request identity without hiding ordinary messages.
+- [x] Assert **Use this sound** opens creation with the resolved sound selected; it must not simply call `SoundDetailScreen._onUseSound`, which currently only saves.
+- [x] Assert **Save to My Sounds** saves without starting recording, becomes **Saved**, reflects later removal, and reports save errors without a false saved state. The ready message alone does not save.
+- [x] Assert takedown, permission revocation, expired/unavailable source, and account switch between verification and action stop use/save.
+- [x] Run tests red, implement the cards/actions/route wiring, then run affected conversation, saved-sounds, and recorder-route tests green.
+- [x] Commit with `feat(audio): act on sound requests and ready replies`.
 
 ### Task 6: Localization, full-flow validation, and publication
 
@@ -182,8 +194,8 @@ ports belonging to another task; no other task's services were stopped.
 - Add the feature's end-to-end integration coverage under `mobile/integration_test/` using the established local backend harness.
 - Update this plan's task checkboxes with verified progress.
 
-- [ ] Add all specified request/ready copy plus pending, dismissed, retry, unavailable, and saved states using existing localization conventions. Preserve persisted fallback content across locale changes.
-- [ ] Run the repository's localization skills/checks and generation commands; verify all supported locales and generated files remain synchronized.
+- [x] Add all specified request/ready copy plus pending, dismissed, retry, unavailable, and saved states using existing localization conventions. Preserve persisted fallback content across locale changes.
+- [x] Run the repository's localization skills/checks and generation commands; verify all supported locales and generated files remain synchronized.
 - [ ] Exercise two signed-in accounts: request from a video with sharing off, approve without the original local file, receive the ready reply, save it, then enter creation with it selected. Repeat with two requesters and a failed/retried reply.
 - [ ] Run affected package and app tests plus `flutter analyze lib test integration_test` from `mobile/`. Run relevant architecture, generated-file, localization, and identifier guards. Resolve failures caused by this change.
 - [ ] Review the whole diff against the spec, especially Review Focus cases, and commit the finished change. Do not publish a partial flow.

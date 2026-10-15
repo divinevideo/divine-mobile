@@ -36,14 +36,35 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
     if (source.video.addressableId != videoAddress) {
       throw StateError('Source video coordinate mismatch');
     }
-    return source;
+    final original =
+        !source.video.hasAudioReference ||
+        await _linkedOriginal(source) != null;
+    return SoundRequestSource(
+      video: source.video,
+      allowReuse: source.allowReuse,
+      requestable: source.requestable && original,
+      audioEventId: source.audioEventId,
+    );
+  }
+
+  Future<AudioEvent?> _linkedOriginal(SoundRequestSource source) async {
+    final id = source.video.audioEventId;
+    if (id == null) return null;
+    final audio = await fetchSound(id);
+    _checkAccount();
+    return audio != null &&
+            audio.id == id &&
+            audio.pubkey == source.video.pubkey &&
+            audio.sourceVideoReference == source.video.addressableId &&
+            audio.hasExplicitReuseConsent &&
+            audio.allowsReuse
+        ? audio
+        : null;
   }
 
   void _checkPublication(SoundRequestSource source) {
     _checkAccount();
-    if (source.video.pubkey != ownerPubkey ||
-        !source.requestable ||
-        (source.video.hasAudioReference && !source.allowReuse)) {
+    if (source.video.pubkey != ownerPubkey || !source.requestable) {
       throw StateError('Source audio cannot be published by this account');
     }
   }
@@ -51,6 +72,13 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
   @override
   Future<String> publishAudio(SoundRequestSource source) async {
     _checkPublication(source);
+    if (source.video.hasAudioReference) {
+      final original = await _linkedOriginal(source);
+      if (original == null) {
+        throw StateError('Linked original sound unavailable');
+      }
+      return original.id;
+    }
     final path = await acquireMedia(source.video);
     _checkPublication(source);
     final id = await publishOriginal(source.video, path);

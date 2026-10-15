@@ -83,48 +83,50 @@ AudioEvent _providerSound() => AudioEvent(
 );
 
 void main() {
-  test(
-    'closing the request session during extraction stops the upload',
-    () async {
-      final auth = _MockAuthService();
-      final extraction = _MockExtraction();
-      final blossom = _MockBlossomUploadService();
-      var active = true;
-      when(() => auth.currentPublicKeyHex).thenReturn(_self);
-      when(() => extraction.extractAudio(videoPath: '/source.mp4'))
-          .thenAnswer((_) async {
-            active = false;
-            return AudioExtractionResult(
-              audioFilePath: '/sound.wav',
-              duration: 1,
-              fileSize: 4,
-              sha256Hash: 'a' * 64,
-              mimeType: 'audio/wav',
-            );
-          });
-      final nostr = _MockNostrClient();
-      when(() => nostr.connectedRelays).thenReturn(const []);
-      when(() => nostr.configuredRelays).thenReturn(const []);
-      when(() => extraction.cleanupAudioFile('/sound.wav'))
-          .thenAnswer((_) async {});
-      final publisher = VideoAudioPublisher(
-        nostrClient: nostr,
-        relayPublisher: _MockRelayPublisher(),
-        authService: auth,
-        blossomUploadService: blossom,
-        audioExtractionService: extraction,
-      );
-      final result = await publisher.publishOriginalSound(
-        videoPath: '/source.mp4',
-        videoDTag: 'clip',
-        videoTitle: 'Clip',
-        ownerPubkey: _self,
-        isOperationCurrent: () => active,
-      );
-      expect(result, isNull);
-      verifyZeroInteractions(blossom);
-    },
-  );
+  group('interactions', () {
+    test(
+      'closing the request session during extraction stops the upload',
+      () async {
+        final auth = _MockAuthService();
+        final extraction = _MockExtraction();
+        final blossom = _MockBlossomUploadService();
+        var active = true;
+        when(() => auth.currentPublicKeyHex).thenReturn(_self);
+        when(() => extraction.extractAudio(videoPath: '/source.mp4'))
+            .thenAnswer((_) async {
+              active = false;
+              return AudioExtractionResult(
+                audioFilePath: '/sound.wav',
+                duration: 1,
+                fileSize: 4,
+                sha256Hash: 'a' * 64,
+                mimeType: 'audio/wav',
+              );
+            });
+        final nostr = _MockNostrClient();
+        when(() => nostr.connectedRelays).thenReturn(const []);
+        when(() => nostr.configuredRelays).thenReturn(const []);
+        when(() => extraction.cleanupAudioFile('/sound.wav'))
+            .thenAnswer((_) async {});
+        final publisher = VideoAudioPublisher(
+          nostrClient: nostr,
+          relayPublisher: _MockRelayPublisher(),
+          authService: auth,
+          blossomUploadService: blossom,
+          audioExtractionService: extraction,
+        );
+        final result = await publisher.publishOriginalSound(
+          videoPath: '/source.mp4',
+          videoDTag: 'clip',
+          videoTitle: 'Clip',
+          ownerPubkey: _self,
+          isOperationCurrent: () => active,
+        );
+        expect(result, isNull);
+        verifyZeroInteractions(blossom);
+      },
+    );
+  });
 
   late _MockNostrClient nostrClient;
   late _MockAuthService authService;

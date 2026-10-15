@@ -64,7 +64,7 @@ while IFS= read -r path; do
       ;;
   esac
 
-  # Eleven suites have this maintainable production dependency closure.
+  # Twelve suites have this maintainable production dependency closure.
   case "$path" in
     # FOCUSED_SCOPE_START — parsed by service_suite_scope_detector.dart.
     mobile/packages/cache_sync/*|\
@@ -82,6 +82,7 @@ while IFS= read -r path; do
     mobile/lib/services/outgoing_dm_retry_service.dart|\
     mobile/lib/services/outgoing_dm_retry_service_reportable_sites.dart|\
     mobile/lib/services/relay_discovery_service.dart|\
+    mobile/lib/services/sound_requests/sound_request_dm_client.dart|\
     mobile/lib/utils/relay_url_utils.dart)
     # FOCUSED_SCOPE_END
       focused=true

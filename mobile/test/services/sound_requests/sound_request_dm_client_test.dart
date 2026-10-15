@@ -13,53 +13,55 @@ const recipient =
 const rumor =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 void main() {
-  test(
-    'replays stable inputs and joins already delivered application messages',
-    () async {
-      final repository = _Repository();
-      when(() => repository.userPubkey).thenReturn(owner);
-      when(repository.watchSoundRequestMessages)
-          .thenAnswer((_) => Stream.value([]));
-      when(
-        () => repository.enqueueSend(
-          recipientPubkey: recipient,
-          content: 'Please enable',
-          idempotencyKey: 'stable',
-          createdAt: 1,
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer((_) async => const EnqueueSendResult.enqueued(rumor));
-      final client = SoundRequestDmClient(
-        repository: repository,
-        ownerPubkey: owner,
-      );
-      final intent = SoundRequestSendIntent(
-        key: 'stable',
-        recipient: recipient,
-        content: 'Please enable',
-        tags: soundRequestTags(videoAddress: '34236:$recipient:clip'),
-        createdAt: 1,
-        videoAddress: '34236:$recipient:clip',
-      );
-      expect(await client.enqueue(intent), rumor);
-      when(repository.watchSoundRequestMessages).thenAnswer(
-        (_) => Stream.value([
-          const DmMessage(
-            id: rumor,
-            conversationId: 'conversation',
-            senderPubkey: owner,
+  group('interactions', () {
+    test(
+      'replays stable inputs and joins already delivered application messages',
+      () async {
+        final repository = _Repository();
+        when(() => repository.userPubkey).thenReturn(owner);
+        when(repository.watchSoundRequestMessages)
+            .thenAnswer((_) => Stream.value([]));
+        when(
+          () => repository.enqueueSend(
+            recipientPubkey: recipient,
             content: 'Please enable',
+            idempotencyKey: 'stable',
             createdAt: 1,
-            giftWrapId: rumor,
-            tags: [
-              ['batch', 'stable'],
-            ],
+            additionalTags: any(named: 'additionalTags'),
           ),
-        ]),
-      );
-      expect(await client.enqueue(intent), rumor);
-      await client.retry(rumor);
-      verifyNever(() => repository.recoverFullSend(rumorId: rumor));
-    },
-  );
+        ).thenAnswer((_) async => const EnqueueSendResult.enqueued(rumor));
+        final client = SoundRequestDmClient(
+          repository: repository,
+          ownerPubkey: owner,
+        );
+        final intent = SoundRequestSendIntent(
+          key: 'stable',
+          recipient: recipient,
+          content: 'Please enable',
+          tags: soundRequestTags(videoAddress: '34236:$recipient:clip'),
+          createdAt: 1,
+          videoAddress: '34236:$recipient:clip',
+        );
+        expect(await client.enqueue(intent), rumor);
+        when(repository.watchSoundRequestMessages).thenAnswer(
+          (_) => Stream.value([
+            const DmMessage(
+              id: rumor,
+              conversationId: 'conversation',
+              senderPubkey: owner,
+              content: 'Please enable',
+              createdAt: 1,
+              giftWrapId: rumor,
+              tags: [
+                ['batch', 'stable'],
+              ],
+            ),
+          ]),
+        );
+        expect(await client.enqueue(intent), rumor);
+        await client.retry(rumor);
+        verifyNever(() => repository.recoverFullSend(rumorId: rumor));
+      },
+    );
+  });
 }

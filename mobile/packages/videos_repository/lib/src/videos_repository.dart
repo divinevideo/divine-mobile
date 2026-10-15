@@ -1778,17 +1778,26 @@ class VideosRepository {
       await _localStorage.saveEventsBatch(events);
     }
 
-    // Build a map keyed by addressable ID for ordering
-    final foundVideos = <String, VideoEvent>{};
+    // Relays can disagree about the latest revision. Choose by the signed
+    // timestamp (then lowest event ID per NIP-01), before parsing/filtering so
+    // an older eligible revision cannot replace a newer filtered revision.
+    final latestEvents = <String, Event>{};
     for (final event in events) {
       final dTag = event.dTagValue;
-      if (dTag.isNotEmpty) {
-        final addressableId = '${event.kind}:${event.pubkey}:$dTag';
-        final video = _tryParseAndFilter(event);
-        if (video != null) {
-          foundVideos[addressableId] = video;
-        }
+      if (dTag.isEmpty) continue;
+      final address = '${event.kind}:${event.pubkey}:$dTag';
+      final previous = latestEvents[address];
+      if (previous == null ||
+          event.createdAt > previous.createdAt ||
+          (event.createdAt == previous.createdAt &&
+              event.id.compareTo(previous.id) < 0)) {
+        latestEvents[address] = event;
       }
+    }
+    final foundVideos = <String, VideoEvent>{};
+    for (final entry in latestEvents.entries) {
+      final video = _tryParseAndFilter(entry.value);
+      if (video != null) foundVideos[entry.key] = video;
     }
 
     // Find which IDs weren't found on Nostr

@@ -837,7 +837,8 @@ class VideoEventPublisher {
   );
 
   /// Replaces only audio-sharing tags on a signed, addressable owner video.
-  Future<VideoEvent?> republishWithAudioReuse({
+  /// Throws [SoundReusePublicationException] if signing or publication fails.
+  Future<VideoEvent> republishWithAudioReuse({
     required VideoEvent existingEvent,
     required String audioEventId,
     required String audioRelayHint,
@@ -851,7 +852,9 @@ class VideoEventPublisher {
         auth.currentPublicKeyHex != owner ||
         !NostrHexUtils.isValidEventId(audioEventId) ||
         (kind != 34236 && kind != 34235)) {
-      return null;
+      throw const SoundReusePublicationException(
+        'Invalid sound-sharing account or event',
+      );
     }
     final originalTags = sourceOriginalVideoTags(
       video: existingEvent,
@@ -863,7 +866,9 @@ class VideoEventPublisher {
     if (dTags.length != 1 ||
         dTags.single.length != 2 ||
         dTags.single[1].isEmpty) {
-      return null;
+      throw const SoundReusePublicationException(
+        'Invalid source video coordinate',
+      );
     }
     final tags =
         originalTags
@@ -887,11 +892,15 @@ class VideoEventPublisher {
         event == null ||
         event.pubkey != owner ||
         auth.currentPublicKeyHex != owner) {
-      return null;
+      throw const SoundReusePublicationException(
+        'Sound-sharing signature unavailable or account changed',
+      );
     }
     if (await _relayPublisher.publishViaWebSocket(event) !=
         EventPublishOutcome.published) {
-      return null;
+      throw const SoundReusePublicationException(
+        'Sound-sharing replacement rejected by relays',
+      );
     }
     final updated = VideoEvent.fromNostrEvent(event, permissive: true);
     if (auth.currentPublicKeyHex == owner) {

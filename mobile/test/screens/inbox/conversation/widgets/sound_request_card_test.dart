@@ -17,69 +17,71 @@ const requester =
 const id = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 const address = '34236:$creator:clip';
 void main() {
-  testWidgets(
-    'incoming request explains public reuse and exposes creator actions',
-    (tester) async {
-      final repo = _Repository();
-      when(() => repo.ownerPubkey).thenReturn(creator);
-      when(repo.watchState).thenAnswer(
-        (_) => Stream.value(
-          const SoundRequestSnapshot(
-            requests: {
-              id: SoundRequestEntry(
-                id: id,
-                requester: requester,
-                videoAddress: address,
-              ),
-            },
-          ),
-        ),
-      );
-      when(repo.start).thenAnswer((_) async {});
-      when(() => repo.sourceVideo(address)).thenAnswer(
-        (_) async => VideoEvent(
-          id: 'd' * 64,
-          pubkey: creator,
-          createdAt: 1,
-          content: 'clip',
-          timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
-          title: 'My clip',
-        ),
-      );
-      final cubit = SoundRequestsCubit();
-      await cubit.connect(repo);
-      addTearDown(cubit.close);
-      const message = SoundRequestMessage(
-        kind: SoundRequestMessageKind.request,
-        messageId: id,
-        senderPubkey: requester,
-        recipientPubkey: creator,
-        videoAddress: address,
-        creatorPubkey: creator,
-      );
-      await tester.pumpWidget(
-        BlocProvider.value(
-          value: cubit,
-          child: const MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: SoundRequestCard(message: message, isSent: false),
+  group('interactions', () {
+    testWidgets(
+      'incoming request explains public reuse and exposes creator actions',
+      (tester) async {
+        final repo = _Repository();
+        when(() => repo.ownerPubkey).thenReturn(creator);
+        when(repo.watchState).thenAnswer(
+          (_) => Stream.value(
+            const SoundRequestSnapshot(
+              requests: {
+                id: SoundRequestEntry(
+                  id: id,
+                  requester: requester,
+                  videoAddress: address,
+                ),
+              },
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Enable sound reuse'), findsOneWidget);
-      expect(
-        find.text(
-          'Enable sound reuse on this video so anyone can remix with it.',
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Dismiss'), findsOneWidget);
-      expect(find.text('My clip'), findsOneWidget);
-      verifyNever(() => repo.approve(id));
-    },
-  );
+        );
+        when(repo.start).thenAnswer((_) async {});
+        when(() => repo.sourceVideo(address)).thenAnswer(
+          (_) async => VideoEvent(
+            id: 'd' * 64,
+            pubkey: creator,
+            createdAt: 1,
+            content: 'clip',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+            title: 'My clip',
+          ),
+        );
+        final cubit = SoundRequestsCubit();
+        await cubit.connect(repo);
+        addTearDown(cubit.close);
+        const message = SoundRequestMessage(
+          kind: SoundRequestMessageKind.request,
+          messageId: id,
+          senderPubkey: requester,
+          recipientPubkey: creator,
+          videoAddress: address,
+          creatorPubkey: creator,
+        );
+        await tester.pumpWidget(
+          BlocProvider.value(
+            value: cubit,
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SoundRequestCard(message: message, isSent: false),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Enable sound reuse'), findsOneWidget);
+        expect(
+          find.text(
+            'Enable sound reuse on this video so anyone can remix with it.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Dismiss'), findsOneWidget);
+        expect(find.text('My clip'), findsOneWidget);
+        verifyNever(() => repo.approve(id));
+      },
+    );
+  });
 }

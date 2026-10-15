@@ -257,6 +257,8 @@ class SoundRequestSnapshot extends Equatable {
     this.audioByVideo = const {},
     this.jobs = const {},
     this.approvedVideos = const {},
+    this.metadataPublishedVideos = const {},
+    this.metadataBaselineByVideo = const {},
   });
 
   /// Restores a persisted value; malformed data throws.
@@ -276,6 +278,12 @@ class SoundRequestSnapshot extends Equatable {
           ),
         ),
         approvedVideos: (json['approvedVideos'] as List).cast<String>().toSet(),
+        metadataBaselineByVideo: (json['metadataBaselineByVideo'] as Map? ?? {})
+            .cast<String, String>(),
+        metadataPublishedVideos:
+            (json['metadataPublishedVideos'] as List? ?? [])
+                .cast<String>()
+                .toSet(),
       );
 
   /// Requests indexed by canonical rumor ID.
@@ -290,17 +298,31 @@ class SoundRequestSnapshot extends Equatable {
   /// Source coordinates explicitly approved by the current creator.
   final Set<String> approvedVideos;
 
+  /// Signed source revision observed before each metadata attempt.
+  final Map<String, String> metadataBaselineByVideo;
+
+  /// Sources whose metadata replacement was acknowledged by relays.
+  final Set<String> metadataPublishedVideos;
+
   /// Returns an updated immutable value.
   SoundRequestSnapshot copyWith({
     Map<String, SoundRequestEntry>? requests,
     Map<String, String>? audioByVideo,
     Map<String, SoundRequestSendIntent>? jobs,
     Set<String>? approvedVideos,
+    Set<String>? metadataPublishedVideos,
+    Map<String, String>? metadataBaselineByVideo,
   }) => SoundRequestSnapshot(
     requests: Map.unmodifiable(requests ?? this.requests),
     audioByVideo: Map.unmodifiable(audioByVideo ?? this.audioByVideo),
     jobs: Map.unmodifiable(jobs ?? this.jobs),
     approvedVideos: Set.unmodifiable(approvedVideos ?? this.approvedVideos),
+    metadataBaselineByVideo: Map.unmodifiable(
+      metadataBaselineByVideo ?? this.metadataBaselineByVideo,
+    ),
+    metadataPublishedVideos: Set.unmodifiable(
+      metadataPublishedVideos ?? this.metadataPublishedVideos,
+    ),
   );
 
   /// Serializes this value for durable local storage.
@@ -309,7 +331,16 @@ class SoundRequestSnapshot extends Equatable {
     'audioByVideo': audioByVideo,
     'jobs': jobs.map((k, v) => MapEntry(k, v.toJson())),
     'approvedVideos': approvedVideos.toList(),
+    'metadataPublishedVideos': metadataPublishedVideos.toList(),
+    'metadataBaselineByVideo': metadataBaselineByVideo,
   };
   @override
-  List<Object?> get props => [requests, audioByVideo, jobs, approvedVideos];
+  List<Object?> get props => [
+    requests,
+    audioByVideo,
+    jobs,
+    approvedVideos,
+    metadataPublishedVideos,
+    metadataBaselineByVideo,
+  ];
 }

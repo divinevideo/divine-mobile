@@ -134,19 +134,13 @@ class SoundRequestsRepository {
       (m) => m.kind == SoundRequestMessageKind.request,
     )) {
       if (requests.containsKey(m.messageId)) continue;
-      final known = requests.values.any(
-        (r) =>
-            r.videoAddress == m.videoAddress &&
-            r.requester == m.senderPubkey &&
-            r.isPending,
+      // Keep distinct signed requests: a later request can belong to a new
+      // consent cycle even when its earlier ready reply arrives out of order.
+      requests[m.messageId] = SoundRequestEntry(
+        id: m.messageId,
+        requester: m.senderPubkey,
+        videoAddress: m.videoAddress,
       );
-      if (!known) {
-        requests[m.messageId] = SoundRequestEntry(
-          id: m.messageId,
-          requester: m.senderPubkey,
-          videoAddress: m.videoAddress,
-        );
-      }
     }
     for (final m in parsed.where(
       (m) => m.kind == SoundRequestMessageKind.ready,
@@ -294,6 +288,10 @@ class SoundRequestsRepository {
     await _save(
       _state.copyWith(
         approvedVideos: {..._state.approvedVideos, request.videoAddress},
+        metadataPublishedVideos: {..._state.metadataPublishedVideos}
+          ..remove(request.videoAddress),
+        metadataBaselineByVideo: {..._state.metadataBaselineByVideo}
+          ..remove(request.videoAddress),
         requests: {
           ..._state.requests,
           request.id: request.copyWith(status: SoundRequestStatus.publishing),
@@ -309,9 +307,33 @@ class SoundRequestsRepository {
       final source = await _publisher.resolve(address);
       _checkOpen();
       final checkpoint = _state.audioByVideo[address];
+      final baseline = _state.metadataBaselineByVideo[address];
+      if (baseline != null &&
+          source.video.id != baseline &&
+          !source.allowReuse &&
+          !source.video.allowAudioReuse) {
+        // A creator edit after the attempted publication invalidates its old
+        // approval, including a crash between relay ACK and local checkpoint.
+        // Require a new explicit approval against the current signed revision.
+        await _save(
+          _state.copyWith(
+            approvedVideos: {..._state.approvedVideos}..remove(address),
+            requests: {
+              for (final entry in _state.requests.entries)
+                entry.key:
+                    entry.value.videoAddress == address && entry.value.isPending
+                    ? entry.value.copyWith(status: SoundRequestStatus.pending)
+                    : entry.value,
+            },
+          ),
+        );
+        return;
+      }
       if (soundRequestCreator(address) == ownerPubkey &&
           checkpoint != null &&
-          source.audioEventId == checkpoint) {
+          (_state.metadataPublishedVideos.contains(address) ||
+              (source.audioEventId == checkpoint &&
+                  (source.allowReuse || source.video.allowAudioReuse)))) {
         await _fulfill(address, checkpoint);
         await _drain();
         return;
@@ -332,8 +354,26 @@ class SoundRequestsRepository {
         );
       }
       if (!source.allowReuse || source.audioEventId != audio) {
+        await _save(
+          _state.copyWith(
+            metadataBaselineByVideo: {
+              ..._state.metadataBaselineByVideo,
+              address: source.video.id,
+            },
+          ),
+        );
         await _publisher.enableReuse(source, audio);
         _checkOpen();
+        // An acknowledged replacement must never be replayed after a later
+        // revocation, even while policy indexing has not caught up.
+        await _save(
+          _state.copyWith(
+            metadataPublishedVideos: {
+              ..._state.metadataPublishedVideos,
+              address,
+            },
+          ),
+        );
       }
       await _fulfill(address, audio);
       await _drain();
@@ -394,9 +434,13 @@ class SoundRequestsRepository {
     }
     final approvals = Set<String>.of(_state.approvedVideos);
     final checkpoints = Map<String, String>.of(_state.audioByVideo);
+    final published = Set<String>.of(_state.metadataPublishedVideos);
+    final baselines = Map<String, String>.of(_state.metadataBaselineByVideo);
     if (valid) {
       approvals.remove(address);
       checkpoints.remove(address);
+      published.remove(address);
+      baselines.remove(address);
     }
     await _save(
       _state.copyWith(
@@ -404,6 +448,8 @@ class SoundRequestsRepository {
         jobs: jobs,
         approvedVideos: approvals,
         audioByVideo: checkpoints,
+        metadataPublishedVideos: published,
+        metadataBaselineByVideo: baselines,
       ),
     );
   }
@@ -461,14 +507,20 @@ class SoundRequestsRepository {
         soundRequestCreator(request.videoAddress) != ownerPubkey) {
       throw StateError('Invalid dismissal');
     }
-    await _save(
-      _state.copyWith(
-        requests: {
-          ..._state.requests,
-          requestId: request.copyWith(status: SoundRequestStatus.dismissed),
-        },
-      ),
-    );
+    final requests = {
+      ..._state.requests,
+      requestId: request.copyWith(status: SoundRequestStatus.dismissed),
+    };
+    final approvals = Set<String>.of(_state.approvedVideos);
+    if (!requests.values.any(
+      (r) =>
+          r.videoAddress == request.videoAddress &&
+          r.requester != ownerPubkey &&
+          r.isPending,
+    )) {
+      approvals.remove(request.videoAddress);
+    }
+    await _save(_state.copyWith(requests: requests, approvedVideos: approvals));
   });
 
   /// Resumes the relevant publication or previously enqueued outgoing job.

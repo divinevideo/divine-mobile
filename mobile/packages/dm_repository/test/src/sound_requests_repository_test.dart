@@ -30,12 +30,16 @@ DmMessage requestMessage(String who, String id) => DmMessage(
 class MemoryStore implements SoundRequestStore {
   final data = <String, SoundRequestSnapshot>{};
   bool fail = false;
+  bool failAcknowledgement = false;
   @override
   Future<SoundRequestSnapshot> read(String owner) async =>
       data[owner] ?? const SoundRequestSnapshot();
   @override
   Future<void> write(String owner, SoundRequestSnapshot value) async {
-    if (fail) throw StateError('disk full');
+    if (fail ||
+        (failAcknowledgement && value.metadataPublishedVideos.isNotEmpty)) {
+      throw StateError('disk full');
+    }
     data[owner] = SoundRequestSnapshot.fromJson(
       jsonDecode(jsonEncode(value.toJson())) as Map<String, dynamic>,
     );
@@ -67,9 +71,12 @@ class Transport implements SoundRequestTransport {
 
 class Publisher implements SoundRequestPublisher {
   bool enabled = false;
+  bool retainedAudio = false;
+  bool policyVerified = true;
+  int metadataPublishes = 0;
   bool failReplacement = false;
   int audioPublishes = 0;
-  final video = VideoEvent(
+  VideoEvent video = VideoEvent(
     id: 'e' * 64,
     pubkey: creator,
     createdAt: 1,
@@ -84,7 +91,7 @@ class Publisher implements SoundRequestPublisher {
         video: video,
         allowReuse: enabled,
         requestable: true,
-        audioEventId: enabled ? sound : null,
+        audioEventId: enabled || retainedAudio ? sound : null,
       );
   @override
   Future<String> publishAudio(SoundRequestSource source) async {
@@ -95,12 +102,13 @@ class Publisher implements SoundRequestPublisher {
   @override
   Future<void> enableReuse(SoundRequestSource source, String id) async {
     if (failReplacement) throw StateError('rejected');
+    metadataPublishes++;
     enabled = true;
   }
 
   @override
   Future<bool> verifyReady(String coordinate, String id) async =>
-      enabled && id == sound;
+      policyVerified && enabled && id == sound;
   @override
   Future<AudioEvent?> resolveReady(String coordinate, String id) async => null;
 }
@@ -120,182 +128,371 @@ SoundRequestsRepository repository(
   now: () => DateTime.utc(2026, 10, 16),
 );
 void main() {
-  test('a fulfilled requester can ask again after reuse is disabled', () async {
-    final transport = Transport([]);
-    final store = MemoryStore();
-    final publisher = Publisher();
-    final repo = repository(viewer, transport, store, publisher);
-    await repo.start();
-    final first = await repo.request(address);
-    await repo.close();
-    final snapshot = store.data[viewer]!;
-    store.data[viewer] = snapshot.copyWith(
-      requests: {
-        first: snapshot.requests[first]!.copyWith(
-          status: SoundRequestStatus.ready,
-        ),
+  group('dismiss', () {
+    test(
+      'dismissing the last failed approval does not approve later requests',
+      () async {
+        final first = requestMessage(viewer, '1' * 64);
+        final transport = Transport([first]);
+        final store = MemoryStore();
+        final publisher = Publisher()..failReplacement = true;
+        final repo = repository(creator, transport, store, publisher);
+        await repo.start();
+        await expectLater(repo.approve(first.id), throwsStateError);
+        await repo.dismiss(first.id);
+        await repo.close();
+        publisher.failReplacement = false;
+        transport.messages.add(requestMessage(second, '2' * 64));
+        final resumed = repository(creator, transport, store, publisher);
+        addTearDown(resumed.close);
+        await resumed.start();
+        expect(publisher.enabled, isFalse);
+        expect(transport.intents, isEmpty);
       },
     );
-    final resumed = repository(viewer, transport, store, publisher);
-    addTearDown(resumed.close);
-    await resumed.start();
-    final next = await resumed.request(address);
-    expect(next, isNot(first));
-    expect(transport.intents, hasLength(2));
+  });
+  group('retry', () {
+    test(
+      'lost acknowledgement checkpoint cannot replay consent after revision',
+      () async {
+        final request = requestMessage(viewer, '1' * 64);
+        final transport = Transport([request]);
+        final store = MemoryStore()..failAcknowledgement = true;
+        final publisher = Publisher()
+          ..retainedAudio = true
+          ..policyVerified = false;
+        final repo = repository(creator, transport, store, publisher);
+        await repo.start();
+        await expectLater(repo.approve(request.id), throwsStateError);
+        expect(publisher.metadataPublishes, 1);
+        await repo.close();
+        store.failAcknowledgement = false;
+        publisher.enabled = false;
+        publisher.video = publisher.video.copyWith(id: '9' * 64);
+        final resumed = repository(creator, transport, store, publisher);
+        addTearDown(resumed.close);
+        await resumed.start();
+        expect(publisher.enabled, isFalse);
+        expect(publisher.metadataPublishes, 1);
+        expect(
+          resumed.state.requests[request.id]?.status,
+          SoundRequestStatus.pending,
+        );
+        // A new explicit approval can enable sharing on the changed revision.
+        publisher.policyVerified = true;
+        await resumed.approve(request.id);
+        expect(publisher.enabled, isTrue);
+        expect(publisher.metadataPublishes, 2);
+      },
+    );
+
+    for (final retained in [true, false]) {
+      test(
+        'accepted metadata respects revocation: retained=$retained',
+        () async {
+          final request = requestMessage(viewer, '1' * 64);
+          final transport = Transport([request]);
+          final store = MemoryStore();
+          final publisher = Publisher()
+            ..retainedAudio = retained
+            ..policyVerified = false;
+          final repo = repository(creator, transport, store, publisher);
+          await repo.start();
+          await repo.approve(request.id);
+          expect(
+            repo.state.requests[request.id]?.status,
+            SoundRequestStatus.awaitingPolicy,
+          );
+          await repo.close();
+          publisher.enabled = false;
+          final resumed = repository(creator, transport, store, publisher);
+          addTearDown(resumed.close);
+          await resumed.start();
+          await resumed.retry(request.id);
+          expect(publisher.enabled, isFalse);
+          expect(publisher.metadataPublishes, 1);
+          expect(transport.intents, isEmpty);
+        },
+      );
+    }
+
+    test(
+      'retries approval when original audio reference predates approval',
+      () async {
+        final request = requestMessage(viewer, '1' * 64);
+        final publisher = Publisher()
+          ..retainedAudio = true
+          ..failReplacement = true;
+        final repo = repository(
+          creator,
+          Transport([request]),
+          MemoryStore(),
+          publisher,
+        );
+        addTearDown(repo.close);
+        await repo.start();
+        await expectLater(repo.approve(request.id), throwsStateError);
+        publisher.failReplacement = false;
+        await repo.retry(request.id);
+        expect(publisher.enabled, isTrue);
+        expect(
+          repo.state.requests[request.id]?.status,
+          SoundRequestStatus.ready,
+        );
+      },
+    );
   });
 
-  test(
-    'completed approval cannot enable reuse again for a later request',
-    () async {
+  for (final reversed in [true, false]) {
+    for (final fulfilled in [true, false]) {
+      group('interactions', () {
+        test(
+          'reconstructs consent cycles: reversed=$reversed '
+          'fulfilled=$fulfilled',
+          () async {
+            final first = requestMessage(viewer, '1' * 64);
+            final next = requestMessage(viewer, '2' * 64);
+            DmMessage ready(String id, String requestId) => DmMessage(
+              id: id,
+              conversationId: first.conversationId,
+              senderPubkey: creator,
+              content: 'ready',
+              createdAt: 2,
+              giftWrapId: sound,
+              tags: [
+                const ['p', viewer],
+                ...soundReadyTags(
+                  videoAddress: address,
+                  requestId: requestId,
+                  audioEventId: sound,
+                ),
+              ],
+            );
+            final history = [
+              first,
+              ready('3' * 64, first.id),
+              next,
+              if (fulfilled) ready('4' * 64, next.id),
+            ];
+            final repo = repository(
+              viewer,
+              Transport(reversed ? history.reversed.toList() : history),
+              MemoryStore(),
+              Publisher(),
+            );
+            addTearDown(repo.close);
+            await repo.start();
+            expect(
+              repo.state.requests[first.id]?.status,
+              SoundRequestStatus.ready,
+            );
+            expect(
+              repo.state.requests[next.id]?.status,
+              fulfilled ? SoundRequestStatus.ready : SoundRequestStatus.pending,
+            );
+          },
+        );
+      });
+    }
+  }
+
+  group('interactions', () {
+    test(
+      'a fulfilled requester can ask again after reuse is disabled',
+      () async {
+        final transport = Transport([]);
+        final store = MemoryStore();
+        final publisher = Publisher();
+        final repo = repository(viewer, transport, store, publisher);
+        await repo.start();
+        final first = await repo.request(address);
+        await repo.close();
+        final snapshot = store.data[viewer]!;
+        store.data[viewer] = snapshot.copyWith(
+          requests: {
+            first: snapshot.requests[first]!.copyWith(
+              status: SoundRequestStatus.ready,
+            ),
+          },
+        );
+        final resumed = repository(viewer, transport, store, publisher);
+        addTearDown(resumed.close);
+        await resumed.start();
+        final next = await resumed.request(address);
+        expect(next, isNot(first));
+        expect(transport.intents, hasLength(2));
+      },
+    );
+  });
+
+  group('interactions', () {
+    test(
+      'completed approval cannot enable reuse again for a later request',
+      () async {
+        final first = requestMessage(viewer, '1' * 64);
+        final transport = Transport([first]);
+        final store = MemoryStore();
+        final publisher = Publisher();
+        final repo = repository(creator, transport, store, publisher);
+        await repo.start();
+        await repo.approve(first.id);
+        await repo.close();
+        publisher.enabled = false;
+        transport.messages.add(requestMessage(second, '2' * 64));
+        final resumed = repository(creator, transport, store, publisher);
+        addTearDown(resumed.close);
+        await resumed.start();
+        expect(publisher.enabled, isFalse);
+        expect(transport.delivered, hasLength(1));
+      },
+    );
+  });
+  group('interactions', () {
+    test('repeated approval does not send another ready reply', () async {
       final first = requestMessage(viewer, '1' * 64);
       final transport = Transport([first]);
       final store = MemoryStore();
       final publisher = Publisher();
       final repo = repository(creator, transport, store, publisher);
+      addTearDown(repo.close);
       await repo.start();
       await repo.approve(first.id);
-      await repo.close();
-      publisher.enabled = false;
-      transport.messages.add(requestMessage(second, '2' * 64));
-      final resumed = repository(creator, transport, store, publisher);
-      addTearDown(resumed.close);
-      await resumed.start();
-      expect(publisher.enabled, isFalse);
-      expect(transport.delivered, hasLength(1));
-    },
-  );
-  test('repeated approval does not send another ready reply', () async {
-    final first = requestMessage(viewer, '1' * 64);
-    final transport = Transport([first]);
-    final store = MemoryStore();
-    final publisher = Publisher();
-    final repo = repository(creator, transport, store, publisher);
-    addTearDown(repo.close);
-    await repo.start();
-    await repo.approve(first.id);
-    await repo.approve(first.id);
-    expect(publisher.audioPublishes, 1);
-    expect(transport.attempts, 1);
+      await repo.approve(first.id);
+      expect(publisher.audioPublishes, 1);
+      expect(transport.attempts, 1);
+    });
   });
 
-  test(
-    'one approval publishes once and replies to all pending requesters',
-    () async {
-      final a = requestMessage(viewer, '1' * 64);
-      final b = requestMessage(second, '2' * 64);
-      final transport = Transport([a, b]);
-      final store = MemoryStore();
-      final publisher = Publisher();
-      final repo = repository(creator, transport, store, publisher);
-      addTearDown(repo.close);
-      await repo.start();
-      await repo.approve(a.id);
-      expect(publisher.audioPublishes, 1);
-      expect(transport.delivered, hasLength(2));
-      expect(
-        repo.state.requests.values.map((r) => r.status),
-        everyElement(SoundRequestStatus.ready),
-      );
-    },
-  );
-  test(
-    'replacement failure sends no reply and retry reuses the published audio',
-    () async {
-      final a = requestMessage(viewer, '1' * 64);
-      final transport = Transport([a]);
-      final store = MemoryStore();
-      final publisher = Publisher()..failReplacement = true;
-      final repo = repository(creator, transport, store, publisher);
-      addTearDown(repo.close);
-      await repo.start();
-      await expectLater(repo.approve(a.id), throwsStateError);
-      expect(transport.intents, isEmpty);
-      expect(publisher.audioPublishes, 1);
-      publisher.failReplacement = false;
-      await repo.retry(a.id);
-      expect(publisher.audioPublishes, 1);
-      expect(transport.delivered, hasLength(1));
-    },
-  );
-  test(
-    'restart after failed reply retries delivery without republishing',
-    () async {
-      final a = requestMessage(viewer, '1' * 64);
-      final store = MemoryStore();
-      final publisher = Publisher();
-      final transport = Transport([a])..failDelivery = true;
-      final repo = repository(creator, transport, store, publisher);
-      await repo.start();
-      await expectLater(repo.approve(a.id), throwsStateError);
-      await repo.close();
-      expect(store.data[creator]!.jobs, isNotEmpty);
-      transport.failDelivery = false;
-      final resumed = repository(creator, transport, store, publisher);
-      addTearDown(resumed.close);
-      await resumed.start();
-      expect(publisher.audioPublishes, 1);
-      expect(transport.delivered, hasLength(1));
-      expect(resumed.state.jobs, isEmpty);
-    },
-  );
-  test(
-    'dismissal survives history replay and does not receive a ready reply',
-    () async {
-      final a = requestMessage(viewer, '1' * 64);
-      final b = requestMessage(second, '2' * 64);
-      final transport = Transport([a, b]);
-      final store = MemoryStore();
-      final publisher = Publisher();
-      final repo = repository(creator, transport, store, publisher);
-      await repo.start();
-      await repo.dismiss(a.id);
-      await repo.approve(b.id);
-      await repo.close();
-      final resumed = repository(creator, transport, store, publisher);
-      addTearDown(resumed.close);
-      await resumed.start();
-      expect(
-        resumed.state.requests[a.id]!.status,
-        SoundRequestStatus.dismissed,
-      );
-      expect(transport.intents.values.map((j) => j.recipient), [second]);
-    },
-  );
-  test(
-    'duplicate request taps and restart reuse the same persisted intent',
-    () async {
-      final transport = Transport([])..failDelivery = true;
-      final store = MemoryStore();
-      final publisher = Publisher();
-      final repo = repository(viewer, transport, store, publisher);
-      await repo.start();
-      await expectLater(repo.request(address), throwsStateError);
-      final first = store.data[viewer]!.jobs.values.single;
-      await expectLater(repo.request(address), throwsStateError);
-      await repo.close();
-      final resumed = repository(viewer, transport, store, publisher);
-      addTearDown(resumed.close);
-      await resumed.start();
-      expect(
-        store.data[viewer]!.jobs.values.single,
-        first.withRumor(sha256.convert(utf8.encode(first.key)).toString()),
-      );
-      expect(transport.intents, hasLength(1));
-    },
-  );
-  test(
-    'persistence failure prevents publishing and preserves previous state',
-    () async {
-      final a = requestMessage(viewer, '1' * 64);
-      final store = MemoryStore();
-      final publisher = Publisher();
-      final repo = repository(creator, Transport([a]), store, publisher);
-      addTearDown(repo.close);
-      await repo.start();
-      store.fail = true;
-      await expectLater(repo.approve(a.id), throwsStateError);
-      expect(publisher.audioPublishes, 0);
-      expect(repo.state.approvedVideos, isEmpty);
-    },
-  );
+  group('interactions', () {
+    test(
+      'one approval publishes once and replies to all pending requesters',
+      () async {
+        final a = requestMessage(viewer, '1' * 64);
+        final b = requestMessage(second, '2' * 64);
+        final transport = Transport([a, b]);
+        final store = MemoryStore();
+        final publisher = Publisher();
+        final repo = repository(creator, transport, store, publisher);
+        addTearDown(repo.close);
+        await repo.start();
+        await repo.approve(a.id);
+        expect(publisher.audioPublishes, 1);
+        expect(transport.delivered, hasLength(2));
+        expect(
+          repo.state.requests.values.map((r) => r.status),
+          everyElement(SoundRequestStatus.ready),
+        );
+      },
+    );
+  });
+  group('interactions', () {
+    test(
+      'replacement failure sends no reply and retry reuses the published audio',
+      () async {
+        final a = requestMessage(viewer, '1' * 64);
+        final transport = Transport([a]);
+        final store = MemoryStore();
+        final publisher = Publisher()..failReplacement = true;
+        final repo = repository(creator, transport, store, publisher);
+        addTearDown(repo.close);
+        await repo.start();
+        await expectLater(repo.approve(a.id), throwsStateError);
+        expect(transport.intents, isEmpty);
+        expect(publisher.audioPublishes, 1);
+        publisher.failReplacement = false;
+        await repo.retry(a.id);
+        expect(publisher.audioPublishes, 1);
+        expect(transport.delivered, hasLength(1));
+      },
+    );
+  });
+  group('interactions', () {
+    test(
+      'restart after failed reply retries delivery without republishing',
+      () async {
+        final a = requestMessage(viewer, '1' * 64);
+        final store = MemoryStore();
+        final publisher = Publisher();
+        final transport = Transport([a])..failDelivery = true;
+        final repo = repository(creator, transport, store, publisher);
+        await repo.start();
+        await expectLater(repo.approve(a.id), throwsStateError);
+        await repo.close();
+        expect(store.data[creator]!.jobs, isNotEmpty);
+        transport.failDelivery = false;
+        final resumed = repository(creator, transport, store, publisher);
+        addTearDown(resumed.close);
+        await resumed.start();
+        expect(publisher.audioPublishes, 1);
+        expect(transport.delivered, hasLength(1));
+        expect(resumed.state.jobs, isEmpty);
+      },
+    );
+  });
+  group('interactions', () {
+    test(
+      'dismissal survives history replay and does not receive a ready reply',
+      () async {
+        final a = requestMessage(viewer, '1' * 64);
+        final b = requestMessage(second, '2' * 64);
+        final transport = Transport([a, b]);
+        final store = MemoryStore();
+        final publisher = Publisher();
+        final repo = repository(creator, transport, store, publisher);
+        await repo.start();
+        await repo.dismiss(a.id);
+        await repo.approve(b.id);
+        await repo.close();
+        final resumed = repository(creator, transport, store, publisher);
+        addTearDown(resumed.close);
+        await resumed.start();
+        expect(
+          resumed.state.requests[a.id]!.status,
+          SoundRequestStatus.dismissed,
+        );
+        expect(transport.intents.values.map((j) => j.recipient), [second]);
+      },
+    );
+  });
+  group('interactions', () {
+    test(
+      'duplicate request taps and restart reuse the same persisted intent',
+      () async {
+        final transport = Transport([])..failDelivery = true;
+        final store = MemoryStore();
+        final publisher = Publisher();
+        final repo = repository(viewer, transport, store, publisher);
+        await repo.start();
+        await expectLater(repo.request(address), throwsStateError);
+        final first = store.data[viewer]!.jobs.values.single;
+        await expectLater(repo.request(address), throwsStateError);
+        await repo.close();
+        final resumed = repository(viewer, transport, store, publisher);
+        addTearDown(resumed.close);
+        await resumed.start();
+        expect(
+          store.data[viewer]!.jobs.values.single,
+          first.withRumor(sha256.convert(utf8.encode(first.key)).toString()),
+        );
+        expect(transport.intents, hasLength(1));
+      },
+    );
+  });
+  group('interactions', () {
+    test(
+      'persistence failure prevents publishing and preserves previous state',
+      () async {
+        final a = requestMessage(viewer, '1' * 64);
+        final store = MemoryStore();
+        final publisher = Publisher();
+        final repo = repository(creator, Transport([a]), store, publisher);
+        addTearDown(repo.close);
+        await repo.start();
+        store.fail = true;
+        await expectLater(repo.approve(a.id), throwsStateError);
+        expect(publisher.audioPublishes, 0);
+        expect(repo.state.approvedVideos, isEmpty);
+      },
+    );
+  });
 }

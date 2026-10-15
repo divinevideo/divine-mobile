@@ -4,12 +4,15 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:dm_repository/dm_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -18,6 +21,9 @@ import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_sectio
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/test_provider_overrides.dart';
+
+class _SoundRequestsRepository extends Mock
+    implements SoundRequestsRepository {}
 
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
@@ -147,6 +153,36 @@ void main() {
         .length;
 
     group('Shared audio', () {
+      testWidgets(
+        'offers a fresh request for a retained original sound reference',
+        (tester) async {
+          final repo = _SoundRequestsRepository();
+          when(() => repo.ownerPubkey).thenReturn('b' * 64);
+          when(repo.watchState).thenAnswer((_) => const Stream.empty());
+          when(repo.start).thenAnswer((_) async {});
+          final video = createVideoWithAudio().copyWith(
+            eventKind: 34236,
+            addressableDTag: 'clip',
+          );
+          when(() => repo.canRequest(video.addressableId!))
+              .thenAnswer((_) async => true);
+          final cubit = SoundRequestsCubit();
+          await cubit.connect(repo);
+          addTearDown(cubit.close);
+          await tester.pumpWidget(
+            BlocProvider.value(
+              value: cubit,
+              child: buildTestWidget(
+                video: video,
+                currentPolicyAllowsReuse: false,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Request this sound'), findsOneWidget);
+        },
+      );
+
       testWidgets('does not log when the error fallback rebuilds', (
         tester,
       ) async {

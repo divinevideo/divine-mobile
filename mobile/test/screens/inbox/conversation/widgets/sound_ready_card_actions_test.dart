@@ -30,120 +30,124 @@ const soundId =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const address = '34236:$creator:clip';
 void main() {
-  testWidgets(
-    'ready reply saves explicitly, reflects removal, and hands sound to creation',
-    (tester) async {
-      final repo = _Repository();
-      final library = _Library();
-      final updates = StreamController<SavedSoundsState>.broadcast();
-      addTearDown(updates.close);
-      var libraryState = const SavedSoundsState();
-      final audio = AudioEvent(
-        id: soundId,
-        pubkey: creator,
-        createdAt: 1,
-        url: 'https://example.com/sound.wav',
-      );
-      const message = SoundRequestMessage(
-        kind: SoundRequestMessageKind.ready,
-        messageId: soundId,
-        senderPubkey: creator,
-        recipientPubkey: viewer,
-        videoAddress: address,
-        creatorPubkey: creator,
-        requestId: request,
-        audioEventId: soundId,
-      );
-      when(() => repo.ownerPubkey).thenReturn(viewer);
-      when(repo.watchState).thenAnswer(
-        (_) => Stream.value(
-          const SoundRequestSnapshot(
-            requests: {
-              request: SoundRequestEntry(
-                id: request,
-                requester: viewer,
-                videoAddress: address,
-                status: SoundRequestStatus.ready,
-                audioEventId: soundId,
-              ),
-            },
-          ),
-        ),
-      );
-      when(repo.start).thenAnswer((_) async {});
-      when(() => repo.sourceVideo(address)).thenAnswer(
-        (_) async => VideoEvent(
-          id: 'e' * 64,
+  group('interactions', () {
+    testWidgets(
+      'ready reply saves explicitly, reflects removal, and hands sound to creation',
+      (tester) async {
+        final repo = _Repository();
+        final library = _Library();
+        final updates = StreamController<SavedSoundsState>.broadcast();
+        addTearDown(updates.close);
+        var libraryState = const SavedSoundsState();
+        final audio = AudioEvent(
+          id: soundId,
           pubkey: creator,
           createdAt: 1,
-          content: 'clip',
-          timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
-        ),
-      );
-      when(() => repo.resolveReady(message)).thenAnswer((_) async => audio);
-      when(() => library.state).thenAnswer((_) => libraryState);
-      when(() => library.stream).thenAnswer((_) => updates.stream);
-      var saves = 0;
-      when(() => library.saveSound(audio)).thenAnswer((_) async {
-        saves++;
-        libraryState = SavedSoundsState(sounds: [SavedSound.fromLegacy(audio)]);
+          url: 'https://example.com/sound.wav',
+        );
+        const message = SoundRequestMessage(
+          kind: SoundRequestMessageKind.ready,
+          messageId: soundId,
+          senderPubkey: creator,
+          recipientPubkey: viewer,
+          videoAddress: address,
+          creatorPubkey: creator,
+          requestId: request,
+          audioEventId: soundId,
+        );
+        when(() => repo.ownerPubkey).thenReturn(viewer);
+        when(repo.watchState).thenAnswer(
+          (_) => Stream.value(
+            const SoundRequestSnapshot(
+              requests: {
+                request: SoundRequestEntry(
+                  id: request,
+                  requester: viewer,
+                  videoAddress: address,
+                  status: SoundRequestStatus.ready,
+                  audioEventId: soundId,
+                ),
+              },
+            ),
+          ),
+        );
+        when(repo.start).thenAnswer((_) async {});
+        when(() => repo.sourceVideo(address)).thenAnswer(
+          (_) async => VideoEvent(
+            id: 'e' * 64,
+            pubkey: creator,
+            createdAt: 1,
+            content: 'clip',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+          ),
+        );
+        when(() => repo.resolveReady(message)).thenAnswer((_) async => audio);
+        when(() => library.state).thenAnswer((_) => libraryState);
+        when(() => library.stream).thenAnswer((_) => updates.stream);
+        var saves = 0;
+        when(() => library.saveSound(audio)).thenAnswer((_) async {
+          saves++;
+          libraryState = SavedSoundsState(
+            sounds: [SavedSound.fromLegacy(audio)],
+          );
+          updates.add(libraryState);
+          return SavedSoundSaveResult.saved;
+        });
+        final cubit = SoundRequestsCubit();
+        await cubit.connect(repo);
+        addTearDown(cubit.close);
+        RecorderSoundSelection? selection;
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => const Scaffold(
+                body: SoundRequestCard(message: message, isSent: false),
+              ),
+            ),
+            GoRoute(
+              path: VideoRecorderScreen.path,
+              builder: (_, state) {
+                selection = state.extra! as RecorderSoundSelection;
+                return const Scaffold(body: Text('Creation'));
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: cubit),
+                BlocProvider<SavedSoundsBloc>.value(value: library),
+              ],
+              child: MaterialApp.router(
+                routerConfig: router,
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(saves, 0);
+        await tester.tap(find.text('Save to My Sounds'));
+        await tester.pumpAndSettle();
+        expect(saves, 1);
+        expect(find.text('Saved'), findsOneWidget);
+        expect(selection, isNull);
+        libraryState = const SavedSoundsState();
         updates.add(libraryState);
-        return SavedSoundSaveResult.saved;
-      });
-      final cubit = SoundRequestsCubit();
-      await cubit.connect(repo);
-      addTearDown(cubit.close);
-      RecorderSoundSelection? selection;
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, _) => const Scaffold(
-              body: SoundRequestCard(message: message, isSent: false),
-            ),
-          ),
-          GoRoute(
-            path: VideoRecorderScreen.path,
-            builder: (_, state) {
-              selection = state.extra! as RecorderSoundSelection;
-              return const Scaffold(body: Text('Creation'));
-            },
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: cubit),
-              BlocProvider<SavedSoundsBloc>.value(value: library),
-            ],
-            child: MaterialApp.router(
-              routerConfig: router,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(saves, 0);
-      await tester.tap(find.text('Save to My Sounds'));
-      await tester.pumpAndSettle();
-      expect(saves, 1);
-      expect(find.text('Saved'), findsOneWidget);
-      expect(selection, isNull);
-      libraryState = const SavedSoundsState();
-      updates.add(libraryState);
-      await tester.pumpAndSettle();
-      expect(find.text('Save to My Sounds'), findsOneWidget);
-      await tester.tap(find.text('Use this sound'));
-      await tester.pumpAndSettle();
-      expect(find.text('Creation'), findsOneWidget);
-      expect(selection?.sound.id, soundId);
-      expect(selection?.ownerPubkey, viewer);
-      expect(saves, 1);
-    },
-  );
+        await tester.pumpAndSettle();
+        expect(find.text('Save to My Sounds'), findsOneWidget);
+        await tester.tap(find.text('Use this sound'));
+        await tester.pumpAndSettle();
+        expect(find.text('Creation'), findsOneWidget);
+        expect(selection?.sound.id, soundId);
+        expect(selection?.ownerPubkey, viewer);
+        expect(saves, 1);
+      },
+    );
+  });
 }
