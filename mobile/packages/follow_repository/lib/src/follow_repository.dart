@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:cache_sync/cache_sync.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:follow_repository/src/follow_list_kind.dart';
@@ -120,6 +119,35 @@ class FollowRepository {
   static int _currentSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
   final _myFollowersSyncState = MyFollowersSyncState();
   Future<void>? _myFollowersSyncFuture;
+  Future<void>? _myFollowersWriteTail;
+
+  // Reserve before fetching, not just before writing: an older full response
+  // must never replace observations from a newer incremental query.
+  ({Future<void>? ready, void Function() release}) _reserveFollowerWrite() {
+    final previous = _myFollowersWriteTail;
+    final done = Completer<void>();
+    _myFollowersWriteTail = done.future;
+    return (
+      ready: previous,
+      release: () {
+        if (identical(_myFollowersWriteTail, done.future)) {
+          _myFollowersWriteTail = null;
+        }
+        done.complete();
+      },
+    );
+  }
+
+  Future<T> _withFollowerWrite<T>(Future<T> Function() operation) async {
+    final lease = _reserveFollowerWrite();
+    if (lease.ready != null) await lease.ready;
+    try {
+      return await operation();
+    } finally {
+      lease.release();
+    }
+  }
+
   String? _myFollowersOwner;
   bool _disposed = false;
 
@@ -570,13 +598,19 @@ class FollowRepository {
     final pubkey = _nostrClient.publicKey;
     if (pubkey.isEmpty) return (pubkeys: <String>[], datedCount: 0);
 
-    final result = await _fetchOrderedFollowers(pubkey);
-    await _persistMyFollowers(
-      pubkey,
-      result.refs,
-      replace: !result.anySourceFailed,
-    );
-    return (pubkeys: result.pubkeys, datedCount: result.datedCount);
+    return _withFollowerWrite(() async {
+      if (!_isCurrentFollowerOwner(pubkey)) {
+        return (pubkeys: <String>[], datedCount: 0);
+      }
+      await _myFollowersSyncState.stampAttempt(pubkey, _nowSeconds());
+      final result = await _fetchOrderedFollowers(pubkey);
+      await _completeFullFollowers(
+        pubkey,
+        result.refs,
+        complete: !result.anySourceFailed,
+      );
+      return (pubkeys: result.pubkeys, datedCount: result.datedCount);
+    });
   }
 
   bool _isCurrentFollowerOwner(String owner) =>
@@ -613,6 +647,17 @@ class FollowRepository {
     await _loadPersistedMyFollowers(owner);
   }
 
+  Future<void> _completeFullFollowers(
+    String owner,
+    List<_FollowerRef> refs, {
+    required bool complete,
+  }) async {
+    await _persistMyFollowers(owner, refs, replace: complete);
+    if (complete && _isCurrentFollowerOwner(owner)) {
+      await _myFollowersSyncState.stampFull(owner, _nowSeconds());
+    }
+  }
+
   /// Refreshes the owner's persisted followers, sharing concurrent work.
   ///
   /// Partial full queries only merge: a failed source cannot prove an unfollow.
@@ -624,31 +669,33 @@ class FollowRepository {
         !(_isOnline?.call() ?? true)) {
       return Future<void>.value();
     }
-    return _myFollowersSyncFuture ??= _syncMyFollowers(
-      _nostrClient.publicKey,
+    final owner = _nostrClient.publicKey;
+    return _myFollowersSyncFuture ??= _withFollowerWrite(
+      () => _syncMyFollowers(owner),
     ).whenComplete(() => _myFollowersSyncFuture = null);
   }
 
   Future<void> _syncMyFollowers(String owner) async {
     final dao = _myFollowersDao!;
-    final rows = await dao.followersOf(owner);
     final state = await _myFollowersSyncState.read(owner);
     if (!_isCurrentFollowerOwner(owner)) return;
     final now = _nowSeconds();
-    if (rows.isEmpty ||
-        state.full == null ||
+    if (state.attempt != null &&
+        now - state.attempt! <= myFollowersIncrementalInterval.inSeconds) {
+      return;
+    }
+    if (state.full == null ||
         now - state.full! > myFollowersReconcileInterval.inSeconds) {
+      await _myFollowersSyncState.stampAttempt(owner, now);
       final result = await _fetchOrderedFollowers(owner);
-      if (!_isCurrentFollowerOwner(owner)) return;
-      await _persistMyFollowers(
+      await _completeFullFollowers(
         owner,
         result.refs,
-        replace: !result.anySourceFailed,
+        complete: !result.anySourceFailed,
       );
-      if (!_isCurrentFollowerOwner(owner)) return;
-      await _myFollowersSyncState.stampFull(owner, now);
     } else if (state.incremental == null ||
         now - state.incremental! > myFollowersIncrementalInterval.inSeconds) {
+      await _myFollowersSyncState.stampAttempt(owner, now);
       final highWater = min(await dao.newestFollowedAt(owner) ?? 0, now);
       if (!_isCurrentFollowerOwner(owner)) return;
       final events = await _nostrClient
@@ -858,22 +905,45 @@ class FollowRepository {
   /// Emits a [CacheResult.cached] if disk-cached data exists, then a single
   /// [CacheResult.live] once the network fetch resolves.
   ///
-  /// Uses [CacheSync.watchOne] rather than [CacheSync.watchStream] so that
-  /// [CacheSync] is the single owner of the stale/live boundary. Wrapping
-  /// [watchMyFollowers] with [CacheSync.watchStream] created two cache layers:
-  /// CacheSync emitted the disk entry as [CacheResult.cached], but
-  /// [watchMyFollowers]'s own in-memory phase then emitted an additional
-  /// snapshot that CacheSync incorrectly tagged as [CacheResult.live] before
-  /// the real network fetch had completed, breaking [CacheResult.isLive]
-  /// semantics.
-  Stream<CacheResult<FollowersSnapshot>> watchMyFollowersCached() {
-    return CacheSync.watchOne<FollowersSnapshot>(
-      key: _myFollowersCacheKey(_nostrClient.publicKey),
+  /// Durable relationship rows take precedence over an older CacheSync entry.
+  /// They are explicitly stale; only the completed network snapshot is live.
+  /// Authoritative counts are read separately from persisted profile stats.
+  Stream<CacheResult<FollowersSnapshot>> watchMyFollowersCached() async* {
+    final owner = _nostrClient.publicKey;
+    var deliveredDurable = false;
+    final dao = _myFollowersDao;
+    if (dao != null && owner.isNotEmpty) {
+      final rows = await dao.followersOf(owner);
+      final checkpoint = await _myFollowersSyncState.read(owner);
+      if (!_isCurrentFollowerOwner(owner)) return;
+      if (rows.isNotEmpty || checkpoint.full != null) {
+        _cacheMyFollowers(owner, rows);
+        final persisted = await _loadPersistedStats(owner);
+        if (!_isCurrentFollowerOwner(owner)) return;
+        final count =
+            _followerStatsCache[owner]?.stats.followers ??
+            persisted?.followers ??
+            0;
+        deliveredDurable = true;
+        yield CacheResult.cached(
+          FollowersSnapshot(
+            pubkeys: List.unmodifiable(_cachedMyFollowersPubkeys),
+            count: count,
+            datedCount: _cachedMyFollowersDatedCount,
+          ),
+        );
+      }
+    }
+    await for (final result in CacheSync.watchOne<FollowersSnapshot>(
+      key: _myFollowersCacheKey(owner),
       fetch: fetchMyFollowersSnapshot,
       fromJson: FollowersSnapshot.fromJson,
       toJson: (s) => s.toJson(),
       ttl: _profileListCacheTtl,
-    );
+    )) {
+      if (_disposed || owner != _nostrClient.publicKey) return;
+      if (result.isLive || !deliveredDurable) yield result;
+    }
   }
 
   /// Cache-backed stream of the current user's following list.
@@ -1892,8 +1962,19 @@ class FollowRepository {
   /// stream only emits an error when it ends up with *no* followers at all
   /// and at least one source failed, which is the case where the caller
   /// genuinely cannot tell "you have no followers" from "the lookup broke".
-  Stream<List<String>> streamMyFollowers() =>
-      _streamFollowers(_nostrClient.publicKey);
+  Stream<List<String>> streamMyFollowers() async* {
+    final owner = _nostrClient.publicKey;
+    final lease = _reserveFollowerWrite();
+    if (lease.ready != null) await lease.ready;
+    try {
+      if (owner.isNotEmpty && _isCurrentFollowerOwner(owner)) {
+        await _myFollowersSyncState.stampAttempt(owner, _nowSeconds());
+      }
+      yield* _streamFollowers(owner);
+    } finally {
+      lease.release();
+    }
+  }
 
   Stream<List<String>> _streamFollowers(String pubkey) async* {
     if (pubkey.isEmpty) {
@@ -1944,7 +2025,7 @@ class FollowRepository {
     }
 
     if (pubkey == _nostrClient.publicKey) {
-      await _persistMyFollowers(pubkey, merged, replace: !anySourceFailed);
+      await _completeFullFollowers(pubkey, merged, complete: !anySourceFailed);
     }
   }
 

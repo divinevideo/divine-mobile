@@ -65,6 +65,7 @@ void main() {
       await updates.close();
     });
     MyFollowingBloc createBloc() => MyFollowingBloc(
+      rankForList: true,
       followRepository: repository,
       contentBlocklistRepository: blocklist,
       rankingSignalsLoader: loader,
@@ -73,6 +74,38 @@ void main() {
       CacheResult.live(
         FollowingSnapshot(pubkeys: keys, count: keys.length),
       ),
+    );
+
+    test('membership-only loading never reads ranking or refreshes', () async {
+      final bloc = MyFollowingBloc(
+        followRepository: repository,
+        contentBlocklistRepository: blocklist,
+        rankingSignalsLoader: loader,
+      );
+      addTearDown(bloc.close);
+      bloc.add(const MyFollowingListLoadRequested());
+      load([_a, _b]);
+      await pumpEventQueue();
+      expect(bloc.state.isFollowing(_a), isTrue);
+      verifyNever(() => loader.load(any()));
+      verifyNever(() => loader.loadCachedDisplayNames(any()));
+      verifyNever(() => loader.refreshInBackground(any()));
+    });
+
+    test(
+      'ranked following refreshes only after the first visible state',
+      () async {
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        when(() => loader.refreshInBackground(any())).thenAnswer((_) {
+          expect(bloc.state.isSmartOrderReady, isTrue);
+          expect(bloc.state.followingPubkeys, [_a, _b]);
+        });
+        bloc.add(const MyFollowingListLoadRequested());
+        load([_a, _b]);
+        await pumpEventQueue();
+        verify(() => loader.refreshInBackground([_a, _b])).called(1);
+      },
     );
 
     test(
@@ -388,6 +421,7 @@ void main() {
       await updates.close();
     });
     MyFollowersBloc createBloc() => MyFollowersBloc(
+      rankForList: true,
       followRepository: repository,
       contentBlocklistRepository: blocklist,
       rankingSignalsLoader: loader,
@@ -401,6 +435,37 @@ void main() {
         ),
       ),
     );
+
+    test('count-only loading never reads ranking or refreshes', () async {
+      final bloc = MyFollowersBloc(
+        followRepository: repository,
+        contentBlocklistRepository: blocklist,
+        rankingSignalsLoader: loader,
+      );
+      addTearDown(bloc.close);
+      bloc.add(const MyFollowersListLoadRequested());
+      snapshots.add(
+        const CacheResult.live(FollowersSnapshot(pubkeys: [_a], count: 50)),
+      );
+      await pumpEventQueue();
+      expect(bloc.state.followerCount, 50);
+      verifyNever(() => loader.load(any()));
+      verifyNever(() => loader.refreshInBackground(any()));
+    });
+
+    test('ranked followers refresh after initial emission', () async {
+      final bloc = createBloc();
+      addTearDown(bloc.close);
+      when(() => loader.refreshInBackground(any())).thenAnswer((_) {
+        expect(bloc.state.status, MyFollowersStatus.success);
+      });
+      bloc.add(const MyFollowersListLoadRequested());
+      snapshots.add(
+        const CacheResult.live(FollowersSnapshot(pubkeys: [_a], count: 50)),
+      );
+      await pumpEventQueue();
+      verify(() => loader.refreshInBackground([_a])).called(1);
+    });
 
     test(
       'ranks scores, switches date sorts, and restores the frozen Smart order',

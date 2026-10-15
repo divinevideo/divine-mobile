@@ -27,17 +27,18 @@ class NewMessageSearchBloc
     extends Bloc<NewMessageSearchEvent, NewMessageSearchState>
     with CloseGuardedEmit<NewMessageSearchState> {
   NewMessageSearchBloc({
-    required ProfileRepository profileRepository,
+    required ProfileRepository? profileRepository,
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
     required ModerationPresentationResolver moderationPresentation,
+    NewMessageSearchState? initialState,
   }) : _profileRepository = profileRepository,
        _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
        _moderationPresentation = moderationPresentation,
-       super(const NewMessageSearchState()) {
+       super(_retained(initialState, rankingSignalsLoader, currentUserPubkey)) {
     on<NewMessageSearchStarted>(_onStarted);
     on<NewMessageSearchQueryChanged>(
       _onQueryChanged,
@@ -51,7 +52,29 @@ class NewMessageSearchBloc
     _subscribeToVanishedPubkeys();
   }
 
-  final ProfileRepository _profileRepository;
+  static NewMessageSearchState _retained(
+    NewMessageSearchState? snapshot,
+    UserRankingSignalsLoader loader,
+    String owner,
+  ) {
+    if (snapshot == null) return const NewMessageSearchState();
+    bool eligible(String key) =>
+        !pubkeysEqual(key, owner) && loader.isEligible(key);
+    List<UserProfile> keep(List<UserProfile> profiles) =>
+        List.unmodifiable(profiles.where((p) => eligible(p.pubkey)));
+    return snapshot.copyWith(
+      contacts: keep(snapshot.contacts),
+      results: keep(snapshot.results),
+      networkResults: keep(snapshot.networkResults),
+      selectedRecipients: keep(snapshot.selectedRecipients),
+      rankingSignals: Map.unmodifiable({
+        for (final entry in snapshot.rankingSignals.entries)
+          if (eligible(entry.key)) entry.key: entry.value,
+      }),
+    );
+  }
+
+  final ProfileRepository? _profileRepository;
   final FollowRepository _followRepository;
   final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
@@ -67,6 +90,8 @@ class NewMessageSearchBloc
     NewMessageSearchStarted event,
     Emitter<NewMessageSearchState> emit,
   ) async {
+    final repository = _profileRepository;
+    if (repository == null) return;
     final pubkeys = _followRepository.followingPubkeys
         .where((pubkey) => !_isSelf(pubkey))
         .toSet();
@@ -81,16 +106,16 @@ class NewMessageSearchBloc
         stackTrace,
       );
     }
-    if (isClosed) return;
+    if (isClosed || emit.isDone) return;
     final eligiblePubkeys = signals == null
         ? pubkeys.where(_rankingSignalsLoader.isEligible)
         : pubkeys.where(signals.containsKey);
     final results = await Future.wait(
       eligiblePubkeys.map(
-        (pubkey) => _profileRepository.getCachedProfile(pubkey: pubkey),
+        (pubkey) => repository.getCachedProfile(pubkey: pubkey),
       ),
     );
-    if (isClosed) return;
+    if (isClosed || emit.isDone) return;
     final profiles = {
       for (final profile in results.whereType<UserProfile>())
         if (signals != null || _rankingSignalsLoader.isEligible(profile.pubkey))
@@ -109,24 +134,34 @@ class NewMessageSearchBloc
       ),
       interactionTierFirst: true,
     );
-    if (!emitIfOpen(
-      _withRecomputedSearch(
-        state.copyWith(
-          status: NewMessageSearchStatus.idle,
-          contacts: [for (final pubkey in rankedPubkeys) profiles[pubkey]!],
-          rankingSignals: Map.unmodifiable(signals ?? const {}),
-        ),
-      ),
-    )) {
+    final previous = state.contacts.map((p) => p.pubkey).toSet();
+    final ordered = [
+      for (final profile in state.contacts)
+        if (profiles.containsKey(profile.pubkey)) profile.pubkey,
+      ...rankedPubkeys.where((key) => !previous.contains(key)),
+    ];
+    if (emit.isDone ||
+        !emitIfOpen(
+          _withRecomputedSearch(
+            state.copyWith(
+              status: state.status == NewMessageSearchStatus.loadingContacts
+                  ? NewMessageSearchStatus.idle
+                  : state.status,
+              contacts: [for (final pubkey in ordered) profiles[pubkey]!],
+              rankingSignals: Map.unmodifiable(signals ?? const {}),
+            ),
+          ),
+        )) {
       return;
     }
-    _rankingSignalsLoader.refreshInBackground(rankedPubkeys);
+    _rankingSignalsLoader.refreshInBackground(ordered);
   }
 
   Future<void> _onQueryChanged(
     NewMessageSearchQueryChanged event,
     Emitter<NewMessageSearchState> emit,
   ) async {
+    final repository = _profileRepository;
     final query = event.query.trim();
 
     if (query.isEmpty || query.length < minSearchQueryLength) {
@@ -147,13 +182,16 @@ class NewMessageSearchBloc
         state.copyWith(
           status: NewMessageSearchStatus.searching,
           query: query,
-          networkResults: const [],
+          networkResults: state.query == query
+              ? state.networkResults
+              : const [],
         ),
       ),
     );
 
+    if (repository == null) return;
     try {
-      final networkResults = (await _profileRepository.searchUsers(
+      final networkResults = (await repository.searchUsers(
         query: query,
         limit: 50,
         sortBy: profileSearchSortFollowers,
@@ -373,7 +411,7 @@ class NewMessageSearchBloc
 
   /// (Re)points the vanished-set subscription at the profile repository.
   void _subscribeToVanishedPubkeys() {
-    _vanishedSubscription = _profileRepository.watchVanishedPubkeys().listen(
+    _vanishedSubscription = _profileRepository?.watchVanishedPubkeys().listen(
       // A stream callback resumes outside the handler that started it, so the
       // add has to be guarded — `close()` does not cancel it.
       (pubkeys) => addIfOpen(_NewMessageSearchVanishedPubkeysChanged(pubkeys)),

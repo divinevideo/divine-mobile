@@ -14,7 +14,6 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -69,7 +68,6 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
     final followRepository = ref.read(followRepositoryProvider);
     final nostrClient = ref.read(nostrServiceProvider);
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
-    final rankingSignalsLoader = ref.read(userRankingSignalsLoaderProvider);
 
     // Check if this is the user's own video (read once, never changes)
     _isOwnVideo = nostrClient.publicKey == widget.pubkey;
@@ -78,7 +76,6 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
     // the viewer's own video nor an author they already follow.
     if (!_isOwnVideo && !followRepository.isFollowing(widget.pubkey)) {
       _bloc = MyFollowingBloc(
-        rankingSignalsLoader: rankingSignalsLoader,
         followRepository: followRepository,
         contentBlocklistRepository: blocklistRepository,
       )..add(const MyFollowingListLoadRequested());

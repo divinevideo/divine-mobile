@@ -74,6 +74,21 @@ void main() {
     });
 
     test(
+      'refreshes after initial ranked emission without moving visible rows',
+      () async {
+        final cubit = create();
+        when(() => loader.refreshInBackground(any())).thenAnswer((_) {
+          expect(cubit.state.loaded, isTrue);
+          expect(cubit.state.profiles.map((p) => p.pubkey), [b, a]);
+        });
+        await cubit.started();
+        followers.add([a, b]);
+        verify(() => loader.refreshInBackground([b, a])).called(1);
+        expect(cubit.state.profiles.map((p) => p.pubkey), [b, a]);
+      },
+    );
+
+    test(
       'ranks initial mutuals then appends late mutuals under the active query',
       () async {
         final cubit = create();

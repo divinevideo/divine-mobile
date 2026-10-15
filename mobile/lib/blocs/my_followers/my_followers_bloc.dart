@@ -29,12 +29,27 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
     with CloseGuardedEmit<MyFollowersState> {
   MyFollowersBloc({
     required FollowRepository followRepository,
-    required UserRankingSignalsLoader rankingSignalsLoader,
     required ContentBlocklistRepository contentBlocklistRepository,
-  }) : _followRepository = followRepository,
+    UserRankingSignalsLoader? rankingSignalsLoader,
+    bool rankForList = false,
+    MyFollowersState? initialState,
+  }) : assert(
+         !rankForList || rankingSignalsLoader != null,
+         'Ranked lists require a ranking signals loader',
+       ),
+       _followRepository = followRepository,
        _blocklistRepository = contentBlocklistRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
-       super(const MyFollowersState()) {
+       _rankForList = rankForList,
+       super(
+         initialState == null
+             ? const MyFollowersState()
+             : _retained(
+                 initialState,
+                 rankingSignalsLoader,
+                 contentBlocklistRepository,
+               ),
+       ) {
     on<MyFollowersListLoadRequested>(
       _onLoadRequested,
       transformer: restartable(),
@@ -46,7 +61,30 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
     on<MyFollowersSortOrderChanged>(_onSortOrderChanged);
   }
 
-  final UserRankingSignalsLoader _rankingSignalsLoader;
+  static MyFollowersState _retained(
+    MyFollowersState snapshot,
+    UserRankingSignalsLoader? loader,
+    ContentBlocklistRepository blocklist,
+  ) {
+    bool eligible(String key) =>
+        (loader?.isEligible(key) ?? true) &&
+        !blocklist.isBlocked(key) &&
+        !blocklist.isFollowSevered(key);
+    return snapshot.copyWith(
+      rawFollowersPubkeys: List.unmodifiable(snapshot.rawFollowersPubkeys),
+      followersPubkeys: List.unmodifiable(
+        snapshot.followersPubkeys.where(eligible),
+      ),
+      smartOrder: List.unmodifiable(snapshot.smartOrder.where(eligible)),
+      rankingSignals: Map.unmodifiable({
+        for (final entry in snapshot.rankingSignals.entries)
+          if (eligible(entry.key)) entry.key: entry.value,
+      }),
+    );
+  }
+
+  final UserRankingSignalsLoader? _rankingSignalsLoader;
+  final bool _rankForList;
   final FollowRepository _followRepository;
   final ContentBlocklistRepository _blocklistRepository;
 
@@ -60,17 +98,23 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
     required FollowListSort sortOrder,
   }) => filterMyFollowerPubkeys(
     pubkeys:
-        (sortOrder.followSortOrder?.fromNewestFirst(
-                  rawPubkeys,
-                  datedCount: datedCount,
-                ) ??
+        ((_rankForList
+                        ? sortOrder.followSortOrder
+                        : FollowSortOrder.newestFirst)
+                    ?.fromNewestFirst(
+                      rawPubkeys,
+                      datedCount: datedCount,
+                    ) ??
                 state.smartOrder.where(rawPubkeys.toSet().contains).toList())
             .where(
               (pubkey) =>
+                  !_rankForList ||
                   !state.isSmartOrderReady ||
                   state.rankingSignals.containsKey(pubkey),
             )
-            .where(_rankingSignalsLoader.isEligible)
+            .where(
+              (key) => !_rankForList || _rankingSignalsLoader!.isEligible(key),
+            )
             .toList(),
     blocklistRepository: _blocklistRepository,
   );
@@ -92,7 +136,7 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
     }
 
     try {
-      await emit.forEach<MyFollowersState>(
+      await emit.onEach<MyFollowersState>(
         _followRepository.watchMyFollowersCached().asyncMap(
           (result) => _rankedState(
             result.data.pubkeys,
@@ -102,7 +146,9 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
             count: result.data.count,
           ),
         ),
-        onData: (next) => next,
+        onData: (next) {
+          if (!emit.isDone) _emitRanked(next);
+        },
       );
     } catch (e, stackTrace) {
       Log.error(
@@ -117,6 +163,13 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
     }
   }
 
+  void _emitRanked(MyFollowersState next) {
+    final first = !state.isSmartOrderReady && next.isSmartOrderReady;
+    if (emitIfOpen(next) && first && _rankForList) {
+      _rankingSignalsLoader!.refreshInBackground(next.followersPubkeys);
+    }
+  }
+
   Future<MyFollowersState> _rankedState(
     List<String> pubkeys, {
     required bool isRefreshing,
@@ -124,11 +177,25 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
     int datedCount = 0,
     int count = 0,
   }) async {
+    if (!_rankForList) {
+      return state.copyWith(
+        status: MyFollowersStatus.success,
+        rawFollowersPubkeys: pubkeys,
+        followersPubkeys: filterMyFollowerPubkeys(
+          pubkeys: pubkeys,
+          blocklistRepository: _blocklistRepository,
+        ),
+        rawDatedCount: datedCount,
+        authoritativeFollowerCount: count,
+        isSmartOrderReady: true,
+        isRefreshing: isRefreshing,
+      );
+    }
     while (!isClosed && isCurrent()) {
       final eligibilityRevision = state.eligibilityRevision;
       final signals = await loadFollowListRankingSignals(
         pubkeys: pubkeys,
-        loader: _rankingSignalsLoader,
+        loader: _rankingSignalsLoader!,
         logName: 'MyFollowersBloc',
         onError: addError,
       );

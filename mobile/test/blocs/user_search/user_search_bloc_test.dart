@@ -392,6 +392,81 @@ void main() {
         },
       );
 
+      test(
+        'resuming the same query retains the inherited progressive prefix',
+        () async {
+          final prefix = profiles.take(2).toList();
+          final bloc = UserSearchBloc(
+            profileRepository: mockProfileRepository,
+            searchRunner: mockSearchRunner,
+            rankingSignalsLoader: loader,
+            initialState: UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'alice',
+              results: prefix,
+              rankingSignals: {
+                for (final profile in prefix)
+                  profile.pubkey: UserRankingSignals(pubkey: profile.pubkey),
+              },
+            ),
+          );
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, prefix);
+          expect(bloc.state.rankingSignals.keys, prefix.map((p) => p.pubkey));
+          verifyNever(() => loader.load(any()));
+        },
+      );
+
+      test('progressive prefix drops newly blocked and omitted rows', () async {
+        final stream = StreamController<ProgressiveSearchResult>();
+        addTearDown(stream.close);
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) => stream.stream);
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        bloc.add(const UserSearchQueryChanged('alice'));
+        final first = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+        stream.add(
+          ProgressiveSearchResult(
+            profiles: profiles.take(2).toList(),
+            sources: const {},
+            isComplete: false,
+          ),
+        );
+        await first;
+        when(() => loader.isEligible(profiles[1].pubkey)).thenReturn(false);
+        final second = bloc.stream.firstWhere(
+          (s) => s.results.contains(profiles[2]),
+        );
+        stream.add(
+          ProgressiveSearchResult(
+            profiles: [profiles[1], profiles[2]],
+            sources: const {},
+            isComplete: true,
+          ),
+        );
+        await second;
+        expect(bloc.state.results, [profiles[2]]);
+        expect(bloc.state.rankingSignals.keys, [profiles[2].pubkey]);
+      });
+
+      test('load more revalidates the complete visible prefix', () async {
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        await search(bloc);
+        when(() => loader.isEligible(profiles[1].pubkey)).thenReturn(false);
+        await loadMore(bloc);
+        expect(bloc.state.results, [profiles[0], profiles[2], profiles[3]]);
+        expect(bloc.state.rankingSignals, isNot(contains(profiles[1].pubkey)));
+      });
+
       test('null loader keeps server order', () async {
         final bloc = createBloc();
         addTearDown(bloc.close);

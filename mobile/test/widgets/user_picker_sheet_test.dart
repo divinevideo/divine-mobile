@@ -150,6 +150,8 @@ class _MockRankingSignalsLoader extends Mock
     implements UserRankingSignalsLoader {}
 
 class _TestNostrSession extends NostrSession {
+  void selectOwner(String pubkey) =>
+      state = NostrSessionReadiness.identityKnown(pubkey: pubkey);
   @override
   NostrSessionReadiness build() =>
       NostrSessionReadiness.identityKnown(pubkey: 'f' * 64);
@@ -182,7 +184,48 @@ void main() {
   group(UserPickerSheet, () {
     group('account dependencies', () {
       testWidgets(
-        'replaces search state when the account ranking loader changes',
+        'an owner change retires the picker even after switching back',
+        (tester) async {
+          final session = _TestNostrSession();
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                nostrSessionProvider.overrideWith(() => session),
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
+                _noVanishedProfiles,
+                profileRepositoryProvider.overrideWithValue(
+                  _createMockProfileRepository(),
+                ),
+                followRepositoryProvider.overrideWithValue(
+                  _createMockFollowRepository(),
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: UserPickerSheet(
+                    title: 'Private selection',
+                    filterMode: UserPickerFilterMode.allUsers,
+                  ),
+                ),
+              ),
+            ),
+          );
+          expect(find.byType(TextField), findsOneWidget);
+          session.selectOwner('e' * 64);
+          await tester.pump();
+          expect(find.byType(TextField), findsNothing);
+          session.selectOwner('f' * 64);
+          await tester.pump();
+          expect(find.byType(TextField), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'preserves search text when same-owner ranking dependencies change',
         (tester) async {
           final replacement = _MockRankingSignalsLoader();
           await tester.pumpWidget(
@@ -227,7 +270,7 @@ void main() {
           await tester.pump();
           expect(
             tester.widget<TextField>(find.byType(TextField)).controller!.text,
-            isEmpty,
+            'before',
           );
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump(searchDebounceDuration);
@@ -1092,8 +1135,14 @@ void main() {
         await tester.pump();
         cached.complete([profile(a, 'Previous')]);
         await tester.pumpAndSettle();
-        expect(find.text('Current'), findsOneWidget);
+        expect(find.text('Current'), findsNothing);
         expect(find.text('Previous'), findsNothing);
+        expect(find.byType(TextField), findsNothing);
+        container
+            .read(nostrSessionProvider.notifier)
+            .update(NostrSessionReadiness.identityKnown(pubkey: 'f' * 64));
+        await tester.pump();
+        expect(find.byType(TextField), findsNothing);
       });
     });
 

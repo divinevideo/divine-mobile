@@ -49,6 +49,7 @@ void main() {
     });
 
     MyFollowingBloc createBloc() => MyFollowingBloc(
+      rankForList: true,
       rankingSignalsLoader: testUserRankingLoader(),
       followRepository: mockFollowRepository,
       contentBlocklistRepository: mockBlocklistRepository,

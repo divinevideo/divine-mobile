@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-
+import 'package:cache_sync/cache_sync.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../cache_sync/test/fake_cache_dao.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {
   _MockNostrClient() {
@@ -29,6 +30,8 @@ class _MockNostrClient extends Mock implements NostrClient {
 }
 
 class _MockApi extends Mock implements FunnelcakeApiClient {}
+
+class _MockStatsDao extends Mock implements ProfileStatsDao {}
 
 // The DAO itself has SQLite tests; this double keeps sync timing deterministic.
 class _MemoryFollowersDao extends Fake implements MyFollowersDao {
@@ -133,11 +136,13 @@ void main() {
       List<String> indexers = const [],
       RelayFactory? relayFactory,
       bool withDao = true,
+      ProfileStatsDao? statsDao,
     }) => FollowRepository(
       nostrClient: client,
       indexerRelayUrls: indexers,
       funnelcakeApiClient: api,
       myFollowersDao: withDao ? dao : null,
+      profileStatsDao: statsDao,
       nowSeconds: () => now,
       isOnline: () => online,
       relayFactory: relayFactory,
@@ -203,6 +208,224 @@ void main() {
         now,
       );
     });
+    test(
+      'cleared owner checkpoints reseed while other owner markers survive',
+      () async {
+        final checkpoints = MyFollowersSyncState();
+        await repository.syncMyFollowers();
+        await checkpoints.stampFull(otherOwner, 123);
+        await checkpoints.stampAttempt(otherOwner, 456);
+        await checkpoints.clear(owner);
+        expect(await checkpoints.read(owner), (
+          full: null,
+          incremental: null,
+          attempt: null,
+        ));
+        expect(await checkpoints.read(otherOwner), (
+          full: 123,
+          incremental: 123,
+          attempt: 456,
+        ));
+        when(
+          () => client.queryEvents(any()),
+        ).thenAnswer((_) async => [contact(first, 100)]);
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner], {first: 100});
+        expect((await checkpoints.read(owner)).full, now);
+        verify(() => client.queryEvents(any())).called(2);
+      },
+    );
+
+    test(
+      'queued full fetch rejects an owner that changed while waiting',
+      () async {
+        final started = Completer<void>();
+        final response = Completer<List<Event>>();
+        when(() => client.queryEvents(any())).thenAnswer((_) {
+          started.complete();
+          return response.future;
+        });
+        final firstFetch = repository.getMyFollowers();
+        await started.future;
+        final queued = repository.getMyFollowers();
+        when(() => client.publicKey).thenReturn(otherOwner);
+        response.complete([contact(first, 100)]);
+        await firstFetch;
+        expect(await queued, isEmpty);
+        expect(dao.rows, isEmpty);
+        verify(() => client.queryEvents(any())).called(1);
+      },
+    );
+
+    test('successful empty seed is not repeated on the next open', () async {
+      await repository.syncMyFollowers();
+      await repository.syncMyFollowers();
+      verify(() => client.queryEvents(any())).called(1);
+      expect(dao.rows[owner], isEmpty);
+    });
+
+    test(
+      'partial full attempt retries after fifteen minutes, not a week',
+      () async {
+        when(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).thenAnswer(
+          (_) async => QueryResult(
+            events: [contact(first, 100)],
+            endedBy: QueryEnd.deadline,
+          ),
+        );
+        await repository.syncMyFollowers();
+        expect(
+          (await SharedPreferences.getInstance()).getInt(
+            'my_followers_full_sync_$owner',
+          ),
+          isNull,
+        );
+        await repository.syncMyFollowers();
+        verify(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).called(1);
+        now += 901;
+        when(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).thenAnswer(
+          (_) async => QueryResult(
+            events: [contact(first, 100), contact(second, 50)],
+            endedBy: QueryEnd.complete,
+            confirmedExhaustive: true,
+          ),
+        );
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner], {first: 100, second: 50});
+        expect(
+          (await SharedPreferences.getInstance()).getInt(
+            'my_followers_full_sync_$owner',
+          ),
+          now,
+        );
+      },
+    );
+
+    for (final fullPath in ['get', 'stream']) {
+      test(
+        '$fullPath serializes full fetch with incremental and credits completion',
+        () async {
+          dao.rows[owner] = {first: 100};
+          await stamp(incremental: now - 901);
+          final started = Completer<void>();
+          final response = Completer<QueryResult>();
+          when(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          ).thenAnswer((_) {
+            started.complete();
+            return response.future;
+          });
+          when(
+            () => client.queryEvents(any()),
+          ).thenAnswer((_) async => [contact(second, now)]);
+          final full = fullPath == 'get'
+              ? repository.getMyFollowers()
+              : repository.streamMyFollowers().toList();
+          await started.future;
+          final incremental = repository.syncMyFollowers();
+          await pumpEventQueue();
+          // The incremental fetch must not overlap an older full snapshot.
+          verifyNever(() => client.queryEvents(any()));
+          response.complete(
+            QueryResult(
+              events: [contact(first, 100)],
+              endedBy: QueryEnd.complete,
+              confirmedExhaustive: true,
+            ),
+          );
+          await full;
+          await incremental;
+          verifyNever(() => client.queryEvents(any()));
+          expect(
+            (await SharedPreferences.getInstance()).getInt(
+              'my_followers_full_sync_$owner',
+            ),
+            now,
+          );
+        },
+      );
+    }
+
+    for (final completedEmpty in [false, true]) {
+      test(
+        'durable ${completedEmpty ? "empty" : "populated"} snapshot outranks older CacheSync before live network',
+        () async {
+          final cacheDao = FakeCacheDao();
+          await CacheSync.init(dao: cacheDao);
+          await cacheDao.write(
+            key: '$owner:my_followers',
+            payload: FollowersSnapshot(pubkeys: [stale], count: 12).toJson(),
+          );
+          dao.rows[owner] = completedEmpty ? {} : {first: 100};
+          if (completedEmpty) await stamp();
+          final stats = _MockStatsDao();
+          when(() => stats.getStatsRaw(owner)).thenAnswer(
+            (_) async => ProfileStatRow(
+              pubkey: owner,
+              followerCount: 99,
+              cachedAt: DateTime.now(),
+            ),
+          );
+          when(
+            () => stats.upsertStats(
+              pubkey: any(named: 'pubkey'),
+              followerCount: any(named: 'followerCount'),
+              followingCount: any(named: 'followingCount'),
+            ),
+          ).thenAnswer((_) async {});
+          await repository.dispose();
+          repository = build(statsDao: stats);
+          final started = Completer<void>();
+          final response = Completer<List<Event>>();
+          when(() => client.queryEvents(any())).thenAnswer((_) {
+            if (!started.isCompleted) started.complete();
+            return response.future;
+          });
+          final results = <CacheResult<FollowersSnapshot>>[];
+          final done = Completer<void>();
+          final subscription = repository.watchMyFollowersCached().listen(
+            results.add,
+            onDone: done.complete,
+          );
+          await started.future;
+          await pumpEventQueue();
+          expect(results, hasLength(1));
+          expect(results.single.isStale, isTrue);
+          expect(
+            results.single.data.pubkeys,
+            completedEmpty ? isEmpty : [first],
+          );
+          expect(
+            results.single.data.count,
+            99,
+            reason:
+                'authoritative baseline is independent of relationship rows and older cache',
+          );
+          response.complete([contact(second, 200)]);
+          await done.future;
+          expect(results, hasLength(2));
+          expect(results.last.isLive, isTrue);
+          expect(results.last.data.pubkeys, [second]);
+          await subscription.cancel();
+        },
+      );
+    }
+
+    test('durable rows do not invent an authoritative count', () async {
+      await CacheSync.init(dao: FakeCacheDao());
+      dao.rows[owner] = {first: 100};
+      final snapshot = await repository.watchMyFollowersCached().first;
+      expect(snapshot.isStale, isTrue);
+      expect(snapshot.data.pubkeys, [first]);
+      expect(snapshot.data.count, 0);
+    });
+
     test('partial source failure merges instead of replacing', () async {
       dao.rows[owner] = {stale: 50};
       when(() => api.isAvailable).thenReturn(true);
@@ -421,7 +644,7 @@ void main() {
     );
 
     test(
-      'failed incremental sync can retry without a stamped checkpoint',
+      'failed incremental sync retries after the attempt throttle',
       () async {
         dao.rows[owner] = {first: 100};
         await stamp(incremental: now - 901);
@@ -438,6 +661,9 @@ void main() {
         when(
           () => client.queryEvents(any()),
         ).thenAnswer((_) async => [contact(second, 200)]);
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner], {first: 100});
+        now += 901;
         await repository.syncMyFollowers();
         expect(dao.rows[owner], {first: 100, second: 200});
       },

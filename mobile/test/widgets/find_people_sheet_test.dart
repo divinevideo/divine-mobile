@@ -17,6 +17,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
@@ -36,6 +37,14 @@ class _MockRankingSignalsLoader extends Mock
     implements UserRankingSignalsLoader {}
 
 final _rankingLoaderSelection = StateProvider<bool>((ref) => false);
+
+class _OwnerSession extends NostrSession {
+  _OwnerSession(this.owner);
+  final String owner;
+  @override
+  NostrSessionReadiness build() =>
+      NostrSessionReadiness.identityKnown(pubkey: owner);
+}
 
 void main() {
   late _MockRankingSignalsLoader rankingLoader;
@@ -59,9 +68,11 @@ void main() {
     const currentUserPubkey =
         'facade00facade00facade00facade00facade00facade00facade00facade00';
     late _MockProfileRepository mockProfileRepo;
+    late _OwnerSession session;
 
     setUp(() {
       mockProfileRepo = _MockProfileRepository();
+      session = _OwnerSession(currentUserPubkey);
     });
 
     Widget createTestWidget({
@@ -105,6 +116,7 @@ void main() {
           },
         ),
         additionalOverrides: [
+          nostrSessionProvider.overrideWith(() => session),
           rankingLoaderOverride ??
               userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
           profileRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -150,7 +162,7 @@ void main() {
 
     group('account dependencies', () {
       testWidgets(
-        'replaces search state when the account ranking loader changes',
+        'preserves search text when same-owner ranking dependencies change',
         (tester) async {
           final replacement = _MockRankingSignalsLoader();
           await tester.pumpWidget(
@@ -179,7 +191,7 @@ void main() {
           await tester.pump();
           expect(
             tester.widget<TextField>(find.byType(TextField)).controller!.text,
-            isEmpty,
+            'before',
           );
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump(searchDebounceDuration);
@@ -187,6 +199,35 @@ void main() {
         },
       );
     });
+
+    testWidgets(
+      'owner change withdraws captured contacts and rejects a late selection',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            contacts: [ShareableUser(pubkey: 'a' * 64, displayName: 'Alice')],
+            searchTimeout: null,
+          ),
+        );
+        await tester.tap(find.text('Open Sheet'));
+        await tester.pumpAndSettle();
+        final callback = tester.widget<ListTile>(find.byType(ListTile)).onTap!;
+        ProviderScope.containerOf(tester.element(find.byType(FindPeopleSheet)))
+            .read(nostrSessionProvider);
+        session.update(NostrSessionReadiness.identityKnown(pubkey: 'b' * 64));
+        await tester.pump();
+        expect(find.text('Alice'), findsNothing);
+        callback();
+        await tester.pump();
+        expect(find.byType(FindPeopleSheet), findsOneWidget);
+        session.update(
+          const NostrSessionReadiness.identityKnown(pubkey: currentUserPubkey),
+        );
+        await tester.pump();
+        expect(find.text('Alice'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     group('rendering', () {
       testWidgets('renders search field with "Find people" hint text', (
@@ -601,6 +642,7 @@ void main() {
                 },
               ),
               additionalOverrides: [
+                nostrSessionProvider.overrideWith(() => session),
                 userRankingSignalsLoaderProvider.overrideWithValue(
                   rankingLoader,
                 ),
@@ -657,6 +699,7 @@ void main() {
               ),
             ),
             additionalOverrides: [
+              nostrSessionProvider.overrideWith(() => session),
               userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
@@ -903,6 +946,7 @@ void main() {
               ),
             ),
             additionalOverrides: [
+              nostrSessionProvider.overrideWith(() => session),
               userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),

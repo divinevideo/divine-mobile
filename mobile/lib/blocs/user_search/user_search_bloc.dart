@@ -44,7 +44,7 @@ Map<SearchSource, SearchSourceStatus> _pendingSourceOutcomes() {
 class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     with CloseGuardedEmit<UserSearchState> {
   UserSearchBloc({
-    required ProfileRepository profileRepository,
+    required ProfileRepository? profileRepository,
     FollowRepository? followRepository,
     UserRankingSignalsLoader? rankingSignalsLoader,
     this.hasVideos = false,
@@ -52,12 +52,13 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     this.excludedPubkey,
     FeedPerformanceTracker? feedTracker,
     UserSearchRunner? searchRunner,
+    UserSearchState? initialState,
   }) : _profileRepository = profileRepository,
        _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _feedTracker = feedTracker,
        _searchRunner = searchRunner,
-       super(const UserSearchState()) {
+       super(_retained(initialState, rankingSignalsLoader, excludedPubkey)) {
     on<UserSearchQueryChanged>(
       _onQueryChanged,
       transformer: debounceRestartable(),
@@ -66,7 +67,32 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     on<UserSearchLoadMore>(_onLoadMore, transformer: sequential());
   }
 
-  final ProfileRepository _profileRepository;
+  static UserSearchState _retained(
+    UserSearchState? snapshot,
+    UserRankingSignalsLoader? loader,
+    String? excluded,
+  ) {
+    if (snapshot == null) return const UserSearchState();
+    final profiles = snapshot.results
+        .where(
+          (p) =>
+              (excluded == null || !pubkeysEqual(p.pubkey, excluded)) &&
+              (loader?.isEligible(p.pubkey) ?? true),
+        )
+        .toList();
+    final keys = profiles.map((p) => p.pubkey).toSet();
+    return snapshot.copyWith(
+      results: List.unmodifiable(profiles),
+      resultCount: snapshot.resultCount == null ? null : profiles.length,
+      isLoadingMore: false,
+      rankingSignals: Map.unmodifiable({
+        for (final entry in snapshot.rankingSignals.entries)
+          if (keys.contains(entry.key)) entry.key: entry.value,
+      }),
+    );
+  }
+
+  final ProfileRepository? _profileRepository;
   final UserRankingSignalsLoader? _rankingSignalsLoader;
 
   /// Optional follow graph used to boost followed users to the top of the
@@ -102,7 +128,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
   >
   _rankPage(List<UserProfile> profiles, Emitter<UserSearchState> emit) async {
     final loader = _rankingSignalsLoader;
-    if (loader == null) {
+    if (loader == null || profiles.isEmpty) {
       return (
         profiles: profiles,
         signals: const <String, UserRankingSignals>{},
@@ -156,6 +182,8 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     UserSearchQueryChanged event,
     Emitter<UserSearchState> emit,
   ) async {
+    final repository = _profileRepository;
+    if (repository == null && _searchRunner == null) return;
     final query = event.query.trim();
 
     // Empty query resets to initial state
@@ -163,6 +191,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
       emit(const UserSearchState());
       return;
     }
+
+    // Resuming an interrupted same-owner query keeps positions already shown.
+    final retainedProfiles = state.query == query
+        ? state.results
+        : <UserProfile>[];
+    final retainedSignals = state.query == query
+        ? state.rankingSignals
+        : <String, UserRankingSignals>{};
 
     // No dedup guard here — the restartable() transformer already cancels the
     // previous in-flight handler via switchMap. Adding a same-query skip caused
@@ -177,7 +213,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
         hasMore: false,
         isLoadingMore: false,
         sourceOutcomes: const {},
-        rankingSignals: const {},
+        rankingSignals: retainedSignals,
       ),
     );
 
@@ -217,7 +253,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
             boostPubkeys: followedPubkeys,
             cancellationToken: cancellationToken,
           ) ??
-          _profileRepository.searchUsersProgressive(
+          repository!.searchUsersProgressive(
             query: query,
             limit: _pageSize,
             sortBy: profileSearchSortFollowers,
@@ -229,8 +265,10 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
       final timedStream = searchTimeout == null
           ? searchStream
           : searchStream.timeout(searchTimeout!);
-      var publishedProfiles = <UserProfile>[];
-      var publishedSignals = <String, UserRankingSignals>{};
+      var publishedProfiles = List<UserProfile>.of(retainedProfiles);
+      var publishedSignals = Map<String, UserRankingSignals>.of(
+        retainedSignals,
+      );
       await emit.onEach(
         timedStream.asyncMap((result) async {
           final visible = _visibleProfiles(result.profiles);
@@ -265,10 +303,19 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
             };
             publishedProfiles = [
               for (final profile in publishedProfiles)
-                updates[profile.pubkey] ?? profile,
-              ...page.profiles,
+                if (updates.containsKey(profile.pubkey) &&
+                    _rankingSignalsLoader.isEligible(profile.pubkey))
+                  updates[profile.pubkey]!,
+              ...page.profiles.where(
+                (profile) => _rankingSignalsLoader.isEligible(profile.pubkey),
+              ),
             ];
-            publishedSignals = {...publishedSignals, ...page.signals};
+            final signals = {...publishedSignals, ...page.signals};
+            publishedSignals = {
+              for (final profile in publishedProfiles)
+                if (signals.containsKey(profile.pubkey))
+                  profile.pubkey: signals[profile.pubkey]!,
+            };
           }
           final visibleProfiles = publishedProfiles;
           if (!trackedFirst && visibleProfiles.isNotEmpty) {
@@ -387,14 +434,20 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     UserSearchLoadMore event,
     Emitter<UserSearchState> emit,
   ) async {
-    if (!state.hasMore || state.isLoadingMore || state.query.isEmpty) return;
+    final repository = _profileRepository;
+    if (repository == null ||
+        !state.hasMore ||
+        state.isLoadingMore ||
+        state.query.isEmpty) {
+      return;
+    }
 
     final query = state.query;
     final previousResults = state.results;
     emit(state.copyWith(isLoadingMore: true));
 
     try {
-      final result = await _profileRepository
+      final result = await repository
           .searchUsersProgressive(
             query: state.query,
             limit: _pageSize,
@@ -433,12 +486,22 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           !identical(state.results, previousResults)) {
         return;
       }
-      final allResults = [...previousResults, ...page.profiles];
+      final allResults = [...previousResults, ...page.profiles]
+          .where(
+            (profile) =>
+                _rankingSignalsLoader?.isEligible(profile.pubkey) ?? true,
+          )
+          .toList();
+      final signals = {...state.rankingSignals, ...page.signals};
 
       emitIfOpen(
         state.copyWith(
           results: allResults,
-          rankingSignals: {...state.rankingSignals, ...page.signals},
+          rankingSignals: {
+            for (final profile in allResults)
+              if (signals.containsKey(profile.pubkey))
+                profile.pubkey: signals[profile.pubkey]!,
+          },
           offset: result.nextRestOffset ?? state.offset + unfilteredPageCount,
           hasMore: result.restHasMore,
           isLoadingMore: false,

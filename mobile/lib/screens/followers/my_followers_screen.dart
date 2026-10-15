@@ -19,6 +19,7 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile/follow_sort_menu.dart';
 import 'package:openvine/widgets/profile/follower_count_title.dart';
 import 'package:openvine/widgets/profile/searchable_follow_list.dart';
+import 'package:openvine/widgets/retained_bloc_provider.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 
 /// Page widget for displaying current user's followers list.
@@ -37,40 +38,44 @@ class MyFollowersScreen extends ConsumerWidget {
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
     final currentUserPubkey = ref.watch(nostrServiceProvider).publicKey;
+    final sessionOwner = ref.watch(
+      nostrSessionProvider.select((session) => session.pubkey),
+    );
 
-    return MultiBlocProvider(
-      key: ValueKey((
+    return RetainedBlocProvider<MyFollowersBloc, MyFollowersState>(
+      key: ValueKey((sessionOwner, currentUserPubkey)),
+      dependencies: (
         followRepository,
         blocklistRepository,
         rankingSignalsLoader,
-      )),
-      providers: [
-        BlocProvider(
-          create: (_) => MyFollowersBloc(
-            rankingSignalsLoader: rankingSignalsLoader,
-            followRepository: followRepository,
-            contentBlocklistRepository: blocklistRepository,
-          )..add(const MyFollowersListLoadRequested()),
-        ),
-        BlocProvider(
-          create: (_) => MyFollowingBloc(
-            rankingSignalsLoader: rankingSignalsLoader,
-            followRepository: followRepository,
-            contentBlocklistRepository: blocklistRepository,
-          )..add(const MyFollowingListLoadRequested()),
-        ),
-        // Search also accepts late profile repositories through the view's
-        // listener, alongside the account-scoped ranking dependencies above.
-        BlocProvider(
-          create: (_) => FollowListSearchBloc(
-            followRepository: followRepository,
-            subjectPubkey: currentUserPubkey,
-            listKind: FollowListKind.followers,
-            profileRepository: profileRepository,
-          ),
-        ),
-      ],
-      child: _MyFollowersView(displayName: displayName),
+      ),
+      create: (snapshot) => MyFollowersBloc(
+        rankForList: true,
+        followRepository: followRepository,
+        contentBlocklistRepository: blocklistRepository,
+        rankingSignalsLoader: rankingSignalsLoader,
+        initialState: snapshot,
+      )..add(const MyFollowersListLoadRequested()),
+      child: RetainedBlocProvider<MyFollowingBloc, MyFollowingState>(
+        dependencies: (followRepository, blocklistRepository),
+        create: (snapshot) => MyFollowingBloc(
+          followRepository: followRepository,
+          contentBlocklistRepository: blocklistRepository,
+          initialState: snapshot,
+        )..add(const MyFollowingListLoadRequested()),
+        child:
+            RetainedBlocProvider<FollowListSearchBloc, FollowListSearchState>(
+              dependencies: (followRepository, profileRepository),
+              create: (snapshot) => FollowListSearchBloc(
+                followRepository: followRepository,
+                subjectPubkey: currentUserPubkey,
+                listKind: FollowListKind.followers,
+                profileRepository: profileRepository,
+                initialState: snapshot ?? const FollowListSearchState(),
+              ),
+              child: _MyFollowersView(displayName: displayName),
+            ),
+      ),
     );
   }
 }

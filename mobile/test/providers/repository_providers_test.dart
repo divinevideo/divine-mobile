@@ -13,6 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -33,6 +34,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockMyFollowersDao extends Mock implements MyFollowersDao {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockConnectionStatus extends Mock implements ConnectionStatusService {}
 
 class _MockPersonalEventCache extends Mock
     implements PersonalEventCacheService {}
@@ -77,7 +80,10 @@ void main() {
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
   group('followRepositoryProvider follower persistence', () {
-    setUpAll(() => registerFallbackValue(<Filter>[]));
+    setUpAll(() {
+      registerFallbackValue(<Filter>[]);
+      registerFallbackValue(<({String pubkey, int? followedAt})>[]);
+    });
 
     test(
       'hydrates relationships from the injected database follower DAO',
@@ -108,8 +114,10 @@ void main() {
         when(() => personalCache.isInitialized).thenReturn(false);
         final environment = _MockEnvironmentConfig();
         when(() => environment.indexerRelays).thenReturn(const []);
-        final connectionStatus = ConnectionStatusService();
-        addTearDown(connectionStatus.dispose);
+        final connectionStatus = _MockConnectionStatus();
+        when(() => connectionStatus.isOnline).thenReturn(true);
+        final auth = _MockAuthService();
+        when(() => auth.canPublishNostrWritesNow).thenReturn(true);
         final container = ProviderContainer(
           overrides: [
             nostrServiceProvider.overrideWithValue(client),
@@ -120,7 +128,7 @@ void main() {
             ),
             personalEventCacheServiceProvider.overrideWithValue(personalCache),
             pendingActionServiceProvider.overrideWithValue(null),
-            authServiceProvider.overrideWithValue(_MockAuthService()),
+            authServiceProvider.overrideWithValue(auth),
             connectionStatusServiceProvider.overrideWithValue(connectionStatus),
             databaseProvider.overrideWithValue(database),
             sharedPreferencesProvider.overrideWithValue(prefs),
@@ -146,6 +154,32 @@ void main() {
         );
         verify(() => followersDao.followersOf(pubkey)).called(1);
         verifyNever(() => client.queryEvents(any()));
+        verifyNever(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        );
+        when(() => client.readEvents(any(), requireAllRelaysSettled: true))
+            .thenAnswer(
+              (_) async => const QueryResult(
+                events: [],
+                endedBy: QueryEnd.complete,
+                confirmedExhaustive: true,
+              ),
+            );
+        when(
+          () => followersDao.replaceAll(
+            ownerPubkey: pubkey,
+            followers: any(named: 'followers'),
+            seenAt: any(named: 'seenAt'),
+          ),
+        ).thenAnswer((_) async {});
+        container.read(appForegroundProvider.notifier).setForeground(false);
+        container.read(appForegroundProvider.notifier).setForeground(true);
+        await pumpEventQueue();
+        verify(() => client.readEvents(any(), requireAllRelaysSettled: true))
+            .called(1);
+        container.read(appForegroundProvider.notifier).setForeground(false);
+        container.read(appForegroundProvider.notifier).setForeground(true);
+        await pumpEventQueue();
         verifyNever(
           () => client.readEvents(any(), requireAllRelaysSettled: true),
         );

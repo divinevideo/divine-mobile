@@ -124,7 +124,143 @@ void main() {
     }
 
     testWidgets(
-      'recreates search blocs when the account ranking loader changes',
+      'same-owner fresh profiles retain loaded pages and continue pagination',
+      (tester) async {
+        final fresh = createMockProfileRepository();
+        when(
+          () => mockVideosRepository.searchVideos(
+            query: any(named: 'query'),
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer((_) => Stream.value(const <VideoEvent>[]));
+        when(
+          () => mockHashtagRepository.searchHashtags(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const <String>[]);
+        when(() => mockCuratedListRepository.searchAllLists(any()))
+            .thenAnswer((_) => Stream.value(const <CuratedList>[]));
+
+        final first = UserProfile(
+          pubkey: 'a' * 64,
+          name: 'First',
+          createdAt: DateTime.utc(2026),
+          eventId: '1' * 64,
+          rawData: const {},
+        );
+        final second = UserProfile(
+          pubkey: 'b' * 64,
+          name: 'Second',
+          createdAt: DateTime.utc(2026),
+          eventId: '2' * 64,
+          rawData: const {},
+        );
+        final third = UserProfile(
+          pubkey: 'c' * 64,
+          name: 'Third',
+          createdAt: DateTime.utc(2026),
+          eventId: '3' * 64,
+          rawData: const {},
+        );
+        void stub(
+          MockProfileRepository repository,
+          List<UserProfile> Function(int) page,
+        ) {
+          when(
+            () => repository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
+              cancellationToken: any(named: 'cancellationToken'),
+            ),
+          ).thenAnswer((call) {
+            final offset = call.namedArguments[#offset] as int;
+            return Stream.value(
+              ProgressiveSearchResult(
+                profiles: page(offset),
+                sources: const {},
+                isComplete: true,
+                nextRestOffset: offset + 20,
+                restHasMore: true,
+              ),
+            );
+          });
+        }
+
+        stub(
+          mockProfileRepository,
+          (offset) => offset == 0 ? [first] : [second],
+        );
+        stub(fresh, (_) => [third]);
+        await tester.pumpWidget(
+          createTestWidget(
+            profileRepositoryOverride: profileRepositoryProvider.overrideWith(
+              (ref) => switch (ref.watch(_profileReadinessSelection)) {
+                0 => mockProfileRepository,
+                1 => null,
+                _ => fresh,
+              },
+            ),
+          ),
+        );
+        final context = tester.element(find.byType(SearchResultsView));
+        final original = context.read<UserSearchBloc>();
+        final videos = context.read<VideoSearchBloc>();
+        final hashtags = context.read<HashtagSearchBloc>();
+        await tester.enterText(find.byType(TextField), 'person');
+        await tester.pump(const Duration(milliseconds: 350));
+        for (
+          var i = 0;
+          i < 10 && original.state.status != UserSearchStatus.success;
+          i++
+        ) {
+          await tester.runAsync(() async {});
+          await tester.pump();
+        }
+        expect(original.state.results, [first]);
+        original.add(const UserSearchLoadMore());
+        for (var i = 0; i < 10 && original.state.results.length < 2; i++) {
+          await tester.runAsync(() async {});
+          await tester.pump();
+        }
+        expect(original.state.results, [first, second]);
+        final container = ProviderScope.containerOf(context);
+        container.read(_profileReadinessSelection.notifier).state = 1;
+        await tester.pump();
+        container.read(_profileReadinessSelection.notifier).state = 2;
+        await tester.pump();
+        final current = tester.element(find.byType(SearchResultsView));
+        final next = current.read<UserSearchBloc>();
+        expect(original.isClosed, isTrue);
+        expect(current.read<VideoSearchBloc>(), same(videos));
+        expect(current.read<HashtagSearchBloc>(), same(hashtags));
+        expect(next.state.query, 'person');
+        expect(next.state.results, [first, second]);
+        expect(next.state.offset, 40);
+        next.add(const UserSearchLoadMore());
+        for (var i = 0; i < 10 && next.state.results.length < 3; i++) {
+          await tester.runAsync(() async {});
+          await tester.pump();
+        }
+        expect(next.state.results, [first, second, third]);
+        verify(
+          () => fresh.searchUsersProgressive(
+            query: 'person',
+            limit: any(named: 'limit'),
+            offset: 40,
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'refreshes people dependencies while retaining unrelated search blocs',
       (tester) async {
         final replacement = _MockRankingSignalsLoader();
         await tester.pumpWidget(
@@ -140,12 +276,17 @@ void main() {
         await tester.pump();
         final context = tester.element(find.byType(SearchResultsView));
         final original = context.read<UserSearchBloc>();
+        final videos = context.read<VideoSearchBloc>();
+        final hashtags = context.read<HashtagSearchBloc>();
         expect(original.isClosed, isFalse);
         final container = ProviderScope.containerOf(context);
         container.read(_rankingLoaderSelection.notifier).state = true;
         await tester.pump();
         await tester.pump();
         expect(original.isClosed, isTrue);
+        final refreshedContext = tester.element(find.byType(SearchResultsView));
+        expect(refreshedContext.read<VideoSearchBloc>(), same(videos));
+        expect(refreshedContext.read<HashtagSearchBloc>(), same(hashtags));
         expect(
           tester.element(find.byType(SearchResultsView)).read<UserSearchBloc>(),
           isNot(same(original)),
@@ -296,7 +437,7 @@ void main() {
         expect(find.byType(TextField), findsNothing);
         expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
         for (final result in nextResults) {
-          expect(result.isClosed, isTrue);
+          expect(result.isClosed, result is UserSearchBloc);
         }
         expect(category.isClosed, isFalse);
         expect(category.state, SearchResultsFilter.lists);
@@ -306,8 +447,8 @@ void main() {
         final readyBloc = BlocProvider.of<ListSearchBloc>(
           tester.element(find.byType(SearchResultsView)),
         );
-        expect(readyBloc, isNot(same(newBloc)));
-        expect(readyBloc.state.videoResults, isEmpty);
+        expect(readyBloc, same(newBloc));
+        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
         expect(
           BlocProvider.of<SearchResultsFilterCubit>(
             tester.element(find.byType(SearchResultsView)),
@@ -322,9 +463,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 350));
         await tester.runAsync(() async {});
         await tester.pump();
-        verify(() => replacement.searchAllLists('dance')).called(1);
+        verifyNever(() => replacement.searchAllLists('dance'));
         expect(readyBloc.state.query, 'dance');
-        expect(readyBloc.state.videoResults, isEmpty);
+        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
         pending.add([row.copyWith(thumbnailUrls: const [])]);
         await tester.pump();
         expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);

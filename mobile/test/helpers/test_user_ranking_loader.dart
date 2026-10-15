@@ -8,6 +8,9 @@ UserRankingSignalsLoader testUserRankingLoader() => _defaultLoader;
 
 class _TestRankingLoader extends Fake implements UserRankingSignalsLoader {
   @override
+  void refreshInBackground(List<String> rankedPubkeys) {}
+
+  @override
   Future<Map<String, String>> loadCachedDisplayNames(
     Iterable<String> pubkeys,
   ) async => {};

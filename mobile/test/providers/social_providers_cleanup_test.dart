@@ -11,6 +11,7 @@ import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
@@ -225,6 +226,11 @@ void main() {
     test(
       'account switch clears the departing owner my_followers rows and keeps the other owner',
       () async {
+        final checkpoints = MyFollowersSyncState();
+        await checkpoints.stampFull(_pubkeyA, 123);
+        await checkpoints.stampAttempt(_pubkeyA, 456);
+        await checkpoints.stampFull(_pubkeyB, 789);
+        await checkpoints.stampAttempt(_pubkeyB, 900);
         await db.myFollowersDao.upsertAll(
           ownerPubkey: _pubkeyA,
           followers: [(pubkey: _reactionIdA, followedAt: 100)],
@@ -249,6 +255,16 @@ void main() {
 
         await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
 
+        expect(await checkpoints.read(_pubkeyA), (
+          full: null,
+          incremental: null,
+          attempt: null,
+        ));
+        expect(await checkpoints.read(_pubkeyB), (
+          full: 789,
+          incremental: 789,
+          attempt: 900,
+        ));
         expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
         expect(await db.myFollowersDao.followersOf(_pubkeyB), [
           (pubkey: _reactionIdB, followedAt: 150),

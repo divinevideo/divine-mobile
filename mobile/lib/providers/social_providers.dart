@@ -9,6 +9,7 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -853,7 +854,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           if (userPubkey != null) {
             await requiredCleanup(
               'myFollowers',
-              () => db.myFollowersDao.clearAllForUser(userPubkey),
+              () async {
+                await db.myFollowersDao.clearAllForUser(userPubkey);
+                await MyFollowersSyncState().clear(userPubkey);
+              },
             );
           }
           await safeCleanup('identityEvents', db.identityEventsDao.clearAll);

@@ -458,8 +458,6 @@ class _MessagesContent extends ConsumerWidget {
 
     final selected = await NewMessageSheet.show(
       context,
-      profileRepository: profileRepo,
-      followRepository: ref.read(followRepositoryProvider),
       currentUserPubkey: currentPubkey,
       allowGroups: allowGroups,
     );

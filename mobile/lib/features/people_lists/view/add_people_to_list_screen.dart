@@ -16,7 +16,6 @@ import 'package:openvine/features/people_lists/models/people_list_candidate.dart
 import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/people_picker_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -50,7 +49,6 @@ class AddPeopleToListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final followRepository = ref.watch(followRepositoryProvider);
     final factory = ref.watch(addPeopleToListCubitFactoryProvider);
     final ownerPubkey = ref.watch(
       nostrSessionProvider.select((session) => session.pubkey),
@@ -67,7 +65,7 @@ class AddPeopleToListScreen extends ConsumerWidget {
           return const _ListNotFoundScaffold();
         }
         return _AddPeopleToListScope(
-          key: ValueKey((ownerPubkey, userList.id, followRepository)),
+          key: ValueKey((ownerPubkey, userList.id)),
           userList: userList,
           factory: factory,
         );
@@ -76,7 +74,7 @@ class AddPeopleToListScreen extends ConsumerWidget {
   }
 }
 
-/// Owns dependency replacement while the owner/list/source selection flow lives.
+/// Owns dependency replacement while the owner/list selection flow lives.
 class _AddPeopleToListScope extends StatefulWidget {
   const _AddPeopleToListScope({
     required this.userList,

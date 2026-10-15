@@ -5,16 +5,23 @@ import 'package:cache_sync/cache_sync.dart';
 import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/blocs/follow_list_sort.dart';
+import 'package:openvine/blocs/my_followers/my_followers_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/followers/my_followers_screen.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:user_ranking/user_ranking.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -117,6 +124,7 @@ void main() {
     Future<void> pumpScreen(
       WidgetTester tester, {
       UserRankingSignalsLoader? loader,
+      Override? rankingOverride,
     }) async {
       await tester.pumpWidget(
         testMaterialApp(
@@ -126,6 +134,7 @@ void main() {
           mockNostrService: mockNostrClient,
           mockFollowRepository: mockFollowRepository,
           additionalOverrides: [
+            ?rankingOverride,
             contentBlocklistRepositoryProvider.overrideWithValue(
               mockBlocklistRepository,
             ),
@@ -140,6 +149,52 @@ void main() {
         .widgetList<UserProfileTile>(find.byType(UserProfileTile))
         .map((tile) => tile.pubkey)
         .toList();
+
+    testWidgets(
+      'same-owner fresh loader preserves chronological follower order',
+      (tester) async {
+        final version = StateProvider<int>((ref) => 0);
+        final loaders = <_MockRankingLoader>[];
+        await pumpScreen(
+          tester,
+          rankingOverride: userRankingSignalsLoaderProvider.overrideWith((ref) {
+            ref.watch(version);
+            final loader = _MockRankingLoader();
+            loaders.add(loader);
+            when(() => loader.isEligible(any())).thenReturn(true);
+            when(() => loader.loadCachedDisplayNames(any()))
+                .thenAnswer((_) async => {});
+            when(() => loader.load(any())).thenAnswer(
+              (call) async => {
+                for (final key
+                    in call.positionalArguments.single as Iterable<String>)
+                  key: UserRankingSignals(pubkey: key),
+              },
+            );
+            return loader;
+          }),
+        );
+        final old = tester
+            .element(find.byType(UserProfileTile).first)
+            .read<MyFollowersBloc>();
+        old.add(const MyFollowersSortOrderChanged(FollowListSort.oldestFirst));
+        await tester.pump();
+        final order = visibleOrder(tester);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MyFollowersScreen)),
+        );
+        container.read(version.notifier).state++;
+        await tester.pump();
+        await tester.pump();
+        final next = tester
+            .element(find.byType(UserProfileTile).first)
+            .read<MyFollowersBloc>();
+        expect(old.isClosed, isTrue);
+        expect(next.state.sortOrder, FollowListSort.oldestFirst);
+        expect(visibleOrder(tester), order);
+        expect(loaders, hasLength(2));
+      },
+    );
 
     testWidgets('renders cached activity from the list ranking state', (
       tester,

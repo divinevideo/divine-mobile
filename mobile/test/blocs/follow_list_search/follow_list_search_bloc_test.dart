@@ -103,6 +103,33 @@ void main() {
       );
     }
 
+    test(
+      'fresh dependencies resume unresolved names in an inherited query',
+      () {
+        fakeAsync((clock) {
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            profileRepository: profileRepository,
+            subjectPubkey: _subjectPubkey,
+            listKind: FollowListKind.followers,
+            initialState: const FollowListSearchState(
+              query: 'alice',
+              candidatePubkeys: _allPubkeys,
+            ),
+          );
+          expect(bloc.state.query, 'alice');
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+          verify(
+            () => profileRepository.fetchBatchProfiles(pubkeys: _allPubkeys),
+          ).called(1);
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
     test('starts with no query and shows every pubkey', () {
       final bloc = createBloc();
       addTearDown(bloc.close);
