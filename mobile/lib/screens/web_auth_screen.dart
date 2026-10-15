@@ -9,7 +9,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/web_auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+const _logName = 'WebAuthScreen';
 
 class WebAuthScreen extends ConsumerStatefulWidget {
   const WebAuthScreen({super.key});
@@ -44,7 +47,12 @@ class _WebAuthScreenState extends ConsumerState<WebAuthScreen>
 
     // Check for existing session
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkExistingSession();
+      runDetached(
+        _checkExistingSession(),
+        'check for an existing web authentication session',
+        logName: _logName,
+        category: LogCategory.ui,
+      );
     });
   }
 
@@ -65,7 +73,7 @@ class _WebAuthScreenState extends ConsumerState<WebAuthScreen>
     }
   }
 
-  Future<void> _onAuthenticationSuccess() async {
+  void _onAuthenticationSuccess() {
     // Navigate to main app or trigger auth state update
     if (mounted) {
       final webAuth = ref.read(webAuthServiceProvider);
