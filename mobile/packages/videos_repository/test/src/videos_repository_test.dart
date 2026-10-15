@@ -2556,9 +2556,10 @@ void main() {
             );
 
             // The Following route pages on revision time, so the fallback
-            // cursor must step before the oldest `createdAt` (1900), not the
-            // oldest `publishedAt` (500).
-            expect(requestedBefore, equals([null, 1899]));
+            // cursor is the oldest `createdAt` (1900), not the oldest
+            // `publishedAt` (500). `before` is exclusive, so 1899 would skip
+            // every row revised in that second.
+            expect(requestedBefore, equals([null, 1900]));
           },
         );
 

@@ -466,8 +466,11 @@ class VideosRepository {
       // malformed rows, and a short page would otherwise end the feed early.
       if (!response.hasMore) break;
 
+      // Funnelcake's own cursor is the last row's revision time and `before`
+      // is exclusive, so the fallback is the oldest row, not one second
+      // before it — that second's rows would otherwise never be fetched.
       final nextCursor =
-          response.nextCursor ?? _cursorBeforeOldestStats(response.videos);
+          response.nextCursor ?? _oldestRevisionTime(response.videos);
       if (nextCursor == null || nextCursor == cursor) break;
       cursor = nextCursor;
       nextBefore = nextCursor;
@@ -1992,12 +1995,21 @@ class VideosRepository {
     }
   }
 
+  /// The oldest revision time (`created_at`, in seconds) in [stats], or
+  /// `null` when [stats] is empty.
+  int? _oldestRevisionTime(List<VideoStats> stats) {
+    if (stats.isEmpty) return null;
+    return stats
+        .map((stat) => stat.createdAt.millisecondsSinceEpoch ~/ 1000)
+        .reduce(min);
+  }
+
   /// Returns the timestamp immediately before the oldest row's cursor clock.
   ///
   /// New Videos pages on original publication time, so its fallback walks
-  /// [VideoStats.publishedAt] when the server supplied one. Following and
-  /// Popular stay on the revision clock (`createdAt`) their server routes walk,
-  /// so a publication-time cursor cannot skip rows between the two times.
+  /// [VideoStats.publishedAt] when the server supplied one. Popular stays on
+  /// the revision clock (`createdAt`) its server route walks, so a
+  /// publication-time cursor cannot skip rows between the two times.
   int? _cursorBeforeOldestStats(
     List<VideoStats> stats, {
     bool usePublicationClock = false,
