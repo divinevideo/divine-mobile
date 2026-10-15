@@ -273,7 +273,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     );
     await _maybeShowWhySixSeconds();
     if (!mounted) return;
-    await _checkAutosavedChanges();
+    await offerAutosavedSession(context, ref, openEditorOnRestore: true);
   }
 
   /// The mode the open asks the bloc for, or `null` to restore the
@@ -346,9 +346,6 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
       ),
     );
   }
-
-  Future<void> _checkAutosavedChanges() =>
-      offerAutosavedSession(context, ref, openEditorOnRestore: true);
 
   /// Force all background video playback to pause while camera is open.
   void _pauseBackgroundPlayback() {
