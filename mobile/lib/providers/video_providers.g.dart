@@ -504,8 +504,7 @@ String _$subscribedListVideoCacheHash() =>
 /// relay-ready client instead made Share a dead tap for that whole window
 /// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
 ///
-/// When a [DmRepository] is available the service sends videos via NIP-17
-/// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
+/// The service sends videos as NIP-17 DMs through the [DmRepository].
 
 @ProviderFor(videoSharingService)
 final videoSharingServiceProvider = VideoSharingServiceProvider._();
@@ -521,8 +520,7 @@ final videoSharingServiceProvider = VideoSharingServiceProvider._();
 /// relay-ready client instead made Share a dead tap for that whole window
 /// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
 ///
-/// When a [DmRepository] is available the service sends videos via NIP-17
-/// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
+/// The service sends videos as NIP-17 DMs through the [DmRepository].
 
 final class VideoSharingServiceProvider
     extends
@@ -543,8 +541,7 @@ final class VideoSharingServiceProvider
   /// relay-ready client instead made Share a dead tap for that whole window
   /// (#6423). The send path gates itself on `canPublishNostrWritesNow`.
   ///
-  /// When a [DmRepository] is available the service sends videos via NIP-17
-  /// encrypted DMs (NIP-17). Otherwise falls back to NIP-04 kind 4.
+  /// The service sends videos as NIP-17 DMs through the [DmRepository].
   VideoSharingServiceProvider._()
     : super(
         from: null,
@@ -580,7 +577,7 @@ final class VideoSharingServiceProvider
 }
 
 String _$videoSharingServiceHash() =>
-    r'7406fd516a93ac8becbf4df73335ffa387ad25c6';
+    r'21697da62304b49f384cd2ef74951c4e258c1190';
 
 /// Unified resolver for fetching a [VideoEvent] by its event id, with
 /// in-memory → personal cache → relay fallback. See [VideoEventResolver].

@@ -5,13 +5,9 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:profile_repository/profile_repository.dart';
-
-class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -26,7 +22,6 @@ void main() {
       () {
         final container = ProviderContainer(
           overrides: [
-            nostrServiceProvider.overrideWithValue(_MockNostrClient()),
             authServiceProvider.overrideWithValue(_MockAuthService()),
             profileReadRepositoryProvider.overrideWithValue(null),
             dmRepositoryProvider.overrideWithValue(_MockDmRepository()),
@@ -45,7 +40,6 @@ void main() {
       // send path instead, via AuthService.canPublishNostrWritesNow.
       final container = ProviderContainer(
         overrides: [
-          nostrServiceProvider.overrideWithValue(_MockNostrClient()),
           authServiceProvider.overrideWithValue(_MockAuthService()),
           profileRepositoryProvider.overrideWithValue(null),
           profileReadRepositoryProvider.overrideWithValue(

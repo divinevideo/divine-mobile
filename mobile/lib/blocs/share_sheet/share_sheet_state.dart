@@ -43,8 +43,8 @@ class ShareSheetSendSuccess extends ShareSheetActionResult {
   final String? recipientPubkey;
 
   /// NIP-17 conversation ID for "View chat" navigation. Set only for a
-  /// single-recipient NIP-17 send — multi-recipient sends and legacy
-  /// NIP-04 sends have no single thread to open, so no action is shown.
+  /// single-recipient send — a multi-recipient send has no single thread to
+  /// open, so no action is shown.
   final String? conversationId;
 }
 
