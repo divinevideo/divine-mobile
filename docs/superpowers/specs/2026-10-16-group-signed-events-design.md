@@ -1,11 +1,14 @@
 # Group-signed Nostr events
 
-Date: 2026-10-16. Status: revised after product feedback. One authorized admin may publish normal content; custody and written-spec approval pending.
+Date: 2026-10-16. Status: product direction confirmed: one-admin publishing, Keycast-backed recovery by default, and an explicit advanced mode without Keycast. App integration is not implemented.
 
 ## Outcome and evidence
 
 A group controls one Nostr identity. For most content, **any one authorized admin
 may publish**, including in a three-admin group. Other admins need not be online.
+Keycast backs up each admin's group-signing material by default so ordinary users
+can recover without managing shares. Groups can explicitly choose advanced
+self-management with no Keycast signing, storage or recovery dependency.
 Higher quorums are an optional group capability, not the default content workflow.
 Every mode produces the ordinary NIP-01 event ID and 64-byte BIP-340 signature.
 Existing clients and relays need no threshold awareness. Relay events are the
@@ -57,9 +60,11 @@ or threshold arithmetic should be implemented in Dart.
 content. “1-of-3” here describes one human approval among three admins; it does
 not require a distributed cryptographic ceremony for each edit.
 
-Recommended default: a Keycast-hosted group key, with separately authenticated,
-revocable signing authorizations for each admin. Mobile owns editing and the
-single-admin publish action; Keycast checks authorization and signs as the group.
+Confirmed default: Keycast-backed recovery for each admin's group-signing
+material. Proposed initial signing path: a hosted group key with separately
+authenticated, revocable signing authorizations; admin-held shares must also have a recoverable backup when
+used in a Keycast-assisted group. Mobile owns editing and the single-admin
+publish action; Keycast checks authorization and signs as the group.
 Keycast already models teams, team-owned stored keys, policies and authorizations
 and can issue NIP-46 access to a team's stored key. These are reusable primitives,
 not evidence that the required mobile group flow or complete revocation semantics
@@ -70,14 +75,15 @@ bunker connection secret between admins.
 This gives a stable group pubkey while the service changes authorized admins,
 without distributing the group private key. Public content remains ordinary relay
 events. The service is a signing dependency; it is not the only source of list
-state. Hosted custody remains a product choice to confirm, not a consequence of
-choosing one-admin approval.
+state. Keycast-backed recovery is the default custody choice; no-Keycast groups
+are an explicit advanced option. Backup copies do not count as additional admins
+or increase the required number of human approvals.
 
 The alternatives are:
 
 | Custody | Ordinary-content approval | Consequence |
 | --- | --- | --- |
-| Keycast group key (recommended default) | One authorized admin | Reuses team/authorization primitives; service controls the key and enforces policy. |
+| Keycast-assisted group (default) | One authorized admin | Hosted signing and per-admin recovery; back up any device-held group key/share too. Service-recoverable material is custodial. |
 | Full group key on every admin device | Any one key holder | Works without a signing service; removing an admin cannot revoke their retained key without rotation. |
 | Independent FROST shares | An actual t-of-n signing quorum | Keep for groups choosing threshold custody; the tested implementation requires t >= 2. |
 | FROST with an automatic Keycast co-signer | One human admin plus the service | Potentially preserves one-admin UX with threshold custody; a separate design, not literal 1-of-n FROST. |
@@ -105,9 +111,13 @@ Keycast's current full-key `SigningSession` is suitable for a hosted group key;
 threshold participation would need a separate path. Standard NIP-46 does not
 supply DKG/partial-signature RPCs.
 
-**Remaining user decision:** use the existing Keycast custody model for the
-one-admin default, or require device-held group keys. Live Keycast changes and
-custody enrollment wait for that choice.
+**Decisions settled:** ordinary content needs one admin; each admin gets
+Keycast-backed recovery by default; a group may opt out of Keycast entirely.
+Do not ask users to configure shares, backup encryption or quorum infrastructure
+during the normal flow. Offer advanced self-management during group creation,
+with a plain explanation that the group handles its own keys and recovery.
+Switching to no-Keycast later does not erase previously recoverable server copies;
+exclusive device custody would require a new key rather than a setting toggle.
 
 ## Ceremony transport and approval
 
@@ -158,27 +168,58 @@ nonces. Never generate new partials from an old approval after a crash/retry.
 
 ## Shares, recovery and nonce lifecycle
 
-In hosted mode, Keycast retains the group key and mobile stores each admin
-authorization through its existing secure credential storage. Reuse the hosted
-key recovery policy; do not add local FROST-share backup to that mode.
+**Keycast-assisted mode (default).** Preserve recoverable, encrypted signing
+material for every admin. For hosted-only admins, the backed-up group key and
+recoverable authorization relationship provide access after account recovery;
+a cached bunker token alone is not the backup. For admins with device-held group
+keys or FROST shares, back up that actual key/share package as well. A team roster
+or one central key is not a substitute for backing up distinct participant shares.
 
-For threshold mode, provision a fresh threshold identity; existing NIP-46 account
-keys do not expose secret material from which mobile can derive a share. Do not reconstruct or export
-the group secret. No nsec, share, DKG private contribution, nonce or secret-bearing
-exception reaches logs, analytics, crash reports or a clipboard.
+Use Keycast's established encrypted key custody and authenticated account-recovery
+boundary. Bind each backup to tenant, group identity, admin identity, participant
+identifier where applicable, roster/key version and crypto/tweak version. Restore
+the same authorized participant and group pubkey; reissue credentials after current
+authorization checks instead of reviving an old session. A restored copy is the
+same participant, never another quorum vote. Mark enrollment/recovery as backed up
+only after durable storage has been acknowledged; expose a failed backup as an
+actionable retry rather than falsely claiming the admin is protected. Verify
+restore, not merely upload success, before enrolling real persistent groups.
 
-Store a versioned share package encrypted at rest with a device-bound wrapping
-key in platform secure storage; bind it to account, group, roster, threshold,
-ciphersuite and tweak version. iOS Keychain / Android Keystore can protect the
-wrapping key; do not assume they can perform secp256k1 FROST directly. Device
-locking and account switching must close opaque native sessions.
+Keycast's existing stored-key API handles complete Nostr keys. A versioned,
+per-admin FROST-share backup/restore API still needs implementation; do not feed
+share bytes into that existing secret-key parser or claim it already supports
+share recovery. Mobile holds admin authorization in its existing secure storage.
+No extra backup password should be required in the normal account-recovery flow.
 
-Proposed prototype recovery policy: no automatic cloud share backup and no nonce
-backup. Display that losing enough devices loses signing capability. Any later
-backup must be an explicitly authorized encrypted **share** export, containing
-recovery metadata but no pending signing sessions/nonces. Restoring an account's
-ordinary Nostr key does not restore this newly provisioned share. A backup clone
-is the same participant, not another quorum vote.
+A server-recoverable backup changes custody: if Keycast can recover a threshold
+of shares, it can technically sign as the group. Encryption at rest does not
+remove that authority. Describe that honestly in advanced custody information;
+ordinary users can still choose the recoverable default. Do not describe its
+threshold as protection against Keycast itself.
+
+**No-Keycast mode (advanced).** No key/share upload, hosted signing, backup or
+recovery request goes to Keycast. Setup includes an explicit local/offline backup
+and restore check and a clear statement that Divine cannot recover lost material.
+Allow ordinary one-admin signing with a shared full group key, or t >= 2 FROST
+with independent shares. Full-key holders cannot be revoked cryptographically
+without rotating the group identity. No-Keycast mode must operate against relays
+even when Keycast is unavailable; opting out is a functional mode, not just hiding
+the backup screen.
+
+For device-held threshold material, provision a fresh identity; an existing NIP-46
+account does not expose a private key from which mobile can derive a share. Do
+not reconstruct the group secret for backup: preserve each participant's share.
+Store a versioned local package encrypted with a device-bound wrapping key in
+platform secure storage, bound to account, group, roster and ciphersuite/tweak
+version. iOS Keychain / Android Keystore protects the wrapping key; do not assume
+it can perform secp256k1 FROST directly. Account switching closes native sessions.
+No nsec, share, DKG private contribution, nonce or secret-bearing exception reaches
+logs, analytics, crash reports or the clipboard in either mode.
+
+**Nonce state is never backup material.** Backups exclude nonce seeds, pending
+signing handles and partial-signature retry state. A restore invalidates every
+pending session before signing can resume and generates fresh nonces for a new
+session, even when the event being approved is unchanged.
 
 Use fresh OS randomness per signer/event/session, no precomputed nonce pool.
 Persist the binding and an irreversible consumed/aborted record **before** releasing
@@ -188,14 +229,12 @@ abort on process death and retry with fresh nonces rather than regenerate old
 nonce seeds. Reject duplicate/conflicting proposals and concurrent reuse of a
 handle. Memory disposal alone is not a durable nonce ledger.
 
-**User decision:** accept device-loss risk for the closed prototype, or require
-an encrypted backup/recovery flow before enrolling persistent groups.
-
 ## Membership and identity rotation
 
-In hosted mode, admin changes update signing permissions while retaining the
-group pubkey. Revocation must terminate the removed admin's effective signing
-access, including previously established sessions.
+In hosted mode, admin changes update signing and backup-restore permissions
+while retaining the group pubkey. Recovery must not resurrect a removed admin
+or an obsolete share version. Revocation must terminate the removed admin's
+effective signing access, including previously established sessions.
 
 In threshold mode, the first prototype uses a fixed roster. Adding/removing a
 signer requires a new ceremony and new public key. Update list coordinates and
@@ -242,14 +281,19 @@ rebuild from verified relay events without privileged state.
 
 ## Prototype gates and decisions
 
-1. Approve custody/recovery choice and this written spec, then review the concrete
-   implementation plan. One-admin approval for ordinary content is confirmed;
-   requiring two human approvers by default would contradict that decision.
+1. Preserve the settled choices in implementation: one-admin ordinary publishing,
+   Keycast recovery for each admin by default, and an advanced no-Keycast mode.
+   Build recovery before enrolling persistent groups. This document describes
+   the design; the app and backup/restore integration are not built yet.
 2. Add `mobile/packages/group_signing` for shared group/signing interfaces, with
    native crypto only for threshold mode, its own analysis options and package CI;
    BLoC and Page/View in the app; an internal flag defaulting off, including guarded routes and no startup work when disabled.
 3. In hosted mode, prove every authorized admin can publish alone, unauthorized
-   and revoked admins cannot, and other admins may be offline. In threshold mode,
+   and revoked admins cannot, and other admins may be offline. Prove a replacement
+   device recovers the same group identity; reject cross-account/group and stale
+   backup restores; never restore a removed admin or reuse nonce state. In advanced
+   no-Keycast mode, prove no Keycast calls occur and restore works from the group's
+   own backup with Keycast unavailable. In threshold mode,
    test authenticated transcript agreement, tampered/replayed/wrong-roster messages,
    exact-event approval, below-quorum signing, durable nonce consumption, process
    death/retry, lost/offline members and altered bytes after approval.
@@ -257,7 +301,8 @@ rebuild from verified relay events without privileged state.
    platforms. In both modes, publish a group list to a test relay, read it back by ID and coordinate, verify locally,
    and record another independent Nostr client's visible rendering with client
    version/relay/event IDs. A library verifier is not that UI acceptance test.
-5. Require server support only for groups choosing hosted custody; no Funnelcake
+5. Require Keycast support only for groups using the default assisted mode.
+   Separate full-key storage from versioned per-admin share backup. No Funnelcake
    migration, production enrollment, custom public group protocol, membership
    migration or deployment is implied.
 
@@ -265,7 +310,7 @@ rebuild from verified relay events without privileged state.
 
 - Local source snapshots: Divine mobile base `d8c01c405c`; Keycast `9927597e8455ec835c11d98fd1ef23900b397188`; Mantra `99f48d176974cf064a292fa6dae7ae18712dda4c`.
 - Divine: `mobile/packages/nostr_sdk/lib/event.dart`; `mobile/lib/services/curated_list_service.dart` (`canCollaborate` has no external callers found); `mobile/packages/curated_list_repository/lib/src/curated_list_converter.dart`; `mobile/packages/people_lists_repository`; `mobile/lib/features/feature_flags`; `docs/ARCHITECTURE.md`.
-- Keycast: `core/src/signing_session.rs`, `core/src/types/team.rs`, `core/src/types/authorization.rs`, `core/src/repositories/team.rs`, `api/src/api/http/teams.rs`, `core/src/custom_permissions/allowed_kinds.rs`, `api/src/handlers/http_rpc_handler.rs`, `Cargo.toml`. No FROST dependency found in its lockfile.
+- Keycast: `core/src/signing_session.rs`, `core/src/types/team.rs`, `core/src/types/authorization.rs`, `core/src/repositories/team.rs`, `api/src/api/http/teams.rs` (`add_key` parses complete keys, not shares), `core/src/custom_permissions/allowed_kinds.rs`, `api/src/handlers/http_rpc_handler.rs`, `Cargo.toml`. No FROST dependency found in its lockfile.
 - Mantra: `docs/README.md`, `shared-key-ceremony.md`, `shared-key-derivation.md`, `frost-batch-signing.md`, `marmot-membership.md`, `subgroups.md`, `project-feature.md`, `curated-to-mantra.md`; `ChillDkgRitualManager.kt`, `FrostSigningManager.kt`, `composeApp/build.gradle.kts`. Removed `CuratedSchemaEvent.kt`, `CuratedEntryEvent.kt`, `CuratedSchema.kt` inspected via `git show 776455ec^:<path>` under `composeApp/src/commonMain/kotlin/press/mantra/compose/nostr/curated/`.
 - [Tested threshold validation](https://github.com/ZcashFoundation/frost/blob/3ffc19d8f473d5bc4e07ed41bc884bdb42d6c29f/frost-core/src/keys.rs), `frosty` 4 `lib/src/dkg/part1.dart`.
 - [ZF suite and audit scope](https://frost.zfnd.org/), [BIP-340 suite choice](https://frost.zfnd.org/tutorial.html), [DKG channel requirements](https://frost.zfnd.org/tutorial/dkg.html), [3.0.0 API](https://docs.rs/frost-secp256k1-tr/3.0.0/frost_secp256k1_tr/).
