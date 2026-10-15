@@ -340,6 +340,63 @@ void main() {
         await replacement.close();
       });
 
+      test(
+        'confirmation during refresh keeps rows and confirmed membership',
+        () async {
+          final snapshot = await selectedSnapshot();
+          final signals = Completer<Map<String, UserRankingSignals>>();
+          final entered = Completer<void>();
+          when(() => rankingLoader.load(any())).thenAnswer((_) {
+            entered.complete();
+            return signals.future;
+          });
+          final replacement = createCubit(initialState: snapshot);
+          final emitted = <AddPeopleToListState>[];
+          final subscription = replacement.stream.listen(emitted.add);
+          addTearDown(() async {
+            if (!signals.isCompleted) signals.complete({});
+            await subscription.cancel();
+            await replacement.close();
+          });
+          final refresh = replacement.started();
+          await entered.future;
+          expect(replacement.state.status, AddPeopleToListStatus.ready);
+          expect(
+            replacement.state.candidates.map((candidate) => candidate.pubkey),
+            [_alicePubkey, _bobPubkey],
+          );
+          replacement.additionsConfirmed({_alicePubkey});
+          expect(
+            replacement.state.candidates.map((candidate) => candidate.pubkey),
+            [_alicePubkey, _bobPubkey],
+          );
+          expect(replacement.state.candidates.first.isAlreadyInList, isTrue);
+          expect(replacement.state.selectedPubkeys, isEmpty);
+          signals.complete({
+            _alicePubkey: const UserRankingSignals(pubkey: _alicePubkey),
+            _bobPubkey: const UserRankingSignals(pubkey: _bobPubkey),
+          });
+          await refresh;
+          await _flush();
+          expect(
+            replacement.state.candidates.map((candidate) => candidate.pubkey),
+            [_alicePubkey, _bobPubkey],
+          );
+          expect(replacement.state.candidates.first.isAlreadyInList, isTrue);
+          expect(replacement.state.selectedPubkeys, isEmpty);
+          expect(replacement.state.query, 'a');
+          expect(emitted, isNotEmpty);
+          for (final state in emitted) {
+            expect(state.candidates.map((candidate) => candidate.pubkey), [
+              _alicePubkey,
+              _bobPubkey,
+            ]);
+          }
+          await subscription.cancel();
+          await replacement.close();
+        },
+      );
+
       test('successful refresh omissions remove retained rows and their selections', () async {
         final snapshot = await selectedSnapshot();
         when(() => rankingLoader.load(any())).thenAnswer(
