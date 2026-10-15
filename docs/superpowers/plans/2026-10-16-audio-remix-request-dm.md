@@ -33,13 +33,16 @@
 
 ## Execution status
 
-Tasks 1–5 are implemented and committed. Task 6 validation is in progress.
+Tasks 1–5 are implemented and committed. Task 6 local validation is complete with the native-media gap below. Publication and remote checks are tracked on the pull request.
 Independent review findings are resolved: newest signed source revisions,
 repeat request cycles, retained original sounds, and consent-safe recovery across
 metadata acknowledgement/checkpoint failures. New regressions reproduced each
 finding before its fix.
 
-Validation so far: 1,674 tests in the expanded affected suite; 71 affected app and
+Validation: the rebased affected suite passed 1,954 tests; its one file that
+compiled before the workspace dependency refresh passed both tests on rerun.
+All 65 repository guards, async safety, app analysis, and affected package
+analysis pass. Earlier validation included 1,674 tests in the expanded suite; 71 affected app and
 feature tests after review fixes; 27 addressable-video lookup tests; 18 request
 lifecycle tests including final consent recovery. Real NIP-17 socket transport
 passed on the host. Full native media extraction/upload/recording E2E remains
@@ -197,8 +200,8 @@ ports belonging to another task; no other task's services were stopped.
 - [x] Add all specified request/ready copy plus pending, dismissed, retry, unavailable, and saved states using existing localization conventions. Preserve persisted fallback content across locale changes.
 - [x] Run the repository's localization skills/checks and generation commands; verify all supported locales and generated files remain synchronized.
 - [ ] Exercise two signed-in accounts: request from a video with sharing off, approve without the original local file, receive the ready reply, save it, then enter creation with it selected. Repeat with two requesters and a failed/retried reply.
-- [ ] Run affected package and app tests plus `flutter analyze lib test integration_test` from `mobile/`. Run relevant architecture, generated-file, localization, and identifier guards. Resolve failures caused by this change.
-- [ ] Review the whole diff against the spec, especially Review Focus cases, and commit the finished change. Do not publish a partial flow.
-- [ ] Load shared `PR_REVIEW.md` and `PR_REVIEW_TEAMS.md`, fetch/rebase fresh `origin/main`, and rerun affected validation after any conflict resolutions.
+- [x] Run affected package and app tests plus `flutter analyze lib test integration_test` from `mobile/`. Run relevant architecture, generated-file, localization, and identifier guards. Resolve failures caused by this change.
+- [x] Review the whole diff against the spec, especially Review Focus cases, and commit the finished change. Do not publish a partial flow.
+- [x] Load shared `PR_REVIEW.md` and `PR_REVIEW_TEAMS.md`, fetch/rebase fresh `origin/main`, and rerun affected validation after any conflict resolutions.
 - [ ] Push the task branch; open one PR targeting `main` with a Conventional Commit title, concrete user behavior, and validation evidence. Request the mapped review team once and verify the request.
 - [ ] Watch and inspect required/relevant checks to completion; resolve introduced failures. Return the PR URL and actual validation state, leaving merge to the authorized maintainer.
