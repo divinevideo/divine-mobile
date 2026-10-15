@@ -3826,6 +3826,7 @@ class DmRepository {
             lastMessageSenderPubkey: rumor.pubkey,
             subject: subject,
             isRead: isSentByMe,
+            isNewMessage: existing?.isDismissed ?? false,
             currentUserHasSent:
                 isSentByMe || (existing?.currentUserHasSent ?? false),
             ownerPubkey: ownerPubkey,
@@ -4670,6 +4671,7 @@ class DmRepository {
           lastMessageTimestamp: persistedCreatedAt,
           lastMessageSenderPubkey: senderPubkey,
           isRead: isSentByMe,
+          isNewMessage: existing?.isDismissed ?? false,
           currentUserHasSent:
               isSentByMe || (existing?.currentUserHasSent ?? false),
           ownerPubkey: ownerPubkey,
@@ -9815,6 +9817,27 @@ class DmRepository {
     _scheduleReadMarkerPublish();
   }
 
+  /// Put a conversation aside locally, retaining messages and acceptance state.
+  /// Restoring makes it visible again. A newer incoming message also restores
+  /// it through the conversation upsert. Dismissal itself is device-local;
+  /// the read cursor uses the existing cross-device read-state marker.
+  Future<void> setConversationDismissed(
+    String conversationId, {
+    required bool dismissed,
+  }) async {
+    final owner = _ownerPubkey;
+    if (owner == null) {
+      throw StateError('Cannot dismiss a conversation without a known owner.');
+    }
+    final changed = await _conversationsDao.setDismissed(
+      conversationId,
+      ownerPubkey: owner,
+      dismissed: dismissed,
+    );
+    if (!changed) throw StateError('Conversation is no longer available.');
+    if (dismissed) _scheduleReadMarkerPublish();
+  }
+
   // ---------------------------------------------------------------------------
   // Cross-device read-state sync (#4977)
   // ---------------------------------------------------------------------------
@@ -10038,8 +10061,12 @@ class DmRepository {
   /// its author named, so a protected account in a room does not make the room
   /// that account's thread (#10151). Two distinct members is a one-to-one even
   /// while no account is signed in.
-  bool isRemovalProtected(DmConversation conversation) {
-    final members = conversation.participantPubkeys.toSet();
+  bool isRemovalProtected(DmConversation conversation) =>
+      isRemovalProtectedParticipants(conversation.participantPubkeys);
+
+  /// The same policy for a resolved route's full participant set.
+  bool isRemovalProtectedParticipants(Iterable<String> participantPubkeys) {
+    final members = participantPubkeys.toSet();
     if (members.length != 2) return false;
     final me = _userPubkey;
     return members.any((pubkey) => pubkey != me && _removalPolicy(pubkey));
@@ -11351,6 +11378,7 @@ class DmRepository {
       lastMessageSenderPubkey: row.lastMessageSenderPubkey,
       subject: row.subject,
       isRead: row.isRead,
+      isDismissed: row.isDismissed,
       currentUserHasSent: row.currentUserHasSent,
       dmProtocol: row.dmProtocol,
     );

@@ -855,6 +855,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: groupConversationId,
               participantPubkeys: jsonEncode([
                 _ownerPubkey,
@@ -3028,6 +3029,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             id: oneToOneConversationId,
             participantPubkeys: jsonEncode([_ownerPubkey, _otherPubkey]),
             isGroup: false,
@@ -3204,6 +3206,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: groupConversationId,
               participantPubkeys: jsonEncode([
                 _ownerPubkey,
@@ -3448,6 +3451,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: groupConversationId,
               participantPubkeys: jsonEncode([
                 _ownerPubkey,
@@ -4277,6 +4281,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: groupConversationId,
               participantPubkeys: jsonEncode([
                 _ownerPubkey,

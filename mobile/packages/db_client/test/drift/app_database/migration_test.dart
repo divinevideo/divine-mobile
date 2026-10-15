@@ -124,10 +124,39 @@ void main() {
       },
     );
 
-    test('v23 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(23);
+    test(
+      'v23 requests remain active with messages intact after upgrade',
+      () async {
+        final schema = await verifier.schemaAt(23);
+        schema.rawDatabase.execute(
+          'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+          'last_message_content, owner_pubkey, is_read) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            'a' * 64,
+            '["${'b' * 64}","${'c' * 64}"]',
+            100,
+            'Keep me',
+            'b' * 64,
+            0,
+          ],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+        await verifier.migrateAndValidate(db, 24);
+        final row = (await db.conversationsDao.getConversation(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+        ))!;
+        expect(row.isDismissed, isFalse);
+        expect(row.isRead, isFalse);
+        expect(row.lastMessageContent, 'Keep me');
+      },
+    );
+
+    test('v24 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(24);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       await db.close();
     });
 

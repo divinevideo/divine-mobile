@@ -33,7 +33,11 @@ import 'package:openvine/services/collaborator_response_service.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
-class _MockDmRepository extends Mock implements DmRepository {}
+class _MockDmRepository extends Mock implements DmRepository {
+  @override
+  bool isRemovalProtectedParticipants(Iterable<String> participantPubkeys) =>
+      false;
+}
 
 class _MockAuthService extends Mock implements AuthService {}
 

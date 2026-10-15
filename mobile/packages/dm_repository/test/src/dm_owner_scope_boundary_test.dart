@@ -114,6 +114,50 @@ void main() {
       expect(await repository.getConversation(conversationId), isNull);
     });
 
+    test(
+      'dismissal keeps messages and acceptance state and restores',
+      () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        addTearDown(repository.stopListening);
+        await repository.setConversationDismissed(
+          conversationId,
+          dismissed: true,
+        );
+        final dismissed = (await repository.getConversation(conversationId))!;
+        expect(dismissed.isDismissed, isTrue);
+        expect(dismissed.isRead, isTrue);
+        expect(dismissed.currentUserHasSent, isFalse);
+        expect(await repository.getMessages(conversationId), hasLength(1));
+        await repository.setConversationDismissed(
+          conversationId,
+          dismissed: false,
+        );
+        expect(
+          (await repository.getConversation(conversationId))!.isDismissed,
+          isFalse,
+        );
+        expect(await repository.getMessages(conversationId), hasLength(1));
+      },
+    );
+
+    test(
+      'an unknown owner cannot dismiss another account conversation',
+      () async {
+        final repository = buildRepository(userPubkey: '');
+        addTearDown(repository.stopListening);
+        await expectLater(
+          repository.setConversationDismissed(conversationId, dismissed: true),
+          throwsStateError,
+        );
+        final row = (await conversationsDao.getConversation(
+          conversationId,
+          ownerPubkey: _ownerA,
+        ))!;
+        expect(row.isDismissed, isFalse);
+        expect(row.isRead, isFalse);
+      },
+    );
+
     test('an uninitialized repository marks nobody read', () async {
       // `ConversationsDao.markAsRead` drops its owner clause entirely for a
       // null owner, leaving `UPDATE conversations SET is_read = 1 WHERE

@@ -36,6 +36,101 @@ void main() {
   });
 
   group(ConversationsDao, () {
+    group('request dismissal', () {
+      Future<void> seed(String owner, {int timestamp = 100}) =>
+          dao.upsertConversation(
+            id: 'a' * 64,
+            participantPubkeys: '["${'b' * 64}","${'c' * 64}"]',
+            isGroup: false,
+            createdAt: 50,
+            lastMessageTimestamp: timestamp,
+            lastMessageContent: 'Keep this message',
+            ownerPubkey: owner,
+            isRead: false,
+          );
+
+      test('dismisses and marks read only the requested account', () async {
+        await seed('b' * 64);
+        await seed('c' * 64);
+        await dao.setDismissed(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+          dismissed: true,
+        );
+        final own = (await dao.getConversation(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+        ))!;
+        final other = (await dao.getConversation(
+          'a' * 64,
+          ownerPubkey: 'c' * 64,
+        ))!;
+        expect(own.isDismissed, isTrue);
+        expect(own.isRead, isTrue);
+        expect(own.lastReadTimestamp, 100);
+        expect(own.lastMessageContent, 'Keep this message');
+        expect(own.currentUserHasSent, isFalse);
+        expect(other.isDismissed, isFalse);
+        expect(other.isRead, isFalse);
+      });
+
+      test('persists dismissal and restores without accepting', () async {
+        await seed('b' * 64);
+        await dao.setDismissed(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+          dismissed: true,
+        );
+        await database.close();
+        database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+        dao = database.conversationsDao;
+        expect(
+          (await dao.getConversation(
+            'a' * 64,
+            ownerPubkey: 'b' * 64,
+          ))!.isDismissed,
+          isTrue,
+        );
+        await dao.setDismissed(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+          dismissed: false,
+        );
+        final row = (await dao.getConversation(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+        ))!;
+        expect(row.isDismissed, isFalse);
+        expect(row.currentUserHasSent, isFalse);
+        expect(row.lastMessageContent, 'Keep this message');
+      });
+
+      test('only a newer message resurfaces a dismissed request', () async {
+        await seed('b' * 64);
+        await dao.setDismissed(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+          dismissed: true,
+        );
+        await seed('b' * 64, timestamp: 90);
+        await seed('b' * 64);
+        expect(
+          (await dao.getConversation(
+            'a' * 64,
+            ownerPubkey: 'b' * 64,
+          ))!.isDismissed,
+          isTrue,
+        );
+        await seed('b' * 64, timestamp: 101);
+        final row = (await dao.getConversation(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+        ))!;
+        expect(row.isDismissed, isFalse);
+        expect(row.isRead, isFalse);
+      });
+    });
+
     group('clearNip04ProtocolLatch', () {
       Future<void> seed({
         required String id,
@@ -498,6 +593,7 @@ void main() {
             'last_message_sender_pubkey',
             'subject',
             'is_read',
+            'is_dismissed',
             'current_user_has_sent',
             'owner_pubkey',
             'dm_protocol',

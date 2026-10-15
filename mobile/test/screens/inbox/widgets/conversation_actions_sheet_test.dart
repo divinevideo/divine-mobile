@@ -61,9 +61,9 @@ void main() {
     }
 
     group('renders', () {
-      // Exactly three: the mute toggle that used to lead the sheet saved a
-      // set nothing read, so it confirmed work that never happened (#7379).
-      testWidgets('renders exactly the three action tiles', (tester) async {
+      testWidgets('offers read and dismiss alongside the existing actions', (
+        tester,
+      ) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.pumpWidget(buildSubject(onResult: (_) {}));
 
@@ -73,7 +73,7 @@ void main() {
         expect(find.text(l10n.inboxActionReport('Alice')), findsOneWidget);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsOneWidget);
         expect(find.text(l10n.inboxActionRemove), findsOneWidget);
-        expect(sheetRows(tester), hasLength(3));
+        expect(sheetRows(tester), hasLength(5));
       });
 
       testWidgets('withholds Remove for a thread that cannot be removed', (
@@ -90,7 +90,7 @@ void main() {
         expect(find.text(l10n.inboxActionReport('Alice')), findsOneWidget);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsOneWidget);
         expect(find.text(l10n.inboxActionRemove), findsNothing);
-        expect(sheetRows(tester), hasLength(2));
+        expect(sheetRows(tester), hasLength(3));
       });
 
       testWidgets('renders Unblock label when user is blocked', (tester) async {
@@ -237,35 +237,6 @@ void main() {
       });
     });
 
-    // A group sheet has no way to say WHICH account Report and Block would
-    // act on, so it offers neither. A group that cannot be removed therefore
-    // has nothing left, and the caller must not open the sheet for it.
-    group('hasActions', () {
-      test('is false for a group with nothing removable', () {
-        expect(
-          ConversationActionsSheet.hasActions(isGroup: true, canRemove: false),
-          isFalse,
-        );
-      });
-
-      test('is true for every conversation the sheet has a row for', () {
-        for (final (isGroup, canRemove) in [
-          (false, true),
-          (false, false),
-          (true, true),
-        ]) {
-          expect(
-            ConversationActionsSheet.hasActions(
-              isGroup: isGroup,
-              canRemove: canRemove,
-            ),
-            isTrue,
-            reason: 'isGroup: $isGroup, canRemove: $canRemove',
-          );
-        }
-      });
-    });
-
     group('a group conversation', () {
       testWidgets('offers only the conversation-scoped action', (
         tester,
@@ -280,7 +251,7 @@ void main() {
         expect(find.text(l10n.inboxActionRemove), findsOneWidget);
         expect(find.text(l10n.inboxActionReport('Alice')), findsNothing);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsNothing);
-        expect(sheetRows(tester), hasLength(1));
+        expect(sheetRows(tester), hasLength(3));
       });
 
       testWidgets('a 1:1 still offers both', (tester) async {

@@ -61,6 +61,45 @@ class ConversationActionsCubit extends Cubit<ConversationActionsState> {
   final DmRepository _dmRepository;
   final String _currentUserPubkey;
 
+  /// Whether a resolved route's peer set belongs to a protected thread.
+  bool isThreadProtected(Iterable<String> peerPubkeys) =>
+      _dmRepository.isRemovalProtectedParticipants({
+        _currentUserPubkey,
+        ...peerPubkeys,
+      });
+
+  /// Clear unread status for a single conversation.
+  Future<bool> markAsRead(String conversationId) => _runTriage(
+    () => _dmRepository.markConversationAsRead(conversationId),
+  );
+
+  /// Dismiss or restore a single conversation without removing its history.
+  Future<bool> setDismissed(String conversationId, {required bool dismissed}) =>
+      _runTriage(
+        () => _dmRepository.setConversationDismissed(
+          conversationId,
+          dismissed: dismissed,
+        ),
+      );
+
+  Future<bool> _runTriage(Future<void> Function() action) async {
+    if (state.status == ConversationActionsStatus.processing) return false;
+    emit(state.copyWith(status: ConversationActionsStatus.processing));
+    try {
+      await action();
+      if (!isClosed) {
+        emit(state.copyWith(status: ConversationActionsStatus.success));
+      }
+      return true;
+    } catch (e, stackTrace) {
+      addError(e, stackTrace);
+      if (!isClosed) {
+        emit(state.copyWith(status: ConversationActionsStatus.failure));
+      }
+      return false;
+    }
+  }
+
   /// Whether [pubkey] is currently on the blocklist.
   bool isBlocked(String pubkey) => _blocklistRepository.isBlocked(pubkey);
 

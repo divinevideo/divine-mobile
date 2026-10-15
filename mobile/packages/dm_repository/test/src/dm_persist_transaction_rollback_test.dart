@@ -62,6 +62,7 @@ class _InstrumentedConversationsDao extends ConversationsDao {
     String? ownerPubkey,
     String? dmProtocol,
     bool forceUpdateLastMessage = false,
+    bool isNewMessage = false,
   }) {
     membership['upsertConversation'] = _open;
     if (failUpsert) {
@@ -81,6 +82,7 @@ class _InstrumentedConversationsDao extends ConversationsDao {
       ownerPubkey: ownerPubkey,
       dmProtocol: dmProtocol,
       forceUpdateLastMessage: forceUpdateLastMessage,
+      isNewMessage: isNewMessage,
     );
   }
 }
