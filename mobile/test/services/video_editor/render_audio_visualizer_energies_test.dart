@@ -80,20 +80,22 @@ void main() {
     late Directory tempDir;
     late _ToneFile tone;
     late List<String> tempFilePaths;
+    late int downloads;
 
     setUp(() {
       tempDir = Directory.systemTemp.createTempSync('render_visualizer_');
       tone = _ToneFile();
       tempFilePaths = [];
+      downloads = 0;
     });
 
     tearDown(() => tempDir.deleteSync(recursive: true));
 
     RenderAudioFetcher fetcher() => RenderAudioFetcher(
-      clientFactory: () => MockClient(
-        (request) async =>
-            http.Response.bytes(wavBytes(silentAudio(_ms(10))), 200),
-      ),
+      clientFactory: () => MockClient((request) async {
+        downloads++;
+        return http.Response.bytes(wavBytes(silentAudio(_ms(10))), 200);
+      }),
       tempDirectory: tempDir,
       baseDelay: Duration.zero,
     );
@@ -130,6 +132,7 @@ void main() {
               endTime: _ms(1500),
             ),
             logicalSize: Size.zero,
+            sourceOffset: _ms(200),
           ),
         ],
         maxOutputDuration: null,
@@ -142,6 +145,11 @@ void main() {
       expect(
         tone.reads.map((read) => read.video),
         equals([detached.video]),
+      );
+      // Read from the layer's offset into the clip, with the context before it.
+      expect(
+        tone.reads.single.startTime,
+        equals(_ms(200) - VideoEditorAudioLevelResolver.context),
       );
       expect(_energy(energies!, 15), equals(0));
       expect(_energy(energies, 60), greaterThan(0));
@@ -164,19 +172,37 @@ void main() {
       expect(energies, hasLength(audioBandFrameRate * audioBandCount));
     });
 
+    test('ends with the video when the render is cut later', () async {
+      final energies = await audioVisualizerEnergiesForRender(
+        capturedLayers: [_visualizer()],
+        sounds: const [],
+        clips: [_clip('a')],
+        detached: const [],
+        maxOutputDuration: const Duration(seconds: 5),
+        audioFetcher: fetcher(),
+        tempFilePaths: tempFilePaths,
+        logName: 'test',
+        resolver: VideoEditorAudioLevelResolver(extractAudio: tone.call),
+      );
+
+      expect(energies, hasLength(2 * audioBandFrameRate * audioBandCount));
+    });
+
     test(
-      "downloads a network sound once, into the render's temp files",
+      "downloads a sound two parts share once, into the render's temp files",
       () async {
         final energies = await audioVisualizerEnergiesForRender(
           capturedLayers: [_visualizer()],
           sounds: [
-            AudioEvent(
-              id: 'music',
-              pubkey: 'a' * 64,
-              createdAt: 1735689600,
-              url: 'https://example.com/music.m4a',
-              duration: 30,
-            ),
+            for (final id in ['music', 'music-again'])
+              AudioEvent(
+                id: id,
+                pubkey: 'a' * 64,
+                createdAt: 1735689600,
+                url: 'https://example.com/music.m4a',
+                duration: 30,
+                startTime: id == 'music' ? Duration.zero : _ms(1000),
+              ),
           ],
           clips: [_clip('a', volume: 0)],
           detached: const [],
@@ -188,11 +214,12 @@ void main() {
         );
 
         expect(energies, isNotNull);
+        expect(downloads, equals(1));
         expect(tempFilePaths, hasLength(1));
         expect(tempFilePaths.single, startsWith(tempDir.path));
         expect(
-          tone.reads.map((read) => read.video.file?.path),
-          equals([tempFilePaths.single]),
+          tone.reads.map((read) => read.video.file?.path).toSet(),
+          equals({tempFilePaths.single}),
         );
       },
     );

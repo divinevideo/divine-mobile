@@ -250,9 +250,9 @@ void main() {
 
   group('audioBandFrequency', () {
     test('names the middle of the band bandEnergies puts that tone in', () {
-      // Below band 16 a band is narrower than the analysis can tell apart,
-      // so a tone spreads over its neighbours there.
-      for (var band = 16; band < audioBandCount; band++) {
+      // The lowest bands are narrower than an FFT bin, so a tone there
+      // spreads into a neighbour.
+      for (var band = 6; band < audioBandCount; band++) {
         final energies = bandEnergies(
           _tone(audioBandFrequency(band)),
           sampleRate: _sampleRate,
