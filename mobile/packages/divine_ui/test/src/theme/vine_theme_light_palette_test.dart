@@ -113,6 +113,8 @@ const _bodyPairs = <(String, String)>[
   ('link', 'surface'),
   ('link', 'surfaceContainer'),
   ('link', 'surfaceContainerHigh'),
+  // A held comment highlights its row, links included, in `containerLow`.
+  ('link', 'containerLow'),
 ];
 
 /// Supporting copy — hints, placeholders, secondary labels — held to the

@@ -254,7 +254,7 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
   /// body copy.
   ///
   /// Dark is [VineTheme.primary], the primary button fill, so a link reads as
-  /// the same brand action (7.7:1 or better on every dark surface). That
+  /// the same brand action (6.8:1 or better on every dark surface). That
   /// green is ~2:1 on the light surfaces, too faint for body text, so light
   /// uses the darkened green [accentPositive] already carries for body copy
   /// (7.5:1 or better).
