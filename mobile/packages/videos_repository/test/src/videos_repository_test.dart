@@ -4241,11 +4241,12 @@ void main() {
         );
 
         test(
-          'stops when a relay ignores until and repeats the same batch',
+          'stops when a read returns nothing older than its bound',
           () async {
-            // Without the stall guard the walk would re-request the same
-            // bound forever, since repeated rows never grow the page. A third
-            // query fails the test instead of hanging it.
+            // NostrClient drops rows at or above the bound, so no relay can
+            // cause this; the guard backstops the walk's own loop. Without it
+            // the walk would re-request the same bound forever. A third query
+            // fails the test instead of hanging it.
             var queries = 0;
             when(() => mockNostrClient.queryEvents(any())).thenAnswer((
               _,
