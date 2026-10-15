@@ -460,20 +460,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     emit(state.copyWith(isLoadingMore: true));
 
     try {
-      // Find the oldest createdAt among all loaded videos for the cursor.
-      // For popular feed (sorted by engagement), state.videos.last is the
-      // lowest-engagement video, not the oldest — using its createdAt would
-      // skip older popular videos.
-      final oldestCreatedAt = state.videos
-          .map((v) => v.createdAt)
-          .reduce((a, b) => a < b ? a : b);
-      final until = oldestCreatedAt;
-
       final usesCursor =
           _usesCursorPagination(source) && state.paginationCursor != null;
       final result = await _fetchVideosForSource(
         source,
-        until: usesCursor ? null : until,
+        // Only a cursor-less page reads `until`. It is the oldest loaded
+        // video rather than `state.videos.last`, because the list is not
+        // always in `createdAt` order.
+        until: usesCursor
+            ? null
+            : state.videos
+                  .map((v) => v.createdAt)
+                  .reduce((a, b) => a < b ? a : b),
         paginationCursor: usesCursor ? state.paginationCursor : null,
       );
       if (!_canEmitForSource(source, emit) ||
