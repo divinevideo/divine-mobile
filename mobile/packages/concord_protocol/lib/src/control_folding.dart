@@ -17,6 +17,7 @@ FoldedThread foldControls(
 }) {
   final byId = <String, ChatMessage>{for (final m in base) m.id: m};
   final reactions = <String, Map<String, int>>{};
+  final reacted = <(String, String, String)>{};
   final sorted = [...controls]
     ..sort((a, b) => _order(a.createdAt, a.ms, a.id, b.createdAt, b.ms, b.id));
   for (final c in sorted) {
@@ -41,7 +42,7 @@ FoldedThread foldControls(
           byId.remove(c.targetId);
         }
       case ControlType.reaction:
-        if (c.emoji != null) {
+        if (c.emoji != null && reacted.add((c.targetId, c.emoji!, c.actor))) {
           final tally = reactions.putIfAbsent(c.targetId, () => {});
           tally[c.emoji!] = (tally[c.emoji!] ?? 0) + 1;
         }

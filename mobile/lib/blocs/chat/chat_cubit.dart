@@ -95,7 +95,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
       (_) {
         refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
       },
-      onError: (Object _, StackTrace _) {
+      onError: (Object error, StackTrace stack) {
+        addError(error, stack);
         emitIfOpen(state.copyWith(loadFailed: true));
       },
     );
@@ -111,7 +112,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
         streamPubkey: stream.pubkey,
       );
       refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
-    } on Object {
+    } on Object catch (error, stack) {
+      addError(error, stack);
       emitIfOpen(state.copyWith(loadFailed: true));
     } finally {
       _starting = false;
@@ -133,11 +135,15 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   final GroupKey Function(String channelId)? pocStreamForChannel;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);
+    final pending = _repo.pendingIds;
     emitIfOpen(
       state.copyWith(
         messages: t.messages,
         reactions: t.reactions,
-        pendingIds: _repo.pendingIds,
+        pendingIds: pending,
+        sendFailed:
+            state.sendFailed &&
+            !(state.pendingIds.isNotEmpty && pending.isEmpty),
       ),
     );
   }
@@ -209,7 +215,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
       }
       refresh(now: now);
       return true;
-    } on Object {
+    } on Object catch (error, stack) {
+      addError(error, stack);
       emitIfOpen(state.copyWith(sendFailed: true));
     } finally {
       emitIfOpen(state.copyWith(sending: false));
@@ -223,7 +230,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     emitIfOpen(state.copyWith(sending: true, sendFailed: false));
     try {
       await _repo.retryPending(messageId: id);
-    } on Object {
+    } on Object catch (error, stack) {
+      addError(error, stack);
       emitIfOpen(state.copyWith(sendFailed: true));
     } finally {
       refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -22,6 +25,19 @@ import 'package:openvine/services/auth_service.dart';
 class _Relay extends Mock implements RelayGateway {}
 
 class _Cipher extends Mock implements StreamCipher {}
+
+class _RoomRelay implements RelayGateway {
+  _RoomRelay() {
+    wraps.onCancel = cancelled.complete;
+  }
+  final cancelled = Completer<void>.sync();
+  final wraps = StreamController<Map<String, dynamic>>();
+  @override
+  Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter) =>
+      wraps.stream;
+  @override
+  Future<void> publish(Map<String, dynamic> event) async {}
+}
 
 class _Auth extends Fake implements AuthService {
   _Auth(String pubkey, {this.isAuthenticated = true})
@@ -92,6 +108,57 @@ void main() {
 
     setUp(() => database = AppDatabase.test(NativeDatabase.memory()));
     tearDown(() => database.close());
+
+    testWidgets('closes a running room when its account loses access', (
+      tester,
+    ) async {
+      final relay = _RoomRelay();
+      addTearDown(relay.wraps.close);
+      final flags = StateProvider((ref) => true);
+      final restricted = StateProvider((ref) => false);
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(_Auth('a' * 64)),
+          databaseProvider.overrideWithValue(database),
+          isFeatureEnabledProvider(FeatureFlag.concordChat).overrideWith(
+            (ref) => ref.watch(flags),
+          ),
+          isDmRestrictedProvider.overrideWith((ref) => ref.watch(restricted)),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ChatPage(
+              repositoryBuilder:
+                  ({required pubkey, required signer, required store}) =>
+                      ConcordRepository(
+                        relay: relay,
+                        store: store,
+                        cipher: _Cipher(),
+                        sealedTransport: SealedChatTransport(
+                          relay: relay,
+                          signer: (_) async =>
+                              throw StateError('unused signer'),
+                        ),
+                      ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ChatScreen), findsOneWidget);
+      expect(relay.wraps.hasListener, isTrue);
+      container.read(restricted.notifier).state = true;
+      await tester.pumpAndSettle();
+      expect(find.byType(ChatScreen), findsNothing);
+      await tester.runAsync(() => relay.cancelled.future);
+      expect(relay.wraps.hasListener, isFalse);
+    });
 
     List<Override> overrides({
       required AuthService auth,

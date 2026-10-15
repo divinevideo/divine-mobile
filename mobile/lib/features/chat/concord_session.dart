@@ -37,6 +37,12 @@ class _UnavailableCipher implements StreamCipher {
       throw StateError('chat requires the active Divine signer');
 }
 
+typedef ConcordRepositoryBuilder = ConcordRepository Function({
+  required String? pubkey,
+  required NostrSigner? signer,
+  required AccountScopedStore store,
+});
+
 /// Builds the chat repository bound to the live session: real WebSocket
 /// relay, account-scoped store keyed to the signed-in pubkey, and a
 /// sealed transport whose author signer is the already signed-in Divine

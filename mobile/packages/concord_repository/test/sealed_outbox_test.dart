@@ -33,6 +33,7 @@ class DelayedStore extends InMemoryConcordStore {
   Completer<void>? blockRead;
   final reading = Completer<void>();
   int writes = 0;
+  int largestWrite = 0;
   bool failRead = false;
   @override
   Future<String?> get(String key) async {
@@ -50,7 +51,23 @@ class DelayedStore extends InMemoryConcordStore {
   @override
   Future<void> put(String key, String value) async {
     writes++;
+    if (value.length > largestWrite) largestWrite = value.length;
     return super.put(key, value);
+  }
+}
+
+class BlockedMigrationStore extends InMemoryConcordStore {
+  BlockedMigrationStore() : super('a' * 64);
+  final batchStarted = Completer<void>();
+  final resumeBatch = Completer<void>();
+  @override
+  Future<void> writeBatch(
+    Map<String, String> values, {
+    List<String> remove = const [],
+  }) async {
+    if (!batchStarted.isCompleted) batchStarted.complete();
+    await resumeBatch.future;
+    return super.writeBatch(values, remove: remove);
   }
 }
 
@@ -72,7 +89,179 @@ Future<Map<String, dynamic>> sign(Map<String, dynamic> t) async {
   };
 }
 
+Future<Map<String, dynamic>> savedSealedRecords(
+  AccountScopedStore store,
+) async {
+  final index = await store.get('sealed:index');
+  if (index == null) return {};
+  return {
+    for (final id in (jsonDecode(index) as List).cast<String>())
+      id: jsonDecode((await store.get('sealed:$id'))!),
+  };
+}
+
 void main() {
+  group('migration lifecycle', () {
+    test(
+      'close waits for an in-flight migration before account deletion',
+      () async {
+        final relay = Relay();
+        addTearDown(relay.events.close);
+        final store = BlockedMigrationStore();
+        final id = '09' * 32;
+        await store.put(
+          'sealed',
+          jsonEncode({
+            id: {
+              'wrap': {'created_at': 1},
+              'pending': true,
+              'expiresAt': null,
+            },
+          }),
+        );
+        final repo = ConcordRepository(
+          relay: relay,
+          store: store,
+          cipher: NoLegacyCipher(),
+          sealedTransport: SealedChatTransport(relay: relay, signer: sign),
+        );
+        final stream = publicChannelKey('02' * 32, '03' * 32, 0);
+        final starting = repo.startChannel(
+          channelId: '03' * 32,
+          epoch: 0,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+        await store.batchStarted.future;
+        final deletion = repo.close().then((_) => store.clearAccount());
+        store.resumeBatch.complete();
+        await Future.wait([starting, deletion]);
+        expect(await store.get('sealed:index'), isNull);
+      },
+    );
+  });
+
+  group('legacy compatibility', () {
+    test('sealed persistence preserves a legacy pending send', () async {
+      final relay = Relay()..reject = true;
+      addTearDown(relay.events.close);
+      final store = InMemoryConcordStore('a' * 64);
+      final legacyId = '09' * 32;
+      await store.put('index', legacyId);
+      await store.put('msg:$legacyId', 'legacy unsent');
+      await store.put('meta:$legacyId', 'general|${'01' * 32}|10|');
+      await store.put('outgoing:$legacyId', '{}');
+      final repo = ConcordRepository(
+        relay: relay,
+        store: store,
+        cipher: NoLegacyCipher(),
+        sealedTransport: SealedChatTransport(relay: relay, signer: sign),
+      );
+      addTearDown(repo.close);
+      expect(await repo.restore(), [legacyId]);
+      final stream = publicChannelKey('02' * 32, '03' * 32, 0);
+      await expectLater(
+        repo.sendSealedMessage(
+          channelId: '03' * 32,
+          author: schnorr.getPublicKey('01' * 32),
+          body: 'sealed unsent',
+          createdAt: 11,
+          ms: 0,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        ),
+        throwsStateError,
+      );
+      expect(repo.pendingIds, contains(legacyId));
+    });
+  });
+
+  group('received history', () {
+    test('stores new wraps without rewriting earlier ciphertext', () async {
+      final relay = Relay();
+      addTearDown(relay.events.close);
+      final store = DelayedStore();
+      final stream = publicChannelKey('02' * 32, '03' * 32, 0);
+      final receiver = ConcordRepository(
+        relay: relay,
+        store: store,
+        cipher: NoLegacyCipher(),
+        sealedTransport: SealedChatTransport(relay: relay, signer: sign),
+        historyLimit: 3,
+      );
+      addTearDown(receiver.close);
+      await receiver.startChannel(
+        channelId: '03' * 32,
+        epoch: 0,
+        streamSeedHex: stream.seedHex,
+        streamPubkey: stream.pubkey,
+        now: () => 100,
+      );
+      final sender = ConcordRepository(
+        relay: relay,
+        store: InMemoryConcordStore('b' * 64),
+        cipher: NoLegacyCipher(),
+        sealedTransport: SealedChatTransport(relay: relay, signer: sign),
+      );
+      addTearDown(sender.close);
+      var largestWrap = 0;
+      for (var i = 0; i < 8; i++) {
+        final wrap = await sender.sendSealedMessage(
+          channelId: '03' * 32,
+          author: schnorr.getPublicKey('01' * 32),
+          body: 'message $i ${'x' * 1000}',
+          createdAt: 10 + i,
+          ms: 0,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+        final size = jsonEncode(wrap).length;
+        if (size > largestWrap) largestWrap = size;
+        await receiver.ingestSealedWrap(wrap);
+      }
+      expect(receiver.timeline(now: 100).messages.map((m) => m.createdAt), [
+        15,
+        16,
+        17,
+      ]);
+      expect(await savedSealedRecords(store), hasLength(3));
+      expect(store.largestWrite, lessThan(largestWrap * 2));
+    });
+    test(
+      'migrates old storage and retains unsent messages when pruning',
+      () async {
+        final relay = Relay();
+        addTearDown(relay.events.close);
+        final store = InMemoryConcordStore('a' * 64);
+        final legacy = <String, dynamic>{
+          for (var i = 0; i < 4; i++)
+            i.toRadixString(16).padLeft(64, '0'): {
+              'wrap': {'created_at': i},
+              'pending': i == 0,
+              'expiresAt': null,
+            },
+        };
+        await store.put('sealed', jsonEncode(legacy));
+        ConcordRepository make() => ConcordRepository(
+          relay: relay,
+          store: store,
+          cipher: NoLegacyCipher(),
+          historyLimit: 2,
+        );
+        final repo = make();
+        addTearDown(repo.close);
+        expect(await repo.restore(), ['0' * 64]);
+        expect(await store.get('sealed'), isNull);
+        final migrated = await savedSealedRecords(store);
+        expect(migrated.keys, ['0' * 64, '0' * 63 + '2', '0' * 63 + '3']);
+        expect(migrated['0' * 64], legacy['0' * 64]);
+        final reopened = make();
+        addTearDown(reopened.close);
+        expect(await reopened.restore(), ['0' * 64]);
+        expect(await savedSealedRecords(store), migrated);
+      },
+    );
+  });
   group('retryPending', () {
     test('sealed retry republishes the original wrap after restart', () async {
       final relay = Relay()..reject = true;
@@ -155,17 +344,20 @@ void main() {
         expect(receiver.timeline(now: now).messages.single.body, 'incoming');
         await receiver.ingestSealedWrap(wrap);
         expect(receiver.timeline(now: now).messages, hasLength(1));
-        expect(await receivingStore.get('sealed'), isNot(contains('incoming')));
+        expect(
+          jsonEncode(await savedSealedRecords(receivingStore)),
+          isNot(contains('incoming')),
+        );
         now = 15;
         await receiver.purgeExpired(now: now);
         expect(receiver.timeline(now: now).messages, isEmpty);
         expect(
-          jsonDecode((await receivingStore.get('sealed'))!) as Map,
+          await savedSealedRecords(receivingStore),
           isEmpty,
         );
         await receiver.ingestSealedWrap(wrap);
         expect(
-          jsonDecode((await receivingStore.get('sealed'))!) as Map,
+          await savedSealedRecords(receivingStore),
           isEmpty,
         );
       },
@@ -360,7 +552,7 @@ void main() {
         await repo.purgeExpired(now: now);
         ack.complete();
         await retry;
-        expect(jsonDecode((await store.get('sealed'))!) as Map, isEmpty);
+        expect(await savedSealedRecords(store), isEmpty);
         expect(repo.pendingIds, isEmpty);
       },
     );
@@ -514,7 +706,8 @@ void main() {
       final original = make();
       await send(original, 'saved');
       await original.close();
-      final saved = await store.get('sealed');
+      final saved = await savedSealedRecords(store);
+      expect(saved, isNotEmpty);
       store.failRead = true;
       final restarted = make();
       addTearDown(restarted.close);
@@ -528,7 +721,7 @@ void main() {
         throwsStateError,
       );
       await expectLater(send(restarted, 'new'), throwsStateError);
-      expect(await store.get('sealed'), saved);
+      expect(await savedSealedRecords(store), saved);
     });
   });
 }

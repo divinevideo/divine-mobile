@@ -16,6 +16,9 @@ abstract interface class AccountScopedStore {
   Future<String?> get(String key);
   Future<void> remove(String key);
   Future<void> clearAccount();
+
+  /// Atomically updates records and their index, including removals.
+  Future<void> writeBatch(Map<String, String> values, {List<String> remove});
 }
 
 /// In-memory store; the app binds this to db_client/protected storage
@@ -34,6 +37,26 @@ class InMemoryConcordStore implements AccountScopedStore {
   @override
   Future<void> clearAccount() async =>
       _data.removeWhere((k, _) => k.startsWith('concord:v1:$pubkey:'));
+  @override
+  Future<void> writeBatch(
+    Map<String, String> values, {
+    List<String> remove = const [],
+  }) async {
+    final before = {..._data};
+    try {
+      for (final entry in values.entries) {
+        await put(entry.key, entry.value);
+      }
+      for (final key in remove) {
+        await this.remove(key);
+      }
+    } on Object {
+      _data
+        ..clear()
+        ..addAll(before);
+      rethrow;
+    }
+  }
 }
 
 class ConcordRepository {
@@ -42,7 +65,11 @@ class ConcordRepository {
     required this.store,
     required this.cipher,
     this.sealedTransport,
-  });
+    this.historyLimit = 200,
+  }) : assert(historyLimit > 0, 'historyLimit must be positive');
+
+  /// Recent delivered wraps retained per room. Unsent records are kept.
+  final int historyLimit;
   final RelayGateway relay;
   final AccountScopedStore store;
   final StreamCipher cipher;
@@ -58,15 +85,36 @@ class ConcordRepository {
   List<String> get pendingIds => List.unmodifiable(_pendingIds);
 
   Future<void> _restoreOutbox() async {
-    final saved = await store.get('sealed');
-    if (saved == null) return;
-    final records = jsonDecode(saved) as Map<String, dynamic>;
-    _sealed.clear();
-    for (final entry in records.entries) {
-      final record = Map<String, dynamic>.from(entry.value as Map);
-      _sealed[entry.key] = record;
-      if (record['pending'] == true) _pendingIds.add(entry.key);
+    final legacy = await store.get('sealed');
+    var index = await store.get('sealed:index');
+    if (_closed) return;
+    if (index == null && legacy != null) {
+      final records = jsonDecode(legacy) as Map<String, dynamic>;
+      index = jsonEncode(records.keys.toList());
+      await _serial(() async {
+        if (_closed) return;
+        await store.writeBatch(
+          {
+            for (final entry in records.entries)
+              'sealed:${entry.key}': jsonEncode(entry.value),
+            'sealed:index': index!,
+          },
+          remove: ['sealed'],
+        );
+      });
     }
+    if (_closed) return;
+    _sealed.clear();
+    if (index == null) return;
+    for (final id in (jsonDecode(index) as List).cast<String>()) {
+      final saved = await store.get('sealed:$id');
+      if (saved == null) throw const FormatException('missing sealed record');
+      _sealed[id] = jsonDecode(saved) as Map<String, dynamic>;
+    }
+    if (_closed) return;
+    await _serial(() async {
+      if (!_closed) await _saveSealed({..._sealed});
+    });
   }
 
   final _changes = StreamController<void>.broadcast();
@@ -93,14 +141,58 @@ class ConcordRepository {
     if (!_closed) _changes.add(null);
   }
 
+  Future<void> _saveSealed(
+    Map<String, Map<String, dynamic>> updated, {
+    Set<String> changed = const {},
+  }) async {
+    final delivered =
+        updated.entries.where((e) => e.value['pending'] != true).toList()
+          ..sort((a, b) {
+            final aWrap = a.value['wrap'] as Map;
+            final bWrap = b.value['wrap'] as Map;
+            final time = (aWrap['created_at'] as int).compareTo(
+              bWrap['created_at'] as int,
+            );
+            return time == 0 ? a.key.compareTo(b.key) : time;
+          });
+    final evicted = delivered
+        .take(
+          delivered.length > historyLimit ? delivered.length - historyLimit : 0,
+        )
+        .map((e) => e.key)
+        .toSet();
+    final removed = {
+      ..._sealed.keys.where((id) => !updated.containsKey(id)),
+      ...evicted,
+    };
+    updated.removeWhere((id, _) => evicted.contains(id));
+    await store.writeBatch({
+      for (final id in changed)
+        if (updated.containsKey(id)) 'sealed:$id': jsonEncode(updated[id]),
+      'sealed:index': jsonEncode(updated.keys.toList()),
+    }, remove: removed.map((id) => 'sealed:$id').toList());
+    final legacyPending = _pendingIds
+        .where((id) => !_sealed.containsKey(id))
+        .toList();
+    _sealed
+      ..clear()
+      ..addAll(updated);
+    _pendingIds
+      ..clear()
+      ..addAll(legacyPending)
+      ..addAll(
+        updated.entries
+            .where((e) => e.value['pending'] == true)
+            .map((e) => e.key),
+      );
+    _messages.removeWhere((m) => removed.contains(m.id));
+    _controls.removeWhere((c) => removed.contains(c.id));
+  }
+
   Future<void> _record(String id, Map<String, dynamic> record) =>
       _serial(() async {
         if (_closed) throw StateError('chat is closed');
-        final updated = {..._sealed, id: record};
-        await store.put('sealed', jsonEncode(updated));
-        _sealed[id] = record;
-        _pendingIds.remove(id);
-        if (record['pending'] == true) _pendingIds.add(id);
+        await _saveSealed({..._sealed, id: record}, changed: {id});
         _notify();
       });
 
@@ -108,9 +200,7 @@ class ConcordRepository {
     final current = _sealed[id];
     if (_closed || current == null || current['pending'] != true) return;
     final updated = {...current, 'pending': false};
-    await store.put('sealed', jsonEncode({..._sealed, id: updated}));
-    _sealed[id] = updated;
-    _pendingIds.remove(id);
+    await _saveSealed({..._sealed, id: updated}, changed: {id});
     _notify();
   });
 
@@ -145,7 +235,7 @@ class ConcordRepository {
     if (_closed) return;
     _ready = true;
     _subscription = sealedTransport!
-        .subscribeWraps(streamPubkey: streamPubkey)
+        .subscribeWraps(streamPubkey: streamPubkey, limit: historyLimit)
         .listen(
           (wrap) => unawaited(
             ingestSealedWrap(wrap).catchError((Object error, StackTrace stack) {
@@ -227,9 +317,7 @@ class ConcordRepository {
       if (existing != null) {
         if (existing['pending'] == true) {
           final acknowledged = {...existing, 'pending': false};
-          await store.put('sealed', jsonEncode({..._sealed, id: acknowledged}));
-          _sealed[id] = acknowledged;
-          _pendingIds.remove(id);
+          await _saveSealed({..._sealed, id: acknowledged}, changed: {id});
           _notify();
         }
         return;
@@ -239,9 +327,8 @@ class ConcordRepository {
         'pending': false,
         'expiresAt': expiration,
       };
-      await store.put('sealed', jsonEncode({..._sealed, id: record}));
-      _sealed[id] = record;
-      _applyRumor(rumor);
+      await _saveSealed({..._sealed, id: record}, changed: {id});
+      if (_sealed.containsKey(id)) _applyRumor(rumor);
       _notify();
     });
   }
@@ -372,12 +459,7 @@ class ConcordRepository {
           .toSet();
       if (expired.isEmpty) return;
       final kept = {..._sealed}..removeWhere((id, _) => expired.contains(id));
-      await store.put('sealed', jsonEncode(kept));
-      _sealed
-        ..clear()
-        ..addAll(kept);
-      _pendingIds.removeWhere(expired.contains);
-      _messages.removeWhere((m) => expired.contains(m.id));
+      await _saveSealed(kept);
       _controls.clear();
       for (final record in _sealed.values) {
         if (_channelId != null) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -18,6 +20,56 @@ class _ChatCubit extends MockCubit<ChatState> implements ChatCubit {}
 
 void main() {
   group(ChatScreen, () {
+    testWidgets('keeps focus and a new draft while a send finishes', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      final states = StreamController<ChatState>();
+      addTearDown(states.close);
+      whenListen(cubit, states.stream, initialState: const ChatState());
+      when(cubit.visibleMessages).thenReturn([]);
+      final sent = Completer<bool>();
+      when(
+        () => cubit.send(
+          communityId: any(named: 'communityId'),
+          channelId: any(named: 'channelId'),
+          author: any(named: 'author'),
+          body: any(named: 'body'),
+          nowMilliseconds: any(named: 'nowMilliseconds'),
+        ),
+      ).thenAnswer((_) => sent.future);
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: BlocProvider<ChatCubit>.value(
+            value: cubit,
+            child: const ChatScreen(),
+          ),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), 'first message');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      verify(
+        () => cubit.send(
+          communityId: any(named: 'communityId'),
+          channelId: any(named: 'channelId'),
+          author: any(named: 'author'),
+          body: 'first message',
+          nowMilliseconds: any(named: 'nowMilliseconds'),
+        ),
+      ).called(1);
+      states.add(const ChatState(sending: true));
+      await tester.pump();
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+      await tester.enterText(find.byType(TextField), 'next draft');
+      sent.complete(true);
+      states.add(const ChatState());
+      await tester.pump();
+      expect(find.text('next draft'), findsOneWidget);
+      expect(tester.testTextInput.isVisible, isTrue);
+    });
     for (final width in [390.0, 1400.0]) {
       for (final theme in [VineTheme.theme, VineTheme.lightTheme]) {
         testWidgets(

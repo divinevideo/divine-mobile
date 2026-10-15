@@ -33,10 +33,16 @@ bool selectChatRoom(ChatCubit cubit, {String? communityId, String? channelId}) {
 }
 
 class ChatPage extends ConsumerWidget {
-  const ChatPage({this.communityId, this.channelId, super.key});
+  const ChatPage({
+    this.communityId,
+    this.channelId,
+    this.repositoryBuilder = buildConcordRepository,
+    super.key,
+  });
 
   final String? communityId;
   final String? channelId;
+  final ConcordRepositoryBuilder repositoryBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,7 +69,7 @@ class ChatPage extends ConsumerWidget {
     return BlocProvider(
       key: ValueKey((pubkey, signer, communityId, channelId)),
       create: (_) => ChatCubit(
-        buildConcordRepository(
+        repositoryBuilder(
           pubkey: pubkey,
           signer: signer,
           store: DriftConcordStore(

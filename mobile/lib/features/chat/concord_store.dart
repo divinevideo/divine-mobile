@@ -24,4 +24,16 @@ class DriftConcordStore implements AccountScopedStore {
       dao.remove(account: account, scope: scope, key: key);
   @override
   Future<void> clearAccount() => dao.clearAccount(account);
+  @override
+  Future<void> writeBatch(
+    Map<String, String> values, {
+    List<String> remove = const [],
+  }) => dao.transaction(() async {
+    for (final entry in values.entries) {
+      await put(entry.key, entry.value);
+    }
+    for (final key in remove) {
+      await this.remove(key);
+    }
+  });
 }

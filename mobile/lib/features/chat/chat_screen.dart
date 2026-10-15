@@ -31,6 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _send(String text) async {
+    final submittedDraft = _controller.text;
     final cubit = context.read<ChatCubit>();
     final state = cubit.state;
     final accepted = await cubit.send(
@@ -40,7 +41,9 @@ class _ChatScreenState extends State<ChatScreen> {
       body: text,
       nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
     );
-    if (mounted && accepted) _controller.clear();
+    if (mounted && accepted && _controller.text == submittedDraft) {
+      _controller.clear();
+    }
   }
 
   void _submit(String text) {
@@ -166,8 +169,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _controller,
                     clearOnSend: false,
                     textCapitalization: TextCapitalization.sentences,
-                    enabled:
-                        !state.sending && !state.loading && !state.loadFailed,
+                    enabled: !state.loading && !state.loadFailed,
                     onSend: _submit,
                   ),
                 ),

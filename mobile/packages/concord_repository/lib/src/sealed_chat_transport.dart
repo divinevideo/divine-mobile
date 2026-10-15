@@ -73,8 +73,10 @@ class SealedChatTransport {
 
   Stream<Map<String, dynamic>> subscribeWraps({
     required String streamPubkey,
+    int limit = 200,
   }) => relay.subscribe({
     'kinds': [1059],
     'authors': [streamPubkey],
+    'limit': limit,
   });
 }

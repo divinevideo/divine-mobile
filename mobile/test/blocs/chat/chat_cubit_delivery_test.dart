@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
@@ -9,6 +10,15 @@ import 'package:openvine/blocs/chat/chat_cubit.dart';
 class _Repo extends Mock implements ConcordRepository {}
 
 class _Transport extends Mock implements SealedChatTransport {}
+
+class _Errors extends BlocObserver {
+  final errors = <Object>[];
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 class _Relay implements RelayGateway {
   final wraps = StreamController<Map<String, dynamic>>();
@@ -55,8 +65,47 @@ ChatCubit _cubitOver(
 void main() {
   group('send', () {
     test(
+      'clears a failed delivery notice when the pending message arrives',
+      () async {
+        final repo = _Repo();
+        var pending = <String>['01' * 32];
+        when(() => repo.pendingIds).thenAnswer((_) => pending);
+        when(() => repo.sealedTransport).thenReturn(null);
+        when(() => repo.timeline(now: any(named: 'now')))
+            .thenReturn(FoldedThread([], {}));
+        when(
+          () => repo.send(
+            communityId: any(named: 'communityId'),
+            channelId: any(named: 'channelId'),
+            author: any(named: 'author'),
+            body: any(named: 'body'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenThrow(StateError('relay unavailable'));
+        final cubit = ChatCubit(repo);
+        addTearDown(cubit.close);
+        await cubit.send(
+          communityId: 'community-test',
+          channelId: 'general',
+          author: '02' * 32,
+          body: 'message',
+          nowMilliseconds: 1700000000000,
+        );
+        expect(cubit.state.sendFailed, isTrue);
+        expect(cubit.state.pendingIds, hasLength(1));
+        pending = [];
+        cubit.refresh(now: 1700000001);
+        expect(cubit.state.pendingIds, isEmpty);
+        expect(cubit.state.sendFailed, isFalse);
+      },
+    );
+    test(
       'uses millisecond remainder and retains a draft on signer failure',
       () async {
+        final previousObserver = Bloc.observer;
+        final observer = _Errors();
+        Bloc.observer = observer;
+        addTearDown(() => Bloc.observer = previousObserver);
         final repo = _Repo();
         when(() => repo.sealedTransport).thenReturn(_Transport());
         when(() => repo.pendingIds).thenReturn([]);
@@ -90,6 +139,7 @@ void main() {
         expect(accepted, isFalse);
         expect(cubit.state.sendFailed, isTrue);
         expect(cubit.state.sending, isFalse);
+        expect(observer.errors, hasLength(1));
         verify(
           () => repo.sendSealedMessage(
             channelId: '04' * 32,

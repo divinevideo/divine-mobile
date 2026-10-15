@@ -2165,6 +2165,9 @@ class ScheduledPosts extends Table {
 ///
 /// Values must contain sealed events or non-secret delivery metadata only.
 /// The scope identifies the relay and channel; account deletion spans scopes.
+/// ConcordRepository keeps the latest 200 delivered wraps in each scope and
+/// prunes on restore and ingestion. Pending sends survive until delivered,
+/// explicitly expired, or removed with the account.
 @DataClassName('ConcordStoreRow')
 class ConcordStoreEntries extends Table {
   TextColumn get account => text()();
