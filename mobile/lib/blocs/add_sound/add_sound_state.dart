@@ -62,6 +62,7 @@ class AddSoundState extends Equatable {
   const AddSoundState({
     this.status = AddSoundStatus.idle,
     this.audio,
+    this.accountId,
     this.sharePublicly = false,
     this.attribution,
     this.publishedSound,
@@ -73,6 +74,11 @@ class AddSoundState extends Equatable {
 
   /// The library-owned copy for this pick, once it exists.
   final AudioEvent? audio;
+
+  /// The account [audio] was imported under. A save is refused once another
+  /// account is signed in, so one account's sound never lands in another's
+  /// library.
+  final String? accountId;
 
   /// Whether saving also publishes the sound as a reusable Kind 1063.
   final bool sharePublicly;
@@ -115,6 +121,7 @@ class AddSoundState extends Equatable {
   AddSoundState copyWith({
     AddSoundStatus? status,
     Object? audio = _unset,
+    Object? accountId = _unset,
     bool? sharePublicly,
     Object? attribution = _unset,
     Object? publishedSound = _unset,
@@ -124,6 +131,9 @@ class AddSoundState extends Equatable {
     return AddSoundState(
       status: status ?? this.status,
       audio: identical(audio, _unset) ? this.audio : audio as AudioEvent?,
+      accountId: identical(accountId, _unset)
+          ? this.accountId
+          : accountId as String?,
       sharePublicly: sharePublicly ?? this.sharePublicly,
       attribution: identical(attribution, _unset)
           ? this.attribution
@@ -144,6 +154,7 @@ class AddSoundState extends Equatable {
   List<Object?> get props => [
     status,
     audio,
+    accountId,
     sharePublicly,
     attribution,
     publishedSound,

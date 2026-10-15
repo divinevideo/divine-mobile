@@ -191,6 +191,33 @@ void main() {
         expect(reclaimed, isEmpty);
       });
 
+      test(
+        'a cancelled re-pick under another account does not adopt the copy',
+        () async {
+          AudioImportPickedFile? nextPick = AudioImportPickedFile(
+            path: source.path,
+            name: 'pick.mp3',
+          );
+          final cubit = build(pickFile: () async => nextPick);
+          addTearDown(cubit.close);
+          await cubit.pickFileAndImport();
+          final copiedPath = cubit.state.audio!.localFilePath;
+
+          accountId = 'account-b';
+          nextPick = null;
+          await cubit.pickFileAndImport();
+          expect(cubit.state.audio?.localFilePath, copiedPath);
+
+          await cubit.save();
+
+          // The copy was imported under account-a: it must not be written
+          // into account-b's library just because b opened the picker.
+          expect(cubit.state.failure, AddSoundFailure.accountChanged);
+          expect(savedSounds, isEmpty);
+          expect(reclaimed, equals([copiedPath]));
+        },
+      );
+
       test('an unsupported extension reports an unsupported format', () async {
         final cubit = build(
           pickFile: () async =>
