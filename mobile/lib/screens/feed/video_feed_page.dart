@@ -491,10 +491,14 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
             child: BlocBuilder<VideoFeedBloc, VideoFeedBlocState>(
               // The builder renders from the widget's own [_currentIndex], never
               // [state.currentIndex], so a per-swipe index emit must not rebuild
-              // the whole feed. Rebuild only when some other field changed.
+              // the whole feed. Operation ordering snapshots do not change
+              // presentation either. Rebuild only when a rendered field changes.
               buildWhen: (previous, current) =>
                   current !=
-                  previous.copyWith(currentIndex: current.currentIndex),
+                  previous.copyWith(
+                    currentIndex: current.currentIndex,
+                    coordination: current.coordination,
+                  ),
               builder: (context, state) {
                 final itemCount = state.videos.length;
                 final clampedIndex = _clampIndexForItemCount(

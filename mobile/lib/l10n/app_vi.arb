@@ -6976,6 +6976,7 @@
   "listPermissionsRecoveryPending": "Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.",
   "listRecoveryReadOnly": "Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.",
   "listAddToLists": "Thêm vào danh sách",
+  "accountDeletionProcessingSignOutFailed": "Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.",
   "soundRequestAction": "Yêu cầu âm thanh này",
   "soundRequestTitle": "Có người muốn dùng âm thanh của bạn",
   "soundRequestDescription": "Cho phép sử dụng lại âm thanh của video này để mọi người có thể tạo bản phối lại.",

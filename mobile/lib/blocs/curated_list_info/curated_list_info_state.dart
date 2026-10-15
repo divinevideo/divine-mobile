@@ -49,6 +49,10 @@ class CuratedListInfoState extends Equatable {
     this.needsSync = false,
     this.permissionRecoveryPending = false,
     this.recoveryReadOnly = false,
+    this.storedCollaborators = const [],
+    this.visibilityEdited = false,
+    this.collaboratorsEdited = false,
+    this.lastAttemptWasSync = false,
   });
 
   /// Where the save stands.
@@ -77,6 +81,14 @@ class CuratedListInfoState extends Equatable {
 
   /// Saved recovery records need verified repair before any mutation is safe.
   final bool recoveryReadOnly;
+
+  /// Confirmed permissions and explicit draft intent survive background Sync.
+  final List<String> storedCollaborators;
+  final bool visibilityEdited;
+  final bool collaboratorsEdited;
+
+  /// Whether delivery refresh may settle the most recent failed attempt.
+  final bool lastAttemptWasSync;
 
   /// Whether fields and permissions may be edited.
   bool get canEdit =>
@@ -122,6 +134,10 @@ class CuratedListInfoState extends Equatable {
     bool? needsSync,
     bool? permissionRecoveryPending,
     bool? recoveryReadOnly,
+    List<String>? storedCollaborators,
+    bool? visibilityEdited,
+    bool? collaboratorsEdited,
+    bool? lastAttemptWasSync,
   }) {
     return CuratedListInfoState(
       status: status ?? this.status,
@@ -134,6 +150,10 @@ class CuratedListInfoState extends Equatable {
       permissionRecoveryPending:
           permissionRecoveryPending ?? this.permissionRecoveryPending,
       recoveryReadOnly: recoveryReadOnly ?? this.recoveryReadOnly,
+      storedCollaborators: storedCollaborators ?? this.storedCollaborators,
+      visibilityEdited: visibilityEdited ?? this.visibilityEdited,
+      collaboratorsEdited: collaboratorsEdited ?? this.collaboratorsEdited,
+      lastAttemptWasSync: lastAttemptWasSync ?? this.lastAttemptWasSync,
     );
   }
 
@@ -148,5 +168,9 @@ class CuratedListInfoState extends Equatable {
     needsSync,
     permissionRecoveryPending,
     recoveryReadOnly,
+    storedCollaborators,
+    visibilityEdited,
+    collaboratorsEdited,
+    lastAttemptWasSync,
   ];
 }

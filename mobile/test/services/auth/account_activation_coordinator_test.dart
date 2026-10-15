@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -99,7 +100,12 @@ void main() {
         backend.refuse = failure == 'refused';
         backend.lie = failure == 'lying';
         backend.failRead = failure == 'readback';
-        await expectLater(coordinator.commit(ticket), throwsStateError);
+        await expectLater(
+          coordinator.commit(ticket),
+          failure == 'readback'
+              ? throwsStateError
+              : throwsA(isA<AccountStorageException>()),
+        );
         expect(coordinator.hasUnresolvedActivation, isTrue);
         expect(coordinator.committedOwnerPubkey, isNull);
       });
@@ -212,7 +218,7 @@ void main() {
             isCurrent: () => true,
             recoverInterruptedOwner: true,
           ),
-          throwsStateError,
+          throwsA(isA<AccountStorageException>()),
         );
         expect(cold.get(AccountActivationCoordinator.storageKey), raw);
         expect(gate.hasUnresolvedActivation, isTrue);
@@ -240,7 +246,7 @@ void main() {
         await coordinator.commit(ticket);
         await expectLater(
           coordinator.begin(ownerPubkey: _bob, isCurrent: () => true),
-          throwsStateError,
+          throwsA(isA<AccountStorageException>()),
         );
         expect(coordinator.committedOwnerPubkey, _alice);
       },
@@ -270,7 +276,7 @@ void main() {
         await prefs.setString('current_user_pubkey_hex', _alice);
         await expectLater(
           coordinator.completeSignOut(ticket),
-          throwsStateError,
+          throwsA(isA<AccountStorageException>()),
         );
         expect(coordinator.hasUnresolvedActivation, isTrue);
         expect(coordinator.committedOwnerPubkey, isNull);

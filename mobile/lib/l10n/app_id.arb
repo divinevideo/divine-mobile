@@ -5735,4 +5735,5 @@
 "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
 "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
 "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
-"listAddToLists": "Tambahkan ke daftar"}
+"listAddToLists": "Tambahkan ke daftar",
+"accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi."}

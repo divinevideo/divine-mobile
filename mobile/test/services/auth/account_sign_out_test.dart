@@ -15,6 +15,7 @@ import 'package:nostr_sdk/nostr_sdk.dart'
     show NostrRemoteSigner, NostrRemoteSignerInfo;
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -410,7 +411,12 @@ void main() {
           final beforeMutations = List.of(nativeMutations);
           await expectLater(
             auth.signOut(deleteKeys: true),
-            throwsA(anyOf(isA<StateError>(), isA<UserDataCleanupException>())),
+            throwsA(
+              anyOf(
+                isA<AccountStorageException>(),
+                isA<UserDataCleanupException>(),
+              ),
+            ),
           );
           expect(preferencesSnapshot(), beforePrefs);
           expect(native, beforeNative);

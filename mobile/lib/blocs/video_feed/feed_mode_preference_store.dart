@@ -207,9 +207,7 @@ class FeedModePreferenceStore {
   Future<void> persist(VideoFeedSource source) async {
     try {
       await _lease.persist(storageValueFor(source));
-      // The coordinator reports a refused native write as a StateError.
-      // ignore: avoid_catching_errors
-    } on StateError catch (error, stackTrace) {
+    } on FeedModePersistenceException catch (error, stackTrace) {
       Log.warning(
         'Home could not save the selected feed source',
         name: 'FeedModePreferenceStore',

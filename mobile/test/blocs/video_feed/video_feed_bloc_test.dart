@@ -25,6 +25,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../helpers/feed_bloc_test_helper.dart';
+
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
@@ -253,11 +255,46 @@ void main() {
       expect(bloc.state.error, isNull);
     });
 
+    blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      'emits immutable operation ownership alongside load and close',
+      setUp: () {
+        when(
+          () => mockVideosRepository.getRecommendedVideos(
+            userPubkey: any(named: 'userPubkey'),
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((_) async => HomeFeedResult(videos: createTestVideos(1)));
+      },
+      build: createBloc,
+      act: (bloc) => bloc.add(const VideoFeedStarted()),
+      expect: () => containsAllInOrder([
+        isA<VideoFeedBlocState>()
+            .having((s) => s.status, 'status', VideoFeedStatus.loading)
+            .having((s) => s.coordination.loadGeneration, 'before load', 0),
+        isA<VideoFeedBlocState>()
+            .having((s) => s.status, 'status', VideoFeedStatus.loading)
+            .having((s) => s.coordination.loadGeneration, 'active load', 1),
+        isA<VideoFeedBlocState>().having(
+          (s) => s.status,
+          'status',
+          VideoFeedStatus.success,
+        ),
+        isA<VideoFeedBlocState>().having(
+          (s) => s.coordination.isClosing,
+          'closing',
+          isTrue,
+        ),
+      ]),
+    );
+
     group('feed tuning', () {
       late _MockFeedTuningRepository tuningRepository;
       late VideoEvent tunedVideo;
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'publishes a tuning signal for the target video',
         setUp: () {
           tuningRepository = _MockFeedTuningRepository();
@@ -315,7 +352,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'undo retracts a published tuning signal',
         setUp: () {
           tuningRepository = _MockFeedTuningRepository();
@@ -399,7 +436,7 @@ void main() {
     });
 
     group('VideoFeedStarted', () {
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'emits [loading, success] when home feed loads successfully',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -435,7 +472,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'applies background Nostr enrichment to following feed videos',
         setUp: () {
           final authors = ['author1'];
@@ -585,7 +622,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'reports unexpected background enrichment failures as Reportable',
         setUp: () {
           final authors = ['author1'];
@@ -639,7 +676,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'maps legacy latest start mode to New Videos',
         setUp: () {
           final videos = createTestVideos(5);
@@ -665,7 +702,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'loads recommendations when forYou mode is specified',
         setUp: () {
           final videos = createTestVideos(5);
@@ -712,7 +749,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'marks forYou exhausted when recommendations omit next cursor',
         setUp: () {
           final videos = createTestVideos(5);
@@ -740,7 +777,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'restores saved following mode from SharedPreferences before loading',
         setUp: () async {
           final videos = createTestVideos(5);
@@ -785,7 +822,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not inherit legacy following mode for a new account with no follows',
         setUp: () async {
           final videos = createTestVideos(3);
@@ -849,7 +886,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'migrates legacy following mode for current account with follows',
         setUp: () async {
           final videos = createTestVideos(5);
@@ -895,7 +932,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not inherit legacy list mode for an authenticated account',
         setUp: () async {
           final videos = createTestVideos(3);
@@ -956,7 +993,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'restores persisted latest to New Videos',
         setUp: () async {
           final videos = createTestVideos(2);
@@ -1018,7 +1055,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'restores persisted classic to Classics',
         setUp: () async {
           final videos = createTestVideos(2);
@@ -1078,7 +1115,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'restores saved subscribed list source when list exists',
         setUp: () async {
           final list = createTestList().copyWith(
@@ -1145,7 +1182,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'falls back to For You when saved subscribed list no longer exists',
         setUp: () async {
           final videos = createTestVideos(2);
@@ -1190,7 +1227,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'emits noFollowedUsers when following list is empty on startup',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
@@ -1225,7 +1262,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not emit noFollowedUsers for forYou when following list is empty',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
@@ -1250,7 +1287,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'emits [loading, failure] when repository throws',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -1277,7 +1314,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'keeps hasMore true when fewer than page size returned',
         setUp: () {
           final videos = createTestVideos(3); // Less than 5 (page size)
@@ -1311,7 +1348,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'sets hasMore to false when empty list returned',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -1337,7 +1374,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not await initialized before calling repository',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -1377,7 +1414,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'refreshes following feed when follow repo initializes after initial load',
         // Regression test for: Following and For You show identical content
         // when the Funnelcake /feed endpoint returns stale/popular-fallback
@@ -1482,7 +1519,7 @@ void main() {
 
       late Completer<void> cachedFollowingSubscribed;
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not refresh twice when cached follows replay before initialize finishes',
         setUp: () {
           cachedFollowingSubscribed = Completer<void>();
@@ -1624,7 +1661,6 @@ void main() {
             videoRefs: any(named: 'videoRefs'),
             userPubkey: any(named: 'userPubkey'),
             limit: any(named: 'limit'),
-            until: any(named: 'until'),
           ),
         ).thenAnswer(
           (_) async => HomeFeedResult(videos: createTestVideos(pageSize)),
@@ -1638,7 +1674,7 @@ void main() {
         sharedPreferences: refusingPreferences,
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'still loads the feed on start',
         build: createRefusingBloc,
         act: (bloc) =>
@@ -1651,7 +1687,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'still switches to the chosen source',
         build: createRefusingBloc,
         act: (bloc) =>
@@ -1670,7 +1706,7 @@ void main() {
     });
 
     group('VideoFeedModeChanged', () {
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'following fetches followed creators without subscribed list refs',
         setUp: () {
           when(
@@ -1700,7 +1736,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'selected subscribed list fetches only that list in list order',
         setUp: () {
           final videos = createTestVideos(2);
@@ -1749,7 +1785,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'classic source fetches popular classic videos via cursor',
         setUp: () {
           final videos = createTestVideos(2);
@@ -1804,7 +1840,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'classic load-more paginates with the stored cursor (no until)',
         setUp: () {
           when(
@@ -1866,7 +1902,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'legacy latest mode change maps to New Videos',
         setUp: () {
           final videos = createTestVideos(5);
@@ -1896,7 +1932,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when legacy latest maps to already selected New Videos',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -1998,7 +2034,7 @@ void main() {
         });
       });
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'clears stale pagination loading flag when source changes',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -2074,7 +2110,7 @@ void main() {
       // getNewVideos reports hasMore itself, so the newVideos source paginates
       // on that flag instead of the "did anything new arrive" fallback. A page
       // that adds videos but says the source is dry must stop pagination.
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'stops newVideos pagination on the repository hasMore flag',
         setUp: () {
           when(
@@ -2108,7 +2144,7 @@ void main() {
       // New Videos falls back to `until` pagination when the repository returns
       // no cursor (Funnelcake outage or a legacy bare-list response), so a
       // cursor-less page must not be read as exhaustion.
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'pages newVideos by until when the repository returns no cursor',
         setUp: () {
           when(
@@ -2149,7 +2185,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'uses recommendations pagination path for forYou mode',
         setUp: () {
           final moreVideos = createTestVideos(
@@ -2214,7 +2250,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'preserves forYou recommendation order when next page has newer '
         'createdAt timestamps',
         setUp: () {
@@ -2266,7 +2302,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'filters duplicate IDs from the next forYou page while preserving '
         'order',
         setUp: () {
@@ -2318,7 +2354,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'appends following pages in server order on load more',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -2369,7 +2405,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'loads more following videos from the repository cursor, not the '
         'oldest publication time',
         setUp: () {
@@ -2416,7 +2452,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'stops following pagination when the repository returns no cursor',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -2460,7 +2496,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'deduplicates republished following videos by addressable identity',
         setUp: () {
           const author =
@@ -2521,7 +2557,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'keeps same d-tag videos from different authors',
         setUp: () {
           const authorB =
@@ -2577,7 +2613,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'reads the first forYou page when the cached window has no cursor',
         setUp: () {
           when(
@@ -2626,7 +2662,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'appends new videos to existing list',
         setUp: () {
           // Use different ID prefix to ensure unique videos
@@ -2685,7 +2721,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when not in success state',
         build: createBloc,
         seed: () => const VideoFeedBlocState(),
@@ -2693,7 +2729,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when already loading more',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -2705,7 +2741,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when hasMore is false',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -2717,7 +2753,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when videos list is empty',
         build: createBloc,
         seed: () => const VideoFeedBlocState(status: VideoFeedStatus.success),
@@ -2725,7 +2761,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'keeps hasMore true when fewer than page size returned from load more',
         setUp: () {
           // Return fewer videos than page size with unique IDs.
@@ -2775,7 +2811,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'sets hasMore to false when empty list returned from load more',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -2812,7 +2848,7 @@ void main() {
 
       late Completer<HomeFeedResult> paginationResponse;
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'drops concurrent requests via droppable transformer',
         setUp: () {
           paginationResponse = Completer<HomeFeedResult>();
@@ -2886,7 +2922,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'deduplicates overlapping videos from Funnelcake and Nostr',
         setUp: () {
           // Return videos that partially overlap with existing ones.
@@ -2943,7 +2979,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'resets isLoadingMore on error',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -2979,7 +3015,7 @@ void main() {
     });
 
     group('VideoFeedRefreshRequested', () {
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'clears videos and reloads from beginning',
         setUp: () {
           final freshVideos = createTestVideos(pageSize);
@@ -3030,7 +3066,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'clears error on refresh',
         setUp: () {
           final videos = createTestVideos(5);
@@ -3063,7 +3099,7 @@ void main() {
     });
 
     group('VideoFeedAutoRefreshRequested', () {
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'refreshes when on home mode and data is stale',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -3099,7 +3135,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'revalidates New when data is stale',
         setUp: () {
           when(
@@ -3142,7 +3178,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when mode is classic',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -3163,7 +3199,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'refreshes forYou when data is stale',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -3208,7 +3244,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing for forYou when data is fresh '
         '(last refresh within auto-refresh interval)',
         setUp: () {
@@ -3250,7 +3286,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when data is fresh '
         '(last refresh within auto-refresh interval)',
         setUp: () {
@@ -3294,7 +3330,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'refreshes when auto-refresh interval has elapsed',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -3340,7 +3376,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'refreshes when _lastRefreshedAt is null '
         '(feed never loaded successfully)',
         setUp: () {
@@ -3374,7 +3410,7 @@ void main() {
     });
 
     group('VideoFeedFollowingListChanged', () {
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'failed quiet refresh releases paging flag',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys)
@@ -3385,7 +3421,6 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
             ),
           ).thenThrow(Exception('relay failed'));
         },
@@ -3401,7 +3436,7 @@ void main() {
         verify: (bloc) => expect(bloc.state.isLoadingMore, isFalse),
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'silently refreshes home feed on follow list change',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -3436,7 +3471,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when mode is not home',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -3449,7 +3484,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when feed is still loading',
         build: createBloc,
         seed: () => const VideoFeedBlocState(mode: FeedMode.following),
@@ -3458,7 +3493,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'transitions from noFollowedUsers to loaded feed',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -3494,7 +3529,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'skips initial follow list replay to avoid redundant API call',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -3536,7 +3571,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'silently refreshes on second follow list emission after feed '
         'is empty (Funnelcake failed)',
         setUp: () {
@@ -3614,7 +3649,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'silently refreshes on runtime follow list changes '
         '(skips initial replay)',
         setUp: () {
@@ -3662,7 +3697,7 @@ void main() {
     });
 
     group('VideoFeedCuratedListsChanged', () {
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'updates subscribed lists without refreshing plain Following',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -3691,7 +3726,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'refreshes selected subscribed list when curated lists change',
         setUp: () {
           final videos = createTestVideos(2);
@@ -3724,7 +3759,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'falls back to forYou when selected subscribed list is unsubscribed',
         setUp: () async {
           SharedPreferences.setMockInitialValues({
@@ -3789,7 +3824,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not refresh plain Following when curated lists change',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -3812,7 +3847,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when mode is not home',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -3824,7 +3859,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does nothing when feed is still loading',
         build: createBloc,
         seed: () => const VideoFeedBlocState(mode: FeedMode.following),
@@ -3832,7 +3867,7 @@ void main() {
         expect: () => <VideoFeedBlocState>[],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'subscribes to subscribedListsStream on startup',
         setUp: () {
           final videos = createTestVideos(pageSize);
@@ -3870,7 +3905,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not fetch home attribution when plain Following curated lists change',
         build: createBloc,
         seed: () => VideoFeedBlocState(
@@ -3893,7 +3928,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'merges attribution metadata on load more',
         setUp: () {
           final moreVideos = createTestVideos(
@@ -4292,7 +4327,7 @@ void main() {
             );
           },
         );
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'blocking followed list owner removes selector and falls back',
           setUp: () => stubRecommended(createTestVideos(2)),
           build: createPeopleBloc,
@@ -4310,7 +4345,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'a blocklist read that a newer followed set overtakes is read again',
           setUp: () {
             final stale = Completer<List<PeopleListSearchResult>>();
@@ -4352,7 +4387,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'does not wait on the followed-list read when no list is saved',
           setUp: () {
             stubRecommended(createTestVideos(2));
@@ -4380,7 +4415,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'offers the lists the viewer follows',
           setUp: () => stubRecommended(createTestVideos(2)),
           build: createPeopleBloc,
@@ -4399,7 +4434,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           "restores a saved people list and loads its members' videos",
           setUp: () async {
             final crew = followedList();
@@ -4440,7 +4475,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'falls back to For You when the saved people list is no longer '
           'followed',
           setUp: () async {
@@ -4482,7 +4517,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'keeps the stored people list while its copy is not held yet',
           setUp: () async {
             // After "Reset app data" the follow survives but its copy is
@@ -4516,7 +4551,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'still loads Home when the follows cannot be read',
           setUp: () {
             stubRecommended(createTestVideos(2));
@@ -4534,7 +4569,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'keeps the stored people list when the follows cannot be read',
           setUp: () async {
             SharedPreferences.setMockInitialValues({
@@ -4576,7 +4611,7 @@ void main() {
           StateError('box will not open'),
           _UnopenableBoxError(),
         ]) {
-          blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          feedBlocTest(
             'still loads Home when restoring a saved list and the read throws '
             '${thrown.runtimeType}, leaving the observer to decide whether '
             'it is reportable',
@@ -4607,7 +4642,7 @@ void main() {
           );
         }
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'reads no follows for a signed-out viewer',
           setUp: () => stubRecommended(createTestVideos(2)),
           build: () => createPeopleBloc(signedOut: true),
@@ -4627,7 +4662,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'a follow made while Home is alive reaches the menu',
           setUp: () => stubRecommended(createTestVideos(2)),
           build: createPeopleBloc,
@@ -4648,7 +4683,7 @@ void main() {
       });
 
       group('VideoFeedSourceChanged', () {
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           "loads the selected list's members, newest page first",
           setUp: () => stubMemberVideos(createTestVideos(3)),
           build: createPeopleBloc,
@@ -4681,7 +4716,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'asks for nobody when the selected list is not followed',
           setUp: () => stubMemberVideos(const []),
           build: createPeopleBloc,
@@ -4703,7 +4738,7 @@ void main() {
       });
 
       group('VideoFeedLoadMoreRequested', () {
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'pages backwards from the oldest loaded video',
           setUp: () => stubMemberVideos(
             createTestVideos(2, startTimestamp: 900, idPrefix: 'older'),
@@ -4734,7 +4769,7 @@ void main() {
           for (final refreshingMembers in [true, false]) {
             late Completer<List<VideoEvent>> staleFetch;
             late Completer<void> fetchStarted;
-            blocTest<VideoFeedBloc, VideoFeedBlocState>(
+            feedBlocTest(
               '${unfollow ? 'unfollowing' : 'replacing members'} during '
               '${refreshingMembers ? 'a membership reload' : 'a refresh'} '
               'discards the old result',
@@ -4856,7 +4891,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'adds a followed list to the menu without reloading another feed',
           build: createPeopleBloc,
           seed: () => VideoFeedBlocState(
@@ -4874,7 +4909,7 @@ void main() {
           ],
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'ignores a set equal to the one it already holds',
           build: createPeopleBloc,
           seed: () => VideoFeedBlocState(
@@ -4888,7 +4923,7 @@ void main() {
           expect: () => const <VideoFeedBlocState>[],
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'falls back to For You when the selected list is unfollowed',
           setUp: () async {
             SharedPreferences.setMockInitialValues({});
@@ -4937,7 +4972,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'still falls back to For You when the fallback cannot be saved',
           setUp: () async {
             final platform = SharedPreferencesStorePlatform.instance;
@@ -5027,7 +5062,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'keeps the saved selection when its cached copy disappears',
           setUp: () async {
             SharedPreferences.setMockInitialValues({
@@ -5066,7 +5101,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'reloads the selected list when its members change',
           setUp: () => stubMemberVideos(createTestVideos(4)),
           build: createPeopleBloc,
@@ -5102,7 +5137,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'keeps playing when the selected list is only renamed',
           build: createPeopleBloc,
           seed: () => VideoFeedBlocState(
@@ -5228,7 +5263,7 @@ void main() {
         feedTracker: mockTracker,
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'calls startFeedLoad on VideoFeedStarted',
         setUp: () {
           final videos = createTestVideos(3);
@@ -5251,7 +5286,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'records first-visible and fresh-result milestones on success',
         setUp: () {
           final videos = createTestVideos(3);
@@ -5295,7 +5330,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'calls trackFeedError on failure',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn(['a']);
@@ -5329,7 +5364,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'uses New Videos feed type for legacy latest mode',
         setUp: () {
           final videos = createTestVideos(3);
@@ -5438,7 +5473,7 @@ void main() {
         ).thenAnswer((_) async => HomeFeedResult(videos: videos));
       }
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'serves cached videos then splices fresh after the active video',
         setUp: () {
           when(
@@ -5480,7 +5515,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'serves cached For You then refreshes (supersedes #3861 exclusion)',
         setUp: () {
           when(
@@ -5524,7 +5559,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'replaces wholesale when no cache exists',
         setUp: () => stubFollowingFetch(createTestVideos(3)),
         build: createBlocWithCache,
@@ -5538,7 +5573,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'keeps cached data visible when the network fails',
         setUp: () {
           when(
@@ -5569,7 +5604,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not serve cache for a subscribed list source',
         setUp: () async {
           final list = createTestList().copyWith(
@@ -5624,7 +5659,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'filters cached videos through applyContentPreferences',
         setUp: () {
           final hidden = VideoEvent(
@@ -5682,7 +5717,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'advances the resume window past the active position on a fetch',
         setUp: () => stubFollowingFetch(createTestVideos(3, idPrefix: 'fresh')),
         build: createBlocWithCache,
@@ -5703,7 +5738,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'on swipe, persists the forward window starting past the active video',
         setUp: () => stubFollowingFetch(createTestVideos(5, idPrefix: 'fresh')),
         build: createBlocWithCache,
@@ -5756,7 +5791,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'clears the resume cache when swiped to the end of the window',
         setUp: () => stubFollowingFetch(createTestVideos(3, idPrefix: 'fresh')),
         build: createBlocWithCache,
@@ -5834,7 +5869,7 @@ void main() {
         createdAt: DateTime(2024),
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'fetches creator profiles when videos load',
         setUp: () {
           final baseTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -5893,7 +5928,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'fetches only new profiles on pagination',
         setUp: () {
           final baseTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -5994,7 +6029,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not re-fetch existing profiles on pagination',
         setUp: () {
           final baseTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;

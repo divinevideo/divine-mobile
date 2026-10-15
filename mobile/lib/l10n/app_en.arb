@@ -10458,6 +10458,8 @@
     "description": "Title of the sheet where the viewer picks which of their lists a video or a person belongs to."
   },
   "listAddToLists": "Add to lists",
+  "accountDeletionProcessingSignOutFailed": "Your account deletion is processing, but we couldn’t finish signing you out. Try again.",
+  "@accountDeletionProcessingSignOutFailed": {"description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."},
   "soundRequestAction": "Request this sound",
   "soundRequestTitle": "Someone wants to use your sound",
   "soundRequestDescription": "Enable sound reuse on this video so anyone can remix with it.",

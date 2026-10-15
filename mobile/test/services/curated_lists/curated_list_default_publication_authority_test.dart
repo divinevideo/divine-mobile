@@ -5,6 +5,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:db_client/db_client.dart' hide Filter;
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -18,6 +20,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_default_signed_intent_store.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -76,6 +79,7 @@ class _Harness {
     this.owner,
     this.signer,
     AccountActivationReceipt receipt, {
+    CuratedDefaultSignedIntentStore? signedIntentStore,
     Duration relayTimeout = const Duration(milliseconds: 10),
   }) {
     when(() => auth.isAuthenticated).thenReturn(true);
@@ -124,6 +128,7 @@ class _Harness {
       authService: auth,
       prefs: prefs,
       relaySyncTimeout: relayTimeout,
+      defaultSignedIntentStore: signedIntentStore,
     );
   }
   final SharedPreferences prefs;
@@ -148,6 +153,7 @@ Future<_Harness> _makeHarness(
   SharedPreferences prefs,
   String owner,
   LocalNostrSigner signer, {
+  CuratedDefaultSignedIntentStore? signedIntentStore,
   Duration relayTimeout = const Duration(milliseconds: 10),
 }) async {
   final coordinator = AccountActivationCoordinator.forPreferences(prefs);
@@ -157,7 +163,14 @@ Future<_Harness> _makeHarness(
   );
   await coordinator.markIdentityReady(ticket);
   final receipt = await coordinator.commit(ticket);
-  return _Harness(prefs, owner, signer, receipt, relayTimeout: relayTimeout);
+  return _Harness(
+    prefs,
+    owner,
+    signer,
+    receipt,
+    relayTimeout: relayTimeout,
+    signedIntentStore: signedIntentStore,
+  );
 }
 
 CuratedList _cached(
@@ -1145,6 +1158,67 @@ void main() {
         expect(h.sent, isEmpty);
       },
     );
+    test('explicit Sync recovers a signed pending edit after restart', () async {
+      final database = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(database.close);
+      final store = CuratedDefaultSignedIntentStore(database.personalEventsDao);
+      h.close();
+      h = _Harness(
+        h.prefs,
+        owner,
+        signer,
+        h.auth.committedAccountActivationReceipt!,
+        signedIntentStore: store,
+      );
+      final baseline = await _privateEvent(signer, owner);
+      h.relay = () => Stream.value(baseline);
+      await h.settle();
+      when(() => h.client.publishEvent(any()))
+          .thenAnswer((_) async => const PublishFailed());
+      final added = 'c'.padRight(64, 'c');
+      expect(await h.service.addVideoToList(_defaultId, added), isFalse);
+      await h.prefs.setString('current_user_pubkey_hex', owner);
+      final persisted = {
+        for (final key in h.prefs.getKeys()) key: h.prefs.get(key)!,
+      };
+      h.close();
+      // A cold restart has fresh preferences/coordinators and no live receipt.
+      SharedPreferences.setMockInitialValues(persisted);
+      final prefs = await SharedPreferences.getInstance();
+      h = await _makeHarness(prefs, owner, signer, signedIntentStore: store);
+      await h.settle();
+      expect(h.sent, isEmpty);
+      expect(h.service.getDefaultList()!.videoEventIds, contains(added));
+      final savedIntent = (await store.read(owner))!;
+      await database.personalEventsDao.deleteAllForOwner(owner);
+      expect(await h.service.retryListSync(_defaultId), isFalse);
+      final forged = Event.fromJson({
+        ...savedIntent.toJson(),
+        'sig': '0' * 128,
+      });
+      await database.personalEventsDao.upsertPersonalEvent(
+        forged,
+        retainForRetry: true,
+      );
+      expect(await h.service.retryListSync(_defaultId), isFalse);
+      expect(h.sent, isEmpty);
+      expect(h.service.getDefaultList()!.videoEventIds, contains(added));
+      await database.personalEventsDao.deleteAllForOwner(owner);
+      expect(await store.save(savedIntent), isTrue);
+      expect(await h.service.retryListSync(_defaultId), isTrue);
+      expect(h.signed, isEmpty);
+      expect(h.sent.single.id, savedIntent.id);
+      expect(h.sent, hasLength(1));
+      expect(
+        jsonDecode((await signer.nip44Decrypt(owner, h.sent.single.content))!),
+        [
+          ['e', _video],
+          ['e', added],
+        ],
+      );
+      expect(h.service.getDefaultList()!.pendingRepublish, isFalse);
+    });
+
     test(
       'retry of the same failed explicit value remains permitted without broadening intent',
       () async {

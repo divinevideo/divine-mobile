@@ -5735,4 +5735,5 @@
 "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
 "listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.",
 "listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.",
-"listAddToLists": "Adaugă la liste"}
+"listAddToLists": "Adaugă la liste",
+"accountDeletionProcessingSignOutFailed": "Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou."}

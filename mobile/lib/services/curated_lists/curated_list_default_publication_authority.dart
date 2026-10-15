@@ -15,12 +15,14 @@ class _DefaultPublicationIntent {
     required this.value,
     this.baselineEventId,
     this.creationPermit,
+    this.signedRetry,
   });
 
   final String owner;
   final String value;
   final String? baselineEventId;
   final FreshAccountListCreationPermit? creationPermit;
+  final Event? signedRetry;
 }
 
 /// One operation may undo only its own unpersisted publication reservation.
@@ -239,6 +241,41 @@ class CuratedDefaultPublicationAuthority {
     });
   }
 
+  /// A genuine owner-signed intent permits only an explicit retry of its exact
+  /// saved payload. It does not establish relay acceptance or permit edits.
+  bool restoreSignedRetry(
+    Event event,
+    UnsealedItemTags items,
+    CuratedList target,
+  ) {
+    if (!_owns(target.pubkey) ||
+        !authenticates(event, target.pubkey) ||
+        items.status == UnsealItemTagsStatus.failed ||
+        (items.status == UnsealItemTagsStatus.unsealed &&
+            !items.hasCompleteItemSnapshot) ||
+        (items.status == UnsealItemTagsStatus.notSealed &&
+            CuratedListConverter.isEncryptedItemPayload(event.content))) {
+      return false;
+    }
+    final newest = _newestObserved;
+    if (newest != null && _olderThan(event, newest)) return false;
+    final decoded = CuratedListConverter.fromEvent(
+      event,
+      privateTags: items.tags,
+      isPrivateEvent: items.status == UnsealItemTagsStatus.unsealed,
+    );
+    if (decoded == null ||
+        _value(decoded) != _value(target.publicationTarget)) {
+      return false;
+    }
+    _intent = _DefaultPublicationIntent(
+      owner: event.pubkey,
+      value: _value(decoded),
+      signedRetry: event,
+    );
+    return true;
+  }
+
   /// Sync may retry the exact saved creation intent without granting edits.
   bool canRetrySavedPublication(CuratedList list) =>
       canMutate(list) || canPublish(list.publicationTarget);
@@ -291,6 +328,11 @@ class CuratedDefaultPublicationAuthority {
         intent.owner != target.pubkey ||
         intent.value != _value(target)) {
       return false;
+    }
+    final signedRetry = intent.signedRetry;
+    if (signedRetry != null) {
+      final newest = _newestObserved;
+      return newest == null || !_olderThan(signedRetry, newest);
     }
     final permit = intent.creationPermit;
     return permit != null

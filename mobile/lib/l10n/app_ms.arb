@@ -6976,6 +6976,7 @@
   "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.",
   "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
   "listAddToLists": "Tambah ke senarai",
+  "accountDeletionProcessingSignOutFailed": "Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.",
   "soundRequestAction": "Minta bunyi ini",
   "soundRequestTitle": "Seseorang mahu menggunakan bunyi anda",
   "soundRequestDescription": "Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.",

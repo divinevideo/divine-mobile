@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show NostrRemoteSignerInfo;
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/signer_secure_store.dart';
 
 import '../support/auth_service_test_harness.dart';
@@ -82,7 +83,7 @@ void main() {
         await expectLater(
           SignerSecureStore(throwingStorage).clearAccount(_pubkeyA),
           throwsA(
-            isA<StateError>().having(
+            isA<AccountStorageException>().having(
               (error) => error.message,
               'message',
               'Account signer removal is incomplete',
@@ -119,7 +120,7 @@ void main() {
           await expectLater(
             SignerSecureStore(throwingStorage).clearAccount(_pubkeyA),
             throwsA(
-              isA<StateError>().having(
+              isA<AccountStorageException>().having(
                 (error) => error.message,
                 'message',
                 'Account signer removal is incomplete',
@@ -168,7 +169,7 @@ void main() {
         await expectLater(
           SignerSecureStore(throwingStorage).clearAccount(_pubkeyA),
           throwsA(
-            isA<StateError>().having(
+            isA<AccountStorageException>().having(
               (error) => error.message,
               'message',
               'Account signer removal is incomplete',
@@ -206,7 +207,10 @@ void main() {
             await store.saveAmber(_pubkeyB, 'com.example.bob');
             final before = Map<String, String>.of(mocks.secureStorage);
 
-            await expectLater(store.clearAccount(_pubkeyA), throwsStateError);
+            await expectLater(
+              store.clearAccount(_pubkeyA),
+              throwsA(isA<AccountStorageException>()),
+            );
 
             expect(mocks.secureStorage, before);
           });
@@ -224,7 +228,10 @@ void main() {
           ]) {
             mocks.secureStorage.clear();
             mocks.secureStorage.addAll(values);
-            await expectLater(store.clearAccount(_pubkeyA), throwsStateError);
+            await expectLater(
+              store.clearAccount(_pubkeyA),
+              throwsA(isA<AccountStorageException>()),
+            );
             expect(mocks.secureStorage, values);
           }
         },
@@ -262,7 +269,10 @@ void main() {
             'amber_pubkey_$_pubkeyA': _pubkeyA,
             'bunker_info_$_pubkeyA': '{damaged',
           });
-          await expectLater(store.clearAccount(_pubkeyA), throwsStateError);
+          await expectLater(
+            store.clearAccount(_pubkeyA),
+            throwsA(isA<AccountStorageException>()),
+          );
           expect(mocks.secureStorage, {'bunker_info_$_pubkeyA': '{damaged'});
         },
       );
@@ -304,7 +314,7 @@ void main() {
 
             await expectLater(
               SignerSecureStore(silent).clearAccount(_pubkeyA),
-              throwsStateError,
+              throwsA(isA<AccountStorageException>()),
             );
 
             expect(values.containsKey(slot), isTrue);
@@ -322,7 +332,7 @@ void main() {
         mocks.secureStorage['amber_pubkey_$_pubkeyA'] = '{damaged';
         await expectLater(
           SignerSecureStore(null).clearAccount(_pubkeyA),
-          throwsStateError,
+          throwsA(isA<AccountStorageException>()),
         );
         expect(mocks.secureStorage['amber_pubkey_$_pubkeyA'], '{damaged');
       });

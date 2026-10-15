@@ -5735,4 +5735,5 @@
 "listRecoveryPending": "Diese Liste hat Änderungen, die auf die Synchronisierung warten.",
 "listPermissionsRecoveryPending": "Deine Änderung wurde angenommen. Tippe auf Jetzt synchronisieren, um das Speichern abzuschließen. Bis dahin ist die Bearbeitung pausiert.",
 "listRecoveryReadOnly": "Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.",
-"listAddToLists": "Zu Listen hinzufügen"}
+"listAddToLists": "Zu Listen hinzufügen",
+"accountDeletionProcessingSignOutFailed": "Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal."}

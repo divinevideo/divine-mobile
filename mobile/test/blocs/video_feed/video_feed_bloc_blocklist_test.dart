@@ -3,7 +3,6 @@
 
 import 'dart:async';
 
-import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +16,8 @@ import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+import '../../helpers/feed_bloc_test_helper.dart';
 
 class _Videos extends Mock implements VideosRepository {}
 
@@ -187,7 +188,7 @@ void main() {
         verifyZeroInteractions(curatedLists);
       }
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'new local block removes its author without restarting the selected feed',
         build: buildBloc,
         seed: () => activeFeed,
@@ -206,7 +207,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'new relay mute removes its author through the full current policy',
         build: buildBloc,
         seed: () => activeFeed,
@@ -225,7 +226,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'unrelated background mute retains loaded videos and their pagination',
         build: buildBloc,
         seed: () => activeFeed,
@@ -239,7 +240,12 @@ void main() {
           expect(blocklist.filteredAuthorSets, [
             [_visibleAuthor, _visibleAuthor, _deniedAuthor],
           ]);
-          expect(bloc.state, activeFeed);
+          expect(
+            bloc.state,
+            activeFeed.copyWith(
+              coordination: const VideoFeedCoordination(isClosing: true),
+            ),
+          );
           expect(bloc.state.videos, hasLength(3));
           expectNoRestartOrSelectionWrite(bloc);
         },

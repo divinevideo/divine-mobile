@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
@@ -510,7 +511,7 @@ void main() {
       store.failReadback = true;
       await expectLater(
         deleteAlice(),
-        throwsStateError,
+        throwsA(isA<AccountStorageException>()),
       );
       expect(journal.needsRepair(_bob), isTrue);
       store.failReadback = false;
@@ -685,7 +686,7 @@ void main() {
         await expectLater(
           deleteAlice(),
           guardedKey == PendingAccountCleanup.storageKey
-              ? throwsStateError
+              ? throwsA(isA<AccountStorageException>())
               : throwsA(isA<CuratedListRecoveryException>()),
         );
         await restart();

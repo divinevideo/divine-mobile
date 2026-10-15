@@ -407,7 +407,7 @@ class CuratedListRecoveryJournal {
     for (final owner in owners) {
       if (owner == deletingOwner) continue;
       if (!await _captureRows(prefs, const [], owner)) {
-        throw StateError('Could not preserve acknowledged curated recovery');
+        throw const CuratedListRecoveryException();
       }
     }
     final groups = <String, List<CuratedList>>{};
@@ -423,7 +423,7 @@ class CuratedListRecoveryJournal {
         continue;
       }
       if (owner == null) {
-        throw StateError('Could not attribute curated-list recovery');
+        throw const CuratedListRecoveryException();
       }
       (groups[owner] ??= []).add(list);
     }
@@ -434,7 +434,7 @@ class CuratedListRecoveryJournal {
         group.key,
         retireSuperseded: !CuratedListRecoveryStorage.legacyNeedsRepair(prefs),
       )) {
-        throw StateError('Could not preserve curated-list recovery');
+        throw const CuratedListRecoveryException();
       }
     }
   }

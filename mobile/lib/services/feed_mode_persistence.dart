@@ -1,10 +1,20 @@
 // ABOUTME: Device-lifetime ownership of account-scoped Home preferences.
 // ABOUTME: Preserves accepted selections across route and account replacement.
 
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 const legacyHomeFeedModeKey = 'selected_feed_mode';
+
+/// The platform refused to persist the selected Home source.
+class FeedModePersistenceException implements Exception {
+  const FeedModePersistenceException(this.message);
+  final String message;
+
+  @override
+  String toString() => 'FeedModePersistenceException: $message';
+}
 
 /// Explicitly owned by DeviceScope and injected into every account container.
 /// Coordinators are reused by complete account pubkey so pending old writers
@@ -134,24 +144,34 @@ class FeedModePersistenceCoordinator {
   }
 
   Future<void> _write(String? value) async {
-    final prefs = _preferences;
-    if (prefs == null) return;
-    final persisted = value == null
-        ? await prefs.remove(key)
-        : await prefs.setString(key, value);
-    if (!persisted) {
-      throw StateError('The Home selection could not be persisted.');
-    }
-    if (_userPubkey != null &&
-        !_retired &&
-        _owner != null &&
-        (_mayClearLegacy?.call() ?? true)) {
-      final coordinatedClear = _clearLegacy;
-      if (coordinatedClear != null) {
-        await coordinatedClear();
-      } else if (!await prefs.remove(legacyHomeFeedModeKey)) {
-        throw StateError('The legacy Home selection could not be cleared.');
+    try {
+      final prefs = _preferences;
+      if (prefs == null) return;
+      final persisted = value == null
+          ? await prefs.remove(key)
+          : await prefs.setString(key, value);
+      if (!persisted) {
+        throw const FeedModePersistenceException(
+          'The Home selection could not be persisted.',
+        );
       }
+      if (_userPubkey != null &&
+          !_retired &&
+          _owner != null &&
+          (_mayClearLegacy?.call() ?? true)) {
+        final coordinatedClear = _clearLegacy;
+        if (coordinatedClear != null) {
+          await coordinatedClear();
+        } else if (!await prefs.remove(legacyHomeFeedModeKey)) {
+          throw const FeedModePersistenceException(
+            'The legacy Home selection could not be cleared.',
+          );
+        }
+      }
+    } on PlatformException {
+      throw const FeedModePersistenceException(
+        'The Home selection could not be persisted.',
+      );
     }
   }
 

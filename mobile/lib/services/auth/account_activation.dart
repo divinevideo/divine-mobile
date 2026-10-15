@@ -14,6 +14,8 @@ class _AccountActivationState {
   bool Function()? hostIsCurrent;
   bool Function()? metadataIsCurrent;
   bool Function()? identityIsCurrent;
+  NostrIdentity? boundIdentity;
+  SecureKeyContainer? boundKeys;
   void Function()? nostrConnectAttempt;
   final changes = StreamController<AccountActivationReceipt?>.broadcast();
   AccountActivationCoordinator? coordinator;
@@ -310,14 +312,18 @@ extension AccountActivationAuthority on AuthService {
     final result = await mutation();
     ensureCurrent();
     if (result is SecureKeyContainer && result.publicKeyHex != ownerPubkey) {
-      throw StateError('Imported identity does not match its requested owner');
+      throw const AccountStorageException(
+        'Imported identity does not match its requested owner',
+      );
     }
     // Dropping the cache does not dispose a signer held by the leaving account.
     _keyStorage.clearCache();
     final storedKeys = await _keyStorage.getKeyContainer();
     ensureCurrent();
     if (storedKeys?.publicKeyHex != ownerPubkey) {
-      throw StateError('PRIMARY identity readback does not match its owner');
+      throw const AccountStorageException(
+        'PRIMARY identity readback does not match its owner',
+      );
     }
     return result;
   }, preparedEntry: preparedEntry);
@@ -330,12 +336,16 @@ extension AccountActivationAuthority on AuthService {
       NostrKeyUtils.encodePubKey(ownerPubkey),
     );
     if (!switched) {
-      throw StateError('Could not restore the requested PRIMARY identity');
+      throw const AccountStorageException(
+        'Could not restore the requested PRIMARY identity',
+      );
     }
     _keyStorage.clearCache();
     final keys = await _keyStorage.getKeyContainer();
     if (keys == null || keys.publicKeyHex != ownerPubkey) {
-      throw StateError('Restored PRIMARY identity does not match its owner');
+      throw const AccountStorageException(
+        'Restored PRIMARY identity does not match its owner',
+      );
     }
     return keys;
   }, preparedEntry: preparedEntry);
@@ -468,18 +478,15 @@ extension AccountActivationAuthority on AuthService {
         coordinator == null ||
         !isAuthenticated ||
         currentPublicKeyHex != ticket.ownerPubkey) {
-      throw StateError('The incoming account has not proved its identity');
+      throw const AccountStorageException(
+        'The incoming account has not proved its identity',
+      );
     }
     state.hostIsCurrent = hostIsCurrent;
     state.frameIsCurrent = hostIsCurrent;
-    final identity = _currentIdentity;
-    final keys = _currentKeyContainer;
     final liveHost = state.hostIsCurrent!;
     state.hostIsCurrent = () =>
-        liveHost() &&
-        isAuthenticated &&
-        identical(identity, _currentIdentity) &&
-        identical(keys, _currentKeyContainer);
+        liveHost() && isAuthenticated && state.identityIsCurrent!.call();
     coordinator.ensureCurrent(ticket);
     state.receipt = await coordinator.commit(ticket);
     coordinator.ensureCurrent(ticket);
@@ -493,6 +500,8 @@ extension AccountActivationAuthority on AuthService {
     state.generation += 1;
     state.receipt = null;
     state.freshPermit = null;
+    state.boundIdentity = null;
+    state.boundKeys = null;
     state.coordinator?.retire(state.ticket);
     if (!state.changes.isClosed) state.changes.add(null);
   }
@@ -520,11 +529,13 @@ extension AccountActivationAuthority on AuthService {
     }
     final state = _activation;
     state.awaitsHost = true;
+    state.boundIdentity = identity;
+    state.boundKeys = keys;
+    state.identityIsCurrent = () =>
+        identical(state.boundIdentity, _currentIdentity) &&
+        identical(state.boundKeys, _currentKeyContainer);
     state.hostIsCurrent = () =>
-        hostIsCurrent() &&
-        isAuthenticated &&
-        identical(identity, _currentIdentity) &&
-        identical(keys, _currentKeyContainer);
+        hostIsCurrent() && isAuthenticated && state.identityIsCurrent!.call();
     state.generation += 1;
     final generation = state.generation;
     final coordinator = AccountActivationCoordinator.forPreferences(
@@ -548,7 +559,9 @@ extension AccountActivationAuthority on AuthService {
         preferences.getString(kLastUsedNpubKey) != keys.npub ||
         preferences.getString(kAuthenticationSourceKey) != _authSource.code) {
       coordinator.retire(ticket);
-      throw StateError('The outgoing session was not durably restored');
+      throw const AccountStorageException(
+        'The outgoing session was not durably restored',
+      );
     }
     state.metadataIsCurrent = () =>
         preferences.get('current_user_pubkey_hex') == keys.publicKeyHex &&
@@ -573,22 +586,24 @@ extension AccountActivationAuthority on AuthService {
         !identical(keys, _currentKeyContainer)) {
       throw const AccountActivationRetiredException();
     }
+    state.boundIdentity = identity;
+    state.boundKeys = keys;
+    state.identityIsCurrent = () =>
+        identical(state.boundIdentity, _currentIdentity) &&
+        identical(state.boundKeys, _currentKeyContainer);
     if (state.entryPrepared) {
       state.entryPrepared = false;
-      state.identityIsCurrent = () =>
-          identical(identity, _currentIdentity) &&
-          identical(keys, _currentKeyContainer);
       final ticket = state.ticket;
       if (ticket == null || ticket.ownerPubkey != keys.publicKeyHex) {
-        throw StateError('Account switch identity does not match its intent');
+        throw const AccountStorageException(
+          'Account switch identity does not match its intent',
+        );
       }
       final hostIsCurrent =
           state.hostIsCurrent ??
           () => !state.disposed && (state.frameIsCurrent?.call() ?? true);
       state.hostIsCurrent = () =>
-          hostIsCurrent() &&
-          identical(identity, _currentIdentity) &&
-          identical(keys, _currentKeyContainer);
+          hostIsCurrent() && state.identityIsCurrent!.call();
       state.coordinator!.ensureCurrent(ticket);
       return ticket;
     }
@@ -609,8 +624,7 @@ extension AccountActivationAuthority on AuthService {
       isCurrent: () =>
           !state.disposed &&
           state.generation == generation &&
-          identical(identity, _currentIdentity) &&
-          identical(keys, _currentKeyContainer) &&
+          state.identityIsCurrent!.call() &&
           (state.frameIsCurrent?.call() ?? true) &&
           (state.metadataIsCurrent?.call() ?? true),
     );

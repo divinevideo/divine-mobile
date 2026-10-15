@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,7 +39,10 @@ class _NativeGate extends InMemorySharedPreferencesStore {
     started.complete();
     await release.future;
     if (result == _NativeResult.throwsError) {
-      throw StateError('Native operation failed.');
+      throw PlatformException(
+        code: 'write_failed',
+        message: 'Native operation failed.',
+      );
     }
     return result != _NativeResult.returnsFalse;
   }
@@ -139,13 +143,14 @@ void main() {
               expect(transaction.accept(), isFalse);
               await transaction.discard();
             } else {
-              expect(outcome, isA<StateError>());
+              expect(
+                outcome,
+                isA<FeedModePersistenceException>(),
+              );
               expect(
                 outcome.toString(),
                 contains(
-                  result == _NativeResult.throwsError
-                      ? 'Native operation failed.'
-                      : 'The Home selection could not be persisted.',
+                  'The Home selection could not be persisted.',
                 ),
               );
             }

@@ -165,7 +165,7 @@ class _PagePreferencesGate extends InMemorySharedPreferencesStore {
 
 class _CacheDao implements CacheDao {
   @override
-  Future<String?> read(String key) async => null;
+  Future<CacheEntry?> readEntry(String key) async => null;
   @override
   Future<void> write({
     required String key,

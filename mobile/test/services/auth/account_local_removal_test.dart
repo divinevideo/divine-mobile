@@ -14,6 +14,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
@@ -41,16 +42,17 @@ class _RemovalCacheDao implements CacheDao {
   final deletedPrefixes = <String>[];
   int _accessSequence = 0;
 
+  Future<String?> read(String key) async => (await readEntry(key))?.payload;
+
   @override
-  Future<String?> read(String key) async {
+  Future<CacheEntry?> readEntry(String key) async {
     final record = _records[key];
     if (record == null) return null;
-    if (record.expiresAt?.isAfter(DateTime.now()) == false) {
-      _records.remove(key);
-      return null;
-    }
     record.lastAccess = _accessSequence++;
-    return record.payload;
+    return CacheEntry(
+      payload: record.payload,
+      isStale: record.expiresAt?.isAfter(DateTime.now()) == false,
+    );
   }
 
   @override
@@ -890,7 +892,7 @@ void main() {
             isA<UserDataCleanupException>().having(
               (error) => error.cause,
               'cause',
-              isA<StateError>().having(
+              isA<AccountStorageException>().having(
                 (error) => error.message,
                 'message',
                 'Account activation evidence requires recovery',

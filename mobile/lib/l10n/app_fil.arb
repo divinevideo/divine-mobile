@@ -4762,4 +4762,5 @@
 "listRecoveryPending": "May mga pagbabago sa listahang ito na naghihintay ma-sync.",
 "listPermissionsRecoveryPending": "Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.",
 "listRecoveryReadOnly": "Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.",
-"listAddToLists": "Idagdag sa mga list"}
+"listAddToLists": "Idagdag sa mga list",
+"accountDeletionProcessingSignOutFailed": "Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit."}

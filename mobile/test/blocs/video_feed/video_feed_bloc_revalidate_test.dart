@@ -3,7 +3,6 @@
 
 import 'dart:async';
 
-import 'package:bloc_test/bloc_test.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +14,8 @@ import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+import '../../helpers/feed_bloc_test_helper.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -337,7 +338,7 @@ void main() {
       // The fetch revalidates (cache-read bypass) rather than full
       // `skipCache`, because `skipCache` on New also triggers the
       // pull-to-refresh relay merge, which does not belong on session start.
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'revalidates past the cache on start so a reopen is not stale',
         build: buildBloc,
         act: (bloc) async {
@@ -368,7 +369,7 @@ void main() {
       // `_selectSource`, a second route to the same stale page: the cache it
       // reads has no TTL either. Fixing only the cold start left #7719's
       // symptom alive here.
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'revalidates past the cache when the user switches modes',
         build: buildBloc,
         act: (bloc) async {
@@ -398,7 +399,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'switches directly to cached content before revalidation completes',
         setUp: () {
           when(
@@ -471,7 +472,7 @@ void main() {
       // For You start revalidates without `skipCache`: `skipCache` would
       // draw a new recommendation session seed and reshuffle the session,
       // which is reserved for explicit pull-to-refresh.
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'revalidates For You on start without reseeding the session',
         build: buildBloc,
         act: (bloc) async {
@@ -498,7 +499,7 @@ void main() {
       // Classics keeps its deliberate 15-minute first-page cache on start:
       // re-entry within the TTL resumes the same stable opening instead of
       // re-shuffling, so the bloc must not bypass or revalidate it.
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'keeps the Classics first-page cache on start',
         build: buildBloc,
         act: (bloc) async {

@@ -683,7 +683,10 @@ class Nostr {
       // Growable, like every other exit: the normal path hands back
       // [EventMemBox.all], which callers are free to sort or append to.
       return (
-        result: QueryResult(events: <Event>[], endedBy: QueryEnd.deadline),
+        result: QueryResult(
+          events: List<Event>.empty(growable: true),
+          endedBy: QueryEnd.deadline,
+        ),
         endedAtDeadline: true,
         relays: <QueryRelaySummary>[],
         cappedWithoutEvents: <String>[],

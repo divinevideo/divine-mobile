@@ -2,6 +2,7 @@
 // ABOUTME: False acknowledgements cannot authorize erasure or completed cleanup.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,7 +98,10 @@ void main() {
           store.lieAboutWrite = failure == 'lying';
           store.refuseWrite = failure == 'refused';
           store.throwWrite = failure == 'throwing';
-          await expectLater(intent.record(prefs), throwsStateError);
+          await expectLater(
+            intent.record(prefs),
+            throwsA(isA<AccountStorageException>()),
+          );
           expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);
           await restart();
           expect(PendingAccountCleanup.read(prefs), isNull);
@@ -150,7 +154,10 @@ void main() {
           store.lieAboutRemoval = failure == 'lying';
           store.refuseRemoval = failure == 'refused';
           store.throwAfterRemoval = failure == 'throwing';
-          await expectLater(intent.complete(prefs), throwsStateError);
+          await expectLater(
+            intent.complete(prefs),
+            throwsA(isA<AccountStorageException>()),
+          );
           expect(PendingAccountCleanup.read(prefs)?.userPubkey, _owner);
           await restart();
           expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
@@ -163,7 +170,10 @@ void main() {
       () async {
         await intent.record(prefs);
         store.failReadback = true;
-        await expectLater(intent.complete(prefs), throwsStateError);
+        await expectLater(
+          intent.complete(prefs),
+          throwsA(isA<AccountStorageException>()),
+        );
         expect(PendingAccountCleanup.readbackUnknown(prefs), isTrue);
         store.failReadback = false;
         await restart();

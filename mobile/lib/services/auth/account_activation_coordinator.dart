@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The activation stopped belonging to the live account or mounted host.
@@ -196,7 +197,9 @@ class AccountActivationCoordinator {
     if (hasUnresolvedActivation ||
         committedOwnerPubkey != null ||
         _preferences.get('current_user_pubkey_hex') != null) {
-      throw StateError('Ownerless sign out cannot clear another account');
+      throw const AccountStorageException(
+        'Ownerless sign out cannot clear another account',
+      );
     }
     await _preferences.reload();
     if (!isCurrent() ||
@@ -208,7 +211,9 @@ class AccountActivationCoordinator {
         committedOwnerPubkey != null ||
         _preferences.get(storageKey) != record ||
         _preferences.get('current_user_pubkey_hex') != null) {
-      throw StateError('Ownerless sign out requires verified account absence');
+      throw const AccountStorageException(
+        'Ownerless sign out requires verified account absence',
+      );
     }
     final next = OwnerlessSignOutReservation._(active, record, isCurrent);
     _ownerlessSignOut = next;
@@ -300,14 +305,18 @@ class AccountActivationCoordinator {
       _uncertain = true;
       await _preferences.reload();
       if (!isCurrent() || _preferences.get(storageKey) != before) {
-        throw StateError('Account activation evidence could not be verified');
+        throw const AccountStorageException(
+          'Account activation evidence could not be verified',
+        );
       }
       final raw = _preferences.get(storageKey);
       Object? decoded;
       try {
         decoded = raw is String ? jsonDecode(raw) : null;
       } on FormatException {
-        throw StateError('Account activation evidence is unreadable');
+        throw const AccountStorageException(
+          'Account activation evidence is unreadable',
+        );
       }
       if (decoded is! Map<String, dynamic> ||
           decoded['version'] != 1 ||
@@ -333,7 +342,9 @@ class AccountActivationCoordinator {
               _preferences.get('current_user_pubkey_hex') != ownerPubkey) ||
           (decoded['phase'] == 'signedOut' &&
               _preferences.get('current_user_pubkey_hex') != null)) {
-        throw StateError('Account activation evidence requires recovery');
+        throw const AccountStorageException(
+          'Account activation evidence requires recovery',
+        );
       }
       if (decoded['phase'] != 'committed' && decoded['phase'] != 'signedOut') {
         recoveredToken = decoded['token'] as String;
@@ -349,7 +360,9 @@ class AccountActivationCoordinator {
         !active._signedOut &&
         _isLive(active) &&
         !identical(active, previousTicket)) {
-      throw StateError('Another account activation is still authoritative');
+      throw const AccountStorageException(
+        'Another account activation is still authoritative',
+      );
     }
     final token =
         recoveredToken ??
@@ -386,7 +399,9 @@ class AccountActivationCoordinator {
   Future<void> completeSignOut(AccountActivationTicket ticket) async {
     ensureCurrent(ticket);
     if (_preferences.get('current_user_pubkey_hex') != null) {
-      throw StateError('The outgoing session is still persisted');
+      throw const AccountStorageException(
+        'The outgoing session is still persisted',
+      );
     }
     await _record(ticket, 'signedOut');
     ensureCurrent(ticket);
@@ -445,7 +460,9 @@ class AccountActivationCoordinator {
     );
     if (_active case final active?
         when _isCommitted(active) && active.ownerPubkey == removedOwnerPubkey) {
-      throw StateError('The active account must use verified sign out');
+      throw const AccountStorageException(
+        'The active account must use verified sign out',
+      );
     }
     lease.ensureCurrent();
     final previous = _storageTail;
@@ -495,7 +512,9 @@ class AccountActivationCoordinator {
     if (_ownerlessSignOut != null ||
         (lease._owner != null && lease._owner != owner) ||
         (_active != null && _active!.ownerPubkey != owner)) {
-      throw StateError('Local removal cannot retire another account');
+      throw const AccountStorageException(
+        'Local removal cannot retire another account',
+      );
     }
     final raw = lease._record;
     if (raw == null) return;
@@ -503,7 +522,9 @@ class AccountActivationCoordinator {
     try {
       decoded = raw is String ? jsonDecode(raw) : null;
     } on FormatException {
-      throw StateError('Local account activation evidence is unreadable');
+      throw const AccountStorageException(
+        'Local account activation evidence is unreadable',
+      );
     }
     if (decoded is! Map<String, dynamic> ||
         decoded['version'] is! int ||
@@ -517,7 +538,7 @@ class AccountActivationCoordinator {
           'committed',
           'signedOut',
         ].contains(decoded['phase'])) {
-      throw StateError(
+      throw const AccountStorageException(
         'Local account activation evidence cannot be attributed',
       );
     }
@@ -541,13 +562,17 @@ class AccountActivationCoordinator {
       final removed = await _preferences.remove('current_user_pubkey_hex');
       _ensureAccountCleanupActor(lease);
       if (!removed) {
-        throw StateError('Could not remove retired account metadata');
+        throw const AccountStorageException(
+          'Could not remove retired account metadata',
+        );
       }
       await _preferences.reload();
       _ensureAccountCleanupActor(lease);
       if (_preferences.get('current_user_pubkey_hex') != null ||
           _preferences.get(storageKey) != lease._record) {
-        throw StateError('Retired account metadata removal did not persist');
+        throw const AccountStorageException(
+          'Retired account metadata removal did not persist',
+        );
       }
       lease._owner = null;
       lease.ensureCurrent();
@@ -557,13 +582,17 @@ class AccountActivationCoordinator {
       final removed = await _preferences.remove(storageKey);
       _ensureAccountCleanupActor(lease);
       if (!removed) {
-        throw StateError('Could not retire local account activation');
+        throw const AccountStorageException(
+          'Could not retire local account activation',
+        );
       }
       await _preferences.reload();
       _ensureAccountCleanupActor(lease);
       if (_preferences.get(storageKey) != null ||
           _preferences.get('current_user_pubkey_hex') != null) {
-        throw StateError('Local account retirement did not persist');
+        throw const AccountStorageException(
+          'Local account retirement did not persist',
+        );
       }
       lease._record = null;
     }
@@ -592,12 +621,16 @@ class AccountActivationCoordinator {
         final written = await _preferences.setString(storageKey, encoded);
         ensureCurrent(ticket);
         if (!written) {
-          throw StateError('Could not persist account activation');
+          throw const AccountStorageException(
+            'Could not persist account activation',
+          );
         }
         await _preferences.reload();
         ensureCurrent(ticket);
         if (_preferences.get(storageKey) != encoded) {
-          throw StateError('Account activation readback did not match');
+          throw const AccountStorageException(
+            'Account activation readback did not match',
+          );
         }
         _verifiedRecord = encoded;
       });

@@ -2,6 +2,7 @@
 // ABOUTME: Avoids fabricating an authoritative empty contact-list cache record.
 
 import 'package:follow_repository/follow_repository.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 String followingPrefetchMarkerKey(String pubkeyHex) =>
@@ -29,7 +30,9 @@ Future<bool> prepareFollowingAuthRedirect(
     );
     ensureCurrent?.call();
     if (!written) {
-      throw StateError('Could not persist the following prefetch marker');
+      throw const AccountStorageException(
+        'Could not persist the following prefetch marker',
+      );
     }
   }
   return prefs.containsKey(FollowingCacheRecord.storageKey(pubkeyHex)) ||

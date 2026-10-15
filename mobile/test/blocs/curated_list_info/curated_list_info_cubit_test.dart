@@ -448,6 +448,7 @@ void main() {
               description: 'Strings attached',
               isPublic: false,
               collaboratorPubkeys: [_alice],
+              storedCollaborators: [_alice],
               wasPublic: false,
             ),
           ),

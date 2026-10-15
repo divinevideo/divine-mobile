@@ -5735,4 +5735,5 @@
 "listRecoveryPending": "Esta lista tiene cambios pendientes de sincronización.",
 "listPermissionsRecoveryPending": "Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.",
 "listRecoveryReadOnly": "Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.",
-"listAddToLists": "Añadir a listas"}
+"listAddToLists": "Añadir a listas",
+"accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo."}
