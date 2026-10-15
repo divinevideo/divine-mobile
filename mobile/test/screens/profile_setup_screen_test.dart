@@ -20,6 +20,7 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
+import 'package:openvine/widgets/profile/nostr_info_sheet_content.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
 import 'package:riverpod/misc.dart' show Override;
 
@@ -868,6 +869,20 @@ void main() {
 
     const freshEventId =
         'event222222222222222222222222222222222222222222222222222222222222';
+
+    group('About Nostr', () {
+      testWidgets('info action opens the Nostr explainer sheet', (
+        tester,
+      ) async {
+        await pumpScreen(tester);
+        expect(find.byType(NostrInfoSheetContent), findsNothing);
+
+        await tester.tap(findByTooltip(l10n.profileSetupAboutNostr));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(NostrInfoSheetContent), findsOneWidget);
+      });
+    });
 
     group('seeding the form', () {
       testWidgets('fills from the cached profile before the relay answers', (

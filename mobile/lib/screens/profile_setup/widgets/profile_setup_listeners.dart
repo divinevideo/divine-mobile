@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_upload_errors.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
 
 /// Wraps the profile-setup form with all of its [BlocListener] side effects
@@ -307,43 +308,48 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
             } else if (state.status ==
                 ProfileEditorStatus.confirmationRequired) {
               // Show confirmation dialog for blank profile overwrite
-              showDialog<void>(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  backgroundColor: context.vineColors.card,
-                  title: Text(
-                    context.l10n.profileSetupCreateNewProfile,
-                    style: TextStyle(color: context.vineColors.primaryText),
-                  ),
-                  content: Text(
-                    context.l10n.profileSetupNoExistingProfile,
-                    style: TextStyle(color: context.vineColors.secondaryText),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => dialogContext.popModalIfMounted(),
-                      child: Text(
-                        context.l10n.profileCancelButton,
-                        style: TextStyle(color: context.vineColors.mutedText),
-                      ),
+              runDetached(
+                showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    backgroundColor: context.vineColors.card,
+                    title: Text(
+                      context.l10n.profileSetupCreateNewProfile,
+                      style: TextStyle(color: context.vineColors.primaryText),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        // A tap that lands after the route is gone is not a
-                        // confirmation the user ever saw, so it must not
-                        // publish either.
-                        if (!dialogContext.popModalIfMounted()) return;
-                        context.read<ProfileEditorBloc>().add(
-                          const ProfileSaveConfirmed(),
-                        );
-                      },
-                      child: Text(
-                        context.l10n.profileSetupPublishButton,
-                        style: const TextStyle(color: VineTheme.vineGreen),
-                      ),
+                    content: Text(
+                      context.l10n.profileSetupNoExistingProfile,
+                      style: TextStyle(color: context.vineColors.secondaryText),
                     ),
-                  ],
+                    actions: [
+                      TextButton(
+                        onPressed: () => dialogContext.popModalIfMounted(),
+                        child: Text(
+                          context.l10n.profileCancelButton,
+                          style: TextStyle(color: context.vineColors.mutedText),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // A tap that lands after the route is gone is not a
+                          // confirmation the user ever saw, so it must not
+                          // publish either.
+                          if (!dialogContext.popModalIfMounted()) return;
+                          context.read<ProfileEditorBloc>().add(
+                            const ProfileSaveConfirmed(),
+                          );
+                        },
+                        child: Text(
+                          context.l10n.profileSetupPublishButton,
+                          style: const TextStyle(color: VineTheme.vineGreen),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                'show profile setup publish confirmation',
+                logName: 'ProfileSetupScreen',
+                category: LogCategory.ui,
               );
             } else if (state.status == ProfileEditorStatus.failure) {
               if (isNewUser) {
@@ -381,9 +387,18 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
                   );
                 case ProfileEditorError.usernameReserved:
                   final username = state.username;
-                  showDialog<void>(
-                    context: context,
-                    builder: (context) => UsernameReservedDialog(username),
+                  final editorBloc = context.read<ProfileEditorBloc>();
+                  runDetached(
+                    showDialog<void>(
+                      context: context,
+                      builder: (_) => BlocProvider.value(
+                        value: editorBloc,
+                        child: UsernameReservedDialog(username),
+                      ),
+                    ),
+                    'show reserved username dialog',
+                    logName: 'ProfileSetupScreen',
+                    category: LogCategory.ui,
                   );
                 // claimFailed (server rejected) and claimNetworkError
                 // (couldn't reach the server) currently share this copy; the
