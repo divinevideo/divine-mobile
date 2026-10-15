@@ -1841,6 +1841,55 @@ void main() {
           expect(state.finalRenderedClip?.id, 'rendered-2');
         });
 
+        test('deletes the video of a render the edit changed under', () async {
+          final dir = Directory.systemTemp.createTempSync('stale_render');
+          addTearDown(() => dir.deleteSync(recursive: true));
+          final staleVideo = File(p.join(dir.path, 'stale.mp4'))
+            ..writeAsBytesSync(const [0]);
+          final gate = Completer<void>();
+          final render = VideoEditorRenderService.renderVideoToClipOverride!;
+          var staleRender = true;
+          VideoEditorRenderService.renderVideoToClipOverride =
+              ({
+                required clips,
+                required editorStateHistory,
+                parameters,
+                taskId,
+              }) async {
+                final (clip, proof) = await render(
+                  clips: clips,
+                  editorStateHistory: editorStateHistory,
+                  parameters: parameters,
+                  taskId: taskId,
+                );
+                if (!staleRender) return (clip, proof);
+                staleRender = false;
+                await gate.future;
+                return (
+                  clip.copyWith(video: EditorVideo.file(staleVideo.path)),
+                  proof,
+                );
+              };
+          final clipManager = postDetails.read(clipManagerProvider.notifier);
+          clipManager.refreshClip(
+            clipManager.clips.single.copyWith(
+              thumbnailPath: '/docs/thumb.jpg',
+            ),
+          );
+          await pumpEventQueue();
+
+          landTakeProof();
+          gate.complete();
+          await pumpEventQueue();
+          await postDetails.read(editorBackgroundWorkProvider).settle();
+
+          expect(staleVideo.existsSync(), isFalse);
+          expect(
+            postDetails.read(videoEditorProvider).finalRenderedClip?.id,
+            'rendered-3',
+          );
+        });
+
         group('while the new render runs', () {
           late Completer<void> gate;
           late List<List<DivineVideoClip>> renderedClips;
