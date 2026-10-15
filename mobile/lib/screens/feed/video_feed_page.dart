@@ -16,6 +16,7 @@ import 'package:openvine/models/view_traffic_source.dart'
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
+import 'package:openvine/providers/hashtag_subscription_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
@@ -78,6 +79,7 @@ class VideoFeedPage extends ConsumerWidget {
     final contentFilterVersion = ref.watch(contentFilterVersionProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
+    final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
     final authService = ref.watch(authServiceProvider);
@@ -91,7 +93,12 @@ class VideoFeedPage extends ConsumerWidget {
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     return MultiBlocProvider(
-      key: ValueKey('video-feed-$showDivineHostedOnly-$contentFilterVersion'),
+      key: ValueKey((
+        'video-feed',
+        showDivineHostedOnly,
+        contentFilterVersion,
+        hashtagRepository,
+      )),
       providers: [
         BlocProvider(
           create: (_) =>
@@ -99,6 +106,7 @@ class VideoFeedPage extends ConsumerWidget {
                 videosRepository: videosRepository,
                 followRepository: followRepository,
                 curatedListRepository: curatedListRepository,
+                hashtagSubscriptionRepository: hashtagRepository,
                 profileRepository: profileRepository,
                 contentBlocklistRepository: blocklistRepository,
                 userPubkey: authService.currentPublicKeyHex,
@@ -382,10 +390,31 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                       !previous.isRefreshing && current.isRefreshing,
                   listener: (context, _) => _onHomeRetap(context, retapCubit),
                 ),
+              BlocListener<VideoFeedBloc, VideoFeedBlocState>(
+                listenWhen: (previous, current) =>
+                    current.source.type ==
+                        VideoFeedSourceType.subscribedHashtag &&
+                    current.videos.isNotEmpty &&
+                    current.status == VideoFeedStatus.failure &&
+                    previous.status != VideoFeedStatus.failure,
+                listener: (context, state) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.l10n.feedFailedToLoadVideos),
+                      action: SnackBarAction(
+                        label: context.l10n.commonRetry,
+                        onPressed: () => context.read<VideoFeedBloc>().add(
+                          const VideoFeedRefreshRequested(),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
               // Reset page position when mode changes.
               BlocListener<VideoFeedBloc, VideoFeedBlocState>(
                 listenWhen: (previous, current) =>
-                    previous.mode != current.mode,
+                    previous.source != current.source,
                 listener: (_, _) {
                   _currentIndex = 0;
                   _pagePosition.value = 0;
@@ -461,12 +490,17 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                 }
 
                 // Loading state (including initial state before first load)
-                if (state.isLoading) {
+                final keepHashtagVideos =
+                    state.source.type ==
+                        VideoFeedSourceType.subscribedHashtag &&
+                    state.videos.isNotEmpty;
+                if (state.isLoading && !keepHashtagVideos) {
                   return const Center(child: BrandedLoadingIndicator());
                 }
 
                 // Error state
-                if (state.status == VideoFeedStatus.failure) {
+                if (state.status == VideoFeedStatus.failure &&
+                    !keepHashtagVideos) {
                   return FeedErrorWidget(onRetry: () => _refreshFeed(context));
                 }
 

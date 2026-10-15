@@ -87,6 +87,11 @@ VideoFeedSource _sourceFor(VideoFeedSourceType type) => switch (type) {
     listId: 'list-id',
     listName: 'Curated List',
   ),
+  VideoFeedSourceType.subscribedHashtag =>
+    const VideoFeedSource.subscribedHashtag(
+      hashtag: 'lnic',
+      displayTag: 'LNIC',
+    ),
   VideoFeedSourceType.newVideos => const VideoFeedSource.newVideos(),
   VideoFeedSourceType.classic => const VideoFeedSource.classic(),
 };

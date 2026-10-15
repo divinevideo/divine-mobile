@@ -6,6 +6,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hashtag_subscription_repository/hashtag_subscription_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -434,6 +435,35 @@ void main() {
           ).called(1);
         },
       );
+
+      testWidgets('selects a followed hashtag from Home', (tester) async {
+        final tag = HashtagSubscription.fromTag('LNIC');
+        final state = VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          followedHashtags: [tag],
+        );
+        when(() => mockBloc.state).thenReturn(state);
+        await tester.pumpWidget(
+          createTestWidget(overrides: getStandardTestOverrides()),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('For You'));
+        await tester.pumpAndSettle();
+        expect(find.text('#LNIC'), findsOneWidget);
+        expect(find.text('Manage hashtags'), findsOneWidget);
+        await tester.tap(find.text('#LNIC'));
+        await tester.pumpAndSettle();
+        verify(
+          () => mockBloc.add(
+            const VideoFeedSourceChanged(
+              VideoFeedSource.subscribedHashtag(
+                hashtag: 'lnic',
+                displayTag: 'LNIC',
+              ),
+            ),
+          ),
+        ).called(1);
+      });
 
       testWidgets('does not dispatch event when bottom sheet dismissed', (
         tester,

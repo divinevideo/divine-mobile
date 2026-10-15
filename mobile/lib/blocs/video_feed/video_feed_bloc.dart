@@ -12,6 +12,7 @@ import 'package:equatable/equatable.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:hashtag_subscription_repository/hashtag_subscription_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
@@ -49,6 +50,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     required VideosRepository videosRepository,
     required FollowRepository followRepository,
     required CuratedListRepository curatedListRepository,
+    HashtagSubscriptionRepository? hashtagSubscriptionRepository,
     ProfileRepository? profileRepository,
     ContentBlocklistRepository? contentBlocklistRepository,
     String? userPubkey,
@@ -62,6 +64,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
+       _hashtagSubscriptionRepository = hashtagSubscriptionRepository,
        _profileRepository = profileRepository,
        _blocklistRepository = contentBlocklistRepository,
        _userPubkey = userPubkey,
@@ -80,6 +83,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
          userPubkey: userPubkey,
          followRepository: followRepository,
          curatedListRepository: curatedListRepository,
+         hashtagSubscriptionRepository: hashtagSubscriptionRepository,
        ),
        super(const VideoFeedBlocState()) {
     on<VideoFeedStarted>(_onStarted);
@@ -93,6 +97,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     on<VideoFeedAutoRefreshRequested>(_onAutoRefreshRequested);
     on<VideoFeedFollowingListChanged>(_onFollowingListChanged);
     on<VideoFeedCuratedListsChanged>(_onCuratedListsChanged);
+    on<VideoFeedHashtagsChanged>(_onHashtagsChanged);
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
@@ -103,6 +108,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final VideosRepository _videosRepository;
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
+  final HashtagSubscriptionRepository? _hashtagSubscriptionRepository;
+  StreamSubscription<List<HashtagSubscription>>? _hashtagsSubscription;
   final ProfileRepository? _profileRepository;
   final ContentBlocklistRepository? _blocklistRepository;
   final String? _userPubkey;
@@ -246,6 +253,25 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedStarted event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    final hashtagRepository = _hashtagSubscriptionRepository;
+    if (hashtagRepository != null) {
+      try {
+        await hashtagRepository.initialize();
+      } on Exception {
+        Log.warning(
+          'Followed hashtags unavailable; open hashtag management to retry',
+          name: 'VideoFeedBloc',
+          category: LogCategory.system,
+        );
+      }
+      if (emit.isDone) return;
+      await _hashtagsSubscription?.cancel();
+      _hashtagsSubscription = hashtagRepository.subscriptionsStream.listen((
+        tags,
+      ) {
+        addIfOpen(VideoFeedHashtagsChanged(tags));
+      });
+    }
     final source = event.forceMode
         ? VideoFeedSource.fromMode(event.mode)
         : _modePreferences.restoreSource(event.mode);
@@ -262,6 +288,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         status: VideoFeedStatus.loading,
         source: source,
         subscribedLists: subscribedLists,
+        followedHashtags: hashtagRepository?.subscriptions ?? const [],
         isLoadingMore: false,
         clearPaginationCursor: true,
       ),
@@ -338,11 +365,25 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     // Flush any swipe still inside the debounce window before tearing down, so
     // the last move isn't lost on dispose.
     _resumeManager.dispose();
+    await _hashtagsSubscription?.cancel();
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
     _followingSubscription = null;
     _curatedListsSubscription = null;
     return super.close();
+  }
+
+  Future<void> _onHashtagsChanged(
+    VideoFeedHashtagsChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    emit(state.copyWith(followedHashtags: event.hashtags));
+    if (state.source.type == VideoFeedSourceType.subscribedHashtag &&
+        !event.hashtags.any(
+          (tag) => tag.canonicalTag == state.source.hashtag,
+        )) {
+      await _selectSource(const VideoFeedSource.forYou(), emit);
+    }
   }
 
   /// Handle mode changed event.
@@ -365,6 +406,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    if (source.type == VideoFeedSourceType.subscribedHashtag &&
+        !state.followedHashtags.any(
+          (tag) => tag.canonicalTag == source.hashtag,
+        )) {
+      return;
+    }
     // Skip if already on this source.
     if (state.source == source && state.status == VideoFeedStatus.success) {
       return;
@@ -382,9 +429,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
+    if (source.type == VideoFeedSourceType.subscribedHashtag &&
+        !state.followedHashtags.any(
+          (tag) => tag.canonicalTag == source.hashtag,
+        )) {
+      return;
+    }
     await _modePreferences.persist(source);
     if (selectionSequence != _sourceSelectionSequence || emit.isDone) {
       if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
+      return;
+    }
+    if (source.type == VideoFeedSourceType.subscribedHashtag &&
+        !state.followedHashtags.any(
+          (tag) => tag.canonicalTag == source.hashtag,
+        )) {
+      // The follow disappeared while persistence awaited the platform.
+      // Restore the current source rather than committing a removed hashtag.
+      await _modePreferences.persist(state.source);
       return;
     }
 
@@ -581,8 +643,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     emit(
       state.copyWith(
         status: VideoFeedStatus.loading,
-        videos: [],
-        hasMore: true,
+        videos: state.source.type == VideoFeedSourceType.subscribedHashtag
+            ? state.videos
+            : [],
+        hasMore: state.source.type != VideoFeedSourceType.subscribedHashtag,
         isLoadingMore: false,
         clearError: true,
         videoListSources: const {},
@@ -916,6 +980,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         errorMessage: e.toString(),
       );
 
+      if (source.type == VideoFeedSourceType.subscribedHashtag &&
+          state.videos.isNotEmpty) {
+        emit(
+          state.copyWith(
+            status: VideoFeedStatus.failure,
+            error: VideoFeedError.loadFailed,
+          ),
+        );
+        return;
+      }
       // Only show failure if we don't have cached data already displayed.
       if (state.status != VideoFeedStatus.success || state.videos.isEmpty) {
         emit(
@@ -1092,6 +1166,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       userPubkey: _userPubkey,
       cursor: paginationCursor,
     ),
+    VideoFeedSourceType.subscribedHashtag => _fetchHashtagVideos(
+      source.hashtag!,
+    ),
     VideoFeedSourceType.subscribedList =>
       _videosRepository
           .getVideosForList(
@@ -1119,6 +1196,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       skipCache: skipCache,
     ),
   };
+
+  Future<HomeFeedResult> _fetchHashtagVideos(String hashtag) async {
+    final result = await _videosRepository.getHashtagFeedVideos(
+      hashtag: hashtag,
+    );
+    if (!result.succeeded) throw Exception('Could not load hashtag feed');
+    final seen = <String>{};
+    return HomeFeedResult(
+      videos: result.videos.where((video) => seen.add(video.id)).toList(),
+      hasMore: false,
+    );
+  }
 
   void _scheduleNostrEnrichment({
     required VideoFeedSource source,
