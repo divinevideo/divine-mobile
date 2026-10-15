@@ -171,6 +171,8 @@ class _RecoveryStateContent extends StatelessWidget {
             : context.l10n.authUnexpectedError,
         actionLabel: context.l10n.accountDeletionSignOut,
         onPressed: cubit.retrySignOut,
+        secondaryActionLabel: context.l10n.supportContactSupport,
+        onSecondaryPressed: () => context.push(RoutePaths.supportCenter),
       ),
       AccountDeletionRecoveryStatus.restorable => _RestorableContent(
         state: state,
