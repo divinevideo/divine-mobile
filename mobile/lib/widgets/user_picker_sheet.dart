@@ -682,10 +682,11 @@ class _UserSearchTile extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      // The rendered nip05 is what tells two same-named users apart, so it
-      // rides along with the action instead of being dropped by the
-      // ExcludeSemantics below.
-      label: nip05 != null && nip05.isNotEmpty ? '$action. $nip05' : action,
+      // Preserve every visible account fact while suppressing duplicate
+      // avatar/name announcements inside the row.
+      label: indicators.hasContent
+          ? '$action. ${indicators.labelFor(context)}'
+          : action,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: isDisabled ? null : onTap,

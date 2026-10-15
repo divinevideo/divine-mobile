@@ -1,10 +1,13 @@
 // ABOUTME: Builds user-ranking snapshots exclusively from local stores.
 // ABOUTME: Refreshes stale signals separately without changing visible order.
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart' show NIP71VideoKinds, UserProfile;
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -108,20 +111,53 @@ class UserRankingSignalsLoader {
     }
     if (candidates.isEmpty) return {};
     final keys = candidates.toList(growable: false);
-    final (followers, stats, videos, verifications, profiles) = await (
-      _myFollowersDao.followerSubset(
-        ownerPubkey: _currentUserPubkey,
-        candidates: keys,
-      ),
-      _profileStatsDao.getStatsRawMany(keys),
-      _nostrEventsDao.newestCreatedAtByAuthor(
-        authors: keys,
-        kinds: NIP71VideoKinds.getAllVideoKinds(),
-      ),
-      _nip05VerificationsDao.getValidVerifications(keys),
-      _profileRepository?.getCachedProfiles(pubkeys: keys) ??
-          Future<List<UserProfile>>.value(const []),
-    ).wait;
+    final (followers, stats, videos, verifications, profiles) =
+        await (
+          _myFollowersDao.followerSubset(
+            ownerPubkey: _currentUserPubkey,
+            candidates: keys,
+          ),
+          _profileStatsDao.getStatsRawMany(keys),
+          _nostrEventsDao.newestCreatedAtByAuthor(
+            authors: keys,
+            kinds: NIP71VideoKinds.getAllVideoKinds(),
+          ),
+          _nip05VerificationsDao.getValidVerifications(keys),
+          _profileRepository?.getCachedProfiles(pubkeys: keys) ??
+              Future<List<UserProfile>>.value(const []),
+        ).wait.onError((Object error, StackTrace stackTrace) {
+          if (error is ParallelWaitError) {
+            final failures =
+                error.errors
+                    as (
+                      AsyncError?,
+                      AsyncError?,
+                      AsyncError?,
+                      AsyncError?,
+                      AsyncError?,
+                    );
+            final errors = [
+              failures.$1,
+              failures.$2,
+              failures.$3,
+              failures.$4,
+              failures.$5,
+            ].whereType<AsyncError>().toList();
+            // Preserve the underlying error type so callers can distinguish
+            // reportable invariants from expected local-store failures.
+            final failure = errors.firstWhere(
+              (failure) =>
+                  asReportableError(
+                    failure.error,
+                    context: 'UserRankingSignalsLoader.load',
+                  ) !=
+                  null,
+              orElse: () => errors.first,
+            );
+            Error.throwWithStackTrace(failure.error, failure.stackTrace);
+          }
+          Error.throwWithStackTrace(error, stackTrace);
+        });
     final verified = {
       for (final row in verifications)
         if (row.status == 'verified') row.pubkey,

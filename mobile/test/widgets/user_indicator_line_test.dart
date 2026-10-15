@@ -103,6 +103,28 @@ void main() {
       }
     });
 
+    testWidgets('future posts do not claim recent activity', (tester) async {
+      await pumpLine(tester, lastPostedAt: now.add(const Duration(seconds: 1)));
+      expect(find.byType(Text), findsNothing);
+    });
+
+    testWidgets('just-posted activity uses sentence-compatible time copy', (
+      tester,
+    ) async {
+      for (final locale in [const Locale('en'), const Locale('de')]) {
+        final strings = lookupAppLocalizations(locale);
+        await pumpLine(
+          tester,
+          locale: locale,
+          lastPostedAt: now.subtract(const Duration(seconds: 20)),
+        );
+        expect(
+          find.text(strings.userRowPosted(strings.timeJustNow)),
+          findsOneWidget,
+        );
+      }
+    });
+
     testWidgets('Posted is present immediately before seven days', (
       tester,
     ) async {

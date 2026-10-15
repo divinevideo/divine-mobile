@@ -33,7 +33,9 @@ class UserIndicatorLine extends StatelessWidget {
   final TextStyle? style;
 
   bool get _hasRecentPost =>
-      lastPostedAt != null && now.difference(lastPostedAt!) < _recentPostWindow;
+      lastPostedAt != null &&
+      !lastPostedAt!.isAfter(now) &&
+      now.difference(lastPostedAt!) < _recentPostWindow;
 
   /// Lets a parent omit the entire child, including inter-child spacing.
   bool get hasContent =>
@@ -43,9 +45,8 @@ class UserIndicatorLine extends StatelessWidget {
       (videoCount != null && videoCount! > 0) ||
       _hasRecentPost;
 
-  @override
-  Widget build(BuildContext context) {
-    if (!hasContent) return const SizedBox.shrink();
+  /// The visible facts, also used by rows that provide their own semantics.
+  String labelFor(BuildContext context) {
     final l10n = context.l10n;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final relationshipLabel = switch (relationship) {
@@ -69,15 +70,23 @@ class UserIndicatorLine extends StatelessWidget {
         l10n.userRowPosted(
           withClock(
             Clock.fixed(now),
-            () => LocalizedTimeFormatter.formatRelativeVerbose(
-              l10n,
-              posted.millisecondsSinceEpoch ~/ 1000,
-            ),
+            () => now.difference(posted) < const Duration(minutes: 1)
+                ? l10n.timeJustNow
+                : LocalizedTimeFormatter.formatRelativeVerbose(
+                    l10n,
+                    posted.millisecondsSinceEpoch ~/ 1000,
+                  ),
           ),
         ),
     ];
+    return parts.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hasContent) return const SizedBox.shrink();
     return Text(
-      parts.join(' · '),
+      labelFor(context),
       style:
           style ??
           VineTheme.bodySmallFont(color: context.vineColors.onSurfaceVariant),
