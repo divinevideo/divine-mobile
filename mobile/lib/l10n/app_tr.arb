@@ -2933,7 +2933,6 @@
     "videoRecorderCameraPreviewLabel": "Kamera önizlemesi",
     "videoRecorderCameraPreviewFocusHint": "Kamerayı odakla",
     "videoRecorderSwitchToModeLabel": "{mode} moduna geç",
-    "videoRecorderLipSyncAddAudioFirst": "Kayıttan önce ses ekleyin",
     "videoRecorderStopMotionAssembleFailed": "Video oluşturulamadı. Tekrar deneyin.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Kalan çekim yok} other{{count} çekim kaldı}}",
     "@videoRecorderStopMotionShotsLeft": {

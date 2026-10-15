@@ -8619,10 +8619,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'Thêm âm thanh trước khi quay';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'Không tạo được video. Thử lại nhé.';
 

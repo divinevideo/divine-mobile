@@ -104,5 +104,4 @@ saveOriginalNotNow	e2e/maestro/flows/loginEmailPwd.yaml	bound:Not Now
 unfollowUserIndexedSemanticLabel	e2e/maestro/asserts/assertUsersFollowing.yaml	rendered:Unfollow user 0
 videoActionUnlike	e2e/maestro/asserts/assertVideoLiked.yaml	bound:Unlike video
 videoEditorFontUnknown	e2e/maestro/asserts/assertVideoUser&Description.yaml	bound:Unknown
-videoRecorderLipSyncAddAudioFirst	e2e/maestro/tests/lipSyncModeAudioGate.yaml	bound:Add audio before recording
 videoRecorderWhySixSecondsTitle	e2e/maestro/utils/openRecorder.yaml	bound:Why six seconds?

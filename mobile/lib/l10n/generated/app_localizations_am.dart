@@ -8457,9 +8457,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst => 'ከመቅረጽ በፊት ኦዲዮ ያክሉ';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'ቪዲዮውን መፍጠር አልተቻለም። እንደገና ይሞክሩ።';
 

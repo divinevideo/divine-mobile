@@ -2474,7 +2474,6 @@
     "videoRecorderCameraPreviewLabel": "Previzualizare cameră",
     "videoRecorderCameraPreviewFocusHint": "Focalizează camera",
     "videoRecorderSwitchToModeLabel": "Comută la modul {mode}",
-    "videoRecorderLipSyncAddAudioFirst": "Adaugă audio înainte de înregistrare",
     "videoRecorderStopMotionAssembleFailed": "Videoclipul nu a putut fi creat. Încearcă din nou.",
     "videoRecorderStopMotionShotsLeft": "{count, plural, =0{Nu mai sunt cadre} =1{A mai rămas 1 cadru} few{Au mai rămas {count} cadre} other{Au mai rămas {count} de cadre}}",
     "@videoRecorderStopMotionShotsLeft": {

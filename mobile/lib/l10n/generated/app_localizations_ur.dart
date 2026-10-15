@@ -8657,10 +8657,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'ریکارڈنگ سے پہلے آڈیو شامل کریں';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'ویڈیو نہیں بن سکی۔ دوبارہ کوشش کریں۔';
 

@@ -4539,10 +4539,6 @@
   "videoRecorderCameraPreviewLabel": "Bản xem trước camera",
   "videoRecorderCameraPreviewFocusHint": "Lấy nét camera",
   "videoRecorderSwitchToModeLabel": "Chuyển sang chế độ {mode}",
-  "videoRecorderLipSyncAddAudioFirst": "Thêm âm thanh trước khi quay",
-  "@videoRecorderLipSyncAddAudioFirst": {
-    "description": "Snackbar shown when the user taps the record button in lip-sync mode without first selecting a sound."
-  },
   "videoRecorderStopMotionAssembleFailed": "Không tạo được video. Thử lại nhé.",
   "@videoRecorderStopMotionAssembleFailed": {
     "description": "Snackbar shown when assembling captured stop-motion frames into a video failed."

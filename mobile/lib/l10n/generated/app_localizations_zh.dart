@@ -8145,9 +8145,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst => '录制前请先添加音频';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed => '无法生成视频，请重试。';
 
   @override

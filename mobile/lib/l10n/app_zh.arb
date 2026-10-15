@@ -4539,10 +4539,6 @@
   "videoRecorderCameraPreviewLabel": "相机预览",
   "videoRecorderCameraPreviewFocusHint": "相机对焦",
   "videoRecorderSwitchToModeLabel": "切换到{mode}模式",
-  "videoRecorderLipSyncAddAudioFirst": "录制前请先添加音频",
-  "@videoRecorderLipSyncAddAudioFirst": {
-    "description": "Snackbar shown when the user taps the record button in lip-sync mode without first selecting a sound."
-  },
   "videoRecorderStopMotionAssembleFailed": "无法生成视频，请重试。",
   "@videoRecorderStopMotionAssembleFailed": {
     "description": "Snackbar shown when assembling captured stop-motion frames into a video failed."

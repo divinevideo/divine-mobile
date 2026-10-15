@@ -8696,10 +8696,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'Voeg audio toe vóór de opname';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'Kan de video niet maken. Probeer het opnieuw.';
 

@@ -13,20 +13,10 @@ import 'package:openvine/widgets/video_recorder/shutter_gesture_detector.dart';
 
 /// Circular record button for starting/stopping video recording.
 class RecordButton extends ConsumerWidget {
-  const RecordButton({this.onBlockedTap, super.key});
-
-  /// When non-null, the button is shown in a disabled (grayed) state and a tap
-  /// invokes this callback instead of starting recording. Lip-sync mode uses
-  /// this to require an audio selection before recording.
-  final VoidCallback? onBlockedTap;
+  const RecordButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final onBlockedTap = this.onBlockedTap;
-    if (onBlockedTap != null) {
-      return _BlockedRecordButton(onTap: onBlockedTap);
-    }
-
     final state = context.select(
       (VideoRecorderBloc b) => (
         isRecording: b.state.isRecording,
@@ -102,34 +92,6 @@ class RecordButton extends ConsumerWidget {
           isEnabled: isEnabled,
           isRecording: state.showsActiveRecording,
           isFinalizing: state.isStoppingRecording,
-        ),
-      ),
-    );
-  }
-}
-
-/// Record button shown disabled (grayed) with a tap that reports a reason
-/// instead of starting recording. Used by lip-sync mode to require an audio
-/// selection before recording.
-class _BlockedRecordButton extends StatelessWidget {
-  const _BlockedRecordButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      identifier: SemanticIds.cameraRecordButton,
-      button: true,
-      tooltip: context.l10n.videoRecorderStartRecordingTooltip,
-      onTap: onTap,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: const _RecordButtonVisual(
-          isEnabled: false,
-          isRecording: false,
-          isFinalizing: false,
         ),
       ),
     );

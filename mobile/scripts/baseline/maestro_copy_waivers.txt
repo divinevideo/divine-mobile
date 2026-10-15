@@ -9,7 +9,6 @@
 .*(Standard|Cinematic|Preview Optimized|Low Latency|Auto).*	regex	Matches the active capture-quality option
 .*10 seconds.*	regex	Matches the rendered capture-duration label
 .*3 seconds.*	regex	Matches the rendered capture-duration label
-.*Add audio.*	regex	Matches the recorder audio-gate semantics
 .*Auto.*	regex	Matches the current flash-mode semantics
 .*Back camera.*	regex	Matches the current camera-lens semantics
 .*Bruh Sound Effect.*	regex	Matches seeded sound metadata

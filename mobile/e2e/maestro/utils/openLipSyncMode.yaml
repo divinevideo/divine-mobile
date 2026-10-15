@@ -1,7 +1,8 @@
 appId: co.openvine.app.staging
 ---
 #Utility: given the user is signed in and on a feed surface, open the recorder
-#and leave it on a ready lip-sync viewfinder with no sound picked.
+#and leave it on lip-sync with no sound picked, which shows the sound picker in
+#place of the viewfinder.
 #
 # No launchApp, so this runs against whatever is already on screen — see the
 # "Iterating" section of e2e/maestro/README.md.

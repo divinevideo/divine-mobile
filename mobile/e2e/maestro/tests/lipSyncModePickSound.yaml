@@ -1,0 +1,19 @@
+appId: co.openvine.app.staging
+tags:
+  - recorder
+---
+#TC to pick the sound a lip-sync video is recorded against,
+# given the recorder is open on lip-sync with no sound picked,
+# validate picking one from the inline picker brings up the viewfinder with that
+# sound in its chip.
+#
+# Lip-sync starts from the sound, so the mode opens on the picker rather than
+# the camera: the viewfinder, its shutter and its control rail only appear once
+# a sound is picked. That swap is the behaviour this test pins, and the state
+# every later lip-sync test starts from.
+#Steps:
+# 1. Pick a bundled sound from the inline picker
+# 2. Validate the idle lip-sync viewfinder, its chip carrying the sound
+
+- runFlow: ../utils/pickLipSyncSound.yaml
+- runFlow: ../asserts/assertLipSyncViewfinder.yaml

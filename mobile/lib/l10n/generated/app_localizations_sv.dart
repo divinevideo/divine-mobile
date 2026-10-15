@@ -8650,10 +8650,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'Lägg till ljud innan inspelning';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'Det gick inte att skapa videon. Försök igen.';
 

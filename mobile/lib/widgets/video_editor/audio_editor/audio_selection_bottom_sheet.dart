@@ -11,6 +11,7 @@ import 'package:models/models.dart' show AudioEvent, VineSound;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
@@ -39,17 +40,40 @@ final _featuredVineSounds = [
 
 class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
   const AudioSelectionBottomSheet({
-    required this.scrollController,
+    this.scrollController,
     this.localAudioImportService,
     this.pickAudioFile,
+    this.onSoundPicked,
+    this.categoryBarLeading,
     @visibleForTesting this.audioService,
     super.key,
-  });
+  }) : assert(
+         (scrollController == null) != (onSoundPicked == null),
+         'Pass the sheet its scrollController, or embed it with onSoundPicked',
+       ),
+       assert(
+         categoryBarLeading == null || onSoundPicked != null,
+         'categoryBarLeading only shows when the picker is embedded',
+       );
 
-  final ScrollController scrollController;
+  /// The sheet's controller, which the lists drive so a drag on them closes
+  /// the sheet. Embedded, the picker scrolls on its own and takes none.
+  final ScrollController? scrollController;
   final LocalAudioImportService? localAudioImportService;
   final Future<XFile?> Function()? pickAudioFile;
   final AudioPlaybackService? audioService;
+
+  /// Receives the confirmed sound when the picker is embedded in a page,
+  /// where its search and import scroll away with the list below a pinned
+  /// category bar, and the search floats back in on scrolling up.
+  ///
+  /// Without it the picker is presented by [show], keeps that header pinned,
+  /// and pops its route with the sound instead.
+  final ValueChanged<AudioEvent>? onSoundPicked;
+
+  /// Pinned to the left of the category bar when the picker is embedded, such
+  /// as the button that leaves the page it fills.
+  final Widget? categoryBarLeading;
 
   static Future<AudioEvent?> show(BuildContext context) {
     final navigator = Navigator.of(context);
@@ -382,7 +406,7 @@ class _AudioSelectionBottomSheetState
     if (!mounted) return;
 
     if (_selectedItem == null) {
-      context.pop();
+      if (widget.onSoundPicked == null) context.pop();
       return;
     }
 
@@ -416,11 +440,20 @@ class _AudioSelectionBottomSheetState
       if (timingResult != null && mounted) {
         switch (timingResult) {
           case AudioTimingConfirmed(:final sound):
-            context.pop(sound);
+            _complete(sound);
           case AudioTimingDeleted():
             break;
         }
       }
+    } else {
+      _complete(sound);
+    }
+  }
+
+  void _complete(AudioEvent sound) {
+    final onSoundPicked = widget.onSoundPicked;
+    if (onSoundPicked != null) {
+      onSoundPicked(sound);
     } else {
       context.pop(sound);
     }
@@ -502,85 +535,143 @@ class _AudioSelectionBottomSheetState
             .map((e) => AudioEvent.fromBundledSound(e.$2, index: e.$1))
             .toList();
     const searchEmptyState = _SearchEmptyState();
+    final embedded = widget.onSoundPicked != null;
+    // Embedded, there is no controller, so each list picks up the inner
+    // controller of the NestedScrollView below as its primary one.
+    final listScrollController = widget.scrollController;
+
+    final categoryBar = AudioCategoryBar(
+      category: _category,
+      onSelect: _selectCategory,
+    );
+    final searchInput = _PickerSearchInput(
+      controller: _searchController,
+      onChanged: _onSearchChanged,
+    );
+    final importAction = _ImportAudioAction(onTap: _importAudio);
+    // Embedded, the import action is the lists' first row, so it scrolls with
+    // them and only comes back at the top: the floating search returns first.
+    final listLeading = embedded ? importAction : null;
+    final lists = TabBarView(
+      controller: tabController,
+      children: [
+        _SoundsContent(
+          scrollController: listScrollController,
+          leading: listLeading,
+          sounds: bundledSounds,
+          selectedSound: _selectedItem,
+          audioService: _audioService,
+          onSelect: _selectSound,
+        ),
+        nostrSoundsAsync.when(
+          data: (nostrSounds) {
+            return _SoundsContent(
+              scrollController: listScrollController,
+              leading: listLeading,
+              sounds: _communitySounds(nostrSounds, searchResults),
+              selectedSound: _selectedItem,
+              audioService: _audioService,
+              onSelect: _selectSound,
+              usageCounts: usageCounts,
+              emptyState: _searchQuery.isNotEmpty
+                  ? searchEmptyState
+                  : const _EmptyState(),
+            );
+          },
+          loading: () => _LeadingAbove(
+            leading: listLeading,
+            child: const Center(child: BrandedLoadingIndicator()),
+          ),
+          error: (error, stack) => _LeadingAbove(
+            leading: listLeading,
+            child: _ErrorState(error: error),
+          ),
+        ),
+        _SoundsContent(
+          scrollController: listScrollController,
+          leading: listLeading,
+          sounds: featuredSounds,
+          selectedSound: _selectedItem,
+          audioService: _audioService,
+          onSelect: _selectSound,
+          emptyState: _searchQuery.isNotEmpty
+              ? searchEmptyState
+              : const _EmptyState(),
+        ),
+        _SoundsContent(
+          scrollController: listScrollController,
+          leading: listLeading,
+          sounds: matchingSavedSounds
+              .map((sound) => sound.audio)
+              .toList(growable: false),
+          displayTitles: {
+            for (final sound in matchingSavedSounds)
+              sound.id: ?sound.personalLabel,
+          },
+          selectedSound: _selectedItem,
+          audioService: _audioService,
+          onSelect: _selectSound,
+          // A saved entry whose file is gone stays listed but
+          // cannot be chosen: selecting it would attach a source
+          // that plays nothing to the draft (#8023).
+          unavailableSoundIds: savedSoundsState.missingFileSoundIds,
+          emptyState: _searchQuery.isNotEmpty
+              ? searchEmptyState
+              : _EmptyState(
+                  title: context.l10n.soundsSavedEmptyTitle,
+                  subtitle: context.l10n.soundsSavedEmptyDescription,
+                ),
+        ),
+      ],
+    );
 
     return Stack(
       children: [
-        Column(
-          crossAxisAlignment: .stretch,
-          children: [
-            AudioCategoryBar(category: _category, onSelect: _selectCategory),
-            _PickerSearchInput(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-            ),
-            _ImportAudioAction(onTap: _importAudio),
-            Expanded(
-              child: TabBarView(
-                controller: tabController,
-                children: [
-                  _SoundsContent(
-                    scrollController: widget.scrollController,
-                    sounds: bundledSounds,
-                    selectedSound: _selectedItem,
-                    audioService: _audioService,
-                    onSelect: _selectSound,
-                  ),
-                  nostrSoundsAsync.when(
-                    data: (nostrSounds) {
-                      return _SoundsContent(
-                        scrollController: widget.scrollController,
-                        sounds: _communitySounds(nostrSounds, searchResults),
-                        selectedSound: _selectedItem,
-                        audioService: _audioService,
-                        onSelect: _selectSound,
-                        usageCounts: usageCounts,
-                        emptyState: _searchQuery.isNotEmpty
-                            ? searchEmptyState
-                            : const _EmptyState(),
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: BrandedLoadingIndicator()),
-                    error: (error, stack) => _ErrorState(error: error),
-                  ),
-                  _SoundsContent(
-                    scrollController: widget.scrollController,
-                    sounds: featuredSounds,
-                    selectedSound: _selectedItem,
-                    audioService: _audioService,
-                    onSelect: _selectSound,
-                    emptyState: _searchQuery.isNotEmpty
-                        ? searchEmptyState
-                        : const _EmptyState(),
-                  ),
-                  _SoundsContent(
-                    scrollController: widget.scrollController,
-                    sounds: matchingSavedSounds
-                        .map((sound) => sound.audio)
-                        .toList(growable: false),
-                    displayTitles: {
-                      for (final sound in matchingSavedSounds)
-                        sound.id: ?sound.personalLabel,
-                    },
-                    selectedSound: _selectedItem,
-                    audioService: _audioService,
-                    onSelect: _selectSound,
-                    // A saved entry whose file is gone stays listed but
-                    // cannot be chosen: selecting it would attach a source
-                    // that plays nothing to the draft (#8023).
-                    unavailableSoundIds: savedSoundsState.missingFileSoundIds,
-                    emptyState: _searchQuery.isNotEmpty
-                        ? searchEmptyState
-                        : _EmptyState(
-                            title: context.l10n.soundsSavedEmptyTitle,
-                            subtitle: context.l10n.soundsSavedEmptyDescription,
-                          ),
-                  ),
-                ],
+        if (embedded)
+          // Embedded in a page, the categories stay put while the search
+          // scrolls away with the list and floats back in as soon as the list
+          // scrolls up again.
+          Column(
+            crossAxisAlignment: .stretch,
+            children: [
+              if (widget.categoryBarLeading case final leading?)
+                Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 12),
+                      child: leading,
+                    ),
+                    Expanded(child: categoryBar),
+                  ],
+                )
+              else
+                categoryBar,
+              Expanded(
+                child: NestedScrollView(
+                  floatHeaderSlivers: true,
+                  headerSliverBuilder: (context, _) => [
+                    SliverFloatingHeader(
+                      animationStyle: context.reduceMotion
+                          ? AnimationStyle.noAnimation
+                          : null,
+                      child: searchInput,
+                    ),
+                  ],
+                  body: lists,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          Column(
+            crossAxisAlignment: .stretch,
+            children: [
+              categoryBar,
+              searchInput,
+              importAction,
+              Expanded(child: lists),
+            ],
+          ),
 
         Align(
           alignment: .bottomCenter,
@@ -693,9 +784,12 @@ class _SoundsContent extends StatelessWidget {
     this.unavailableSoundIds = const {},
     this.usageCounts,
     this.emptyState = const _EmptyState(),
+    this.leading,
   });
 
-  final ScrollController scrollController;
+  /// Drives the list, or `null` to use the primary scroll controller, as
+  /// inside a [NestedScrollView].
+  final ScrollController? scrollController;
   final List<AudioEvent> sounds;
   final AudioEvent? selectedSound;
   final AudioPlaybackService audioService;
@@ -718,6 +812,9 @@ class _SoundsContent extends StatelessWidget {
 
   final Widget emptyState;
 
+  /// Scrolls with the list above its first row, and stays above [emptyState].
+  final Widget? leading;
+
   int? _videoCountFor(AudioEvent audio) {
     final id = audio.attributionEventId;
     return id == null ? null : usageCounts?[id];
@@ -727,13 +824,15 @@ class _SoundsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final leading = this.leading;
     if (sounds.isEmpty) {
-      return emptyState;
+      return _LeadingAbove(leading: leading, child: emptyState);
     }
 
     return CustomScrollView(
       controller: scrollController,
       slivers: [
+        if (leading != null) SliverToBoxAdapter(child: leading),
         SliverToBoxAdapter(
           child: Divider(height: 1, color: context.vineColors.outlineDisabled),
         ),
@@ -854,6 +953,28 @@ class _SearchEmptyState extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// [leading] above [child], which fills the rest, or just [child] without
+/// one.
+class _LeadingAbove extends StatelessWidget {
+  const _LeadingAbove({required this.leading, required this.child});
+
+  final Widget? leading;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final leading = this.leading;
+    if (leading == null) return child;
+    return Column(
+      crossAxisAlignment: .stretch,
+      children: [
+        leading,
+        Expanded(child: child),
+      ],
     );
   }
 }

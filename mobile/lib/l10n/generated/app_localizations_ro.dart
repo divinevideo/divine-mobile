@@ -8852,10 +8852,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get videoRecorderLipSyncAddAudioFirst =>
-      'Adaugă audio înainte de înregistrare';
-
-  @override
   String get videoRecorderStopMotionAssembleFailed =>
       'Videoclipul nu a putut fi creat. Încearcă din nou.';
 

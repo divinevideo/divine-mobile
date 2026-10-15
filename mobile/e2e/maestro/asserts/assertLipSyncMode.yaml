@@ -1,11 +1,9 @@
 appId: co.openvine.app.staging
 ---
-# Lip-sync mode, idle: the viewfinder chrome and sound picker are up, and no
-# clip is recorded yet.
-#
-# Lip-sync renders the capture stack with the same control rail, so the sound
-# picker below is the *only* element that separates this screen from capture
-# mode's. assertCaptureMode asserts its absence for the same reason.
+# Lip-sync mode before a sound is picked: the sound picker stands where the
+# viewfinder goes, with the recorder's close button pinned left of its
+# categories. A lip-sync video starts from its sound, so none of the camera
+# chrome is up until one is picked; that state is assertLipSyncViewfinder.
 
 # Mode wheel with Lip Sync armed. `selected` is load-bearing: the wheel renders
 # an entry for every mode in every mode, so a bare id assertion here passes
@@ -14,42 +12,18 @@ appId: co.openvine.app.staging
     id: camera_mode_lipSync
     selected: true
 - assertVisible:
-    id: camera_record_button
-- assertVisible:
     id: camera_close_button
 - assertVisible:
     id: camera_library_button
 
-# The sound picker, in the top-bar slot capture mode leaves empty.
+# The picker itself.
 - assertVisible:
-    id: audio_chip
+    id: audio_search_field
 
-# Control rail, top to bottom — identical to capture mode's, driven by the
-# same ../utils/driveCaptureRail.yaml.
-- assertVisible:
+# No viewfinder yet: no shutter, no control rail, and no sound chip.
+- assertNotVisible:
+    id: camera_record_button
+- assertNotVisible:
     id: camera_flash_button
-- assertVisible:
-    id: camera_timer_button
-- assertVisible:
-    id: camera_aspect_ratio_button
-- assertVisible:
-    id: camera_switch_camera_button
-- assertVisible:
-    id: camera_stabilization_button
-
-# Classic's shutter, absent. A leak guard rather than a mode separator — the
-# record button above already fails this file on a classic viewfinder — and the
-# other half of why the shutter gets an id of its own rather than reusing
-# `camera_record_button`: the record button is pinned absent in
-# assertClassicMode and this one absent in every capture-stack mode, so the
-# pair is what proves which stack is up.
 - assertNotVisible:
-    id: camera_classic_shutter
-
-# Nothing recorded yet. Both buttons sit inside an AnimatedOpacity, and
-# RenderAnimatedOpacity drops its child from the semantics tree at opacity 0 —
-# so "not visible" here means "no clip in the session", not "scrolled away".
-- assertNotVisible:
-    id: camera_next_button
-- assertNotVisible:
-    id: camera_delete_clip_button
+    id: audio_chip

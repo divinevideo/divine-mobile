@@ -4,18 +4,19 @@ tags:
 ---
 #TC to open the video recorder in lip-sync mode,
 # given the user is signed in and on a feed surface,
-# validate the lip-sync viewfinder comes up with its sound picker and that
-# closing it puts the user back on the feed.
+# validate lip-sync opens on its sound picker and that closing the recorder from
+# it puts the user back on the feed.
 #Steps:
-# 1. Open the recorder and switch to Lip Sync: lip-sync mode is displayed
+# 1. Open the recorder and switch to Lip Sync: the sound picker is displayed
 # 2. Close the recorder: the user is back on the feed
 
 # 1. Open the recorder on lip-sync
 - runFlow: ../utils/openLipSyncMode.yaml
 
-# 2. Close it. The recorder is a full-screen push, so the bottom nav coming
-# back is what proves we left it — and the record button going away proves we
-# left it rather than stacking something on top.
+# 2. Close it, from the close button pinned left of the picker's categories.
+# The recorder is a full-screen push, so the bottom nav coming back is what
+# proves we left it — and the picker going away proves we left it rather than
+# stacking something on top.
 - tapOn:
     id: camera_close_button
 - extendedWaitUntil:
@@ -23,4 +24,4 @@ tags:
       id: camera_button
     timeout: 15000
 - assertNotVisible:
-    id: camera_record_button
+    id: audio_search_field

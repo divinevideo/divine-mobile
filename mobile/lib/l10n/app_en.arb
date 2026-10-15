@@ -5868,10 +5868,6 @@
       }
     }
   },
-  "videoRecorderLipSyncAddAudioFirst": "Add audio before recording",
-  "@videoRecorderLipSyncAddAudioFirst": {
-    "description": "Snackbar shown when the user taps the record button in lip-sync mode without first selecting a sound."
-  },
   "videoRecorderStopMotionAssembleFailed": "Couldn't create the video. Try again.",
   "@videoRecorderStopMotionAssembleFailed": {
     "description": "Snackbar shown when assembling captured stop-motion frames into a video failed."

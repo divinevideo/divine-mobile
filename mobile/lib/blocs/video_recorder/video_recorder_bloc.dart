@@ -360,6 +360,12 @@ class VideoRecorderBloc
   bool get _remoteRecordPausedForSound =>
       _readVideoEditorState().selectedSound != null;
 
+  /// Lip-sync shows its sound picker in place of the preview until a sound
+  /// is picked.
+  bool get _lipSyncSoundPickerShowing =>
+      state.recorderMode == VideoRecorderMode.lipSync &&
+      !_remoteRecordPausedForSound;
+
   /// Keeps background chroma-key bakes off the hardware while the camera
   /// encodes: held from the moment a take starts, released once it is over.
   ///
@@ -2375,11 +2381,14 @@ class VideoRecorderBloc
     _VideoRecorderRemoteRecordTriggered event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
-    // The Upload tab shows no preview and pauses the camera, so a volume or
-    // Bluetooth press there must not start a recording the user cannot see.
-    if (state.recorderMode == VideoRecorderMode.upload) {
+    // Neither the Upload tab, which pauses the camera, nor the lip-sync sound
+    // picker shows a preview, so a volume or Bluetooth press there must not
+    // start a recording the user cannot see.
+    if (state.recorderMode == VideoRecorderMode.upload ||
+        _lipSyncSoundPickerShowing) {
       Log.debug(
-        '🎮 Remote record trigger ignored - Upload tab',
+        '🎮 Remote record trigger ignored - no preview on '
+        '${state.recorderMode.name}',
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
@@ -2431,7 +2440,16 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
 
-      if (_remoteRecordPausedForSound) {
+      if (_lipSyncSoundPickerShowing) {
+        // The picker's pause arrived while the camera was still starting and
+        // was dropped, so apply it now; the picker resumes on leaving.
+        await _cameraService.setRemoteRecordControlEnabled(enabled: false);
+        Log.debug(
+          '🎮 Remote record control paused (lip-sync sound picker)',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+      } else if (_remoteRecordPausedForSound) {
         await _cameraService.setVolumeKeysEnabled(enabled: false);
         Log.debug(
           '🎮 Volume keys released (sound already selected)',

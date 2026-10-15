@@ -110,18 +110,18 @@ Four of the recorder's six modes are covered, one flow each:
 | Flow | Mode | Covers |
 |---|---|---|
 | `flows/captureModeFlow.yaml` | capture | open, drive the control rail, record a clip, delete it, close |
-| `flows/lipSyncModeFlow.yaml` | lip-sync | open, drive the control rail, prove the shutter refuses without a sound and records with one, delete the clip, close |
+| `flows/lipSyncModeFlow.yaml` | lip-sync | open on the sound picker, pick a sound to bring up the viewfinder, drive the control rail, record a clip, delete it, close |
 | `flows/stopMotionModeFlow.yaml` | stop-motion | open, drive the control rail, shoot two stills, undo them, close |
 | `flows/classicModeFlow.yaml` | classic | open, drive the action row, record a clip off the preview, prove a second recording stops itself at the duration limit, delete both, close |
 
 Upload and Chroma Key are not covered yet.
 
-The gate is lip-sync's own behaviour and it takes **both** shutter tests to
-cover it. `lipSyncModeAudioGate` proves the shutter refuses with no sound
-picked, which on its own is also what a permanently broken shutter does;
-`lipSyncModeRecordClip` picks one and records against it. They run in that
-order and cannot be swapped — the gate test needs the editor to hold no sound,
-and the record test is what puts one there.
+Lip-sync starts from its sound: until one is picked the mode shows the sound
+picker where the viewfinder goes, so there is no shutter to tap without one.
+`lipSyncModePickSound` picks a sound and asserts the viewfinder that replaces
+the picker, and every later lip-sync test starts from that viewfinder.
+`assertLipSyncMode` pins the picker state and `assertLipSyncViewfinder` the
+viewfinder state.
 
 Picking a sound stays deterministic because the flow only ever touches the
 picker's **Divine** tab, whose entries come from
@@ -152,8 +152,9 @@ lane:
   emulator's virtual scene camera is enough, and a device is best.
 - **The `…Open` tests alone** — the chrome assertions — do pass without a
   camera, because the viewfinder falls back to a placeholder and every control
-  still renders. So does `lipSyncModeAudioGate`: the blocked shutter is
-  rendered from the audio selection, not from the camera being ready.
+  still renders. So does `lipSyncModePickSound`: the picker and the viewfinder
+  that replaces it render from the audio selection, not from the camera being
+  ready.
 
 Run one against a booted Android emulator or a connected device:
 
@@ -219,7 +220,8 @@ bar, its own action rows, and no record button at all.
 | `camera_grid_button` | — | — | ✅ | ✅ |
 
 Lip-sync and capture are the subset trap. Their rails are identical, so assert
-only what each mode renders and `assertCaptureMode` passes on the Lip Sync tab,
+only what each mode renders and `assertCaptureMode` passes on the lip-sync
+viewfinder,
 because everything it checks is there. It asserts `audio_chip` *absent*, and
 that one line is what keeps it honest. `video_editor_audio_chip_test.dart` pins
 the anchor itself at the widget level.
@@ -304,14 +306,15 @@ Shared:
 - **An empty session when the rail is driven.** The aspect-ratio control is
   disabled once the session holds a clip, because clips of mixed ratios cannot
   share an editor timeline. `captureModeControls` therefore runs before the
-  recording tests; lip-sync gets this for free, since nothing in that flow
-  records. Stop-motion stills are not clips until the assemble, so its rail
-  stays live mid-session — but `stopMotionModeControls` closes on its mode
-  assert, which pins next and undo absent, so it needs the empty session
-  anyway and the flow keeps the same order. Classic renders no aspect-ratio
-  control at all (it is square by definition), so nothing there is gated on
-  clips either — but `classicModeControls` closes on the same kind of mode
-  assert and keeps the same order for the same reason.
+  recording tests, and `lipSyncModeControls` runs after the sound is picked
+  but before `lipSyncModeRecordClip`. Stop-motion stills are not clips until
+  the assemble, so its rail stays live mid-session — but
+  `stopMotionModeControls` closes on its mode assert, which pins next and undo
+  absent, so it needs the empty session anyway and the flow keeps the same
+  order. Classic renders no aspect-ratio control at all (it is square by
+  definition), so nothing there is gated on clips either — but
+  `classicModeControls` closes on the same kind of mode assert and keeps the
+  same order for the same reason.
 
 Capture only:
 
@@ -334,35 +337,27 @@ Lip-sync only:
   absent and so never opens here on its own. It walks the wheel one entry at a
   time: Lip Sync sits two places from Capture, and the wheel is a lazy
   `ListView` that only builds entries near the armed one.
-- **No sound picked before the gate test.** The selection lives in the editor
-  provider rather than a preference, so a relaunch clears it — but an iterating
-  run that already reached `lipSyncModeRecordClip`, or picked a sound by hand,
-  has to relaunch before `lipSyncModeAudioGate` means anything again. Same for
-  the rail: the aspect-ratio control is disabled once a clip exists, so
-  `lipSyncModeControls` runs ahead of both.
+- **No sound picked when the mode is entered.** `openLipSyncMode` asserts the
+  picker, so it needs the editor to hold no sound. The selection lives in the
+  editor provider rather than a preference: closing the recorder or a relaunch
+  clears it, and so does the wheel walk, since switching between recording
+  modes resets the session. An iterating run that picked a sound by hand and
+  skipped all three lands on the viewfinder instead.
 - **The keyboard hides the confirm bar.** The picker's done button is anchored
-  to the bottom of the sheet, so with the search keyboard up it is pushed off
-  screen entirely. `lipSyncModeRecordClip` types its query and then calls
+  to the bottom of the picker, so with the search keyboard up it is pushed off
+  screen entirely. `utils/pickLipSyncSound` types its query and then calls
   `hideKeyboard` before touching the list. Skip that and the failure is a
   nasty one to read: the sound selects correctly, the tile turns green in the
   failure screenshot, and the run dies waiting on a button that is simply not
   in the hierarchy.
-- **The sound is picked by title, from the manifest.** The test searches
-  "Bruh Sound Effect" and asserts the title back off the first result, so a
-  reordered or renamed manifest fails there rather than silently recording
-  against a different sound. That title comes from the asset manifest, not
-  l10n, so unlike the rest of the copy in this suite it reads the same in every
-  locale. It is chosen for being 864ms — under the 6.3s maximum clip length, so
-  confirming pops straight back instead of routing through the trim screen a
-  longer sound would need.
-- **The "add audio" snackbar is asserted by copy.** `DivineSnackbarContainer`
-  takes no identifier, and adding one is a `divine_ui` change that drags that
-  package's 100% coverage gate along with it — the same call `openRecorder`
-  makes for the education sheet. It earns the copy dependency: without it the
-  test only proves nothing happened, which is also what a dead button looks
-  like. The two assertions in that test catch different failures and both are
-  needed: the snackbar proves the gate *fired*, the still-visible
-  `camera_close_button` proves no recording started behind it.
+- **The sound is picked by title, from the manifest.** `pickLipSyncSound`
+  searches "Bruh Sound Effect" and asserts the title back off the first
+  result, so a reordered or renamed manifest fails there rather than silently
+  recording against a different sound. That title comes from the asset
+  manifest, not l10n, so unlike the rest of the copy in this suite it reads
+  the same in every locale. It is chosen for being 864ms — under the 6.3s
+  maximum clip length, so confirming hands it straight back instead of routing
+  through the trim screen a longer sound would need.
 
 Stop-motion only:
 
