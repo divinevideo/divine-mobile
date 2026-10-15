@@ -92,7 +92,8 @@ class _SoundRequestButtonState extends State<SoundRequestButton> {
           final hasRequest = state.snapshot.requests.values.any(
             (r) =>
                 r.videoAddress == widget.videoAddress &&
-                r.requester == state.ownerPubkey,
+                r.requester == state.ownerPubkey &&
+                r.isPending,
           );
           final working =
               state.target == widget.videoAddress &&

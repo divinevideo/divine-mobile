@@ -14,6 +14,46 @@ const owner =
 const address =
     '34236:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:clip';
 void main() {
+  testWidgets(
+    'a fulfilled request does not label a new request as already sent',
+    (tester) async {
+      final repo = _Repository();
+      when(() => repo.ownerPubkey).thenReturn(owner);
+      when(repo.watchState).thenAnswer(
+        (_) => Stream.value(
+          SoundRequestSnapshot(
+            requests: {
+              'c' * 64: SoundRequestEntry(
+                id: 'c' * 64,
+                requester: owner,
+                videoAddress: address,
+                status: SoundRequestStatus.ready,
+              ),
+            },
+          ),
+        ),
+      );
+      when(repo.start).thenAnswer((_) async {});
+      when(() => repo.canRequest(address)).thenAnswer((_) async => true);
+      final cubit = SoundRequestsCubit();
+      await cubit.connect(repo);
+      addTearDown(cubit.close);
+      await tester.pumpWidget(
+        BlocProvider.value(
+          value: cubit,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: SoundRequestButton(videoAddress: address)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Request this sound'), findsOneWidget);
+      expect(find.text('Sound requested'), findsNothing);
+    },
+  );
+
   for (final available in [true, false]) {
     testWidgets(
       'request action follows current source eligibility: $available',
