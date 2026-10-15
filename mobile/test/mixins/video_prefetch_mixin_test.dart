@@ -1,12 +1,15 @@
 // ABOUTME: TDD tests for VideoPrefetchMixin
 // ABOUTME: Verifies video prefetching behavior in PageView-based feeds
 
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/mixins/video_prefetch_mixin.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class MockMediaCacheManager extends Mock implements MediaCacheManager {}
 
@@ -240,23 +243,84 @@ void main() {
       });
     });
 
-    test('SPEC: should handle prefetch errors gracefully', () {
-      final videos = _createMockVideos(5);
+    group('prefetch failures', () {
+      late LogCaptureService logCapture;
 
-      when(
-        () => mockCache.preCacheFiles(
-          any(),
-          batchSize: any(named: 'batchSize'),
-          authHeadersProvider: any(named: 'authHeadersProvider'),
-        ),
-      ).thenThrow(Exception('Network error'));
+      setUp(() async {
+        logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+      });
 
-      final mixin = TestVideoPrefetchMixin(mockCache);
+      tearDown(() async {
+        await logCapture.clearAllLogs();
+      });
 
-      // Should not throw
-      expect(
-        () => mixin.checkForPrefetch(currentIndex: 2, videos: videos),
-        returnsNormally,
+      test(
+        'SPEC: should log and contain asynchronous prefetch errors',
+        () async {
+          final videos = _createMockVideos(5);
+
+          when(
+            () => mockCache.preCacheFiles(
+              any(),
+              batchSize: any(named: 'batchSize'),
+              authHeadersProvider: any(named: 'authHeadersProvider'),
+            ),
+          ).thenAnswer((_) async => throw Exception('Network error'));
+
+          final mixin = TestVideoPrefetchMixin(mockCache);
+
+          final unhandledErrors = await _unhandledErrorsWhile(() async {
+            mixin.checkForPrefetch(currentIndex: 2, videos: videos);
+          });
+
+          expect(unhandledErrors, isEmpty);
+          verify(
+            () => mockCache.preCacheFiles(
+              any(),
+              batchSize: any(named: 'batchSize'),
+              authHeadersProvider: any(named: 'authHeadersProvider'),
+            ),
+          ).called(1);
+          _expectPrefetchFailureLogged(
+            logCapture,
+            'Failed to prefetch videos: Exception: Network error',
+          );
+        },
+      );
+
+      test(
+        'SPEC: should log and contain synchronous prefetch errors',
+        () async {
+          final videos = _createMockVideos(10);
+
+          when(
+            () => mockCache.preCacheFiles(
+              any(),
+              batchSize: any(named: 'batchSize'),
+              authHeadersProvider: any(named: 'authHeadersProvider'),
+            ),
+          ).thenThrow(Exception('Synchronous cache error'));
+
+          final mixin = TestVideoPrefetchMixin(mockCache);
+
+          final unhandledErrors = await _unhandledErrorsWhile(() async {
+            mixin.checkForPrefetch(currentIndex: 2, videos: videos);
+          });
+
+          expect(unhandledErrors, isEmpty);
+          verify(
+            () => mockCache.preCacheFiles(
+              any(),
+              batchSize: any(named: 'batchSize'),
+              authHeadersProvider: any(named: 'authHeadersProvider'),
+            ),
+          ).called(1);
+          _expectPrefetchFailureLogged(
+            logCapture,
+            'Failed to prefetch videos: Exception: Synchronous cache error',
+          );
+        },
       );
     });
 
@@ -298,6 +362,43 @@ void main() {
       ).called(1);
     });
   });
+}
+
+/// Runs [body] in a guarded zone and returns every error that escaped it,
+/// including one thrown by [body] itself.
+///
+/// Errors escaping `runDetached` are reported to the zone current when the
+/// future was created, so the call under test has to run inside [body]. A
+/// throw from [body] is recorded rather than rethrown because the guarded
+/// zone would swallow it and leave this future pending until the test times
+/// out.
+Future<List<Object>> _unhandledErrorsWhile(
+  Future<void> Function() body,
+) async {
+  final errors = <Object>[];
+  await runZonedGuarded(() async {
+    try {
+      await body();
+      await pumpEventQueue();
+    } on Object catch (error) {
+      errors.add(error);
+    }
+  }, (error, _) => errors.add(error));
+  return errors;
+}
+
+/// Asserts exactly one prefetch failure was logged with [message].
+void _expectPrefetchFailureLogged(
+  LogCaptureService logCapture,
+  String message,
+) {
+  final failures = logCapture.getRecentLogs().where(
+    (entry) =>
+        entry.name == 'VideoPrefetchMixin' && entry.level == LogLevel.error,
+  );
+  expect(failures, hasLength(1));
+  expect(failures.single.category, LogCategory.video);
+  expect(failures.single.message, message);
 }
 
 /// Helper: Create mock video events

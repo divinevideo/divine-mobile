@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Mixin that provides video prefetching logic for PageView-based feeds.
@@ -114,22 +115,14 @@ mixin VideoPrefetchMixin {
       category: LogCategory.video,
     );
 
-    // Fire and forget - don't block on prefetch.
-    try {
-      videoCacheManager.preCacheFiles(prefetchItems).catchError((error) {
-        Log.error(
-          '❌ Error prefetching videos: $error',
-          name: 'VideoPrefetchMixin',
-          category: LogCategory.video,
-        );
-      });
-    } catch (error) {
-      Log.error(
-        '❌ Error prefetching videos: $error',
-        name: 'VideoPrefetchMixin',
-        category: LogCategory.video,
-      );
-    }
+    // Fire and forget - don't block on prefetch. Future.sync also captures a
+    // synchronous throw from an implementation of the cache manager.
+    runDetached(
+      Future<void>.sync(() => videoCacheManager.preCacheFiles(prefetchItems)),
+      'prefetch videos',
+      logName: 'VideoPrefetchMixin',
+      category: LogCategory.video,
+    );
   }
 
   /// Reset prefetch throttle (useful after feed refresh or context change).
