@@ -199,6 +199,29 @@ void main() {
         expect(referenced, {'pre_key.mp4', 'chroma_bg_1.png'});
       });
 
+      test('protects the footage under a stabilized clip', () async {
+        // Stabilizing swaps `file_path` to the steadied render, so the raw
+        // footage is only reachable through the JSON blob. Reaped, turning
+        // stabilization off fails for good.
+        await dao.upsertClip(
+          id: 'clip_steadied',
+          draftId: testDraftId,
+          orderIndex: 0,
+          durationMs: 3000,
+          recordedAt: DateTime(2023, 11, 14, 10),
+          filePath: 'clip_steadied_stabilized_1.mp4',
+          thumbnailPath: null,
+          data: '{"stabilization":{"rawSourcePath":"unsteady.mp4"}}',
+        );
+
+        final referenced = await dao.referencedFilenames({
+          'unsteady.mp4',
+          'unrelated.mp4',
+        });
+
+        expect(referenced, {'unsteady.mp4'});
+      });
+
       test('protects the backdrop video a chroma key plays', () async {
         // A video backdrop is another library clip's file. Deleting that clip
         // must not take the file away from a key that still renders it: a
