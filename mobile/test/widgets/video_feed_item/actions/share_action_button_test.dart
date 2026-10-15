@@ -25,17 +25,20 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:user_ranking/user_ranking.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../helpers/go_router.dart';
@@ -43,6 +46,9 @@ import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -86,12 +92,27 @@ void main() {
 
     late VideoEvent testVideo;
     late _MockFollowRepository mockFollowRepository;
+    late _MockRankingSignalsLoader mockRankingSignalsLoader;
     late _MockProfileRepository mockProfileRepository;
     late _MockVideoSharingService mockVideoSharingService;
 
     setUp(() {
       mockFollowRepository = _MockFollowRepository();
+      mockRankingSignalsLoader = _MockRankingSignalsLoader();
+      when(
+        () => mockRankingSignalsLoader.load(
+          any(),
+          includeDmCounterparts: true,
+        ),
+      ).thenAnswer(
+        (invocation) async => {
+          for (final key
+              in invocation.positionalArguments.first as Iterable<String>)
+            key: UserRankingSignals(pubkey: key),
+        },
+      );
       mockVideoSharingService = _MockVideoSharingService();
+      when(() => mockVideoSharingService.recentlySharedWith).thenReturn([]);
       when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
 
       mockProfileRepository = _MockProfileRepository();
@@ -180,6 +201,9 @@ void main() {
             ),
           ),
           additionalOverrides: [
+            userRankingSignalsLoaderProvider.overrideWithValue(
+              mockRankingSignalsLoader,
+            ),
             videoSharingServiceProvider.overrideWith(
               (ref) => mockVideoSharingService,
             ),
@@ -203,6 +227,9 @@ void main() {
           testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
@@ -216,6 +243,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Share with'), findsOneWidget);
+        verify(
+          () => mockRankingSignalsLoader.load(
+            any(),
+            includeDmCounterparts: true,
+          ),
+        ).called(1);
       });
 
       testWidgets('shows Find people button', (tester) async {
@@ -225,6 +258,9 @@ void main() {
           testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
@@ -247,6 +283,9 @@ void main() {
           testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
@@ -276,6 +315,9 @@ void main() {
                 },
               ),
               additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
                 videoSharingServiceProvider.overrideWith(
                   (ref) => mockVideoSharingService,
                 ),
@@ -304,6 +346,9 @@ void main() {
           testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
@@ -333,6 +378,9 @@ void main() {
           testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
@@ -381,6 +429,9 @@ void main() {
           testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
@@ -419,6 +470,9 @@ void main() {
           final app = testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
@@ -840,6 +894,9 @@ void main() {
               testMaterialApp(
                 home: Scaffold(body: ShareActionButton(video: testVideo)),
                 additionalOverrides: [
+                  userRankingSignalsLoaderProvider.overrideWithValue(
+                    mockRankingSignalsLoader,
+                  ),
                   videoSharingServiceProvider.overrideWith(
                     (ref) => mockVideoSharingService,
                   ),
@@ -948,6 +1005,9 @@ void main() {
             testMaterialApp(
               home: Scaffold(body: ShareActionButton(video: testVideo)),
               additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
                 videoSharingServiceProvider.overrideWith(
                   (ref) => mockVideoSharingService,
                 ),
@@ -1502,6 +1562,9 @@ void main() {
             testMaterialApp(
               home: Scaffold(body: ShareActionButton(video: testVideo)),
               additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
                 videoSharingServiceProvider.overrideWith(
                   (ref) => mockVideoSharingService,
                 ),
