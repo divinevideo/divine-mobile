@@ -329,21 +329,21 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     final followingPubkeys = followRepo.followingPubkeys;
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
 
+    final signals = await loadFollowListRankingSignals(
+      pubkeys: followingPubkeys,
+      loader: loader,
+      logName: 'UserPickerSheet',
+      onError: (error, stackTrace) {
+        if (isCurrent()) _reportRankingError(error, stackTrace);
+      },
+    );
+    if (!isCurrent()) return;
+    _vanishedPubkeys =
+        ref.read(vanishedProfilePubkeysProvider).value ?? const {};
     final List<UserProfile> candidates;
     try {
       final cached = await profileRepo.getCachedProfiles(
         pubkeys: followingPubkeys,
-      );
-      if (!isCurrent()) return;
-      _vanishedPubkeys =
-          ref.read(vanishedProfilePubkeysProvider).value ?? const {};
-      final signals = await loadFollowListRankingSignals(
-        pubkeys: followingPubkeys,
-        loader: loader,
-        logName: 'UserPickerSheet',
-        onError: (error, stackTrace) {
-          if (isCurrent()) _reportRankingError(error, stackTrace);
-        },
       );
       if (!isCurrent()) return;
       _rankingSignals = signals;
@@ -369,7 +369,26 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     } catch (error, stackTrace) {
       if (!isCurrent()) return;
       _reportRankingError(error, stackTrace);
-      setState(() => _followListLoaded = true);
+      final currentFollowing = followRepo.followingPubkeys.toSet();
+      final retained = _followProfiles
+          .where(
+            (profile) =>
+                currentFollowing.contains(profile.pubkey) &&
+                signals.containsKey(profile.pubkey) &&
+                loader.isEligible(profile.pubkey) &&
+                !blocklistRepository.shouldFilterFromFeeds(profile.pubkey) &&
+                !_isExcludedViewer(profile.pubkey),
+          )
+          .toList();
+      setState(() {
+        _rankingSignals = signals;
+        _followProfiles = retained;
+        _filteredFollowProfiles = _matchingFollowProfiles(
+          _searchController.text,
+          retained,
+        );
+        _followListLoaded = true;
+      });
       return;
     }
     if (!isCurrent()) return;

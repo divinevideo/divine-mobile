@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -120,12 +121,14 @@ void main() {
 
     AddPeopleToListCubit createCubit({
       List<String> existingMembers = const [],
+      AddPeopleToListState initialState = const AddPeopleToListState(),
     }) {
       return AddPeopleToListCubit(
         followRepository: followRepository,
         rankingSignalsLoader: rankingLoader,
         profileRepository: profileRepository,
         existingMemberPubkeys: existingMembers,
+        initialState: initialState,
       );
     }
 
@@ -249,21 +252,34 @@ void main() {
       );
 
       test('ranking failure reports error and still excludes ineligible candidates', () async {
-        when(() => followRepository.followingPubkeys)
-            .thenReturn([_alicePubkey, _bobPubkey]);
-        final observer = _RecordingObserver();
-        final previousObserver = Bloc.observer;
-        Bloc.observer = observer;
-        addTearDown(() => Bloc.observer = previousObserver);
-        when(() => rankingLoader.load(any()))
-            .thenThrow(StateError('local signals'));
-        when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
-        final cubit = createCubit();
-        await cubit.started();
-        expect(cubit.state.status, AddPeopleToListStatus.ready);
-        expect(order(cubit), [_bobPubkey]);
-        expect(observer.errors.single, isA<ReportableError>());
-        await cubit.close();
+        final messages = <String>[];
+        final previousDebugPrint = debugPrint;
+        debugPrint = (message, {wrapWidth}) {
+          if (message != null) messages.add(message);
+        };
+        try {
+          when(() => followRepository.followingPubkeys)
+              .thenReturn([_alicePubkey, _bobPubkey]);
+          final observer = _RecordingObserver();
+          final previousObserver = Bloc.observer;
+          Bloc.observer = observer;
+          addTearDown(() => Bloc.observer = previousObserver);
+          when(() => rankingLoader.load(any()))
+              .thenThrow(StateError('local signals'));
+          when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
+          final cubit = createCubit();
+          await cubit.started();
+          expect(cubit.state.status, AddPeopleToListStatus.ready);
+          expect(order(cubit), [_bobPubkey]);
+          expect(observer.errors.single, isA<ReportableError>());
+          expect(
+            messages.single,
+            contains('Failed to load follow ranking: Bad state: local signals'),
+          );
+          await cubit.close();
+        } finally {
+          debugPrint = previousDebugPrint;
+        }
       });
 
       test(
@@ -289,6 +305,57 @@ void main() {
           verifyNever(() => followRepository.followingStream);
         },
       );
+    });
+
+    group('same-owner snapshot handoff', () {
+      Future<AddPeopleToListState> selectedSnapshot() async {
+        when(() => followRepository.followingPubkeys)
+            .thenReturn([_alicePubkey, _bobPubkey]);
+        final original = createCubit();
+        await original.started();
+        original.queryChanged('a');
+        original.candidateToggled(_alicePubkey);
+        final snapshot = original.state;
+        expect(snapshot.candidates.map((c) => c.pubkey), [
+          _alicePubkey,
+          _bobPubkey,
+        ]);
+        expect(snapshot.selectedPubkeys, {_alicePubkey});
+        await original.close();
+        return snapshot;
+      }
+
+      test('revalidates retained rows and selection synchronously before a refresh', () async {
+        final snapshot = await selectedSnapshot();
+        when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
+        final replacement = createCubit(
+          initialState: snapshot,
+          existingMembers: [_bobPubkey],
+        );
+        expect(replacement.state.candidates.map((c) => c.pubkey), [_bobPubkey]);
+        expect(replacement.state.candidates.single.isAlreadyInList, isTrue);
+        expect(replacement.state.selectedPubkeys, isEmpty);
+        expect(replacement.state.query, 'a');
+        expect(replacement.state.candidatePositions[_bobPubkey], 1);
+        await replacement.close();
+      });
+
+      test('successful refresh omissions remove retained rows and their selections', () async {
+        final snapshot = await selectedSnapshot();
+        when(() => rankingLoader.load(any())).thenAnswer(
+          (_) async => {
+            _bobPubkey: const UserRankingSignals(pubkey: _bobPubkey),
+          },
+        );
+        final replacement = createCubit(initialState: snapshot);
+        expect(replacement.state.selectedPubkeys, {_alicePubkey});
+        await replacement.started();
+        expect(replacement.state.candidates.map((c) => c.pubkey), [_bobPubkey]);
+        expect(replacement.state.selectedPubkeys, isEmpty);
+        expect(replacement.state.candidatePositions[_bobPubkey], 1);
+        expect(replacement.state.query, 'a');
+        await replacement.close();
+      });
     });
 
     group('started', () {

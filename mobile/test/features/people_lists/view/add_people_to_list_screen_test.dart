@@ -7,6 +7,8 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +23,11 @@ import 'package:openvine/features/people_lists/models/people_list_candidate.dart
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:profile_repository/profile_repository.dart';
 import 'package:user_ranking/user_ranking.dart';
 
 import '../../../helpers/go_router.dart';
@@ -35,6 +41,16 @@ class _MockAddPeopleToListCubit extends MockCubit<AddPeopleToListState>
 
 class _MockRankingSignalsLoader extends Mock
     implements UserRankingSignalsLoader {}
+
+class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _TestNostrSession extends NostrSession {
+  @override
+  NostrSessionReadiness build() =>
+      const NostrSessionReadiness.identityKnown(pubkey: _ownerPubkey);
+}
+
+final _dependencyRevision = StateProvider<int>((ref) => 0);
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -636,6 +652,143 @@ void main() {
     tearDown(() async {
       await bloc.close();
     });
+
+    testWidgets(
+      'same-owner dependency refresh preserves the flow and owner switch clears it',
+      (tester) async {
+        final list = _buildList(
+          id: 'refresh',
+          name: 'Crew',
+          pubkeys: [_candidateB],
+        );
+        when(() => bloc.state).thenReturn(_stateWith(lists: [list]));
+        when(() => mockFollowRepository.followingPubkeys)
+            .thenReturn([_candidateA, _candidateB]);
+        final loaders = [
+          _MockRankingSignalsLoader(),
+          _MockRankingSignalsLoader(),
+        ];
+        final repositories = [
+          _MockProfileRepository(),
+          _MockProfileRepository(),
+        ];
+        for (var index = 0; index < 2; index++) {
+          final loader = loaders[index];
+          final repo = repositories[index];
+          when(() => loader.isEligible(any())).thenReturn(true);
+          when(() => loader.load(any())).thenAnswer(
+            (_) async => {
+              _candidateA: UserRankingSignals(
+                pubkey: _candidateA,
+                lastInteractionAt: index == 0 ? DateTime.now() : null,
+              ),
+              _candidateB: UserRankingSignals(
+                pubkey: _candidateB,
+                lastInteractionAt: index == 1 ? DateTime.now() : null,
+              ),
+            },
+          );
+          when(() => loader.loadCachedDisplayNames(any()))
+              .thenAnswer((_) async => {});
+          when(() => repo.getCachedProfile(pubkey: any(named: 'pubkey')))
+              .thenAnswer((invocation) async {
+                final key = invocation.namedArguments[#pubkey] as String;
+                return UserProfile(
+                  pubkey: key,
+                  displayName: key == _candidateA
+                      ? (index == 0 ? 'Zelda' : 'Aaron')
+                      : 'Maria',
+                  rawData: const {},
+                  createdAt: _frozenNow,
+                  eventId: 'e' * 64,
+                );
+              });
+          when(() => repo.fetchFreshProfile(pubkey: any(named: 'pubkey')))
+              .thenAnswer((_) async => null);
+        }
+        await tester.pumpWidget(
+          testMaterialApp(
+            mockFollowRepository: mockFollowRepository,
+            home: ProviderScope(
+              overrides: [
+                nostrSessionProvider.overrideWith(_TestNostrSession.new),
+                profileRepositoryProvider.overrideWith(
+                  (ref) => repositories[ref.watch(_dependencyRevision)],
+                ),
+                userRankingSignalsLoaderProvider.overrideWith(
+                  (ref) => loaders[ref.watch(_dependencyRevision)],
+                ),
+              ],
+              child: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: AddPeopleToListScreen(listId: list.id),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final before = tester
+            .element(find.byType(AddPeopleToListView))
+            .read<AddPeopleToListCubit>();
+        expect(before.state.candidates.map((c) => c.pubkey), [
+          _candidateA,
+          _candidateB,
+        ]);
+        await tester.tap(find.byType(PersonPickableRow).first);
+        await tester.enterText(find.byType(TextField), 'a');
+        await tester.pumpAndSettle();
+        expect(before.state.selectedPubkeys, {_candidateA});
+        expect(before.state.query, 'a');
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AddPeopleToListScreen)),
+        );
+        container.read(_dependencyRevision.notifier).state = 1;
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {});
+        await tester.pumpAndSettle();
+        final after = tester
+            .element(find.byType(AddPeopleToListView))
+            .read<AddPeopleToListCubit>();
+        expect(after, isNot(same(before)));
+        expect(before.isClosed, isTrue);
+        expect(after.state.selectedPubkeys, {_candidateA});
+        expect(after.state.query, 'a');
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'a',
+        );
+        expect(after.state.candidates.map((c) => c.pubkey), [
+          _candidateA,
+          _candidateB,
+        ]);
+        expect(after.state.candidates.first.displayName, 'Aaron');
+        expect(after.state.candidates.last.isAlreadyInList, isTrue);
+        expect(
+          after.state.rankingSignals[_candidateB]!.lastInteractionAt,
+          isNotNull,
+        );
+        container
+            .read(nostrSessionProvider.notifier)
+            .update(NostrSessionReadiness.identityKnown(pubkey: 'e' * 64));
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {});
+        await tester.pumpAndSettle();
+        final otherOwner = tester
+            .element(find.byType(AddPeopleToListView))
+            .read<AddPeopleToListCubit>();
+        expect(after.isClosed, isTrue);
+        expect(otherOwner.state.selectedPubkeys, isEmpty);
+        expect(otherOwner.state.query, isEmpty);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          isEmpty,
+        );
+        expect(otherOwner.state.candidates.map((c) => c.pubkey), [
+          _candidateB,
+          _candidateA,
+        ]);
+      },
+    );
 
     testWidgets('renders network candidates seeded from FollowRepository', (
       tester,
