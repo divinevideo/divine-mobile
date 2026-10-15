@@ -18,6 +18,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:user_ranking/user_ranking.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
@@ -102,6 +103,7 @@ void main() {
         (_) => Stream.value([]),
       );
       when(() => follows.isFollowing(any())).thenReturn(false);
+      when(() => follows.followingPubkeys).thenReturn([]);
       when(() => follows.syncMyFollowers()).thenAnswer((_) async {});
       when(() => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')))
           .thenAnswer((_) async => []);
@@ -162,6 +164,18 @@ void main() {
     );
 
     test(
+      'snapshots follow membership once without per-candidate lookups',
+      () async {
+        when(() => follows.followingPubkeys).thenReturn([mutual, followed]);
+        final result = await loader.load([mutual, followed, stranger]);
+        expect(result[mutual]!.youFollow, isTrue);
+        expect(result[stranger]!.youFollow, isFalse);
+        verify(() => follows.followingPubkeys).called(1);
+        verifyNever(() => follows.isFollowing(any()));
+      },
+    );
+
+    test(
       'cached display names tolerate an unavailable profile repository',
       () async {
         expect(
@@ -181,8 +195,7 @@ void main() {
         when(() => dms.watchAcceptedConversations()).thenAnswer(
           (_) => Stream.value([conversation(mutual)]),
         );
-        when(() => follows.isFollowing(mutual)).thenReturn(true);
-        when(() => follows.isFollowing(followed)).thenReturn(true);
+        when(() => follows.followingPubkeys).thenReturn([mutual, followed]);
         await database.myFollowersDao.upsertAll(
           ownerPubkey: viewer,
           followers: [(pubkey: mutual, followedAt: null)],
@@ -343,7 +356,8 @@ void main() {
         expect(secondSignals[mutual]!.followsYou, isNull);
 
         final replacement = _MockFollowRepository();
-        when(() => replacement.isFollowing(any())).thenReturn(true);
+        when(() => replacement.followingPubkeys)
+            .thenReturn([mutual, followed, stranger]);
         container.updateOverrides([
           databaseProvider.overrideWithValue(database),
           dmRepositoryProvider.overrideWithValue(dms),
@@ -547,6 +561,9 @@ void main() {
     test(
       'observes detached failures independently and preserves loaded signals',
       () async {
+        final capture = LogCaptureService();
+        await capture.clearAllLogs();
+        addTearDown(capture.clearAllLogs);
         final result = await loader.load([stranger]);
         final baseline = Map<String, UserRankingSignals>.of(result);
         when(() => follows.syncMyFollowers())
@@ -558,6 +575,23 @@ void main() {
         verify(() => follows.syncMyFollowers()).called(1);
         verify(() => profiles.refreshStatsForPubkeys([stranger])).called(1);
         expect(result, baseline);
+        final logs = capture
+            .getRecentLogs()
+            .where((entry) => entry.name == 'UserRankingSignalsLoader')
+            .toList();
+        expect(
+          logs.map((entry) => entry.message),
+          unorderedEquals([
+            'Failed to refresh ranking followers: Bad state: sync failed',
+            'Failed to refresh ranking profile stats: Bad state: stats failed',
+          ]),
+        );
+        for (final entry in logs) {
+          expect(entry.category, LogCategory.system);
+          expect(entry.level, LogLevel.error);
+          expect(entry.error, isNotNull);
+          expect(entry.stackTrace, isNotNull);
+        }
       },
     );
   });

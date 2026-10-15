@@ -13,7 +13,6 @@ import 'package:openvine/features/people_lists/models/people_list_entry_point.da
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile/follower_count_title.dart';
@@ -36,7 +35,6 @@ class OthersFollowingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final nostrClient = ref.watch(nostrServiceProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
@@ -53,7 +51,6 @@ class OthersFollowingScreen extends ConsumerWidget {
         ),
         BlocProvider(
           create: (_) => MyFollowingBloc(
-            rankingSignalsLoader: rankingSignalsLoader,
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
           )..add(const MyFollowingListLoadRequested()),

@@ -132,6 +132,18 @@ void main() {
       );
     }
 
+    test('refreshes bounded signals after ready emission', () async {
+      when(() => followRepository.followingPubkeys).thenReturn([_alicePubkey]);
+      final cubit = createCubit();
+      addTearDown(cubit.close);
+      when(() => rankingLoader.refreshInBackground(any())).thenAnswer((_) {
+        expect(cubit.state.status, AddPeopleToListStatus.ready);
+        expect(cubit.state.candidates.map((c) => c.pubkey), [_alicePubkey]);
+      });
+      await cubit.started();
+      verify(() => rankingLoader.refreshInBackground([_alicePubkey])).called(1);
+    });
+
     test('initial state is initial status with empty candidates', () async {
       final cubit = createCubit();
       expect(cubit.state.status, AddPeopleToListStatus.initial);

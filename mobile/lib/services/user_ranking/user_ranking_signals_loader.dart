@@ -82,6 +82,7 @@ class UserRankingSignalsLoader {
     final candidates = pubkeys.where(isEligible).toSet();
     if (candidates.isEmpty && !includeDmCounterparts) return {};
 
+    final following = _followRepository.followingPubkeys.toSet();
     final conversations = await _dmRepository
         .watchAcceptedConversations()
         .first;
@@ -135,7 +136,7 @@ class UserRankingSignalsLoader {
           pubkey: UserRankingSignals(
             pubkey: pubkey,
             lastInteractionAt: _timestamp(interactions[pubkey]),
-            youFollow: _followRepository.isFollowing(pubkey),
+            youFollow: following.contains(pubkey),
             // The local subset has no completeness marker. Absence is unknown,
             // not evidence that the account does not follow the viewer.
             followsYou: followers.contains(pubkey) ? true : null,

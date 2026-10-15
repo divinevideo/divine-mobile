@@ -59,14 +59,17 @@ class UserPickerCubitFactory {
   final UserRankingSignalsLoader? _rankingSignalsLoader;
   final bool Function(String) _isBlocked;
 
-  UserSearchBloc? createSearch({String? excludedPubkey}) {
+  UserSearchBloc createSearch({
+    String? excludedPubkey,
+    UserSearchState? initialState,
+  }) {
     final profiles = _profileRepository;
-    if (profiles == null) return null;
     return UserSearchBloc(
       profileRepository: profiles,
       rankingSignalsLoader: _rankingSignalsLoader,
       followRepository: _followRepository,
       excludedPubkey: excludedPubkey,
+      initialState: initialState,
     );
   }
 

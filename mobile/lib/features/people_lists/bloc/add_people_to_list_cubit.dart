@@ -35,7 +35,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// [existingMemberPubkeys] should contain the full-hex pubkeys already in
   /// the target list. Pass an empty list for a fresh list.
   /// [initialState] may transfer a snapshot only within the same owner, list,
-  /// and follow source when constructor-injected dependencies are refreshed.
+  /// when constructor-injected dependencies are refreshed.
   AddPeopleToListCubit({
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
@@ -60,7 +60,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     );
   }
 
-  /// Retained snapshots must come from the same owner, list, and follow source.
+  /// Retained snapshots must come from the same owner and list.
   /// Revalidate before the replacement Cubit can expose any retained row.
   static AddPeopleToListState _eligibleSnapshot(
     AddPeopleToListState snapshot,
@@ -192,6 +192,9 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
         onError: _onStreamError,
       );
       _emitCandidates();
+      _rankingSignalsLoader.refreshInBackground(
+        state.candidates.map((candidate) => candidate.pubkey).toList(),
+      );
       unawaited(_hydrateProfiles(_candidatesByPubkey.keys.toList(), revision));
     } catch (error, stackTrace) {
       if (!_isCurrent(revision)) return;

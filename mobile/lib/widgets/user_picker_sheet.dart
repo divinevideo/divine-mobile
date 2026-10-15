@@ -79,7 +79,7 @@ Future<List<UserProfile>?> showUserPickerSheet(
 }
 
 /// A bottom sheet widget for searching and selecting a user.
-class UserPickerSheet extends ConsumerWidget {
+class UserPickerSheet extends ConsumerStatefulWidget {
   /// Creates a user picker bottom sheet.
   const UserPickerSheet({
     required this.filterMode,
@@ -139,24 +139,44 @@ class UserPickerSheet extends ConsumerWidget {
   final List<UserProfile> initialSelectedProfiles;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UserPickerSheet> createState() => _UserPickerScopeState();
+}
+
+class _UserPickerScopeState extends ConsumerState<UserPickerSheet> {
+  late final String? _owner;
+  bool _retired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _owner = ref.read(nostrSessionProvider).pubkey;
+  }
+
+  bool _owns(NostrSessionReadiness session) =>
+      session.pubkey == _owner &&
+      session.phase != NostrSessionPhase.tearingDown;
+
+  bool get _canSelect =>
+      mounted && !_retired && _owns(ref.read(nostrSessionProvider));
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(nostrSessionProvider, (_, next) {
+      if (!_owns(next)) _retired = true;
+    });
+    if (!_owns(ref.watch(nostrSessionProvider))) _retired = true;
+    if (_retired) return const SizedBox.shrink();
     final profileRepository = ref.watch(profileRepositoryProvider);
-    final followRepository = ref.watch(followRepositoryProvider);
     final factory = ref.watch(
       userPickerCubitFactoryProvider(
-        filterMode == UserPickerFilterMode.mutualFollowsOnly,
+        widget.filterMode == UserPickerFilterMode.mutualFollowsOnly,
       ),
     );
-    final ownerPubkey = ref.watch(
-      nostrSessionProvider.select((session) => session.pubkey),
-    );
     return _UserPickerSheetView(
-      // A profile repository becoming ready does not start a new selection flow.
-      // An owner or follow-source change must discard all captured local rows.
-      key: ValueKey((ownerPubkey, followRepository)),
-      configuration: this,
+      configuration: widget,
       profileRepository: profileRepository,
       factory: factory,
+      canSelect: () => _canSelect,
     );
   }
 }
@@ -166,12 +186,13 @@ class _UserPickerSheetView extends ConsumerStatefulWidget {
     required this.configuration,
     required this.factory,
     required this.profileRepository,
-    super.key,
+    required this.canSelect,
   });
 
   final UserPickerSheet configuration;
   final UserPickerCubitFactory factory;
   final ProfileRepository? profileRepository;
+  final bool Function() canSelect;
 
   @override
   ConsumerState<_UserPickerSheetView> createState() => _UserPickerSheetState();
@@ -242,13 +263,7 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     }
     final searchBloc = _searchBloc;
     if (searchBloc != null) _closeSearchBloc(searchBloc);
-    // Keep the search-only reset contract when the account-scoped loader changes.
-    // Profile availability changes retain this same owner's query and selection.
-    if (!_useLocalSearch &&
-        identical(oldWidget.profileRepository, widget.profileRepository)) {
-      _searchController.clear();
-    }
-    _configureSearchBloc();
+    _configureSearchBloc(searchBloc?.state);
     if (_useLocalSearch) {
       final previous = _localCubit;
       _configureLocalCubit(previous?.state);
@@ -291,13 +306,19 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
         deletedAccountLabel: context.l10n.profileDeletedAccountName,
       );
 
-  void _configureSearchBloc() {
+  void _configureSearchBloc([UserSearchState? snapshot]) {
     final profileRepo = widget.profileRepository;
     _profileRepoMissing = profileRepo == null;
     _searchBloc = widget.factory.createSearch(
       excludedPubkey: widget.configuration.excludeViewerPubkey,
+      initialState: snapshot,
     );
-    if (!_useLocalSearch && _searchController.text.trim().isNotEmpty) {
+    if (!_useLocalSearch &&
+        !_profileRepoMissing &&
+        _searchController.text.trim().isNotEmpty &&
+        (snapshot == null ||
+            snapshot.query != _searchController.text.trim() ||
+            snapshot.status == UserSearchStatus.loading)) {
       _searchBloc?.add(UserSearchQueryChanged(_searchController.text));
     }
   }
@@ -342,7 +363,9 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
   }
 
   void _onUserSelected(UserProfile profile) {
-    if (_isExcludedViewer(profile.pubkey)) return;
+    if (!mounted || !widget.canSelect() || _isExcludedViewer(profile.pubkey)) {
+      return;
+    }
 
     if (widget.configuration.onUserToggled != null) {
       setState(() {
@@ -375,10 +398,12 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
   }
 
   void _handleDone() {
+    if (!mounted || !widget.canSelect()) return;
     Navigator.of(context).pop(List.of(_selectedProfiles));
   }
 
   void _handleClear() {
+    if (!mounted || !widget.canSelect()) return;
     Navigator.of(context).pop(<UserProfile>[]);
   }
 

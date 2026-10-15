@@ -164,12 +164,16 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
           loaded: true,
         ),
       );
+      loader.refreshInBackground(
+        state.profiles.map((profile) => profile.pubkey).toList(),
+      );
       return;
     }
     if (!isCurrent()) return;
     emitIfOpen(state.copyWith(rankingSignals: signals));
     if (candidates.isEmpty) {
       emitIfOpen(state.copyWith(profiles: const [], loaded: true));
+      loader.refreshInBackground(const []);
       return;
     }
 
@@ -189,6 +193,7 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
         now: DateTime.now(),
       );
       final byKey = {for (final profile in profiles) profile.pubkey: profile};
+      final first = !state.loaded;
       emitIfOpen(
         state.copyWith(
           order: [
@@ -200,6 +205,7 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
           loaded: true,
         ),
       );
+      if (first) loader.refreshInBackground(ranked.smartOrder);
     }
 
     _followersSubscription = _followRepository.streamMyFollowers().listen(
@@ -220,6 +226,7 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
       onDone: () {
         if (!isCurrent() || state.loaded) return;
         emitIfOpen(state.copyWith(loaded: true));
+        loader.refreshInBackground(const []);
       },
     );
   }

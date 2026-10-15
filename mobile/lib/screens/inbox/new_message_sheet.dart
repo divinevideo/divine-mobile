@@ -23,9 +23,9 @@ import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
+import 'package:openvine/widgets/retained_bloc_provider.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_indicator_line.dart';
-import 'package:profile_repository/profile_repository.dart';
 import 'package:user_ranking/user_ranking.dart';
 
 /// Widest a picked person's name runs on their chip before it is ellipsized,
@@ -41,17 +41,12 @@ const double _chipRadius = 16;
 /// field queries for users by name or npub. Tapping a user returns them and
 /// dismisses the sheet. With [allowGroups], a "New group" row switches the
 /// sheet to picking several people, which "Start chat" returns together.
-class NewMessageSheet extends ConsumerWidget {
+class NewMessageSheet extends ConsumerStatefulWidget {
   const NewMessageSheet({
-    required this.profileRepository,
-    required this.followRepository,
     required this.currentUserPubkey,
     required this.allowGroups,
     super.key,
   });
-
-  final ProfileRepository profileRepository;
-  final FollowRepository followRepository;
 
   /// The signed-in user, excluded from the candidate list — Divine does not
   /// support a self-addressed conversation (#8351).
@@ -69,8 +64,6 @@ class NewMessageSheet extends ConsumerWidget {
   /// were picked. Null if the user dismissed without choosing.
   static Future<List<UserProfile>?> show(
     BuildContext context, {
-    required ProfileRepository profileRepository,
-    required FollowRepository followRepository,
     required String currentUserPubkey,
     required bool allowGroups,
   }) {
@@ -80,8 +73,6 @@ class NewMessageSheet extends ConsumerWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => NewMessageSheet(
-        profileRepository: profileRepository,
-        followRepository: followRepository,
         currentUserPubkey: currentUserPubkey,
         allowGroups: allowGroups,
       ),
@@ -89,46 +80,41 @@ class NewMessageSheet extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(nostrSessionProvider);
-    // The modal can outlive its opening account. Withdraw its old-account
-    // dependencies before constructing a bloc with a new account's loader.
-    if (session.phase == NostrSessionPhase.signedOut ||
-        session.phase == NostrSessionPhase.tearingDown ||
-        session.pubkey == null ||
-        !pubkeysEqual(session.pubkey!, currentUserPubkey)) {
-      return const SizedBox.shrink();
-    }
-    final activeProfileRepository = ref.watch(profileRepositoryProvider);
-    final activeFollowRepository = ref.watch(followRepositoryProvider);
-    // Switching back to the opening account does not make repositories that
-    // were disposed during teardown usable again. Reopen with fresh snapshots.
-    if (!identical(activeProfileRepository, profileRepository) ||
-        !identical(activeFollowRepository, followRepository)) {
-      return const SizedBox.shrink();
-    }
-    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
-    final moderationPresentation = ref.watch(
-      moderationPresentationResolverProvider,
-    );
-    return BlocProvider(
-      key: ValueKey((
-        profileRepository,
-        followRepository,
-        currentUserPubkey,
-        rankingSignalsLoader,
-        moderationPresentation,
-      )),
-      create: (_) => NewMessageSearchBloc(
-        profileRepository: profileRepository,
-        followRepository: followRepository,
-        rankingSignalsLoader: rankingSignalsLoader,
-        currentUserPubkey: currentUserPubkey,
-        moderationPresentation: moderationPresentation,
+  ConsumerState<NewMessageSheet> createState() => _NewMessageScopeState();
+}
+
+class _NewMessageScopeState extends ConsumerState<NewMessageSheet> {
+  bool _retired = false;
+  bool _owns(NostrSessionReadiness session) =>
+      session.phase != NostrSessionPhase.signedOut &&
+      session.phase != NostrSessionPhase.tearingDown &&
+      session.pubkey != null &&
+      pubkeysEqual(session.pubkey!, widget.currentUserPubkey);
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(nostrSessionProvider, (_, next) {
+      if (!_owns(next)) _retired = true;
+    });
+    if (!_owns(ref.watch(nostrSessionProvider))) _retired = true;
+    if (_retired) return const SizedBox.shrink();
+    final profiles = ref.watch(profileRepositoryProvider);
+    final follows = ref.watch(followRepositoryProvider);
+    final loader = ref.watch(userRankingSignalsLoaderProvider);
+    final moderation = ref.watch(moderationPresentationResolverProvider);
+    return RetainedBlocProvider<NewMessageSearchBloc, NewMessageSearchState>(
+      dependencies: (profiles, follows, loader, moderation),
+      create: (snapshot) => NewMessageSearchBloc(
+        profileRepository: profiles,
+        followRepository: follows,
+        rankingSignalsLoader: loader,
+        currentUserPubkey: widget.currentUserPubkey,
+        moderationPresentation: moderation,
+        initialState: snapshot,
       )..add(const NewMessageSearchStarted()),
       child: _PeerLabelSync(
         child: _NewMessageSheetView(
-          allowGroups: allowGroups && !ref.watch(isDmRestrictedProvider),
+          allowGroups: widget.allowGroups && !ref.watch(isDmRestrictedProvider),
         ),
       ),
     );
@@ -177,6 +163,12 @@ class _NewMessageSheetViewState extends State<_NewMessageSheetView> {
   @override
   void didUpdateWidget(covariant _NewMessageSheetView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final bloc = context.read<NewMessageSearchBloc>();
+    if (_searchController.text.trim().isNotEmpty &&
+        (bloc.state.query != _searchController.text.trim() ||
+            bloc.state.status == NewMessageSearchStatus.searching)) {
+      bloc.add(NewMessageSearchQueryChanged(_searchController.text));
+    }
     // Groups were withdrawn while the sheet was open, so a group being picked
     // must not survive it.
     if (oldWidget.allowGroups && !widget.allowGroups) {
@@ -746,14 +738,14 @@ class _StartGroupFooter extends StatelessWidget {
               semanticIdentifier: SemanticIds.newMessageStartGroupButton,
               expanded: true,
               onPressed: canStartGroup
-                  ? () => Navigator.of(context).pop(
-                      List<UserProfile>.of(
-                        context
-                            .read<NewMessageSearchBloc>()
-                            .state
-                            .selectedRecipients,
-                      ),
-                    )
+                  ? () {
+                      if (!context.mounted) return;
+                      final bloc = context.read<NewMessageSearchBloc>();
+                      if (bloc.isClosed) return;
+                      Navigator.of(context).pop(
+                        List<UserProfile>.of(bloc.state.selectedRecipients),
+                      );
+                    }
                   : null,
             ),
           ),
@@ -845,7 +837,12 @@ class _CandidateRow extends StatelessWidget {
       return _UserTile(
         profile: profile,
         signals: signals,
-        onTap: () => Navigator.of(context).pop(<UserProfile>[profile]),
+        onTap: () {
+          if (context.mounted &&
+              !context.read<NewMessageSearchBloc>().isClosed) {
+            Navigator.of(context).pop(<UserProfile>[profile]);
+          }
+        },
       );
     }
 
@@ -856,9 +853,13 @@ class _CandidateRow extends StatelessWidget {
       // A full group takes nobody new, but whoever is in it can still leave.
       onTap: isGroupFull && !isSelected
           ? null
-          : () => context.read<NewMessageSearchBloc>().add(
-              NewMessageSearchRecipientToggled(profile),
-            ),
+          : () {
+              if (!context.mounted) return;
+              final bloc = context.read<NewMessageSearchBloc>();
+              if (!bloc.isClosed) {
+                bloc.add(NewMessageSearchRecipientToggled(profile));
+              }
+            },
     );
   }
 }

@@ -140,7 +140,7 @@ final class FollowRepositoryProvider
   }
 }
 
-String _$followRepositoryHash() => r'9e988fe7a3b67e5c11ab321bab0f5c5c6e95f2d8';
+String _$followRepositoryHash() => r'51a14f7f980df97ad6c059b285d2d9fe54c90432';
 
 /// Provider for [CuratedListRepository] instance.
 ///

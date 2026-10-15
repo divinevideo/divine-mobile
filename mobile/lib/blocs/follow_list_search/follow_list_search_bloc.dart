@@ -51,11 +51,18 @@ class FollowListSearchBloc
     required String subjectPubkey,
     required FollowListKind listKind,
     ProfileRepository? profileRepository,
+    FollowListSearchState initialState = const FollowListSearchState(),
   }) : _followRepository = followRepository,
        _subjectPubkey = subjectPubkey,
        _listKind = listKind,
        _profileRepository = profileRepository,
-       super(const FollowListSearchState()) {
+       super(
+         initialState.copyWith(
+           candidatePubkeys: List.unmodifiable(initialState.candidatePubkeys),
+           searchTerms: Map.unmodifiable(initialState.searchTerms),
+           remoteMatches: Set.unmodifiable(initialState.remoteMatches),
+         ),
+       ) {
     on<FollowListSearchQueryChanged>(
       _onQueryChanged,
       transformer: debounceRestartable(),
@@ -65,6 +72,14 @@ class FollowListSearchBloc
       transformer: restartable(),
     );
     on<FollowListSearchSubjectPubkeyChanged>(_onSubjectPubkeyChanged);
+    if (initialState.isActive) {
+      add(
+        FollowListSearchQueryChanged(
+          initialState.query,
+          initialState.candidatePubkeys,
+        ),
+      );
+    }
   }
 
   final FollowRepository _followRepository;
@@ -104,7 +119,7 @@ class FollowListSearchBloc
       state.copyWith(
         query: query,
         candidatePubkeys: event.candidatePubkeys,
-        remoteMatches: const {},
+        remoteMatches: state.query == query ? state.remoteMatches : const {},
       ),
     );
 

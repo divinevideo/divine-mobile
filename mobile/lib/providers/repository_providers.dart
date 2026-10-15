@@ -200,6 +200,16 @@ FollowRepository followRepository(Ref ref) {
     }
   });
 
+  ref.listen<bool>(appForegroundProvider, (previous, next) {
+    if (next && previous == false) {
+      runProviderDetached(
+        repository.syncMyFollowers(),
+        'refresh followers on app foreground',
+        logName: 'FollowRepository',
+      );
+    }
+  });
+
   ref.onDispose(repository.dispose);
 
   return repository;

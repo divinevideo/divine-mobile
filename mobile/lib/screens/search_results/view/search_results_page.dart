@@ -15,6 +15,7 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
@@ -22,6 +23,7 @@ import 'package:openvine/screens/search_results/widgets/search_results_app_bar.d
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
+import 'package:openvine/widgets/retained_bloc_provider.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -112,7 +114,7 @@ class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
   }
 }
 
-/// Wires result BLoCs only while their account-sensitive repositories are ready.
+/// Keeps result lifetimes independent of same-owner people readiness.
 class _SearchResultsScope extends ConsumerWidget {
   const _SearchResultsScope({
     required this.controller,
@@ -125,15 +127,9 @@ class _SearchResultsScope extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileRepository = ref.watch(profileRepositoryProvider);
-    if (profileRepository == null) {
-      return ColoredBox(
-        color: context.vineColors.surface,
-        child: const Center(
-          child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
-        ),
-      );
-    }
-
+    final owner = ref.watch(
+      nostrSessionProvider.select((session) => session.pubkey),
+    );
     final followRepository = ref.watch(followRepositoryProvider);
     final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
@@ -150,70 +146,82 @@ class _SearchResultsScope extends ConsumerWidget {
     final peopleListSearchEnabled =
         profileListFeaturesEnabled && curatedListsEnabled;
 
-    return MultiBlocProvider(
-      // Recreate the search blocs when an auth-sensitive repository or flag
-      // changes so no bloc remains bound to stale dependencies or visible previews.
-      // See `.claude/rules/state_management.md`.
-      key: ValueKey((
-        profileRepository,
-        followRepository,
-        rankingSignalsLoader,
-        videosRepository,
-        hashtagRepository,
-        curatedListRepository,
-        peopleListsRepository,
-        peopleListSearchEnabled,
-      )),
-      providers: [
-        BlocProvider(
-          create: (_) => VideoSearchBloc(
-            videosRepository: videosRepository,
-          ),
-        ),
-        BlocProvider(
-          create: (_) => UserSearchBloc(
-            profileRepository: profileRepository,
-            followRepository: followRepository,
-            rankingSignalsLoader: rankingSignalsLoader,
-          ),
-        ),
-        BlocProvider(
-          create: (_) => HashtagSearchBloc(
-            hashtagRepository: hashtagRepository,
-          ),
-        ),
-        // Created on the first build, before any edit, so the text a route
-        // prefilled is the cubit's starting query.
-        BlocProvider(
-          create: (_) => NostrIdSearchCubit(
-            profileRepository: profileRepository,
-            videosRepository: videosRepository,
-            initialQuery: controller.text,
-          ),
-        ),
-      ],
-      child: _NostrIdAutoOpenScope(
-        controller: controller,
-        child: _ListSearchPolicyScope(
-          repository: curatedListRepository,
-          peopleRepository: peopleListsRepository,
-          peopleListSearchEnabled: peopleListSearchEnabled,
-          policy: listThumbnailPolicy,
-          controller: controller,
-          child: _BlocklistRefreshListener(
-            child: Scaffold(
-              // bg/surface — matches SearchResultsView's body background so the
-              // app bar area (which doesn't paint its own background) doesn't
-              // show through to the root scaffold's darker default.
-              backgroundColor: context.vineColors.surface,
-              body: _SearchResultsBody(
+    return Stack(
+      children: [
+        Offstage(
+          offstage: profileRepository == null,
+          child: MultiBlocProvider(
+            // Recreate the search blocs when an auth-sensitive repository or flag
+            // changes so no bloc remains bound to stale dependencies or visible previews.
+            // See `.claude/rules/state_management.md`.
+            key: ValueKey((
+              owner,
+              videosRepository,
+              hashtagRepository,
+              curatedListRepository,
+              peopleListsRepository,
+              peopleListSearchEnabled,
+            )),
+            providers: [
+              BlocProvider(
+                create: (_) => VideoSearchBloc(
+                  videosRepository: videosRepository,
+                ),
+              ),
+              BlocProvider(
+                create: (_) => HashtagSearchBloc(
+                  hashtagRepository: hashtagRepository,
+                ),
+              ),
+            ],
+            child: RetainedBlocProvider<UserSearchBloc, UserSearchState>(
+              dependencies: (
+                profileRepository,
+                followRepository,
+                rankingSignalsLoader,
+              ),
+              create: (snapshot) {
+                final bloc = UserSearchBloc(
+                  profileRepository: profileRepository,
+                  followRepository: followRepository,
+                  rankingSignalsLoader: rankingSignalsLoader,
+                  initialState: snapshot,
+                );
+                final query = controller.text.trim();
+                if (profileRepository != null &&
+                    query.isNotEmpty &&
+                    (snapshot == null ||
+                        snapshot.query != query ||
+                        snapshot.status == UserSearchStatus.loading)) {
+                  bloc.add(UserSearchQueryChanged(query));
+                }
+                return bloc;
+              },
+              child: _ListSearchPolicyScope(
+                repository: curatedListRepository,
+                peopleRepository: peopleListsRepository,
+                peopleListSearchEnabled: peopleListSearchEnabled,
+                policy: listThumbnailPolicy,
                 controller: controller,
-                requestFocusOnMount: requestFocusOnMount,
+                child: _BlocklistRefreshListener(
+                  child: Scaffold(
+                    // bg/surface — matches SearchResultsView's body background so the
+                    // app bar area (which doesn't paint its own background) doesn't
+                    // show through to the root scaffold's darker default.
+                    backgroundColor: context.vineColors.surface,
+                    body: _SearchResultsBody(
+                      controller: controller,
+                      requestFocusOnMount: requestFocusOnMount,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
         ),
-      ),
+        if (profileRepository == null)
+          const Center(child: DivineCircularProgressIndicator()),
+      ],
     );
   }
 }

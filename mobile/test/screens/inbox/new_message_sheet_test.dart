@@ -16,10 +16,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
@@ -159,9 +161,7 @@ void main() {
             ).overrideWith((ref) => isVanished),
             ...extraOverrides,
           ],
-          home: NewMessageSheet(
-            profileRepository: profileRepository,
-            followRepository: followRepository,
+          home: const NewMessageSheet(
             currentUserPubkey: currentUserPubkey,
             allowGroups: false,
           ),
@@ -178,15 +178,23 @@ void main() {
       required List<UserProfile> contacts,
       Set<String> vanishedPubkeys = const {},
       List<Override> extraOverrides = const [],
+      Override? profileOverride,
     }) async {
       stubContacts(contacts);
       final outcome = _SheetOutcome();
 
       await tester.pumpWidget(
         testMaterialApp(
-          mockProfileRepository: profileRepository,
+          mockProfileRepository: profileOverride == null
+              ? profileRepository
+              : null,
           mockFollowRepository: followRepository,
           additionalOverrides: [
+            ?profileOverride,
+            if (profileOverride != null)
+              profileReadRepositoryProvider.overrideWithValue(
+                profileRepository,
+              ),
             nostrSessionProvider.overrideWith(() => session),
             userRankingSignalsLoaderProvider.overrideWithValue(
               rankingSignalsLoader,
@@ -202,8 +210,6 @@ void main() {
                   onPressed: () async {
                     outcome.selected = await NewMessageSheet.show(
                       context,
-                      profileRepository: profileRepository,
-                      followRepository: followRepository,
                       currentUserPubkey: currentUserPubkey,
                       allowGroups: allowGroups,
                     );
@@ -284,6 +290,7 @@ void main() {
       (tester) async {
         final replacement = _MockRankingSignalsLoader();
         when(() => replacement.load(any())).thenAnswer((_) async => {});
+        when(() => replacement.isEligible(any())).thenReturn(true);
         var activeLoader = rankingSignalsLoader;
         await pumpPickerWith(
           tester,
@@ -309,6 +316,69 @@ void main() {
         expect(newBloc, isNot(same(oldBloc)));
         expect(newBloc.state.contacts, isEmpty);
         verify(() => replacement.load(any())).called(1);
+      },
+    );
+
+    testWidgets(
+      'same-owner original null fresh profile retains group query and selection',
+      (tester) async {
+        final alice = candidate(alicePubkey, 'Alice');
+        final phase = StateProvider<int>((ref) => 0);
+        final replacement = _MockProfileRepository();
+        when(replacement.watchVanishedPubkeys)
+            .thenAnswer((_) => const Stream<Set<String>>.empty());
+        when(() => replacement.getCachedProfile(pubkey: alicePubkey))
+            .thenAnswer((_) async => alice);
+        when(
+          () => replacement.searchUsers(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) async => [alice]);
+        await openSheet(
+          tester,
+          allowGroups: true,
+          contacts: [alice],
+          profileOverride: profileRepositoryProvider.overrideWith(
+            (ref) => switch (ref.watch(phase)) {
+              0 => profileRepository,
+              1 => null,
+              _ => replacement,
+            },
+          ),
+        );
+        final old = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        old.add(const NewMessageSearchGroupModeChanged(enabled: true));
+        old.add(NewMessageSearchRecipientToggled(alice));
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'Ali');
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(NewMessageSheet)),
+        );
+        container.read(phase.notifier).state = 1;
+        await tester.pump();
+        container.read(phase.notifier).state = 2;
+        await tester.pumpAndSettle();
+        expect(find.byType(TextField), findsOneWidget);
+        final next = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(old.isClosed, isTrue);
+        expect(next.state.isGroupMode, isTrue);
+        expect(next.state.selectedRecipients, [alice]);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'Ali',
+        );
+        await tester.pump(searchDebounceDuration);
+        await tester.pumpAndSettle();
+        expect(next.state.query, 'Ali');
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(searchDebounceDuration);
       },
     );
 
