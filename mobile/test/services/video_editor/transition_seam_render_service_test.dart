@@ -15,6 +15,8 @@ import 'package:openvine/services/video_editor/render_slot_pool.dart';
 import 'package:openvine/services/video_editor/transition_seam_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerMask, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 /// Reports a fixed 1500ms duration for any file, so a persisted seam reads back
@@ -547,6 +549,7 @@ void main() {
     // Every path the stubbed render wrote, standing in for the `divine_*.mp4`
     // the real render leaves in the temporary cache directory.
     final renderedPaths = <String>[];
+    final renderedClips = <DivineVideoClip>[];
 
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
@@ -555,6 +558,7 @@ void main() {
       tempRoot = Directory.systemTemp.createTempSync('seam_persist_test_');
       renderCount = 0;
       renderedPaths.clear();
+      renderedClips.clear();
       VideoEditorRenderService.renderVideoOverride =
           ({
             required clips,
@@ -565,6 +569,7 @@ void main() {
             maxOutputDuration,
           }) async {
             renderCount++;
+            renderedClips.addAll(clips);
             final rendered = File('${tempRoot.path}/render_$renderCount.mp4')
               ..writeAsStringSync('seam body');
             renderedPaths.add(rendered.path);
@@ -580,6 +585,30 @@ void main() {
 
     TransitionSeamRenderService service() => TransitionSeamRenderService(
       documentsDirectoryProvider: () async => tempRoot,
+    );
+
+    test(
+      'leaves timeline masks live rather than baking them into the seam',
+      () async {
+        final clipA = clip('a', transition: dissolve).copyWith(
+          mask: const LayerMask(shape: LayerMaskShape.ellipse, feather: 0.2),
+        );
+        final clipB = clip('b').copyWith(
+          mask: const LayerMask(shape: LayerMaskShape.heart, invert: true),
+        );
+
+        final seam = await service().render(
+          clipA: clipA,
+          clipB: clipB,
+          transition: dissolve,
+        );
+
+        expect(seam, isNotNull);
+        expect(renderedClips, hasLength(2));
+        expect(renderedClips.map((clip) => clip.mask), everyElement(isNull));
+        expect(clipA.mask, isNotNull);
+        expect(clipB.mask, isNotNull);
+      },
     );
 
     test('a seam persisted by an earlier session is reused instead of '
