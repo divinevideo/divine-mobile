@@ -643,6 +643,21 @@ void main() {
             'Bad state: push failed',
           );
         });
+
+        testWidgets('a press-and-hold logs and reports the failure', (
+          tester,
+        ) async {
+          await pumpSubjectWithRouter(tester, router);
+
+          await tester.longPress(find.bySemanticsIdentifier('camera_button'));
+          await tester.pump();
+
+          expectFailureObserved(
+            tester,
+            'Failed to open camera with auto-record from bottom navigation: '
+            'Bad state: push failed',
+          );
+        });
       });
     });
 
