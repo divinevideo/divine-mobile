@@ -194,11 +194,12 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
       );
       final byKey = {for (final profile in profiles) profile.pubkey: profile};
       final first = !state.loaded;
+      final ordered = state.order.toSet();
       emitIfOpen(
         state.copyWith(
           order: [
             ...state.order,
-            ...ranked.smartOrder.where((key) => !state.order.contains(key)),
+            ...ranked.smartOrder.where((key) => !ordered.contains(key)),
           ],
           orderReady: true,
           profiles: [for (final key in ranked.smartOrder) byKey[key]!],

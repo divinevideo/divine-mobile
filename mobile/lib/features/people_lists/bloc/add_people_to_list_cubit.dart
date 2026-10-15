@@ -123,7 +123,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
       if (!_isCurrent(revision)) return;
       await _followerSub?.cancel();
       if (!_isCurrent(revision)) return;
-      final initialFollowing = _followRepository.followingPubkeys;
+      // A set: followingPubkeys is a list, and it is probed once per row below.
+      final initialFollowing = _followRepository.followingPubkeys.toSet();
       final initialPubkeys = {
         ...initialFollowing,
         ...snapshot.candidates.map((candidate) => candidate.pubkey),
