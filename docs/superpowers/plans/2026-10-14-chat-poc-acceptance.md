@@ -56,11 +56,15 @@ Remaining boundaries:
 ### Finding the rooms in a review build
 
 Web PR previews build with `FF_CONCORD_CHAT=true`, so signed-in
-reviewers can open **Messages → Rooms** immediately and see `#general` and
+users can open **Messages → Rooms** immediately and see `#general` and
 `#introductions`. No developer mode or settings change is needed. The override
 is defined for preview builds in `mobile_pr_preview_build.yml`, without a
-PR-number exception. Production builds retain the off-by-default flag. Protected-account
-restrictions still apply.
+PR-number exception. These preview URLs are public: anyone with a link who
+signs in can read and post in the same public test rooms, including from
+previews of unrelated PRs.
+There is no reviewer-only access gate; messages use the signed-in account's real
+identity. This is intentional for testing. Normal release builds retain the
+off-by-default flag. Protected-account restrictions still apply.
 
 For local reviewer builds, pass `--dart-define=FF_CONCORD_CHAT=true`. The
 internal settings override remains available under **App preferences →
