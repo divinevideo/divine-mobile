@@ -13,7 +13,7 @@ import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
 import 'package:openvine/services/video_editor/clip_stabilization_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ChromaKey, EditorVideo;
+    show ChromaKey, EditorVideo, ExportTransform;
 
 const _key = ClipChromaKey(key: ChromaKey.greenScreen());
 
@@ -68,6 +68,8 @@ void main() {
       List<DivineVideoClip> clips, {
       StabilizeClipFn? stabilize,
       ChromaKeyBakeFn? bakeChromaKey,
+      ReverseClipFn? reverseClip,
+      TransformClipFn? transformClip,
       void Function()? onFinalClipInvalidated,
       DeferFileCleanupFn? deferFileCleanup,
     }) {
@@ -76,6 +78,9 @@ void main() {
         saveClipToLibrary: ({required clip}) async => false,
         stabilizeClip: stabilize ?? _fakeStabilize,
         bakeChromaKey: bakeChromaKey,
+        reverseClip: reverseClip,
+        transformClip: transformClip,
+        measureAspectRatio: (_) async => 9 / 16,
         deferFileCleanup: deferFileCleanup,
       );
       addTearDown(bloc.close);
@@ -264,6 +269,77 @@ void main() {
 
       expect(state.lastStabilizeResult, isA<ClipStabilizeFailure>());
       expect(state.clips.single.stabilization, isNotNull);
+    });
+
+    group('a later re-render drops the record', () {
+      // Turning stabilization off swaps the raw footage back in. Kept after
+      // a reverse or a transform, the record would silently undo that edit.
+      Future<EditorVideo> reverse({
+        required DivineVideoClip sourceClip,
+        required String renderId,
+      }) async => EditorVideo.file('/documents/${sourceClip.id}_reversed.mp4');
+
+      Future<EditorVideo> transform({
+        required DivineVideoClip sourceClip,
+        required ExportTransform transform,
+        required String renderId,
+      }) async =>
+          EditorVideo.file('/documents/${sourceClip.id}_transformed.mp4');
+
+      test('a reverse render', () async {
+        final bloc = seeded([_longClip()], reverseClip: reverse);
+        expect((await toggle(bloc)).clips.single.stabilization, isNotNull);
+
+        final done = bloc.stream.firstWhere(
+          (s) => s.lastReverseResult != null && !s.isReversing,
+        );
+        bloc.add(const ClipEditorClipReverseRequested(clipId: 'clip'));
+        final clip = (await done).clips.single;
+
+        expect(clip.video!.file!.path, '/documents/clip_reversed.mp4');
+        expect(clip.stabilization, isNull);
+      });
+
+      test('a cached reverse toggle', () async {
+        final bloc = seeded([_longClip()]);
+        final steadied = (await toggle(bloc)).clips.single;
+        bloc.add(
+          ClipEditorClipUpdated(
+            clipId: 'clip',
+            clip: steadied.copyWith(
+              reversedVideoPath: '/documents/clip_reversed_cache.mp4',
+            ),
+          ),
+        );
+
+        final done = bloc.stream.firstWhere(
+          (s) => s.lastReverseResult != null,
+        );
+        bloc.add(const ClipEditorClipReverseRequested(clipId: 'clip'));
+        final clip = (await done).clips.single;
+
+        expect(clip.video!.file!.path, '/documents/clip_reversed_cache.mp4');
+        expect(clip.stabilization, isNull);
+      });
+
+      test('a transform', () async {
+        final bloc = seeded([_longClip()], transformClip: transform);
+        expect((await toggle(bloc)).clips.single.stabilization, isNotNull);
+
+        final done = bloc.stream.firstWhere(
+          (s) => s.lastTransformResult != null && !s.isTransforming,
+        );
+        bloc.add(
+          const ClipEditorClipTransformRequested(
+            clipId: 'clip',
+            transform: ExportTransform(),
+          ),
+        );
+        final clip = (await done).clips.single;
+
+        expect(clip.video!.file!.path, '/documents/clip_transformed.mp4');
+        expect(clip.stabilization, isNull);
+      });
     });
 
     test('drops the render when the clip was removed meanwhile', () async {
