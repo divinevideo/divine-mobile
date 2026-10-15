@@ -5,6 +5,12 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
 
+/// Shows every hashtag as a chip, the way the details sheet does when none is
+/// too long to be one.
+extension on VideoEvent {
+  String get chipCaptionDescription => descriptionWithoutChipLines(allHashtags);
+}
+
 void main() {
   final npub = Nip19.encodePubKey('d' * 64);
 
@@ -58,7 +64,17 @@ void main() {
     });
   });
 
-  group('VideoEvent.chipCaptionDescription', () {
+  group('VideoEvent.descriptionWithoutChipLines', () {
+    test('keeps a hashtag line that is not among the chips passed in', () {
+      expect(
+        build(
+          content: 'Caption\n#glenn',
+          hashtags: const ['glenn'],
+        ).descriptionWithoutChipLines(const []),
+        equals('Caption\n#glenn'),
+      );
+    });
+
     test('drops the hashtag line the Vine archive import appends', () {
       expect(
         build(

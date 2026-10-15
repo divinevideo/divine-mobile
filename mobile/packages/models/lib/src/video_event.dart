@@ -1185,30 +1185,27 @@ class VideoEvent {
   String? get captionTitle =>
       isOriginalVine && displayContent.trim().isNotEmpty ? null : displayTitle;
 
-  /// Description to show in surfaces that render [allHashtags] as chips.
-  ///
-  /// Drops lines made up entirely of hashtags that are already chips. The
-  /// Vine archive import repeats the caption's hashtags on a line of their
-  /// own, so the raw description would show them as text twice above the
-  /// chips. A line with any other text is kept as written, so a sentence never
-  /// loses a word. A dropped line between two blank lines takes one of them
-  /// along; everything else is returned trimmed and otherwise as written.
-  late final String chipCaptionDescription = _withoutChipHashtagLines(
-    displayContent,
-  );
-
   static final _lineToken = RegExp(r'\S+');
   static final _hashtagToken = RegExp(r'^#([^#]+)$');
 
-  String _withoutChipHashtagLines(String text) {
-    final chips = {for (final tag in allHashtags) tag.toLowerCase()};
+  /// [displayContent] without the lines made up entirely of [chips], for
+  /// surfaces that show those hashtags as chips.
+  ///
+  /// The Vine archive import repeats the caption's hashtags on a line of their
+  /// own, so the raw description would show them as text twice above the
+  /// chips. Only a line holding nothing but [chips] is dropped, which includes
+  /// a caption written entirely in them; any other line is kept as written. A
+  /// dropped line between two blank lines takes one of them along; everything
+  /// else is returned trimmed and otherwise as written.
+  String descriptionWithoutChipLines(Iterable<String> chips) {
+    final chipSet = {for (final tag in chips) tag.toLowerCase()};
     final lines = <String>[];
     var lastKeptBlank = false;
     var dropBlankLine = false;
-    for (final line in text.split('\n')) {
+    for (final line in displayContent.split('\n')) {
       final tokens = _lineToken.allMatches(line);
       if (tokens.isNotEmpty &&
-          tokens.every((token) => _isChipHashtag(token[0]!, chips))) {
+          tokens.every((token) => _isChipHashtag(token[0]!, chipSet))) {
         dropBlankLine = lastKeptBlank;
         continue;
       }
