@@ -2406,7 +2406,10 @@ void main() {
             cursor: '1704067300',
           );
 
-          expect(result.videos.map((video) => video.id), ['last-video']);
+          expect(
+            result.videos.map((video) => video.id),
+            equals(['last-video']),
+          );
           expect(result.paginationCursor, isNull);
           expect(result.hasMore, isFalse);
         });
