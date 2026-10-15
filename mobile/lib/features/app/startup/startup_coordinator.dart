@@ -171,6 +171,20 @@ class StartupCoordinator {
         stackTrace: stackTrace,
       );
 
+      // Log before awaiting the report: a bug report carries the unified log.
+      if (!service.optional) {
+        Log.error(
+          'Failed to initialize ${service.name}',
+          name: 'StartupCoordinator',
+          error: error,
+        );
+      } else {
+        Log.warning(
+          'Optional service ${service.name} failed to initialize: $error',
+          name: 'StartupCoordinator',
+        );
+      }
+
       await _crashReporter.recordError(
         error,
         stackTrace,
@@ -179,20 +193,10 @@ class StartupCoordinator {
       _crashReporter.log('✗ ${service.name} failed: $error');
 
       if (!service.optional) {
-        Log.error(
-          'Failed to initialize ${service.name}',
-          name: 'StartupCoordinator',
-          error: error,
-        );
         rethrow;
-      } else {
-        Log.warning(
-          'Optional service ${service.name} failed to initialize: $error',
-          name: 'StartupCoordinator',
-        );
-        _completedServices[service.name] =
-            true; // Mark as "complete" to continue
       }
+      // Mark as "complete" to continue.
+      _completedServices[service.name] = true;
     }
   }
 

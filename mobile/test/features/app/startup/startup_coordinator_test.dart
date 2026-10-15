@@ -9,6 +9,7 @@ import 'package:openvine/features/app/startup/startup_coordinator.dart';
 import 'package:openvine/features/app/startup/startup_metrics.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Records every non-fatal and holds it in flight until [finishReports], so a
 /// test can observe what the coordinator does while a report is pending.
@@ -34,6 +35,13 @@ class _PendingCrashReporter implements CrashReporter {
     return _inFlight.future;
   }
 }
+
+/// The coordinator's warning and error lines in the unified log, which is
+/// what a bug report carries.
+List<LogEntry> _coordinatorFailureLogs() => LogCaptureService()
+    .getRecentLogs(minLevel: LogLevel.warning)
+    .where((entry) => entry.name == 'StartupCoordinator')
+    .toList();
 
 void main() {
   group('StartupCoordinator', () {
@@ -367,6 +375,9 @@ void main() {
     });
 
     group('service failure reporting', () {
+      setUp(() => LogCaptureService().clearAllLogs());
+      tearDown(() => LogCaptureService().clearAllLogs());
+
       test('finishes initialization only after an optional service failure '
           'is reported', () {
         fakeAsync((async) {
@@ -429,6 +440,74 @@ void main() {
           async.flushMicrotasks();
 
           expect(thrown, same(failure));
+        });
+      });
+
+      test('logs an optional service failure before its report completes', () {
+        fakeAsync((async) {
+          final crashReporter = _PendingCrashReporter();
+          final coordinator = StartupCoordinator(crashReporter: crashReporter)
+            ..registerService(
+              name: 'OptionalService',
+              phase: StartupPhase.deferred,
+              initialize: () async {
+                throw Exception('Optional service failed');
+              },
+              optional: true,
+            );
+
+          unawaited(coordinator.initialize());
+          async.flushMicrotasks();
+
+          expect(
+            _coordinatorFailureLogs(),
+            contains(
+              isA<LogEntry>()
+                  .having((entry) => entry.level, 'level', LogLevel.warning)
+                  .having(
+                    (entry) => entry.message,
+                    'message',
+                    'Optional service OptionalService failed to initialize: '
+                        'Exception: Optional service failed',
+                  ),
+            ),
+          );
+
+          crashReporter.finishReports();
+          async.flushMicrotasks();
+        });
+      });
+
+      test('logs a required service failure before its report completes', () {
+        fakeAsync((async) {
+          final crashReporter = _PendingCrashReporter();
+          final coordinator = StartupCoordinator(crashReporter: crashReporter)
+            ..registerService(
+              name: 'RequiredService',
+              phase: StartupPhase.critical,
+              initialize: () async {
+                throw Exception('Required service failed');
+              },
+            );
+
+          unawaited(coordinator.initialize().catchError((Object _) {}));
+          async.flushMicrotasks();
+
+          expect(
+            _coordinatorFailureLogs(),
+            contains(
+              isA<LogEntry>()
+                  .having((entry) => entry.level, 'level', LogLevel.error)
+                  .having(
+                    (entry) => entry.message,
+                    'message',
+                    'Failed to initialize RequiredService',
+                  ),
+            ),
+          );
+
+          crashReporter.finishReports();
+          async.flushMicrotasks();
         });
       });
     });
