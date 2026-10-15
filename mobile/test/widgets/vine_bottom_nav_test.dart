@@ -159,6 +159,27 @@ void main() {
       await tester.pump();
     }
 
+    Finder refreshArrow() => find.byWidgetPredicate(
+      (widget) =>
+          widget is DivineIcon && widget.icon == DivineIconName.arrowClockwise,
+    );
+
+    double refreshArrowOpacity(WidgetTester tester) => tester
+        .widget<Opacity>(
+          find
+              .ancestor(of: refreshArrow(), matching: find.byType(Opacity))
+              .first,
+        )
+        .opacity;
+
+    Matrix4 refreshArrowRotation(WidgetTester tester) => tester
+        .widget<Transform>(
+          find
+              .ancestor(of: refreshArrow(), matching: find.byType(Transform))
+              .first,
+        )
+        .transform;
+
     testWidgets('icon and profile tabs have minimum interactive dimensions', (
       tester,
     ) async {
@@ -272,6 +293,61 @@ void main() {
           }),
         );
         expect(arrowOpacity.opacity, 1);
+      },
+    );
+
+    testWidgets(
+      'lets the refresh arrow finish its turn and fade out once the refresh '
+      'completes',
+      (tester) async {
+        retapCubit.request();
+        await pumpSubject(tester);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(refreshArrowOpacity(tester), 1);
+        // Mid-turn, so finishing the turn, freezing and snapping upright all
+        // look different.
+        final midTurn = refreshArrowRotation(tester);
+        expect(midTurn, isNot(matrixMoreOrLessEquals(Matrix4.identity())));
+
+        retapCubit.completeRefresh();
+        await tester.pump();
+        expect(refreshArrowRotation(tester), matrixMoreOrLessEquals(midTurn));
+
+        await tester.pumpAndSettle();
+        expect(refreshArrowOpacity(tester), 0);
+        expect(
+          refreshArrowRotation(tester),
+          matrixMoreOrLessEquals(Matrix4.identity()),
+        );
+      },
+    );
+
+    testWidgets(
+      'stops and hides the refresh arrow at once when the refresh completes '
+      'under reduced motion',
+      (tester) async {
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        retapCubit.request();
+        await pumpSubject(tester);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(
+          refreshArrowRotation(tester),
+          isNot(matrixMoreOrLessEquals(Matrix4.identity())),
+        );
+
+        // Reduced motion switched on while the arrow is still spinning.
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        retapCubit.completeRefresh();
+        await tester.pump();
+
+        expect(refreshArrowOpacity(tester), 0);
+        expect(
+          refreshArrowRotation(tester),
+          matrixMoreOrLessEquals(Matrix4.identity()),
+        );
       },
     );
 
