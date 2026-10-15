@@ -253,8 +253,10 @@ class AddSoundCubit extends Cubit<AddSoundState>
         return;
       }
       if (_accountChanged()) {
-        // The share went out as the account that started it; its library
-        // row belongs to that account, not the one now signed in.
+        // The share is already public, signed by whichever account was
+        // signed in when the publisher signed it after the upload, so it may
+        // not belong to the account now signed in: keep it out of that
+        // account's library.
         emitIfOpen(
           const AddSoundState(failure: AddSoundFailure.accountChanged),
         );
