@@ -66,6 +66,7 @@ Map<String, Color> _tokens(VineThemeColors c) => {
   'onErrorContainer': c.onErrorContainer,
   'accentPositive': c.accentPositive,
   'accentWarning': c.accentWarning,
+  'link': c.link,
   'inverseSurface': c.inverseSurface,
   'inverseOnSurface': c.inverseOnSurface,
   'mediaChrome': c.mediaChrome,
@@ -105,6 +106,13 @@ const _bodyPairs = <(String, String)>[
   ('accentPositive', 'surface'),
   ('accentPositive', 'surfaceContainer'),
   ('accentPositive', 'surfaceContainerHigh'),
+  // `link` colors URLs, hashtags and mentions inside body copy wherever
+  // that copy sits — feeds, comments, sheets, profile bios.
+  ('link', 'background'),
+  ('link', 'card'),
+  ('link', 'surface'),
+  ('link', 'surfaceContainer'),
+  ('link', 'surfaceContainerHigh'),
 ];
 
 /// Supporting copy — hints, placeholders, secondary labels — held to the
