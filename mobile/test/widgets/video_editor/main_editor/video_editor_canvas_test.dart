@@ -20,7 +20,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show ProImageEditorState, ProVideoController, SubEditor;
+    show ImportStateHistory, ProImageEditorState, ProVideoController, SubEditor;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 void main() {
@@ -290,6 +290,54 @@ void main() {
         ),
         isTrue,
       );
+    });
+  });
+
+  group('VideoEditorCanvas.resolveInitStateHistory', () {
+    const draftHistory = <String, dynamic>{
+      'position': 1,
+      'history': [
+        {
+          'meta': {'step': 1},
+        },
+        {
+          'meta': {'step': 2},
+        },
+      ],
+    };
+
+    test('parses the draft history for the build that creates the editor', () {
+      final history = VideoEditorCanvas.resolveInitStateHistory(
+        isEditorMounted: false,
+        current: null,
+        editorStateHistory: draftHistory,
+      );
+
+      expect(history?.stateHistory, hasLength(2));
+    });
+
+    test('starts a new session without a history', () {
+      expect(
+        VideoEditorCanvas.resolveInitStateHistory(
+          isEditorMounted: false,
+          current: null,
+          editorStateHistory: const {},
+        ),
+        isNull,
+      );
+    });
+
+    test('hands a mounted editor its history without parsing again', () {
+      final started = ImportStateHistory.fromMap(draftHistory);
+
+      // Parsing this would throw, so the result proves nothing was parsed.
+      final history = VideoEditorCanvas.resolveInitStateHistory(
+        isEditorMounted: true,
+        current: started,
+        editorStateHistory: const {'history': 'not a list'},
+      );
+
+      expect(history, same(started));
     });
   });
 

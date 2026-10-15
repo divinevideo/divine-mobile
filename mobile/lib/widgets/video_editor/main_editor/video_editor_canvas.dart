@@ -149,6 +149,34 @@ class VideoEditorCanvas extends StatelessWidget {
     }
   }
 
+  /// The history pro_image_editor starts from.
+  ///
+  /// The editor imports it once, while it initializes, but the canvas
+  /// rebuilds far more often, on every sub-editor open and close among
+  /// others. Parsing the draft's history in each of those builds re-created
+  /// every layer of every history step: with hundreds of layers and steps,
+  /// that held the UI thread for seconds per build until the app froze
+  /// (#10143). So only the build that creates the editor parses it.
+  ///
+  /// A mounted editor gets back the instance it started from, not null: it
+  /// checks the history again once its video is ready, which can be after a
+  /// rebuild.
+  @visibleForTesting
+  static ImportStateHistory? resolveInitStateHistory({
+    required bool isEditorMounted,
+    required ImportStateHistory? current,
+    required Map<String, dynamic> editorStateHistory,
+  }) {
+    if (isEditorMounted) return current;
+    if (editorStateHistory.isEmpty) return null;
+    return ImportStateHistory.fromMap(
+      editorStateHistory,
+      configs: const ImportEditorConfigs(
+        widgetLoader: videoEditorWidgetLayerLoader,
+      ),
+    );
+  }
+
   /// Whether this editor session needs the Android legacy texture surface.
   ///
   /// The choice is sticky once enabled: changing surface implementations more
@@ -524,6 +552,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   bool _isInitialized = false;
   bool _isImportingHistory = false;
   late bool _useLegacySurface;
+
+  /// See [VideoEditorCanvas.resolveInitStateHistory].
+  ImportStateHistory? _initStateHistory;
 
   bool get _isLayerBeingTransformed => _selectedLayer != null;
 
@@ -2408,6 +2439,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final editorStateHistory = ref.read(
       videoEditorProvider.select((s) => s.editorStateHistory),
     );
+    _initStateHistory = VideoEditorCanvas.resolveInitStateHistory(
+      isEditorMounted: scope.editorKey.currentState != null,
+      current: _initStateHistory,
+      editorStateHistory: editorStateHistory,
+    );
     final targetAspectRatio = clip.targetAspectRatio;
 
     // Reinitialize the player when clip paths change.
@@ -2978,14 +3014,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           configs: ProImageEditorConfigs(
             theme: Theme.of(context),
             stateHistory: StateHistoryConfigs(
-              initStateHistory: editorStateHistory.isNotEmpty
-                  ? .fromMap(
-                      editorStateHistory,
-                      configs: const ImportEditorConfigs(
-                        widgetLoader: videoEditorWidgetLayerLoader,
-                      ),
-                    )
-                  : null,
+              initStateHistory: _initStateHistory,
             ),
             imageGeneration: ImageGenerationConfigs(
               captureImageByteFormat: .rawStraightRgba,
