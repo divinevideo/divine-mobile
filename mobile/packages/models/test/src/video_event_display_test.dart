@@ -72,13 +72,23 @@ void main() {
       );
     });
 
-    test('drops hashtags that end a sentence and keeps the sentence', () {
+    test('keeps hashtags that end a sentence', () {
       expect(
         build(
           content: 'Two startup sounds together. #windowsxp #outoftune',
           hashtags: const ['windowsxp', 'outoftune'],
         ).chipCaptionDescription,
-        equals('Two startup sounds together.'),
+        equals('Two startup sounds together. #windowsxp #outoftune'),
+      );
+    });
+
+    test('keeps a sentence whose last word is a chip hashtag', () {
+      expect(
+        build(
+          content: 'I love #pizza',
+          hashtags: const ['pizza'],
+        ).chipCaptionDescription,
+        equals('I love #pizza'),
       );
     });
 
@@ -95,27 +105,27 @@ void main() {
     test('matches chips without regard to case', () {
       expect(
         build(
-          content: 'Caption #WindowsXP',
+          content: 'Caption\n#WindowsXP',
           hashtags: const ['windowsxp'],
         ).chipCaptionDescription,
         equals('Caption'),
       );
     });
 
-    test('keeps trailing hashtags that are not chips', () {
+    test('keeps a hashtag line that has a hashtag that is not a chip', () {
       expect(
         build(
-          content: 'Caption #notachip #glenn',
+          content: 'Caption\n#notachip #glenn',
           hashtags: const ['glenn'],
         ).chipCaptionDescription,
-        equals('Caption #notachip'),
+        equals('Caption\n#notachip #glenn'),
       );
     });
 
     test('drops the synthetic classic hashtag for an original Vine', () {
       expect(
         build(
-          content: 'Caption #classic',
+          content: 'Caption\n#classic',
           rawTags: const {'platform': 'vine'},
         ).chipCaptionDescription,
         equals('Caption'),
@@ -148,7 +158,7 @@ void main() {
           content: 'First\n\n#glenn\nSecond\n\n\n\nThird #glenn',
           hashtags: const ['glenn'],
         ).chipCaptionDescription,
-        equals('First\n\nSecond\n\n\n\nThird'),
+        equals('First\n\nSecond\n\n\n\nThird #glenn'),
       );
     });
 
@@ -162,9 +172,9 @@ void main() {
       );
     });
 
-    test('strips a very long run of trailing chip hashtags quickly', () {
+    test('drops a very long line of chip hashtags quickly', () {
       final video = build(
-        content: 'Caption ${List.filled(20000, '#a').join(' ')}',
+        content: 'Caption\n${List.filled(20000, '#a').join(' ')}',
         hashtags: const ['a'],
       );
 

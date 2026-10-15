@@ -1187,32 +1187,28 @@ class VideoEvent {
 
   /// Description to show in surfaces that render [allHashtags] as chips.
   ///
-  /// Drops hashtags that end a line when each is already a chip, and the line
-  /// itself once nothing else is left on it. The Vine archive import repeats
-  /// the caption's hashtags on a line of their own, so the raw description
-  /// would show them as text twice above the chips. Hashtags inside a
-  /// sentence stay, since removing them would break the sentence. A dropped
-  /// line between two blank lines takes one of them along; everything else
-  /// is returned trimmed and otherwise as written.
-  late final String chipCaptionDescription = _withoutTrailingChipHashtags(
+  /// Drops lines made up entirely of hashtags that are already chips. The
+  /// Vine archive import repeats the caption's hashtags on a line of their
+  /// own, so the raw description would show them as text twice above the
+  /// chips. A line with any other text is kept as written, so a sentence never
+  /// loses a word. A dropped line between two blank lines takes one of them
+  /// along; everything else is returned trimmed and otherwise as written.
+  late final String chipCaptionDescription = _withoutChipHashtagLines(
     displayContent,
   );
 
   static final _lineToken = RegExp(r'\S+');
   static final _hashtagToken = RegExp(r'^#([^#]+)$');
 
-  String _withoutTrailingChipHashtags(String text) {
+  String _withoutChipHashtagLines(String text) {
     final chips = {for (final tag in allHashtags) tag.toLowerCase()};
     final lines = <String>[];
     var lastKeptBlank = false;
     var dropBlankLine = false;
     for (final line in text.split('\n')) {
-      final tokens = _lineToken.allMatches(line).toList();
-      var keep = tokens.length;
-      while (keep > 0 && _isChipHashtag(tokens[keep - 1][0]!, chips)) {
-        keep--;
-      }
-      if (keep == 0 && tokens.isNotEmpty) {
+      final tokens = _lineToken.allMatches(line);
+      if (tokens.isNotEmpty &&
+          tokens.every((token) => _isChipHashtag(token[0]!, chips))) {
         dropBlankLine = lastKeptBlank;
         continue;
       }
@@ -1222,9 +1218,7 @@ class VideoEvent {
       }
       dropBlankLine = false;
       lastKeptBlank = tokens.isEmpty;
-      lines.add(
-        keep < tokens.length ? line.substring(0, tokens[keep - 1].end) : line,
-      );
+      lines.add(line);
     }
     return lines.join('\n').trim();
   }
