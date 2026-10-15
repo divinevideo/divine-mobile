@@ -3304,6 +3304,7 @@ void main() {
               () => mockDraftStorage.saveDraft(
                 any(),
                 deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+                ownedFilesMemo: any(named: 'ownedFilesMemo'),
               ),
             );
           });
@@ -4063,6 +4064,7 @@ void main() {
         () => mockDraftStorage.saveDraft(
           any(),
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
         ),
       ).thenAnswer((_) async {});
     }
@@ -4077,6 +4079,7 @@ void main() {
         () => mockDraftStorage.saveDraft(
           any(),
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
         ),
       );
     });
@@ -4109,6 +4112,7 @@ void main() {
                   () => mockDraftStorage.saveDraft(
                     captureAny(),
                     deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+                    ownedFilesMemo: any(named: 'ownedFilesMemo'),
                   ),
                 ).captured.single
                 as DivineVideoDraft;
@@ -4141,6 +4145,7 @@ void main() {
         () => mockDraftStorage.saveDraft(
           any(),
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
         ),
       );
     });
@@ -4158,6 +4163,144 @@ void main() {
         verifyNever(() => mockDraftStorage.deleteDraft(any()));
       },
     );
+  });
+
+  group('autosaveChanges', () {
+    late _MockDraftStorageService mockDraftStorage;
+    late AppDatabase database;
+    late ProviderContainer container;
+    late List<Completer<void>> writes;
+    late List<DivineVideoDraft> savedDrafts;
+    late List<DraftOwnedFilesMemo?> savedMemos;
+
+    setUpAll(() {
+      registerFallbackValue(
+        DivineVideoDraft.create(
+          id: 'fallback',
+          clips: const [],
+          title: '',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'video',
+        ),
+      );
+      registerFallbackValue(DraftOwnedFilesMemo());
+    });
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      mockDraftStorage = _MockDraftStorageService();
+      database = AppDatabase.test(NativeDatabase.memory());
+      writes = [];
+      savedDrafts = [];
+      savedMemos = [];
+      when(
+        () => mockDraftStorage.saveDraft(
+          any(),
+          deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
+        ),
+      ).thenAnswer((invocation) {
+        savedDrafts.add(
+          invocation.positionalArguments.single as DivineVideoDraft,
+        );
+        savedMemos.add(
+          invocation.namedArguments[#ownedFilesMemo] as DraftOwnedFilesMemo?,
+        );
+        final write = Completer<void>();
+        writes.add(write);
+        return write.future;
+      });
+      container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
+          databaseProvider.overrideWithValue(database),
+        ],
+      );
+      container
+          .read(clipManagerProvider.notifier)
+          .addClip(
+            limitClipDuration: false,
+            video: EditorVideo.file('/path/to/video.mp4'),
+            targetAspectRatio: AspectRatio.square,
+            originalAspectRatio: 9 / 16,
+            duration: const Duration(seconds: 6),
+          );
+    });
+
+    tearDown(() async {
+      for (final write in writes) {
+        if (!write.isCompleted) write.complete();
+      }
+      container.dispose();
+      await database.close();
+    });
+
+    test('writes one autosave at a time', () async {
+      final notifier = container.read(videoEditorProvider.notifier);
+
+      final first = notifier.autosaveChanges();
+      final second = notifier.autosaveChanges();
+      final third = notifier.autosaveChanges();
+      await pumpEventQueue();
+
+      expect(writes, hasLength(1));
+
+      writes.single.complete();
+      await pumpEventQueue();
+
+      expect(writes, hasLength(2), reason: 'both waiting requests share one');
+      writes.last.complete();
+      expect(await Future.wait([first, second, third]), [true, true, true]);
+    });
+
+    test('the waiting autosave writes the state from when it starts', () async {
+      final notifier = container.read(videoEditorProvider.notifier);
+
+      unawaited(notifier.autosaveChanges());
+      final waiting = notifier.autosaveChanges();
+      notifier.updateMetadata(title: 'Written later');
+      await pumpEventQueue();
+      writes.single.complete();
+      await pumpEventQueue();
+      writes.last.complete();
+      await waiting;
+
+      expect(savedDrafts.last.title, 'Written later');
+    });
+
+    test('hands every autosave the same owned-files memo', () async {
+      final notifier = container.read(videoEditorProvider.notifier);
+
+      final first = notifier.autosaveChanges();
+      await pumpEventQueue();
+      writes.single.complete();
+      await first;
+      final second = notifier.autosaveChanges();
+      await pumpEventQueue();
+      writes.last.complete();
+      await second;
+
+      expect(savedMemos, hasLength(2));
+      expect(savedMemos.first, isNotNull);
+      expect(savedMemos.last, same(savedMemos.first));
+    });
+
+    test('reset drops an autosave that has not started yet', () async {
+      final notifier = container.read(videoEditorProvider.notifier);
+
+      final running = notifier.autosaveChanges();
+      final waiting = notifier.autosaveChanges();
+      await pumpEventQueue();
+      await notifier.reset(keepAutosavedDraft: true);
+      writes.single.complete();
+
+      expect(await running, isTrue);
+      expect(await waiting, isFalse);
+      expect(writes, hasLength(1));
+    });
   });
 
   group('VideoEditorProvider deferred file cleanup', () {
@@ -4303,6 +4446,7 @@ void main() {
         () => mockDraftStorage.saveDraft(
           any(),
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
         ),
       ).thenAnswer((invocation) async {
         final defer =
@@ -4372,6 +4516,7 @@ void main() {
         () => mockDraftStorage.saveDraft(
           any(),
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
         ),
       ).thenAnswer((invocation) async {
         await saveMayFinish.future;
@@ -4405,6 +4550,7 @@ void main() {
         () => mockDraftStorage.saveDraft(
           any(),
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
         ),
       ).thenAnswer((_) => saveMayFinish.future);
       fakeAsync((async) {
@@ -4421,6 +4567,7 @@ void main() {
           () => mockDraftStorage.saveDraft(
             any(),
             deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+            ownedFilesMemo: any(named: 'ownedFilesMemo'),
           ),
         ).called(1);
 
@@ -4752,6 +4899,7 @@ void main() {
         () => mockDraftStorage.saveDraft(
           any(),
           deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
+          ownedFilesMemo: any(named: 'ownedFilesMemo'),
         ),
       ).thenAnswer((invocation) async {
         await realDraftStorage.saveDraft(
