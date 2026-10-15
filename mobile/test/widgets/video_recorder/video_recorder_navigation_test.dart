@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -63,6 +64,8 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   DraftSaveOutcome saveResult = DraftSaveOutcome.saved;
   int restoreDraftCalls = 0;
   int removeAutosavedDraftCalls = 0;
+  Completer<void>? restoreGate;
+  Completer<void>? removeGate;
   Completer<void>? startRenderCompleter;
 
   /// Clips the autosave hands back, mirroring the real restore writing them
@@ -75,6 +78,7 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   @override
   Future<bool> restoreDraft([String? draftId]) async {
     restoreDraftCalls++;
+    await restoreGate?.future;
     if (clipsToRestore.isEmpty) return false;
     (ref.read(clipManagerProvider.notifier) as _FakeClipManagerNotifier)
         .setClips(clipsToRestore);
@@ -84,6 +88,7 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   @override
   Future<void> removeAutosavedDraft() async {
     removeAutosavedDraftCalls++;
+    await removeGate?.future;
   }
 
   @override
@@ -147,10 +152,16 @@ void main() {
     ).thenAnswer((_) => const Stream<AuthState>.empty());
   });
 
-  Widget buildHarness() {
+  /// [pushRecorder] starts on a home screen so the recorder can be pushed over
+  /// it, which is what lets a stray pop close the recorder.
+  Widget buildHarness({bool pushRecorder = false}) {
     final router = GoRouter(
-      initialLocation: '/recorder',
+      initialLocation: pushRecorder ? '/home' : '/recorder',
       routes: [
+        GoRoute(
+          path: '/home',
+          builder: (_, _) => const _StubScreen(label: 'home'),
+        ),
         GoRoute(
           path: '/recorder',
           builder: (context, state) => BlocProvider<VideoRecorderBloc>.value(
@@ -529,6 +540,98 @@ void main() {
       expect(fakeEditor.restoreDraftCalls, isZero);
     });
   });
+
+  group('offerAutosavedSession', () {
+    final offeredClip = DivineVideoClip(
+      id: 'offered-clip',
+      video: EditorVideo.file('/path/to/offered.mp4'),
+      duration: const Duration(seconds: 2),
+      recordedAt: DateTime(2026),
+      targetAspectRatio: .vertical,
+      originalAspectRatio: 9 / 16,
+    );
+
+    setUp(() {
+      when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
+      when(() => mockDraftStorageService.getAutosaveDraft()).thenAnswer(
+        (_) async => DivineVideoDraft.create(
+          id: VideoEditorConstants.autoSaveId,
+          clips: [offeredClip],
+          title: '',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'video',
+        ),
+      );
+      fakeEditor.clipsToRestore = [offeredClip];
+    });
+
+    Future<AppLocalizations> pushRecorderAndOffer(WidgetTester tester) async {
+      await tester.pumpWidget(buildHarness(pushRecorder: true));
+      await tester.pumpAndSettle();
+      unawaited(
+        GoRouter.of(tester.element(find.text('home'))).push<void>('/recorder'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('offer-autosave')));
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.videoRecorderAutosaveFoundTitle), findsOneWidget);
+      return l10n;
+    }
+
+    testWidgets('keeps the recorder open when the offer is dismissed while '
+        'Continue restores', (tester) async {
+      final restore = fakeEditor.restoreGate = Completer<void>();
+      final l10n = await pushRecorderAndOffer(tester);
+
+      await tester.tap(find.text(l10n.videoRecorderAutosaveContinueButton));
+      await tester.pump();
+      // Tap the barrier above the sheet.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.videoRecorderAutosaveFoundTitle), findsNothing);
+
+      restore.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('offer-autosave')), findsOneWidget);
+      expect(find.text('editor'), findsNothing);
+      expect(fakeClipManager.state.clips, equals([offeredClip]));
+    });
+
+    testWidgets('restores once when Continue is tapped twice', (tester) async {
+      final restore = fakeEditor.restoreGate = Completer<void>();
+      final l10n = await pushRecorderAndOffer(tester);
+
+      await tester.tap(find.text(l10n.videoRecorderAutosaveContinueButton));
+      await tester.pump();
+      await tester.tap(find.text(l10n.videoRecorderAutosaveContinueButton));
+      await tester.pump();
+      restore.complete();
+      await tester.pumpAndSettle();
+
+      expect(fakeEditor.restoreDraftCalls, equals(1));
+      expect(find.text('editor'), findsOneWidget);
+    });
+
+    testWidgets('keeps the recorder open when the offer is dismissed while '
+        'Discard runs', (tester) async {
+      final removal = fakeEditor.removeGate = Completer<void>();
+      final l10n = await pushRecorderAndOffer(tester);
+
+      await tester.tap(find.text(l10n.videoRecorderAutosaveDiscardButton));
+      await tester.pump();
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+
+      removal.complete();
+      await tester.pumpAndSettle();
+
+      expect(fakeEditor.removeAutosavedDraftCalls, equals(1));
+      expect(find.byKey(const Key('offer-autosave')), findsOneWidget);
+    });
+  });
 }
 
 class _FakeClipManagerNotifier extends ClipManagerNotifier {
@@ -587,6 +690,13 @@ class _RecorderHarness extends ConsumerWidget {
             key: const Key('close-recorder'),
             onPressed: () => closeVideoRecorder(context, ref),
             child: const Text('close recorder'),
+          ),
+          ElevatedButton(
+            key: const Key('offer-autosave'),
+            onPressed: () => unawaited(
+              offerAutosavedSession(context, ref, openEditorOnRestore: true),
+            ),
+            child: const Text('offer autosave'),
           ),
         ],
       ),
