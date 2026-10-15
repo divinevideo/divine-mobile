@@ -4073,8 +4073,8 @@ void main() {
       );
 
       group('relay walk across filtered rows', () {
-        // `no-url` is dropped by the client, so the first relay batch yields
-        // one visible video and the walk reads a second batch.
+        // The repository drops `no-url` (no playable URL), so this full first
+        // batch yields one visible video and the walk reads a second batch.
         List<Event> firstBatch() => [
           _createVideoEvent(
             id: 'first-video',
