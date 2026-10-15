@@ -129,6 +129,46 @@ void main() {
       verifyNever(draftStorageService.migrateOldDrafts);
     });
 
+    testWidgets('runs the startup migrations once the pending publish scan '
+        'finishes', (tester) async {
+      final authService = _MockAuthService();
+      when(() => authService.isAuthenticated).thenReturn(true);
+      final publishNotifier = _PendingVideoPublishNotifier();
+      final clipLibraryService = _MockClipLibraryService();
+      when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
+      when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      final draftStorageService = _MockDraftStorageService();
+      when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(authService),
+            appBadgeServiceProvider.overrideWithValue(
+              _CountingAppBadgeClearer(),
+            ),
+            videoPublishProvider.overrideWith(() => publishNotifier),
+            clipLibraryServiceProvider.overrideWithValue(clipLibraryService),
+            draftStorageServiceProvider.overrideWithValue(draftStorageService),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AppLifecycleHandler(child: SizedBox.shrink()),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(publishNotifier.started.isCompleted, isTrue);
+      verifyNever(clipLibraryService.migrateOldClips);
+
+      publishNotifier.completed.complete();
+      await tester.pump();
+
+      verify(clipLibraryService.migrateOldClips).called(1);
+      verify(draftStorageService.migrateOldDrafts).called(1);
+    });
+
     testWidgets('handles auth stream closing before authentication', (
       tester,
     ) async {
