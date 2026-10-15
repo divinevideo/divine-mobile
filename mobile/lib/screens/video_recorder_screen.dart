@@ -273,7 +273,8 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
       autoStartRecording: autoStartRecording,
     );
     await _maybeShowWhySixSeconds();
-    if (!mounted) return;
+    // An auto-recording open already found nothing to offer.
+    if (!mounted || autoStartRecording) return;
     await offerAutosavedSession(context, ref, openEditorOnRestore: true);
   }
 

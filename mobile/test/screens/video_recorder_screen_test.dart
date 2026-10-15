@@ -1001,7 +1001,7 @@ void main() {
         recorderMode: VideoRecorderMode.capture,
       );
 
-      Future<void> pumpOpen(
+      Future<_MockDraftStorageService> pumpOpen(
         WidgetTester tester, {
         required bool autoRecord,
         required VideoEditorNotifier Function() videoEditor,
@@ -1045,6 +1045,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump();
+        return mockDraftStorage;
       }
 
       testWidgets(
@@ -1060,6 +1061,22 @@ void main() {
           );
 
           verify(() => recorderBloc.add(autoStartInit)).called(1);
+        },
+      );
+
+      testWidgets(
+        'reads the autosave once when the open starts recording',
+        (tester) async {
+          await testPrefs.setBool('why_six_seconds_shown', true);
+
+          final draftStorage = await pumpOpen(
+            tester,
+            autoRecord: true,
+            videoEditor: _AutosaveVideoEditorNotifier.new,
+          );
+
+          verify(() => recorderBloc.add(autoStartInit)).called(1);
+          verify(draftStorage.getAutosaveDraft).called(1);
         },
       );
 
