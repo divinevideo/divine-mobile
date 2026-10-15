@@ -11,10 +11,12 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+import 'package:openvine/blocs/follow_list_ranking.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
@@ -23,6 +25,8 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vanished_account_identity.dart';
+import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 /// Filter mode for user search in [UserPickerSheet].
 enum UserPickerFilterMode {
@@ -140,13 +144,15 @@ class UserPickerSheet extends ConsumerWidget {
     final rankingSignalsLoader = profileRepository == null
         ? null
         : ref.watch(userRankingSignalsLoaderProvider);
+    final ownerPubkey = ref.watch(
+      nostrSessionProvider.select((session) => session.pubkey),
+    );
     return _UserPickerSheetView(
-      key: ValueKey((
-        profileRepository,
-        followRepository,
-        rankingSignalsLoader,
-      )),
+      // A profile repository becoming ready does not start a new selection flow.
+      // An owner or follow-source change must discard all captured local rows.
+      key: ValueKey((ownerPubkey, followRepository)),
       configuration: this,
+      profileRepository: profileRepository,
       rankingSignalsLoader: rankingSignalsLoader,
     );
   }
@@ -156,11 +162,13 @@ class _UserPickerSheetView extends ConsumerStatefulWidget {
   const _UserPickerSheetView({
     required this.configuration,
     required this.rankingSignalsLoader,
+    required this.profileRepository,
     super.key,
   });
 
   final UserPickerSheet configuration;
   final UserRankingSignalsLoader? rankingSignalsLoader;
+  final ProfileRepository? profileRepository;
 
   @override
   ConsumerState<_UserPickerSheetView> createState() => _UserPickerSheetState();
@@ -175,20 +183,22 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
   // For mutualFollowsOnly: local follow list search
   List<UserProfile> _followProfiles = [];
   List<UserProfile> _filteredFollowProfiles = [];
+  Map<String, UserRankingSignals> _rankingSignals = const {};
+  List<String> _followOrder = const [];
+  bool _followOrderReady = false;
+  int _followLoadRevision = 0;
 
   /// Pubkeys carrying a NIP-62 vanish tombstone, mirrored from
   /// [vanishedProfilePubkeysProvider].
   ///
-  /// Held rather than sampled per row so the sort and the filter resolve
-  /// against the same set, and so one subscription covers a list of any
-  /// length. It can arrive after the list is already sorted, which is what
-  /// [_onVanishedPubkeysChanged] re-derives against.
+  /// One subscription keeps rendered identity and search matching consistent.
+  /// Later tombstones update identity in place without changing row positions.
   Set<String> _vanishedPubkeys = const {};
   bool _followListLoaded = false;
   StreamSubscription<List<String>>? _followersSubscription;
   final _selectedProfiles = <UserProfile>[];
 
-  /// Whether the profile repository was unavailable at init time.
+  /// Whether profile operations are currently unavailable.
   bool _profileRepoMissing = false;
 
   /// [widget.configuration.initialSelectedProfiles] without the excluded viewer.
@@ -231,27 +241,72 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     if (_initialSelectedProfiles.isNotEmpty) {
       _selectedProfiles.addAll(_initialSelectedProfiles);
     }
-    final profileRepo = ref.read(profileRepositoryProvider);
-    if (profileRepo == null) {
-      _profileRepoMissing = true;
+    _configureSearchBloc();
+    if (_useLocalSearch && !_profileRepoMissing) _reloadFollowProfiles();
+  }
+
+  @override
+  void didUpdateWidget(covariant _UserPickerSheetView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.profileRepository, widget.profileRepository) &&
+        identical(
+          oldWidget.rankingSignalsLoader,
+          widget.rankingSignalsLoader,
+        )) {
       return;
     }
-    _searchBloc = UserSearchBloc(
-      profileRepository: profileRepo,
-      rankingSignalsLoader: widget.rankingSignalsLoader,
-      followRepository: ref.read(followRepositoryProvider),
-      excludedPubkey: widget.configuration.excludeViewerPubkey,
-    );
-
+    final searchBloc = _searchBloc;
+    if (searchBloc != null) _closeSearchBloc(searchBloc);
+    // Keep the search-only reset contract when the account-scoped loader changes.
+    // Profile availability changes retain this same owner's query and selection.
+    if (!_useLocalSearch &&
+        identical(oldWidget.profileRepository, widget.profileRepository)) {
+      _searchController.clear();
+    }
+    _configureSearchBloc();
     if (_useLocalSearch) {
-      runDetached(
-        _loadFollowProfiles(),
-        'load followed profiles',
-        logName: 'UserPickerSheet',
-        category: LogCategory.ui,
-      );
+      // Invalidate old preload/profile work before a new dependency can publish.
+      _followLoadRevision++;
+      if (!_profileRepoMissing) _reloadFollowProfiles();
     }
   }
+
+  void _configureSearchBloc() {
+    final profileRepo = widget.profileRepository;
+    _profileRepoMissing = profileRepo == null;
+    _searchBloc = profileRepo == null
+        ? null
+        : UserSearchBloc(
+            profileRepository: profileRepo,
+            rankingSignalsLoader: widget.rankingSignalsLoader,
+            followRepository: ref.read(followRepositoryProvider),
+            excludedPubkey: widget.configuration.excludeViewerPubkey,
+          );
+    if (!_useLocalSearch && _searchController.text.trim().isNotEmpty) {
+      _searchBloc?.add(UserSearchQueryChanged(_searchController.text));
+    }
+  }
+
+  void _reloadFollowProfiles() => runDetached(
+    _loadFollowProfiles(),
+    'load followed profiles',
+    logName: 'UserPickerSheet',
+    category: LogCategory.ui,
+  );
+
+  void _closeSearchBloc(UserSearchBloc bloc) => runDetached(
+    bloc.close(),
+    'close user search',
+    logName: 'UserPickerSheet',
+    category: LogCategory.ui,
+  );
+
+  void _reportRankingError(Object error, StackTrace stackTrace) => runDetached(
+    Future<void>.error(error, stackTrace),
+    'load user picker ranking',
+    logName: 'UserPickerSheet',
+    category: LogCategory.ui,
+  );
 
   /// Loads followed profiles, then narrows them to mutuals as each follower
   /// source answers.
@@ -264,13 +319,14 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
   /// mutual confirmed by a live source — a late source can add rows, never
   /// invalidate one already shown.
   Future<void> _loadFollowProfiles() async {
+    final revision = ++_followLoadRevision;
+    bool isCurrent() => mounted && revision == _followLoadRevision;
     final followRepo = ref.read(followRepositoryProvider);
-    final profileRepo = ref.read(profileRepositoryProvider);
-    if (profileRepo == null) {
-      setState(() => _followListLoaded = true);
-      return;
-    }
-
+    final profileRepo = widget.profileRepository;
+    final loader = widget.rankingSignalsLoader;
+    if (profileRepo == null || loader == null) return;
+    await _followersSubscription?.cancel();
+    if (!isCurrent()) return;
     final followingPubkeys = followRepo.followingPubkeys;
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
 
@@ -279,84 +335,107 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
       final cached = await profileRepo.getCachedProfiles(
         pubkeys: followingPubkeys,
       );
-      if (!mounted) return;
-      // Seed from the current value rather than waiting for the listener:
-      // `ref.listen` fires on change only, so a set that already arrived
-      // before this widget mounted would never reach the first sort.
+      if (!isCurrent()) return;
       _vanishedPubkeys =
           ref.read(vanishedProfilePubkeysProvider).value ?? const {};
-      // Sorted after the await, never before: `_deletedAccountLabel` is an
-      // inherited-widget read and this method is kicked off from initState. A
-      // vanished row sorts where "Deleted account" puts it, not where the name
-      // it no longer shows would.
-      candidates = _sortedByRenderedName(
-        cached
-            .where(
-              (profile) =>
-                  !blocklistRepository.shouldFilterFromFeeds(profile.pubkey) &&
-                  !_isExcludedViewer(profile.pubkey),
-            )
-            .toList(),
+      final signals = await loadFollowListRankingSignals(
+        pubkeys: followingPubkeys,
+        loader: loader,
+        logName: 'UserPickerSheet',
+        onError: (error, stackTrace) {
+          if (isCurrent()) _reportRankingError(error, stackTrace);
+        },
       );
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _followProfiles = const [];
-          _filteredFollowProfiles = const [];
-          _followListLoaded = true;
-        });
-      }
+      if (!isCurrent()) return;
+      _rankingSignals = signals;
+      final followingSet = followingPubkeys.toSet();
+      // A newly ready cache may not have hydrated every visible profile yet.
+      // Retain metadata only inside this owner's still-followed candidate set;
+      // vanished identity is still substituted by the existing row/filter path.
+      final profilesByPubkey = {
+        for (final profile in _followProfiles)
+          if (followingSet.contains(profile.pubkey)) profile.pubkey: profile,
+        for (final profile in cached) profile.pubkey: profile,
+      };
+      candidates = profilesByPubkey.values
+          .where(
+            (profile) =>
+                followingSet.contains(profile.pubkey) &&
+                signals.containsKey(profile.pubkey) &&
+                loader.isEligible(profile.pubkey) &&
+                !blocklistRepository.shouldFilterFromFeeds(profile.pubkey) &&
+                !_isExcludedViewer(profile.pubkey),
+          )
+          .toList();
+    } catch (error, stackTrace) {
+      if (!isCurrent()) return;
+      _reportRankingError(error, stackTrace);
+      setState(() => _followListLoaded = true);
+      return;
+    }
+    if (!isCurrent()) return;
+    if (candidates.isEmpty) {
+      setState(() {
+        _followProfiles = const [];
+        _filteredFollowProfiles = const [];
+        _followListLoaded = true;
+      });
       return;
     }
 
-    if (!mounted) return;
-
-    if (candidates.isEmpty) {
-      setState(() => _followListLoaded = true);
-      return;
+    void showProfiles(List<UserProfile> profiles) {
+      if (!isCurrent()) return;
+      final ranked = rankFollowListSnapshot(
+        pubkeys: profiles.map((profile) => profile.pubkey).toList(),
+        signals: _rankingSignals,
+        names: {
+          for (final profile in profiles)
+            profile.pubkey: _renderedName(profile),
+        },
+        isEligible: (key) =>
+            loader.isEligible(key) &&
+            !blocklistRepository.shouldFilterFromFeeds(key) &&
+            !_isExcludedViewer(key),
+        isSmartOrderReady: _followOrderReady,
+        previousSmartOrder: _followOrder,
+        now: DateTime.now(),
+      );
+      final byKey = {for (final profile in profiles) profile.pubkey: profile};
+      final ordered = [for (final key in ranked.smartOrder) byKey[key]!];
+      setState(() {
+        // Keep first-visible positions even if a refresh temporarily omits a row.
+        _followOrder = [
+          ..._followOrder,
+          ...ranked.smartOrder.where((key) => !_followOrder.contains(key)),
+        ];
+        _followOrderReady = true;
+        _followProfiles = ordered;
+        _filteredFollowProfiles = _matchingFollowProfiles(
+          _searchController.text,
+          ordered,
+        );
+        _followListLoaded = true;
+      });
     }
 
     _followersSubscription = followRepo.streamMyFollowers().listen(
       (followers) {
-        if (!mounted) return;
+        if (!isCurrent()) return;
         final followerSet = followers.toSet();
         final mutuals = candidates
             .where((profile) => followerSet.contains(profile.pubkey))
             .toList();
-
-        // An early source can legitimately return nothing; showing the empty
-        // state before the slower ones answer would flash "you follow nobody".
         if (mutuals.isEmpty && !_followListLoaded) return;
-
-        // Sorted here rather than once at load: this listener re-assigns the
-        // list on every follower source, so a re-sort triggered by a late
-        // vanish set would otherwise be overwritten by the next emission.
-        final ordered = _sortedByRenderedName(mutuals);
-        setState(() {
-          _followProfiles = ordered;
-          _filteredFollowProfiles = _matchingFollowProfiles(
-            _searchController.text,
-            ordered,
-          );
-          _followListLoaded = true;
-        });
+        showProfiles(mutuals);
       },
-      // Every source failed. Fall back to local follows so the picker stays
-      // usable instead of hanging in loading.
-      onError: (Object _) {
-        if (!mounted) return;
-        final ordered = _sortedByRenderedName(candidates);
-        setState(() {
-          _followProfiles = ordered;
-          _filteredFollowProfiles = _matchingFollowProfiles(
-            _searchController.text,
-            ordered,
-          );
-          _followListLoaded = true;
-        });
+      // Preserve the existing all-sources-failed fallback, with eligibility intact.
+      onError: (Object error, StackTrace stackTrace) {
+        if (!isCurrent()) return;
+        _reportRankingError(error, stackTrace);
+        showProfiles(candidates);
       },
       onDone: () {
-        if (!mounted || _followListLoaded) return;
+        if (!isCurrent() || _followListLoaded) return;
         setState(() => _followListLoaded = true);
       },
     );
@@ -367,14 +446,7 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     unawaited(_followersSubscription?.cancel());
     _searchController.dispose();
     final searchBloc = _searchBloc;
-    if (searchBloc != null) {
-      runDetached(
-        searchBloc.close(),
-        'close user search',
-        logName: 'UserPickerSheet',
-        category: LogCategory.ui,
-      );
-    }
+    if (searchBloc != null) _closeSearchBloc(searchBloc);
     super.dispose();
   }
 
@@ -441,16 +513,7 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     fallbackName: profile.bestDisplayName,
   );
 
-  /// [profiles] ordered by the name each row renders.
-  List<UserProfile> _sortedByRenderedName(List<UserProfile> profiles) {
-    String key(UserProfile p) => _renderedName(p).toLowerCase();
-    return profiles.toList()..sort((a, b) => key(a).compareTo(key(b)));
-  }
-
-  /// Re-derives the follow list against a newly delivered vanished set.
-  ///
-  /// The tombstone stream emits after the first frame, so a list sorted at load
-  /// time is keyed on the pre-substitution names until this runs.
+  /// Refreshes rendered identity and search matching without moving visible rows.
   void _onVanishedPubkeysChanged(Set<String> pubkeys) {
     if (!mounted) return;
     if (pubkeys.length == _vanishedPubkeys.length &&
@@ -459,7 +522,6 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
     }
     setState(() {
       _vanishedPubkeys = pubkeys;
-      _followProfiles = _sortedByRenderedName(_followProfiles);
       _filteredFollowProfiles = _matchingFollowProfiles(
         _searchController.text,
         _followProfiles,

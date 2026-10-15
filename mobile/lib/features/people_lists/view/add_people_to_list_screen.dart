@@ -17,6 +17,7 @@ import 'package:openvine/features/people_lists/view/widgets/people_list_result_n
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 
 /// Full-screen picker that lets the authenticated user batch-add candidate
@@ -48,6 +49,9 @@ class AddPeopleToListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final followRepository = ref.watch(followRepositoryProvider);
+    final profileRepository = ref.watch(profileRepositoryProvider);
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     return BlocSelector<PeopleListsBloc, PeopleListsState, UserList?>(
       selector: (state) {
         for (final list in state.lists) {
@@ -59,12 +63,17 @@ class AddPeopleToListScreen extends ConsumerWidget {
         if (userList == null) {
           return const _ListNotFoundScaffold();
         }
-        final followRepository = ref.read(followRepositoryProvider);
-        final profileRepository = ref.read(profileRepositoryProvider);
         return BlocProvider<AddPeopleToListCubit>(
+          key: ValueKey((
+            userList.id,
+            followRepository,
+            profileRepository,
+            rankingSignalsLoader,
+          )),
           create: (_) {
             final cubit = AddPeopleToListCubit(
               followRepository: followRepository,
+              rankingSignalsLoader: rankingSignalsLoader,
               profileRepository: profileRepository,
               existingMemberPubkeys: userList.pubkeys,
             );
