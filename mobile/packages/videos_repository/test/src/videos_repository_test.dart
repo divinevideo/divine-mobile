@@ -3951,7 +3951,9 @@ void main() {
         expect(filters, hasLength(1));
         expect(filters.first.kinds, contains(EventKind.videoVertical));
         expect(filters.first.authors, equals(authors));
-        expect(filters.first.limit, equals(10));
+        // One row past the page: a full read leaves its oldest second for the
+        // next one.
+        expect(filters.first.limit, equals(11));
       });
 
       test(
@@ -4051,8 +4053,9 @@ void main() {
       test(
         'ends a relay page at the newest events of the merged answer',
         () async {
-          // A dense relay's two newest, plus the newest of a sparse relay
-          // that reaches far further back.
+          // A two-video page asks each source for three rows: a dense relay's
+          // three newest, plus the newest of a sparse relay that reaches far
+          // further back.
           when(() => mockNostrClient.queryEvents(any())).thenAnswer(
             (_) async => [
               _createVideoEvent(
@@ -4073,6 +4076,12 @@ void main() {
                 videoUrl: 'https://example.com/dense-2.mp4',
                 createdAt: 1791990000,
               ),
+              _createVideoEvent(
+                id: 'dense-relay-video-3',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/dense-3.mp4',
+                createdAt: 1791980000,
+              ),
             ],
           );
 
@@ -4081,43 +4090,15 @@ void main() {
             limit: 2,
           );
 
+          // The third row's second may be incomplete too, so the next page
+          // starts there.
           expect(
             result.videos.map((video) => video.id),
             equals(['dense-relay-video-1', 'dense-relay-video-2']),
           );
-          expect(result.paginationCursor, equals('1791990000'));
+          expect(result.paginationCursor, equals('1791980001'));
         },
       );
-
-      test('keeps relay events that share the page boundary second', () async {
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-          (_) async => [
-            for (final (id, createdAt) in [
-              ('newest', 1792000000),
-              ('boundary-a', 1791990000),
-              ('boundary-b', 1791990000),
-              ('older', 1786800000),
-            ])
-              _createVideoEvent(
-                id: id,
-                pubkey: 'followed-user',
-                videoUrl: 'https://example.com/$id.mp4',
-                createdAt: createdAt,
-              ),
-          ],
-        );
-
-        final result = await repository.getHomeFeedVideos(
-          authors: ['followed-user'],
-          limit: 2,
-        );
-
-        expect(
-          result.videos.map((video) => video.id),
-          unorderedEquals(['newest', 'boundary-a', 'boundary-b']),
-        );
-        expect(result.paginationCursor, equals('1791990000'));
-      });
 
       test(
         'pages and orders relay results on event created_at, not '
@@ -4141,6 +4122,14 @@ void main() {
                   ['published_at', '1786800000'],
                 ],
               ),
+              // Posted after the edited video was first published, so paging
+              // on publication time would keep it and drop `edited-today`.
+              _createVideoEvent(
+                id: 'posted-last-month',
+                pubkey: 'followed-user',
+                videoUrl: 'https://example.com/last-month.mp4',
+                createdAt: 1789000000,
+              ),
             ],
           );
 
@@ -4153,14 +4142,16 @@ void main() {
             result.videos.map((video) => video.id),
             equals(['edited-today', 'posted-today']),
           );
-          expect(result.paginationCursor, equals('1791990000'));
+          expect(result.paginationCursor, equals('1789000001'));
           expect(result.hasMore, isTrue);
         },
       );
 
       group('relay walk across filtered rows', () {
         // The repository drops `no-url` (no playable URL), so this full first
-        // batch yields one visible video and the walk reads a second batch.
+        // batch, three rows for a two-video page, yields one visible video
+        // and the walk reads a second batch. The oldest row's second is left
+        // for that second read.
         List<Event> firstBatch() => [
           _createVideoEvent(
             id: 'first-video',
@@ -4173,6 +4164,12 @@ void main() {
             pubkey: 'followed-user',
             videoUrl: null,
             createdAt: 2950,
+          ),
+          _createVideoEvent(
+            id: 'older-no-url',
+            pubkey: 'followed-user',
+            videoUrl: null,
+            createdAt: 2940,
           ),
         ];
 
@@ -4268,6 +4265,130 @@ void main() {
             expect(queries, equals(2));
           },
         );
+      });
+
+      group('relay walk across a shared second', () {
+        // Relays and the client cut every read to its `limit`, so a full read
+        // can stop partway through the second of its oldest row (#10207).
+        Event video(String id, int createdAt, {bool playable = true}) =>
+            _createVideoEvent(
+              id: id,
+              pubkey: 'followed-user',
+              videoUrl: playable ? 'https://example.com/$id.mp4' : null,
+              createdAt: createdAt,
+            );
+
+        Future<List<String>> pageThrough({required int limit}) async {
+          final shown = <String>[];
+          String? cursor;
+          for (var page = 0; page < 10; page++) {
+            final result = await repository.getHomeFeedVideos(
+              authors: ['followed-user'],
+              limit: limit,
+              cursor: cursor,
+            );
+            shown.addAll(result.videos.map((video) => video.id));
+            if (result.hasMore != true) return shown;
+            cursor = result.paginationCursor;
+          }
+          fail('the feed did not end within 10 pages');
+        }
+
+        test(
+          'shows every video when two share the second a page ends on',
+          () async {
+            _answerReadsFrom(mockNostrClient, [
+              video('newest', 3000),
+              video('mid', 2990),
+              video('boundary-a', 2950),
+              video('boundary-b', 2950),
+              video('older', 2900),
+            ]);
+
+            expect(
+              await pageThrough(limit: 3),
+              unorderedEquals([
+                'newest',
+                'mid',
+                'boundary-a',
+                'boundary-b',
+                'older',
+              ]),
+            );
+          },
+        );
+
+        test(
+          'shows a video that shares its second with a hidden one at the '
+          'end of a read',
+          () async {
+            _answerReadsFrom(mockNostrClient, [
+              video('newest', 3000),
+              video('boundary-a', 2950, playable: false),
+              video('boundary-b', 2950),
+              video('older', 2900),
+            ]);
+
+            expect(
+              await pageThrough(limit: 2),
+              unorderedEquals(['newest', 'boundary-b', 'older']),
+            );
+          },
+        );
+
+        test(
+          'leaves the second a page stops in for the next page, once',
+          () async {
+            _answerReadsFrom(mockNostrClient, [
+              video('newest', 3000),
+              video('mid', 2990),
+              video('boundary-a', 2950),
+              video('boundary-b', 2950),
+              video('older', 2900),
+            ]);
+
+            final first = await repository.getHomeFeedVideos(
+              authors: ['followed-user'],
+              limit: 2,
+            );
+            final second = await repository.getHomeFeedVideos(
+              authors: ['followed-user'],
+              limit: 2,
+              cursor: first.paginationCursor,
+            );
+
+            expect(
+              first.videos.map((video) => video.id),
+              unorderedEquals(['newest', 'mid']),
+            );
+            expect(first.paginationCursor, equals('2951'));
+            expect(
+              second.videos.map((video) => video.id),
+              unorderedEquals(['boundary-a', 'boundary-b']),
+            );
+          },
+        );
+
+        test('moves below a second that fills a whole read', () async {
+          // Re-reading that second would return the same rows forever, the
+          // stall an inclusive bound hit before (#5085).
+          _answerReadsFrom(mockNostrClient, [
+            video('same-second-a', 2950),
+            video('same-second-b', 2950),
+            video('same-second-c', 2950),
+            video('older', 2900),
+          ]);
+
+          expect(
+            await pageThrough(limit: 2),
+            unorderedEquals([
+              'same-second-a',
+              'same-second-b',
+              'same-second-c',
+              'older',
+            ]),
+          );
+        });
       });
 
       test('transforms and filters events correctly', () async {
@@ -15830,6 +15951,26 @@ void _answerDetailedReadsAsFinished(MockNostrClient client) {
       noRelays: false,
     ),
   );
+}
+
+/// Answers [NostrClient.queryEventsDetailed] from [feed] the way relays and
+/// the client do: the rows the filter matches, newest first with ties in id
+/// order (NIP-01), cut to the filter's `limit`.
+void _answerReadsFrom(MockNostrClient client, List<Event> feed) {
+  when(() => client.queryEventsDetailed(any())).thenAnswer((invocation) async {
+    final filters = invocation.positionalArguments.first as List<Filter>;
+    final filter = filters.single;
+    final matching = feed.where(filter.checkEvent).toList()
+      ..sort((a, b) {
+        final byTime = b.createdAt.compareTo(a.createdAt);
+        return byTime != 0 ? byTime : a.id.compareTo(b.id);
+      });
+    return (
+      events: matching.take(filter.limit ?? matching.length).toList(),
+      timedOut: false,
+      noRelays: false,
+    );
+  });
 }
 
 /// Creates a mock VideoStats for testing Funnelcake API fallback.
