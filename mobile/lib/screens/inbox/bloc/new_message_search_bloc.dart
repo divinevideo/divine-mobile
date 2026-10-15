@@ -12,9 +12,12 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 part 'new_message_search_event.dart';
 part 'new_message_search_state.dart';
@@ -22,14 +25,17 @@ part 'new_message_search_state.dart';
 /// BLoC for the new message sheet that loads followed contacts and searches
 /// for users to start a DM conversation.
 class NewMessageSearchBloc
-    extends Bloc<NewMessageSearchEvent, NewMessageSearchState> {
+    extends Bloc<NewMessageSearchEvent, NewMessageSearchState>
+    with CloseGuardedEmit<NewMessageSearchState> {
   NewMessageSearchBloc({
     required ProfileRepository profileRepository,
     required FollowRepository followRepository,
+    required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
     required ModerationPresentationResolver moderationPresentation,
   }) : _profileRepository = profileRepository,
        _followRepository = followRepository,
+       _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
        _moderationPresentation = moderationPresentation,
        super(const NewMessageSearchState()) {
@@ -48,9 +54,10 @@ class NewMessageSearchBloc
 
   final ProfileRepository _profileRepository;
   final FollowRepository _followRepository;
+  final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
 
-  /// How each result's key is presented, so the sort and the search match the
+  /// How each result's key is presented, so ranking and search match the
   /// name the row renders, including a withdrawn key's neutral label (#9963).
   final ModerationPresentationResolver _moderationPresentation;
 
@@ -61,27 +68,59 @@ class NewMessageSearchBloc
     NewMessageSearchStarted event,
     Emitter<NewMessageSearchState> emit,
   ) async {
-    final pubkeys = _followRepository.followingPubkeys.where(
-      (pubkey) => !_isSelf(pubkey),
-    );
-    final futures = pubkeys.map(
-      (pk) => _profileRepository.getCachedProfile(pubkey: pk),
-    );
-    final results = await Future.wait(futures);
-    // Ordered by the name the row renders, not the raw kind-0 one: a vanished
-    // peer sorts under "Deleted account" and the moderation account under
-    // "Divine Moderation", so the alphabetical run matches what is on screen.
-    final profiles = _sortedByPeerName(
-      results.whereType<UserProfile>().toList(),
-      vanishedPubkeys: state.vanishedPubkeys,
-      labels: state.peerLabels,
-    );
-
-    emit(
-      _withRecomputedSearch(
-        state.copyWith(status: NewMessageSearchStatus.idle, contacts: profiles),
+    final pubkeys = _followRepository.followingPubkeys
+        .where((pubkey) => !_isSelf(pubkey))
+        .toSet();
+    Map<String, UserRankingSignals>? signals;
+    try {
+      signals = await _rankingSignalsLoader.load(pubkeys);
+    } catch (error, stackTrace) {
+      // An unavailable snapshot keeps the local picker usable. A successful
+      // snapshot, even an empty one, is authoritative for eligibility.
+      addError(
+        asReportableError(error, context: '_onStarted') ?? error,
+        stackTrace,
+      );
+    }
+    if (isClosed) return;
+    final eligiblePubkeys = signals == null
+        ? pubkeys
+        : pubkeys.where(signals.containsKey);
+    final results = await Future.wait(
+      eligiblePubkeys.map(
+        (pubkey) => _profileRepository.getCachedProfile(pubkey: pubkey),
       ),
     );
+    if (isClosed) return;
+    final profiles = {
+      for (final profile in results.whereType<UserProfile>())
+        profile.pubkey: profile,
+    };
+    final rankedPubkeys = rankUsers(
+      [
+        for (final pubkey in profiles.keys)
+          signals?[pubkey] ?? UserRankingSignals(pubkey: pubkey),
+      ],
+      now: DateTime.now(),
+      nameOf: (pubkey) => _peerNameFor(
+        profiles[pubkey]!,
+        vanishedPubkeys: state.vanishedPubkeys,
+        labels: state.peerLabels,
+      ),
+      interactionTierFirst: true,
+    );
+    if (!emitIfOpen(
+      _withRecomputedSearch(
+        state.copyWith(
+          status: NewMessageSearchStatus.idle,
+          contacts: [for (final pubkey in rankedPubkeys) profiles[pubkey]!],
+          rankingSignals: Map.unmodifiable(signals ?? const {}),
+        ),
+      ),
+    )) {
+      return;
+    }
+    _rankingSignalsLoader.refreshInBackground(rankedPubkeys);
   }
 
   Future<void> _onQueryChanged(
@@ -122,13 +161,14 @@ class NewMessageSearchBloc
         sortBy: profileSearchSortFollowers,
       )).where((profile) => !_isSelf(profile.pubkey)).toList();
 
+      if (emit.isDone) return;
       Log.debug(
         'Query "$query": ${networkResults.length} network results',
         name: 'NewMessageSearchBloc',
         category: LogCategory.api,
       );
 
-      emit(
+      emitIfOpen(
         _withRecomputedSearch(
           state.copyWith(
             status: NewMessageSearchStatus.searchSuccess,
@@ -137,8 +177,9 @@ class NewMessageSearchBloc
         ),
       );
     } on Exception {
+      if (emit.isDone) return;
       // On failure, keep the filtered local contacts visible
-      emit(state.copyWith(status: NewMessageSearchStatus.searchFailure));
+      emitIfOpen(state.copyWith(status: NewMessageSearchStatus.searchFailure));
     }
   }
 
@@ -289,8 +330,8 @@ class NewMessageSearchBloc
 
   /// The name `_UserTile` renders for [profile], resolved the same way.
   ///
-  /// Takes its inputs rather than reading `state`, so an ordering can be
-  /// recomputed against a state that has not been emitted yet.
+  /// Takes its inputs rather than reading `state`, so ranking and filtering
+  /// resolve against the same naming snapshot.
   ///
   /// Falls back to the profile-or-generated value while [labels] is null,
   /// which is the pre-delivery window only.
@@ -309,33 +350,12 @@ class NewMessageSearchBloc
     );
   }
 
-  /// [contacts] ordered by the name each row renders.
-  List<UserProfile> _sortedByPeerName(
-    List<UserProfile> contacts, {
-    required Set<String> vanishedPubkeys,
-    required DmPeerLabels? labels,
-  }) {
-    String key(UserProfile p) => _peerNameFor(
-      p,
-      vanishedPubkeys: vanishedPubkeys,
-      labels: labels,
-    ).toLowerCase();
-    return contacts.toList()..sort((a, b) => key(a).compareTo(key(b)));
-  }
-
-  /// Re-sorts contacts and re-runs the active rendered-name match against all
-  /// candidates. Both naming inputs arrive asynchronously, so every state
-  /// transition that changes either input must pass through here.
+  /// Re-runs the active rendered-name match while preserving the initial
+  /// ranking. Labels and vanish state can update rows, never their order.
   NewMessageSearchState _withRecomputedSearch(NewMessageSearchState next) {
-    final contacts = _sortedByPeerName(
-      next.contacts,
-      vanishedPubkeys: next.vanishedPubkeys,
-      labels: next.peerLabels,
-    );
-    if (!next.isSearchActive) return next.copyWith(contacts: contacts);
+    if (!next.isSearchActive) return next;
 
     return next.copyWith(
-      contacts: contacts,
       results: _mergeWithLocal(
         _visibleNetworkResults(
           next.networkResults,
@@ -344,7 +364,7 @@ class NewMessageSearchBloc
           labels: next.peerLabels,
         ),
         _filterContacts(
-          contacts,
+          next.contacts,
           next.query,
           vanishedPubkeys: next.vanishedPubkeys,
           labels: next.peerLabels,
@@ -378,7 +398,7 @@ class NewMessageSearchBloc
       _withRecomputedSearch(
         // Both naming inputs land asynchronously — the tombstone stream on its
         // first Drift emission, the labels on the first didChangeDependencies
-        // — so either can arrive after the list is sorted and matched.
+        // — so either can arrive after the list is ranked and matched.
         state.copyWith(vanishedPubkeys: event.pubkeys),
       ),
     );

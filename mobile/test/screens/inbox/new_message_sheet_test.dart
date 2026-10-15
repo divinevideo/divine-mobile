@@ -5,6 +5,7 @@
 import 'dart:ui' show SemanticsFlags, Tristate;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -16,14 +17,18 @@ import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/new_message_sheet.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../helpers/retired_key_custody.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -31,6 +36,17 @@ import '../../helpers/test_provider_overrides.dart';
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this.pubkey);
+  final String pubkey;
+  @override
+  NostrSessionReadiness build() =>
+      NostrSessionReadiness.identityKnown(pubkey: pubkey);
+}
 
 /// What `NewMessageSheet.show` handed back to the code that opened it.
 class _SheetOutcome {
@@ -54,9 +70,20 @@ void main() {
     late _MockProfileRepository profileRepository;
     late _MockFollowRepository followRepository;
     late AppLocalizations l10n;
+    late _MockRankingSignalsLoader rankingSignalsLoader;
+    late _TestNostrSession session;
 
     setUp(() {
       profileRepository = _MockProfileRepository();
+      session = _TestNostrSession(currentUserPubkey);
+      rankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => rankingSignalsLoader.load(any())).thenAnswer(
+        (invocation) async => {
+          for (final pubkey
+              in invocation.positionalArguments.first as Iterable<String>)
+            pubkey: UserRankingSignals(pubkey: pubkey, youFollow: true),
+        },
+      );
       followRepository = _MockFollowRepository();
       l10n = lookupAppLocalizations(const Locale('en'));
       when(
@@ -105,13 +132,23 @@ void main() {
       WidgetTester tester, {
       required UserProfile contact,
       bool isVanished = false,
+      Override? rankingOverride,
+      ProfileRepository? activeProfileRepository,
+      FollowRepository? activeFollowRepository,
       List<Override> extraOverrides = const [],
     }) async {
       stubContacts([contact]);
 
       await tester.pumpWidget(
         testMaterialApp(
+          mockProfileRepository: activeProfileRepository ?? profileRepository,
+          mockFollowRepository: activeFollowRepository ?? followRepository,
           additionalOverrides: [
+            nostrSessionProvider.overrideWith(() => session),
+            rankingOverride ??
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingSignalsLoader,
+                ),
             profileVanishedProvider(
               contact.pubkey,
             ).overrideWith((ref) => isVanished),
@@ -142,7 +179,13 @@ void main() {
 
       await tester.pumpWidget(
         testMaterialApp(
+          mockProfileRepository: profileRepository,
+          mockFollowRepository: followRepository,
           additionalOverrides: [
+            nostrSessionProvider.overrideWith(() => session),
+            userRankingSignalsLoaderProvider.overrideWithValue(
+              rankingSignalsLoader,
+            ),
             for (final pubkey in vanishedPubkeys)
               profileVanishedProvider(pubkey).overrideWith((ref) => true),
             ...extraOverrides,
@@ -172,6 +215,97 @@ void main() {
       await tester.pumpAndSettle();
       return outcome;
     }
+
+    testWidgets(
+      'an account switch withdraws the old picker and closes its bloc',
+      (tester) async {
+        await pumpPickerWith(tester, contact: candidate(alicePubkey, 'Alice'));
+        final bloc = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(bloc.state.contacts.map((p) => p.pubkey), [alicePubkey]);
+        session.update(
+          const NostrSessionReadiness.identityKnown(pubkey: bobPubkey),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(TextField), findsNothing);
+        expect(find.text('Alice'), findsNothing);
+        expect(bloc.isClosed, isTrue);
+        verify(() => rankingSignalsLoader.load(any())).called(1);
+      },
+    );
+
+    for (final replaceProfile in [true, false]) {
+      testWidgets(
+        'switching away and back cannot resurrect stale ${replaceProfile ? "profile" : "follow"} repositories',
+        (tester) async {
+          final alice = candidate(alicePubkey, 'Alice');
+          await pumpPickerWith(tester, contact: alice);
+          final oldBloc = tester
+              .element(find.byType(TextField))
+              .read<NewMessageSearchBloc>();
+          expect(oldBloc.state.contacts.map((profile) => profile.pubkey), [
+            alicePubkey,
+          ]);
+          session.update(
+            const NostrSessionReadiness.identityKnown(pubkey: bobPubkey),
+          );
+          await tester.pumpAndSettle();
+          expect(oldBloc.isClosed, isTrue);
+          await pumpPickerWith(
+            tester,
+            contact: alice,
+            activeProfileRepository: replaceProfile
+                ? _MockProfileRepository()
+                : null,
+            activeFollowRepository: replaceProfile
+                ? null
+                : _MockFollowRepository(),
+          );
+          session.update(
+            const NostrSessionReadiness.identityKnown(
+              pubkey: currentUserPubkey,
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.byType(TextField), findsNothing);
+          expect(find.text('Alice'), findsNothing);
+        },
+      );
+    }
+
+    testWidgets(
+      'a replacement loader recreates the picker bloc for the same account',
+      (tester) async {
+        final replacement = _MockRankingSignalsLoader();
+        when(() => replacement.load(any())).thenAnswer((_) async => {});
+        var activeLoader = rankingSignalsLoader;
+        await pumpPickerWith(
+          tester,
+          contact: candidate(alicePubkey, 'Alice'),
+          rankingOverride: userRankingSignalsLoaderProvider.overrideWith(
+            (ref) => activeLoader,
+          ),
+        );
+        final oldBloc = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(oldBloc.state.contacts.map((p) => p.pubkey), [alicePubkey]);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(NewMessageSheet)),
+        );
+        activeLoader = replacement;
+        container.invalidate(userRankingSignalsLoaderProvider);
+        await tester.pumpAndSettle();
+        final newBloc = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(oldBloc.isClosed, isTrue);
+        expect(newBloc, isNot(same(oldBloc)));
+        expect(newBloc.state.contacts, isEmpty);
+        verify(() => replacement.load(any())).called(1);
+      },
+    );
 
     /// Makes room for a list long enough to fill a group without scrolling.
     void useTallSurface(WidgetTester tester) {
