@@ -1,0 +1,38 @@
+// ABOUTME: Account-scoped dependency wiring for local user-ranking signals.
+// ABOUTME: Rebuilds the stateless loader when its repositories or identity change.
+
+import 'package:content_policy/content_policy.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'user_ranking_providers.g.dart';
+
+/// Local ranking dependencies, scoped to the current account's repositories.
+@riverpod
+UserRankingSignalsLoader userRankingSignalsLoader(Ref ref) {
+  final database = ref.watch(databaseProvider);
+  final session = ref.watch(nostrSessionProvider);
+  final blocklist = ref.watch(contentBlocklistRepositoryProvider);
+  final policy = ref.watch(contentPolicyEngineProvider);
+  return UserRankingSignalsLoader(
+    dmRepository: ref.watch(dmRepositoryProvider),
+    followRepository: ref.watch(followRepositoryProvider),
+    profileRepository: ref.watch(profileRepositoryProvider),
+    myFollowersDao: database.myFollowersDao,
+    profileStatsDao: database.profileStatsDao,
+    nostrEventsDao: database.nostrEventsDao,
+    nip05VerificationsDao: database.nip05VerificationsDao,
+    currentUserPubkey:
+        session.phase == NostrSessionPhase.identityKnown ||
+            session.phase == NostrSessionPhase.nostrReady
+        ? session.pubkey ?? ''
+        : '',
+    isBlocked: (pubkey) =>
+        policy.evaluate(PolicyInput(pubkey: pubkey), blocklist.currentState)
+            is Block,
+  );
+}
