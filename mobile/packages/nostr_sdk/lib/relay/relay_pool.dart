@@ -3367,8 +3367,11 @@ class RelayPool {
   }
 
   bool _shouldReplaceTempRelay(Relay relay) {
+    // A relay created a moment ago still reads `disconnect`: its status only
+    // catches up with the dial on a later microtask. Replacing it then drops
+    // the send or REQ the caller that created it is waiting on (#10189).
     if (relay.relayStatus.connected == ClientConnected.disconnect) {
-      return true;
+      return !relay.isSocketConnecting;
     }
     return relay.relayStatus.connected == ClientConnected.connected &&
         relay is RelayBase &&
