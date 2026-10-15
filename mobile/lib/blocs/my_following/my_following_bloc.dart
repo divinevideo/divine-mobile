@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/follow_list_ranking.dart';
 import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -292,62 +293,33 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
   }) async {
     while (!isClosed && isCurrent()) {
       final eligibilityRevision = state.eligibilityRevision;
-      Map<String, UserRankingSignals> signals;
-      try {
-        signals = await _rankingSignalsLoader.load(pubkeys);
-      } catch (error, stackTrace) {
-        Log.error(
-          'Failed to load follow ranking: $error',
-          name: 'MyFollowingBloc',
-          category: LogCategory.system,
-        );
-        addError(error, stackTrace);
-        signals = {
-          for (final pubkey in pubkeys.where(_rankingSignalsLoader.isEligible))
-            pubkey: UserRankingSignals(pubkey: pubkey),
-        };
-      }
+      final signals = await loadFollowListRankingSignals(
+        pubkeys: pubkeys,
+        loader: _rankingSignalsLoader,
+        logName: 'MyFollowingBloc',
+        onError: addError,
+      );
       if (isClosed || !isCurrent()) return state;
       var names = const <String, String>{};
       if (!state.isSmartOrderReady) {
-        try {
-          names = await _rankingSignalsLoader.loadCachedDisplayNames(
-            signals.keys,
-          );
-        } catch (error, stackTrace) {
-          Log.error(
-            'Failed to load cached follow names: $error',
-            name: 'MyFollowingBloc',
-            category: LogCategory.system,
-          );
-          addError(error, stackTrace);
-        }
+        names = await loadFollowListRankingNames(
+          pubkeys: signals.keys,
+          loader: _rankingSignalsLoader,
+          logName: 'MyFollowingBloc',
+          onError: addError,
+        );
       }
       if (isClosed || !isCurrent()) return state;
       if (eligibilityRevision != state.eligibilityRevision) continue;
-      // Successful loader output is authoritative: an omitted row is ineligible.
-      final eligible = pubkeys
-          .where(signals.containsKey)
-          .where(_rankingSignalsLoader.isEligible)
-          .toSet();
-      final previousOrder = state.smartOrder.toSet();
-      final smartOrder = state.isSmartOrderReady
-          ? <String>[
-              ...state.smartOrder.where(eligible.contains),
-              ...pubkeys
-                  .where(
-                    (key) =>
-                        eligible.contains(key) && !previousOrder.contains(key),
-                  )
-                  .toSet(),
-            ]
-          : rankUsers(
-              signals.values.where(
-                (signal) => eligible.contains(signal.pubkey),
-              ),
-              now: DateTime.now(),
-              nameOf: (pubkey) => names[pubkey] ?? pubkey,
-            );
+      final (:eligible, :smartOrder) = rankFollowListSnapshot(
+        pubkeys: pubkeys,
+        signals: signals,
+        names: names,
+        isEligible: _rankingSignalsLoader.isEligible,
+        isSmartOrderReady: state.isSmartOrderReady,
+        previousSmartOrder: state.smartOrder,
+        now: DateTime.now(),
+      );
       final ordered =
           (state.sortOrder.followSortOrder?.fromFollowOrder(pubkeys) ??
                   smartOrder)

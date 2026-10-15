@@ -3536,7 +3536,7 @@
     "followingSortSemanticLabel": "Trier les abonnements",
     "followSortTitle": "Trier par",
     "followSortSmart": "Intelligent",
-  "followSortNewest": "Plus récents d'abord",
+    "followSortNewest": "Plus récents d'abord",
     "followSortOldest": "Plus anciens d'abord",
     "newMessageTitle": "Nouveau message",
     "newMessageFindPeople": "Trouver des gens",

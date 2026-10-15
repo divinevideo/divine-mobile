@@ -3082,7 +3082,7 @@
     "followingSortSemanticLabel": "팔로잉 정렬",
     "followSortTitle": "정렬 기준",
     "followSortSmart": "스마트",
-  "followSortNewest": "최신순",
+    "followSortNewest": "최신순",
     "followSortOldest": "오래된순",
     "newMessageTitle": "새 메시지",
     "newMessageFindPeople": "사람 찾기",
