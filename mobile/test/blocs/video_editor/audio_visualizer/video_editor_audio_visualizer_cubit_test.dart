@@ -75,7 +75,7 @@ void main() {
         ..setActive(isActive: true);
       final state = await settled(cubit);
 
-      expect(state.status, VideoEditorAudioLevelStatus.ready);
+      expect(state.status, equals(VideoEditorAudioLevelStatus.ready));
       // Two seconds of video, 60 rows a second.
       expect(state.energies, hasLength(120 * audioBandCount));
       expect(state.energies!.any((energy) => energy > 0), isTrue);
@@ -91,7 +91,7 @@ void main() {
         ..setPreviewing(isPreviewing: true);
       final state = await settled(cubit);
 
-      expect(state.status, VideoEditorAudioLevelStatus.ready);
+      expect(state.status, equals(VideoEditorAudioLevelStatus.ready));
       expect(state.energies!.any((energy) => energy > 0), isTrue);
       expect(reads, hasLength(1));
       await cubit.close();
@@ -127,6 +127,24 @@ void main() {
       expect(emitted, isEmpty);
       expect(identical(cubit.state.timelineMap, map), isTrue);
       await subscription.cancel();
+      await cubit.close();
+    });
+
+    test('reads the sound of a clip detached onto a layer', () async {
+      final reads = <AudioExtractConfigs>[];
+      final cubit = buildCubit(reads: reads)
+        ..syncSources(
+          sounds: const [],
+          clips: [mutedClip],
+          detachedClips: [
+            DetachedClipSound(clip: mutedClip.copyWith(volume: 1)),
+          ],
+        )
+        ..setActive(isActive: true);
+      final state = await settled(cubit);
+
+      expect(state.status, equals(VideoEditorAudioLevelStatus.ready));
+      expect(reads.single.video, equals(mutedClip.video));
       await cubit.close();
     });
 

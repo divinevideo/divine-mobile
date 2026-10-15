@@ -47,6 +47,7 @@ import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/preview_composition.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
+import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/editor_text_layer_bounds.dart';
@@ -1039,11 +1040,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _isSeeking = true;
     final ownerEpoch = _seekEpoch;
     try {
-      final loaded = await _setClipsSafely(
-        _videoPlayer,
-        [..._composition.buildPlayerClips(clips)],
-        startPosition: _composition.timelineToPlayer(timelineStartPosition),
-      );
+      final loaded = await _setClipsSafely(_videoPlayer, [
+        ..._composition.buildPlayerClips(clips),
+      ], startPosition: _composition.timelineToPlayer(timelineStartPosition));
       if (!loaded) return;
       // Only pin the restored position if no newer swap took over during the
       // await — matching the epoch-guarded [_isSeeking] release below. Without
@@ -1546,12 +1545,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _pendingSeekTarget = currentPosition;
     final generation = _beginClipLoad();
     _runDetached(
-      _setClipsForGeneration(
-        generation,
-        _videoPlayer,
-        [..._composition.buildPlayerClips(clips)],
-        startPosition: _composition.timelineToPlayer(currentPosition),
-      ),
+      _setClipsForGeneration(generation, _videoPlayer, [
+        ..._composition.buildPlayerClips(clips),
+      ], startPosition: _composition.timelineToPlayer(currentPosition)),
       'reload changed clip paths',
     );
     _composition.ensureSeamsRendered(clips);
@@ -2117,10 +2113,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       )
       ..syncApplied(editor.stateManager.videoEffectEntries);
 
+    // A detached clip's file is stored by name, so its sound is found through
+    // the documents path, which is known from the first sync on.
+    final documentsPath = cachedDocumentsPath ?? await _documentsPath;
+    if (!mounted) return;
+    final detachedClips = DetachedClipSound.inLayers(
+      editor.activeLayers,
+      documentsPath: documentsPath,
+    );
     context.read<VideoEditorAudioVisualizerCubit>()
       ..syncSources(
         sounds: editor.stateManager.audioTracks,
         clips: context.read<ClipEditorBloc>().state.clips,
+        detachedClips: detachedClips,
       )
       ..setActive(
         isActive: editor.activeLayers.any(
@@ -2207,6 +2212,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       context.read<VideoEditorAudioVisualizerCubit>().syncSources(
         sounds: editor.stateManager.audioTracks,
         clips: clips,
+        detachedClips: detachedClips,
       );
       context.read<ClipEditorBloc>().add(ClipEditorInitialized(clips));
     }
@@ -2496,12 +2502,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         _pendingSeekTarget = currentPosition;
         final generation = _beginClipLoad();
         _runDetached(
-          _setClipsForGeneration(
-            generation,
-            _videoPlayer,
-            [..._composition.buildPlayerClips(clips)],
-            startPosition: _composition.timelineToPlayer(currentPosition),
-          ),
+          _setClipsForGeneration(generation, _videoPlayer, [
+            ..._composition.buildPlayerClips(clips),
+          ], startPosition: _composition.timelineToPlayer(currentPosition)),
           'reload trimmed clips',
         );
         _composition.ensureSeamsRendered(clips);
@@ -2530,12 +2533,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         _pendingSeekTarget = currentPosition;
         final generation = _beginClipLoad();
         _runDetached(
-          _setClipsForGeneration(
-            generation,
-            _videoPlayer,
-            [..._composition.buildPlayerClips(clips)],
-            startPosition: _composition.timelineToPlayer(currentPosition),
-          ),
+          _setClipsForGeneration(generation, _videoPlayer, [
+            ..._composition.buildPlayerClips(clips),
+          ], startPosition: _composition.timelineToPlayer(currentPosition)),
           'reload speed-adjusted clips',
         );
         _composition.ensureSeamsRendered(clips);

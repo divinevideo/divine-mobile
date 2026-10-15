@@ -247,4 +247,19 @@ void main() {
       expect(levels.every((level) => level == 0), isTrue);
     });
   });
+
+  group('audioBandFrequency', () {
+    test('names the middle of the band bandEnergies puts that tone in', () {
+      // The lowest bands are narrower than an FFT bin, so a tone there
+      // spreads into a neighbour.
+      for (var band = 6; band < audioBandCount; band++) {
+        final energies = bandEnergies(
+          _tone(audioBandFrequency(band)),
+          sampleRate: _sampleRate,
+        );
+
+        expect(_loudestBand(energies, 30), equals(band), reason: 'band $band');
+      }
+    });
+  });
 }

@@ -29,10 +29,10 @@ import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
+import 'package:openvine/services/video_editor/render_audio_visualizer_energies.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
-import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -617,13 +617,15 @@ class VideoEditorRenderService {
       final audioFetcher = RenderAudioFetcher();
       // Read once for both passes: an audio visualizer can sit below or above
       // a detached clip.
-      final audioEnergies = await _audioEnergiesOnOutput(
+      final audioEnergies = await audioVisualizerEnergiesForRender(
         capturedLayers: parameters?.capturedLayers ?? const [],
-        parameters: parameters,
+        sounds: parameters?.audioTracksFromMeta ?? const [],
         clips: clips,
+        detached: detachedPass.partitioned.detached,
         maxOutputDuration: maxOutputDuration,
         audioFetcher: audioFetcher,
         tempFilePaths: tempFilePaths,
+        logName: _logName,
       );
 
       await _concatenateSegments(
@@ -1334,42 +1336,6 @@ class VideoEditorRenderService {
       );
       return const [];
     }
-  }
-
-  /// [audioEnergiesOnExport] for the audio visualizers, or `null` when
-  /// [capturedLayers] holds none. Downloads go through [audioFetcher], which
-  /// the mux reuses, into [tempFilePaths].
-  static Future<Float32List?> _audioEnergiesOnOutput({
-    required List<ExportedLayer> capturedLayers,
-    required CompleteParameters? parameters,
-    required List<DivineVideoClip> clips,
-    required Duration? maxOutputDuration,
-    required RenderAudioFetcher audioFetcher,
-    required List<String> tempFilePaths,
-  }) async {
-    if (!capturedLayers.any(
-      (item) => AudioVisualizerLayerData.isAudioVisualizerLayer(item.layer),
-    )) {
-      return null;
-    }
-    final outputDuration = TransitionTimelineMap.fromClips(
-      clips,
-    ).outputDuration;
-    return audioEnergiesOnExport(
-      sounds: parameters?.audioTracksFromMeta ?? const [],
-      clips: clips,
-      videoEnd: maxOutputDuration != null && maxOutputDuration < outputDuration
-          ? maxOutputDuration
-          : outputDuration,
-      localPathFor: (url) async {
-        final path = await audioFetcher.localPathFor(
-          EditorAudio.network(url),
-          logName: _logName,
-        );
-        if (!tempFilePaths.contains(path)) tempFilePaths.add(path);
-        return path;
-      },
-    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────

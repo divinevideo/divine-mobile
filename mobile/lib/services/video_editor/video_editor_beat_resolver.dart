@@ -72,7 +72,7 @@ List<BeatSourcePart> beatSourceFor({
           .toList()
         ..sort((a, b) => a.at.compareTo(b.at));
   if (music.isNotEmpty) return [music.first];
-  return clipSoundSourceParts(clips);
+  return [for (final sound in clipSoundParts(clips)) sound.part];
 }
 
 /// The stretch of [sound] that plays on a video ending at [videoEnd], or
@@ -110,87 +110,104 @@ BeatSourcePart? soundSourcePartFor(
   );
 }
 
+/// A stretch of a clip's own sound on the exported video: the [clip] it comes
+/// from, where it plays ([part]), and the overlap transitions it is blended
+/// in and out through, each `null` for none.
+typedef ClipSoundPart = ({
+  DivineVideoClip clip,
+  BeatSourcePart part,
+  ClipTransition? blendIn,
+  ClipTransition? blendOut,
+});
+
 /// The stretches of the clips' own sound that play on the exported video,
 /// leaving out muted clips and freeze frames.
-List<BeatSourcePart> clipSoundSourceParts(List<DivineVideoClip> clips) => [
-  for (final (:part, clip: _) in clipSoundSourcePartsWithClips(clips)) part,
-];
-
-/// [clipSoundSourceParts], each with the clip it comes from.
-List<({DivineVideoClip clip, BeatSourcePart part})>
-clipSoundSourcePartsWithClips(List<DivineVideoClip> clips) {
-  final parts = <({DivineVideoClip clip, BeatSourcePart part})>[];
+///
+/// Across an overlap transition the export blends the two clips: the one
+/// going out falls from its volume to silence along the transition's curve,
+/// over the part's last [ClipTransition.duration], while the one coming in
+/// rises over its first. A muted clip leaves the other to fade against
+/// silence, as pro_video_editor does since 2.32.0. The loop-restart blend at
+/// the end of the video does the same with the head of the first clip, moved
+/// there.
+List<ClipSoundPart> clipSoundParts(List<DivineVideoClip> clips) {
+  if (clips.isEmpty) return const [];
   final transitions = clampTransitions(clips);
-  Duration overlapAfter(DivineVideoClip clip) {
+  ClipTransition? overlapAfter(DivineVideoClip clip) {
     final transition = transitions[clip.id];
-    if (transition == null ||
-        transition.type == ClipTransitionType.fadeToBlack ||
-        transition.type == ClipTransitionType.fadeToWhite) {
-      return Duration.zero;
-    }
-    return transition.duration;
+    return transition == null ||
+            transition.type == ClipTransitionType.fadeToBlack ||
+            transition.type == ClipTransitionType.fadeToWhite
+        ? null
+        : transition;
   }
 
-  final wrap = clips.isEmpty ? Duration.zero : overlapAfter(clips.last);
-  // The export gives the loop-restart blend sound only when the clips on both
-  // sides of it have some: next to a muted last clip, the first head moved
-  // into the blend plays in silence.
-  final headSounds = clips.isNotEmpty && clips.last.volume > 0;
+  final wrap = overlapAfter(clips.last);
+  final wrapLength = wrap?.duration ?? Duration.zero;
   final outputDuration = TransitionTimelineMap.fromClips(clips).outputDuration;
-  var clipStart = Duration.zero;
+  final parts = <ClipSoundPart>[];
+  // Where the clip starts on the video, before its head moves into the
+  // loop-restart blend.
+  var clipStart = -wrapLength;
   for (var i = 0; i < clips.length; i++) {
     final clip = clips[i];
     final video = clip.video;
     if (video != null && clip.volume > 0 && !clip.isFreezeFrame) {
       final speed = clip.playbackSpeed ?? 1;
-      final headPlayback = i == 0
-          ? wrap
-          : clips[i - 1].volume <= 0
-          ? overlapAfter(clips[i - 1])
-          : Duration.zero;
-      final head = Duration(
-        microseconds: (headPlayback.inMicroseconds * speed).round(),
-      );
-      final tailPlayback = i == clips.length - 1
-          ? (clips.first.volume <= 0 ? wrap : Duration.zero)
-          : clips[i + 1].volume <= 0
-          ? overlapAfter(clip)
-          : Duration.zero;
-      final tail = Duration(
-        microseconds: (tailPlayback.inMicroseconds * speed).round(),
-      );
-      if (i == 0 && head > Duration.zero && headSounds) {
-        // The first head is the incoming side of the final wrap blend.
-        parts.add((
-          clip: clip,
-          part: BeatSourcePart(
-            media: video,
-            fileLength: clip.duration,
-            from: clip.trimStart,
-            to: clip.trimStart + head,
-            at: outputDuration - wrap,
-            speed: speed,
-          ),
-        ));
-      }
-      parts.add((
+      ClipSoundPart part({
+        required Duration from,
+        required Duration to,
+        required Duration at,
+        ClipTransition? blendIn,
+        ClipTransition? blendOut,
+      }) => (
         clip: clip,
         part: BeatSourcePart(
           media: video,
           fileLength: clip.duration,
-          from: clip.trimStart + head,
-          // Like the loop seam, an internal overlap has no clip audio if
-          // either side is muted. Do not trigger on its silent source range.
-          to: clip.trimStart + clip.trimmedDuration - tail,
-          at: clipStart - wrap + headPlayback,
+          from: from,
+          to: to,
+          at: at,
           speed: speed,
           // Reverse is baked into clip.video; its samples are already in
           // playback order, including the rewritten trims.
         ),
-      ));
+        blendIn: blendIn,
+        blendOut: blendOut,
+      );
+
+      var from = clip.trimStart;
+      var at = clipStart;
+      if (i == 0 && wrap != null) {
+        // The first head is the incoming side of the loop-restart blend.
+        final head = Duration(
+          microseconds: (wrapLength.inMicroseconds * speed).round(),
+        );
+        parts.add(
+          part(
+            from: from,
+            to: from + head,
+            at: outputDuration - wrapLength,
+            blendIn: wrap,
+          ),
+        );
+        from += head;
+        at += wrapLength;
+      }
+      parts.add(
+        part(
+          from: from,
+          to: clip.trimStart + clip.trimmedDuration,
+          at: at,
+          blendIn: i == 0 ? null : overlapAfter(clips[i - 1]),
+          blendOut: i == clips.length - 1 ? wrap : overlapAfter(clip),
+        ),
+      );
     }
     clipStart += clip.playbackDuration;
-    if (i < clips.length - 1) clipStart -= overlapAfter(clip);
+    if (i < clips.length - 1) {
+      clipStart -= overlapAfter(clip)?.duration ?? Duration.zero;
+    }
   }
   return parts;
 }

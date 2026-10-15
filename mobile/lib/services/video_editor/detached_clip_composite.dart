@@ -163,29 +163,14 @@ VideoLayer buildDetachedClipVideoLayer({
   );
   final size = Size(box.width * mapping.scale, box.height * mapping.scale);
 
-  final start = timelineMap.editorToOutputOrNull(layer.startTime);
-  final end = timelineMap.editorToOutputOrNull(layer.endTime);
-
-  // A speed-flattened file already *is* the trimmed, sped-up section, so it
-  // plays from its own zero. The clip's own file still needs its trim window.
-  //
-  // A split tail starts partway in, and its offset is playback time — the same
-  // units the flattened file is already in, but source time has to be derived
-  // for the clip's own file.
-  final offsetIntoSource = speedFlattened
-      ? item.sourceOffset
-      : _sourceSpanFor(clip, item.sourceOffset, speedFlattened: false);
-  final trimStart =
-      (speedFlattened ? Duration.zero : clip.trimStart) + offsetIntoSource;
-  final whole = speedFlattened ? clip.playbackDuration : clip.trimmedDuration;
-  final available = whole - offsetIntoSource;
-
-  // A layer window shorter than the clip cuts the clip; a longer one leaves it
-  // to end on its own last frame rather than freezing.
-  final windowed = start != null && end != null && end > start
-      ? _sourceSpanFor(clip, end - start, speedFlattened: speedFlattened)
-      : available;
-  final span = windowed < available ? windowed : available;
+  final (:start, :trimStart, :span) = detachedClipWindow(
+    clip: clip,
+    sourceOffset: item.sourceOffset,
+    layerStart: layer.startTime,
+    layerEnd: layer.endTime,
+    timelineMap: timelineMap,
+    speedFlattened: speedFlattened,
+  );
 
   return VideoLayer(
     chromaKey: item.chromaKey?.key,
@@ -223,6 +208,53 @@ VideoLayer buildDetachedClipVideoLayer({
         ),
       ),
     ],
+  );
+}
+
+/// Where a detached [clip] plays on the exported video, and what of its
+/// media: from [start] (`null` for the start of the video) it plays [span] of
+/// the media from [trimStart].
+///
+/// The layer plays from [layerStart] to [layerEnd] on the editor's timeline,
+/// mapped onto the video through [timelineMap], from [sourceOffset] of
+/// playback time into the clip. [speedFlattened] says whether the media is a
+/// re-render that already holds the trimmed, sped-up clip, see
+/// [buildDetachedClipVideoLayer]; otherwise it is the clip's own file, and
+/// the span is in its source time.
+({Duration? start, Duration trimStart, Duration span}) detachedClipWindow({
+  required DivineVideoClip clip,
+  required Duration sourceOffset,
+  required Duration? layerStart,
+  required Duration? layerEnd,
+  required TransitionTimelineMap timelineMap,
+  required bool speedFlattened,
+}) {
+  final start = timelineMap.editorToOutputOrNull(layerStart);
+  final end = timelineMap.editorToOutputOrNull(layerEnd);
+
+  // A speed-flattened file already *is* the trimmed, sped-up section, so it
+  // plays from its own zero. The clip's own file still needs its trim window.
+  //
+  // A split tail starts partway in, and its offset is playback time — the same
+  // units the flattened file is already in, but source time has to be derived
+  // for the clip's own file.
+  final offsetIntoSource = speedFlattened
+      ? sourceOffset
+      : _sourceSpanFor(clip, sourceOffset, speedFlattened: false);
+  final trimStart =
+      (speedFlattened ? Duration.zero : clip.trimStart) + offsetIntoSource;
+  final whole = speedFlattened ? clip.playbackDuration : clip.trimmedDuration;
+  final available = whole - offsetIntoSource;
+
+  // A layer window shorter than the clip cuts the clip; a longer one leaves it
+  // to end on its own last frame rather than freezing.
+  final windowed = start != null && end != null && end > start
+      ? _sourceSpanFor(clip, end - start, speedFlattened: speedFlattened)
+      : available;
+  return (
+    start: start,
+    trimStart: trimStart,
+    span: windowed < available ? windowed : available,
   );
 }
 

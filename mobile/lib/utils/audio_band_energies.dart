@@ -178,6 +178,17 @@ Float32List audioVisualizerLevels(
   return levels;
 }
 
+/// The middle of [band] of the [audioBandCount] bands [bandEnergies]
+/// measures, in hertz: halfway in pitch between its edges.
+double audioBandFrequency(int band) => _bandEdge(band + 0.5);
+
+/// The frequency [position] bands up from [_lowestFrequency], in hertz: the
+/// bands are spaced evenly in pitch, so band `b` runs from `_bandEdge(b)` to
+/// `_bandEdge(b + 1)`.
+double _bandEdge(double position) =>
+    _lowestFrequency *
+    math.pow(_highestFrequency / _lowestFrequency, position / audioBandCount);
+
 /// How many octaves the bands span.
 final double _octaves =
     math.log(_highestFrequency / _lowestFrequency) / math.ln2;
@@ -200,16 +211,12 @@ int _windowSize(int sampleRate) {
 /// all of it or none.
 List<List<(int, double)>> _bandBins(int size, int sampleRate) {
   final binWidth = sampleRate / size;
-  final ratio = math.pow(
-    _highestFrequency / _lowestFrequency,
-    1 / audioBandCount,
-  );
   final lastBin = size ~/ 2;
   return [
     for (var band = 0; band < audioBandCount; band++)
       _binsBetween(
-        _lowestFrequency * math.pow(ratio, band),
-        _lowestFrequency * math.pow(ratio, band + 1),
+        _bandEdge(band.toDouble()),
+        _bandEdge(band + 1.0),
         binWidth,
         lastBin,
       ),
