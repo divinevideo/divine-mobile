@@ -442,15 +442,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
-    // Every fresh page of a cursor-only feed clears `hasMore` when it brings
-    // no cursor, so arriving here without one means the cached window served
-    // at start or on a source switch is on screen. Pause until the fresh
-    // first page lands with a cursor.
-    if (_isCursorOnly(state.source) && state.paginationCursor == null) {
-      emit(state.copyWith(hasMore: false));
-      return;
-    }
-
     final source = state.source;
     final paginationGeneration = _paginationGeneration;
     final feedLoad = _feedTracker?.startFeedLoad(
@@ -462,16 +453,21 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     try {
       final usesCursor =
           _usesCursorPagination(source) && state.paginationCursor != null;
+      // Every page of a cursor-only feed clears `hasMore` when it brings no
+      // cursor, so one without a cursor here is showing the cached window
+      // served at start or on a source switch. It reads its first page again,
+      // and the duplicates of what is on screen drop out below. Ending the
+      // feed instead would strand it whenever that fresh first load fails.
+      final pagesByUntil = !usesCursor && !_isCursorOnly(source);
       final result = await _fetchVideosForSource(
         source,
-        // Only a cursor-less page reads `until`. It is the oldest loaded
-        // video rather than `state.videos.last`, because the list is not
-        // always in `createdAt` order.
-        until: usesCursor
-            ? null
-            : state.videos
+        // `until` is the oldest loaded video rather than `state.videos.last`,
+        // because the list is not always in `createdAt` order.
+        until: pagesByUntil
+            ? state.videos
                   .map((v) => v.createdAt)
-                  .reduce((a, b) => a < b ? a : b),
+                  .reduce((a, b) => a < b ? a : b)
+            : null,
         paginationCursor: usesCursor ? state.paginationCursor : null,
       );
       if (!_canEmitForSource(source, emit) ||
@@ -495,11 +491,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         }
       }
 
-      // Cursor-backed pages (For You, Following, Classics, and New Videos
-      // when the repository supplied a cursor) arrive in server order;
-      // re-sorting by createdAt would shuffle new videos around the current
-      // play index and resurface already-seen ones.
-      if (!usesCursor) {
+      // Pages not read by `until` arrive in server order; re-sorting by
+      // createdAt would shuffle new videos around the current play index and
+      // resurface already-seen ones.
+      if (pagesByUntil) {
         updatedVideos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
       final addedUniqueVideos = updatedVideos.length > state.videos.length;

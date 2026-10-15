@@ -198,8 +198,8 @@ void main() {
       );
 
       test(
-        'does not page Following from the cached window and resumes on the '
-        'fresh cursor',
+        'reads the first Following page from the cached window and resumes '
+        'on the fresh cursor',
         () async {
           final cached = _video(''.padLeft(64, 'a'));
           final fresh = _video(''.padLeft(64, 'b'));
@@ -235,11 +235,11 @@ void main() {
           await cachedReady;
 
           // The cached window carries no cursor, and Following has no `until`
-          // fallback, so any request here would re-fetch the first page.
+          // fallback, so the load-more reads the first page again.
           bloc.add(const VideoFeedLoadMoreRequested());
           await pumpEventQueue();
-          expect(requestedCursors, equals([null]));
-          expect(bloc.state.hasMore, isFalse);
+          expect(requestedCursors, equals([null, null]));
+          expect(bloc.state.hasMore, isTrue);
 
           final freshReady = bloc.stream.firstWhere(
             (s) => s.paginationCursor == 'p:fresh',
@@ -259,7 +259,71 @@ void main() {
           );
           bloc.add(const VideoFeedLoadMoreRequested());
           await nextReady;
-          expect(requestedCursors, equals([null, 'p:fresh']));
+          expect(requestedCursors, equals([null, null, 'p:fresh']));
+        },
+      );
+
+      test(
+        'keeps paging Following when the fresh first load fails on the '
+        'cached window',
+        () async {
+          final cached = _video(''.padLeft(64, 'a'));
+          final fresh = _video(''.padLeft(64, 'b'));
+          final next = _video(''.padLeft(64, 'c'));
+          when(() => followRepository.followingPubkeys).thenReturn(['author']);
+          when(
+            () => followRepository.followingStream,
+          ).thenAnswer((_) => BehaviorSubject.seeded(['author']));
+          when(
+            () => homeFeedCache.readVideos(pubkey: null, mode: 'following'),
+          ).thenAnswer((_) async => [cached]);
+          final requestedCursors = <String?>[];
+          when(
+            () => videosRepository.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((call) {
+            final cursor = call.namedArguments[#cursor] as String?;
+            requestedCursors.add(cursor);
+            if (requestedCursors.length == 1) {
+              return Future.error(Exception('offline'));
+            }
+            if (cursor == null) {
+              return Future.value(
+                HomeFeedResult(
+                  videos: [cached, fresh],
+                  hasMore: true,
+                  paginationCursor: 'p:fresh',
+                ),
+              );
+            }
+            return Future.value(HomeFeedResult(videos: [next], hasMore: false));
+          });
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          // The failed fresh load leaves the cached window on screen.
+          expect(bloc.state.videos.map((v) => v.id), equals([cached.id]));
+          expect(bloc.state.paginationCursor, isNull);
+
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+          expect(
+            bloc.state.videos.map((v) => v.id),
+            equals([cached.id, fresh.id]),
+          );
+          expect(bloc.state.paginationCursor, equals('p:fresh'));
+          expect(bloc.state.hasMore, isTrue);
+
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+          expect(requestedCursors, equals([null, null, 'p:fresh']));
+          expect(bloc.state.videos.last.id, equals(next.id));
         },
       );
 

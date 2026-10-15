@@ -2432,18 +2432,9 @@ void main() {
       );
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
-        'stops forYou pagination when the current page has no cursor',
-        build: createBloc,
-        seed: () => VideoFeedBlocState(
-          status: VideoFeedStatus.success,
-          videos: createTestVideos(pageSize, startTimestamp: 2000),
-        ),
-        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
-        expect: () => [
-          isA<VideoFeedBlocState>().having((s) => s.hasMore, 'hasMore', false),
-        ],
-        verify: (_) {
-          verifyNever(
+        'reads the first forYou page when the cached window has no cursor',
+        setUp: () {
+          when(
             () => mockVideosRepository.getRecommendedVideos(
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
@@ -2452,7 +2443,40 @@ void main() {
               skipCache: any(named: 'skipCache'),
               revalidate: any(named: 'revalidate'),
             ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('rec-first', createdAt: 5000)],
+              paginationCursor: 'rec-page-2',
+              hasMore: true,
+            ),
           );
+        },
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: createTestVideos(pageSize, startTimestamp: 2000),
+        ),
+        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (s) => s.isLoadingMore,
+            'isLoadingMore',
+            true,
+          ),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', false)
+              .having((s) => s.videos.last.id, 'appended video', 'rec-first')
+              .having((s) => s.paginationCursor, 'cursor', 'rec-page-2')
+              .having((s) => s.hasMore, 'hasMore', isTrue),
+        ],
+        verify: (_) {
+          verify(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).called(1);
         },
       );
 
