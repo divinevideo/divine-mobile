@@ -5,6 +5,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show Offset, Size;
 
+import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -48,6 +49,29 @@ bool canMaskLayer(Layer? layer) =>
     layer != null &&
     !isCensorLayer(layer) &&
     !AudioVisualizerLayerData.isAudioVisualizerLayer(layer);
+
+/// Moves a timeline mask from the cropped export frame into the full box of
+/// a detached clip. Keeping the same normalized coordinates would stretch a
+/// circle when the source and project have different aspect ratios.
+LayerMask? maskForDetachedClip(
+  LayerMask? mask, {
+  required Size boxSize,
+  required double targetAspectRatio,
+}) {
+  if (mask == null || boxSize.isEmpty) return mask;
+  final frame = ExportLayerMapping.keptRect(boxSize, targetAspectRatio);
+  return mask.copyWith(
+    center: Offset(
+      (frame.left + mask.center.dx * frame.width) / boxSize.width,
+      (frame.top + mask.center.dy * frame.height) / boxSize.height,
+    ),
+    size: Size(
+      mask.size.width * frame.width / boxSize.width,
+      mask.size.height * frame.height / boxSize.height,
+    ),
+    feather: mask.feather * frame.shortestSide / boxSize.shortestSide,
+  );
+}
 
 /// A mask of [shape] for an item whose box is [boxSize].
 ///

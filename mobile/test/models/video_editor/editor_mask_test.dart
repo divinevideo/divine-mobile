@@ -7,6 +7,41 @@ import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 void main() {
+  group('maskForDetachedClip', () {
+    test('keeps an off-centre turned mask in the cropped part of a tall '
+        'source', () {
+      const mask = LayerMask(
+        shape: LayerMaskShape.rectangle,
+        center: Offset(0.6, 0.4),
+        rotation: 0.2,
+        cornerRadius: 0.3,
+        invert: true,
+        feather: 0.2,
+      );
+
+      final detached = maskForDetachedClip(
+        mask,
+        boxSize: const Size(1, 2),
+        targetAspectRatio: 1,
+      )!;
+
+      expect(detached.center, const Offset(0.6, 0.45));
+      expect(detached.size, const Size(0.5, 0.25));
+      expect(detached.feather, mask.feather);
+      expect(detached.rotation, mask.rotation);
+      expect(detached.cornerRadius, mask.cornerRadius);
+      expect(detached.invert, mask.invert);
+      expect(
+        maskForDetachedClip(
+          null,
+          boxSize: const Size(1, 2),
+          targetAspectRatio: 1,
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('canMaskLayer', () {
     test('lets text, stickers and drawings take a mask', () {
       expect(canMaskLayer(TextLayer(text: 'Hi')), isTrue);

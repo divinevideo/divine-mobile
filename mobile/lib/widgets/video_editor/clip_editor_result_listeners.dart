@@ -14,6 +14,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_window.dart';
+import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
@@ -399,7 +400,11 @@ class _ClipDetachResultListener extends StatelessWidget {
       widget: DetachedClipLayerView(meta: meta),
       meta: meta,
       exportConfigs: WidgetLayerExportConfigs(id: layerId, meta: meta),
-      mask: detachedClip.mask,
+      mask: maskForDetachedClip(
+        detachedClip.mask,
+        boxSize: Size(detachedClip.originalAspectRatio, 1),
+        targetAspectRatio: detachedClip.targetAspectRatio.value,
+      ),
     );
 
     overlayBloc.add(TimelineMarkersRebased(rebasedMarkers));
