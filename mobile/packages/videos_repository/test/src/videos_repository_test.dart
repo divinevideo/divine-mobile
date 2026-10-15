@@ -4212,6 +4212,35 @@ void main() {
         );
 
         test(
+          'ends without a cursor when a later relay read comes back empty',
+          () async {
+            // A finished empty read is the end. It is also what a relay that
+            // ignores `until` produces: NostrClient drops every row at or
+            // above the bound before the walk sees it.
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+              invocation,
+            ) async {
+              final filters =
+                  invocation.positionalArguments.first as List<Filter>;
+              return filters.first.until == null ? firstBatch() : [];
+            });
+
+            final result = await repository.getHomeFeedVideos(
+              authors: ['followed-user'],
+              limit: 2,
+            );
+
+            verify(() => mockNostrClient.queryEvents(any())).called(2);
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['first-video']),
+            );
+            expect(result.paginationCursor, isNull);
+            expect(result.hasMore, isFalse);
+          },
+        );
+
+        test(
           'stops when a relay ignores until and repeats the same batch',
           () async {
             // Without the stall guard the walk would re-request the same
