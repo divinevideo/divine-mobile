@@ -49,8 +49,8 @@ jobs:
 
       - name: Build Flutter web preview
         env:
-          # Show Rooms immediately in this POC's review build (#10093).
-          FF_CONCORD_CHAT: ${{ github.event.pull_request.number == 10093 }}
+          # Preview builds expose the public test rooms directly in Messages.
+          FF_CONCORD_CHAT: "true"
         run: |
           flutter build web \
             --release \

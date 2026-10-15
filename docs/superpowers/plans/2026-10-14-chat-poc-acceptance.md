@@ -1,13 +1,13 @@
 # Concord chat test and pilot acceptance
 
-Status checked 2026-10-14. This is an acceptance checklist, not a deployment
+Status checked 2026-10-15. This is an acceptance checklist, not a deployment
 approval or evidence of a working community. Discord remains canonical.
 
 ## Review and implementation state
 
 Backend PR: https://github.com/divinevideo/divine-mobile/pull/10093
-Backend inspected at `60908610be5eba45c67b273a08e871b15bb3d1e1`.
-Messages UI inspected at `f15caa847faf5d518d70c1e76e86c6a90b9f92fa`.
+Review repair starts from published head
+`b9516b117ed3680334b5adeb69e0d66ec5a83076` and includes current main.
 The UI and backend are combined in PR #10093. After the backend session
 failed, Rabble authorized the UI session to finish integration and validation.
 No stacked PR is required.
@@ -55,11 +55,11 @@ Remaining boundaries:
 
 ### Finding the rooms in a review build
 
-PR #10093's web preview builds with `FF_CONCORD_CHAT=true`, so signed-in
+Web PR previews build with `FF_CONCORD_CHAT=true`, so signed-in
 reviewers can open **Messages → Rooms** immediately and see `#general` and
 `#introductions`. No developer mode or settings change is needed. The override
-is scoped to this PR number in `mobile_pr_preview_build.yml`; other previews
-and production builds retain the off-by-default flag. Protected-account
+is defined for preview builds in `mobile_pr_preview_build.yml`, without a
+PR-number exception. Production builds retain the off-by-default flag. Protected-account
 restrictions still apply.
 
 For local reviewer builds, pass `--dart-define=FF_CONCORD_CHAT=true`. The
@@ -85,6 +85,30 @@ member, voice, or moderation controls.
 Verify small and wide screens, light/dark themes, large text, route back to the
 channel list, account restrictions, sender identity, and failed-send draft
 preservation. The shared composer must retain its existing DM behavior.
+
+## Review repair and TestFlight boundary
+
+The review repair enforces NIP-44 encoded and decoded payload bounds, preserves
+Concord outbox rows during database salvage, keeps the keyboard and new drafts
+intact during sends, and clears stale delivery failures after reconciliation.
+Reaction counts represent one account per emoji. Delivered ciphertext is stored
+per event, with an atomic index update and a 200-wrap local history window;
+unsent messages are retained separately from eviction. Existing aggregate
+ciphertext records migrate transactionally on restore. Initial relay history
+queries carry the same limit. This window is not backwards pagination.
+
+These changes make the public text POC reviewable. They do not connect the app
+to the production community. A TestFlight build intended to test Discord and
+Trust & Safety must first load the real channel catalog and membership,
+understand current community authority and moderation state, and expose room
+reporting. Merely changing the relay URL or turning on the POC flag cannot
+satisfy that acceptance gate. Publish that build only after those mobile paths
+and the production enforcement service pass a staff roundtrip.
+
+The approved Discord scope is **all public channels**, not a two-channel pilot.
+Tickets and every private support channel remain excluded. The real channel
+inventory and bridge links determine the production catalog; the two synthetic
+POC rooms are not that catalog.
 
 ## Relay evidence and required contract
 
@@ -194,7 +218,7 @@ while mobile must correctly enforce received state.
       retention, origins and rollback access before authorizing anything.
 - [ ] A Discord server admin authorizes the bot in a disposable test server
       first. The upstream wizard requires installation before preview/import.
-- [ ] Approve a public-channel allowlist. Exclude Tickets and every private
+- [ ] Build the allowlist for all public channels. Exclude Tickets and every private
       support channel unconditionally, including after permission changes.
 - [ ] Use the dedicated owner's human-controlled session for founding
       signatures: the inspected wizard creates a community. Do not create a
