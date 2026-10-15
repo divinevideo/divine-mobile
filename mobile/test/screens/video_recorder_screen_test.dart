@@ -1007,13 +1007,19 @@ void main() {
         required VideoEditorNotifier Function() videoEditor,
         DivineVideoDraft? autosavedDraft,
         Object? autosaveLookupError,
+        bool failAutosaveLookupOnce = false,
       }) async {
         final mockDraftStorage = _MockDraftStorageService();
-        when(mockDraftStorage.getAutosaveDraft).thenAnswer(
-          (_) => autosaveLookupError == null
-              ? Future.value(autosavedDraft)
-              : Future.error(autosaveLookupError),
-        );
+        var autosaveReads = 0;
+        when(mockDraftStorage.getAutosaveDraft).thenAnswer((_) {
+          autosaveReads++;
+          final shouldFail =
+              autosaveLookupError != null &&
+              (!failAutosaveLookupOnce || autosaveReads == 1);
+          return shouldFail
+              ? Future.error(autosaveLookupError)
+              : Future.value(autosavedDraft);
+        });
         final mockClipLibrary = _MockClipLibraryService();
         when(mockClipLibrary.getAllClips).thenAnswer((_) async => []);
 
@@ -1181,6 +1187,29 @@ void main() {
                 ),
               ],
             );
+          },
+        );
+
+        testWidgets(
+          'reports an explicitly reportable first lookup failure even if a '
+          'second lookup would succeed',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            final failure = Reportable(
+              Exception('synthetic autosave invariant'),
+              context: 'recorder test',
+            );
+
+            await pumpOpen(
+              tester,
+              autoRecord: true,
+              videoEditor: _AutosaveVideoEditorNotifier.new,
+              autosaveLookupError: failure,
+              failAutosaveLookupOnce: true,
+            );
+
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, [same(failure)]);
           },
         );
 

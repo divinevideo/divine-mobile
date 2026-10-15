@@ -17,6 +17,7 @@ import 'package:openvine/features/creation_analytics/creation_analytics_tracker.
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
@@ -297,6 +298,9 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     try {
       return await findOfferableAutosavedDraft(ref) == null;
     } on Exception catch (error, stackTrace) {
+      // Explicit invariant failures belong to the detached-work reporter,
+      // just like programming errors that bypass this Exception fallback.
+      if (error is ReportableError) rethrow;
       // An unreadable autosave cannot rule out the offer, so open the camera
       // without recording instead of not opening it at all.
       Log.warning(
