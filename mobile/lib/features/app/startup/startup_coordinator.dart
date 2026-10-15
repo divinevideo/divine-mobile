@@ -171,7 +171,7 @@ class StartupCoordinator {
         stackTrace: stackTrace,
       );
 
-      _crashReporter.recordError(
+      await _crashReporter.recordError(
         error,
         stackTrace,
         reason: 'Service initialization failed: ${service.name}',
