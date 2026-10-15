@@ -174,7 +174,20 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
       await emit.onEach<(MyFollowingState, int)>(
         _followRepository.watchMyFollowingCached().asyncMap((result) async {
           final revision = state.repositoryRevision;
-          // Initialized repository state takes precedence over stale cache.
+          // Once the user has followed or unfollowed here, the repository's
+          // in-memory list is the authority. The mount-time load can still be
+          // in flight when the user taps Follow; its revalidation read
+          // resolves with the relay-lagged pre-edit snapshot and would
+          // otherwise revert the button (#5144). Defer to the repository
+          // instead of the stale emission; let the emission only drive the
+          // refreshing indicator.
+          //
+          // The same holds for any cached (not live) snapshot once the
+          // repository has loaded its authoritative list: the cache outlives
+          // its 30 second TTL across restarts, and the button decides between
+          // follow and unfollow from this state, so a stale snapshot here
+          // would turn a tap into a silent, published unfollow. Cached data
+          // only paints the first frame, while the repository has no list.
           final repositoryIsAuthority =
               state.hasLocalFollowEdit ||
               (!result.isLive && _followRepository.isInitialized);
