@@ -209,8 +209,9 @@ class VideoRecorderView extends ConsumerStatefulWidget {
   /// The auto-start is skipped when the open would first show a prompt (the
   /// first-run "why six seconds?" sheet or an autosaved-session offer): the
   /// user is answering a sheet, not holding a shutter, and a recording that
-  /// starts underneath it would be a surprise. The camera still opens in
-  /// capture mode.
+  /// starts underneath it would be a surprise. It is also skipped when the
+  /// autosave lookup fails, because the open cannot tell whether an offer
+  /// will follow. The camera still opens in capture mode.
   final bool autoRecord;
 
   @override
@@ -288,11 +289,24 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         .getString(VideoRecorderMode.persistenceKey),
   );
 
-  /// Whether the open reaches the live preview with no prompt in between —
-  /// see [VideoRecorderView.autoRecord].
+  /// Whether the open is known to reach the live preview with no prompt in
+  /// between — see [VideoRecorderView.autoRecord].
   Future<bool> _opensStraightToPreview() async {
     if (_isWhySixSecondsPending) return false;
-    return await findOfferableAutosavedDraft(ref) == null;
+    try {
+      return await findOfferableAutosavedDraft(ref) == null;
+    } on Exception catch (error, stackTrace) {
+      // An unreadable autosave cannot rule out the offer, so open the camera
+      // without recording instead of not opening it at all.
+      Log.warning(
+        'Autosave lookup failed; opening without auto-record',
+        name: 'VideoRecorderScreen',
+        category: .video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   /// Whether the one-time "Why six seconds?" prompt is still due.

@@ -1166,6 +1166,26 @@ void main() {
             );
           },
         );
+
+        testWidgets(
+          'still opens the camera, without recording, on a hold-to-record '
+          'open',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+
+            await pumpOpen(
+              tester,
+              autoRecord: true,
+              videoEditor: _AutosaveVideoEditorNotifier.new,
+              autosaveLookupError: Exception('draft store unavailable'),
+            );
+
+            verify(() => recorderBloc.add(captureOnlyInit)).called(1);
+            verifyNever(() => recorderBloc.add(autoStartInit));
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
+          },
+        );
       });
     });
 
