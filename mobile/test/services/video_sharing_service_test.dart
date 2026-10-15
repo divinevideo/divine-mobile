@@ -387,14 +387,18 @@ void main() {
         ),
       ).thenAnswer((_) async => null);
 
+      // Someone else's video, so its author cannot pass for the sender.
+      final videoAuthor = 'c' * 64;
       final now = DateTime.now();
       final result = await service.shareVideoWithUser(
         video: VideoEvent(
           id: _testVideoId,
-          pubkey: _testPubkey,
+          pubkey: videoAuthor,
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
           timestamp: now,
           content: 'Test',
+          vineId: 'shared-video',
+          rawTags: const {'d': 'shared-video'},
         ),
         recipientPubkey: _recipientPubkey,
       );
@@ -403,16 +407,18 @@ void main() {
       expect(result.messageEventId, equals('nip17-msg-id'));
       expect(result.conversationId, isNotNull);
 
-      // The plaintext kind-4 copy is turned off for shares (no
-      // sender↔recipient metadata leak), and the service signs nothing itself.
+      // The repository gets this video's own reference, which is what the
+      // recipient's share card resolves. The plaintext kind-4 copy is turned
+      // off for shares (no sender↔recipient metadata leak), and the service
+      // signs nothing itself.
       verify(
         () => mockDmRepository.sendSharedVideo(
           recipientPubkey: _recipientPubkey,
           baseContent: any(named: 'baseContent'),
-          videoKind: any(named: 'videoKind'),
-          videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
-          videoDTag: any(named: 'videoDTag'),
-          videoEventId: any(named: 'videoEventId'),
+          videoKind: NIP71VideoKinds.addressableShortVideo,
+          videoAuthorPubkey: videoAuthor,
+          videoDTag: 'shared-video',
+          videoEventId: _testVideoId,
           relayHint: any(named: 'relayHint'),
           skipNip04Fallback: true,
         ),
