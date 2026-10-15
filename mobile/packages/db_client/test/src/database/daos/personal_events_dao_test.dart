@@ -100,6 +100,22 @@ void main() {
           );
         },
       );
+      test('malformed retry evidence survives ordinary cache reads', () async {
+        final retained = intent(1);
+        await dao.upsertPersonalEvent(retained, retainForRetry: true);
+        await database.customStatement(
+          'UPDATE personal_events SET tags = ? WHERE id = ?',
+          ['not json', retained.id],
+        );
+        expect(await dao.getAllForOwner(owner), isEmpty);
+        expect(await dao.countForOwner(owner), 1);
+        await expectLater(
+          dao.getRetryEvent(pubkey: owner, kind: 30005, dTag: 'list'),
+          throwsFormatException,
+        );
+        expect(await dao.countForOwner(owner), 1);
+      });
+
       test('rejects non-addressable and ambiguous coordinates', () async {
         for (final event in [
           createEvent(createdAt: 1),
