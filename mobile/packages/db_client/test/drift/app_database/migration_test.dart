@@ -28,14 +28,14 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 21', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 21);
+    test('current schema version is 22', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 22);
     });
 
-    test('v21 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(21);
+    test('v22 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(22);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       await db.close();
     });
 
@@ -415,10 +415,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v21', () async {
+    test('v8 schema migrates to v22', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -440,45 +440,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v21', () async {
+    test('v7 schema migrates to v22', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       await db.close();
     });
 
-    test('v6 schema migrates to v21', () async {
+    test('v6 schema migrates to v22', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       await db.close();
     });
 
-    test('v5 schema migrates to v21', () async {
+    test('v5 schema migrates to v22', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       await db.close();
     });
 
-    test('v3 schema migrates to v21', () async {
+    test('v3 schema migrates to v22', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       await db.close();
     });
 
-    test('v2 schema migrates to v21', () async {
+    test('v2 schema migrates to v22', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v21', () async {
+    test('legacy v1 schema migrates to v22', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 21);
+      await verifier.migrateAndValidate(db, 22);
       await db.close();
     });
 
@@ -576,6 +576,48 @@ void main() {
           ),
           isTrue,
         );
+        await db.close();
+      },
+    );
+
+    test(
+      'a v21 database gains outgoing_dms.environment, and a DM it queued '
+      'still retries in any environment',
+      () async {
+        // #10148. A row queued before v22 records no environment, so the
+        // retry service must keep finding it wherever it runs.
+        const ownerPubkey =
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        final schema = await verifier.schemaAt(21);
+        schema.rawDatabase.execute(
+          'INSERT INTO outgoing_dms '
+          '(id, conversation_id, recipient_pubkey, content, created_at, '
+          'rumor_event_json, recipient_wrap_status, self_wrap_status, '
+          'queued_at, owner_pubkey) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            'queued-before-v22',
+            'conversation',
+            'recipient',
+            'held while offline',
+            1700000000,
+            '{}',
+            'failed',
+            'sent',
+            1700000000,
+            ownerPubkey,
+          ],
+        );
+
+        final db = AppDatabase(schema.newConnection());
+        await verifier.migrateAndValidate(db, 22);
+
+        final retryable = await db.outgoingDmsDao.getRetryableForOwner(
+          ownerPubkey: ownerPubkey,
+          maxRetries: 3,
+          environment: 'staging',
+        );
+        expect(retryable.map((dm) => dm.id), equals(['queued-before-v22']));
+        expect(retryable.single.environment, isNull);
         await db.close();
       },
     );

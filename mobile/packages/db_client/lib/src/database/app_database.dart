@@ -140,7 +140,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -263,6 +263,9 @@ class AppDatabase extends _$AppDatabase {
         // Composite primary key, no `@TableIndex.sql`, so `createTable` is
         // the whole job; see the `from < 13` step.
         await m.createTable(removedMessageIds);
+      }
+      if (from < 22 && to >= 22) {
+        await _addColumnIfMissing('outgoing_dms', 'environment', 'TEXT NULL');
       }
     },
     beforeOpen: (details) async {
@@ -1503,6 +1506,10 @@ class AppDatabase extends _$AppDatabase {
     await _addColumnIfMissing('outgoing_dms', 'send_batch_id', 'TEXT');
     await _addColumnIfMissing('direct_messages', 'send_batch_id', 'TEXT');
 
+    // The environment a queued DM belongs to (#10148), for DBs created before
+    // v22; see tables.dart.
+    await _addColumnIfMissing('outgoing_dms', 'environment', 'TEXT NULL');
+
     // Addressable coordinate for own-like state, so it survives a target
     // edit that mints a new event id for the same coordinate (#6020).
     await _addColumnIfMissing('personal_reactions', 'addressable_id', 'TEXT');
@@ -1614,7 +1621,7 @@ class AppDatabase extends _$AppDatabase {
       ],
       'pending_product_events': ['owner_pubkey'],
       'dm_message_reactions': ['recipient_pubkeys'],
-      'outgoing_dms': ['send_batch_id'],
+      'outgoing_dms': ['send_batch_id', 'environment'],
       'personal_reactions': ['addressable_id'],
       'profile_statistics': ['follower_counts_updated_at'],
       'identity_events': ['source_created_at', 'source_event_id'],

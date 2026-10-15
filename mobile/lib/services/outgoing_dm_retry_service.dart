@@ -96,6 +96,7 @@ class OutgoingDmRetryService {
     OfflineProbe? isOffline,
     OutgoingDmRetryConfig retryConfig = const OutgoingDmRetryConfig(),
     DateTime Function() now = DateTime.now,
+    String? environment,
   }) : _dmRepository = dmRepository,
        _dao = outgoingDmsDao,
        _userPubkey = userPubkey,
@@ -104,9 +105,16 @@ class OutgoingDmRetryService {
        _isOffline = isOffline,
        _retryConfig = retryConfig,
        _now = now,
+       _environment = environment,
        _crashReporting = crashReporting ?? const SilentCrashReporter();
 
   final DmRepository _dmRepository;
+
+  /// The app environment this service runs in. Only queue rows from it, or
+  /// rows queued before environments were recorded, are retried, so a DM
+  /// held across an environment switch is never sent on the other
+  /// environment's relays (#10148). Null retries every row.
+  final String? _environment;
   final OutgoingDmsDao _dao;
   final String _userPubkey;
   final Stream<bool> _appForegroundStream;
@@ -300,6 +308,7 @@ class OutgoingDmRetryService {
       final retryable = await _dao.getRetryableForOwner(
         ownerPubkey: _userPubkey,
         maxRetries: _retryConfig.maxRetries,
+        environment: _environment,
       );
 
       var processedSelfWrap = 0;
@@ -490,7 +499,10 @@ class OutgoingDmRetryService {
       var exhaustedInterrupted = 0;
       var skippedInterruptedTooYoung = 0;
       if (!abortedNotReady) {
-        final pending = await _dao.getStillPendingForOwner(_userPubkey);
+        final pending = await _dao.getStillPendingForOwner(
+          _userPubkey,
+          environment: _environment,
+        );
         for (final row in pending) {
           // Skip rows already dispatched above (a recipient=failed +
           // self=pending row appears in both filters; the failed arm owns
@@ -888,7 +900,10 @@ class OutgoingDmRetryService {
     var flipped = 0;
     var youngRemaining = 0;
     try {
-      final pending = await _dao.getStillPendingForOwner(_userPubkey);
+      final pending = await _dao.getStillPendingForOwner(
+        _userPubkey,
+        environment: _environment,
+      );
       for (final row in pending) {
         if (row.recipientWrapStatus != OutgoingWrapStatus.pending) continue;
         final age = _now().difference(row.queuedAt);

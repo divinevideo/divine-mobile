@@ -12723,6 +12723,17 @@ class $OutgoingDmsTable extends OutgoingDms
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _environmentMeta = const VerificationMeta(
+    'environment',
+  );
+  @override
+  late final GeneratedColumn<String> environment = GeneratedColumn<String>(
+    'environment',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -12744,6 +12755,7 @@ class $OutgoingDmsTable extends OutgoingDms
     queuedAt,
     ownerPubkey,
     sendBatchId,
+    environment,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -12927,6 +12939,15 @@ class $OutgoingDmsTable extends OutgoingDms
         ),
       );
     }
+    if (data.containsKey('environment')) {
+      context.handle(
+        _environmentMeta,
+        environment.isAcceptableOrUnknown(
+          data['environment']!,
+          _environmentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -13011,6 +13032,10 @@ class $OutgoingDmsTable extends OutgoingDms
       sendBatchId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}send_batch_id'],
+      ),
+      environment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}environment'],
       ),
     );
   }
@@ -13123,6 +13148,13 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
   /// cancellation use an exact value. NULL only for legacy rows. See
   /// `DirectMessages.sendBatchId`.
   final String? sendBatchId;
+
+  /// The app environment the DM was queued in: `production`, `staging`,
+  /// `poc` or `local`. The retry service resends only rows from the current
+  /// environment, so a DM still held when someone switches environment is
+  /// never sent to, or scored as delivered on, the other environment's
+  /// relays (#10148). Null for rows queued before v22; those retry anywhere.
+  final String? environment;
   const OutgoingDmRow({
     required this.id,
     required this.conversationId,
@@ -13143,6 +13175,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     required this.queuedAt,
     required this.ownerPubkey,
     this.sendBatchId,
+    this.environment,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -13182,6 +13215,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     if (!nullToAbsent || sendBatchId != null) {
       map['send_batch_id'] = Variable<String>(sendBatchId);
     }
+    if (!nullToAbsent || environment != null) {
+      map['environment'] = Variable<String>(environment);
+    }
     return map;
   }
 
@@ -13220,6 +13256,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       sendBatchId: sendBatchId == null && nullToAbsent
           ? const Value.absent()
           : Value(sendBatchId),
+      environment: environment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(environment),
     );
   }
 
@@ -13256,6 +13295,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
       ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
       sendBatchId: serializer.fromJson<String?>(json['sendBatchId']),
+      environment: serializer.fromJson<String?>(json['environment']),
     );
   }
   @override
@@ -13283,6 +13323,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       'queuedAt': serializer.toJson<DateTime>(queuedAt),
       'ownerPubkey': serializer.toJson<String>(ownerPubkey),
       'sendBatchId': serializer.toJson<String?>(sendBatchId),
+      'environment': serializer.toJson<String?>(environment),
     };
   }
 
@@ -13306,6 +13347,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     DateTime? queuedAt,
     String? ownerPubkey,
     Value<String?> sendBatchId = const Value.absent(),
+    Value<String?> environment = const Value.absent(),
   }) => OutgoingDmRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -13336,6 +13378,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     queuedAt: queuedAt ?? this.queuedAt,
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
     sendBatchId: sendBatchId.present ? sendBatchId.value : this.sendBatchId,
+    environment: environment.present ? environment.value : this.environment,
   );
   OutgoingDmRow copyWithCompanion(OutgoingDmsCompanion data) {
     return OutgoingDmRow(
@@ -13386,6 +13429,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       sendBatchId: data.sendBatchId.present
           ? data.sendBatchId.value
           : this.sendBatchId,
+      environment: data.environment.present
+          ? data.environment.value
+          : this.environment,
     );
   }
 
@@ -13410,7 +13456,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           ..write('lastAttemptAt: $lastAttemptAt, ')
           ..write('queuedAt: $queuedAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
-          ..write('sendBatchId: $sendBatchId')
+          ..write('sendBatchId: $sendBatchId, ')
+          ..write('environment: $environment')
           ..write(')'))
         .toString();
   }
@@ -13436,6 +13483,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     queuedAt,
     ownerPubkey,
     sendBatchId,
+    environment,
   );
   @override
   bool operator ==(Object other) =>
@@ -13459,7 +13507,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           other.lastAttemptAt == this.lastAttemptAt &&
           other.queuedAt == this.queuedAt &&
           other.ownerPubkey == this.ownerPubkey &&
-          other.sendBatchId == this.sendBatchId);
+          other.sendBatchId == this.sendBatchId &&
+          other.environment == this.environment);
 }
 
 class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
@@ -13482,6 +13531,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
   final Value<DateTime> queuedAt;
   final Value<String> ownerPubkey;
   final Value<String?> sendBatchId;
+  final Value<String?> environment;
   final Value<int> rowid;
   const OutgoingDmsCompanion({
     this.id = const Value.absent(),
@@ -13503,6 +13553,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     this.queuedAt = const Value.absent(),
     this.ownerPubkey = const Value.absent(),
     this.sendBatchId = const Value.absent(),
+    this.environment = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OutgoingDmsCompanion.insert({
@@ -13525,6 +13576,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     required DateTime queuedAt,
     required String ownerPubkey,
     this.sendBatchId = const Value.absent(),
+    this.environment = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -13556,6 +13608,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Expression<DateTime>? queuedAt,
     Expression<String>? ownerPubkey,
     Expression<String>? sendBatchId,
+    Expression<String>? environment,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -13581,6 +13634,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       if (queuedAt != null) 'queued_at': queuedAt,
       if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
       if (sendBatchId != null) 'send_batch_id': sendBatchId,
+      if (environment != null) 'environment': environment,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -13605,6 +13659,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Value<DateTime>? queuedAt,
     Value<String>? ownerPubkey,
     Value<String?>? sendBatchId,
+    Value<String?>? environment,
     Value<int>? rowid,
   }) {
     return OutgoingDmsCompanion(
@@ -13628,6 +13683,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       queuedAt: queuedAt ?? this.queuedAt,
       ownerPubkey: ownerPubkey ?? this.ownerPubkey,
       sendBatchId: sendBatchId ?? this.sendBatchId,
+      environment: environment ?? this.environment,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -13698,6 +13754,9 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     if (sendBatchId.present) {
       map['send_batch_id'] = Variable<String>(sendBatchId.value);
     }
+    if (environment.present) {
+      map['environment'] = Variable<String>(environment.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -13726,6 +13785,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
           ..write('queuedAt: $queuedAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('sendBatchId: $sendBatchId, ')
+          ..write('environment: $environment, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -27238,6 +27298,7 @@ typedef $$OutgoingDmsTableCreateCompanionBuilder =
       required DateTime queuedAt,
       required String ownerPubkey,
       Value<String?> sendBatchId,
+      Value<String?> environment,
       Value<int> rowid,
     });
 typedef $$OutgoingDmsTableUpdateCompanionBuilder =
@@ -27261,6 +27322,7 @@ typedef $$OutgoingDmsTableUpdateCompanionBuilder =
       Value<DateTime> queuedAt,
       Value<String> ownerPubkey,
       Value<String?> sendBatchId,
+      Value<String?> environment,
       Value<int> rowid,
     });
 
@@ -27365,6 +27427,11 @@ class $$OutgoingDmsTableFilterComposer
 
   ColumnFilters<String> get sendBatchId => $composableBuilder(
     column: $table.sendBatchId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get environment => $composableBuilder(
+    column: $table.environment,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -27472,6 +27539,11 @@ class $$OutgoingDmsTableOrderingComposer
     column: $table.sendBatchId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get environment => $composableBuilder(
+    column: $table.environment,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$OutgoingDmsTableAnnotationComposer
@@ -27567,6 +27639,11 @@ class $$OutgoingDmsTableAnnotationComposer
     column: $table.sendBatchId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get environment => $composableBuilder(
+    column: $table.environment,
+    builder: (column) => column,
+  );
 }
 
 class $$OutgoingDmsTableTableManager
@@ -27619,6 +27696,7 @@ class $$OutgoingDmsTableTableManager
                 Value<DateTime> queuedAt = const Value.absent(),
                 Value<String> ownerPubkey = const Value.absent(),
                 Value<String?> sendBatchId = const Value.absent(),
+                Value<String?> environment = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion(
                 id: id,
@@ -27640,6 +27718,7 @@ class $$OutgoingDmsTableTableManager
                 queuedAt: queuedAt,
                 ownerPubkey: ownerPubkey,
                 sendBatchId: sendBatchId,
+                environment: environment,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -27663,6 +27742,7 @@ class $$OutgoingDmsTableTableManager
                 required DateTime queuedAt,
                 required String ownerPubkey,
                 Value<String?> sendBatchId = const Value.absent(),
+                Value<String?> environment = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion.insert(
                 id: id,
@@ -27684,6 +27764,7 @@ class $$OutgoingDmsTableTableManager
                 queuedAt: queuedAt,
                 ownerPubkey: ownerPubkey,
                 sendBatchId: sendBatchId,
+                environment: environment,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

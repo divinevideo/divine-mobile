@@ -40,6 +40,7 @@ void main() {
     DateTime? queuedAt,
     int createdAt = 1700000000,
     String? sendBatchId,
+    String? environment,
   }) {
     return OutgoingDm(
       id: id,
@@ -54,6 +55,7 @@ void main() {
       queuedAt: queuedAt ?? DateTime.utc(2026, 5),
       ownerPubkey: owner,
       sendBatchId: sendBatchId,
+      environment: environment,
     );
   }
 
@@ -125,6 +127,21 @@ void main() {
       final withBatch = base.copyWith(sendBatchId: 'batch-x');
       expect(withBatch.sendBatchId, equals('batch-x'));
     });
+
+    test('rows differing only in environment are NOT equal', () {
+      final production = makeDm(id: 'eq-env', environment: 'production');
+      final staging = makeDm(id: 'eq-env', environment: 'staging');
+
+      expect(production, isNot(equals(staging)));
+      expect(production.hashCode, isNot(equals(staging.hashCode)));
+    });
+
+    test('copyWith(environment:) round-trips the field', () {
+      final base = makeDm(id: 'eq-env-rt');
+      expect(base.environment, isNull);
+
+      expect(base.copyWith(environment: 'poc').environment, equals('poc'));
+    });
   });
 
   group('conversation removal', () {
@@ -182,6 +199,14 @@ void main() {
 
   group('OutgoingDmsDao', () {
     group('enqueue', () {
+      test('keeps the environment a DM was queued in (#10148)', () async {
+        await dao.enqueue(makeDm(id: 'queued-in-poc', environment: 'poc'));
+
+        final row = await dao.getById('queued-in-poc');
+        expect(row, isNotNull);
+        expect(row!.environment, equals('poc'));
+      });
+
       test('inserts a new row in pending/pending state', () async {
         final dm = makeDm(id: 'aaaa');
         await dao.enqueue(dm);
@@ -909,6 +934,41 @@ void main() {
 
     group('getRetryableForOwner', () {
       test(
+        'with an environment, leaves out rows queued in another one and keeps '
+        'rows queued before environments were recorded (#10148)',
+        () async {
+          for (final (id, environment) in [
+            ('production', 'production'),
+            ('staging', 'staging'),
+            ('unrecorded', null),
+          ]) {
+            await dao.enqueue(
+              makeDm(
+                id: id,
+                recipientStatus: OutgoingWrapStatus.failed,
+                environment: environment,
+              ),
+            );
+          }
+
+          final inStaging = await dao.getRetryableForOwner(
+            ownerPubkey: ownerA,
+            maxRetries: 3,
+            environment: 'staging',
+          );
+          expect(
+            inStaging.map((dm) => dm.id),
+            unorderedEquals(['staging', 'unrecorded']),
+          );
+          final anywhere = await dao.getRetryableForOwner(
+            ownerPubkey: ownerA,
+            maxRetries: 3,
+          );
+          expect(anywhere, hasLength(3));
+        },
+      );
+
+      test(
         'returns rows where either wrap is failed and retry_count is '
         'under the cap, ordered oldest queuedAt first (FIFO)',
         () async {
@@ -1012,6 +1072,32 @@ void main() {
     });
 
     group('getStillPendingForOwner', () {
+      test(
+        'with an environment, leaves out rows queued in another one and keeps '
+        'rows queued before environments were recorded (#10148)',
+        () async {
+          for (final (id, environment) in [
+            ('production', 'production'),
+            ('staging', 'staging'),
+            ('unrecorded', null),
+          ]) {
+            await dao.enqueue(
+              makeDm(id: id, environment: environment),
+            );
+          }
+
+          final inStaging = await dao.getStillPendingForOwner(
+            ownerA,
+            environment: 'staging',
+          );
+          expect(
+            inStaging.map((dm) => dm.id),
+            unorderedEquals(['staging', 'unrecorded']),
+          );
+          expect(await dao.getStillPendingForOwner(ownerA), hasLength(3));
+        },
+      );
+
       test(
         'returns rows with at least one wrap still pending, ordered '
         'oldest queuedAt first (FIFO)',

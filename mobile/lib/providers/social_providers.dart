@@ -345,6 +345,9 @@ OutgoingDmRetryService? outgoingDmRetryService(Ref ref) {
     // Same probe the send path uses: an offline sweep pass would burn every
     // row's retry budget on attempts that deterministically fail.
     isOffline: dmSendConnectivityIsOffline,
+    environment: ref
+        .watch(currentEnvironmentProvider.select((env) => env.environment))
+        .name,
   );
 
   // initialize() subscribes to the controller's stream synchronously

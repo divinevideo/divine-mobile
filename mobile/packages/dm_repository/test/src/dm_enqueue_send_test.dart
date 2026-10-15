@@ -79,12 +79,30 @@ void main() {
         outgoingDmsDao: outgoingDao,
         userPubkey: _owner,
         signer: LocalNostrSigner(_privateKey),
+        environment: 'staging',
       );
     });
 
     tearDown(() async {
       await db.close();
     });
+
+    test(
+      'stamps the queued row with the environment it was sent in (#10148)',
+      () async {
+        stubBuildRumor(fakeRumor(_rumorId));
+
+        final result = await repository.enqueueSend(
+          recipientPubkey: _peer,
+          content: 'report dm',
+        );
+        expect(result.accepted, isTrue);
+
+        final row = await outgoingDao.getById(_rumorId);
+        expect(row, isNotNull);
+        expect(row!.environment, equals('staging'));
+      },
+    );
 
     test(
       'parks a pending row and returns its rumor id without publishing',

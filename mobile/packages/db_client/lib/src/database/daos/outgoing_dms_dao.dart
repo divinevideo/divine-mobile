@@ -105,6 +105,7 @@ class OutgoingDm {
     this.selfWrapLastError,
     this.lastAttemptAt,
     this.sendBatchId,
+    this.environment,
   }) : rumorId = _rumorIdFromJson(rumorEventJson) ?? id;
 
   /// Opaque durable queue-row handle.
@@ -146,6 +147,10 @@ class OutgoingDm {
   /// for legacy rows.
   final String? sendBatchId;
 
+  /// The app environment the DM was queued in; see `OutgoingDms.environment`.
+  /// Null for rows queued before it was recorded.
+  final String? environment;
+
   /// The kind-14/15 wire rumor id, stable across retries and recipients.
   ///
   /// Legacy and malformed fixtures fall back to [id]. Production rows always
@@ -186,6 +191,7 @@ class OutgoingDm {
     DateTime? queuedAt,
     String? ownerPubkey,
     String? sendBatchId,
+    String? environment,
   }) => OutgoingDm(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -207,6 +213,7 @@ class OutgoingDm {
     queuedAt: queuedAt ?? this.queuedAt,
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
     sendBatchId: sendBatchId ?? this.sendBatchId,
+    environment: environment ?? this.environment,
   );
 
   // Full value equality. `id` alone is NOT sufficient: bloc states carry
@@ -237,7 +244,8 @@ class OutgoingDm {
           lastAttemptAt == other.lastAttemptAt &&
           queuedAt == other.queuedAt &&
           ownerPubkey == other.ownerPubkey &&
-          sendBatchId == other.sendBatchId;
+          sendBatchId == other.sendBatchId &&
+          environment == other.environment;
 
   @override
   int get hashCode => Object.hash(
@@ -260,6 +268,7 @@ class OutgoingDm {
     queuedAt,
     ownerPubkey,
     sendBatchId,
+    environment,
   );
 
   @override
@@ -299,6 +308,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       queuedAt: dm.queuedAt,
       ownerPubkey: dm.ownerPubkey,
       sendBatchId: Value(dm.sendBatchId),
+      environment: Value(dm.environment),
     );
   }
 
@@ -323,6 +333,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       queuedAt: row.queuedAt,
       ownerPubkey: row.ownerPubkey,
       sendBatchId: row.sendBatchId,
+      environment: row.environment,
     );
   }
 
@@ -663,10 +674,12 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
   /// Fetch all rows for [ownerPubkey] where at least one wrap is still
   /// in [OutgoingWrapStatus.failed]. Excludes rows that have exhausted
   /// the retry budget (caller decides what to do with those, typically
-  /// surface a manual retry affordance).
+  /// surface a manual retry affordance). With [environment], rows queued in
+  /// another environment are left out; see [_inEnvironment].
   Future<List<OutgoingDm>> getRetryableForOwner({
     required String ownerPubkey,
     required int maxRetries,
+    String? environment,
   }) async {
     final query = select(outgoingDms)
       ..where(
@@ -674,7 +687,8 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
             t.ownerPubkey.equals(ownerPubkey) &
             t.retryCount.isSmallerThanValue(maxRetries) &
             (t.recipientWrapStatus.equals(OutgoingWrapStatus.failed.name) |
-                t.selfWrapStatus.equals(OutgoingWrapStatus.failed.name)),
+                t.selfWrapStatus.equals(OutgoingWrapStatus.failed.name)) &
+            _inEnvironment(t, environment),
       )
       ..orderBy([(t) => OrderingTerm(expression: t.queuedAt)]);
     final rows = await query.get();
@@ -684,17 +698,31 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
   /// Fetch all rows for [ownerPubkey] still in
   /// [OutgoingWrapStatus.pending] for either wrap. Used to recover
   /// in-flight sends after an app kill that interrupted the publish
-  /// before the row could be marked sent or failed.
-  Future<List<OutgoingDm>> getStillPendingForOwner(String ownerPubkey) async {
+  /// before the row could be marked sent or failed. With [environment], rows
+  /// queued in another environment are left out; see [_inEnvironment].
+  Future<List<OutgoingDm>> getStillPendingForOwner(
+    String ownerPubkey, {
+    String? environment,
+  }) async {
     final query = select(outgoingDms)
       ..where(
         (t) =>
             t.ownerPubkey.equals(ownerPubkey) &
             (t.recipientWrapStatus.equals(OutgoingWrapStatus.pending.name) |
-                t.selfWrapStatus.equals(OutgoingWrapStatus.pending.name)),
+                t.selfWrapStatus.equals(OutgoingWrapStatus.pending.name)) &
+            _inEnvironment(t, environment),
       )
       ..orderBy([(t) => OrderingTerm(expression: t.queuedAt)]);
     final rows = await query.get();
     return rows.map(_rowToModel).toList();
   }
+
+  /// Rows queued in [environment], plus rows queued before environments were
+  /// recorded. A retry must not resend another environment's row on this
+  /// one's relays, where it could be scored as delivered while its recipient
+  /// never sees it (#10148). A null [environment] matches every row.
+  Expression<bool> _inEnvironment($OutgoingDmsTable t, String? environment) =>
+      environment == null
+      ? const Constant(true)
+      : t.environment.isNull() | t.environment.equals(environment);
 }

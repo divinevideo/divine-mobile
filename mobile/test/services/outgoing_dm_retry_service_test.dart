@@ -121,6 +121,7 @@ void main() {
     CrashReportingService? crashReporting,
     Stream<void>? retryTriggerStream,
     Future<bool> Function()? isOffline,
+    String? environment,
   }) {
     return OutgoingDmRetryService(
       dmRepository: dmRepository,
@@ -132,10 +133,72 @@ void main() {
       retryConfig: retryConfig,
       now: now ?? () => DateTime.utc(2026, 5, 10, 12),
       crashReporting: crashReporting ?? CrashReportingService(),
+      environment: environment,
     );
   }
 
   group(OutgoingDmRetryService, () {
+    group('environment (#10148)', () {
+      void stubQueueReadsInAnyEnvironment() {
+        when(
+          () => dao.getRetryableForOwner(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            maxRetries: any(named: 'maxRetries'),
+            environment: any(named: 'environment'),
+          ),
+        ).thenAnswer((_) async => const <OutgoingDm>[]);
+        when(
+          () => dao.getStillPendingForOwner(
+            any(),
+            environment: any(named: 'environment'),
+          ),
+        ).thenAnswer((_) async => const <OutgoingDm>[]);
+      }
+
+      test('a sweep asks only for rows queued in its environment', () async {
+        stubQueueReadsInAnyEnvironment();
+        final service = buildService(environment: 'staging');
+
+        await service.sweep();
+
+        verify(
+          () => dao.getRetryableForOwner(
+            ownerPubkey: _ownerPubkey,
+            maxRetries: any(named: 'maxRetries'),
+            environment: 'staging',
+          ),
+        ).called(1);
+        verify(
+          () => dao.getStillPendingForOwner(
+            _ownerPubkey,
+            environment: 'staging',
+          ),
+        ).called(1);
+      });
+
+      test('an offline sweep surfaces only rows queued in its environment', () {
+        fakeAsync((async) {
+          stubQueueReadsInAnyEnvironment();
+          final service = buildService(
+            environment: 'staging',
+            isOffline: () async => true,
+          );
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          verify(
+            () => dao.getStillPendingForOwner(
+              _ownerPubkey,
+              environment: 'staging',
+            ),
+          ).called(1);
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
+    });
+
     group('initialize', () {
       test('subscribes to the foreground stream', () async {
         final service = buildService();
