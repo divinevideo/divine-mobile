@@ -9,6 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/pooled_fullscreen_feed_route.dart';
+import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/router/widgets/sound_detail_loader.dart';
@@ -35,6 +36,7 @@ List<RouteBase> videoRoutes() {
       pageBuilder: (_, state) => fadeUpwardsPage(
         state: state,
         child: VideoRecorderRoute(
+          initialSound: extraAs<RecorderSoundSelection>(state.extra),
           entryPoint: CreationEntryPoint.fromName(
             state.uri.queryParameters['entry_point'],
           ),
