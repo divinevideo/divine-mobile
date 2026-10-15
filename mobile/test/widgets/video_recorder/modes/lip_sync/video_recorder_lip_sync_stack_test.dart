@@ -70,6 +70,7 @@ void main() {
       AudioEvent? selectedSound,
       List<DivineVideoClip>? clips,
       GoRouter? router,
+      TrendingSounds Function() trendingSounds = _FakeTrendingSounds.new,
     }) {
       when(() => recorderBloc.isClosed).thenReturn(false);
       when(() => recorderBloc.state).thenReturn(
@@ -87,6 +88,8 @@ void main() {
       editorNotifier = _TestVideoEditorNotifier(selectedSound: selectedSound);
 
       return ProviderScope(
+        // A failing sound source shows its error instead of retrying.
+        retry: (_, _) => null,
         overrides: [
           sharedPreferencesProvider.overrideWithValue(testPrefs),
           clipManagerProvider.overrideWith(() => clipNotifier),
@@ -95,7 +98,7 @@ void main() {
           soundLibraryServiceProvider.overrideWith(
             (_) async => _FakeSoundLibraryService(),
           ),
-          trendingSoundsProvider.overrideWith(_FakeTrendingSounds.new),
+          trendingSoundsProvider.overrideWith(trendingSounds),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -232,6 +235,55 @@ void main() {
         // top.
         expect(importAudio, findsNothing);
         expect(find.text('Bundled sound 0').hitTestable(), findsNothing);
+      });
+    });
+
+    group('importing audio', () {
+      Future<void> showCommunity(WidgetTester tester) async {
+        tester
+            .widget<AudioCategoryBar>(find.byType(AudioCategoryBar))
+            .onSelect(AudioCategory.community);
+        // The loading indicator keeps animating, so pumpAndSettle would not.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
+      testWidgets('offers importing while the community sounds load', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(
+          buildWidget(trendingSounds: _PendingTrendingSounds.new),
+        );
+        await tester.pump();
+
+        await showCommunity(tester);
+
+        expect(
+          find.text(l10n.videoEditorAudioImportAudio).hitTestable(),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('offers importing when the community sounds fail to load', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(
+          buildWidget(trendingSounds: _FailingTrendingSounds.new),
+        );
+        await tester.pump();
+
+        await showCommunity(tester);
+
+        expect(
+          find.text(l10n.videoEditorAudioFailedToLoadTitle),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.videoEditorAudioImportAudio).hitTestable(),
+          findsOneWidget,
+        );
       });
     });
 
@@ -456,6 +508,17 @@ class _FakeSoundLibraryService extends SoundLibraryService {
 class _FakeTrendingSounds extends TrendingSounds {
   @override
   Future<List<AudioEvent>> build() async => const [];
+}
+
+class _PendingTrendingSounds extends TrendingSounds {
+  @override
+  Future<List<AudioEvent>> build() => Completer<List<AudioEvent>>().future;
+}
+
+class _FailingTrendingSounds extends TrendingSounds {
+  @override
+  Future<List<AudioEvent>> build() async =>
+      throw Exception('relay unreachable');
 }
 
 class _TestClipManagerNotifier extends ClipManagerNotifier {

@@ -570,8 +570,14 @@ class _AudioSelectionBottomSheetState
                   : const _EmptyState(),
             );
           },
-          loading: () => const Center(child: BrandedLoadingIndicator()),
-          error: (error, stack) => _ErrorState(error: error),
+          loading: () => _LeadingAbove(
+            leading: listLeading,
+            child: const Center(child: BrandedLoadingIndicator()),
+          ),
+          error: (error, stack) => _LeadingAbove(
+            leading: listLeading,
+            child: _ErrorState(error: error),
+          ),
         ),
         _SoundsContent(
           scrollController: listScrollController,
@@ -814,14 +820,7 @@ class _SoundsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final leading = this.leading;
     if (sounds.isEmpty) {
-      if (leading == null) return emptyState;
-      return Column(
-        crossAxisAlignment: .stretch,
-        children: [
-          leading,
-          Expanded(child: emptyState),
-        ],
-      );
+      return _LeadingAbove(leading: leading, child: emptyState);
     }
 
     return CustomScrollView(
@@ -948,6 +947,28 @@ class _SearchEmptyState extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// [leading] above [child], which fills the rest, or just [child] without
+/// one.
+class _LeadingAbove extends StatelessWidget {
+  const _LeadingAbove({required this.leading, required this.child});
+
+  final Widget? leading;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final leading = this.leading;
+    if (leading == null) return child;
+    return Column(
+      crossAxisAlignment: .stretch,
+      children: [
+        leading,
+        Expanded(child: child),
+      ],
     );
   }
 }
