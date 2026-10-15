@@ -37,10 +37,18 @@ const int _defaultLimit = 25;
 const _recentRelayCursorPrefix = 'relay:';
 
 class _FollowingFetchResult {
-  const _FollowingFetchResult({required this.videos, this.pageCount = 0});
+  const _FollowingFetchResult({
+    required this.videos,
+    this.pageCount = 0,
+    this.nextBefore,
+  });
 
   final List<VideoEvent> videos;
   final int pageCount;
+
+  /// Exclusive revision-time bound the next page starts before, or `null`
+  /// when the source is exhausted.
+  final int? nextBefore;
 }
 
 /// Author-feed REST page size used for the `hasMore` fallback heuristic when
@@ -309,24 +317,37 @@ class VideosRepository {
   ///   addressable coordinates (`kind:pubkey:d-tag`). Defaults to empty.
   /// - [userPubkey]: The current user's pubkey for Funnelcake API lookups.
   ///   Required for API-first path; when null, goes directly to Nostr.
-  /// - [limit]: Maximum number of videos to return (default 5)
-  /// - [until]: Only return videos created before this Unix timestamp
-  ///   (for pagination - pass `previousVideo.createdAt`)
+  /// - [limit]: Minimum number of visible videos to collect before stopping
+  ///   (default 25). A page can carry more: rows fetched past [limit] are
+  ///   kept, because the returned cursor already resumes after them.
+  /// - [cursor]: A previous result's [HomeFeedResult.paginationCursor], or
+  ///   `null` for the newest page.
   ///
-  /// Returns a [HomeFeedResult] containing videos sorted by creation time
-  /// (newest first) plus attribution metadata mapping videos to their
-  /// source curated lists. Returns empty result if both [authors] is empty
-  /// and [userPubkey] is null. When [userPubkey] is provided, the Funnelcake
-  /// API is attempted even with an empty [authors] list (fast-path startup).
+  /// Both sources order this feed by revision time — the event's own
+  /// `created_at` — and the cursor is a point on that clock. Never derive one
+  /// from [VideoEvent.createdAt]: that is the publication time, and an edit
+  /// republishes an old video at the top of the feed, so its publication
+  /// sits weeks below rows the next page has not reached yet.
+  ///
+  /// Returns a [HomeFeedResult] in revision order (newest first, recently
+  /// seen videos demoted) with the next [HomeFeedResult.paginationCursor] and
+  /// [HomeFeedResult.hasMore], plus attribution metadata mapping videos to
+  /// their source curated lists. Returns empty result if both [authors] is
+  /// empty and [userPubkey] is null. When [userPubkey] is provided, the
+  /// Funnelcake API is attempted even with an empty [authors] list (fast-path
+  /// startup).
+  ///
+  /// Throws a [FormatException] when [cursor] was not produced by this
+  /// method.
   Future<HomeFeedResult> getHomeFeedVideos({
     required List<String> authors,
     Map<String, List<String>> videoRefs = const {},
     String? userPubkey,
     int limit = _defaultLimit,
-    int? until,
+    String? cursor,
   }) async {
     if (authors.isEmpty && userPubkey == null) {
-      return const HomeFeedResult(videos: []);
+      return const HomeFeedResult(videos: [], hasMore: false);
     }
 
     // 1. Fetch following videos (Funnelcake API → Nostr relay waterfall)
@@ -334,14 +355,18 @@ class VideosRepository {
       authors: authors,
       userPubkey: userPubkey,
       limit: limit,
-      until: until,
+      before: cursor == null ? null : int.parse(cursor),
     );
+    final nextBefore = following.nextBefore;
+    final paginationCursor = nextBefore?.toString();
 
     // 2. If no list refs, return following-only result (with seen demotion)
     if (videoRefs.isEmpty) {
       final ordered = await _orderBySeenFreshness(following.videos);
       final result = HomeFeedResult(
         videos: ordered,
+        paginationCursor: paginationCursor,
+        hasMore: nextBefore != null,
         followingPageCount: following.pageCount,
       );
       return result;
@@ -357,17 +382,23 @@ class VideosRepository {
       videos: orderedVideos,
       videoListSources: merged.videoListSources,
       listOnlyVideoIds: merged.listOnlyVideoIds,
+      paginationCursor: paginationCursor,
+      hasMore: nextBefore != null,
       followingPageCount: following.pageCount,
     );
     return result;
   }
 
   /// Fetches videos from followed users via Funnelcake API or Nostr relays.
+  ///
+  /// [before] is an exclusive revision-time bound. Both sources page on the
+  /// event's own `created_at`, so a bound from one stays valid on the other
+  /// when Funnelcake fails mid-scroll.
   Future<_FollowingFetchResult> _fetchFollowingVideos({
     required List<String> authors,
     String? userPubkey,
     int limit = _defaultLimit,
-    int? until,
+    int? before,
   }) async {
     final effectiveUserPubkey =
         userPubkey ??
@@ -381,7 +412,7 @@ class VideosRepository {
         return await _fetchVisibleHomeVideosFromStatsApi(
           userPubkey: effectiveUserPubkey,
           limit: limit,
-          until: until,
+          before: before,
         );
       } on FunnelcakeException {
         // Fall through to Nostr
@@ -391,24 +422,26 @@ class VideosRepository {
     return _fetchVisibleHomeVideosFromRelays(
       authors: authors,
       limit: limit,
-      until: until,
+      before: before,
     );
   }
 
   Future<_FollowingFetchResult> _fetchVisibleHomeVideosFromStatsApi({
     required String userPubkey,
     required int limit,
-    int? until,
+    int? before,
   }) async {
-    var cursor = until;
+    var cursor = before;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     var pageCount = 0;
+    int? nextBefore;
 
     // Intentionally walk until we have enough visible videos or the upstream
     // feed is exhausted. A hard page cap caused premature EOF on reply-dense
     // feeds by hiding visible videos behind reply-only raw pages.
     while (visible.length < limit) {
+      nextBefore = null;
       pageCount++;
       final response = await _funnelcakeApiClient!.getHomeFeed(
         pubkey: userPubkey,
@@ -429,47 +462,58 @@ class VideosRepository {
         hydratedVideos,
         seenVideoKeys: seenVideoKeys,
       );
-      if (response.videos.length < limit || !response.hasMore) break;
+      // Trust the server's flag rather than the row count: the client drops
+      // malformed rows, and a short page would otherwise end the feed early.
+      if (!response.hasMore) break;
 
       final nextCursor =
           response.nextCursor ?? _cursorBeforeOldestStats(response.videos);
       if (nextCursor == null || nextCursor == cursor) break;
       cursor = nextCursor;
+      nextBefore = nextCursor;
     }
 
+    // Return the over-fetched tail too: the next page resumes after the last
+    // fetched page, so trimming it here would skip it for good.
     return _FollowingFetchResult(
-      videos: visible.take(limit).toList(),
+      videos: visible,
       pageCount: pageCount,
+      nextBefore: nextBefore,
     );
   }
 
   Future<_FollowingFetchResult> _fetchVisibleHomeVideosFromRelays({
     required List<String> authors,
     required int limit,
-    int? until,
+    int? before,
   }) async {
     // Nostr fallback — skip when authors list is empty (fast-path startup
     // before follow list is ready).
     if (authors.isEmpty) return const _FollowingFetchResult(videos: []);
 
-    var cursor = until;
+    // A relay `until` is inclusive; the shared bound is exclusive.
+    var until = before == null ? null : before - 1;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     var pageCount = 0;
+    int? nextBefore;
 
     while (visible.length < limit) {
+      nextBefore = null;
       pageCount++;
       final filter = Filter(
         kinds: [_videoKind],
         authors: authors,
         limit: limit,
-        until: cursor,
+        until: until,
       );
 
       final events = await _nostrClient.queryEvents([filter]);
       if (events.isEmpty) break;
 
-      final videos = _transformAndFilter(events);
+      // Order on the clock this walk pages on, as Funnelcake does.
+      final videos = _transformAndFilter(events, sortByCreatedAt: false)
+        ..sort((a, b) => b.nostrCreatedAt.compareTo(a.nostrCreatedAt));
       _appendUniqueVideos(
         visible,
         await _hydrateVideosWithBulkStats(videos),
@@ -477,14 +521,16 @@ class VideosRepository {
       );
       if (events.length < limit) break;
 
-      final nextCursor = _cursorBeforeOldestEvent(events);
-      if (nextCursor == null || nextCursor == cursor) break;
-      cursor = nextCursor;
+      final nextUntil = _cursorBeforeOldestEvent(events);
+      if (nextUntil == null || nextUntil == until) break;
+      until = nextUntil;
+      nextBefore = nextUntil + 1;
     }
 
     return _FollowingFetchResult(
-      videos: visible.take(limit).toList(),
+      videos: visible,
       pageCount: pageCount,
+      nextBefore: nextBefore,
     );
   }
 

@@ -150,12 +150,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// `createdAt` "until" timestamp.
   ///
   /// Pages carrying a cursor arrive in server-ranked order and must be appended
-  /// as-is (no `createdAt` re-sort). For You and Classics are cursor-only, so a
-  /// null [HomeFeedResult.paginationCursor] signals exhaustion there. New
-  /// Videos prefers the cursor but still pages on `until` when the repository
-  /// returns no cursor (Funnelcake outage or a legacy bare-list response).
+  /// as-is (no `createdAt` re-sort). For You, Following and Classics are
+  /// cursor-only, so a null [HomeFeedResult.paginationCursor] signals
+  /// exhaustion there. New Videos prefers the cursor but still pages on
+  /// `until` when the repository returns no cursor (Funnelcake outage or a
+  /// legacy bare-list response).
+  ///
+  /// Following must never page on `until`: its feed is ordered by revision
+  /// time, while [VideoEvent.createdAt] is the publication time. One edited
+  /// old video on a page would move the next page's start back by weeks.
   bool _usesCursorPagination(VideoFeedSource source) =>
       source.type == VideoFeedSourceType.forYou ||
+      source.type == VideoFeedSourceType.following ||
       source.type == VideoFeedSourceType.newVideos ||
       source.type == VideoFeedSourceType.classic;
 
@@ -434,10 +440,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       return;
     }
 
-    // For You and Classics are cursor-only: a missing cursor means the source
-    // is exhausted. New Videos also prefers the cursor, but its repository can
-    // answer without one (Funnelcake outage or a legacy bare-list response),
-    // and that fallback still pages by `until`.
+    // For You, Following and Classics are cursor-only: a missing cursor means
+    // the source is exhausted. New Videos also prefers the cursor, but its
+    // repository can answer without one (Funnelcake outage or a legacy
+    // bare-list response), and that fallback still pages by `until`.
     if (_usesCursorPagination(state.source) &&
         state.paginationCursor == null &&
         state.source.type != VideoFeedSourceType.newVideos) {
@@ -491,8 +497,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         }
       }
 
-      // Cursor-backed pages (For You, Classics, and New Videos when the
-      // repository supplied a cursor) arrive in server-ranked order;
+      // Cursor-backed pages (For You, Following, Classics, and New Videos
+      // when the repository supplied a cursor) arrive in server order;
       // re-sorting by createdAt would shuffle new videos around the current
       // play index and resurface already-seen ones.
       if (!usesCursor) {
@@ -1096,7 +1102,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedSourceType.following => _videosRepository.getHomeFeedVideos(
       authors: _followRepository.followingPubkeys,
       userPubkey: _userPubkey,
-      until: until,
+      cursor: paginationCursor,
     ),
     VideoFeedSourceType.subscribedList =>
       _videosRepository
