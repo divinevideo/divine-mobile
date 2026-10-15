@@ -89,8 +89,11 @@ Future<String> nip44Encrypt(String plaintext, Uint8List convKey) async {
 }
 
 Future<String> nip44Decrypt(String payload, Uint8List convKey) async {
+  if (payload.length < 132 || payload.length > 87472) {
+    throw const FormatException('nip44: bad payload size');
+  }
   final raw = base64Decode(payload);
-  if (raw.length < 65 || raw[0] != 2) {
+  if (raw.length < 99 || raw.length > 65603 || raw[0] != 2) {
     throw const FormatException('nip44: bad payload');
   }
   final nonce = Uint8List.fromList(raw.sublist(1, 33));

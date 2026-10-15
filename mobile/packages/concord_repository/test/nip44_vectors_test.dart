@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
+import 'package:pointycastle/export.dart' as pc;
 import 'package:test/test.dart';
 
 Map<String, dynamic> _readVectors() {
@@ -31,6 +32,29 @@ Map<String, dynamic> _readVectors() {
 void main() {
   group('nip44Decrypt', () {
     final v2 = _readVectors();
+
+    test('rejects an authenticated payload without a length prefix', () async {
+      final key = Uint8List(32);
+      final nonce = Uint8List(32);
+      Uint8List hmac(Uint8List message) => (pc.HMac(
+        pc.SHA256Digest(),
+        64,
+      )..init(pc.KeyParameter(key))).process(message);
+      final first = hmac(Uint8List.fromList([...nonce, 1]));
+      final second = hmac(Uint8List.fromList([...first, ...nonce, 2]));
+      final third = hmac(Uint8List.fromList([...second, ...nonce, 3]));
+      final messageKeys = [...first, ...second, ...third];
+      final mac =
+          (pc.HMac(pc.SHA256Digest(), 64)..init(
+                pc.KeyParameter(
+                  Uint8List.fromList(messageKeys.sublist(44, 76)),
+                ),
+              ))
+              .process(nonce);
+      final payload = base64Encode([2, ...nonce, ...mac]);
+
+      await expectLater(nip44Decrypt(payload, key), throwsFormatException);
+    });
 
     test('decrypts every valid vector', () async {
       final valid = (v2['valid'] as Map)['encrypt_decrypt'] as List;
