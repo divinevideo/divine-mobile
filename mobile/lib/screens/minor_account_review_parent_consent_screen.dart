@@ -93,7 +93,7 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 ListTile(
                   title: Text(
-                    FeatureFlag.minorConsentInAppRecording.displayName,
+                    context.l10n.minorAccountReviewRecordConsentTitle,
                   ),
                   trailing: DivineSwitch(
                     value: canRecordInApp,
