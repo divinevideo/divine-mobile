@@ -16,6 +16,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
@@ -72,7 +74,7 @@ Future<List<UserProfile>?> showUserPickerSheet(
 }
 
 /// A bottom sheet widget for searching and selecting a user.
-class UserPickerSheet extends ConsumerStatefulWidget {
+class UserPickerSheet extends ConsumerWidget {
   /// Creates a user picker bottom sheet.
   const UserPickerSheet({
     required this.filterMode,
@@ -132,10 +134,39 @@ class UserPickerSheet extends ConsumerStatefulWidget {
   final List<UserProfile> initialSelectedProfiles;
 
   @override
-  ConsumerState<UserPickerSheet> createState() => _UserPickerSheetState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileRepository = ref.watch(profileRepositoryProvider);
+    final followRepository = ref.watch(followRepositoryProvider);
+    final rankingSignalsLoader = profileRepository == null
+        ? null
+        : ref.watch(userRankingSignalsLoaderProvider);
+    return _UserPickerSheetView(
+      key: ValueKey((
+        profileRepository,
+        followRepository,
+        rankingSignalsLoader,
+      )),
+      configuration: this,
+      rankingSignalsLoader: rankingSignalsLoader,
+    );
+  }
 }
 
-class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
+class _UserPickerSheetView extends ConsumerStatefulWidget {
+  const _UserPickerSheetView({
+    required this.configuration,
+    required this.rankingSignalsLoader,
+    super.key,
+  });
+
+  final UserPickerSheet configuration;
+  final UserRankingSignalsLoader? rankingSignalsLoader;
+
+  @override
+  ConsumerState<_UserPickerSheetView> createState() => _UserPickerSheetState();
+}
+
+class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
   static const _searchInputBorderRadius = 20.0;
 
   UserSearchBloc? _searchBloc;
@@ -160,7 +191,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   /// Whether the profile repository was unavailable at init time.
   bool _profileRepoMissing = false;
 
-  /// [widget.initialSelectedProfiles] without the excluded viewer.
+  /// [widget.configuration.initialSelectedProfiles] without the excluded viewer.
   ///
   /// Both the initial selection and the header's clear affordance read this
   /// list, so a sheet whose only initial selection was the viewer has nothing
@@ -168,13 +199,13 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   late final List<UserProfile> _initialSelectedProfiles;
 
   /// Tracks selected pubkeys locally so toggling is reflected immediately.
-  /// Initialised from [widget.excludePubkeys] and the viewer-filtered
-  /// [widget.initialSelectedProfiles] so pre-selected users show as checked
+  /// Initialised from [widget.configuration.excludePubkeys] and the viewer-filtered
+  /// [widget.configuration.initialSelectedProfiles] so pre-selected users show as checked
   /// from the start.
   late Set<String> _selectedPubkeys;
 
   bool get _useLocalSearch =>
-      widget.filterMode == UserPickerFilterMode.mutualFollowsOnly;
+      widget.configuration.filterMode == UserPickerFilterMode.mutualFollowsOnly;
 
   /// Whether the sheet stays open while the user picks more than one person.
   ///
@@ -184,16 +215,17 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   /// without one the only way out is the close button, which reads as
   /// discarding the picks.
   bool get _isMultiSelect =>
-      widget.maxCount != null || widget.onUserToggled != null;
+      widget.configuration.maxCount != null ||
+      widget.configuration.onUserToggled != null;
 
   @override
   void initState() {
     super.initState();
-    _initialSelectedProfiles = widget.initialSelectedProfiles
+    _initialSelectedProfiles = widget.configuration.initialSelectedProfiles
         .where((profile) => !_isExcludedViewer(profile.pubkey))
         .toList();
     _selectedPubkeys = {
-      ...widget.excludePubkeys,
+      ...widget.configuration.excludePubkeys,
       for (final profile in _initialSelectedProfiles) profile.pubkey,
     };
     if (_initialSelectedProfiles.isNotEmpty) {
@@ -206,8 +238,9 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
     }
     _searchBloc = UserSearchBloc(
       profileRepository: profileRepo,
+      rankingSignalsLoader: widget.rankingSignalsLoader,
       followRepository: ref.read(followRepositoryProvider),
-      excludedPubkey: widget.excludeViewerPubkey,
+      excludedPubkey: widget.configuration.excludeViewerPubkey,
     );
 
     if (_useLocalSearch) {
@@ -437,7 +470,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   void _onUserSelected(UserProfile profile) {
     if (_isExcludedViewer(profile.pubkey)) return;
 
-    if (widget.onUserToggled != null) {
+    if (widget.configuration.onUserToggled != null) {
       setState(() {
         if (_selectedPubkeys.remove(profile.pubkey)) {
           _selectedProfiles.removeWhere((p) => p.pubkey == profile.pubkey);
@@ -446,13 +479,13 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
           _selectedProfiles.add(profile);
         }
       });
-      widget.onUserToggled!(profile);
-    } else if (widget.maxCount != null) {
+      widget.configuration.onUserToggled!(profile);
+    } else if (widget.configuration.maxCount != null) {
       setState(() {
         if (_selectedProfiles.any((p) => p.pubkey == profile.pubkey)) {
           _selectedProfiles.removeWhere((p) => p.pubkey == profile.pubkey);
           _selectedPubkeys.remove(profile.pubkey);
-        } else if (_selectedProfiles.length < widget.maxCount!) {
+        } else if (_selectedProfiles.length < widget.configuration.maxCount!) {
           _selectedProfiles.add(profile);
           _selectedPubkeys.add(profile.pubkey);
         }
@@ -463,7 +496,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   }
 
   bool _isExcludedViewer(String pubkey) {
-    final viewerPubkey = widget.excludeViewerPubkey;
+    final viewerPubkey = widget.configuration.excludeViewerPubkey;
     return viewerPubkey != null && pubkeysEqual(pubkey, viewerPubkey);
   }
 
@@ -491,17 +524,17 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
     });
 
     final hintText =
-        widget.searchHint ??
+        widget.configuration.searchHint ??
         (_useLocalSearch
             ? context.l10n.userPickerFilterByNameHint
             : context.l10n.userPickerSearchByNameHint);
-    final disabledPubkeys = widget.onUserToggled == null
-        ? widget.excludePubkeys
+    final disabledPubkeys = widget.configuration.onUserToggled == null
+        ? widget.configuration.excludePubkeys
         : const <String>{};
     // Only the capped mode moves a pick out of the list and into the chips
     // row; the callback mode has no chips, so a picked row has to stay put
     // and just render as checked.
-    final hidePubkeys = widget.maxCount == null
+    final hidePubkeys = widget.configuration.maxCount == null
         ? const <String>{}
         : {for (final profile in _selectedProfiles) profile.pubkey};
 
@@ -518,10 +551,10 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
             onPressed: context.pop,
           ),
           title: _UserPickerTitle(
-            title: widget.title,
-            subtitle: widget.searchText,
+            title: widget.configuration.title,
+            subtitle: widget.configuration.searchText,
             selectedCount: _selectedProfiles.length,
-            maxCount: widget.maxCount,
+            maxCount: widget.configuration.maxCount,
           ),
           trailingAction: _isMultiSelect
               ? DivineIconButton(
@@ -553,7 +586,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
               borderRadius: .circular(_searchInputBorderRadius),
             ),
             child: TextField(
-              autofocus: widget.autoFocus,
+              autofocus: widget.configuration.autoFocus,
               controller: _searchController,
               textInputAction: .search,
               // iOS predictive text and autocorrect silently rewrite the
@@ -620,7 +653,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
           ),
         ),
 
-        if (widget.maxCount != null)
+        if (widget.configuration.maxCount != null)
           AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
@@ -644,13 +677,13 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
             opacity:
-                widget.maxCount != null &&
-                    _selectedProfiles.length >= widget.maxCount!
+                widget.configuration.maxCount != null &&
+                    _selectedProfiles.length >= widget.configuration.maxCount!
                 ? 0.5
                 : 1.0,
             child: _useLocalSearch
                 ? _LocalResults(
-                    scrollController: widget.scrollController,
+                    scrollController: widget.configuration.scrollController,
                     followListLoaded: _followListLoaded,
                     followProfiles: _followProfiles,
                     filteredFollowProfiles: _filteredFollowProfiles,
@@ -661,7 +694,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                   )
                 : _NetworkResults(
                     searchBloc: _searchBloc!,
-                    scrollController: widget.scrollController,
+                    scrollController: widget.configuration.scrollController,
                     onUserSelected: _onUserSelected,
                     excludePubkeys: disabledPubkeys,
                     selectedPubkeys: _selectedPubkeys,

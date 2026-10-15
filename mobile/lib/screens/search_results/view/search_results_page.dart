@@ -15,6 +15,7 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/search_results_app_bar.dart';
@@ -134,6 +135,7 @@ class _SearchResultsScope extends ConsumerWidget {
     }
 
     final followRepository = ref.watch(followRepositoryProvider);
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -155,6 +157,7 @@ class _SearchResultsScope extends ConsumerWidget {
       key: ValueKey((
         profileRepository,
         followRepository,
+        rankingSignalsLoader,
         videosRepository,
         hashtagRepository,
         curatedListRepository,
@@ -171,6 +174,7 @@ class _SearchResultsScope extends ConsumerWidget {
           create: (_) => UserSearchBloc(
             profileRepository: profileRepository,
             followRepository: followRepository,
+            rankingSignalsLoader: rankingSignalsLoader,
           ),
         ),
         BlocProvider(

@@ -5,26 +5,52 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:user_ranking/user_ranking.dart';
 
 import '../helpers/retired_key_custody.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
+final _rankingLoaderSelection = StateProvider<bool>((ref) => false);
+
 void main() {
+  late _MockRankingSignalsLoader rankingLoader;
+  setUp(() {
+    rankingLoader = _MockRankingSignalsLoader();
+    when(() => rankingLoader.isEligible(any())).thenReturn(true);
+    when(() => rankingLoader.load(any())).thenAnswer(
+      (invocation) async => {
+        for (final key
+            in invocation.positionalArguments.single as Iterable<String>)
+          key: UserRankingSignals(pubkey: key),
+      },
+    );
+    when(() => rankingLoader.refreshInBackground(any())).thenReturn(null);
+  });
   setUpAll(() {
     registerFallbackValue(SearchCancellationToken('test-search'));
   });
@@ -42,6 +68,7 @@ void main() {
       List<ShareableUser> contacts = const [],
       Duration? searchTimeout = const Duration(seconds: 20),
       List<Override> extraOverrides = const [],
+      Override? rankingLoaderOverride,
     }) {
       return testMaterialApp(
         home: Builder(
@@ -78,6 +105,8 @@ void main() {
           },
         ),
         additionalOverrides: [
+          rankingLoaderOverride ??
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
           profileRepositoryProvider.overrideWithValue(mockProfileRepo),
           profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
           ...extraOverrides,
@@ -90,6 +119,74 @@ void main() {
       await tester.tap(find.text('Open Sheet'));
       await tester.pumpAndSettle();
     }
+
+    Future<void> completeSearch(WidgetTester tester) async {
+      final builder = tester
+          .widget<BlocBuilder<UserSearchBloc, UserSearchState>>(
+            find.byType(BlocBuilder<UserSearchBloc, UserSearchState>),
+          );
+      final bloc = builder.bloc!;
+      // asyncMap's upstream cancellation uses a shared root-zone future.
+      // Its done notification needs a real turn; BLoC continuations then need
+      // a fake-zone pump. Awaiting the BLoC stream inside runAsync deadlocks.
+      const maxCompletionTurns = 10;
+      for (
+        var turn = 0;
+        turn < maxCompletionTurns &&
+            bloc.state.status == UserSearchStatus.loading;
+        turn++
+      ) {
+        await tester.runAsync(() async {});
+        await tester.pump();
+      }
+      expect(
+        bloc.state.status,
+        anyOf(
+          UserSearchStatus.success,
+          UserSearchStatus.failure,
+        ),
+      );
+    }
+
+    group('account dependencies', () {
+      testWidgets(
+        'replaces search state when the account ranking loader changes',
+        (tester) async {
+          final replacement = _MockRankingSignalsLoader();
+          await tester.pumpWidget(
+            createTestWidget(
+              searchTimeout: null,
+              rankingLoaderOverride: userRankingSignalsLoaderProvider
+                  .overrideWith(
+                    (ref) => ref.watch(_rankingLoaderSelection)
+                        ? replacement
+                        : rankingLoader,
+                  ),
+            ),
+          );
+          await tester.tap(find.text('Open Sheet'));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField), 'before');
+          await tester.pump();
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            'before',
+          );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(FindPeopleSheet)),
+          );
+          container.read(_rankingLoaderSelection.notifier).state = true;
+          await tester.pump();
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            isEmpty,
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(searchDebounceDuration);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    });
 
     group('rendering', () {
       testWidgets('renders search field with "Find people" hint text', (
@@ -190,7 +287,6 @@ void main() {
         await tester.enterText(find.byType(TextField), 'alice');
         // Wait for debounce (300ms) + some processing
         await tester.pump(const Duration(milliseconds: 400));
-
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
         // Close the stream to avoid pending timer errors
@@ -201,7 +297,9 @@ void main() {
             isComplete: true,
           ),
         );
-        await controller.close();
+        await tester.pump();
+        await tester.runAsync(controller.close);
+        await completeSearch(tester);
         await tester.pumpAndSettle();
       });
 
@@ -240,6 +338,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'bob');
         await tester.pump(const Duration(milliseconds: 400));
+        await completeSearch(tester);
         await tester.pumpAndSettle();
 
         expect(find.text('Bob'), findsOneWidget);
@@ -284,6 +383,7 @@ void main() {
         await openSheet(tester);
         await tester.enterText(find.byType(TextField), 'me');
         await tester.pump(const Duration(milliseconds: 400));
+        await completeSearch(tester);
         await tester.pumpAndSettle();
 
         expect(find.text('Me'), findsNothing);
@@ -325,6 +425,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'bob');
         await tester.pump(const Duration(milliseconds: 400));
+        await completeSearch(tester);
         await tester.pumpAndSettle();
 
         expect(find.text('@bob.divine.video'), findsOneWidget);
@@ -366,6 +467,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'dana');
         await tester.pump(const Duration(milliseconds: 400));
+        await completeSearch(tester);
         await tester.pumpAndSettle();
 
         expect(find.text('dana@nostrplebs.com'), findsOneWidget);
@@ -396,6 +498,7 @@ void main() {
 
           await tester.enterText(find.byType(TextField), 'nonexistent');
           await tester.pump(const Duration(milliseconds: 400));
+          await completeSearch(tester);
           await tester.pumpAndSettle();
 
           expect(find.text('No users found'), findsOneWidget);
@@ -420,6 +523,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'error');
         await tester.pump(const Duration(milliseconds: 400));
+        await completeSearch(tester);
         await tester.pumpAndSettle();
 
         expect(find.text('Search failed. Please try again.'), findsOneWidget);
@@ -487,6 +591,7 @@ void main() {
         // Type something
         await tester.enterText(find.byType(TextField), 'test');
         await tester.pump(const Duration(milliseconds: 400));
+        await completeSearch(tester);
         await tester.pumpAndSettle();
 
         expect(find.text('No users found'), findsOneWidget);
@@ -532,6 +637,9 @@ void main() {
                 },
               ),
               additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
                 profileRepositoryProvider.overrideWithValue(mockProfileRepo),
                 profileReadRepositoryProvider.overrideWithValue(
                   mockProfileRepo,
@@ -585,6 +693,7 @@ void main() {
               ),
             ),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
             ],
@@ -631,6 +740,7 @@ void main() {
           // Type a search query to trigger the bloc
           await tester.enterText(find.byType(TextField), 'test');
           await tester.pump(const Duration(milliseconds: 400));
+          await completeSearch(tester);
           await tester.pumpAndSettle();
 
           // Verify searchUsersProgressive was called WITHOUT hasVideos
@@ -829,6 +939,7 @@ void main() {
               ),
             ),
             additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
               profileRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
               profileVanishedProvider(
