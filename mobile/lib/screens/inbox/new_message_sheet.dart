@@ -8,11 +8,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -80,14 +84,41 @@ class NewMessageSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(nostrSessionProvider);
+    // The modal can outlive its opening account. Withdraw its old-account
+    // dependencies before constructing a bloc with a new account's loader.
+    if (session.phase == NostrSessionPhase.signedOut ||
+        session.phase == NostrSessionPhase.tearingDown ||
+        session.pubkey == null ||
+        !pubkeysEqual(session.pubkey!, currentUserPubkey)) {
+      return const SizedBox.shrink();
+    }
+    final activeProfileRepository = ref.watch(profileRepositoryProvider);
+    final activeFollowRepository = ref.watch(followRepositoryProvider);
+    // Switching back to the opening account does not make repositories that
+    // were disposed during teardown usable again. Reopen with fresh snapshots.
+    if (!identical(activeProfileRepository, profileRepository) ||
+        !identical(activeFollowRepository, followRepository)) {
+      return const SizedBox.shrink();
+    }
+    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
+    final moderationPresentation = ref.watch(
+      moderationPresentationResolverProvider,
+    );
     return BlocProvider(
+      key: ValueKey((
+        profileRepository,
+        followRepository,
+        currentUserPubkey,
+        rankingSignalsLoader,
+        moderationPresentation,
+      )),
       create: (_) => NewMessageSearchBloc(
         profileRepository: profileRepository,
         followRepository: followRepository,
+        rankingSignalsLoader: rankingSignalsLoader,
         currentUserPubkey: currentUserPubkey,
-        moderationPresentation: ref.read(
-          moderationPresentationResolverProvider,
-        ),
+        moderationPresentation: moderationPresentation,
       )..add(const NewMessageSearchStarted()),
       child: _PeerLabelSync(
         child: _NewMessageSheetView(
