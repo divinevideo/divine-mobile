@@ -1,6 +1,8 @@
 // ABOUTME: Covers the chrome the hashtag feed owns when it is not embedded:
 // ABOUTME: its app-bar title and the pull-to-refresh wiring on its grid.
 
+import 'dart:async';
+
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +13,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
@@ -40,6 +43,7 @@ VideoEvent _video(String id) {
 void main() {
   setUpAll(() {
     registerFallbackValue(<VideoEvent>[]);
+    registerFallbackValue(() {});
   });
 
   late _MockHashtagService hashtagService;
@@ -83,6 +87,40 @@ void main() {
     await tester.pump();
     await tester.pump();
   }
+
+  testWidgets('relay arrivals render while the REST request is still pending', (
+    tester,
+  ) async {
+    final pending = Completer<HashtagFeedVideosResult>();
+    addTearDown(() {
+      if (!pending.isCompleted) {
+        pending.complete(const HashtagFeedVideosResult.success([]));
+      }
+    });
+    when(
+      () => videosRepository.getHashtagFeedVideos(
+        hashtag: any(named: 'hashtag'),
+      ),
+    ).thenAnswer((_) => pending.future);
+    void Function()? videoChanged;
+    when(() => videoEventService.addListener(any())).thenAnswer((invocation) {
+      videoChanged = invocation.positionalArguments.first as void Function();
+    });
+    await pumpScreen(tester, 'fast');
+    when(() => hashtagService.getVideosByHashtags(any()))
+        .thenReturn([_video('relay-video')]);
+    videoChanged!();
+    await tester.pump();
+    expect(
+      tester
+          .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+          .videos
+          .single
+          .id,
+      'relay-video',
+    );
+    expect(pending.isCompleted, isFalse);
+  });
 
   group(HashtagFeedScreen, () {
     testWidgets('titles its app bar with the hashtag', (tester) async {

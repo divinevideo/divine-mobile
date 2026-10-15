@@ -1175,6 +1175,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     ),
     VideoFeedSourceType.subscribedHashtag => _fetchHashtagVideos(
       source.hashtag!,
+      skipCache: skipCache,
     ),
     VideoFeedSourceType.subscribedList =>
       _videosRepository
@@ -1204,7 +1205,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     ),
   };
 
-  Future<HomeFeedResult> _fetchHashtagVideos(String hashtag) async {
+  Future<HomeFeedResult> _fetchHashtagVideos(
+    String hashtag, {
+    required bool skipCache,
+  }) async {
+    if (skipCache) {
+      _videosRepository.clearInMemoryFeedCache(
+        key: 'hashtag:${hashtag.trim().toLowerCase()}',
+      );
+    }
     final result = await _videosRepository.getHashtagFeedVideos(
       hashtag: hashtag,
     );

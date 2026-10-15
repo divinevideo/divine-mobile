@@ -40,9 +40,9 @@ class HashtagFeedScreen extends ConsumerStatefulWidget {
 }
 
 class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
-  /// Tracks whether we've completed the initial subscription attempt.
-  /// Used to show loading state until subscription has been tried.
-  bool _subscriptionAttempted = false;
+  /// Distinguishes a pending REST request from a confirmed empty response.
+  bool _initialLoadCompleted = false;
+  bool _loadFailed = false;
 
   /// Cached videos from Funnelcake REST API for popularity ordering.
   /// When available, these provide engagement-based sorting.
@@ -69,10 +69,7 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
     super.dispose();
   }
 
-  /// Load the fast initial hashtag results first, then detach realtime updates.
-  /// This keeps the first paint honest: no empty-state flash before the
-  /// initial source has answered, while the websocket subscription still starts
-  /// in the background.
+  /// Start independent sources together; neither gates the other.
   Future<void> _loadHashtagVideos() async {
     if (!mounted) return;
 
@@ -82,24 +79,34 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
     );
 
     final hashtagService = ref.read(hashtagServiceProvider);
+    if (_initialLoadCompleted) {
+      _clearHashtagCache();
+    }
 
-    // Wait for the fast initial source before leaving the loading gate.
-    // The websocket can continue in the background once the first pass has
-    // answered.
-    await _fetchFromFunnelcake();
-    if (!mounted) return;
-
+    setState(() {
+      _initialLoadCompleted = false;
+      _loadFailed = false;
+    });
     unawaited(_subscribeViaWebSocket(hashtagService));
-
-    setState(() => _subscriptionAttempted = true);
+    try {
+      await _fetchFromFunnelcake();
+    } catch (_) {
+      if (mounted) setState(() => _loadFailed = true);
+      rethrow;
+    } finally {
+      if (mounted) setState(() => _initialLoadCompleted = true);
+    }
   }
 
-  /// Fetch the interleaved trending+classic hashtag feed from the
-  /// repository and update state immediately.
-  ///
-  /// The repository owns the REST fetch, the trending/classic interleave,
-  /// and the block/mute parse-gate, so blocked authors never reach
-  /// [_popularVideos] (#948).
+  void _clearHashtagCache() {
+    ref
+        .read(videosRepositoryProvider)
+        .clearInMemoryFeedCache(
+          key: 'hashtag:${widget.hashtag.trim().toLowerCase()}',
+        );
+  }
+
+  /// Render the ranked REST page as soon as it arrives.
   Future<void> _fetchFromFunnelcake() async {
     final repository = ref.read(videosRepositoryProvider);
     final result = await repository.getHashtagFeedVideos(
@@ -108,28 +115,30 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
 
     if (!mounted) return;
 
-    if (!result.succeeded && _popularVideos != null) {
+    if (!result.succeeded) {
+      setState(() => _loadFailed = true);
       Log.debug(
-        '🏷️ HashtagFeedScreen: preserving cached Funnelcake videos after '
-        'failed refresh for #${widget.hashtag}',
+        '🏷️ HashtagFeedScreen: REST load failed for #${widget.hashtag}; '
+        'retaining available cached videos',
         category: LogCategory.video,
       );
       return;
     }
 
-    final interleaved = result.videos;
+    final rankedVideos = result.videos;
     Log.info(
-      '🏷️ HashtagFeedScreen: Got ${interleaved.length} interleaved videos '
+      '🏷️ HashtagFeedScreen: Got ${rankedVideos.length} ranked videos '
       'from Funnelcake for #${widget.hashtag}',
       category: LogCategory.video,
     );
 
     // Update immediately - don't wait for WebSocket
     setState(() {
-      _popularVideos = interleaved;
+      _loadFailed = false;
+      _popularVideos = rankedVideos;
       // Mark as ready to show content if we have videos
-      if (interleaved.isNotEmpty) {
-        _subscriptionAttempted = true;
+      if (rankedVideos.isNotEmpty) {
+        _initialLoadCompleted = true;
       }
     });
   }
@@ -245,11 +254,18 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
     // re-show their videos through a refetch. See #948.
     ref.listen<int>(blocklistVersionProvider, (previous, next) {
       if (previous == next || !mounted) return;
-      unawaited(_fetchFromFunnelcake());
+      _clearHashtagCache();
+      runDetached(
+        _fetchFromFunnelcake(),
+        'refresh hashtag videos',
+        logName: 'HashtagFeedScreen',
+        category: LogCategory.video,
+      );
     });
 
-    final body = Builder(
-      builder: (context) {
+    final body = ListenableBuilder(
+      listenable: ref.watch(videoEventServiceProvider),
+      builder: (context, _) {
         Log.debug(
           '🏷️ Building HashtagFeedScreen for #${widget.hashtag}',
           category: LogCategory.video,
@@ -272,10 +288,8 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
           category: LogCategory.video,
         );
 
-        // Show a full-screen loader only before the initial startup attempt.
-        // Once background loading has started, render empty or cached state
-        // instead of blocking on relay subscription setup.
-        final shouldShowLoading = !_subscriptionAttempted;
+        // Cached and live relay results can render while REST is pending.
+        final shouldShowLoading = !_initialLoadCompleted;
 
         if (shouldShowLoading && videos.isEmpty) {
           return Center(
@@ -304,6 +318,29 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
                     color: context.vineColors.secondaryText,
                     fontSize: 14,
                   ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (videos.isEmpty && _loadFailed) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(context.l10n.feedFailedToLoadVideos),
+                const SizedBox(height: 16),
+                DivineButton(
+                  label: context.l10n.commonRetry,
+                  onPressed: () {
+                    runDetached(
+                      _loadHashtagVideos(),
+                      'load hashtag videos',
+                      logName: 'HashtagFeedScreen',
+                      category: LogCategory.video,
+                    );
+                  },
                 ),
               ],
             ),

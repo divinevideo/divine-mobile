@@ -251,6 +251,8 @@ class VideosRepository {
   final VideoWarningLabelsResolver? _warningLabelsResolver;
   final FunnelcakeApiClient? _funnelcakeApiClient;
   final InMemoryFeedCache? _inMemoryFeedCache;
+  // Bound variable hashtag keys to at most 1,000 videos (20 first pages).
+  final _cachedHashtagKeys = <String>{};
   final SeenVideoLookup? _seenVideoLookup;
 
   /// Randomness behind the Classics feed's per-session slice and shuffle.
@@ -292,7 +294,9 @@ class VideosRepository {
   void clearInMemoryFeedCache({String? key}) {
     if (key != null) {
       _inMemoryFeedCache?.remove(key);
+      _cachedHashtagKeys.remove(key);
     } else {
+      _cachedHashtagKeys.clear();
       _inMemoryFeedCache?.clear();
     }
   }
@@ -2331,13 +2335,12 @@ class VideosRepository {
 
   /// Fetches the hashtag feed from the Funnelcake REST API.
   ///
-  /// Fetches trending and classic videos for [hashtag] in parallel and
-  /// interleaves them 1:1 (trending first), deduplicating classics that
-  /// also appear in trending (by event ID or vine ID, case-insensitive).
-  /// Both lists pass through the same filtering pipeline as
-  /// [_transformVideoStats] — block filter, transport scheme, expiration,
-  /// content preferences. The endpoint is anonymous, so the injected
-  /// block filter is the only block/mute enforcement on this path (#948).
+  /// Fetches one ranked page, including classic videos already ranked by the
+  /// endpoint. A separate classics query must not gate visible results.
+  /// Results pass through the shared block, transport and content filters.
+  /// Nonempty pages are cached for one minute for immediate re-entry and
+  /// grid-to-player navigation. Call [clearInMemoryFeedCache] for refresh.
+  /// Cached reads reapply current visibility policy.
   ///
   /// Returns a failed result when [hashtag] is blank, the API client is
   /// unavailable, or the fetch fails or exceeds [timeout] — the REST feed
@@ -2352,15 +2355,36 @@ class VideosRepository {
       return const HashtagFeedVideosResult.failure();
     }
 
-    try {
-      final results = await Future.wait([
-        getVideosByHashtag(hashtag: trimmed, limit: 50),
-        getClassicVideosByHashtag(hashtag: trimmed, limit: 50),
-      ]).timeout(timeout);
-
+    final cacheKey = 'hashtag:${trimmed.toLowerCase()}';
+    final cached = _inMemoryFeedCache?.get(cacheKey);
+    if (cached != null) {
       return HashtagFeedVideosResult.success(
-        _interleaveHashtagVideos(results[0], results[1]),
+        applyContentPreferences(
+          cached.videos.where((video) => !video.isExpired).toList(),
+        ),
       );
+    }
+
+    try {
+      final videos = await getVideosByHashtag(
+        hashtag: trimmed,
+        limit: 50,
+      ).timeout(timeout);
+      if (videos.isNotEmpty && _inMemoryFeedCache != null) {
+        _cachedHashtagKeys.remove(cacheKey);
+        _cachedHashtagKeys.add(cacheKey);
+        if (_cachedHashtagKeys.length > 20) {
+          final oldest = _cachedHashtagKeys.first;
+          _cachedHashtagKeys.remove(oldest);
+          _inMemoryFeedCache.remove(oldest);
+        }
+        _inMemoryFeedCache.set(
+          cacheKey,
+          HomeFeedResult(videos: List.unmodifiable(videos)),
+          ttl: const Duration(minutes: 1),
+        );
+      }
+      return HashtagFeedVideosResult.success(videos);
     } on Exception catch (e, stackTrace) {
       Log.error(
         'getHashtagFeedVideos failed for "#$trimmed"',
@@ -2371,40 +2395,6 @@ class VideosRepository {
       );
       return const HashtagFeedVideosResult.failure();
     }
-  }
-
-  /// Interleaves trending and classic hashtag videos 1:1 for a balanced
-  /// feed. Classics that already appear in trending (by event ID or vine
-  /// ID, case-insensitive) are dropped; when one list runs out, the
-  /// remainder of the other is appended.
-  List<VideoEvent> _interleaveHashtagVideos(
-    List<VideoEvent> trending,
-    List<VideoEvent> classics,
-  ) {
-    final trendingIds = <String>{};
-    for (final video in trending) {
-      if (video.id.isNotEmpty) trendingIds.add(video.id.toLowerCase());
-      final vineId = video.vineId;
-      if (vineId != null && vineId.isNotEmpty) {
-        trendingIds.add(vineId.toLowerCase());
-      }
-    }
-
-    final uniqueClassics = classics.where((video) {
-      final vineId = video.vineId;
-      return !trendingIds.contains(video.id.toLowerCase()) &&
-          (vineId == null || !trendingIds.contains(vineId.toLowerCase()));
-    }).toList();
-
-    final result = <VideoEvent>[];
-    final maxLen = trending.length > uniqueClassics.length
-        ? trending.length
-        : uniqueClassics.length;
-    for (var i = 0; i < maxLen; i++) {
-      if (i < trending.length) result.add(trending[i]);
-      if (i < uniqueClassics.length) result.add(uniqueClassics[i]);
-    }
-    return result;
   }
 
   /// Deduplicates videos by logical feed identity and sorts by popularity

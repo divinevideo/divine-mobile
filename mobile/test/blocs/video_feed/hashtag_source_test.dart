@@ -137,6 +137,8 @@ void main() {
       final failure = await failed;
       expect(failure.videos.single.id, video.id);
       expect(failure.error, VideoFeedError.loadFailed);
+      verify(() => videos.clearInMemoryFeedCache(key: 'hashtag:lnic'))
+          .called(1);
     });
 
     test(
