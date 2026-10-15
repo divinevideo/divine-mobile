@@ -53,7 +53,9 @@ void main() {
     late FeedRepository repository;
 
     setUp(() {
-      container = ProviderContainer();
+      container = ProviderContainer(
+        overrides: [newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new)],
+      );
       repository = container.read(feedRepositoryProvider);
     });
 
@@ -87,14 +89,6 @@ void main() {
     test(
       'global feed bridge replays latest state and re-emits updates',
       () async {
-        container.dispose();
-        container = ProviderContainer(
-          overrides: [
-            newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new),
-          ],
-        );
-        repository = container.read(feedRepositoryProvider);
-
         final feed = container.read(
           newVideosFeedProvider.notifier,
         ) as _TestNewVideosFeed;
@@ -119,12 +113,6 @@ void main() {
     );
 
     test('global feed bridge closes its streams when disposed', () async {
-      container.dispose();
-      container = ProviderContainer(
-        overrides: [newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new)],
-      );
-      repository = container.read(feedRepositoryProvider);
-
       final stream = repository.watchView(const NewVideosViewSource());
       final streamClosed = expectLater(stream, emitsDone);
 
@@ -144,14 +132,6 @@ void main() {
       'global feed bridge replays the previous list when the feed is '
       'reloading at subscribe time',
       () async {
-        container.dispose();
-        container = ProviderContainer(
-          overrides: [
-            newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new),
-          ],
-        );
-        repository = container.read(feedRepositoryProvider);
-
         final feed = container.read(
           newVideosFeedProvider.notifier,
         ) as _TestNewVideosFeed;
