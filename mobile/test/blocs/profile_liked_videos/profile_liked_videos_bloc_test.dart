@@ -39,12 +39,20 @@ class _MockContentBlocklistRepository extends Mock
 class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> _store = {};
 
+  /// Keys whose entries read as expired, as a past-TTL row would.
+  final Set<String> staleKeys = {};
+
   /// When set, [write] parks until it completes, holding a sync handler in the
   /// post-emit snapshot write the way a real disk write does.
   Completer<void>? writeGate;
 
   @override
-  Future<String?> read(String key) async => _store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: staleKeys.contains(key));
+  }
 
   @override
   Future<void> write({
@@ -378,6 +386,55 @@ void main() {
             error: ProfileLikedVideosError.syncFailed,
           ),
         ],
+      );
+
+      blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(
+        'shows a stale snapshot while revalidating',
+        setUp: () async {
+          const key =
+              '$currentUserPubkey:$currentUserPubkey:profile_liked_videos';
+          await cacheDao.write(
+            key: key,
+            payload: ProfileVideoListSnapshot(
+              videos: [createTestVideo('a'), createTestVideo('b')],
+              itemIds: const ['a', 'b'],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          cacheDao.staleKeys.add(key);
+          when(() => mockLikesRepository.syncUserReactions()).thenAnswer(
+            (_) async => const LikesSyncResult(
+              orderedEventIds: ['a', 'b'],
+              eventIdToReactionId: {},
+            ),
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileLikedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileLikedVideosState>()
+              .having(
+                (s) => s.status,
+                'status',
+                ProfileLikedVideosStatus.success,
+              )
+              .having((s) => s.isRefreshing, 'isRefreshing', true)
+              .having(
+                (s) => s.videos.map((v) => v.id).toList(),
+                'stale videos',
+                ['a', 'b'],
+              ),
+          isA<ProfileLikedVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            false,
+          ),
+        ],
+        verify: (_) {
+          verify(() => mockLikesRepository.syncUserReactions()).called(1);
+        },
       );
 
       blocTest<ProfileLikedVideosBloc, ProfileLikedVideosState>(

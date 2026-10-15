@@ -27,12 +27,20 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> _store = {};
 
+  /// Keys whose entries read as expired, as a past-TTL row would.
+  final Set<String> staleKeys = {};
+
   /// When set, [write] parks until it completes, holding a sync handler in the
   /// post-emit snapshot write the way a real disk write does.
   Completer<void>? writeGate;
 
   @override
-  Future<String?> read(String key) async => _store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: staleKeys.contains(key));
+  }
 
   @override
   Future<void> write({
@@ -392,6 +400,62 @@ void main() {
             error: ProfileRepostedVideosError.syncFailed,
           ),
         ],
+      );
+
+      blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+        'shows a stale snapshot while revalidating',
+        setUp: () async {
+          const key = '$currentUserPubkey:profile_reposted_videos';
+          final id1 = createAddressableId(currentUserPubkey, 'd1');
+          final id2 = createAddressableId(currentUserPubkey, 'd2');
+          await cacheDao.write(
+            key: key,
+            payload: ProfileVideoListSnapshot(
+              videos: [
+                createTestVideo(
+                  id: 'e1',
+                  pubkey: currentUserPubkey,
+                  vineId: 'd1',
+                ),
+                createTestVideo(
+                  id: 'e2',
+                  pubkey: currentUserPubkey,
+                  vineId: 'd2',
+                ),
+              ],
+              itemIds: [id1, id2],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          cacheDao.staleKeys.add(key);
+          when(() => mockRepostsRepository.syncUserReposts()).thenAnswer(
+            (_) async => RepostsSyncResult(
+              orderedAddressableIds: [id1, id2],
+              addressableIdToRepostId: const {},
+            ),
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileRepostedVideosState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true)
+              .having(
+                (s) => s.videos.map((v) => v.id).toList(),
+                'stale videos',
+                ['e1', 'e2'],
+              ),
+          isA<ProfileRepostedVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            false,
+          ),
+        ],
+        verify: (_) {
+          verify(() => mockRepostsRepository.syncUserReposts()).called(1);
+        },
       );
 
       blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(

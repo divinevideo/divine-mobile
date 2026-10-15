@@ -1,10 +1,15 @@
+import 'package:cache_sync/src/cache_entry.dart';
+
 /// Abstract interface for the cache DAO.
 ///
 /// Decoupled from Drift so tests can inject a fake DAO.
 abstract interface class CacheDao {
-  /// Returns the payload for [key], or `null` when the entry is absent or
-  /// has passed its `expiresAt` deadline.
-  Future<String?> read(String key);
+  /// Returns the entry for [key], or `null` when it is absent.
+  ///
+  /// An entry past its `expiresAt` deadline is returned with
+  /// [CacheEntry.isStale] set; it is never deleted by a read. A TTL only
+  /// decides when to refresh, not whether the data may be shown.
+  Future<CacheEntry?> readEntry(String key);
 
   /// Writes [payload] for [key].
   ///

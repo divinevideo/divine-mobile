@@ -620,7 +620,13 @@ void main() {
         byPubkey['withcounts']!.read<int?>('follower_counts_updated_at'),
         cachedAt,
       );
-      expect(byPubkey.containsKey('withoutcounts'), isFalse);
+      // Startup cleanup keeps a 10-hour-old row (30-day retention), so the
+      // row is still here and the migration left it unstamped.
+      expect(byPubkey.containsKey('withoutcounts'), isTrue);
+      expect(
+        byPubkey['withoutcounts']!.read<int?>('follower_counts_updated_at'),
+        isNull,
+      );
       await db.close();
     });
 

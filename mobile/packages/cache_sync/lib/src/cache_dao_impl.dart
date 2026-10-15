@@ -1,12 +1,12 @@
-// ignore_for_file: public_member_api_docs // internal implementation, not re-exported by the package
 import 'package:cache_sync/src/cache_dao.dart';
 import 'package:cache_sync/src/cache_database.dart';
+import 'package:cache_sync/src/cache_entry.dart';
 import 'package:drift/drift.dart';
 
 /// Drift-backed implementation of [CacheDao].
 ///
-/// TTL eviction is applied **on read**: an expired row is deleted and `null`
-/// is returned, so stale data never reaches the caller.
+/// An expired row is returned as stale and kept; only size-based eviction and
+/// explicit deletes remove rows.
 ///
 /// When [maxSizeBytes] is set, LRU eviction runs **after every write**: the
 /// oldest entries (by `cachedAt`) are deleted until the total payload size is
@@ -20,9 +20,18 @@ import 'package:drift/drift.dart';
 /// sum to bound drift from a concurrent same-key write. It is maintained only
 /// when [maxSizeBytes] is set — an unbounded cache pays nothing.
 class CacheDaoImpl implements CacheDao {
-  CacheDaoImpl(this._db, {this.maxSizeBytes});
+  /// Creates the DAO over [_db].
+  ///
+  /// [now] is the clock used for expiry checks and write timestamps. It
+  /// defaults to `DateTime.now().toUtc()` and exists so tests can move time.
+  CacheDaoImpl(this._db, {this.maxSizeBytes, DateTime Function()? now})
+    : _now = now ?? _systemNow;
 
   final CacheDatabase _db;
+
+  final DateTime Function() _now;
+
+  static DateTime _systemNow() => DateTime.now().toUtc();
 
   /// Maximum total payload size in characters. `null` = unlimited.
   final int? maxSizeBytes;
@@ -42,7 +51,7 @@ class CacheDaoImpl implements CacheDao {
   Expression<int> get _payloadLength => _db.cacheEntries.payload.length;
 
   @override
-  Future<String?> read(String key) async {
+  Future<CacheEntry?> readEntry(String key) async {
     final row = await (_db.select(
       _db.cacheEntries,
     )..where((t) => t.cacheKey.equals(key))).getSingleOrNull();
@@ -50,12 +59,10 @@ class CacheDaoImpl implements CacheDao {
     if (row == null) return null;
 
     final expires = row.expiresAt;
-    if (expires != null && DateTime.now().toUtc().isAfter(expires)) {
-      await delete(key);
-      return null;
-    }
-
-    return row.payload;
+    return CacheEntry(
+      payload: row.payload,
+      isStale: expires != null && _now().isAfter(expires),
+    );
   }
 
   @override
@@ -64,7 +71,7 @@ class CacheDaoImpl implements CacheDao {
     required String payload,
     Duration? ttl,
   }) async {
-    final now = DateTime.now().toUtc();
+    final now = _now();
     final limit = maxSizeBytes;
 
     // Seed the running counter from the PRE-write total and capture the

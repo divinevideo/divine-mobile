@@ -20,12 +20,20 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> _store = {};
 
+  /// Keys whose entries read as expired, as a past-TTL row would.
+  final Set<String> staleKeys = {};
+
   /// When set, [write] parks until it completes, holding a fetch handler in the
   /// post-emit snapshot write the way a real disk write does.
   Completer<void>? writeGate;
 
   @override
-  Future<String?> read(String key) async => _store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: staleKeys.contains(key));
+  }
 
   @override
   Future<void> write({
@@ -430,6 +438,63 @@ void main() {
                 ProfileCollabVideosStatus.failure,
               ),
         ],
+      );
+
+      blocTest<ProfileCollabVideosBloc, ProfileCollabVideosState>(
+        'shows a stale snapshot while revalidating',
+        build: () {
+          when(
+            () => mockVideosRepository.getCollabVideos(
+              taggedPubkey: targetPubkey,
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              createTestVideo(id: 'cached-1', pubkey: authorPubkey),
+              createTestVideo(id: 'cached-2', pubkey: authorPubkey),
+            ],
+          );
+          return createBloc();
+        },
+        setUp: () async {
+          const key = '$targetPubkey:profile_collab_videos';
+          await cacheDao.write(
+            key: key,
+            payload: ProfileVideoCursorSnapshot(
+              videos: [
+                createTestVideo(id: 'cached-1', pubkey: authorPubkey),
+                createTestVideo(id: 'cached-2', pubkey: authorPubkey),
+              ],
+              paginationCursor: 100,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          cacheDao.staleKeys.add(key);
+        },
+        act: (bloc) => bloc.add(const ProfileCollabVideosFetchRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileCollabVideosState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true)
+              .having(
+                (s) => s.videos.map((v) => v.id).toList(),
+                'stale videos',
+                ['cached-1', 'cached-2'],
+              ),
+          isA<ProfileCollabVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            false,
+          ),
+        ],
+        verify: (_) {
+          verify(
+            () => mockVideosRepository.getCollabVideos(
+              taggedPubkey: targetPubkey,
+              limit: any(named: 'limit'),
+            ),
+          ).called(1);
+        },
       );
 
       blocTest<ProfileCollabVideosBloc, ProfileCollabVideosState>(

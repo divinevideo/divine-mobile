@@ -30,7 +30,7 @@ class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 
 class _NoOpCacheDao implements CacheDao {
   @override
-  Future<String?> read(String key) async => null;
+  Future<CacheEntry?> readEntry(String key) async => null;
 
   @override
   Future<void> write({

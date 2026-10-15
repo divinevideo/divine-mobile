@@ -104,7 +104,8 @@ class ProfilePinsRepository {
   /// publish can still supersede a base whose `created_at` is in our future.
   static const int maxPublishFutureSkew = 30;
 
-  /// How long a cached pin list is served before it is treated as absent.
+  /// How long a cached pin list stays fresh before it is refreshed in the
+  /// background; a stale list is still served meanwhile.
   static const Duration cacheTtl = Duration(days: 30);
 
   /// Mutations run one at a time so a second pin cannot read the list the
@@ -152,14 +153,16 @@ class ProfilePinsRepository {
 
   /// The cached pin list for [ownerPubkey], or `null` when nothing is cached.
   ///
+  /// An expired list is still returned; callers revalidate with [fetch].
   /// Never touches the network; a cache failure reads as a miss so a cold
   /// profile open cannot be broken by it.
   Future<List<String>?> readCached(String ownerPubkey) async {
     try {
-      return await CacheSync.read<List<String>>(
+      final entry = await CacheSync.readEntry<List<String>>(
         key: cacheKeyFor(ownerPubkey),
         fromJson: _coordinatesFromJson,
       );
+      return entry?.data;
     } on Object catch (error) {
       Log.warning(
         'Failed to read cached profile pins - $error',
@@ -570,7 +573,7 @@ class ProfilePinsRepository {
   }
 
   /// Eager on purpose: `cast` returns a lazy view that only throws when an
-  /// element is read, which is long after `CacheSync.read`'s guard has
+  /// element is read, which is long after `CacheSync.readEntry`'s guard has
   /// returned and left the corrupt entry on disk.
   static List<String> _coordinatesFromJson(String json) =>
       List<String>.from(jsonDecode(json) as List<dynamic>);

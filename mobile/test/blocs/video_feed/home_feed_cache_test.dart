@@ -10,15 +10,14 @@ class _FakeCacheDao implements CacheDao {
   final Map<String, ({String payload, DateTime? expiresAt})> store = {};
 
   @override
-  Future<String?> read(String key) async {
+  Future<CacheEntry?> readEntry(String key) async {
     final entry = store[key];
     if (entry == null) return null;
     final expiresAt = entry.expiresAt;
-    if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt)) {
-      store.remove(key);
-      return null;
-    }
-    return entry.payload;
+    return CacheEntry(
+      payload: entry.payload,
+      isStale: expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt),
+    );
   }
 
   @override
@@ -87,6 +86,24 @@ void main() {
         final result = await cache.readVideos(pubkey: pubkey, mode: 'forYou');
         expect(result, isNotNull);
         expect(result!.map((v) => v.id), equals(['a', 'b']));
+      });
+
+      test('shows a stale snapshot while revalidating', () async {
+        await cache.writeVideos(
+          pubkey: pubkey,
+          mode: 'forYou',
+          videos: [_video('a'), _video('b')],
+        );
+        final key = dao.store.keys.single;
+        dao.store[key] = (
+          payload: dao.store[key]!.payload,
+          expiresAt: DateTime.now().toUtc().subtract(homeFeedCacheMaxAge),
+        );
+
+        final result = await cache.readVideos(pubkey: pubkey, mode: 'forYou');
+
+        expect(result!.map((v) => v.id), equals(['a', 'b']));
+        expect(dao.store, contains(key));
       });
 
       test('does not persist an empty list', () async {

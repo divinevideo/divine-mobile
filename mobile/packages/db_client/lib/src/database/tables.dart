@@ -179,7 +179,10 @@ class VideoMetrics extends Table {
 
 /// Cache of profile statistics (followers, following, video counts, etc.)
 ///
-/// Stores aggregated stats for user profiles with a 5-minute expiry.
+/// Stores aggregated stats for user profiles. Rows are fresh for
+/// `profileStatsCacheDuration`; retained 30 days (`profileStatsRetention`),
+/// swept by `ProfileStatsDao.deleteExpired` from
+/// `AppDatabase.runStartupCleanup`.
 @DataClassName('ProfileStatRow')
 class ProfileStats extends Table {
   @override

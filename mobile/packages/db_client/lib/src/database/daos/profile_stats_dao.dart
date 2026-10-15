@@ -1,27 +1,29 @@
 // ABOUTME: Data Access Object for profile statistics cache operations.
-// ABOUTME: Provides upsert with expiry checking.
+// ABOUTME: Provides upsert, freshness-checked reads, and 30-day retention.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 
 part 'profile_stats_dao.g.dart';
 
-/// Default cache duration for profile stats (5 minutes)
+/// How long a profile stats row counts as fresh (5 minutes).
+///
+/// A freshness signal only: [ProfileStatsDao.getStats] returns `null` for an
+/// older row so callers refetch, but the row stays on disk until
+/// [profileStatsRetention] passes.
 const profileStatsCacheDuration = Duration(minutes: 5);
 
-/// How long follower/following counts stay useful after they were written.
+/// How long a profile stats row is kept on disk (30 days).
 ///
-/// Follower counts live in this row and have coordinated REST and relay
-/// writers.
-/// The relay fallback stabilizes partial observations against the persisted
-/// value, which only works if the baseline survives a restart, so the counts
-/// outlive the 5-minute stats cache.
-///
-/// This must stay comfortably longer than `FollowRepository`'s own staleness
-/// window, so the baseline is still on disk for as long as the repository would
-/// still trust it. Sizing them equally would race: the row could be swept in
-/// the same launch the repository still wanted to compare against it.
-const profileFollowerCountsCacheDuration = Duration(hours: 48);
+/// Retention policy for the `profile_stats` table: a row is deleted only when
+/// both its `cached_at` and (when set) its `follower_counts_updated_at` are
+/// older than this window. [ProfileStatsDao.deleteExpired] enforces it, called
+/// from `AppDatabase.runStartupCleanup`. Rows are never deleted because they
+/// are merely stale; stale rows remain available through
+/// [ProfileStatsDao.getStatsRaw] while a refresh runs. This also keeps the
+/// persisted follower-count baseline across restarts, which the relay
+/// fallback stabilizes partial observations against.
+const profileStatsRetention = Duration(days: 30);
 
 @DriftAccessor(tables: [ProfileStats, VanishedProfiles])
 class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
@@ -44,9 +46,9 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
   /// one question for two readers: *when were these counts last written from
   /// a source we trust?*
   ///
-  /// - [getStats] and [deleteExpired] use it as the retention clock, keeping a
-  ///   row whose counts are newer than [profileFollowerCountsCacheDuration]
-  ///   even after the rest of the row has expired.
+  /// - [deleteExpired] uses it as part of the retention clock, keeping a row
+  ///   whose counts are newer than [profileStatsRetention] even after the rest
+  ///   of the row is older than the window.
   /// - `FollowRepository`'s relay-fallback hysteresis uses it to decide when a
   ///   baseline is old enough that a lower relay count should be accepted.
   ///
@@ -88,34 +90,22 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
     await into(profileStats).insertOnConflictUpdate(companion);
   }
 
-  /// Get stats for a pubkey (returns null if not found or expired).
+  /// Get stats for a pubkey (returns null if not found or stale).
   ///
-  /// An expired row is only deleted when it carries nothing worth keeping.
-  /// Follower counts outlive this cache ([followerCountsExpiry]) and form the
-  /// shared baseline for REST/profile rendering and relay fallback, so evicting
-  /// them here would reintroduce the loss [deleteExpired] avoids.
+  /// A row older than [expiry] is a freshness miss only: this returns `null`
+  /// so the caller refetches, but the row is left on disk. Deletion is governed
+  /// by [profileStatsRetention] in [deleteExpired]. Use [getStatsRaw] to read a
+  /// stale row while a refresh runs.
   Future<ProfileStatRow?> getStats(
     String pubkey, {
     Duration expiry = profileStatsCacheDuration,
-    Duration followerCountsExpiry = profileFollowerCountsCacheDuration,
   }) async {
     final query = select(profileStats)..where((t) => t.pubkey.equals(pubkey));
     final result = await query.getSingleOrNull();
 
     if (result == null) return null;
 
-    // Check expiry
-    final now = DateTime.now();
-    if (result.cachedAt.isBefore(now.subtract(expiry))) {
-      final hasCounts =
-          result.followerCount != null || result.followingCount != null;
-      final countsWrittenAt = result.followerCountsUpdatedAt ?? result.cachedAt;
-      final countsWorthKeeping =
-          hasCounts &&
-          !countsWrittenAt.isBefore(now.subtract(followerCountsExpiry));
-      if (!countsWorthKeeping) {
-        await deleteStats(pubkey);
-      }
+    if (result.cachedAt.isBefore(DateTime.now().subtract(expiry))) {
       return null;
     }
 
@@ -127,47 +117,33 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
     return (delete(profileStats)..where((t) => t.pubkey.equals(pubkey))).go();
   }
 
-  /// Delete all expired stats.
+  /// Deletes rows older than the [retention] window ([profileStatsRetention],
+  /// 30 days by default).
   ///
-  /// A row survives only while it still carries useful follower counts:
-  /// it must hold at least one count, and that count must be newer than
-  /// [followerCountsExpiry]. Everything else is governed by [expiry] alone.
-  /// Dropping a row that still holds fresh follower counts would destroy the
-  /// baseline `FollowRepository` stabilizes against, which is exactly the
-  /// cross-restart case its hysteresis exists for.
+  /// A row is deleted only when `cached_at` and `follower_counts_updated_at`
+  /// are both older than the window. A row whose `follower_counts_updated_at`
+  /// is NULL (written before that column existed, or never given a count) is
+  /// judged by `cached_at` alone.
   ///
-  /// `follower_counts_updated_at` falls back to `cached_at` when NULL, matching
-  /// `FollowRepository`'s own read. Rows written before that column existed
-  /// carry counts with a NULL timestamp, and on the first launch after the
-  /// v1 → v2 upgrade those are exactly the baselines worth keeping — treating
-  /// NULL as "already expired" would delete them before the new column was ever
-  /// populated.
+  /// Called from `AppDatabase.runStartupCleanup`. Freshness
+  /// ([profileStatsCacheDuration]) plays no part here: a stale row stays until
+  /// the retention window passes.
   Future<int> deleteExpired({
-    Duration expiry = profileStatsCacheDuration,
-    Duration followerCountsExpiry = profileFollowerCountsCacheDuration,
+    Duration retention = profileStatsRetention,
   }) {
-    final now = DateTime.now();
-    final expiryTime = now.subtract(expiry);
-    final followerExpiryTime = now.subtract(followerCountsExpiry);
-    return (delete(profileStats)..where((t) {
-          final hasCounts =
-              t.followerCount.isNotNull() | t.followingCount.isNotNull();
-          final countsWrittenAt = coalesce([
-            t.followerCountsUpdatedAt,
-            t.cachedAt,
-          ]);
-          final countsWorthKeeping =
-              hasCounts &
-              countsWrittenAt.isBiggerOrEqualValue(followerExpiryTime);
-          return t.cachedAt.isSmallerThan(Variable(expiryTime)) &
-              countsWorthKeeping.not();
-        }))
+    final cutoff = DateTime.now().subtract(retention);
+    return (delete(profileStats)..where(
+          (t) =>
+              t.cachedAt.isSmallerThanValue(cutoff) &
+              (t.followerCountsUpdatedAt.isNull() |
+                  t.followerCountsUpdatedAt.isSmallerThanValue(cutoff)),
+        ))
         .go();
   }
 
   /// Read the stats row without expiry checking.
   ///
-  /// Unlike [getStats], this never deletes expired rows.
+  /// Unlike [getStats], this returns stale rows too.
   /// Use this when the consumer manages its own staleness logic
   /// (e.g., hysteresis with a custom stale duration).
   Future<ProfileStatRow?> getStatsRaw(String pubkey) async {

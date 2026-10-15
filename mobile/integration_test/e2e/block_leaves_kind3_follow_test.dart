@@ -48,7 +48,12 @@ class _MemoryCacheDao implements CacheDao {
   final Map<String, String> _entries = {};
 
   @override
-  Future<String?> read(String key) async => _entries[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _entries[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: false);
+  }
 
   @override
   Future<void> write({

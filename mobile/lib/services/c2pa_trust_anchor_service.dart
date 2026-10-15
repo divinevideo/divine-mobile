@@ -221,6 +221,8 @@ class C2paTrustAnchorService {
 
   Future<_CachedBundle?> _readCache(String key) async {
     try {
+      // The row has no TTL; freshness is enforced by
+      // `refreshInterval`/`maxStaleAge` in `load`.
       return await CacheSync.read<_CachedBundle>(
         key: key,
         fromJson: _CachedBundle.fromJson,

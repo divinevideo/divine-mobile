@@ -1,5 +1,6 @@
 import 'package:cache_sync/src/cache_dao_impl.dart';
 import 'package:cache_sync/src/cache_database.dart';
+import 'package:cache_sync/src/cache_entry.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,54 +8,98 @@ void main() {
   group(CacheDaoImpl, () {
     late CacheDatabase db;
     late CacheDaoImpl dao;
+    late DateTime clock;
 
     setUp(() {
+      clock = DateTime.utc(2026, 10, 14);
       db = CacheDatabase.test(NativeDatabase.memory());
-      dao = CacheDaoImpl(db);
+      dao = CacheDaoImpl(db, now: () => clock);
     });
 
     tearDown(() => db.close());
 
     group('write / read', () {
       test('returns null for absent key', () async {
-        expect(await dao.read('missing'), isNull);
+        expect(await dao.readEntry('missing'), isNull);
       });
 
       test('returns payload for a written entry', () async {
         await dao.write(key: 'k1', payload: '{"x":1}');
-        expect(await dao.read('k1'), equals('{"x":1}'));
+        expect((await dao.readEntry('k1'))?.payload, equals('{"x":1}'));
       });
 
       test('overwrites existing entry', () async {
         await dao.write(key: 'k1', payload: 'first');
         await dao.write(key: 'k1', payload: 'second');
-        expect(await dao.read('k1'), equals('second'));
+        expect((await dao.readEntry('k1'))?.payload, equals('second'));
       });
     });
 
-    group('TTL eviction', () {
-      test('returns null for an already-expired entry', () async {
+    group('TTL staleness', () {
+      test('readEntry returns an expired row as stale and keeps it', () async {
         await dao.write(
           key: 'expired',
           payload: 'old',
-          ttl: const Duration(microseconds: 1),
+          ttl: const Duration(seconds: 1),
         );
-        await Future<void>.delayed(const Duration(milliseconds: 5));
-        expect(await dao.read('expired'), isNull);
+        clock = clock.add(const Duration(seconds: 2));
+
+        final entry = await dao.readEntry('expired');
+
+        expect(entry, isNotNull);
+        expect(entry!.isStale, isTrue);
+        expect(entry.payload, equals('old'));
+        expect(await dao.readEntry('expired'), isNotNull);
+        expect(await dao.totalPayloadBytes(), equals(3));
       });
 
-      test('returns payload when TTL has not yet elapsed', () async {
+      test('readEntry returns a fresh row when TTL has not elapsed', () async {
         await dao.write(
           key: 'fresh',
           payload: 'data',
           ttl: const Duration(hours: 1),
         );
-        expect(await dao.read('fresh'), equals('data'));
+        clock = clock.add(const Duration(minutes: 59));
+
+        final entry = await dao.readEntry('fresh');
+
+        expect(
+          entry,
+          equals(const CacheEntry(payload: 'data', isStale: false)),
+        );
       });
 
-      test('entry without TTL never expires', () async {
+      test('entry without TTL is never stale', () async {
         await dao.write(key: 'immortal', payload: 'forever');
-        expect(await dao.read('immortal'), equals('forever'));
+        clock = clock.add(const Duration(days: 3650));
+
+        final entry = await dao.readEntry('immortal');
+
+        expect(
+          entry,
+          equals(const CacheEntry(payload: 'forever', isStale: false)),
+        );
+      });
+
+      test('rewriting a stale row makes it fresh again', () async {
+        await dao.write(
+          key: 'k',
+          payload: 'old',
+          ttl: const Duration(hours: 1),
+        );
+        clock = clock.add(const Duration(hours: 2));
+        expect((await dao.readEntry('k'))!.isStale, isTrue);
+
+        await dao.write(
+          key: 'k',
+          payload: 'new',
+          ttl: const Duration(hours: 1),
+        );
+
+        expect(
+          await dao.readEntry('k'),
+          equals(const CacheEntry(payload: 'new', isStale: false)),
+        );
       });
     });
 
@@ -62,7 +107,7 @@ void main() {
       test('removes entry', () async {
         await dao.write(key: 'del', payload: 'bye');
         await dao.delete('del');
-        expect(await dao.read('del'), isNull);
+        expect(await dao.readEntry('del'), isNull);
       });
 
       test('is a no-op for absent key', () async {
@@ -82,9 +127,9 @@ void main() {
 
         await dao.deletePrefix('user1');
 
-        expect(await dao.read('user1:home_feed'), isNull);
-        expect(await dao.read('user1:my_followers'), isNull);
-        expect(await dao.read('user2:home_feed'), equals('c'));
+        expect(await dao.readEntry('user1:home_feed'), isNull);
+        expect(await dao.readEntry('user1:my_followers'), isNull);
+        expect((await dao.readEntry('user2:home_feed'))?.payload, equals('c'));
       });
 
       test('exact-key prefix removes prefixed siblings too', () async {
@@ -93,8 +138,8 @@ void main() {
 
         await dao.deletePrefix('abc');
 
-        expect(await dao.read('abc'), isNull);
-        expect(await dao.read('abcdef'), isNull);
+        expect(await dao.readEntry('abc'), isNull);
+        expect(await dao.readEntry('abcdef'), isNull);
       });
 
       test('non-prefix substring is preserved', () async {
@@ -103,8 +148,11 @@ void main() {
 
         await dao.deletePrefix('prefix');
 
-        expect(await dao.read('prefixed'), isNull);
-        expect(await dao.read('wrap_prefixed_inner'), equals('b'));
+        expect(await dao.readEntry('prefixed'), isNull);
+        expect(
+          (await dao.readEntry('wrap_prefixed_inner'))?.payload,
+          equals('b'),
+        );
       });
 
       test('treats `_` in prefix as a literal, not a LIKE wildcard', () async {
@@ -116,8 +164,8 @@ void main() {
 
         await dao.deletePrefix('user_1');
 
-        expect(await dao.read('user_1:home'), isNull);
-        expect(await dao.read('userX1:home'), equals('b'));
+        expect(await dao.readEntry('user_1:home'), isNull);
+        expect((await dao.readEntry('userX1:home'))?.payload, equals('b'));
       });
 
       test('treats `%` in prefix as a literal, not a LIKE wildcard', () async {
@@ -128,8 +176,8 @@ void main() {
 
         await dao.deletePrefix('pre%fix');
 
-        expect(await dao.read('pre%fix:home'), isNull);
-        expect(await dao.read('preXYZfix:home'), equals('b'));
+        expect(await dao.readEntry('pre%fix:home'), isNull);
+        expect((await dao.readEntry('preXYZfix:home'))?.payload, equals('b'));
       });
 
       test(
@@ -141,8 +189,8 @@ void main() {
 
           await dao.deletePrefix(r'wrap\back');
 
-          expect(await dao.read(r'wrap\back:home'), isNull);
-          expect(await dao.read('wrap:home'), equals('b'));
+          expect(await dao.readEntry(r'wrap\back:home'), isNull);
+          expect((await dao.readEntry('wrap:home'))?.payload, equals('b'));
         },
       );
     });
@@ -169,32 +217,32 @@ void main() {
       test('does nothing when bytesToFree is 0', () async {
         await dao.write(key: 'a', payload: 'hello');
         await dao.evictOldest(0);
-        expect(await dao.read('a'), equals('hello'));
+        expect((await dao.readEntry('a'))?.payload, equals('hello'));
       });
 
       test('deletes oldest entry until enough bytes are freed', () async {
         await dao.write(key: 'old', payload: 'aaaa'); // 4 bytes, written first
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         await dao.write(key: 'new', payload: 'bbbb'); // 4 bytes, written later
 
         await dao.evictOldest(4);
 
-        expect(await dao.read('old'), isNull);
-        expect(await dao.read('new'), equals('bbbb'));
+        expect(await dao.readEntry('old'), isNull);
+        expect((await dao.readEntry('new'))?.payload, equals('bbbb'));
       });
 
       test('evicts multiple entries when one is not enough', () async {
         await dao.write(key: 'a', payload: 'aa'); // 2
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         await dao.write(key: 'b', payload: 'bb'); // 2
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         await dao.write(key: 'c', payload: 'cc'); // 2 — newest, kept
 
         await dao.evictOldest(4);
 
-        expect(await dao.read('a'), isNull);
-        expect(await dao.read('b'), isNull);
-        expect(await dao.read('c'), equals('cc'));
+        expect(await dao.readEntry('a'), isNull);
+        expect(await dao.readEntry('b'), isNull);
+        expect((await dao.readEntry('c'))?.payload, equals('cc'));
       });
     });
 
@@ -202,25 +250,25 @@ void main() {
       setUp(() async {
         await db.close();
         db = CacheDatabase.test(NativeDatabase.memory());
-        dao = CacheDaoImpl(db, maxSizeBytes: 10);
+        dao = CacheDaoImpl(db, maxSizeBytes: 10, now: () => clock);
       });
 
       test('keeps entries within limit', () async {
         await dao.write(key: 'a', payload: 'aaaaa'); // 5
         await dao.write(key: 'b', payload: 'bbbbb'); // 5 — total: 10, ok
 
-        expect(await dao.read('a'), equals('aaaaa'));
-        expect(await dao.read('b'), equals('bbbbb'));
+        expect((await dao.readEntry('a'))?.payload, equals('aaaaa'));
+        expect((await dao.readEntry('b'))?.payload, equals('bbbbb'));
       });
 
       test('evicts oldest entry when limit is exceeded', () async {
         await dao.write(key: 'old', payload: 'aaaaaaaaaa'); // 10
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        clock = clock.add(const Duration(seconds: 1));
         // 10 + 10 = 20 > limit 10, 'old' is evicted
         await dao.write(key: 'new', payload: 'bbbbbbbbbb');
 
-        expect(await dao.read('old'), isNull);
-        expect(await dao.read('new'), equals('bbbbbbbbbb'));
+        expect(await dao.readEntry('old'), isNull);
+        expect((await dao.readEntry('new'))?.payload, equals('bbbbbbbbbb'));
       });
 
       test('does not evict when unlimited (maxSizeBytes: null)', () async {
@@ -229,8 +277,8 @@ void main() {
         await unlimitedDao.write(key: 'y', payload: 'y' * 1000);
 
         expect(await unlimitedDao.totalPayloadBytes(), equals(2000));
-        expect(await unlimitedDao.read('x'), isNotNull);
-        expect(await unlimitedDao.read('y'), isNotNull);
+        expect(await unlimitedDao.readEntry('x'), isNotNull);
+        expect(await unlimitedDao.readEntry('y'), isNotNull);
       });
 
       test('overwriting with a smaller payload frees budget (counter '
@@ -243,9 +291,9 @@ void main() {
         await dao.write(key: 'a', payload: 'a'); // total 3
         await dao.write(key: 'c', payload: 'ccccccc'); // 7 — total 10
 
-        expect(await dao.read('a'), equals('a'));
-        expect(await dao.read('b'), equals('bb'));
-        expect(await dao.read('c'), equals('ccccccc'));
+        expect((await dao.readEntry('a'))?.payload, equals('a'));
+        expect((await dao.readEntry('b'))?.payload, equals('bb'));
+        expect((await dao.readEntry('c'))?.payload, equals('ccccccc'));
       });
 
       test('delete frees budget so a later write does not evict', () async {
@@ -254,17 +302,17 @@ void main() {
         await dao.delete('a'); // total 5
         await dao.write(key: 'c', payload: 'ccccc'); // 5 — total 10, no evict
 
-        expect(await dao.read('a'), isNull);
-        expect(await dao.read('b'), equals('bbbbb'));
-        expect(await dao.read('c'), equals('ccccc'));
+        expect(await dao.readEntry('a'), isNull);
+        expect((await dao.readEntry('b'))?.payload, equals('bbbbb'));
+        expect((await dao.readEntry('c'))?.payload, equals('ccccc'));
       });
 
       test('uses the database length metric for non-BMP payloads', () async {
         await dao.write(key: 'emoji', payload: '😀' * 5);
         await dao.write(key: 'plain', payload: 'xxxxx');
 
-        expect(await dao.read('emoji'), equals('😀' * 5));
-        expect(await dao.read('plain'), equals('xxxxx'));
+        expect((await dao.readEntry('emoji'))?.payload, equals('😀' * 5));
+        expect((await dao.readEntry('plain'))?.payload, equals('xxxxx'));
         expect(await dao.totalPayloadBytes(), equals(10));
       });
 
@@ -278,9 +326,9 @@ void main() {
           // write fits. A stale counter (still 10) would evict user2:y.
           await dao.write(key: 'user2:z', payload: 'zzzzz'); // 5 — total 10
 
-          expect(await dao.read('user1:x'), isNull);
-          expect(await dao.read('user2:y'), equals('yyyyy'));
-          expect(await dao.read('user2:z'), equals('zzzzz'));
+          expect(await dao.readEntry('user1:x'), isNull);
+          expect((await dao.readEntry('user2:y'))?.payload, equals('yyyyy'));
+          expect((await dao.readEntry('user2:z'))?.payload, equals('zzzzz'));
         },
       );
 
@@ -293,7 +341,7 @@ void main() {
         // This 257th write exercises the post-reconcile path where _totalBytes
         // was nullified and must be recomputed via totalPayloadBytes().
         await dao.write(key: 'k', payload: 'x');
-        expect(await dao.read('k'), equals('x'));
+        expect((await dao.readEntry('k'))?.payload, equals('x'));
         expect(await dao.totalPayloadBytes(), equals(1));
       });
     });

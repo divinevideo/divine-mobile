@@ -25,12 +25,16 @@ class ProfileVideoSnapshotCache {
 
   /// Reads the persisted snapshot once; `null` on miss or failure (a cache
   /// problem must never break an otherwise-fine cold load).
+  ///
+  /// An expired snapshot is still returned: the cubit revalidates the head
+  /// right after restoring it.
   Future<ProfileVideoOffsetSnapshot?> read() async {
     try {
-      return await CacheSync.read<ProfileVideoOffsetSnapshot>(
+      final entry = await CacheSync.readEntry<ProfileVideoOffsetSnapshot>(
         key: _key,
         fromJson: ProfileVideoOffsetSnapshot.fromJson,
       );
+      return entry?.data;
     } on Object catch (error) {
       Log.warning(
         'Failed to read cached profile-videos snapshot - $error',

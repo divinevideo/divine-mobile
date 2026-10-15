@@ -33,8 +33,16 @@ class _MockProfilePinsRepository extends Mock
 class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> _store = {};
 
+  /// Keys whose entries read as expired, as a past-TTL row would.
+  final Set<String> staleKeys = {};
+
   @override
-  Future<String?> read(String key) async => _store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: staleKeys.contains(key));
+  }
 
   @override
   Future<void> write({
@@ -341,6 +349,44 @@ void main() {
         expect(cubit.state.totalVideoCount, 300);
         expect(cubit.state.isInitialLoad, isFalse);
         expect(cubit.state.isRefreshing, isFalse);
+        verify(
+          () => h.repo.getAuthorFeed(
+            authorPubkey: _author,
+            relaySeed: any(named: 'relaySeed'),
+            skipCache: true,
+          ),
+        ).called(1);
+      });
+
+      test('shows a stale snapshot while revalidating', () async {
+        await seedSnapshot(
+          ProfileVideoOffsetSnapshot(
+            videos: [
+              _video('v1', createdAt: 5000),
+              _video('v2', createdAt: 4000),
+            ],
+            nextOffset: 120,
+            totalVideoCount: 200,
+            hasMoreContent: true,
+          ),
+        );
+        cacheDao.staleKeys.add(cacheKey);
+        h.stubAuthorFeed(
+          _result(
+            [_video('v1', createdAt: 5000)],
+            totalCount: 200,
+            nextOffset: 50,
+            hasMore: true,
+          ),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.status, ProfileFeedStatus.ready);
+        expect(cubit.state.videos.map((v) => v.id), ['v1', 'v2']);
+        expect(cubit.state.nextOffset, 120);
         verify(
           () => h.repo.getAuthorFeed(
             authorPubkey: _author,

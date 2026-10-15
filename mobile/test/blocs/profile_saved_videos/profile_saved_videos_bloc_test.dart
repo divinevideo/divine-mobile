@@ -24,12 +24,20 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 class _InMemoryCacheDao implements CacheDao {
   final Map<String, String> _store = {};
 
+  /// Keys whose entries read as expired, as a past-TTL row would.
+  final Set<String> staleKeys = {};
+
   /// When set, [write] parks until it completes, holding a sync handler in the
   /// post-emit snapshot write the way a real disk write does.
   Completer<void>? writeGate;
 
   @override
-  Future<String?> read(String key) async => _store[key];
+  Future<CacheEntry?> readEntry(String key) async {
+    final payload = _store[key];
+    return payload == null
+        ? null
+        : CacheEntry(payload: payload, isStale: staleKeys.contains(key));
+  }
 
   @override
   Future<void> write({
@@ -183,12 +191,15 @@ void main() {
           expect(bloc.state.savedEventIds, [newestId, secondId, firstId]);
           expect(fetchedIds.where((id) => id == secondId), hasLength(1));
           expect(fetchedIds.where((id) => id == newestId), hasLength(1));
-          final persisted = await cacheDao.read(snapshotCacheKey);
-          expect(ProfileVideoListSnapshot.fromJson(persisted!).itemIds, [
-            newestId,
-            secondId,
-            firstId,
-          ]);
+          final persisted = await cacheDao.readEntry(snapshotCacheKey);
+          expect(
+            ProfileVideoListSnapshot.fromJson(persisted!.payload).itemIds,
+            [
+              newestId,
+              secondId,
+              firstId,
+            ],
+          );
         },
       );
     }
@@ -238,9 +249,9 @@ void main() {
       await refresh.future;
       await pumpEventQueue();
       expect(bloc.state.nextPageOffset, ProfileTabPagination.pageSize * 2);
-      final persisted = await cacheDao.read(snapshotCacheKey);
+      final persisted = await cacheDao.readEntry(snapshotCacheKey);
       expect(
-        ProfileVideoListSnapshot.fromJson(persisted!).nextPageOffset,
+        ProfileVideoListSnapshot.fromJson(persisted!.payload).nextPageOffset,
         ProfileTabPagination.pageSize * 2,
       );
       // A new gesture after completion still loads the next page.
@@ -417,6 +428,47 @@ void main() {
           ),
         );
       });
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'shows a stale snapshot while revalidating',
+        setUp: () async {
+          await cacheDao.write(
+            key: snapshotCacheKey,
+            payload: ProfileVideoListSnapshot(
+              videos: [createTestVideo('video-1'), createTestVideo('video-2')],
+              itemIds: const ['video-1', 'video-2'],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          cacheDao.staleKeys.add(snapshotCacheKey);
+          when(
+            () => mockBookmarksRepository.globalBookmarks,
+          ).thenReturn(repositoryListShownAs(['video-1', 'video-2']));
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileSavedVideosState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true)
+              .having(
+                (s) => s.videos.map((v) => v.id).toList(),
+                'stale videos',
+                ['video-1', 'video-2'],
+              ),
+          isA<ProfileSavedVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            false,
+          ),
+        ],
+        verify: (_) {
+          verify(() => mockBookmarksRepository.globalBookmarks).called(
+            greaterThan(0),
+          );
+        },
+      );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'reopen restores the cached list, then flips the bar off when '
