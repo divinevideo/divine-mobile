@@ -2124,6 +2124,17 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       // footage it was steadied from.
       derivedFrom: steadySources,
     );
+    // The key bake reports progress under its own render id. Without the
+    // switch the spinner holds the steadying render's last value, full, for
+    // the whole bake.
+    if (clip.chromaKey != null && !emit.isDone) {
+      emit(
+        state.copyWith(
+          stabilizeRenderId: ChromaKeyBakeService.renderIdFor(clip.id),
+          clearStabilizeProgress: true,
+        ),
+      );
+    }
     return _rekey(steadied, steadyPath!, rendered);
   }
 

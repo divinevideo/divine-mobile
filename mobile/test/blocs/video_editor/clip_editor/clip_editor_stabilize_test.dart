@@ -226,6 +226,47 @@ void main() {
       expect(clip.stabilization!.rawSourcePath, '/documents/clip.mp4');
     });
 
+    test('follows the key bake once the steadied render is done', () async {
+      final baking = Completer<void>();
+      final release = Completer<void>();
+      final bloc = seeded(
+        [
+          _longClip().copyWith(
+            video: EditorVideo.file('/documents/clip_keyed.mp4'),
+            chromaKey: _key,
+            chromaKeySourcePath: '/documents/clip.mp4',
+          ),
+        ],
+        bakeChromaKey:
+            ({
+              required sourceClip,
+              required chromaKey,
+              required renderId,
+            }) async {
+              baking.complete();
+              await release.future;
+              return (
+                video: EditorVideo.file('/documents/clip_rekeyed.mp4'),
+                source: sourceClip.chromaKeySourcePath!,
+              );
+            },
+      );
+      final done = toggle(bloc);
+      await baking.future;
+
+      // The overlay reads the bake's own progress rather than the steadying
+      // render's last value.
+      expect(bloc.state.isStabilizing, isTrue);
+      expect(bloc.state.stabilizeProgress, isNull);
+      expect(
+        bloc.state.stabilizeRenderId,
+        ChromaKeyBakeService.renderIdFor('clip'),
+      );
+
+      release.complete();
+      expect((await done).lastStabilizeResult, isA<ClipStabilizeSuccess>());
+    });
+
     test('reports a clip without a local file', () async {
       final bloc = seeded([
         DivineVideoClip(
