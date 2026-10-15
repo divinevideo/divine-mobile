@@ -79,6 +79,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         );
 

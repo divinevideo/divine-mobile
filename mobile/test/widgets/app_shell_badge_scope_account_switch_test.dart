@@ -130,6 +130,8 @@ void main() {
           () => nostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => giftWraps.stream);
         when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);

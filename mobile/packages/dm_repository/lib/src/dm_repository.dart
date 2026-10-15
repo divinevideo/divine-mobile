@@ -716,6 +716,19 @@ class DmRepository {
   final String Function() _newSendBatchId;
 
   StreamSubscription<Event>? _giftWrapSubscription;
+
+  /// The live subscription's progress through stored events, or null while
+  /// not listening. See [_LiveCatchUp].
+  _LiveCatchUp? _liveCatchUp;
+
+  /// How long a catch-up may hold wire stamps back before the newest one
+  /// handled is saved anyway.
+  ///
+  /// A relay that never finishes sending stored events would otherwise stop
+  /// the window from moving for the whole session, and each launch would ask
+  /// for a longer window. Saving at the limit is the behaviour from before
+  /// the hold (#10191), so it is never worse than that.
+  static const _storedEventsHoldLimit = Duration(minutes: 2);
   Timer? _reconnectTimer;
 
   /// Pending retries of legacy kind-4 copies no relay accepted, with the copy
@@ -1246,6 +1259,8 @@ class DmRepository {
     _pendingReadCursors.clear();
     unawaited(_giftWrapSubscription?.cancel());
     _giftWrapSubscription = null;
+    _liveCatchUp?.cancelHoldLimit();
+    _liveCatchUp = null;
     // Drop the outgoing user's resolved own-inbox relays so the next user
     // re-resolves their own kind-10050 (never reuses a stale set). #4974.
     _ownInboxFuture = null;
@@ -1406,14 +1421,30 @@ class DmRepository {
       }
 
       _subscriptionId = dmInboxSubscriptionId(_userPubkey);
+      final catchUp = _LiveCatchUp(_userPubkey, _resetGeneration);
+      void limitHold() => catchUp.startHoldLimit(
+        _storedEventsHoldLimit,
+        () => _maybeCommitCatchUp(catchUp),
+      );
       final stream = _nostrClient.subscribe(
         [filter],
         subscriptionId: _subscriptionId,
         tempRelays: ownInbox,
+        onStoredEventsStart: () {
+          if (!identical(_liveCatchUp, catchUp)) return;
+          catchUp.reopen();
+          limitHold();
+        },
+        onStoredEventsEnd: (delivered) {
+          catchUp.endAfter(delivered);
+          _maybeCommitCatchUp(catchUp);
+        },
       );
+      _liveCatchUp = catchUp;
+      limitHold();
 
       _giftWrapSubscription = stream.listen(
-        _handleIncomingEvent,
+        (event) => _handleLiveEvent(catchUp, event),
         onError: (Object error) {
           Log.error(
             'DM subscription error: $error',
@@ -1425,6 +1456,7 @@ class DmRepository {
           // the local cleanup for a stream that has already failed.
           unawaited(_giftWrapSubscription?.cancel());
           _giftWrapSubscription = null;
+          _dropLiveCatchUp(catchUp);
           if (!_disposed) {
             _scheduleReconnect();
           }
@@ -1433,6 +1465,7 @@ class DmRepository {
           // Stream closed (relay disconnect, NostrClient rebuild, etc.)
           // Clear the subscription so startListening() can re-subscribe.
           _giftWrapSubscription = null;
+          _dropLiveCatchUp(catchUp);
           if (!_disposed) {
             Log.info(
               'DM subscription stream closed, re-subscribing '
@@ -2183,7 +2216,15 @@ class DmRepository {
         // same _eventLock as the live subscription and the drain. A
         // successful decrypt deletes the pending row inside
         // _handleGiftWrapEvent; a failure increments its attempts.
-        await _handleIncomingEvent(giftWrapEvent);
+        // A wrap recovered while a catch-up is still holding stamps back is
+        // held with them, or saving its stamp could move the window past the
+        // older wraps of that batch (#10191).
+        final catchUp = _liveCatchUp;
+        if (catchUp != null && catchUp.holdsStamps) {
+          await _handleHeld(catchUp, giftWrapEvent);
+        } else {
+          await _handleIncomingEvent(giftWrapEvent);
+        }
         // WS3: yield periodically so a large retry queue cannot starve frame
         // rendering. See #5391.
         await _maybeYieldDuringDrain(i);
@@ -2760,6 +2801,8 @@ class DmRepository {
     _resetGeneration++;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _liveCatchUp?.cancelHoldLimit();
+    _liveCatchUp = null;
     _cancelNip04CopyRetries();
     _resetNip04RefusalConfirmationState();
     await _drainRelayReadySubscription?.cancel();
@@ -2815,11 +2858,124 @@ class DmRepository {
   // Receive pipeline
   // -------------------------------------------------------------------------
 
+  /// Hands an event from the live subscription to [_handleIncomingEvent].
+  ///
+  /// Whether its wire stamp is held back is decided here, on arrival, and not
+  /// when its turn to be handled comes: by then the pool may already have
+  /// reported the batch's end. An event that arrives while held-back events
+  /// are still being handled is held back too, live or not. The processing
+  /// locks do not keep arrival order, and a kind 4 does not wait behind gift
+  /// wraps at all, so an event saved on its own could otherwise move the
+  /// window past stored events that are not handled yet.
+  Future<void> _handleLiveEvent(_LiveCatchUp catchUp, Event event) {
+    final hold = catchUp.holdsStamps;
+    catchUp.arrived();
+    if (!hold) return _handleIncomingEvent(event);
+    return _handleHeld(catchUp, event);
+  }
+
+  /// Handles [event] with its wire stamp held on [catchUp], and saves the
+  /// held stamps if this was the last held-back event still being handled.
+  Future<void> _handleHeld(_LiveCatchUp catchUp, Event event) {
+    catchUp.beginHandling();
+    return _handleIncomingEvent(event, deferWireTo: catchUp).whenComplete(() {
+      catchUp.endHandling();
+      _maybeCommitCatchUp(catchUp);
+    });
+  }
+
+  /// Drops [catchUp]'s held stamps with its subscription, which ended before
+  /// its batch did. The next subscription asks for the same window again.
+  void _dropLiveCatchUp(_LiveCatchUp catchUp) {
+    catchUp.cancelHoldLimit();
+    if (identical(_liveCatchUp, catchUp)) _liveCatchUp = null;
+  }
+
+  /// Saves the stamps [catchUp] holds once the stored batch has fully
+  /// arrived and every held-back event has been handled.
+  ///
+  /// A relay sends a stored batch newest first, so saving each stamp as it is
+  /// handled would move the next launch's `since:` past the rest of the batch
+  /// before it is handled; if the app stops in between, those events are
+  /// never asked for again (#10191).
+  void _maybeCommitCatchUp(_LiveCatchUp catchUp) {
+    if (!identical(_liveCatchUp, catchUp)) {
+      catchUp.cancelHoldLimit();
+      return;
+    }
+    if (!catchUp.holdsStamps) catchUp.cancelHoldLimit();
+    if (!catchUp.readyToSave) return;
+    unawaited(
+      _withGiftWrapProcessingLock(
+        () => _withEventLock(() async {
+          // A reconnect may have reopened the batch while this waited.
+          if (!catchUp.readyToSave ||
+              _disposed ||
+              _resetGeneration != catchUp.generation ||
+              _userPubkey != catchUp.owner) {
+            return;
+          }
+          final (:wire, :oldestRumor, :newestRumor) = catchUp.takeHeld();
+          if (newestRumor != null) {
+            await _syncState?.recordSeen(catchUp.owner, createdAt: newestRumor);
+          }
+          if (oldestRumor != null && oldestRumor != newestRumor) {
+            await _syncState?.recordSeen(catchUp.owner, createdAt: oldestRumor);
+          }
+          if (wire != null) {
+            await _syncState?.recordWireSeen(catchUp.owner, createdAt: wire);
+          }
+        }),
+      ).catchError((Object error, StackTrace stackTrace) {
+        Log.error(
+          'Failed to save the DM catch-up boundary: $error',
+          category: LogCategory.system,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }),
+    );
+  }
+
+  /// Records [createdAt] as a processed rumor timestamp for [owner], or holds
+  /// it on [deferTo] when it came from a stored batch still being received.
+  ///
+  /// The live subscription falls back to this boundary when no wire stamp
+  /// has been saved yet, so it is held with the wire stamp.
+  Future<void> _recordSeen(
+    String owner,
+    int createdAt, {
+    _LiveCatchUp? deferTo,
+  }) async {
+    if (deferTo != null && deferTo.owner == owner) {
+      deferTo.holdRumor(createdAt);
+      return;
+    }
+    await _syncState?.recordSeen(owner, createdAt: createdAt);
+  }
+
+  /// Records [createdAt] as a processed wire stamp for [owner], or holds it
+  /// on [deferTo] when it came from a stored batch still being received.
+  Future<void> _recordWireSeen(
+    String owner,
+    int createdAt, {
+    _LiveCatchUp? deferTo,
+  }) async {
+    if (deferTo != null && deferTo.owner == owner) {
+      deferTo.holdWire(createdAt);
+      return;
+    }
+    await _syncState?.recordWireSeen(owner, createdAt: createdAt);
+  }
+
   /// Routes an incoming event to the correct handler based on kind.
   ///
   /// Serialized via [_eventLock] so that subscription events never race
   /// into the dedup/insert path concurrently.
-  Future<void> _handleIncomingEvent(Event event) async {
+  Future<void> _handleIncomingEvent(
+    Event event, {
+    _LiveCatchUp? deferWireTo,
+  }) async {
     if (event.kind == EventKind.giftWrap) {
       final gen = _resetGeneration;
       final ownerPubkey = _userPubkey;
@@ -2829,7 +2985,7 @@ class DmRepository {
             _userPubkey != ownerPubkey) {
           return;
         }
-        await _handleGiftWrapEvent(event);
+        await _handleGiftWrapEvent(event, deferWireTo: deferWireTo);
       });
       return;
     }
@@ -2837,7 +2993,7 @@ class DmRepository {
       if (event.kind == EventKind.eventDeletion) {
         await _handleDeletionEvent(event);
       } else if (event.kind == EventKind.directMessage) {
-        await _handleNip04Event(event);
+        await _handleNip04Event(event, deferWireTo: deferWireTo);
       }
     });
   }
@@ -3177,7 +3333,10 @@ class DmRepository {
   /// decrypt, then persist. The persist body is shared with the batched
   /// history-drain path via [_persistDecryptedGiftWrap]. Callers must already
   /// hold the [_eventLock] (via [_handleIncomingEvent]).
-  Future<void> _handleGiftWrapEvent(Event giftWrapEvent) async {
+  Future<void> _handleGiftWrapEvent(
+    Event giftWrapEvent, {
+    _LiveCatchUp? deferWireTo,
+  }) async {
     final gen = _resetGeneration;
     final ownerPubkey = _userPubkey;
     if (ownerPubkey.isEmpty) return;
@@ -3192,9 +3351,10 @@ class DmRepository {
         // genuinely new message — every wrap already in the window returns
         // here first. Monotonic, so the drain replaying old pages cannot
         // drag it backwards.
-        await _syncState?.recordWireSeen(
+        await _recordWireSeen(
           ownerPubkey,
-          createdAt: giftWrapEvent.createdAt,
+          giftWrapEvent.createdAt,
+          deferTo: deferWireTo,
         );
         // History drain pass 2 re-routes already-persisted wraps through this
         // handler (preDecrypted miss). Per-wrap debug would fill the 50k
@@ -3251,6 +3411,7 @@ class DmRepository {
           giftWrapEvent,
           null,
           ownerPubkey: ownerPubkey,
+          deferWireTo: deferWireTo,
         );
       });
       return;
@@ -3270,6 +3431,7 @@ class DmRepository {
         giftWrapEvent,
         rumorEvent,
         ownerPubkey: ownerPubkey,
+        deferWireTo: deferWireTo,
       );
     });
   }
@@ -3283,6 +3445,7 @@ class DmRepository {
     Event giftWrapEvent,
     Event? rumorEvent, {
     required String ownerPubkey,
+    _LiveCatchUp? deferWireTo,
   }) async {
     try {
       if (rumorEvent == null) {
@@ -3787,13 +3950,15 @@ class DmRepository {
         // subscription's `since:` has to be derived from that one instead —
         // recording only the rumor clock is what made a backdated wrap fall
         // outside the window and never be requested again. See #8209.
-        await _syncState?.recordSeen(
+        await _recordSeen(
           ownerPubkey,
-          createdAt: persistedCreatedAt,
+          persistedCreatedAt,
+          deferTo: deferWireTo,
         );
-        await _syncState?.recordWireSeen(
+        await _recordWireSeen(
           ownerPubkey,
-          createdAt: giftWrapEvent.createdAt,
+          giftWrapEvent.createdAt,
+          deferTo: deferWireTo,
         );
 
         final contentCorrelation = _dmContentCorrelation(
@@ -4276,7 +4441,10 @@ class DmRepository {
     return _rumorDecryptor(nostr, giftWrapEvent);
   }
 
-  Future<void> _handleNip04Event(Event nip04Event) async {
+  Future<void> _handleNip04Event(
+    Event nip04Event, {
+    _LiveCatchUp? deferWireTo,
+  }) async {
     final ownerPubkey = _userPubkey;
     try {
       // Dedup: use event ID as giftWrapId for the unique index. The
@@ -4292,9 +4460,10 @@ class DmRepository {
           // Advance the wire boundary for the same reason the gift-wrap dedup
           // path does. A kind 4 is its own envelope, so the stamp the relay
           // filtered to deliver this replay is the event's own `created_at`.
-          await _syncState?.recordWireSeen(
+          await _recordWireSeen(
             ownerPubkey,
-            createdAt: nip04Event.createdAt,
+            nip04Event.createdAt,
+            deferTo: deferWireTo,
           );
         } else {
           // A different local account processed this kind 4 — its id is shared
@@ -4552,10 +4721,11 @@ class DmRepository {
       // decrypt and transaction return: this handler has no generation guard
       // to abandon on, and a switch inside that window would import this
       // stamp into the next account's maximum, narrowing its `since:`.
-      await _syncState?.recordSeen(ownerPubkey, createdAt: persistedCreatedAt);
-      await _syncState?.recordWireSeen(
+      await _recordSeen(ownerPubkey, persistedCreatedAt, deferTo: deferWireTo);
+      await _recordWireSeen(
         ownerPubkey,
-        createdAt: nip04Event.createdAt,
+        nip04Event.createdAt,
+        deferTo: deferWireTo,
       );
 
       Log.debug(
@@ -11224,5 +11394,129 @@ class DmRepository {
 
   Never _dummyRelay(String url) {
     throw UnimplementedError('Relay not needed for decryption');
+  }
+}
+
+/// The live DM subscription's progress through relays' stored events.
+///
+/// Wire stamps and rumor timestamps of events that arrive while stored
+/// events are still coming, or while earlier held-back events are still
+/// being handled, are held here instead of being saved. They are saved
+/// together once the pool has reported the end of stored events, that many
+/// events have arrived, and every held-back event has been handled.
+class _LiveCatchUp {
+  _LiveCatchUp(this.owner, this.generation);
+
+  /// The account the subscription belongs to.
+  final String owner;
+
+  /// The repository's reset generation when the subscription opened, so a
+  /// save queued before a teardown or account switch is dropped.
+  final int generation;
+
+  /// Whether arriving events may belong to a stored batch. True from the
+  /// subscription's start, and again from a reconnect's replay.
+  bool _storedOpen = true;
+
+  /// Events received from the subscription so far.
+  int _received = 0;
+
+  /// How many events the pool had handed over when it reported the end of
+  /// stored events, or null until it does.
+  int? _endsAfter;
+
+  /// Held-back events whose handling has not finished.
+  int _handling = 0;
+
+  int? _heldWire;
+
+  Timer? _holdLimit;
+
+  /// Whether the hold limit passed: stamps are saved as events are handled
+  /// until a reconnect reopens the stored events.
+  bool _released = false;
+
+  /// Whether the next arriving event's stamp must be held back.
+  bool get holdsStamps => !_released && (_storedOpen || _handling > 0);
+
+  int? _oldestHeldRumor;
+
+  int? _newestHeldRumor;
+
+  bool get _holdsAny => _heldWire != null || _newestHeldRumor != null;
+
+  /// Whether a held stamp can be saved now.
+  bool get readyToSave =>
+      _holdsAny && (_released || (!_storedOpen && _handling == 0));
+
+  void beginHandling() => _handling++;
+
+  void endHandling() => _handling--;
+
+  /// Saves whatever is held, through [onExpired], if the hold has not ended
+  /// within [limit].
+  void startHoldLimit(Duration limit, void Function() onExpired) {
+    _holdLimit?.cancel();
+    _released = false;
+    _holdLimit = Timer(limit, () {
+      _released = true;
+      onExpired();
+    });
+  }
+
+  void cancelHoldLimit() {
+    _holdLimit?.cancel();
+    _holdLimit = null;
+  }
+
+  void arrived() {
+    _received++;
+    _closeIfArrived();
+  }
+
+  /// The pool reported the end of stored events after handing over
+  /// [delivered] events.
+  void endAfter(int delivered) {
+    _endsAfter = delivered;
+    _closeIfArrived();
+  }
+
+  /// A reconnect is replaying stored events: hold stamps again, and wait for
+  /// that replay's end rather than an earlier one.
+  void reopen() {
+    _storedOpen = true;
+    _endsAfter = null;
+  }
+
+  void _closeIfArrived() {
+    final endsAfter = _endsAfter;
+    if (endsAfter == null || _received < endsAfter) return;
+    _storedOpen = false;
+    _endsAfter = null;
+  }
+
+  void holdWire(int createdAt) {
+    final held = _heldWire;
+    if (held == null || createdAt > held) _heldWire = createdAt;
+  }
+
+  void holdRumor(int createdAt) {
+    final oldest = _oldestHeldRumor;
+    if (oldest == null || createdAt < oldest) _oldestHeldRumor = createdAt;
+    final newest = _newestHeldRumor;
+    if (newest == null || createdAt > newest) _newestHeldRumor = createdAt;
+  }
+
+  /// Hands over everything held and holds nothing afterwards.
+  ({int? wire, int? oldestRumor, int? newestRumor}) takeHeld() {
+    final held = (
+      wire: _heldWire,
+      oldestRumor: _oldestHeldRumor,
+      newestRumor: _newestHeldRumor,
+    );
+    _heldWire = null;
+    _oldestHeldRumor = null;
+    _newestHeldRumor = null;
+    return held;
   }
 }
