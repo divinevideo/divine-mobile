@@ -1755,6 +1755,15 @@ void main() {
           );
         });
 
+        test('does not render once a new editor session starts', () async {
+          await postDetails.read(videoEditorProvider.notifier).initialize();
+
+          landTakeProof();
+          await pumpEventQueue();
+
+          expect(renderedHistories, hasLength(1));
+        });
+
         test('does not render while a post is in flight', () async {
           postDetails
               .read(videoEditorProvider.notifier)
