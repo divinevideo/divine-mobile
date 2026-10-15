@@ -3313,6 +3313,44 @@ void main() {
           );
         });
 
+        test('stays paused on opening into the lip-sync sound picker, whose '
+            'pause arrives before the camera has started', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          // The picker shows on the first lip-sync frame, before init has
+          // enabled remote control, so this pause is dropped.
+          bloc
+            ..add(
+              const VideoRecorderInitializeRequested(
+                recorderMode: VideoRecorderMode.lipSync,
+              ),
+            )
+            ..add(const VideoRecorderRemoteRecordPaused());
+          await pumpEventQueue();
+
+          verifyInOrder([
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+            () => cameraService.setRemoteRecordControlEnabled(enabled: false),
+          ]);
+        });
+
+        test(
+          'leaves remote control on when opening into a capture tab',
+          () async {
+            final bloc = buildBloc();
+            addTearDown(bloc.close);
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+
+            verify(
+              () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+            ).called(1);
+            verifyNever(
+              () => cameraService.setRemoteRecordControlEnabled(enabled: false),
+            );
+          },
+        );
+
         test('is ignored on lip-sync before a sound is picked, which shows '
             'the sound picker instead of a preview', () async {
           final bloc = buildBloc();

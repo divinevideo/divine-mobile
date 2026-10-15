@@ -2440,7 +2440,16 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
 
-      if (_remoteRecordPausedForSound) {
+      if (_lipSyncSoundPickerShowing) {
+        // The picker's pause arrived while the camera was still starting and
+        // was dropped, so apply it now; the picker resumes on leaving.
+        await _cameraService.setRemoteRecordControlEnabled(enabled: false);
+        Log.debug(
+          '🎮 Remote record control paused (lip-sync sound picker)',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+      } else if (_remoteRecordPausedForSound) {
         await _cameraService.setVolumeKeysEnabled(enabled: false);
         Log.debug(
           '🎮 Volume keys released (sound already selected)',
