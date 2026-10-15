@@ -22,16 +22,16 @@ class SupporterHaloWings extends StatefulWidget {
     required this.avatarSize,
     required this.builder,
     this.sparkles,
-    this.fadeIn = false,
+    this.reveal,
     super.key,
   });
 
   final double avatarSize;
 
-  /// Whether the halo and wings fade in when this first appears, rather than
-  /// being there from the start. Set where supporter status arrives after the
-  /// avatar is already on screen; left off where the group flies in whole.
-  final bool fadeIn;
+  /// Opacity of the halo and wings, from a [SupporterReveal] above any Hero
+  /// so a remount after a flight does not fade them in again. Null shows them
+  /// fully.
+  final Animation<double>? reveal;
 
   /// When set, twinkling sparkles surround the group, faded in by this value.
   /// Used where the supporter status is the subject, such as its lightbox.
@@ -44,6 +44,59 @@ class SupporterHaloWings extends StatefulWidget {
 
   @override
   State<SupporterHaloWings> createState() => _SupporterHaloWingsState();
+}
+
+/// Fades the supporter treatment in when [visible] turns on while mounted,
+/// and hands that animation to [builder].
+///
+/// Sits above the avatar Hero: a Hero swaps its child for a placeholder while
+/// it flies, so state kept inside it restarts when the flight lands.
+class SupporterReveal extends StatefulWidget {
+  const SupporterReveal({
+    required this.visible,
+    required this.builder,
+    super.key,
+  });
+
+  /// Whether the treatment is shown. Visible from the first build means no
+  /// fade, so a cached status appears with the avatar.
+  final bool visible;
+
+  final Widget Function(BuildContext context, Animation<double> reveal) builder;
+
+  @override
+  State<SupporterReveal> createState() => _SupporterRevealState();
+}
+
+class _SupporterRevealState extends State<SupporterReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _reveal = AnimationController(
+    vsync: this,
+    duration: _Motion.reveal,
+    value: widget.visible ? 1 : 0,
+  );
+
+  @override
+  void didUpdateWidget(SupporterReveal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible == oldWidget.visible) return;
+    if (!widget.visible) {
+      _reveal.value = 0;
+    } else if (context.reduceMotion) {
+      _reveal.value = 1;
+    } else {
+      _reveal.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _reveal.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _reveal);
 }
 
 /// Figma geometry, as fractions of the 144pt avatar.
@@ -102,17 +155,10 @@ _sparkles = [
 ];
 
 class _SupporterHaloWingsState extends State<SupporterHaloWings>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: _Motion.period,
-  );
-
-  /// Opacity of the halo and wings, below 1 only while fading in.
-  late final AnimationController _reveal = AnimationController(
-    vsync: this,
-    duration: _Motion.reveal,
-    value: widget.fadeIn ? 0 : 1,
   );
   late final AppLifecycleListener _lifecycle;
   final Key _visibilityKey = UniqueKey();
@@ -143,13 +189,6 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_reveal.isDismissed) {
-      if (context.reduceMotion) {
-        _reveal.value = 1;
-      } else {
-        _reveal.forward();
-      }
-    }
     _sync();
   }
 
@@ -185,7 +224,6 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
   @override
   void dispose() {
     _lifecycle.dispose();
-    _reveal.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -241,7 +279,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   width: wingWidth,
                   height: wingHeight,
                   child: _CoverFade(
-                    reveal: _reveal,
+                    reveal: widget.reveal ?? kAlwaysCompleteAnimation,
                     cover: _cover,
                     // The avatar's centre, in this wing's own coordinates.
                     origin: Offset(outset + size / 2, size / 2 - wingTop),
@@ -258,7 +296,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   width: wingWidth,
                   height: wingHeight,
                   child: _CoverFade(
-                    reveal: _reveal,
+                    reveal: widget.reveal ?? kAlwaysCompleteAnimation,
                     cover: _cover,
                     origin: Offset(
                       wingWidth - outset - size / 2,
@@ -286,7 +324,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   width: haloWidth,
                   height: haloHeight,
                   child: _CoverFade(
-                    reveal: _reveal,
+                    reveal: widget.reveal ?? kAlwaysCompleteAnimation,
                     cover: _cover,
                     origin: Offset(
                       haloWidth / 2,

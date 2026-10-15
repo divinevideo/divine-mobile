@@ -508,21 +508,26 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         );
       }
 
-      avatar = showSupporterTreatment && opensSupporterLightbox
-          ? _SupporterAvatarHero(
-              imageUrl: imageUrl,
-              userIdHex: userIdHex,
-              avatarSize: avatarSize,
-              avatar: avatarWidget,
-            )
-          : showSupporterTreatment
-          ? SupporterHaloWings(
-              avatarSize: avatarSize,
-              fadeIn: true,
-              builder: (context, trackCover) =>
-                  tappableAvatar(onOpened: trackCover),
-            )
-          : tappableAvatar();
+      avatar = SupporterReveal(
+        visible: showSupporterTreatment,
+        builder: (context, reveal) =>
+            showSupporterTreatment && opensSupporterLightbox
+            ? _SupporterAvatarHero(
+                imageUrl: imageUrl,
+                userIdHex: userIdHex,
+                avatarSize: avatarSize,
+                avatar: avatarWidget,
+                reveal: reveal,
+              )
+            : showSupporterTreatment
+            ? SupporterHaloWings(
+                avatarSize: avatarSize,
+                reveal: reveal,
+                builder: (context, trackCover) =>
+                    tappableAvatar(onOpened: trackCover),
+              )
+            : tappableAvatar(),
+      );
     }
 
     if (pendingActions.isEmpty) return avatar;

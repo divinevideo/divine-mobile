@@ -808,6 +808,57 @@ void main() {
       });
 
       group('interactions', () {
+        testWidgets('keeps the halo and wings at full opacity when the '
+            'supporter view closes', (tester) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              userIdHex: testUserHex,
+              isOwnProfile: false,
+              suppliedProfile: createTestProfile(
+                displayName: 'Ivy',
+                picture: supporterPicture,
+              ),
+              supporterClient: supporterClient(isPublicSupporter: true),
+            ),
+          );
+          // The halo loops forever with motion allowed, so step past the
+          // status load and its fade-in instead of settling.
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          await tester.tap(find.byType(UserAvatar));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          Navigator.of(
+            tester.element(find.text(l10n.supporterLightboxBody)),
+          ).pop();
+          // Step frame by frame: a single long pump lands the flight
+          // without the Hero ever swapping in its placeholder. ~480 ms covers
+          // the 300 ms return flight with a restarted fade still short of 1.
+          for (var i = 0; i < 30; i++) {
+            await tester.pump(const Duration(milliseconds: 16));
+          }
+
+          for (final part in [
+            'assets/supporter/halo.png',
+            'assets/supporter/wing_left.png',
+            'assets/supporter/wing_right.png',
+          ]) {
+            final fades = tester.widgetList<FadeTransition>(
+              find.ancestor(
+                of: find.image(AssetImage(part)),
+                matching: find.byType(FadeTransition),
+              ),
+            );
+            expect(fades, isNotEmpty, reason: part);
+            expect(
+              fades.map((fade) => fade.opacity.value),
+              everyElement(1.0),
+              reason: part,
+            );
+          }
+        });
+
         testWidgets("tapping another supporter's avatar opens the supporter "
             'view', (tester) async {
           await pumpHeader(

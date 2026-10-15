@@ -25,6 +25,7 @@ class _SupporterAvatarHero extends StatelessWidget {
     required this.userIdHex,
     required this.avatarSize,
     required this.avatar,
+    required this.reveal,
     this.imageUrl,
   });
 
@@ -32,6 +33,9 @@ class _SupporterAvatarHero extends StatelessWidget {
   final String userIdHex;
   final double avatarSize;
   final Widget avatar;
+
+  /// Owned outside the Hero, which remounts its child when a flight lands.
+  final Animation<double> reveal;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +54,7 @@ class _SupporterAvatarHero extends StatelessWidget {
           flightShuttleBuilder: _supporterShuttle(imageUrl, userIdHex),
           child: SupporterHaloWings(
             avatarSize: avatarSize,
-            fadeIn: true,
+            reveal: reveal,
             builder: (_, _) => avatar,
           ),
         ),
