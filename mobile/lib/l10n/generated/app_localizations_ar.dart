@@ -13602,4 +13602,36 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => 'تابع وسمًا من صفحته لتجده هنا.';
+
+  @override
+  String get soundRequestAction => 'اطلب هذا الصوت';
+
+  @override
+  String get soundRequestTitle => 'يريد شخص ما استخدام صوتك';
+
+  @override
+  String get soundRequestDescription =>
+      'اسمح بإعادة استخدام صوت هذا الفيديو ليتمكن الجميع من إنشاء ريمكس به.';
+
+  @override
+  String get soundRequestEnable => 'السماح بإعادة استخدام الصوت';
+
+  @override
+  String get soundRequestSent => 'تم طلب الصوت';
+
+  @override
+  String get soundReadyTitle => 'الصوت الذي طلبته جاهز';
+
+  @override
+  String get soundReadyDescription =>
+      'استخدمه في الفيديو القادم أو احفظه في مكتبة الأصوات.';
+
+  @override
+  String get soundReadyUse => 'استخدم هذا الصوت';
+
+  @override
+  String get soundReadySave => 'حفظ في أصواتي';
+
+  @override
+  String get soundRequestSaved => 'تم الحفظ';
 }

@@ -13537,4 +13537,36 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Bir etiketi burada bulmak için kendi sayfasından takip et.';
+
+  @override
+  String get soundRequestAction => 'Bu sesi iste';
+
+  @override
+  String get soundRequestTitle => 'Birisi sesini kullanmak istiyor';
+
+  @override
+  String get soundRequestDescription =>
+      'Herkesin remiks yapabilmesi için bu videonun sesinin yeniden kullanılmasına izin ver.';
+
+  @override
+  String get soundRequestEnable => 'Sesin yeniden kullanımına izin ver';
+
+  @override
+  String get soundRequestSent => 'Ses istendi';
+
+  @override
+  String get soundReadyTitle => 'İstediğin ses hazır';
+
+  @override
+  String get soundReadyDescription =>
+      'Bir sonraki videonda kullan veya ses kitaplığına kaydet.';
+
+  @override
+  String get soundReadyUse => 'Bu sesi kullan';
+
+  @override
+  String get soundReadySave => 'Seslerim’e kaydet';
+
+  @override
+  String get soundRequestSaved => 'Kaydedildi';
 }

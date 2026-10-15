@@ -5074,5 +5074,15 @@
   "messagesNoRooms": "まだルームはありません",
   "followedHashtagsTitle": "フォロー中のハッシュタグ",
   "manageHashtags": "ハッシュタグを管理",
-  "followedHashtagsEmpty": "ハッシュタグのページでフォローすると、ここに表示されます。"
+  "followedHashtagsEmpty": "ハッシュタグのページでフォローすると、ここに表示されます。",
+  "soundRequestAction": "このサウンドをリクエスト",
+  "soundRequestTitle": "あなたのサウンドを使いたい人がいます",
+  "soundRequestDescription": "この動画のサウンドの再利用を許可すると、誰でもリミックスに使えます。",
+  "soundRequestEnable": "サウンドの再利用を許可",
+  "soundRequestSent": "サウンドをリクエスト済み",
+  "soundReadyTitle": "リクエストしたサウンドが使えるようになりました",
+  "soundReadyDescription": "次の動画で使うか、サウンドライブラリに保存しましょう。",
+  "soundReadyUse": "このサウンドを使う",
+  "soundReadySave": "マイサウンドに保存",
+  "soundRequestSaved": "保存済み"
 }

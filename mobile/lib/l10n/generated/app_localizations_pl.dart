@@ -13896,4 +13896,36 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Obserwuj hashtag na jego stronie, aby znaleźć go tutaj.';
+
+  @override
+  String get soundRequestAction => 'Poproś o ten dźwięk';
+
+  @override
+  String get soundRequestTitle => 'Ktoś chce użyć Twojego dźwięku';
+
+  @override
+  String get soundRequestDescription =>
+      'Zezwól na ponowne użycie dźwięku z tego filmu, aby każdy mógł tworzyć z nim remiksy.';
+
+  @override
+  String get soundRequestEnable => 'Zezwól na używanie dźwięku';
+
+  @override
+  String get soundRequestSent => 'Prośba o dźwięk wysłana';
+
+  @override
+  String get soundReadyTitle => 'Dźwięk, o który prosisz, jest gotowy';
+
+  @override
+  String get soundReadyDescription =>
+      'Użyj go w kolejnym filmie lub zapisz w bibliotece dźwięków.';
+
+  @override
+  String get soundReadyUse => 'Użyj tego dźwięku';
+
+  @override
+  String get soundReadySave => 'Zapisz w Moich dźwiękach';
+
+  @override
+  String get soundRequestSaved => 'Zapisano';
 }

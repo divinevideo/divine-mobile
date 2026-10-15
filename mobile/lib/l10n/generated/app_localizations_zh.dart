@@ -12793,4 +12793,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => '在话题标签页面关注后，即可在这里找到。';
+
+  @override
+  String get soundRequestAction => '请求使用此声音';
+
+  @override
+  String get soundRequestTitle => '有人想使用你的声音';
+
+  @override
+  String get soundRequestDescription => '允许重复使用此视频的声音，让任何人都能用它进行混剪。';
+
+  @override
+  String get soundRequestEnable => '允许重复使用声音';
+
+  @override
+  String get soundRequestSent => '已请求声音';
+
+  @override
+  String get soundReadyTitle => '你请求的声音已准备就绪';
+
+  @override
+  String get soundReadyDescription => '在下一个视频中使用它，或保存到你的声音库。';
+
+  @override
+  String get soundReadyUse => '使用此声音';
+
+  @override
+  String get soundReadySave => '保存到我的声音';
+
+  @override
+  String get soundRequestSaved => '已保存';
 }

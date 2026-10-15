@@ -197,6 +197,24 @@ class SoundRequestsRepository {
       requests.length == _state.requests.length &&
       requests.entries.every((e) => _state.requests[e.key] == e.value);
 
+  /// Resolves the source preview through the owning publication boundary.
+  Future<VideoEvent> sourceVideo(String videoAddress) async {
+    _checkOpen();
+    final source = await _publisher.resolve(videoAddress);
+    _checkOpen();
+    return source.video;
+  }
+
+  /// Checks fresh eligibility without sending a message.
+  Future<bool> canRequest(String videoAddress) async {
+    _checkOpen();
+    final creator = soundRequestCreator(videoAddress);
+    if (creator == null || creator == ownerPubkey) return false;
+    final source = await _publisher.resolve(videoAddress);
+    _checkOpen();
+    return source.requestable && !source.allowReuse;
+  }
+
   /// Sends one request per source, joining an existing pending request.
   Future<String> request(String videoAddress) => _run(() async {
     final creator = soundRequestCreator(videoAddress);

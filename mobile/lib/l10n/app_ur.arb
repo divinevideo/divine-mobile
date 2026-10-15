@@ -6838,5 +6838,15 @@
   "messagesNoRooms": "ابھی کوئی کمرہ نہیں",
   "followedHashtagsTitle": "فالو کیے گئے ہیش ٹیگز",
   "manageHashtags": "ہیش ٹیگز کا نظم کریں",
-  "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔"
+  "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔",
+  "soundRequestAction": "یہ آواز مانگیں",
+  "soundRequestTitle": "کوئی آپ کی آواز استعمال کرنا چاہتا ہے",
+  "soundRequestDescription": "اس ویڈیو کی آواز دوبارہ استعمال کرنے کی اجازت دیں تاکہ کوئی بھی اس سے ریمکس بنا سکے۔",
+  "soundRequestEnable": "آواز دوبارہ استعمال کرنے کی اجازت دیں",
+  "soundRequestSent": "آواز کی درخواست بھیج دی گئی",
+  "soundReadyTitle": "آپ کی مانگی ہوئی آواز تیار ہے",
+  "soundReadyDescription": "اسے اپنی اگلی ویڈیو میں استعمال کریں یا اپنی آوازوں کی لائبریری میں محفوظ کریں۔",
+  "soundReadyUse": "یہ آواز استعمال کریں",
+  "soundReadySave": "میری آوازوں میں محفوظ کریں",
+  "soundRequestSaved": "محفوظ ہو گیا"
 }

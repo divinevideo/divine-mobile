@@ -5074,5 +5074,15 @@
   "messagesNoRooms": "Nog geen kamers",
   "followedHashtagsTitle": "Gevolgde hashtags",
   "manageHashtags": "Hashtags beheren",
-  "followedHashtagsEmpty": "Volg een hashtag op de bijbehorende pagina om die hier te vinden."
+  "followedHashtagsEmpty": "Volg een hashtag op de bijbehorende pagina om die hier te vinden.",
+  "soundRequestAction": "Dit geluid aanvragen",
+  "soundRequestTitle": "Iemand wil je geluid gebruiken",
+  "soundRequestDescription": "Sta hergebruik van het geluid van deze video toe, zodat iedereen ermee kan remixen.",
+  "soundRequestEnable": "Hergebruik van geluid toestaan",
+  "soundRequestSent": "Geluid aangevraagd",
+  "soundReadyTitle": "Je aangevraagde geluid is klaar",
+  "soundReadyDescription": "Gebruik het in je volgende video of sla het op in je geluidsbibliotheek.",
+  "soundReadyUse": "Dit geluid gebruiken",
+  "soundReadySave": "Opslaan in Mijn geluiden",
+  "soundRequestSaved": "Opgeslagen"
 }

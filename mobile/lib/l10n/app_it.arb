@@ -5074,5 +5074,15 @@
   "messagesNoRooms": "Ancora nessuna stanza",
   "followedHashtagsTitle": "Hashtag seguiti",
   "manageHashtags": "Gestisci hashtag",
-  "followedHashtagsEmpty": "Segui un hashtag dalla sua pagina per trovarlo qui."
+  "followedHashtagsEmpty": "Segui un hashtag dalla sua pagina per trovarlo qui.",
+  "soundRequestAction": "Richiedi questo suono",
+  "soundRequestTitle": "Qualcuno vuole usare il tuo suono",
+  "soundRequestDescription": "Consenti il riutilizzo del suono di questo video, così chiunque potrà creare un remix.",
+  "soundRequestEnable": "Consenti il riutilizzo del suono",
+  "soundRequestSent": "Suono richiesto",
+  "soundReadyTitle": "Il suono che hai richiesto è pronto",
+  "soundReadyDescription": "Usalo nel tuo prossimo video o salvalo nella tua raccolta di suoni.",
+  "soundReadyUse": "Usa questo suono",
+  "soundReadySave": "Salva in I miei suoni",
+  "soundRequestSaved": "Salvato"
 }

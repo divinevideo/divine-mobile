@@ -2,9 +2,11 @@
 // ABOUTME: Shows audio info for all videos - shared audio or "Original sound".
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -14,6 +16,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_credit.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/sound_request_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Sounds section showing audio attribution in the metadata sheet.
@@ -114,11 +117,21 @@ class _OriginalSoundSection extends ConsumerWidget {
 
     return MetadataSection(
       label: context.l10n.metadataSoundsLabel,
-      child: _OriginalSoundRow(
-        creatorName: creatorName,
-        onTap: _canReuseSound(ref)
-            ? () => _navigateToSoundDetail(context, creatorName)
-            : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _OriginalSoundRow(
+            creatorName: creatorName,
+            onTap: _canReuseSound(ref)
+                ? () => _navigateToSoundDetail(context, creatorName)
+                : null,
+          ),
+          if (!video.hasAudioReference &&
+              video.addressableId != null &&
+              context.read<SoundRequestsCubit?>() != null)
+            SoundRequestButton(videoAddress: video.addressableId!),
+        ],
       ),
     );
   }

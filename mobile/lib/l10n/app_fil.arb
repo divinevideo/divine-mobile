@@ -4080,5 +4080,15 @@
   "messagesNoRooms": "Wala pang mga silid",
   "followedHashtagsTitle": "Mga sinusundang hashtag",
   "manageHashtags": "Pamahalaan ang mga hashtag",
-  "followedHashtagsEmpty": "Sundan ang isang hashtag sa pahina nito para makita ito rito."
+  "followedHashtagsEmpty": "Sundan ang isang hashtag sa pahina nito para makita ito rito.",
+  "soundRequestAction": "Hilingin ang tunog na ito",
+  "soundRequestTitle": "May gustong gumamit ng tunog mo",
+  "soundRequestDescription": "Payagang gamitin muli ang tunog ng video na ito para makapag-remix ang kahit sino.",
+  "soundRequestEnable": "Payagang gamitin muli ang tunog",
+  "soundRequestSent": "Naipadala ang hiling sa tunog",
+  "soundReadyTitle": "Handa na ang hiniling mong tunog",
+  "soundReadyDescription": "Gamitin ito sa susunod mong video o i-save sa library ng mga tunog mo.",
+  "soundReadyUse": "Gamitin ang tunog na ito",
+  "soundReadySave": "I-save sa Mga Tunog Ko",
+  "soundRequestSaved": "Na-save"
 }

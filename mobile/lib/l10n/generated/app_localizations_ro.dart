@@ -13891,4 +13891,36 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.';
+
+  @override
+  String get soundRequestAction => 'Solicită acest sunet';
+
+  @override
+  String get soundRequestTitle => 'Cineva vrea să folosească sunetul tău';
+
+  @override
+  String get soundRequestDescription =>
+      'Permite reutilizarea sunetului din acest videoclip, astfel încât oricine să poată crea remixuri cu el.';
+
+  @override
+  String get soundRequestEnable => 'Permite reutilizarea sunetului';
+
+  @override
+  String get soundRequestSent => 'Sunet solicitat';
+
+  @override
+  String get soundReadyTitle => 'Sunetul solicitat este gata';
+
+  @override
+  String get soundReadyDescription =>
+      'Folosește-l în următorul videoclip sau salvează-l în biblioteca ta de sunete.';
+
+  @override
+  String get soundReadyUse => 'Folosește acest sunet';
+
+  @override
+  String get soundReadySave => 'Salvează în Sunetele mele';
+
+  @override
+  String get soundRequestSaved => 'Salvat';
 }

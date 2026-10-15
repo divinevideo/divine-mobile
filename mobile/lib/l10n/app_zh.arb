@@ -6838,5 +6838,15 @@
   "messagesNoRooms": "暂无聊天室",
   "followedHashtagsTitle": "已关注的话题标签",
   "manageHashtags": "管理话题标签",
-  "followedHashtagsEmpty": "在话题标签页面关注后，即可在这里找到。"
+  "followedHashtagsEmpty": "在话题标签页面关注后，即可在这里找到。",
+  "soundRequestAction": "请求使用此声音",
+  "soundRequestTitle": "有人想使用你的声音",
+  "soundRequestDescription": "允许重复使用此视频的声音，让任何人都能用它进行混剪。",
+  "soundRequestEnable": "允许重复使用声音",
+  "soundRequestSent": "已请求声音",
+  "soundReadyTitle": "你请求的声音已准备就绪",
+  "soundReadyDescription": "在下一个视频中使用它，或保存到你的声音库。",
+  "soundReadyUse": "使用此声音",
+  "soundReadySave": "保存到我的声音",
+  "soundRequestSaved": "已保存"
 }

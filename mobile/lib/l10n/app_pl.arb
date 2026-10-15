@@ -5074,5 +5074,15 @@
   "messagesNoRooms": "Nie ma jeszcze pokoi",
   "followedHashtagsTitle": "Obserwowane hashtagi",
   "manageHashtags": "Zarządzaj hashtagami",
-  "followedHashtagsEmpty": "Obserwuj hashtag na jego stronie, aby znaleźć go tutaj."
+  "followedHashtagsEmpty": "Obserwuj hashtag na jego stronie, aby znaleźć go tutaj.",
+  "soundRequestAction": "Poproś o ten dźwięk",
+  "soundRequestTitle": "Ktoś chce użyć Twojego dźwięku",
+  "soundRequestDescription": "Zezwól na ponowne użycie dźwięku z tego filmu, aby każdy mógł tworzyć z nim remiksy.",
+  "soundRequestEnable": "Zezwól na używanie dźwięku",
+  "soundRequestSent": "Prośba o dźwięk wysłana",
+  "soundReadyTitle": "Dźwięk, o który prosisz, jest gotowy",
+  "soundReadyDescription": "Użyj go w kolejnym filmie lub zapisz w bibliotece dźwięków.",
+  "soundReadyUse": "Użyj tego dźwięku",
+  "soundReadySave": "Zapisz w Moich dźwiękach",
+  "soundRequestSaved": "Zapisano"
 }

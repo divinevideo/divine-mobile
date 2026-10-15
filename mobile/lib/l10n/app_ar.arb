@@ -5074,5 +5074,15 @@
   "messagesNoRooms": "لا توجد غرف بعد",
   "followedHashtagsTitle": "الوسوم التي تتابعها",
   "manageHashtags": "إدارة الوسوم",
-  "followedHashtagsEmpty": "تابع وسمًا من صفحته لتجده هنا."
+  "followedHashtagsEmpty": "تابع وسمًا من صفحته لتجده هنا.",
+  "soundRequestAction": "اطلب هذا الصوت",
+  "soundRequestTitle": "يريد شخص ما استخدام صوتك",
+  "soundRequestDescription": "اسمح بإعادة استخدام صوت هذا الفيديو ليتمكن الجميع من إنشاء ريمكس به.",
+  "soundRequestEnable": "السماح بإعادة استخدام الصوت",
+  "soundRequestSent": "تم طلب الصوت",
+  "soundReadyTitle": "الصوت الذي طلبته جاهز",
+  "soundReadyDescription": "استخدمه في الفيديو القادم أو احفظه في مكتبة الأصوات.",
+  "soundReadyUse": "استخدم هذا الصوت",
+  "soundReadySave": "حفظ في أصواتي",
+  "soundRequestSaved": "تم الحفظ"
 }

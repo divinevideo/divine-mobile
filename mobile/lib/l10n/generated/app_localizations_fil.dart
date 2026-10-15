@@ -13732,4 +13732,36 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Sundan ang isang hashtag sa pahina nito para makita ito rito.';
+
+  @override
+  String get soundRequestAction => 'Hilingin ang tunog na ito';
+
+  @override
+  String get soundRequestTitle => 'May gustong gumamit ng tunog mo';
+
+  @override
+  String get soundRequestDescription =>
+      'Payagang gamitin muli ang tunog ng video na ito para makapag-remix ang kahit sino.';
+
+  @override
+  String get soundRequestEnable => 'Payagang gamitin muli ang tunog';
+
+  @override
+  String get soundRequestSent => 'Naipadala ang hiling sa tunog';
+
+  @override
+  String get soundReadyTitle => 'Handa na ang hiniling mong tunog';
+
+  @override
+  String get soundReadyDescription =>
+      'Gamitin ito sa susunod mong video o i-save sa library ng mga tunog mo.';
+
+  @override
+  String get soundReadyUse => 'Gamitin ang tunog na ito';
+
+  @override
+  String get soundReadySave => 'I-save sa Mga Tunog Ko';
+
+  @override
+  String get soundRequestSaved => 'Na-save';
 }

@@ -13512,4 +13512,36 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Ikuti tagar dari halamannya untuk menemukannya di sini.';
+
+  @override
+  String get soundRequestAction => 'Minta suara ini';
+
+  @override
+  String get soundRequestTitle => 'Seseorang ingin memakai suaramu';
+
+  @override
+  String get soundRequestDescription =>
+      'Izinkan penggunaan ulang suara video ini agar siapa pun bisa membuat remix dengannya.';
+
+  @override
+  String get soundRequestEnable => 'Izinkan penggunaan ulang suara';
+
+  @override
+  String get soundRequestSent => 'Suara diminta';
+
+  @override
+  String get soundReadyTitle => 'Suara yang kamu minta sudah siap';
+
+  @override
+  String get soundReadyDescription =>
+      'Pakai di video berikutnya atau simpan ke koleksi suaramu.';
+
+  @override
+  String get soundReadyUse => 'Pakai suara ini';
+
+  @override
+  String get soundReadySave => 'Simpan ke Suara Saya';
+
+  @override
+  String get soundRequestSaved => 'Tersimpan';
 }

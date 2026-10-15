@@ -5074,5 +5074,15 @@
   "messagesNoRooms": "Noch keine Räume",
   "followedHashtagsTitle": "Abonnierte Hashtags",
   "manageHashtags": "Hashtags verwalten",
-  "followedHashtagsEmpty": "Folge einem Hashtag auf seiner Seite, um ihn hier zu finden."
+  "followedHashtagsEmpty": "Folge einem Hashtag auf seiner Seite, um ihn hier zu finden.",
+  "soundRequestAction": "Diesen Sound anfragen",
+  "soundRequestTitle": "Jemand möchte deinen Sound verwenden",
+  "soundRequestDescription": "Erlaube die Wiederverwendung des Sounds dieses Videos, damit alle damit remixen können.",
+  "soundRequestEnable": "Sound zur Wiederverwendung freigeben",
+  "soundRequestSent": "Sound angefragt",
+  "soundReadyTitle": "Dein angefragter Sound ist bereit",
+  "soundReadyDescription": "Nutze ihn in deinem nächsten Video oder speichere ihn in deiner Soundbibliothek.",
+  "soundReadyUse": "Diesen Sound verwenden",
+  "soundReadySave": "In Meine Sounds speichern",
+  "soundRequestSaved": "Gespeichert"
 }

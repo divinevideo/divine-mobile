@@ -12947,4 +12947,34 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => 'ハッシュタグのページでフォローすると、ここに表示されます。';
+
+  @override
+  String get soundRequestAction => 'このサウンドをリクエスト';
+
+  @override
+  String get soundRequestTitle => 'あなたのサウンドを使いたい人がいます';
+
+  @override
+  String get soundRequestDescription => 'この動画のサウンドの再利用を許可すると、誰でもリミックスに使えます。';
+
+  @override
+  String get soundRequestEnable => 'サウンドの再利用を許可';
+
+  @override
+  String get soundRequestSent => 'サウンドをリクエスト済み';
+
+  @override
+  String get soundReadyTitle => 'リクエストしたサウンドが使えるようになりました';
+
+  @override
+  String get soundReadyDescription => '次の動画で使うか、サウンドライブラリに保存しましょう。';
+
+  @override
+  String get soundReadyUse => 'このサウンドを使う';
+
+  @override
+  String get soundReadySave => 'マイサウンドに保存';
+
+  @override
+  String get soundRequestSaved => '保存済み';
 }

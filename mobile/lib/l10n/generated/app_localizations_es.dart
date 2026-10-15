@@ -13764,4 +13764,36 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Sigue un hashtag desde su página para encontrarlo aquí.';
+
+  @override
+  String get soundRequestAction => 'Solicitar este sonido';
+
+  @override
+  String get soundRequestTitle => 'Alguien quiere usar tu sonido';
+
+  @override
+  String get soundRequestDescription =>
+      'Activa la reutilización del sonido de este video para que cualquiera pueda crear con él.';
+
+  @override
+  String get soundRequestEnable => 'Permitir reutilizar el sonido';
+
+  @override
+  String get soundRequestSent => 'Sonido solicitado';
+
+  @override
+  String get soundReadyTitle => 'El sonido que pediste está listo';
+
+  @override
+  String get soundReadyDescription =>
+      'Úsalo en tu próximo video o guárdalo en tu biblioteca de sonidos.';
+
+  @override
+  String get soundReadyUse => 'Usar este sonido';
+
+  @override
+  String get soundReadySave => 'Guardar en Mis sonidos';
+
+  @override
+  String get soundRequestSaved => 'Guardado';
 }

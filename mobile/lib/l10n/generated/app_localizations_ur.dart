@@ -13606,4 +13606,36 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔';
+
+  @override
+  String get soundRequestAction => 'یہ آواز مانگیں';
+
+  @override
+  String get soundRequestTitle => 'کوئی آپ کی آواز استعمال کرنا چاہتا ہے';
+
+  @override
+  String get soundRequestDescription =>
+      'اس ویڈیو کی آواز دوبارہ استعمال کرنے کی اجازت دیں تاکہ کوئی بھی اس سے ریمکس بنا سکے۔';
+
+  @override
+  String get soundRequestEnable => 'آواز دوبارہ استعمال کرنے کی اجازت دیں';
+
+  @override
+  String get soundRequestSent => 'آواز کی درخواست بھیج دی گئی';
+
+  @override
+  String get soundReadyTitle => 'آپ کی مانگی ہوئی آواز تیار ہے';
+
+  @override
+  String get soundReadyDescription =>
+      'اسے اپنی اگلی ویڈیو میں استعمال کریں یا اپنی آوازوں کی لائبریری میں محفوظ کریں۔';
+
+  @override
+  String get soundReadyUse => 'یہ آواز استعمال کریں';
+
+  @override
+  String get soundReadySave => 'میری آوازوں میں محفوظ کریں';
+
+  @override
+  String get soundRequestSaved => 'محفوظ ہو گیا';
 }

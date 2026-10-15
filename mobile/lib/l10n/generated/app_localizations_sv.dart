@@ -13617,4 +13617,36 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Följ en hashtagg på dess sida för att hitta den här.';
+
+  @override
+  String get soundRequestAction => 'Be om det här ljudet';
+
+  @override
+  String get soundRequestTitle => 'Någon vill använda ditt ljud';
+
+  @override
+  String get soundRequestDescription =>
+      'Tillåt återanvändning av ljudet i den här videon så att alla kan remixa med det.';
+
+  @override
+  String get soundRequestEnable => 'Tillåt återanvändning av ljud';
+
+  @override
+  String get soundRequestSent => 'Ljud efterfrågat';
+
+  @override
+  String get soundReadyTitle => 'Ljudet du bad om är klart';
+
+  @override
+  String get soundReadyDescription =>
+      'Använd det i din nästa video eller spara det i ditt ljudbibliotek.';
+
+  @override
+  String get soundReadyUse => 'Använd det här ljudet';
+
+  @override
+  String get soundReadySave => 'Spara i Mina ljud';
+
+  @override
+  String get soundRequestSaved => 'Sparat';
 }

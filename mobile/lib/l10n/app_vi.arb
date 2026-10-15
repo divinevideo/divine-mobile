@@ -6838,5 +6838,15 @@
   "messagesNoRooms": "Chưa có phòng nào",
   "followedHashtagsTitle": "Hashtag đang theo dõi",
   "manageHashtags": "Quản lý hashtag",
-  "followedHashtagsEmpty": "Theo dõi hashtag từ trang của nó để tìm thấy ở đây."
+  "followedHashtagsEmpty": "Theo dõi hashtag từ trang của nó để tìm thấy ở đây.",
+  "soundRequestAction": "Yêu cầu âm thanh này",
+  "soundRequestTitle": "Có người muốn dùng âm thanh của bạn",
+  "soundRequestDescription": "Cho phép sử dụng lại âm thanh của video này để mọi người có thể tạo bản phối lại.",
+  "soundRequestEnable": "Cho phép sử dụng lại âm thanh",
+  "soundRequestSent": "Đã yêu cầu âm thanh",
+  "soundReadyTitle": "Âm thanh bạn yêu cầu đã sẵn sàng",
+  "soundReadyDescription": "Dùng trong video tiếp theo hoặc lưu vào thư viện âm thanh của bạn.",
+  "soundReadyUse": "Dùng âm thanh này",
+  "soundReadySave": "Lưu vào Âm thanh của tôi",
+  "soundRequestSaved": "Đã lưu"
 }
