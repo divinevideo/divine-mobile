@@ -624,16 +624,15 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                     prev.currentVideo == null && curr.currentVideo != null,
                 listener: (context, state) {
                   final video = state.currentVideo;
-                  if (video != null) {
-                    runDetached(
-                      Future<void>.sync(
-                        () => CommentsScreen.show(context, video),
-                      ),
-                      'open comments from fullscreen feed',
-                      logName: 'FullscreenFeedContent',
-                      category: LogCategory.video,
-                    );
-                  }
+                  if (video == null) return;
+                  runDetached(
+                    Future<void>.sync(
+                      () => CommentsScreen.show(context, video),
+                    ),
+                    'open comments from fullscreen feed',
+                    logName: 'FullscreenFeedContent',
+                    category: LogCategory.video,
+                  );
                 },
               ),
             // Dispatch FullscreenFeedVideoUnavailable when the active video's
