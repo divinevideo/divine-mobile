@@ -33,17 +33,3 @@ final class FollowListSearchProfileRepositoryChanged
   /// The freshly provided repository, or `null` while Nostr is not ready.
   final ProfileRepository? repository;
 }
-
-/// The signed-in user's pubkey resolved or changed.
-///
-/// Only the own-list screens send this: they address the server-side search
-/// with whoever is signed in, and `nostrServiceProvider` hands over a client
-/// carrying an empty [pubkey] until auth restore finishes. Without this the
-/// BLoC would keep the cold-start empty string and never search server-side.
-final class FollowListSearchSubjectPubkeyChanged extends FollowListSearchEvent {
-  /// Creates the event carrying the current subject [pubkey].
-  const FollowListSearchSubjectPubkeyChanged(this.pubkey);
-
-  /// Whose list this is now, or empty while auth has not restored.
-  final String pubkey;
-}

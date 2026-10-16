@@ -691,7 +691,7 @@ void main() {
     );
 
     test(
-      'runs the API search once the subject pubkey arrives',
+      'a replacement built for the arrived subject pubkey runs the API search',
       () {
         fakeAsync((clock) {
           // Nothing resolves on device, so only the API can produce this match.
@@ -708,19 +708,27 @@ void main() {
             ),
           ).thenAnswer((_) async => const {_alicePubkey});
 
-          final bloc = FollowListSearchBloc(
+          final coldStart = FollowListSearchBloc(
             followRepository: followRepository,
             subjectPubkey: '',
             listKind: FollowListKind.followers,
             profileRepository: profileRepository,
           );
 
-          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          coldStart.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
           clock.elapse(_pastDebounce);
           clock.flushMicrotasks();
-          expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+          expect(coldStart.state.visibleFrom(_allPubkeys), isEmpty);
 
-          bloc.add(const FollowListSearchSubjectPubkeyChanged(_subjectPubkey));
+          // What RetainedBlocProvider does once the signed-in key resolves.
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            subjectPubkey: _subjectPubkey,
+            listKind: FollowListKind.followers,
+            profileRepository: profileRepository,
+            initialState: coldStart.state,
+          );
+          unawaited(coldStart.close());
 
           clock.flushMicrotasks();
           clock.elapse(_pastDebounce);
