@@ -89,9 +89,11 @@ void main() {
       ).thenAnswer((_) => const Stream<ProgressiveSearchResult>.empty());
     });
 
-    Widget createTestWidget() {
+    Widget createTestWidget({
+      String initialLocation = SearchResultsPage.emptyPath,
+    }) {
       final router = GoRouter(
-        initialLocation: SearchResultsPage.emptyPath,
+        initialLocation: initialLocation,
         routes: [
           GoRoute(
             path: SearchResultsPage.emptyPath,
@@ -99,7 +101,9 @@ void main() {
           ),
           GoRoute(
             path: SearchResultsPage.path,
-            builder: (_, _) => const SearchResultsPage(),
+            builder: (_, state) => SearchResultsPage(
+              initialQuery: state.pathParameters['query'],
+            ),
           ),
           GoRoute(
             path: OtherProfileScreen.pathWithNpub,
@@ -179,6 +183,29 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('video:$hexId'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'focusing an npub prefilled by a search link does not open it',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            initialLocation: SearchResultsPage.pathForQuery(
+              npub,
+              requestFocusOnMount: false,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Focusing moves the cursor, which notifies the controller without
+        // the user having edited the query.
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+
+        expect(find.text('profile:$npub'), findsNothing);
+        expect(find.byType(SearchResultsPage), findsOneWidget);
       },
     );
 

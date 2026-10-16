@@ -227,12 +227,15 @@ class _NostrIdAutoOpenScope extends ConsumerStatefulWidget {
 class _NostrIdAutoOpenScopeState extends ConsumerState<_NostrIdAutoOpenScope> {
   // The last text we classified. The controller also notifies on
   // selection-only edits (cursor moves, focus changes); comparing the text
-  // avoids reclassifying the same query on every one of those.
-  String? _lastClassifiedQuery;
+  // avoids reclassifying the same query on every one of those. It starts at
+  // the text already in the field, so focusing a query prefilled by the
+  // route opens nothing until the user edits it.
+  late String _lastClassifiedQuery;
 
   @override
   void initState() {
     super.initState();
+    _lastClassifiedQuery = widget.controller.text.trim();
     widget.controller.addListener(_onControllerChanged);
   }
 
@@ -241,6 +244,7 @@ class _NostrIdAutoOpenScopeState extends ConsumerState<_NostrIdAutoOpenScope> {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.controller, widget.controller)) {
       oldWidget.controller.removeListener(_onControllerChanged);
+      _lastClassifiedQuery = widget.controller.text.trim();
       widget.controller.addListener(_onControllerChanged);
     }
   }
