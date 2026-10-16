@@ -30,10 +30,14 @@ DmMessage requestMessage(String who, String id) => DmMessage(
 class MemoryStore implements SoundRequestStore {
   final data = <String, SoundRequestSnapshot>{};
   bool fail = false;
+  bool failRead = false;
   bool failAcknowledgement = false;
   @override
-  Future<SoundRequestSnapshot> read(String owner) async =>
-      data[owner] ?? const SoundRequestSnapshot();
+  Future<SoundRequestSnapshot> read(String owner) async {
+    if (failRead) throw const FormatException('unreadable');
+    return data[owner] ?? const SoundRequestSnapshot();
+  }
+
   @override
   Future<void> write(String owner, SoundRequestSnapshot value) async {
     if (fail ||
@@ -303,6 +307,30 @@ void main() {
         expect(transport.delivered, hasLength(1));
       },
     );
+  });
+
+  group('restore', () {
+    test('a failed restore does not overwrite the stored records', () async {
+      final transport = Transport([]);
+      final store = MemoryStore();
+      final publisher = Publisher();
+      final earlier = repository(viewer, transport, store, publisher);
+      await earlier.start();
+      await earlier.request(address);
+      await earlier.close();
+      final stored = store.data[viewer];
+      expect(stored?.requests, hasLength(1));
+      store.failRead = true;
+      final repo = repository(viewer, transport, store, publisher);
+      addTearDown(repo.close);
+      await expectLater(repo.start(), throwsFormatException);
+      await expectLater(
+        repo.request('34236:$creator:other'),
+        throwsA(isA<SoundRequestException>()),
+      );
+      expect(store.data[viewer], stored);
+      expect(transport.intents, hasLength(1));
+    });
   });
 
   group('request', () {
