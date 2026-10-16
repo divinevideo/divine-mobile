@@ -7,6 +7,10 @@ import android.app.Activity
 import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -29,6 +33,27 @@ class DivineCameraPlugin :
     private var activity: Activity? = null
     private var cameraController: CameraController? = null
     private var volumeKeyHandler: VolumeKeyHandler? = null
+
+    @VisibleForTesting
+    internal val remoteRecordControl: VolumeKeyHandler?
+        get() = volumeKeyHandler
+
+    // Remote record control only holds its media session while the activity
+    // is in the foreground (#10196). Stopping releases it, resuming claims it
+    // back; a pause alone (notification shade, permission dialog) keeps it.
+    private var activityLifecycle: Lifecycle? = null
+    private var isActivityInForeground = false
+    private val activityLifecycleObserver = object : DefaultLifecycleObserver {
+        override fun onResume(owner: LifecycleOwner) {
+            isActivityInForeground = true
+            volumeKeyHandler?.onBecomeActive()
+        }
+
+        override fun onStop(owner: LifecycleOwner) {
+            isActivityInForeground = false
+            volumeKeyHandler?.onEnterBackground()
+        }
+    }
 
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -503,7 +528,7 @@ class DivineCameraPlugin :
                         }
                     }
                 }
-                val success = volumeKeyHandler?.enable() ?: false
+                val success = volumeKeyHandler?.enable(appActive = isActivityInForeground) ?: false
                 result.success(success)
             } else {
                 volumeKeyHandler?.disable()
@@ -549,8 +574,23 @@ class DivineCameraPlugin :
         cameraController = null
     }
 
+    // Adding the observer replays the activity's current state, so
+    // isActivityInForeground is right before the first enable.
+    private fun observeActivityLifecycle(binding: ActivityPluginBinding) {
+        activityLifecycle = (binding.activity as? LifecycleOwner)?.lifecycle
+        activityLifecycle?.addObserver(activityLifecycleObserver)
+    }
+
+    private fun stopObservingActivityLifecycle() {
+        activityLifecycle?.removeObserver(activityLifecycleObserver)
+        activityLifecycle = null
+        isActivityInForeground = false
+        volumeKeyHandler?.onEnterBackground()
+    }
+
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
+        observeActivityLifecycle(binding)
         // The UI engine is the one that attaches to an Activity, so this is
         // where diagnostics-sink ownership belongs.
         claimLogSink()
@@ -558,6 +598,7 @@ class DivineCameraPlugin :
 
     override fun onDetachedFromActivityForConfigChanges() {
         activity = null
+        stopObservingActivityLifecycle()
         // Keep the sink: the engine and its method channel survive a config
         // change, and the same UI engine re-attaches via
         // onReattachedToActivityForConfigChanges.
@@ -565,11 +606,13 @@ class DivineCameraPlugin :
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
+        observeActivityLifecycle(binding)
         claimLogSink()
     }
 
     override fun onDetachedFromActivity() {
         activity = null
+        stopObservingActivityLifecycle()
         // Activity is gone (not a config change), so the UI engine no longer
         // owns the diagnostics sink. Ownership-guarded so a background engine's
         // sink — if one had somehow been installed — isn't cleared here.
