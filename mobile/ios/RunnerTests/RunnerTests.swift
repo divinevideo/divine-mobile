@@ -4,8 +4,9 @@ import WebKit
 import background_uploader
 import divine_camera
 @testable import divine_video_player
+import CryptoKit
 import Flutter
-import LibProofMode
+@testable import LibProofMode
 import ObjectivePGP
 @testable import Runner
 
@@ -338,6 +339,116 @@ final class LibProofModeNetworkFieldsTests: XCTestCase {
         "\(field) must not enter the signed proof"
       )
     }
+  }
+}
+
+/// LibProofMode used to read the whole recording into memory to hash and sign
+/// it, and ObjectivePGP copied it three more times, so stopping a long take
+/// got the app killed (#10197). The media is now streamed; these pin that the
+/// signature it writes is still the one ObjectivePGP would have written.
+final class LibProofModeStreamingSignatureTests: XCTestCase {
+  // Generating an RSA-3072 key takes seconds, so the tests share one.
+  private static let key = KeyGenerator().generate(
+    for: "noone@proofmode.witness.org", passphrase: "password"
+  )
+
+  private var folder: URL!
+  private var originalDocumentFolder: URL?
+  private var originalPgpKey: Key?
+
+  override func setUpWithError() throws {
+    folder = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: folder, withIntermediateDirectories: true
+    )
+    originalDocumentFolder = Proof.shared.defaultDocumentFolder
+    originalPgpKey = Proof.shared.pgpKey
+    Proof.shared.defaultDocumentFolder = folder
+    Proof.shared.pgpKey = Self.key
+  }
+
+  override func tearDownWithError() throws {
+    Proof.shared.pgpKey = originalPgpKey
+    Proof.shared.defaultDocumentFolder = originalDocumentFolder
+    try? FileManager.default.removeItem(at: folder)
+  }
+
+  func testStreamedSignatureIsTheOneObjectivePGPWrites() throws {
+    let media = try writeMedia()
+    let reference = try ObjectivePGP.sign(
+      media.data, detached: true, using: [Self.key],
+      passphraseForKey: { _ in "password" }
+    )
+
+    let digest = try MediaDigest(
+      reading: XCTUnwrap(InputStream(url: media.url))
+    )
+    let streamed = try DetachedSignature.sign(
+      digest, with: Self.key, passphrase: "password",
+      createdAt: creationTime(of: reference)
+    )
+
+    XCTAssertEqual(
+      digest.sha256, SHA256.hash(data: media.data).hexStr.lowercased()
+    )
+    XCTAssertEqual(streamed, reference)
+  }
+
+  func testFileProofSignsTheFileWithoutLoadingIt() throws {
+    let media = try writeMedia()
+    let item = MediaItem(mediaUrl: media.url)
+    let options = ProofGenerationOptions(
+      showDeviceIds: false,
+      showLocation: false,
+      showMobileNetwork: false,
+      notarizationProviders: []
+    )
+
+    let done = expectation(description: "proof generated")
+    Proof.shared.process(mediaItem: item, options: options) { _ in
+      done.fulfill()
+    }
+    wait(for: [done], timeout: 60)
+
+    let hash = try XCTUnwrap(item.mediaItemHash)
+    XCTAssertEqual(hash, SHA256.hash(data: media.data).hexStr.lowercased())
+    XCTAssertNil(item.data, "the recording must not be read into memory")
+
+    let armored = try String(
+      contentsOf: folder.appendingPathComponent(hash, isDirectory: true)
+        .appendingPathComponent("\(hash).asc"),
+      encoding: .utf8
+    )
+    XCTAssertNoThrow(
+      try ObjectivePGP.verify(
+        media.data, withSignature: Armor.readArmored(armored),
+        using: [Self.key], passphraseForKey: nil
+      )
+    )
+  }
+
+  /// A little over 2.5 MiB, so the digest reads it in several chunks and the
+  /// last one is partial.
+  private func writeMedia() throws -> (url: URL, data: Data) {
+    let data = Data((0..<(5 << 19) + 7).map { UInt8(truncatingIfNeeded: $0 &* 31) })
+    let url = folder.appendingPathComponent("clip.mp4")
+    try data.write(to: url)
+    return (url, data)
+  }
+
+  /// The creation time ObjectivePGP hashed into [signature], so the streamed
+  /// one can be made at the same second and compared byte for byte.
+  private func creationTime(of signature: Data) throws -> Date {
+    let bytes = [UInt8](signature)
+    // A new-format header with a two-octet length, then version, signature
+    // type, key and hash algorithms and the hashed subpacket count.
+    let subpacket = 3 + 6
+    XCTAssertEqual(bytes[0], 0xC2, "a new-format signature packet")
+    XCTAssertEqual(bytes[subpacket + 1], 2, "a creation-time subpacket")
+    let seconds = bytes[(subpacket + 2)..<(subpacket + 6)]
+      .reduce(UInt32(0)) { $0 << 8 | UInt32($1) }
+    return Date(timeIntervalSince1970: TimeInterval(seconds))
   }
 }
 

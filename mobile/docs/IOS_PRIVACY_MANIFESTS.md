@@ -60,6 +60,16 @@ when refreshing it until each change is present upstream:
   vendor delta in CI, and `LibProofModeNetworkFieldsTests` in
   `ios/RunnerTests/RunnerTests.swift` verifies the generated proof when the
   native test suite runs.
+- `Classes/StreamingSignature.swift` is Divine-only, and `Classes/Proof.swift`
+  and `Classes/MediaItem.swift` use it to hash and sign a file by streaming it
+  in 1 MiB chunks. Upstream reads the whole file into `MediaItem.data`, and
+  ObjectivePGP copies it three more times while signing, so stopping a
+  recording of about ten minutes got the app killed (#10197). The signature is
+  byte for byte the one `ObjectivePGP.sign` writes, but its RSA step calls
+  ObjectivePGP's internal `PGPRSA` class, because ObjectivePGP cannot sign a
+  hash it did not compute. `LibProofModeStreamingSignatureTests` in
+  `ios/RunnerTests/RunnerTests.swift` compares the two signatures and checks
+  the file is never loaded, so run it after updating either library.
 
 The Podfile selects LibProofMode's existing `PrivacyProtected` subspec. Divine
 sets `showDeviceIds: false`, so compiling out `AdSupport` and
