@@ -158,8 +158,10 @@ class VideoEditorScope extends InheritedWidget {
 
   /// Whether the canvas has handed its preview decoders to an export.
   ///
-  /// True while the metadata screen covers the editor and renders the video.
-  /// Each detached clip then gives its player back and shows its poster: the
+  /// Set once Done has covered the editor with the metadata screen, and
+  /// cleared only after the editor is back and that export has finished, so
+  /// the clips stay on their posters for any part of the render the user
+  /// returns during. Each detached clip gives its player back meanwhile: the
   /// export decodes every detached clip at once, and a player left open is a
   /// decoder the device cannot give the export (#10141). Optional, like
   /// [canvasBodyKey].
