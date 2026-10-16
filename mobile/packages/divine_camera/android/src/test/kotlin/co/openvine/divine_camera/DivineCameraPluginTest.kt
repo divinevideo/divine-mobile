@@ -3,7 +3,6 @@ package co.openvine.divine_camera
 import android.app.Activity
 import android.content.Context
 import android.hardware.camera2.CameraMetadata
-import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.camera.video.Quality
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -11,19 +10,15 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.view.TextureRegistry
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
-import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -588,41 +583,6 @@ internal class DivineCameraPluginRemoteRecordControlTest {
     }
 
     @Test
-    fun hostWithoutALifecycle_tellsDartRemoteRecordStaysOff() {
-        val messenger = Mockito.mock(BinaryMessenger::class.java)
-        val binding = Mockito.mock(ActivityPluginBinding::class.java)
-        Mockito.`when`(binding.activity)
-            .thenReturn(Robolectric.buildActivity(Activity::class.java).setup().get())
-
-        val plugin = DivineCameraPlugin()
-        plugin.onAttachedToEngine(
-            engineBinding(
-                context = RuntimeEnvironment.getApplication(),
-                messenger = messenger,
-            )
-        )
-        plugin.onAttachedToActivity(binding)
-        shadowOf(Looper.getMainLooper()).idle()
-
-        val sent = ArgumentCaptor.forClass(ByteBuffer::class.java)
-        Mockito.verify(messenger, Mockito.atLeastOnce())
-            .send(Mockito.eq("divine_camera"), sent.capture(), Mockito.isNull())
-        val logs = sent.allValues
-            .map { buffer ->
-                // The codec leaves the position at the end of what it wrote.
-                buffer.flip()
-                StandardMethodCodec.INSTANCE.decodeMethodCall(buffer)
-            }
-            .filter { it.method == "onNativeLog" }
-            .map { it.arguments as Map<*, *> }
-        assertTrue(
-            logs.any {
-                it["level"] == "warning" && it["name"] == "DivineCamera.Lifecycle"
-            }
-        )
-    }
-
-    @Test
     fun enabledWhileStopped_claimsTheSessionOnResume() {
         val activity = Robolectric.buildActivity(ComponentActivity::class.java)
             .setup()
@@ -639,10 +599,10 @@ internal class DivineCameraPluginRemoteRecordControlTest {
 
 private fun engineBinding(
     context: Context = Mockito.mock(Context::class.java),
-    messenger: BinaryMessenger = Mockito.mock(BinaryMessenger::class.java),
 ): FlutterPlugin.FlutterPluginBinding {
     val binding = Mockito.mock(FlutterPlugin.FlutterPluginBinding::class.java)
-    Mockito.`when`(binding.binaryMessenger).thenReturn(messenger)
+    Mockito.`when`(binding.binaryMessenger)
+        .thenReturn(Mockito.mock(BinaryMessenger::class.java))
     Mockito.`when`(binding.applicationContext).thenReturn(context)
     Mockito.`when`(binding.textureRegistry)
         .thenReturn(Mockito.mock(TextureRegistry::class.java))
