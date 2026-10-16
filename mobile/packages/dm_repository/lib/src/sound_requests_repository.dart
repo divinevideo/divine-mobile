@@ -24,6 +24,10 @@ class SoundRequestsRepository {
        _readyBody = readyBody,
        _now = now ?? DateTime.now;
 
+  /// Minimum spacing between background rechecks of a source whose last
+  /// check failed or left its requests awaiting policy.
+  static const backgroundRecheckInterval = Duration(minutes: 1);
+
   /// The account owning this lifecycle and its durable checkpoints.
   final String ownerPubkey;
   final SoundRequestTransport _transport;
@@ -35,6 +39,7 @@ class SoundRequestsRepository {
   final _changes = StreamController<SoundRequestSnapshot>.broadcast(sync: true);
   final _attemptedVideos = <String>{};
   final _reconciledRequests = <String>{};
+  final _recheckAt = <String, DateTime>{};
   List<DmMessage>? _queuedHistory;
   bool _historyQueued = false;
   StreamSubscription<List<DmMessage>>? _subscription;
@@ -186,28 +191,37 @@ class SoundRequestsRepository {
     }
     for (final MapEntry(key: address, value: ids) in pendingByAddress.entries) {
       final approved = _state.approvedVideos.contains(address);
-      // History re-emits on every DM write. An unapproved request is checked
-      // against current reuse once per session. Explicit approvals and
-      // automatic fulfillment awaiting sound/policy indexing keep rechecking.
-      final unchecked = ids.where((id) => !_reconciledRequests.contains(id));
-      final awaitingPolicy = ids.any(
-        (id) =>
-            _state.requests[id]?.status == SoundRequestStatus.awaitingPolicy,
-      );
+      // History re-emits on every DM write. Unapproved requests are checked
+      // against current reuse when first seen; a check that failed or left
+      // them awaiting sound/policy indexing repeats at most once per recheck
+      // interval. Explicit approvals keep rechecking on every pass.
+      final unchecked = ids.any((id) => !_reconciledRequests.contains(id));
+      final recheckAt = _recheckAt[address];
+      final recheckDue = recheckAt != null && !_now().isBefore(recheckAt);
+      if (!approved && !unchecked && !recheckDue) continue;
+      _reconciledRequests.addAll(ids);
+      _recheckAt.remove(address);
+      var settled = false;
       try {
         if (approved && !_attemptedVideos.contains(address)) {
           await _publishFor(address);
-        } else if (approved || awaitingPolicy || unchecked.isNotEmpty) {
+        } else {
           final source = await _publisher.resolve(address);
           _checkOpen();
-          _reconciledRequests.addAll(ids);
           if (source.allowReuse && source.audioEventId != null) {
             await _fulfill(address, source.audioEventId!);
             await _drain();
           }
         }
+        settled = !ids.any(
+          (id) =>
+              _state.requests[id]?.status == SoundRequestStatus.awaitingPolicy,
+        );
       } on Object catch (e, s) {
         _report(e, s);
+      }
+      if (!approved && !settled) {
+        _recheckAt[address] = _now().add(backgroundRecheckInterval);
       }
     }
   }

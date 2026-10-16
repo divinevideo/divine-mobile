@@ -81,6 +81,7 @@ class Publisher implements SoundRequestPublisher {
   bool policyVerified = true;
   int metadataPublishes = 0;
   bool failReplacement = false;
+  bool failResolve = false;
   int audioPublishes = 0;
   int resolves = 0;
   Completer<void>? resolveGate;
@@ -97,6 +98,7 @@ class Publisher implements SoundRequestPublisher {
   Future<SoundRequestSource> resolve(String coordinate) async {
     resolves++;
     await resolveGate?.future;
+    if (failResolve) throw const SoundRequestException('Source unavailable');
     return SoundRequestSource(
       video: video,
       allowReuse: enabled,
@@ -129,15 +131,16 @@ SoundRequestsRepository repository(
   String owner,
   Transport transport,
   MemoryStore store,
-  Publisher publisher,
-) => SoundRequestsRepository(
+  Publisher publisher, {
+  DateTime Function()? now,
+}) => SoundRequestsRepository(
   ownerPubkey: owner,
   transport: transport,
   store: store,
   publisher: publisher,
   requestBody: (_) => 'Please enable this sound',
   readyBody: (_) => 'Your requested sound is ready',
-  now: () => DateTime.utc(2026, 10, 16),
+  now: now ?? () => DateTime.utc(2026, 10, 16),
 );
 void main() {
   group('start', () {
@@ -155,7 +158,14 @@ void main() {
       final publisher = Publisher()
         ..enabled = true
         ..policyVerified = false;
-      final repo = repository(creator, transport, MemoryStore(), publisher);
+      var now = DateTime.utc(2026, 10, 16);
+      final repo = repository(
+        creator,
+        transport,
+        MemoryStore(),
+        publisher,
+        now: () => now,
+      );
       addTearDown(repo.close);
       live.add([request]);
       await repo.start();
@@ -167,10 +177,49 @@ void main() {
       publisher.policyVerified = true;
       live.add([request]);
       await pumpEventQueue();
+      expect(publisher.resolves, 1);
+      expect(
+        repo.state.requests[request.id]?.status,
+        SoundRequestStatus.awaitingPolicy,
+      );
+      now = now.add(SoundRequestsRepository.backgroundRecheckInterval);
+      live.add([request]);
+      await pumpEventQueue();
       expect(repo.state.requests[request.id]?.status, SoundRequestStatus.ready);
       expect(transport.delivered, hasLength(1));
       expect(publisher.audioPublishes, 0);
       expect(publisher.metadataPublishes, 0);
+    });
+
+    test('a failed lookup is retried after the recheck interval', () async {
+      final request = requestMessage(viewer, '1' * 64);
+      final publisher = Publisher()
+        ..enabled = true
+        ..failResolve = true;
+      var now = DateTime.utc(2026, 10, 16);
+      final repo = repository(
+        creator,
+        transport,
+        MemoryStore(),
+        publisher,
+        now: () => now,
+      );
+      addTearDown(repo.close);
+      live.add([request]);
+      await repo.start();
+      expect(publisher.resolves, 1);
+      for (var i = 0; i < 3; i++) {
+        live.add([request]);
+      }
+      await pumpEventQueue();
+      expect(publisher.resolves, 1);
+      publisher.failResolve = false;
+      now = now.add(SoundRequestsRepository.backgroundRecheckInterval);
+      live.add([request]);
+      await pumpEventQueue();
+      expect(publisher.resolves, 2);
+      expect(repo.state.requests[request.id]?.status, SoundRequestStatus.ready);
+      expect(transport.delivered, hasLength(1));
     });
 
     test('unchanged history does not look up pending requests again', () async {
