@@ -5064,10 +5064,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listContinue => 'Magpatuloy';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -13678,6 +13674,10 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Sundan ang isang hashtag sa pahina nito para makita ito rito.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Naglo-load ng mga list';

@@ -5045,8 +5045,8 @@
   "listsDiscoveryLoadingLabel": "Chargement des listes",
   "listSearchPeopleUnavailable": "Les listes de personnes sont indisponibles pour le moment.",
   "listSearchVideosUnavailable": "Les listes de vidéos sont indisponibles pour le moment.",
-  "authAccountCleanupFailed": "Impossible d’effacer les données du compte précédent. Réessaie.",
   "listPrivateConversionTooLarge": "Cette liste est trop grande pour devenir privée. Retire d’abord quelques vidéos. Tes modifications restent ici et n’ont pas été enregistrées.",
+  "authAccountCleanupFailed": "Impossible d’effacer les données du compte précédent. Réessaie.",
   "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
       "name": {

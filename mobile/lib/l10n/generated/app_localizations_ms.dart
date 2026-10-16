@@ -5030,10 +5030,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listContinue => 'Teruskan';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -13557,6 +13553,10 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Ikuti hashtag dari halamannya untuk menemuinya di sini.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Memuatkan senarai';

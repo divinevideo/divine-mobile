@@ -4749,10 +4749,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listContinue => '계속';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      '이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -12912,6 +12908,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => '해시태그 페이지에서 팔로우하면 여기에 표시됩니다.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      '이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.';
 
   @override
   String get listsDiscoveryLoadingLabel => '목록 불러오는 중';

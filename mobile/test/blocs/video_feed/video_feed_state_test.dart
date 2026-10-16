@@ -65,7 +65,7 @@ void main() {
       // is visible at review time when someone adds a feed mode.
       expect(
         VideoFeedSourceType.values.length,
-        6,
+        7,
         reason:
             'new feed mode added: give it an analyticsTag and update this '
             'test, otherwise its views land in an unattributed bucket',

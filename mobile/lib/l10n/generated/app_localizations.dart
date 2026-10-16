@@ -8521,12 +8521,6 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get listContinue;
 
-  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
-  ///
-  /// In en, this message translates to:
-  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
-  String get listPrivateConversionTooLarge;
-
   /// Shown when a video cannot be added to a private list because its encrypted payload would exceed the NIP-44 size limit. Retrying cannot succeed, so the copy must not suggest trying again.
   ///
   /// In en, this message translates to:
@@ -22634,6 +22628,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Follow a hashtag from its page to find it here.'**
   String get followedHashtagsEmpty;
+
+  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
+  ///
+  /// In en, this message translates to:
+  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
+  String get listPrivateConversionTooLarge;
 
   /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
   ///

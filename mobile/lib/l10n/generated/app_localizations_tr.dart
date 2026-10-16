@@ -4973,10 +4973,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listContinue => 'Devam';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -13483,6 +13479,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Bir etiketi burada bulmak için kendi sayfasından takip et.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';

@@ -4709,10 +4709,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listContinue => '继续';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -12744,6 +12740,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => '在话题标签页面关注后，即可在这里找到。';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
 
   @override
   String get listsDiscoveryLoadingLabel => '正在加载列表';

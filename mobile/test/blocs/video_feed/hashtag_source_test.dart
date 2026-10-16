@@ -47,6 +47,13 @@ void main() {
       when(() => follows.followingStream)
           .thenAnswer((_) => const Stream.empty());
       when(lists.getSubscribedLists).thenReturn([]);
+      final snapshot = CuratedListSubscriptionSnapshot(
+        lists: const [],
+        isComplete: true,
+      );
+      when(() => lists.subscriptionSnapshot).thenReturn(snapshot);
+      when(() => lists.subscriptionSnapshots)
+          .thenAnswer((_) => const Stream.empty());
       when(() => lists.subscribedListsStream)
           .thenAnswer((_) => const Stream.empty());
       when(() => videos.getHashtagFeedVideos(hashtag: any(named: 'hashtag')))

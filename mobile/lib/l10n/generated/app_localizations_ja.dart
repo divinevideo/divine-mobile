@@ -4730,10 +4730,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listContinue => '続ける';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -12897,6 +12893,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => 'ハッシュタグのページでフォローすると、ここに表示されます。';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
 
   @override
   String get listsDiscoveryLoadingLabel => 'リストを読み込み中';

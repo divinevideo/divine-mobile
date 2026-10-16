@@ -31,6 +31,7 @@ enum VideoFeedSourceType {
 
   /// Videos matching a followed hashtag.
   subscribedHashtag,
+
   /// Videos from the members of one followed people list.
   peopleList,
 
@@ -231,7 +232,14 @@ final class VideoFeedSource extends Equatable {
   };
 
   @override
-  List<Object?> get props => [type, listId, listName, listOwnerPubkey, hashtag, displayTag];
+  List<Object?> get props => [
+    type,
+    listId,
+    listName,
+    listOwnerPubkey,
+    hashtag,
+    displayTag,
+  ];
 }
 
 /// Status of the video feed.
@@ -339,6 +347,7 @@ final class VideoFeedBlocState extends Equatable {
 
   /// Followed hashtags available in the Home picker.
   final List<HashtagSubscription> followedHashtags;
+
   /// People lists the viewer follows, available to Home as feeds of their
   /// members' videos.
   final List<PeopleListSearchResult> followedPeopleLists;

@@ -5045,8 +5045,8 @@
   "listsDiscoveryLoadingLabel": "Se încarcă listele",
   "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",
   "listSearchVideosUnavailable": "Listele de videoclipuri nu sunt disponibile acum.",
-  "authAccountCleanupFailed": "Nu am putut șterge datele contului anterior. Încearcă din nou.",
   "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.",
+  "authAccountCleanupFailed": "Nu am putut șterge datele contului anterior. Încearcă din nou.",
   "@peopleListsAddPersonSemanticLabel": {
     "placeholders": {
       "name": {

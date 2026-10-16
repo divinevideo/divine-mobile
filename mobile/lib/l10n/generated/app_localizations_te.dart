@@ -5205,10 +5205,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listContinue => 'కొనసాగించండి';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -13904,6 +13900,10 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
 
   @override
   String get listsDiscoveryLoadingLabel => 'జాబితాలను లోడ్ చేస్తోంది';
