@@ -172,10 +172,14 @@ class FollowListSearchBloc
     if (query.isEmpty || repository == null) return;
 
     final generation = ++_resolveGeneration;
-    final unresolved = state.candidatePubkeys
-        .where((pubkey) => !state.searchTerms.containsKey(pubkey))
-        .toSet()
-        .toList();
+    // Sorted before chunking: the own lists arrive in Smart order, which comes
+    // from message history, and lookups must not reveal it chunk by chunk.
+    final unresolved =
+        state.candidatePubkeys
+            .where((pubkey) => !state.searchTerms.containsKey(pubkey))
+            .toSet()
+            .toList()
+          ..sort();
 
     for (var i = 0; i < unresolved.length; i += searchProfileResolveChunkSize) {
       if (!_canEmitResolve(emit, generation, repository, query)) return;

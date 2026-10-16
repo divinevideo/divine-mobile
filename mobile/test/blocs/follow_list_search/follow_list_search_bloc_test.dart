@@ -130,6 +130,28 @@ void main() {
       },
     );
 
+    test('resolves names in key order, not the list order on screen', () {
+      fakeAsync((clock) {
+        final bloc = createBloc();
+        bloc.add(
+          const FollowListSearchQueryChanged('alice', [
+            _carolPubkey,
+            _alicePubkey,
+            _bobPubkey,
+          ]),
+        );
+        clock.flushMicrotasks();
+        clock.elapse(_pastDebounce);
+        clock.flushMicrotasks();
+        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+        verify(
+          () => profileRepository.fetchBatchProfiles(pubkeys: _allPubkeys),
+        ).called(1);
+        unawaited(bloc.close());
+        clock.flushMicrotasks();
+      });
+    });
+
     test('starts with no query and shows every pubkey', () {
       final bloc = createBloc();
       addTearDown(bloc.close);
