@@ -8,6 +8,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.view.KeyEvent
@@ -33,7 +34,9 @@ private const val TAG = "VolumeKeyHandler"
 class VolumeKeyHandler(
     private val context: Context,
     private val activity: Activity?,
-    private val clock: () -> Long = System::currentTimeMillis,
+    // Monotonic, so a wall-clock correction cannot cut the cooldown short or
+    // stretch it out.
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
     private val onTrigger: (String) -> Unit
 ) {
     private var isEnabled = false
