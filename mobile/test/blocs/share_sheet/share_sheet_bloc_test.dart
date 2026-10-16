@@ -446,6 +446,7 @@ void main() {
       for (final error in [
         Exception('local read failed'),
         StateError('invariant'),
+        RangeError('index'),
       ]) {
         blocTest<ShareSheetBloc, ShareSheetState>(
           'ranking load $error falls back to old order and adds classified error',
@@ -467,7 +468,7 @@ void main() {
             readyWith([dave, alice, bob, carol]),
           ],
           errors: () => [
-            if (error is StateError)
+            if (error is StateError || error is RangeError)
               isA<Reportable<Object>>().having(
                 (e) => e.unwrap(),
                 'unwrap',
