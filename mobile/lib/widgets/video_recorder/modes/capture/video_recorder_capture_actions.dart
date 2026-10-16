@@ -27,6 +27,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         isFrontCamera: b.state.isFrontCamera,
         hasFlash: b.state.hasFlash,
         isRecording: b.state.isRecording,
+        hasRecordingInFlight: b.state.hasRecordingInFlight,
         showGridLines: b.state.showGridLines,
         supportsTimer: b.state.recorderMode.supportsCountdownTimer,
         capturesStills: b.state.recorderMode.capturesStills,
@@ -109,7 +110,9 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                       : state.isFrontCamera
                       ? l10n.videoRecorderCameraValueFront
                       : l10n.videoRecorderCameraValueBack,
-                  onTap: state.canSwitchCamera
+                  // The recorder refuses a flip while a take starts or
+                  // finishes, so show it disabled instead of dropping the tap.
+                  onTap: state.canSwitchCamera && !state.hasRecordingInFlight
                       ? () => context.read<VideoRecorderBloc>().add(
                           const VideoRecorderCameraSwitched(),
                         )

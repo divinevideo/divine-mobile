@@ -695,6 +695,8 @@ class VideoRecorderBloc
     VideoRecorderCameraSwitched event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    if (_refusesRebindMidTake('Camera switch')) return;
+
     // Flag the switch up front so the preview blurs its frozen last frame
     // while the native camera rebinds. `_emitCameraSync` rebuilds the state
     // from scratch and drops this flag once the new lens is live; the
@@ -735,7 +737,12 @@ class VideoRecorderBloc
     VideoRecorderStabilizationModeSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    if (state.isRecording) return;
+    // On Android a stabilization change rebinds the camera too.
+    if (_refusesRebindMidTake(
+      'Stabilization change to ${event.mode.name}',
+    )) {
+      return;
+    }
     if (event.mode == state.videoStabilizationMode) return;
     // Already on a mode that hides the control: keep the pick, but do not
     // start a rebind. Upload's camera is paused, and a rebind would restart it.
@@ -779,6 +786,10 @@ class VideoRecorderBloc
     VideoRecorderLensSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    if (_refusesRebindMidTake('Lens change to ${event.lens.displayName}')) {
+      return;
+    }
+
     final success = await _cameraService.setLens(event.lens);
     if (!success) {
       Log.warning(
@@ -940,9 +951,7 @@ class VideoRecorderBloc
 
     if (state.recordingLockedForNavigation ||
         !_cameraService.canRecord ||
-        state.isRecording ||
-        state.isStartingRecording ||
-        state.isStoppingRecording ||
+        state.hasRecordingInFlight ||
         (remainingDuration < const Duration(milliseconds: 30) &&
             state.recorderMode.hasRecordingLimit)) {
       Log.debug(
@@ -2316,9 +2325,10 @@ class VideoRecorderBloc
   /// Rebuilds [state] from the current [CameraService] values.
   ///
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
-  /// was entered from), overlay and grid toggles, the stop-motion session, the
-  /// chroma-key setup and, while the camera is initialized, the screen flash
-  /// carry over; flash resets to `off` and every other field to its default.
+  /// was entered from), overlay and grid toggles, the take in flight, the
+  /// navigation lock, the stop-motion session, the chroma-key setup and, while
+  /// the camera is initialized, the screen flash carry over; flash resets to
+  /// `off` and every other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
   /// not a flip to the other one: its still shows the wall behind the lens it
@@ -2358,6 +2368,16 @@ class VideoRecorderBloc
         recorderMode: state.recorderMode,
         modeBeforeUpload: state.modeBeforeUpload,
         showGridLines: state.showGridLines,
+        // The native take outlives a re-sync. Reading idle here would hide the
+        // stop button and let the shutter start a second take on top of it.
+        recordingState: state.recordingState,
+        countdownValue: state.countdownValue,
+        isStartingRecording: state.isStartingRecording,
+        isStoppingRecording: state.isStoppingRecording,
+        pendingStopAfterStart: state.pendingStopAfterStart,
+        // Only the next initialize releases the lock. The camera's own dispose
+        // reports through here, right after the lock is set.
+        recordingLockedForNavigation: state.recordingLockedForNavigation,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
         // split into several one-frame recordings (and lose frames on
@@ -2421,6 +2441,19 @@ class VideoRecorderBloc
   }
 
   // === Private helpers ===
+
+  /// Whether [change] must be refused because it rebinds the camera while a
+  /// take is in flight. A rebind mid-take ends it without a clip on Android,
+  /// and leaves iOS writing a recording the recorder can no longer stop.
+  bool _refusesRebindMidTake(String change) {
+    if (!state.hasRecordingInFlight) return false;
+    Log.debug(
+      '🔄 $change ignored - recording in progress',
+      name: 'VideoRecorderBloc',
+      category: LogCategory.video,
+    );
+    return true;
+  }
 
   Future<void> _setupRemoteRecordControl() async {
     _cameraService.setOnRemoteRecordTrigger(() {

@@ -24,22 +24,28 @@ class VideoRecorderClassicActionsTop extends ConsumerWidget {
       (VideoRecorderBloc b) => b.state.isRecording,
     );
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
+    final isVisible = hasClips && !isRecording;
 
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 220),
-      opacity: isRecording || !hasClips ? 0 : 1,
-      child: Row(
-        mainAxisAlignment: .center,
-        children: [
-          DivineIconButton(
-            icon: .trash,
-            semanticLabel: context.l10n.videoRecorderDeleteLastClipLabel,
-            semanticIdentifier: SemanticIds.cameraDeleteClipButton,
-            size: .small,
-            type: .ghostSecondary,
-            onPressed: () => _deleteLastClip(context, ref),
-          ),
-        ],
+    // Faded out is not gone: without this the hidden button still takes taps,
+    // and a tap mid-take deletes the last finished clip.
+    return IgnorePointer(
+      ignoring: !isVisible,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 220),
+        opacity: isVisible ? 1 : 0,
+        child: Row(
+          mainAxisAlignment: .center,
+          children: [
+            DivineIconButton(
+              icon: .trash,
+              semanticLabel: context.l10n.videoRecorderDeleteLastClipLabel,
+              semanticIdentifier: SemanticIds.cameraDeleteClipButton,
+              size: .small,
+              type: .ghostSecondary,
+              onPressed: () => _deleteLastClip(context, ref),
+            ),
+          ],
+        ),
       ),
     );
   }
