@@ -737,6 +737,13 @@ void main() {
 
       const cases = <_NextStepCase>[
         (
+          description: 'an under-13 case that only allows support email',
+          ageBand: SuspectedAgeBand.under13,
+          resolution: MinorReviewResolutionType.supportEmailOnly,
+          parentSupportLabel: true,
+          expectedPath: MinorAccountReviewUnder13SupportScreen.path,
+        ),
+        (
           description: 'an under-13 case, even when a parent video is allowed',
           ageBand: SuspectedAgeBand.under13,
           resolution: MinorReviewResolutionType.parentVideoOrEmail,
@@ -1227,59 +1234,6 @@ void main() {
           expect(find.text(l10n.supportContactSupport), findsOneWidget);
         },
       );
-
-      testWidgets(
-        'an under-13 case that needs action offers parent instructions',
-        (tester) async {
-          final goRouter = MockGoRouter();
-          when(
-            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async {});
-          await _pumpAppeal(
-            tester,
-            ageBand: SuspectedAgeBand.under13,
-            state: MinorReviewCaseState.restrictedPendingSupportEmail,
-            goRouter: goRouter,
-          );
-
-          await tester.tap(
-            find.text(l10n.minorAccountReviewParentSupportInstructions),
-          );
-          await tester.pumpAndSettle();
-
-          verify(
-            () => goRouter.push<void>(
-              MinorAccountReviewUnder13SupportScreen.path,
-              extra: any(named: 'extra'),
-            ),
-          ).called(1);
-        },
-      );
-
-      testWidgets('a parent-contact case continues to parent contact', (
-        tester,
-      ) async {
-        final goRouter = MockGoRouter();
-        when(
-          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async {});
-        await _pumpAppeal(
-          tester,
-          ageBand: SuspectedAgeBand.age13To15,
-          state: MinorReviewCaseState.restrictedPendingUserResponse,
-          goRouter: goRouter,
-        );
-
-        await tester.tap(find.text(l10n.minorAccountReviewContinue));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => goRouter.push<void>(
-            MinorAccountReviewParentContactScreen.path,
-            extra: any(named: 'extra'),
-          ),
-        ).called(1);
-      });
 
       // An unrecognised or missing resolution parses to unknown. The appeal
       // button is already the right next step, so there is no Continue into
