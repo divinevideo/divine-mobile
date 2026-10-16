@@ -7,6 +7,7 @@ import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart' show NIP71VideoKinds, UserProfile;
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -101,7 +102,11 @@ class UserRankingSignalsLoader {
       }
       for (final peer in conversation.participantPubkeys) {
         if (!isEligible(peer)) continue;
-        if (includeDmCounterparts) candidates.add(peer);
+        // A retired moderation key refuses every send, so a thread with it
+        // never makes it a share recipient.
+        if (includeDmCounterparts && !isRetiredModerationAccount(peer)) {
+          candidates.add(peer);
+        }
         if (!candidates.contains(peer)) continue;
         final previous = interactions[peer];
         if (previous == null || timestamp > previous) {
