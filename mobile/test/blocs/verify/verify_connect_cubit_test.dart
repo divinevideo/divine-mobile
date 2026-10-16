@@ -247,66 +247,70 @@ void main() {
         },
       );
 
-      blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'asks the person to try again when the verifier could not check',
-        setUp: () {
-          // Not a rejection: the proof may be fine, so "try again" is the right
-          // next step, not "fix your post".
+      group('when the verifier could not check', () {
+        setUp(() {
           when(() => repository.verifyClaim(any())).thenAnswer(
             (_) async =>
                 _result(verified: false, code: 'temporarily_unavailable'),
           );
-        },
-        build: () => build(_github),
-        act: (cubit) async {
-          cubit
-            ..identityChanged('octocat')
-            ..proofChanged('abc');
-          await cubit.submitProof();
-        },
-        verify: (cubit) {
-          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
-        },
-      );
+        });
 
-      blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'counts "could not check right now" as its own outcome, not a rejection',
-        setUp: () async {
-          await LogCaptureService().clearAllLogs();
-          when(() => repository.verifyClaim(any())).thenAnswer(
-            (_) async =>
-                _result(verified: false, code: 'temporarily_unavailable'),
-          );
-        },
-        build: () => build(_github),
-        act: (cubit) async {
+        Future<void> submit(VerifyConnectCubit cubit) async {
           cubit
             ..identityChanged('octocat')
             ..proofChanged('abc');
           await cubit.submitProof();
-        },
-        verify: (cubit) {
-          verify(
-            () => analytics.logEvent(
-              name: 'verify_proof_unavailable',
-              parameters: {'platform': 'github'},
-            ),
-          ).called(1);
-          verifyNever(
-            () => analytics.logEvent(
-              name: 'verify_proof_rejected',
-              parameters: any(named: 'parameters'),
-            ),
-          );
-          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
-          final logged = LogCaptureService()
-              .getRecentLogs()
-              .map((entry) => entry.message)
-              .join('\n');
-          expect(logged, contains('Verifier could not check github:octocat'));
-          expect(logged, isNot(contains('Verifier rejected')));
-        },
-      );
+        }
+
+        // Not a rejection: the proof may be fine, so "try again" is the right
+        // next step, not "fix your post".
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'asks the person to try again',
+          build: () => build(_github),
+          act: submit,
+          verify: (cubit) {
+            expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          },
+        );
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'counts it as its own outcome, not as a rejection',
+          build: () => build(_github),
+          act: submit,
+          verify: (_) {
+            verify(
+              () => analytics.logEvent(
+                name: 'verify_proof_unavailable',
+                parameters: {'platform': 'github'},
+              ),
+            ).called(1);
+            verifyNever(
+              () => analytics.logEvent(
+                name: 'verify_proof_rejected',
+                parameters: any(named: 'parameters'),
+              ),
+            );
+          },
+        );
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'logs it as "could not check", not as a rejection',
+          setUp: () => LogCaptureService().clearAllLogs(),
+          // The capture buffer is process-global and the merged test run
+          // shares one isolate, so the line must not outlive this test.
+          tearDown: () => LogCaptureService().clearAllLogs(),
+          build: () => build(_github),
+          act: submit,
+          verify: (_) {
+            final logged = LogCaptureService()
+                .getRecentLogs()
+                .map((entry) => entry.message)
+                .join('\n');
+            expect(logged, contains('Verifier could not check github:octocat'));
+            expect(logged, isNot(contains('Verifier rejected')));
+          },
+        );
+      });
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
         'names an absent code rather than dropping the event',
