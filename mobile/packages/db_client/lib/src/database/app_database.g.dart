@@ -12054,8 +12054,8 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
   /// Whether the conversation has unread messages.
   final bool isRead;
 
-  /// Locally dismissed request. Messages remain stored and recoverable.
-  /// A strictly newer message clears this marker.
+  /// Cached dismissal projection. [ConversationDismissals] retains the state
+  /// when sign-out or account switching clears these conversation rows.
   final bool isDismissed;
 
   /// Per-conversation read cursor (unix seconds) for cross-device read-state
@@ -12557,6 +12557,359 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
           ..write('createdAt: $createdAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('dmProtocol: $dmProtocol, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ConversationDismissalsTable extends ConversationDismissals
+    with TableInfo<$ConversationDismissalsTable, ConversationDismissal> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ConversationDismissalsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _conversationIdMeta = const VerificationMeta(
+    'conversationId',
+  );
+  @override
+  late final GeneratedColumn<String> conversationId = GeneratedColumn<String>(
+    'conversation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _boundaryTimestampMeta = const VerificationMeta(
+    'boundaryTimestamp',
+  );
+  @override
+  late final GeneratedColumn<int> boundaryTimestamp = GeneratedColumn<int>(
+    'boundary_timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _knownMessageIdsMeta = const VerificationMeta(
+    'knownMessageIds',
+  );
+  @override
+  late final GeneratedColumn<String> knownMessageIds = GeneratedColumn<String>(
+    'known_message_ids',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    conversationId,
+    ownerPubkey,
+    boundaryTimestamp,
+    knownMessageIds,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'conversation_dismissals';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ConversationDismissal> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('conversation_id')) {
+      context.handle(
+        _conversationIdMeta,
+        conversationId.isAcceptableOrUnknown(
+          data['conversation_id']!,
+          _conversationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_conversationIdMeta);
+    }
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('boundary_timestamp')) {
+      context.handle(
+        _boundaryTimestampMeta,
+        boundaryTimestamp.isAcceptableOrUnknown(
+          data['boundary_timestamp']!,
+          _boundaryTimestampMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_boundaryTimestampMeta);
+    }
+    if (data.containsKey('known_message_ids')) {
+      context.handle(
+        _knownMessageIdsMeta,
+        knownMessageIds.isAcceptableOrUnknown(
+          data['known_message_ids']!,
+          _knownMessageIdsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {conversationId, ownerPubkey};
+  @override
+  ConversationDismissal map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ConversationDismissal(
+      conversationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}conversation_id'],
+      )!,
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      boundaryTimestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}boundary_timestamp'],
+      )!,
+      knownMessageIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}known_message_ids'],
+      )!,
+    );
+  }
+
+  @override
+  $ConversationDismissalsTable createAlias(String alias) {
+    return $ConversationDismissalsTable(attachedDatabase, alias);
+  }
+}
+
+class ConversationDismissal extends DataClass
+    implements Insertable<ConversationDismissal> {
+  final String conversationId;
+  final String ownerPubkey;
+
+  /// Latest message time when dismissed, not wall-clock time. Older relay
+  /// history cannot undo dismissal, even when the conversation is rebuilt.
+  final int boundaryTimestamp;
+
+  /// IDs already present at the boundary second. A distinct incoming message
+  /// in that second restores the thread; replaying one of these does not.
+  final String knownMessageIds;
+  const ConversationDismissal({
+    required this.conversationId,
+    required this.ownerPubkey,
+    required this.boundaryTimestamp,
+    required this.knownMessageIds,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['conversation_id'] = Variable<String>(conversationId);
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['boundary_timestamp'] = Variable<int>(boundaryTimestamp);
+    map['known_message_ids'] = Variable<String>(knownMessageIds);
+    return map;
+  }
+
+  ConversationDismissalsCompanion toCompanion(bool nullToAbsent) {
+    return ConversationDismissalsCompanion(
+      conversationId: Value(conversationId),
+      ownerPubkey: Value(ownerPubkey),
+      boundaryTimestamp: Value(boundaryTimestamp),
+      knownMessageIds: Value(knownMessageIds),
+    );
+  }
+
+  factory ConversationDismissal.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ConversationDismissal(
+      conversationId: serializer.fromJson<String>(json['conversationId']),
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      boundaryTimestamp: serializer.fromJson<int>(json['boundaryTimestamp']),
+      knownMessageIds: serializer.fromJson<String>(json['knownMessageIds']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'conversationId': serializer.toJson<String>(conversationId),
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'boundaryTimestamp': serializer.toJson<int>(boundaryTimestamp),
+      'knownMessageIds': serializer.toJson<String>(knownMessageIds),
+    };
+  }
+
+  ConversationDismissal copyWith({
+    String? conversationId,
+    String? ownerPubkey,
+    int? boundaryTimestamp,
+    String? knownMessageIds,
+  }) => ConversationDismissal(
+    conversationId: conversationId ?? this.conversationId,
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    boundaryTimestamp: boundaryTimestamp ?? this.boundaryTimestamp,
+    knownMessageIds: knownMessageIds ?? this.knownMessageIds,
+  );
+  ConversationDismissal copyWithCompanion(
+    ConversationDismissalsCompanion data,
+  ) {
+    return ConversationDismissal(
+      conversationId: data.conversationId.present
+          ? data.conversationId.value
+          : this.conversationId,
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      boundaryTimestamp: data.boundaryTimestamp.present
+          ? data.boundaryTimestamp.value
+          : this.boundaryTimestamp,
+      knownMessageIds: data.knownMessageIds.present
+          ? data.knownMessageIds.value
+          : this.knownMessageIds,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConversationDismissal(')
+          ..write('conversationId: $conversationId, ')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('boundaryTimestamp: $boundaryTimestamp, ')
+          ..write('knownMessageIds: $knownMessageIds')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    conversationId,
+    ownerPubkey,
+    boundaryTimestamp,
+    knownMessageIds,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConversationDismissal &&
+          other.conversationId == this.conversationId &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.boundaryTimestamp == this.boundaryTimestamp &&
+          other.knownMessageIds == this.knownMessageIds);
+}
+
+class ConversationDismissalsCompanion
+    extends UpdateCompanion<ConversationDismissal> {
+  final Value<String> conversationId;
+  final Value<String> ownerPubkey;
+  final Value<int> boundaryTimestamp;
+  final Value<String> knownMessageIds;
+  final Value<int> rowid;
+  const ConversationDismissalsCompanion({
+    this.conversationId = const Value.absent(),
+    this.ownerPubkey = const Value.absent(),
+    this.boundaryTimestamp = const Value.absent(),
+    this.knownMessageIds = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ConversationDismissalsCompanion.insert({
+    required String conversationId,
+    required String ownerPubkey,
+    required int boundaryTimestamp,
+    this.knownMessageIds = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : conversationId = Value(conversationId),
+       ownerPubkey = Value(ownerPubkey),
+       boundaryTimestamp = Value(boundaryTimestamp);
+  static Insertable<ConversationDismissal> custom({
+    Expression<String>? conversationId,
+    Expression<String>? ownerPubkey,
+    Expression<int>? boundaryTimestamp,
+    Expression<String>? knownMessageIds,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (conversationId != null) 'conversation_id': conversationId,
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (boundaryTimestamp != null) 'boundary_timestamp': boundaryTimestamp,
+      if (knownMessageIds != null) 'known_message_ids': knownMessageIds,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ConversationDismissalsCompanion copyWith({
+    Value<String>? conversationId,
+    Value<String>? ownerPubkey,
+    Value<int>? boundaryTimestamp,
+    Value<String>? knownMessageIds,
+    Value<int>? rowid,
+  }) {
+    return ConversationDismissalsCompanion(
+      conversationId: conversationId ?? this.conversationId,
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      boundaryTimestamp: boundaryTimestamp ?? this.boundaryTimestamp,
+      knownMessageIds: knownMessageIds ?? this.knownMessageIds,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (conversationId.present) {
+      map['conversation_id'] = Variable<String>(conversationId.value);
+    }
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (boundaryTimestamp.present) {
+      map['boundary_timestamp'] = Variable<int>(boundaryTimestamp.value);
+    }
+    if (knownMessageIds.present) {
+      map['known_message_ids'] = Variable<String>(knownMessageIds.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConversationDismissalsCompanion(')
+          ..write('conversationId: $conversationId, ')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('boundaryTimestamp: $boundaryTimestamp, ')
+          ..write('knownMessageIds: $knownMessageIds, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -21968,6 +22321,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DmMessageReactionsTable dmMessageReactions =
       $DmMessageReactionsTable(this);
   late final $ConversationsTable conversations = $ConversationsTable(this);
+  late final $ConversationDismissalsTable conversationDismissals =
+      $ConversationDismissalsTable(this);
   late final $OutgoingDmsTable outgoingDms = $OutgoingDmsTable(this);
   late final $PendingViewEventsTable pendingViewEvents =
       $PendingViewEventsTable(this);
@@ -22192,6 +22547,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     directMessages,
     dmMessageReactions,
     conversations,
+    conversationDismissals,
     outgoingDms,
     pendingViewEvents,
     pendingReports,
@@ -28001,6 +28357,214 @@ typedef $$ConversationsTableProcessedTableManager =
       ConversationRow,
       PrefetchHooks Function()
     >;
+typedef $$ConversationDismissalsTableCreateCompanionBuilder =
+    ConversationDismissalsCompanion Function({
+      required String conversationId,
+      required String ownerPubkey,
+      required int boundaryTimestamp,
+      Value<String> knownMessageIds,
+      Value<int> rowid,
+    });
+typedef $$ConversationDismissalsTableUpdateCompanionBuilder =
+    ConversationDismissalsCompanion Function({
+      Value<String> conversationId,
+      Value<String> ownerPubkey,
+      Value<int> boundaryTimestamp,
+      Value<String> knownMessageIds,
+      Value<int> rowid,
+    });
+
+class $$ConversationDismissalsTableFilterComposer
+    extends Composer<_$AppDatabase, $ConversationDismissalsTable> {
+  $$ConversationDismissalsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get boundaryTimestamp => $composableBuilder(
+    column: $table.boundaryTimestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get knownMessageIds => $composableBuilder(
+    column: $table.knownMessageIds,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ConversationDismissalsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ConversationDismissalsTable> {
+  $$ConversationDismissalsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get boundaryTimestamp => $composableBuilder(
+    column: $table.boundaryTimestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get knownMessageIds => $composableBuilder(
+    column: $table.knownMessageIds,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ConversationDismissalsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ConversationDismissalsTable> {
+  $$ConversationDismissalsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get boundaryTimestamp => $composableBuilder(
+    column: $table.boundaryTimestamp,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get knownMessageIds => $composableBuilder(
+    column: $table.knownMessageIds,
+    builder: (column) => column,
+  );
+}
+
+class $$ConversationDismissalsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ConversationDismissalsTable,
+          ConversationDismissal,
+          $$ConversationDismissalsTableFilterComposer,
+          $$ConversationDismissalsTableOrderingComposer,
+          $$ConversationDismissalsTableAnnotationComposer,
+          $$ConversationDismissalsTableCreateCompanionBuilder,
+          $$ConversationDismissalsTableUpdateCompanionBuilder,
+          (
+            ConversationDismissal,
+            BaseReferences<
+              _$AppDatabase,
+              $ConversationDismissalsTable,
+              ConversationDismissal
+            >,
+          ),
+          ConversationDismissal,
+          PrefetchHooks Function()
+        > {
+  $$ConversationDismissalsTableTableManager(
+    _$AppDatabase db,
+    $ConversationDismissalsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ConversationDismissalsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ConversationDismissalsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ConversationDismissalsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> conversationId = const Value.absent(),
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<int> boundaryTimestamp = const Value.absent(),
+                Value<String> knownMessageIds = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ConversationDismissalsCompanion(
+                conversationId: conversationId,
+                ownerPubkey: ownerPubkey,
+                boundaryTimestamp: boundaryTimestamp,
+                knownMessageIds: knownMessageIds,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String conversationId,
+                required String ownerPubkey,
+                required int boundaryTimestamp,
+                Value<String> knownMessageIds = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ConversationDismissalsCompanion.insert(
+                conversationId: conversationId,
+                ownerPubkey: ownerPubkey,
+                boundaryTimestamp: boundaryTimestamp,
+                knownMessageIds: knownMessageIds,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ConversationDismissalsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ConversationDismissalsTable,
+      ConversationDismissal,
+      $$ConversationDismissalsTableFilterComposer,
+      $$ConversationDismissalsTableOrderingComposer,
+      $$ConversationDismissalsTableAnnotationComposer,
+      $$ConversationDismissalsTableCreateCompanionBuilder,
+      $$ConversationDismissalsTableUpdateCompanionBuilder,
+      (
+        ConversationDismissal,
+        BaseReferences<
+          _$AppDatabase,
+          $ConversationDismissalsTable,
+          ConversationDismissal
+        >,
+      ),
+      ConversationDismissal,
+      PrefetchHooks Function()
+    >;
 typedef $$OutgoingDmsTableCreateCompanionBuilder =
     OutgoingDmsCompanion Function({
       required String id,
@@ -32802,6 +33366,11 @@ class $AppDatabaseManager {
       $$DmMessageReactionsTableTableManager(_db, _db.dmMessageReactions);
   $$ConversationsTableTableManager get conversations =>
       $$ConversationsTableTableManager(_db, _db.conversations);
+  $$ConversationDismissalsTableTableManager get conversationDismissals =>
+      $$ConversationDismissalsTableTableManager(
+        _db,
+        _db.conversationDismissals,
+      );
   $$OutgoingDmsTableTableManager get outgoingDms =>
       $$OutgoingDmsTableTableManager(_db, _db.outgoingDms);
   $$PendingViewEventsTableTableManager get pendingViewEvents =>

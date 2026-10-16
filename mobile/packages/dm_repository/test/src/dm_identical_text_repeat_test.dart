@@ -255,6 +255,85 @@ void main() {
       },
     );
 
+    for (final legacy in [false, true]) {
+      test(
+        '${legacy ? 'NIP-04' : 'NIP-17'} history recovery retains dismissal '
+        'until a new arrival',
+        () async {
+          Future<void> deliver(
+            String id,
+            String text,
+            int timestamp, {
+            String? wrapId,
+          }) => legacy
+              ? deliverNip04(id: id, text: text, createdAt: timestamp)
+              : deliverNip17(
+                  wrapId: wrapId ?? id,
+                  rumorId: id,
+                  text: text,
+                  createdAt: timestamp,
+                );
+
+          await deliver('a' * 64, 'first', _baseCreatedAt);
+          final conversationId = (await conversationsDao.getAllConversations(
+            ownerPubkey: _owner,
+          )).single.id;
+          await repository.setConversationDismissed(
+            conversationId,
+            dismissed: true,
+          );
+          expect(
+            (await conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: _owner,
+            ))!.isDismissed,
+            isTrue,
+          );
+
+          await repository.stopListening();
+          await relay.close();
+          await messagesDao.clearForAccountSwitch(_owner);
+          await conversationsDao.clearForAccountSwitch(_owner);
+          relay = StreamController<Event>();
+          repository = DmRepository(
+            nostrClient: nostrClient,
+            directMessagesDao: messagesDao,
+            conversationsDao: conversationsDao,
+            userPubkey: _owner,
+            signer: LocalNostrSigner(_privateKey),
+            rumorDecryptor: (_, wrap) async => rumorByWrapId[wrap.id],
+            nip04Decryptor: (_, ciphertext) async => ciphertext,
+          );
+          await repository.startListening();
+
+          await deliver('a' * 64, 'first', _baseCreatedAt, wrapId: 'd' * 64);
+          expect(
+            (await conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: _owner,
+            ))!.isDismissed,
+            isTrue,
+          );
+          await deliver('c' * 64, 'older', _baseCreatedAt - 10);
+          expect(
+            (await conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: _owner,
+            ))!.isDismissed,
+            isTrue,
+          );
+          await deliver('b' * 64, 'new', _baseCreatedAt);
+          final restored = (await conversationsDao.getConversation(
+            conversationId,
+            ownerPubkey: _owner,
+          ))!;
+          expect(restored.isDismissed, isFalse);
+          expect(restored.isRead, isFalse);
+          expect(restored.currentUserHasSent, isFalse);
+        },
+      );
+    }
+
     test('the cross-protocol twin of the first is still collapsed', () async {
       await deliverNip17(
         wrapId: 'w' * 64,

@@ -18232,6 +18232,7 @@ final class Schema24 extends i0.VersionedSchema {
     directMessages,
     dmMessageReactions,
     conversations,
+    conversationDismissals,
     outgoingDms,
     pendingViewEvents,
     pendingReports,
@@ -18651,6 +18652,17 @@ final class Schema24 extends i0.VersionedSchema {
     ),
     alias: null,
   );
+  late final Shape46 conversationDismissals = Shape46(
+    source: i0.VersionedTable(
+      entityName: 'conversation_dismissals',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(conversation_id, owner_pubkey)'],
+      columns: [_column_101, _column_125, _column_212, _column_213],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
   late final Shape43 outgoingDms = Shape43(
     source: i0.VersionedTable(
       entityName: 'outgoing_dms',
@@ -19066,6 +19078,36 @@ i1.GeneratedColumn<String> _column_212(String aliasedName) =>
       false,
       type: i1.DriftSqlType.string,
       $customConstraints: 'NOT NULL',
+    );
+
+class Shape46 extends i0.VersionedTable {
+  Shape46({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get conversationId =>
+      columnsByName['conversation_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get ownerPubkey =>
+      columnsByName['owner_pubkey']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get boundaryTimestamp =>
+      columnsByName['boundary_timestamp']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get knownMessageIds =>
+      columnsByName['known_message_ids']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<int> _column_212(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'boundary_timestamp',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_213(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'known_message_ids',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL DEFAULT \'[]\'',
+      defaultValue: const i1.CustomExpression('\'[]\''),
     );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,

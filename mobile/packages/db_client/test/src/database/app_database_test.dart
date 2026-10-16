@@ -105,6 +105,52 @@ void main() {
 
     group('conversation dismissal schema recovery', () {
       test(
+        'backfills retained state when an earlier v24 lacks its table',
+        () async {
+          final id = '9' * 64;
+          await database.conversationsDao.upsertConversation(
+            id: id,
+            participantPubkeys: '["$testPubkey","$testPubkey2"]',
+            isGroup: false,
+            createdAt: 100,
+            lastMessageTimestamp: 100,
+            ownerPubkey: testPubkey,
+          );
+          await database.conversationsDao.setDismissed(
+            id,
+            ownerPubkey: testPubkey,
+            dismissed: true,
+          );
+          await database.customStatement('DROP TABLE conversation_dismissals');
+          await database.close();
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          expect(
+            (await database.conversationsDao.getConversation(
+              id,
+              ownerPubkey: testPubkey,
+            ))!.isDismissed,
+            isTrue,
+          );
+          await database.conversationsDao.clearForAccountSwitch(testPubkey);
+          await database.conversationsDao.upsertConversation(
+            id: id,
+            participantPubkeys: '["$testPubkey","$testPubkey2"]',
+            isGroup: false,
+            createdAt: 100,
+            lastMessageTimestamp: 100,
+            ownerPubkey: testPubkey,
+          );
+          expect(
+            (await database.conversationsDao.getConversation(
+              id,
+              ownerPubkey: testPubkey,
+            ))!.isDismissed,
+            isTrue,
+          );
+        },
+      );
+
+      test(
         'restores is_dismissed on a current-version database that lacks it, '
         'keeping the conversation',
         () async {
@@ -2223,6 +2269,7 @@ const _v1NormalizationTables = <String>[
   'identity_verifications',
   'vanished_profiles',
   'seen_videos',
+  'conversation_dismissals',
 ];
 
 /// `event` indexes owned by the normalization SQL rather than by Drift's

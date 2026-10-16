@@ -1309,6 +1309,93 @@ void main() {
       },
     );
 
+    group('dismissal account lifetime', () {
+      final conversationId = '9' * 64;
+
+      Future<void> rebuild(String owner) =>
+          db.conversationsDao.upsertConversation(
+            id: conversationId,
+            participantPubkeys: jsonEncode([_pubkeyA, _pubkeyB]),
+            isGroup: false,
+            createdAt: 100,
+            lastMessageTimestamp: 100,
+            ownerPubkey: owner,
+            isRead: false,
+          );
+
+      Future<bool> dismissed(String owner) async =>
+          (await db.conversationsDao.getConversation(
+            conversationId,
+            ownerPubkey: owner,
+          ))!.isDismissed;
+
+      test(
+        'sign-out and switch cleanup retain dismissal through history recovery',
+        () async {
+          await rebuild(_pubkeyA);
+          await db.conversationsDao.setDismissed(
+            conversationId,
+            ownerPubkey: _pubkeyA,
+            dismissed: true,
+          );
+          final subscription = container.listen(
+            userDataCleanupServiceProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          final cleanup = subscription.read().onDatabaseCleanup!;
+
+          // This is the callback invoked by ordinary sign-out: cached message
+          // and conversation rows go away, account-lifetime state stays.
+          await cleanup(userPubkey: _pubkeyA);
+          expect(
+            await db.conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: _pubkeyA,
+            ),
+            isNull,
+          );
+          await rebuild(_pubkeyA);
+          expect(await dismissed(_pubkeyA), isTrue);
+
+          // Switch away, use a different account with the same conversation id,
+          // then return and replay the first account's history.
+          await cleanup(userPubkey: _pubkeyA);
+          await rebuild(_pubkeyB);
+          expect(await dismissed(_pubkeyB), isFalse);
+          await cleanup(userPubkey: _pubkeyB);
+          await rebuild(_pubkeyA);
+          expect(await dismissed(_pubkeyA), isTrue);
+        },
+      );
+
+      test(
+        'explicit local-account deletion clears only that owner’s dismissal',
+        () async {
+          for (final owner in [_pubkeyA, _pubkeyB]) {
+            await rebuild(owner);
+            await db.conversationsDao.setDismissed(
+              conversationId,
+              ownerPubkey: owner,
+              dismissed: true,
+            );
+          }
+          final subscription = container.listen(
+            userDataCleanupServiceProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await subscription.read().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            deleteUserData: true,
+          );
+          await rebuild(_pubkeyA);
+          expect(await dismissed(_pubkeyA), isFalse);
+          expect(await dismissed(_pubkeyB), isTrue);
+        },
+      );
+    });
+
     // The removal tombstone is what keeps a removed conversation from being
     // rebuilt by relay replay (#7804). It is the one DM table deliberately
     // NOT wiped on a plain sign-out, so these two cases pin the gate: move
