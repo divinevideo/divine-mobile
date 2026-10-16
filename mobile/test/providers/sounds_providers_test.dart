@@ -400,6 +400,51 @@ void main() {
       });
     });
 
+    group('soundSearchResultsProvider', () {
+      setUp(() {
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+        when(
+          () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
+        ).thenAnswer((_) async => [createTestAudioEvent(id: 'found')]);
+      });
+
+      test('passes a query through to the repository', () async {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final result = await container.read(
+          soundSearchResultsProvider('drums').future,
+        );
+
+        expect(result.map((s) => s.id), equals(['found']));
+      });
+
+      test('does not search for a query holding a private key', () async {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final result = await container.read(
+          soundSearchResultsProvider(
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+          ).future,
+        );
+
+        expect(result, isEmpty);
+        verifyNever(
+          () => mockRepository.searchSounds(any(), limit: any(named: 'limit')),
+        );
+      });
+    });
+
     group('soundsByCreatorProvider', () {
       test('returns sounds by creator pubkey', () async {
         const creatorPubkey = 'creator-pubkey-123';

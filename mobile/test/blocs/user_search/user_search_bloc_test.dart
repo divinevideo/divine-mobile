@@ -20,6 +20,9 @@ class _MockFollowRepository extends Mock implements FollowRepository {}
 class _MockFeedPerformanceTracker extends Mock
     implements FeedPerformanceTracker {}
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 void main() {
   setUpAll(() {
     // Required so `any(that: isA<SearchSourceSuccess>())` can be used as a
@@ -346,6 +349,42 @@ void main() {
           verifyNever(
             () => mockProfileRepository.searchUsersProgressive(
               query: any(named: 'query'),
+            ),
+          );
+        },
+      );
+
+      blocTest<UserSearchBloc, UserSearchState>(
+        'does not search and resets when the query contains a private key',
+        setUp: () {
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
+            ),
+          ).thenAnswer((_) => const Stream.empty());
+        },
+        build: createBloc,
+        seed: () => UserSearchState(
+          status: UserSearchStatus.success,
+          query: 'flutter',
+          results: [createTestProfile('a' * 64, 'Flutter Dev')],
+          offset: 1,
+        ),
+        act: (bloc) => bloc.add(const UserSearchQueryChanged(_privateKeyQuery)),
+        wait: debounceDuration,
+        expect: () => [const UserSearchState()],
+        verify: (_) {
+          verifyNever(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
             ),
           );
         },

@@ -8,6 +8,7 @@ import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/audio_reuse_consent_resolver.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sounds_repository/sounds_repository.dart';
 
@@ -99,6 +100,8 @@ Future<List<AudioEvent>> soundSearchResults(Ref ref, String query) async {
   // open does not construct one — and with it a Nostr client — for a query
   // nobody has typed yet.
   if (searchTermsOf(query).isEmpty) return const [];
+  // Text holding a private key is never sent as a search either.
+  if (NostrKeyUtils.containsPrivateKey(query)) return const [];
 
   final repository = ref.watch(soundsRepositoryProvider);
   return repository.searchSounds(query);

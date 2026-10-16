@@ -11,6 +11,9 @@ import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 
 class _MockHashtagRepository extends Mock implements HashtagRepository {}
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 class _MockFeedPerformanceTracker extends Mock
     implements FeedPerformanceTracker {}
 
@@ -51,6 +54,29 @@ void main() {
     group('HashtagSearchQueryChanged', () {
       // Debounce duration used in the BLoC + buffer
       const debounceDuration = Duration(milliseconds: 400);
+
+      blocTest<HashtagSearchBloc, HashtagSearchState>(
+        'does not search and resets when the query contains a private key',
+        build: createBloc,
+        seed: () => const HashtagSearchState(
+          status: HashtagSearchStatus.success,
+          query: 'music',
+          results: ['music'],
+        ),
+        act: (bloc) =>
+            bloc.add(const HashtagSearchQueryChanged(_privateKeyQuery)),
+        wait: debounceDuration,
+        expect: () => [const HashtagSearchState()],
+        verify: (_) {
+          verifyNever(
+            () => mockHashtagRepository.searchHashtags(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+            ),
+          );
+        },
+      );
 
       blocTest<HashtagSearchBloc, HashtagSearchState>(
         'emits [loading, success] when search succeeds',

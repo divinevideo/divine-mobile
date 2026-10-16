@@ -17,6 +17,9 @@ import 'package:profile_repository/profile_repository.dart';
 
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
+const _privateKeyQuery =
+    'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -745,6 +748,24 @@ void main() {
             isEmpty,
           ),
         ],
+      );
+
+      blocTest<CommentComposerBloc, CommentComposerState>(
+        'MentionSearchRequested does not search the API when the query '
+        'contains a private key',
+        build: createBloc,
+        act: (b) => b.add(const MentionSearchRequested(_privateKeyQuery)),
+        verify: (_) {
+          verifyNever(
+            () => mockProfileRepository.searchUsersFromApi(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          );
+        },
       );
 
       blocTest<CommentComposerBloc, CommentComposerState>(

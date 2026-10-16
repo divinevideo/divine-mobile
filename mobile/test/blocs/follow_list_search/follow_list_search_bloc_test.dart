@@ -38,6 +38,9 @@ const String _subjectPubkey =
 
 const List<String> _allPubkeys = [_alicePubkey, _bobPubkey, _carolPubkey];
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 /// Advance fake time beyond the 300 ms search debounce.
 const _pastDebounce = Duration(milliseconds: 400);
 
@@ -126,6 +129,40 @@ void main() {
           verifyNever(
             () => profileRepository.fetchBatchProfiles(
               pubkeys: any(named: 'pubkeys'),
+            ),
+          );
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
+    test(
+      'treats a query holding a private key as no query and never sends it',
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.query, 'ali');
+
+          bloc.add(
+            const FollowListSearchQueryChanged(_privateKeyQuery, _allPubkeys),
+          );
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.query, isEmpty);
+          expect(bloc.state.visibleFrom(_allPubkeys), _allPubkeys);
+          verifyNever(
+            () => followRepository.searchFollowList(
+              pubkey: any(named: 'pubkey'),
+              query: any(named: 'query', that: contains('nsec1')),
+              kind: any(named: 'kind'),
             ),
           );
 

@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -96,8 +97,10 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
   ) async {
     final query = event.query.trim();
 
-    // Empty query resets to initial state
-    if (query.isEmpty || query.length < minSearchQueryLength) {
+    // Empty query, or one holding a private key, resets to initial state
+    if (query.isEmpty ||
+        query.length < minSearchQueryLength ||
+        NostrKeyUtils.containsPrivateKey(query)) {
       emit(const UserSearchState());
       return;
     }
