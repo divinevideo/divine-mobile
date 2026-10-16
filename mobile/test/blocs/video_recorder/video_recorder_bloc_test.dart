@@ -794,6 +794,11 @@ void main() {
           recordingState: VideoRecorderState.recording,
           isStoppingRecording: true,
         ),
+        // An auto-stop still saves its clip when the recorder already reads
+        // idle, so only isStoppingRecording marks the take as in flight.
+        'finalizing an auto-stopped clip': const VideoRecorderBlocState(
+          isStoppingRecording: true,
+        ),
       };
 
       for (final MapEntry(key: phase, value: seed) in takesInFlight.entries) {
