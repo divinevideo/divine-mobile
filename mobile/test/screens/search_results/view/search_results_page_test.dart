@@ -15,12 +15,14 @@ import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -37,6 +39,9 @@ class _MockCuratedListRepository extends Mock
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
+
+const _viewerPubkey =
+    '7777777777777777777777777777777777777777777777777777777777777777';
 
 final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
@@ -71,10 +76,12 @@ void main() {
       Override? listThumbnailPolicyOverride,
       MockFollowRepository? mockFollowRepository,
       List<Override> flagOverrides = const [],
+      AuthService? authService,
     }) {
       return testMaterialApp(
         home: const SearchResultsPage(),
         mockFollowRepository: mockFollowRepository,
+        mockAuthService: authService,
         mockProfileRepository: profileRepositoryOverride == null
             ? mockProfileRepository
             : null,
@@ -410,10 +417,17 @@ void main() {
             when(() => mockCuratedListRepository.searchAllLists(any()))
                 .thenAnswer((_) => Stream.value(const <CuratedList>[]));
             when(
-              () => mockPeopleListsRepository.searchPublicLists(any()),
+              () => mockPeopleListsRepository.searchPublicLists(
+                any(),
+                viewerPubkey: any(named: 'viewerPubkey'),
+              ),
             ).thenAnswer((_) => Stream.value(const <PeopleListSearchResult>[]));
             await tester.pumpWidget(
               createTestWidget(
+                authService: createMockAuthService(
+                  authState: AuthState.authenticated,
+                  currentPublicKeyHex: _viewerPubkey,
+                ),
                 flagOverrides: [
                   isFeatureEnabledProvider(FeatureFlag.curatedLists)
                       .overrideWith((ref) => master),
@@ -422,18 +436,55 @@ void main() {
                 ],
               ),
             );
+            await tester.pump();
             final bloc = BlocProvider.of<ListSearchBloc>(
               tester.element(find.byType(SearchResultsView)),
             );
             bloc.add(const ListSearchQueryChanged('crew'));
-            await tester.pump(const Duration(milliseconds: 350));
             await tester.pump();
+            expect(bloc.state.requestedQuery, 'crew');
+            expect(bloc.state.query, isEmpty);
+            verifyNever(
+              () => mockCuratedListRepository.searchAllLists(any()),
+            );
+            verifyNever(
+              () => mockPeopleListsRepository.searchPublicLists(
+                any(),
+                viewerPubkey: any(named: 'viewerPubkey'),
+              ),
+            );
+            await tester.pump(searchDebounceDuration);
+            // Rx cancellation completes in the root zone; flush without advancing time.
+            await tester.runAsync(() async {});
+            await tester.pump();
+            expect(bloc.isClosed, isFalse);
+            expect(
+              BlocProvider.of<ListSearchBloc>(
+                tester.element(find.byType(SearchResultsView)),
+              ),
+              same(bloc),
+            );
+            expect(bloc.state.query, 'crew');
+            expect(bloc.state.videoStatus, ListSearchSourceStatus.success);
+            expect(
+              bloc.state.peopleStatus,
+              master && profile
+                  ? ListSearchSourceStatus.success
+                  : ListSearchSourceStatus.initial,
+            );
             if (master && profile) {
-              verify(() => mockPeopleListsRepository.searchPublicLists('crew'))
-                  .called(1);
+              verify(
+                () => mockPeopleListsRepository.searchPublicLists(
+                  'crew',
+                  viewerPubkey: _viewerPubkey,
+                ),
+              ).called(1);
             } else {
               verifyNever(
-                () => mockPeopleListsRepository.searchPublicLists(any()),
+                () => mockPeopleListsRepository.searchPublicLists(
+                  any(),
+                  viewerPubkey: any(named: 'viewerPubkey'),
+                ),
               );
             }
             verify(() => mockCuratedListRepository.searchAllLists('crew'))
@@ -552,6 +603,39 @@ void main() {
 
       final contextAfter = tester.element(find.byType(SearchResultsView));
       final blocAfter = BlocProvider.of<VideoSearchBloc>(contextAfter);
+      expect(blocAfter, isNot(same(blocBefore)));
+      expect(blocBefore.isClosed, isTrue);
+    });
+
+    testWidgets('recreates the list search bloc when the viewer changes', (
+      tester,
+    ) async {
+      // The list search keeps the viewer's own lists past the Divine author
+      // check, so the viewer is a dependency like the repositories are.
+      final authStates = StreamController<AuthState>.broadcast();
+      addTearDown(authStates.close);
+      final authService = createMockAuthService(
+        authState: AuthState.authenticated,
+        currentPublicKeyHex: 'a' * 64,
+      );
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => authStates.stream);
+      await tester.pumpWidget(createTestWidget(authService: authService));
+
+      final blocBefore = BlocProvider.of<ListSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
+
+      when(() => authService.currentPublicKeyHex).thenReturn('b' * 64);
+      authStates.add(AuthState.authenticating);
+      await tester.pump();
+      authStates.add(AuthState.authenticated);
+      await tester.pump();
+
+      final blocAfter = BlocProvider.of<ListSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
       expect(blocAfter, isNot(same(blocBefore)));
       expect(blocBefore.isClosed, isTrue);
     });

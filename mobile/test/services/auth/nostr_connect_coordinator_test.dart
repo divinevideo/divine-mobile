@@ -9,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/auth_result.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 
 class _MockNostrConnectSession extends Mock implements NostrConnectSession {}
 
@@ -97,6 +99,40 @@ void main() {
         expect(coordinator.connectUrl, 'nostrconnect://abc');
         expect(coordinator.state, NostrConnectState.listening);
       });
+
+      test(
+        'a replaced start cannot return or dispose the newer session',
+        () async {
+          final old = session;
+          final started = Completer<void>();
+          final resume = Completer<void>();
+          when(old.start).thenAnswer((_) {
+            started.complete();
+            return resume.future;
+          });
+          final coordinator = build();
+          final oldChecked = expectLater(
+            coordinator.initiate(),
+            throwsA(isA<AccountActivationRetiredException>()),
+          );
+          await started.future;
+          session = _MockNostrConnectSession();
+          when(session.start).thenAnswer((_) async {});
+          when(() => session.connectUrl)
+              .thenReturn('nostrconnect://replacement');
+          when(session.cancel).thenReturn(null);
+          when(session.dispose).thenReturn(null);
+          try {
+            expect(await coordinator.initiate(), same(session));
+          } finally {
+            resume.complete();
+            await oldChecked;
+          }
+          expect(coordinator.connectUrl, 'nostrconnect://replacement');
+          verifyNever(session.dispose);
+          coordinator.cancel();
+        },
+      );
     });
 
     group('waitForResponse', () {
@@ -236,6 +272,72 @@ void main() {
           NostrConnectFailureReason.postConnectFailed,
         );
         expect(connectFailedErrors, hasLength(1));
+      });
+
+      for (final failure in [false, true]) {
+        test(
+          'a replaced apply ${failure ? 'failure' : 'success'} cannot touch its successor',
+          () async {
+            final entered = Completer<void>();
+            final resume = Completer<void>();
+            when(
+              () => session.waitForConnection(timeout: any(named: 'timeout')),
+            ).thenAnswer((_) async => resultFor('a' * 64));
+            onConnectedImpl = (_) async {
+              entered.complete();
+              await resume.future;
+              if (failure) {
+                throw StateError('Retired connection failed');
+              }
+              return const AuthResult(success: true);
+            };
+            final coordinator = build();
+            await coordinator.initiate();
+            final oldResult = coordinator.waitForResponse();
+            await entered.future;
+            session = _MockNostrConnectSession();
+            when(session.start).thenAnswer((_) async {});
+            when(() => session.connectUrl)
+                .thenReturn('nostrconnect://replacement');
+            when(session.cancel).thenReturn(null);
+            when(session.dispose).thenReturn(null);
+            try {
+              await coordinator.initiate();
+            } finally {
+              resume.complete();
+            }
+            final result = await oldResult;
+            expect(
+              result.nostrConnectFailureReason,
+              NostrConnectFailureReason.cancelled,
+            );
+            expect(connectFailedErrors, isEmpty);
+            expect(waitFailedCalls, 0);
+            expect(coordinator.connectUrl, 'nostrconnect://replacement');
+            verifyNever(session.dispose);
+            coordinator.cancel();
+          },
+        );
+      }
+
+      test('preserves a cleanup failure after the signer connects', () async {
+        when(
+          () => session.waitForConnection(timeout: any(named: 'timeout')),
+        ).thenAnswer((_) async => resultFor('a' * 64));
+        const cleanupError = UserDataCleanupException(
+          'Account cache unavailable',
+        );
+        onConnectedImpl = (_) async => throw cleanupError;
+        final coordinator = build();
+        await coordinator.initiate();
+
+        final result = await coordinator.waitForResponse();
+
+        expect(result.success, isFalse);
+        expect(result.failureReason, AuthFailureReason.accountCleanupFailed);
+        expect(result.nostrConnectFailureReason, isNull);
+        expect(result.errorMessage, isNull);
+        expect(connectFailedErrors, [cleanupError]);
       });
     });
 

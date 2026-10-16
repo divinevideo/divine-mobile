@@ -10,6 +10,8 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:test/test.dart';
 
+import 'helpers/in_memory_followed_people_lists_store.dart';
+
 class _Client extends Mock implements NostrClient {}
 
 class _Cache extends Mock implements LocalPeopleListsCache {}
@@ -89,6 +91,7 @@ void main() {
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       final results = await Future.wait([
         repository.addPubkey(
@@ -116,6 +119,7 @@ void main() {
       final cold = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       await cold.syncOwner(ownerPubkey: _owner);
       expect(
@@ -145,6 +149,7 @@ void main() {
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       expect(
         (await repository.createList(ownerPubkey: _owner, name: 'Crew')).status,
@@ -167,21 +172,38 @@ void main() {
             ['p', _alice],
           ], ''),
         );
-        when(() => client.queryEvents(any())).thenAnswer((call) async {
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            timeout: kPublicPeopleListsRelayReadTimeout,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((call) async {
           final filter =
               (call.positionalArguments.single as List<Filter>).single;
-          return events.take(filter.limit!).toList();
+          return (
+            events: events.take(filter.limit!).toList(),
+            timedOut: false,
+            noRelays: false,
+          );
         });
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         final results = await repository
             .searchPublicLists('Matching', limit: 2)
             .toList();
         expect(results.single, hasLength(2));
         final filter =
-            (verify(() => client.queryEvents(captureAny())).captured.single
+            (verify(
+                      () => client.queryEventsDetailed(
+                        captureAny(),
+                        timeout: kPublicPeopleListsRelayReadTimeout,
+                        requireAllRelaysSettled: true,
+                      ),
+                    ).captured.single
                     as List<Filter>)
                 .single;
         expect(filter.limit, greaterThanOrEqualTo(500));
@@ -207,10 +229,19 @@ void main() {
               createdAt: 1700000000 + i,
             ),
         ];
-        when(() => client.queryEvents(any())).thenAnswer((_) async => events);
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            timeout: kPublicPeopleListsRelayReadTimeout,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: events, timedOut: false, noRelays: false),
+        );
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
 
         final results = await repository
@@ -226,19 +257,30 @@ void main() {
 
     test('public search excludes block and notify machinery sets', () async {
       final client = _Client();
-      when(() => client.queryEvents(any())).thenAnswer(
-        (_) async => [
-          for (final id in ['block', 'notify', 'crew'])
-            Event(_owner, 30000, [
-              ['d', id],
-              ['title', 'Matching'],
-              ['p', _alice],
-            ], ''),
-        ],
+      when(
+        () => client.queryEventsDetailed(
+          any(),
+          timeout: kPublicPeopleListsRelayReadTimeout,
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: [
+            for (final id in ['block', 'notify', 'crew'])
+              Event(_owner, 30000, [
+                ['d', id],
+                ['title', 'Matching'],
+                ['p', _alice],
+              ], ''),
+          ],
+          timedOut: false,
+          noRelays: false,
+        ),
       );
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: await cache(),
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       final results = await repository.searchPublicLists('Matching').toList();
       expect(results.single.map((result) => result.list.id), ['crew']);
@@ -283,6 +325,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         expect(
           (await repository.updateList(
@@ -349,6 +392,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         final results = await Future.wait([
           repository.updateList(
@@ -436,6 +480,7 @@ void main() {
           final repository = PeopleListsRepositoryImpl(
             nostrClient: client,
             cache: await cache(),
+            followedListsStore: InMemoryFollowedPeopleListsStore(),
           );
           final result = await switch (action) {
             'add' => repository.addPubkey(
@@ -501,6 +546,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         expect(
           (await repository.addPubkey(
@@ -554,6 +600,7 @@ void main() {
         final repository = PeopleListsRepositoryImpl(
           nostrClient: client,
           cache: await cache(),
+          followedListsStore: InMemoryFollowedPeopleListsStore(),
         );
         final results = await Future.wait([
           repository.addPubkey(
@@ -647,6 +694,7 @@ void main() {
       final repository = PeopleListsRepositoryImpl(
         nostrClient: client,
         cache: cache,
+        followedListsStore: InMemoryFollowedPeopleListsStore(),
       );
       final sync = repository.syncOwner(ownerPubkey: _owner);
       await syncRead.future;

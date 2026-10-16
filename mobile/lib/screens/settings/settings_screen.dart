@@ -43,6 +43,7 @@ import 'package:openvine/screens/settings/privacy_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -207,8 +208,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!proceed || !mounted) return;
 
     final authService = ref.read(authServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    final cleanupFailedMessage = context.l10n.authAccountCleanupFailed;
+    final previousPendingTarget = authService.pendingAccountSwitchPubkey;
+    final leavingOwner = authService.currentPublicKeyHex;
+    final leavingIdentity = authService.currentIdentity;
+    final leavingReceipt = authService.committedAccountActivationReceipt;
     authService.pendingAccountSwitchPubkey = account.pubkeyHex;
-    await authService.signOut();
+    try {
+      await authService.signOut();
+    } catch (error, stackTrace) {
+      Log.error(
+        'Account reauthentication could not complete sign-out',
+        name: 'SettingsScreen',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (mounted &&
+          identical(ref.read(authServiceProvider), authService) &&
+          authService.isAuthenticated &&
+          leavingOwner != null &&
+          authService.currentPublicKeyHex == leavingOwner &&
+          identical(authService.currentIdentity, leavingIdentity) &&
+          authService.pendingAccountSwitchPubkey == account.pubkeyHex) {
+        final receipt = authService.committedAccountActivationReceipt;
+        if (receipt == null || identical(receipt, leavingReceipt)) {
+          authService.pendingAccountSwitchPubkey = previousPendingTarget;
+        }
+      }
+      if (!messenger.mounted) return;
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(cleanupFailedMessage, error: true),
+      );
+    }
   }
 
   Future<bool> _parkUploadsBeforeAccountChange(
@@ -302,6 +334,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await _offerReauthentication(account, e);
               } on AccountRestoreFailedException catch (e) {
                 await _offerReauthentication(account, e);
+              } on UserDataCleanupException {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  DivineSnackbarContainer.snackBar(
+                    context.l10n.authAccountCleanupFailed,
+                    error: true,
+                  ),
+                );
               } catch (e, stackTrace) {
                 Log.error(
                   'Account switch failed',
@@ -333,7 +373,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // switch above does, under the same warning this sheet opened with.
             if (!await _parkUploadsBeforeAccountChange(publishBloc)) return;
             if (!mounted) return;
-            await _accountCubit.addNewAccount();
+            final messenger = ScaffoldMessenger.of(context);
+            final cleanupFailedMessage = context.l10n.authAccountCleanupFailed;
+            try {
+              await _accountCubit.addNewAccount();
+            } catch (error, stackTrace) {
+              Log.error(
+                'Adding an account could not complete sign-out',
+                name: 'SettingsScreen',
+                error: error,
+                stackTrace: stackTrace,
+              );
+              if (!messenger.mounted) return;
+              messenger.showSnackBar(
+                DivineSnackbarContainer.snackBar(
+                  cleanupFailedMessage,
+                  error: true,
+                ),
+              );
+            }
           },
         ),
       ],

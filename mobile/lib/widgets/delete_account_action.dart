@@ -164,7 +164,12 @@ Future<void> startAccountDeletionFlow({
                   'Could not submit durable deletion attempt',
                 );
               }
-              return submittedStatus == AccountDeletionAttemptStatus.completed;
+              if (submittedStatus == AccountDeletionAttemptStatus.processing) {
+                await owner.switchAccount();
+              }
+              // The owner now owns both success and incomplete sign-out. Its
+              // recovery screen keeps the receipt and offers a bounded retry.
+              return true;
             },
       );
       container.invalidate(currentAccountDeletionAttemptProvider);

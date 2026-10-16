@@ -19,13 +19,13 @@ import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/for_you_provider.dart';
-import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -41,12 +41,51 @@ class _FakeFunnelcakeAvailable extends FunnelcakeAvailable {
   Future<bool> build() async => false;
 }
 
+class _MockCuratedListService extends Mock implements CuratedListService {}
+
+class _MockPeopleListsRepository extends Mock
+    implements PeopleListsRepository {}
+
 class _FakeCuratedListsState extends CuratedListsState {
+  _FakeCuratedListsState(this._service);
+
+  final CuratedListService _service;
+
   @override
-  CuratedListService? get service => null;
+  CuratedListService? get service => _service;
 
   @override
   Future<List<CuratedList>> build() async => const [];
+}
+
+/// The Lists tab renders the discovery gallery; empty stubs settle it on
+/// the static empty message instead of an endlessly-animating loader,
+/// which is what pumpAndSettle needs.
+CuratedListService _stubbedListService() {
+  final service = _MockCuratedListService();
+  when(() => service.isCurrentSession).thenReturn(true);
+  when(() => service.isInitialized).thenReturn(true);
+  when(() => service.initializationError).thenReturn(null);
+  when(() => service.hasLoadedSubscriptionIds).thenReturn(true);
+  when(() => service.subscribedLists).thenReturn(const []);
+  when(() => service.subscribedListIds).thenReturn(const <String>{});
+  when(() => service.lists).thenReturn(const []);
+  when(() => service.myLists).thenReturn(const []);
+  when(
+    () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+  ).thenAnswer((_) => Stream.value(const <CuratedList>[]));
+  return service;
+}
+
+PeopleListsRepository _stubbedPeopleRepository() {
+  final repository = _MockPeopleListsRepository();
+  when(
+    () => repository.discoverPublicLists(
+      limit: any(named: 'limit'),
+      excludeAuthor: any(named: 'excludeAuthor'),
+    ),
+  ).thenAnswer((_) async => const []);
+  return repository;
 }
 
 const _pollInterval = Duration(seconds: 30);
@@ -114,6 +153,9 @@ void main() {
 
   setUp(() {
     videoEventService = _MockVideoEventService();
+    when(() => videoEventService.removedVideoIds).thenAnswer(
+      (_) => const Stream<String>.empty(),
+    );
     when(
       () => videoEventService.addVideoUpdateListener(any()),
     ).thenReturn(() {});
@@ -148,11 +190,12 @@ void main() {
             (ref) async => classicsAvailable,
           ),
           forYouAvailableProvider.overrideWithValue(false),
-          allListsProvider.overrideWith(
-            (ref) async =>
-                (userLists: <UserList>[], curatedLists: <CuratedList>[]),
+          curatedListsStateProvider.overrideWith(
+            () => _FakeCuratedListsState(_stubbedListService()),
           ),
-          curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+          peopleListsRepositoryProvider.overrideWith(
+            (ref) => _stubbedPeopleRepository(),
+          ),
           funnelcakeAvailableProvider.overrideWith(
             _FakeFunnelcakeAvailable.new,
           ),

@@ -21,7 +21,11 @@ enum PersonalEventRetention {
   collapsing(0),
 
   /// Kept until the per-owner cap evicts it, newest first.
-  durable(1);
+  durable(1),
+
+  /// Latest explicitly retained outbound event per addressable coordinate.
+  /// Survives the ordinary cache cap until owner-scoped destructive cleanup.
+  retryIntent(2);
 
   const PersonalEventRetention(this.value);
 
@@ -54,15 +58,50 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
   /// everything else is appended and the owner's durable set is trimmed to
   /// [maxDurablePersonalEventsPerOwner].
   ///
+  /// [retainForRetry] keeps one outbound addressable event per coordinate
+  /// outside that cap. A normal cache write cannot unpin the same event.
+  ///
   /// Both halves run in one transaction, so a read can never observe an event
   /// without its retention having been applied. The Hive implementation this
   /// replaced wrote the event and its kind index as two separate awaited
   /// writes, leaving a window in which the event existed but was invisible to
   /// kind queries (#6280).
-  Future<void> upsertPersonalEvent(Event event) async {
-    final retention = PersonalEventRetention.forKind(event.kind);
+  Future<void> upsertPersonalEvent(
+    Event event, {
+    bool retainForRetry = false,
+  }) async {
+    final dTag = retainForRetry ? _retryCoordinate(event) : null;
+    if (retainForRetry && dTag == null) {
+      throw ArgumentError('Retry retention requires an addressable event');
+    }
+    var retention = retainForRetry
+        ? PersonalEventRetention.retryIntent
+        : PersonalEventRetention.forKind(event.kind);
 
     await transaction(() async {
+      if (retainForRetry) {
+        final candidates = await _retryRows(event.pubkey, event.kind);
+        for (final row in candidates) {
+          final stored = _toEvent(row);
+          if (_retryCoordinate(stored) != dTag) continue;
+          // Follow NIP-01's timestamp and lowest-id tie ordering.
+          if (stored.createdAt > event.createdAt ||
+              (stored.createdAt == event.createdAt &&
+                  stored.id.compareTo(event.id) < 0)) {
+            return;
+          }
+          await (delete(
+            personalEvents,
+          )..where((t) => t.id.equals(row.id))).go();
+        }
+      } else {
+        final existing = await (select(
+          personalEvents,
+        )..where((t) => t.id.equals(event.id))).getSingleOrNull();
+        if (existing?.retention == PersonalEventRetention.retryIntent.value) {
+          retention = PersonalEventRetention.retryIntent;
+        }
+      }
       if (retention == PersonalEventRetention.collapsing) {
         // Keep the newest version. The Hive store this replaced kept every
         // version and let readers sort, so an out-of-order write could not
@@ -109,6 +148,40 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
         await _trimDurableRows(event.pubkey);
       }
     });
+  }
+
+  String? _retryCoordinate(Event event) {
+    final tags = event.tags.where((tag) => tag.isNotEmpty && tag.first == 'd');
+    if (event.kind < 30000 ||
+        event.kind >= 40000 ||
+        tags.length != 1 ||
+        tags.single.length != 2) {
+      return null;
+    }
+    return tags.single[1];
+  }
+
+  Future<List<PersonalEventRow>> _retryRows(String pubkey, int kind) =>
+      (select(personalEvents)..where(
+            (t) =>
+                t.pubkey.equals(pubkey) &
+                t.kind.equals(kind) &
+                t.retention.equals(PersonalEventRetention.retryIntent.value),
+          ))
+          .get();
+
+  /// Reads only an explicitly retained outbound intent, never a cached event.
+  Future<Event?> getRetryEvent({
+    required String pubkey,
+    required int kind,
+    required String dTag,
+  }) async {
+    final rows = await _retryRows(pubkey, kind);
+    for (final row in rows) {
+      final event = _toEvent(row);
+      if (_retryCoordinate(event) == dTag) return event;
+    }
+    return null;
   }
 
   /// Drops the oldest durable rows past the per-owner cap.
@@ -187,11 +260,25 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
     return _decodeRows(rows);
   }
 
+  /// Clears disposable cache rows while preserving explicit outbound intents.
+  /// Omit [pubkey] only for whole-app cache recovery.
+  Future<int> deleteCachedEvents({String? pubkey}) =>
+      (delete(personalEvents)..where(
+            (t) =>
+                t.retention
+                    .equals(PersonalEventRetention.retryIntent.value)
+                    .not() &
+                (pubkey == null
+                    ? const Constant(true)
+                    : t.pubkey.equals(pubkey)),
+          ))
+          .go();
+
   /// Deletes every row belonging to [pubkey].
   Future<int> deleteAllForOwner(String pubkey) =>
       (delete(personalEvents)..where((t) => t.pubkey.equals(pubkey))).go();
 
-  /// Deletes every row, for every owner. Used by cache recovery.
+  /// Deletes every row, including outbound intents, for a destructive reset.
   Future<int> deleteAll() => delete(personalEvents).go();
 
   /// Number of rows belonging to [pubkey].
@@ -210,10 +297,14 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
       try {
         events.add(_toEvent(row));
       } on FormatException {
-        // This table is a disposable cache. Quarantine a malformed JSON row
-        // instead of letting one bad event disable every synchronous cache
-        // reader for the rest of the signed-in session.
-        await (delete(personalEvents)..where((t) => t.id.equals(row.id))).go();
+        // Disposable cache rows can be quarantined by removal. An explicit
+        // outbound intent is durable evidence: hide it from cache readers,
+        // retaining the unreadable row for supported recovery.
+        if (row.retention != PersonalEventRetention.retryIntent.value) {
+          await (delete(
+            personalEvents,
+          )..where((t) => t.id.equals(row.id))).go();
+        }
       }
     }
     return events;

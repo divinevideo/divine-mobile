@@ -50,7 +50,7 @@ void main() {
           'lightning network',
           authors: ['pubkey1', 'pubkey2'],
           kinds: [1],
-          since: DateTime.now().subtract(Duration(days: 7)),
+          since: DateTime.now().subtract(const Duration(days: 7)),
           until: DateTime.now(),
           limit: 20,
         );
@@ -61,7 +61,7 @@ void main() {
     test('searchEvents should handle timeout parameter', () async {
       final results = await nostr.relayPool.searchEvents(
         'test',
-        timeout: Duration(seconds: 2),
+        timeout: const Duration(seconds: 2),
       );
 
       expect(results, isA<List<Event>>());
@@ -82,7 +82,7 @@ void main() {
       // we get an empty list, but the invariant still holds.
       final results = await nostr.relayPool.searchEvents(
         'test',
-        timeout: Duration(milliseconds: 100),
+        timeout: const Duration(milliseconds: 100),
       );
 
       // Verify the invariant: all event IDs are unique
@@ -93,7 +93,7 @@ void main() {
     test('searchEvents should return empty list for no results', () async {
       final results = await nostr.relayPool.searchEvents(
         'extremely_unlikely_search_term_xyz123',
-        timeout: Duration(seconds: 1),
+        timeout: const Duration(seconds: 1),
       );
 
       expect(results, isEmpty);

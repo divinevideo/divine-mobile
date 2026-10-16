@@ -116,10 +116,17 @@ class AccountDeletionRecoveryView extends StatelessWidget {
                 : context.l10n.minorAccountReviewCheckingStatusTitle,
           ),
         ),
-        body: const SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: _RecoveryStateContent(),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: _RecoveryStateContent(),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -166,9 +173,13 @@ class _RecoveryStateContent extends StatelessWidget {
         onSecondaryPressed: cubit.signOut,
       ),
       AccountDeletionRecoveryStatus.signOutFailed => _RecoveryContent(
-        body: context.l10n.authUnexpectedError,
+        body: state.attempt?.status == AccountDeletionAttemptStatus.processing
+            ? context.l10n.accountDeletionProcessingSignOutFailed
+            : context.l10n.authUnexpectedError,
         actionLabel: context.l10n.accountDeletionSignOut,
-        onPressed: cubit.signOut,
+        onPressed: cubit.retrySignOut,
+        secondaryActionLabel: context.l10n.supportContactSupport,
+        onSecondaryPressed: () => context.push(RoutePaths.supportCenter),
       ),
       AccountDeletionRecoveryStatus.restorable => _RestorableContent(
         state: state,

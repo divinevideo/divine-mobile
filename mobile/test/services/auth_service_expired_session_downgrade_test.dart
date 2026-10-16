@@ -13,6 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Event, Nip19, generatePrivateKey;
 import 'package:openvine/models/auth_rpc_capability.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -794,6 +795,7 @@ void main() {
 
         final authService = createAuthService();
 
+        AccountActivationReceipt? receipt;
         await runIgnoringMockedHttpErrors(() async {
           await authService.initialize();
           await waitForRpcUpgradeToSettle(authService);
@@ -812,6 +814,7 @@ void main() {
             () => mockOAuthClient.getSession(),
           ).thenAnswer((_) async => storedRpcSession);
 
+          receipt = authService.committedAccountActivationReceipt;
           final refreshCallsBeforeResume = refreshCalls;
           authService.onAppResumed();
           await pumpEventQueue();
@@ -822,6 +825,9 @@ void main() {
           expect(authService.canPublishNostrWritesNow, isTrue);
           expect(authService.hasExpiredOAuthSession, isFalse);
         });
+        expect(receipt, isNotNull);
+        expect(authService.committedAccountActivationReceipt, same(receipt));
+        expect(receipt!.isCurrent, isTrue);
       },
     );
 

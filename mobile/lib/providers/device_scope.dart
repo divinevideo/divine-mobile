@@ -11,6 +11,7 @@ import 'package:openvine/providers/database_corruption_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/db_cipher_key_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
+import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
+import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
@@ -53,6 +55,7 @@ class DeviceScope {
   const DeviceScope({
     required this.database,
     required this.sharedPreferences,
+    required this.feedModePersistence,
     required this.switchController,
     required this.appVersion,
     required this.documentsPath,
@@ -76,6 +79,9 @@ class DeviceScope {
   final AppDatabase database;
 
   final SharedPreferences sharedPreferences;
+
+  /// Pending Home writes must share ownership across routes and account swaps.
+  final FeedModePersistenceRegistry feedModePersistence;
 
   /// App version resolved once from `PackageInfo` during bootstrap.
   final String appVersion;
@@ -140,6 +146,7 @@ class DeviceScope {
   List<Override> get overrides => [
     databaseProvider.overrideWithValue(database),
     sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+    feedModePersistenceRegistryProvider.overrideWithValue(feedModePersistence),
     appVersionProvider.overrideWithValue(appVersion),
     documentsPathProvider.overrideWithValue(documentsPath),
     dbCipherKeyProvider.overrideWithValue(dbCipherKey),

@@ -10,11 +10,13 @@ import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
 import 'package:openvine/providers/hashtag_subscription_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -77,12 +79,24 @@ class VideoFeedPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(divineHostFilterVersionProvider);
     final contentFilterVersion = ref.watch(contentFilterVersionProvider);
+    // The version is a rebuild signal; the key holds the fact it signals,
+    // because start-up retires legacy keys and notifies without a change.
+    ref.watch(adultContentVerificationVersionProvider);
+    final adultContentVerified = ref
+        .watch(ageVerificationServiceProvider)
+        .isAdultContentVerified;
+    final provenanceFilterVersion = ref.watch(
+      videoProvenanceFilterVersionProvider,
+    );
     final videosRepository = ref.watch(videosRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
+    final peopleListsRepository = ref.watch(homePeopleListsRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
+    ref.watch(currentAuthStateProvider);
     final authService = ref.watch(authServiceProvider);
+    final viewerPubkey = authService.currentPublicKeyHex;
     final sharedPreferences = ref.watch(sharedPreferencesProvider);
     final showDivineHostedOnly = ref
         .read(divineHostFilterServiceProvider)
@@ -92,53 +106,68 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
-    return MultiBlocProvider(
-      key: ValueKey((
-        'video-feed',
-        showDivineHostedOnly,
-        contentFilterVersion,
-        hashtagRepository,
-      )),
-      providers: [
-        BlocProvider(
-          create: (_) =>
-              VideoFeedBloc(
-                videosRepository: videosRepository,
-                followRepository: followRepository,
-                curatedListRepository: curatedListRepository,
-                hashtagSubscriptionRepository: hashtagRepository,
-                profileRepository: profileRepository,
-                contentBlocklistRepository: blocklistRepository,
-                userPubkey: authService.currentPublicKeyHex,
-                sharedPreferences: sharedPreferences,
-                // Cached-feed serving stays on (constructor default) regardless of
-                // the Divine-hosted-only filter: applyContentPreferences re-filters
-                // on read and the splice-on-refresh keeps the post-active tail
-                // fresh, so the cached serve is never stale to the viewer.
-                feedTracker: ref.read(feedPerformanceTrackerProvider),
-                feedTuningRepository: feedTuningRepository,
-                enrichVideos: (videos) => enrichVideosWithNostrTags(
-                  videos,
-                  nostrService: ref.read(nostrServiceProvider),
-                  callerName: 'VideoFeedBloc',
-                  attemptTracker: enrichmentAttemptTracker,
+    final persistence = ref
+        .watch(feedModePersistenceRegistryProvider)
+        .forAccount(viewerPubkey);
+    return RepositoryProvider<FeedModePersistenceCoordinator>.value(
+      key: ValueKey((viewerPubkey, sharedPreferences)),
+      value: persistence,
+      child: MultiBlocProvider(
+        key: ValueKey((
+          'video-feed',
+          hashtagRepository,
+          showDivineHostedOnly,
+          contentFilterVersion,
+          adultContentVerified,
+          provenanceFilterVersion,
+          curatedListRepository,
+          peopleListsRepository,
+          viewerPubkey,
+        )),
+        providers: [
+          BlocProvider(
+            create: (context) =>
+                VideoFeedBloc(
+                  videosRepository: videosRepository,
+                  followRepository: followRepository,
+                  curatedListRepository: curatedListRepository,
+                  hashtagSubscriptionRepository: hashtagRepository,
+                  peopleListsRepository: peopleListsRepository,
+                  profileRepository: profileRepository,
+                  contentBlocklistRepository: blocklistRepository,
+                  userPubkey: viewerPubkey,
+                  sharedPreferences: sharedPreferences,
+                  persistenceCoordinator: context
+                      .read<FeedModePersistenceCoordinator>(),
+                  // Cached-feed serving stays on (constructor default) regardless of
+                  // the Divine-hosted-only filter: applyContentPreferences re-filters
+                  // on read and the splice-on-refresh keeps the post-active tail
+                  // fresh, so the cached serve is never stale to the viewer.
+                  feedTracker: ref.read(feedPerformanceTrackerProvider),
+                  feedTuningRepository: feedTuningRepository,
+                  enrichVideos: (videos) => enrichVideosWithNostrTags(
+                    videos,
+                    nostrService: ref.read(nostrServiceProvider),
+                    callerName: 'VideoFeedBloc',
+                    attemptTracker: enrichmentAttemptTracker,
+                  ),
+                )..add(
+                  VideoFeedStarted(
+                    mode: initialMode,
+                    forceMode: forceInitialMode,
+                  ),
                 ),
-              )..add(
-                VideoFeedStarted(
-                  mode: initialMode,
-                  forceMode: forceInitialMode,
-                ),
-              ),
-        ),
-        BlocProvider(
-          create: (_) => VideoPlaybackStatusCubit(
-            canAutoAuthorizeAgeRestrictedMedia: () => ref
-                .read(mediaAuthInterceptorProvider)
-                .canAutoAuthorizeAdultMedia(),
           ),
-        ),
-      ],
-      child: VideoFeedView(initialIndex: initialIndex),
+          BlocProvider(
+            create: (_) => VideoPlaybackStatusCubit(
+              canAutoAuthorizeAgeRestrictedMedia: () => ref
+                  .read(mediaAuthInterceptorProvider)
+                  .canAutoAuthorizeAdultMedia(),
+            ),
+          ),
+        ],
+        child: VideoFeedView(initialIndex: initialIndex),
+      ),
     );
   }
 }
@@ -462,10 +491,14 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
             child: BlocBuilder<VideoFeedBloc, VideoFeedBlocState>(
               // The builder renders from the widget's own [_currentIndex], never
               // [state.currentIndex], so a per-swipe index emit must not rebuild
-              // the whole feed. Rebuild only when some other field changed.
+              // the whole feed. Operation ordering snapshots do not change
+              // presentation either. Rebuild only when a rendered field changes.
               buildWhen: (previous, current) =>
                   current !=
-                  previous.copyWith(currentIndex: current.currentIndex),
+                  previous.copyWith(
+                    currentIndex: current.currentIndex,
+                    coordination: current.coordination,
+                  ),
               builder: (context, state) {
                 final itemCount = state.videos.length;
                 final clampedIndex = _clampIndexForItemCount(
@@ -501,7 +534,12 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                 // Error state
                 if (state.status == VideoFeedStatus.failure &&
                     !keepHashtagVideos) {
-                  return FeedErrorWidget(onRetry: () => _refreshFeed(context));
+                  return Stack(
+                    children: [
+                      FeedErrorWidget(onRetry: () => _refreshFeed(context)),
+                      const FeedModeSwitch(),
+                    ],
+                  );
                 }
 
                 // Empty state

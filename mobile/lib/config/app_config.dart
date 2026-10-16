@@ -1,7 +1,35 @@
 // ABOUTME: Application configuration including backend URLs and environment settings
 // ABOUTME: Centralizes app configuration for different environments (dev, staging, prod)
 
+import 'dart:convert';
+
 class AppConfig {
+  /// Public discovery policy supplied by release configuration as a JSON array.
+  /// A missing or malformed input is reported by the repository provider.
+  static final Set<String>? publicPeopleListExcludedDTags =
+      parsePublicPeopleListExcludedDTags(
+        const String.fromEnvironment(
+          'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS',
+        ),
+      );
+
+  /// Reads an immutable deployment policy without logging identifying values.
+  /// Returns null when the build did not supply a valid policy. An explicit
+  /// empty array deliberately enables no additional exclusions.
+  static Set<String>? parsePublicPeopleListExcludedDTags(String input) {
+    if (input.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(input);
+      if (decoded is! List ||
+          decoded.any((value) => value is! String || value.trim().isEmpty)) {
+        return null;
+      }
+      return Set.unmodifiable(decoded.cast<String>());
+    } on FormatException {
+      return null;
+    }
+  }
+
   // Backend configuration
 
   /// Canonical Divine REST API base (funnelcake, `api.divine.video`).

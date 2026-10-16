@@ -11,6 +11,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart' show SecureKeyStorage;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/signer_secure_store.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -121,8 +122,10 @@ class KnownAccountsRegistry {
   /// The result is persisted to [kKnownAccountsKey] so this migration never
   /// runs again.
   Future<List<KnownAccount>> _migrateLegacyAccount(
-    SharedPreferences prefs,
-  ) async {
+    SharedPreferences prefs, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
     Log.info(
       'known_accounts key absent — running one-time legacy migration',
       name: 'KnownAccountsRegistry',
@@ -152,7 +155,11 @@ class KnownAccountsRegistry {
         name: 'KnownAccountsRegistry',
         category: LogCategory.auth,
       );
-      await _persistMigrationResult(prefs, accounts);
+      await _persistMigrationResult(
+        prefs,
+        accounts,
+        ensureCurrent: ensureCurrent,
+      );
       return accounts;
     }
 
@@ -229,7 +236,11 @@ class KnownAccountsRegistry {
       );
     }
 
-    await _persistMigrationResult(prefs, accounts);
+    await _persistMigrationResult(
+      prefs,
+      accounts,
+      ensureCurrent: ensureCurrent,
+    );
     return accounts;
   }
 
@@ -287,12 +298,20 @@ class KnownAccountsRegistry {
   /// Persists the migration result to seal it permanently.
   Future<void> _persistMigrationResult(
     SharedPreferences prefs,
-    List<KnownAccount> accounts,
-  ) async {
-    await prefs.setString(
+    List<KnownAccount> accounts, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
+    final written = await prefs.setString(
       kKnownAccountsKey,
       jsonEncode(accounts.map((a) => a.toJson()).toList()),
     );
+    ensureCurrent?.call();
+    if (!written) {
+      throw const AccountStorageException(
+        'Could not persist account migration',
+      );
+    }
   }
 
   /// Adds or updates an account in the known accounts registry.
@@ -301,44 +320,50 @@ class KnownAccountsRegistry {
   /// and which [AuthenticationSource] authenticated it.
   Future<void> upsert(
     String pubkeyHex,
-    AuthenticationSource source,
-  ) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final accounts = await getKnownAccounts();
-      final now = DateTime.now();
-
-      final index = accounts.indexWhere((a) => a.pubkeyHex == pubkeyHex);
-      if (index >= 0) {
-        accounts[index] = accounts[index].copyWith(
-          authSource: source,
-          lastUsedAt: now,
-        );
-      } else {
-        accounts.add(
-          KnownAccount(
-            pubkeyHex: pubkeyHex,
-            authSource: source,
-            addedAt: now,
-            lastUsedAt: now,
-          ),
-        );
-      }
-
-      final json = jsonEncode(accounts.map((a) => a.toJson()).toList());
-      await prefs.setString(kKnownAccountsKey, json);
-
-      Log.info(
-        'Updated known accounts registry '
-        '(total=${accounts.length}, pubkey=${pubkeyForLogs(pubkeyHex)}, source=${source.name})',
-        name: 'KnownAccountsRegistry',
-        category: LogCategory.auth,
+    AuthenticationSource source, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
+    final prefs = await SharedPreferences.getInstance();
+    ensureCurrent?.call();
+    final raw = prefs.getString(kKnownAccountsKey);
+    final accounts = raw == null
+        ? await _migrateLegacyAccount(prefs, ensureCurrent: ensureCurrent)
+        : raw.isEmpty
+        ? <KnownAccount>[]
+        : (jsonDecode(raw) as List<dynamic>)
+              .cast<Map<String, dynamic>>()
+              .map(KnownAccount.fromJson)
+              .toList();
+    ensureCurrent?.call();
+    final now = DateTime.now();
+    final index = accounts.indexWhere((a) => a.pubkeyHex == pubkeyHex);
+    if (index >= 0) {
+      accounts[index] = accounts[index].copyWith(
+        authSource: source,
+        lastUsedAt: now,
       );
-    } catch (e) {
-      Log.warning(
-        'Failed to update known accounts: $e',
-        name: 'KnownAccountsRegistry',
-        category: LogCategory.auth,
+    } else {
+      accounts.add(
+        KnownAccount(
+          pubkeyHex: pubkeyHex,
+          authSource: source,
+          addedAt: now,
+          lastUsedAt: now,
+        ),
+      );
+    }
+    final json = jsonEncode(accounts.map((a) => a.toJson()).toList());
+    final written = await prefs.setString(kKnownAccountsKey, json);
+    ensureCurrent?.call();
+    if (!written) {
+      throw const AccountStorageException('Could not persist known accounts');
+    }
+    await prefs.reload();
+    ensureCurrent?.call();
+    if (prefs.getString(kKnownAccountsKey) != json) {
+      throw const AccountStorageException(
+        'Known accounts readback did not match',
       );
     }
   }
@@ -373,7 +398,7 @@ class KnownAccountsRegistry {
 
     final json = jsonEncode(accounts.map((a) => a.toJson()).toList());
     if (!await prefs.setString(kKnownAccountsKey, json)) {
-      throw StateError('Could not persist known accounts');
+      throw const AccountStorageException('Could not persist known accounts');
     }
 
     Log.info(
@@ -395,7 +420,7 @@ class KnownAccountsRegistry {
       kKnownAccountsKey,
       jsonEncode(accounts.map((a) => a.toJson()).toList()),
     )) {
-      throw StateError('Could not persist known accounts');
+      throw const AccountStorageException('Could not persist known accounts');
     }
   }
 
@@ -413,11 +438,15 @@ class KnownAccountsRegistry {
       kAuthenticationSourceKey,
       AuthenticationSource.none.code,
     )) {
-      throw StateError('Could not reset the authentication source');
+      throw const AccountStorageException(
+        'Could not reset the authentication source',
+      );
     }
     if (prefs.containsKey(lastUsedNpubKey) &&
         !await prefs.remove(lastUsedNpubKey)) {
-      throw StateError('Could not clear the last-used account');
+      throw const AccountStorageException(
+        'Could not clear the last-used account',
+      );
     }
     return restorable.length;
   }

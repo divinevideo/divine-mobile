@@ -14,6 +14,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -27,6 +28,10 @@ void main() {
     late _MockAuthService mockAuth;
     late SharedPreferences prefs;
     late StreamController<Event> eventController;
+
+    /// The fixture author for [dTag], the same value every list event carries.
+    String authorPubkeyFor(String dTag) =>
+        dTag.hashCode.abs().toRadixString(16).padLeft(64, '0');
 
     /// Creates a mock kind 30005 list event with video references
     Event createListEvent({
@@ -43,7 +48,7 @@ void main() {
 
       return Event.fromJson({
         'id': 'event_$dTag',
-        'pubkey': 'author_pubkey_${dTag.hashCode.abs()}',
+        'pubkey': authorPubkeyFor(dTag),
         'created_at':
             createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
         'kind': 30005,
@@ -57,7 +62,7 @@ void main() {
     Event createEmptyListEvent({required String dTag, required String name}) {
       return Event.fromJson({
         'id': 'event_$dTag',
-        'pubkey': 'author_pubkey_${dTag.hashCode.abs()}',
+        'pubkey': authorPubkeyFor(dTag),
         'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
         'kind': 30005,
         'tags': [
@@ -89,13 +94,18 @@ void main() {
 
       mockNostr = _MockNostrClient();
 
-      stubListSigner(mockNostr, 'test_pubkey');
+      stubListSigner(
+        mockNostr,
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
       mockAuth = _MockAuthService();
       prefs = await SharedPreferences.getInstance();
       eventController = StreamController<Event>.broadcast();
 
       when(() => mockAuth.isAuthenticated).thenReturn(true);
-      when(() => mockAuth.currentPublicKeyHex).thenReturn('test_pubkey');
+      when(() => mockAuth.currentPublicKeyHex).thenReturn(
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
 
       // Mock subscribe to return our controlled stream
       when(
@@ -106,6 +116,10 @@ void main() {
         ),
       ).thenAnswer((_) => eventController.stream);
 
+      await stubCommittedListAccount(
+        auth: mockAuth,
+        preferences: prefs,
+      );
       service = CuratedListService(
         nostrService: mockNostr,
         authService: mockAuth,
@@ -232,9 +246,12 @@ void main() {
       test('excludeIds parameter skips known lists', () async {
         final receivedLists = <List<CuratedList>>[];
 
-        // Start stream with excludeIds containing 'list2'
+        // excludeIds is keyed by author and d-tag, so a bare d-tag matches
+        // nothing; exclude list2 under its author.
         final subscription = service
-            .streamPublicListsFromRelays(excludeIds: {'list2'})
+            .streamPublicListsFromRelays(
+              excludeIds: {'${authorPubkeyFor('list2')}:list2'},
+            )
             .listen((lists) => receivedLists.add(List.from(lists)));
 
         // Wait for the async generator to reach the await for loop
@@ -337,6 +354,34 @@ void main() {
         expect(receivedLists.last.first.name, 'New Name');
         expect(receivedLists.last.first.videoEventIds.length, 2);
       });
+
+      for (final newestFirst in [false, true]) {
+        test('latest empty revision removes older populated list '
+            '(newestFirst: $newestFirst)', () async {
+          final results = service.streamPublicListsFromRelays().toList();
+          await pumpEventQueue();
+          final populated = createListEvent(
+            dTag: 'crew',
+            name: 'Crew',
+            videoIds: const [
+              '1111111111111111111111111111111111111111111111111111111111111111',
+            ],
+            createdAt: 100,
+          );
+          final empty = createListEvent(
+            dTag: 'crew',
+            name: 'Crew',
+            videoIds: const [],
+            createdAt: 200,
+          );
+          (newestFirst ? [empty, populated] : [populated, empty]).forEach(
+            eventController.add,
+          );
+          await eventController.close();
+          final emissions = await results;
+          expect(emissions.lastOrNull ?? const <CuratedList>[], isEmpty);
+        });
+      }
 
       test('passes limit parameter to filter', () async {
         // Capture the filter passed to subscribe

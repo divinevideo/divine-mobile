@@ -25,7 +25,13 @@ class FeedEmptyWidget extends StatelessWidget {
         state.error == VideoFeedError.noFollowedUsers;
 
     if (state.mode == FeedMode.following) {
-      return const _FollowingFeedEmptyState();
+      return _FollowingFeedEmptyState(
+        // A people list projects onto the Following mode, but it is not the
+        // viewer's follows: "people you follow" would be the wrong people.
+        message: state.source.type == VideoFeedSourceType.peopleList
+            ? context.l10n.peopleListsNoVideosSubtitle
+            : context.l10n.feedFollowingEmpty,
+      );
     }
 
     return Center(
@@ -85,7 +91,9 @@ class FeedEmptyWidget extends StatelessWidget {
 }
 
 class _FollowingFeedEmptyState extends StatelessWidget {
-  const _FollowingFeedEmptyState();
+  const _FollowingFeedEmptyState({required this.message});
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +109,7 @@ class _FollowingFeedEmptyState extends StatelessWidget {
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 320),
               child: Text(
-                context.l10n.feedFollowingEmpty,
+                message,
                 style: VineTheme.bodyLargeFont(
                   color: context.vineColors.onSurfaceVariant,
                 ),

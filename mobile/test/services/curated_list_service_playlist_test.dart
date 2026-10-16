@@ -14,6 +14,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -45,14 +46,19 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       mockNostr = _MockNostrClient();
-      stubListSigner(mockNostr, 'test_pubkey_123456789abcdef');
+      stubListSigner(
+        mockNostr,
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
       mockAuth = _MockAuthService();
       prefs = await SharedPreferences.getInstance();
 
       when(() => mockAuth.isAuthenticated).thenReturn(true);
       when(
         () => mockAuth.currentPublicKeyHex,
-      ).thenReturn('test_pubkey_123456789abcdef');
+      ).thenReturn(
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
 
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
         return PublishSuccess(
@@ -72,7 +78,11 @@ void main() {
       });
 
       when(
-        () => mockNostr.subscribe(any(), onEose: any(named: 'onEose')),
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
       ).thenAnswer((_) => const Stream.empty());
 
       when(
@@ -80,19 +90,24 @@ void main() {
           kind: any(named: 'kind'),
           content: any(named: 'content'),
           tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
         ),
       ).thenAnswer(
-        (_) async => Event.fromJson({
+        (invocation) async => Event.fromJson({
           'id': 'test_event_id',
-          'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind': 30005,
-          'tags': [],
-          'content': 'test',
+          'pubkey': '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          'created_at': invocation.namedArguments[#createdAt],
+          'kind': invocation.namedArguments[#kind],
+          'tags': invocation.namedArguments[#tags],
+          'content': invocation.namedArguments[#content],
           'sig': 'test_sig',
         }),
       );
 
+      await stubCommittedListAccount(
+        auth: mockAuth,
+        preferences: prefs,
+      );
       service = CuratedListService(
         nostrService: mockNostr,
         authService: mockAuth,

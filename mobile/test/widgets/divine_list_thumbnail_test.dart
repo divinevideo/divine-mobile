@@ -87,6 +87,55 @@ void main() {
   );
 
   group(DivineListThumbnail, () {
+    testWidgets(
+      'public people media keeps the count without resolving identities',
+      (
+        tester,
+      ) async {
+        var identityReads = 0;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...getStandardTestOverrides(),
+              fetchUserProfileProvider.overrideWith((ref, pubkey) async {
+                identityReads++;
+                return profileFor(pubkey, displayName: 'Cached member');
+              }),
+              userProfileReactiveProvider.overrideWith((ref, pubkey) {
+                identityReads++;
+                return Stream.value(
+                  profileFor(
+                    pubkey,
+                    displayName: 'Cached member',
+                    picture: 'https://example.com/cached-member.jpg',
+                  ),
+                );
+              }),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(
+                  width: 185,
+                  child: DivineListMedia.people(
+                    memberPubkeys: ['a' * 64, 'b' * 64],
+                    showMemberIdentities: false,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(identityReads, 0);
+        expect(find.text('2'), findsOneWidget);
+        expect(find.text('Cached member'), findsNothing);
+        expect(find.byType(UserAvatar), findsNothing);
+        expect(find.byType(VineCachedImage), findsNothing);
+      },
+    );
+
     group('videos variant', () {
       Widget buildSubject({
         required CuratedList curatedList,
@@ -295,6 +344,34 @@ void main() {
         expect(border.color, VineTheme.darkColors.surface);
       });
 
+      testWidgets('the media block alone drops the badge when asked', (
+        tester,
+      ) async {
+        Widget media({required bool showCount}) => ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SizedBox(
+                width: 177,
+                child: DivineListMedia.videos(
+                  thumbnailUrls: const [],
+                  videoCount: 3,
+                  showCount: showCount,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // The positive control: with the badge, the same media draws "3".
+        await tester.pumpWidget(media(showCount: true));
+        expect(find.text('3'), findsOneWidget);
+
+        await tester.pumpWidget(media(showCount: false));
+        expect(find.text('3'), findsNothing);
+      });
+
       testWidgets('renders the video count badge', (tester) async {
         await tester.pumpWidget(
           buildSubject(
@@ -413,6 +490,43 @@ void main() {
 
         await tester.tap(find.text('Test List'));
         await tester.pumpAndSettle();
+
+        expect(tapped, isTrue);
+      });
+
+      testWidgets('a tap on the empty description box opens the list', (
+        tester,
+      ) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(), onTap: () => tapped = true),
+        );
+
+        await tester.tapAt(
+          tester.getBottomLeft(find.byType(DivineListThumbnail)) +
+              const Offset(8, -4),
+        );
+        await tester.pump();
+
+        expect(tapped, isTrue);
+      });
+
+      testWidgets('a tap on a link in the description opens the list', (
+        tester,
+      ) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(description: 'https://example.org/shop'),
+            onTap: () => tapped = true,
+          ),
+        );
+
+        // The first characters are the URL itself, not blank line space.
+        await tester.tapAt(
+          tester.getTopLeft(find.byType(LinkifiedText)) + const Offset(6, 6),
+        );
+        await tester.pump();
 
         expect(tapped, isTrue);
       });
@@ -1008,6 +1122,182 @@ void main() {
     });
   });
 
+  group(DivineListThumbnailSkeleton, () {
+    Widget sideBySide({required Widget card, required Widget skeleton}) {
+      return ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 180, child: card),
+                SizedBox(
+                  width: 180,
+                  child: Skeletonizer(ignoreContainers: true, child: skeleton),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('the video silhouette stands as tall as a video card', (
+      tester,
+    ) async {
+      // Rows stay level when placeholders give way to cards only if the
+      // silhouette reserves the same media box and footer.
+      await tester.pumpWidget(
+        sideBySide(
+          card: DivineListThumbnail.videos(
+            curatedList: createList(description: 'Two lines\nof it'),
+            onTap: () {},
+          ),
+          skeleton: const DivineListThumbnailSkeleton.videos(),
+        ),
+      );
+
+      final card = tester.getSize(find.byType(DivineListThumbnail));
+      final skeleton = tester.getSize(find.byType(DivineListThumbnailSkeleton));
+      expect(card.height, greaterThan(0));
+      expect(skeleton.height, equals(card.height));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the people silhouette stands as tall as a people card', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: DivineListThumbnail.people(
+            userList: createUserList(description: 'Two lines\nof it'),
+            onTap: () {},
+          ),
+          skeleton: const DivineListThumbnailSkeleton.people(),
+        ),
+      );
+
+      final card = tester.getSize(find.byType(DivineListThumbnail));
+      final skeleton = tester.getSize(find.byType(DivineListThumbnailSkeleton));
+      expect(card.height, greaterThan(0));
+      expect(skeleton.height, equals(card.height));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the video silhouette fans out five slots', (tester) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: const SizedBox(),
+          skeleton: const DivineListThumbnailSkeleton.videos(),
+        ),
+      );
+
+      final slots = find.descendant(
+        of: find.byType(DivineListThumbnailSkeleton),
+        matching: find.byType(Positioned),
+      );
+      expect(slots, findsNWidgets(5));
+    });
+
+    testWidgets('the people silhouette tiles the three-slot collage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        sideBySide(
+          card: const SizedBox(),
+          skeleton: const DivineListThumbnailSkeleton.people(),
+        ),
+      );
+
+      // A tile bone is a filled box that rounds an outer corner of the
+      // collage; the skeletonizer paints bones outside the frame's clip,
+      // so the four corners have to come from the tiles themselves.
+      const corner = Radius.circular(16);
+      bool isTileBone(Widget w) =>
+          w is DecoratedBox &&
+          w.decoration is BoxDecoration &&
+          (w.decoration as BoxDecoration).color != null &&
+          [
+            (w.decoration as BoxDecoration).borderRadius,
+          ].whereType<BorderRadius>().any(
+            (r) =>
+                r.topLeft == corner ||
+                r.topRight == corner ||
+                r.bottomLeft == corner ||
+                r.bottomRight == corner,
+          );
+      final tiles = find.descendant(
+        of: find.byType(DivineListThumbnailSkeleton),
+        matching: find.byWidgetPredicate(isTileBone),
+      );
+      expect(tiles, findsNWidgets(3));
+      final radii = tester
+          .widgetList<DecoratedBox>(tiles)
+          .map((w) => (w.decoration as BoxDecoration).borderRadius!)
+          .cast<BorderRadius>()
+          .toList();
+      expect(radii.where((r) => r.topLeft == corner), hasLength(1));
+      expect(radii.where((r) => r.bottomLeft == corner), hasLength(1));
+      expect(radii.where((r) => r.topRight == corner), hasLength(1));
+      expect(radii.where((r) => r.bottomRight == corner), hasLength(1));
+      // The large tile keeps the collage's Figma split.
+      final large = tester.getSize(tiles.first);
+      final media = tester.getSize(
+        find
+            .descendant(
+              of: find.byType(DivineListThumbnailSkeleton),
+              matching: find.byType(AspectRatio),
+            )
+            .first,
+      );
+      expect(large.width / media.width, closeTo(0.661, 0.01));
+    });
+
+    testWidgets('text bones start at the edge the text reads from', (
+      tester,
+    ) async {
+      Future<double> startInset(TextDirection direction) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              builder: (context, child) =>
+                  Directionality(textDirection: direction, child: child!),
+              home: const Scaffold(
+                body: SizedBox(
+                  width: 180,
+                  child: Skeletonizer(
+                    ignoreContainers: true,
+                    child: DivineListThumbnailSkeleton.videos(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final frame = tester.getRect(find.byType(DivineListThumbnailSkeleton));
+        final bone = tester.getRect(
+          find
+              .descendant(
+                of: find.byType(FractionallySizedBox).first,
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
+        );
+        return direction == TextDirection.ltr
+            ? bone.left - frame.left
+            : frame.right - bone.right;
+      }
+
+      final leftToRight = await startInset(TextDirection.ltr);
+      final rightToLeft = await startInset(TextDirection.rtl);
+      expect(rightToLeft, closeTo(leftToRight, 0.01));
+    });
+  });
+
   group('pending thumbnails', () {
     Widget pending({
       required Widget child,
@@ -1056,6 +1346,27 @@ void main() {
       // Three of five slots are bones; the two the list can never fill
       // keep their flat placeholder.
       expect(slotClips(), findsNWidgets(1 + 2));
+    });
+
+    testWidgets('a tap on the shimmering fan still opens the list', (
+      tester,
+    ) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        pending(
+          child: DivineListThumbnail.videos(
+            curatedList: createList(videoEventIds: [videoIdFor(1)]),
+            thumbnailsPending: true,
+            onTap: () => tapped = true,
+          ),
+        ),
+      );
+
+      // The skeleton swallows hit tests, so the tap lands on the card.
+      await tester.tap(skeletonizer(), warnIfMissed: false);
+      await tester.pump();
+
+      expect(tapped, isTrue);
     });
 
     testWidgets('keeps every slot flat once thumbnails are resolved', (

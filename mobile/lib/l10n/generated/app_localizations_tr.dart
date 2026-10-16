@@ -1373,34 +1373,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Hiç video yok';
 
   @override
-  String get exploreDiscoverLists => 'Listeleri Keşfet';
-
-  @override
-  String get exploreAboutLists => 'Listeler Hakkında';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:';
-
-  @override
   String get explorePeopleLists => 'Kişi Listeleri';
 
   @override
-  String get explorePeopleListsDescription =>
-      'İçerik üretici gruplarını takip et ve en son videolarını gör';
-
-  @override
   String get exploreVideoLists => 'Video Listeleri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Sonra izlemek için favori videolarından oynatma listeleri oluştur';
-
-  @override
-  String get exploreMyLists => 'Listelerim';
-
-  @override
-  String get exploreSubscribedLists => 'Abone Olunan Listeler';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -3871,17 +3847,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get peopleListsAddToList => 'Listeye ekle';
 
   @override
-  String get peopleListsSheetTitle => 'Listeye ekle';
-
-  @override
   String get peopleListsEmptyTitle => 'Henüz liste yok';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Kişileri gruplamaya başlamak için bir liste oluştur.';
-
-  @override
-  String get peopleListsCreateList => 'Liste oluştur';
 
   @override
   String get peopleListsNewListTitle => 'Yeni liste';
@@ -3961,14 +3931,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Tekrar dene';
-
-  @override
-  String get peopleListsAddButton => 'Ekle';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '$count ekle';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4910,45 +4872,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportClose => 'Kapat';
 
   @override
-  String get listAddToList => 'Listeye Ekle';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count kişi',
-      one: '1 kişi',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => 'Yazan ';
 
   @override
-  String get listNewList => 'Yeni Liste';
-
-  @override
   String get listDone => 'Bitti';
 
   @override
   String get listErrorLoading => 'Listeler yüklenirken hata';
-
-  @override
-  String listRemovedFrom(String name) {
-    return '$name listesinden kaldırıldı';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return '$name listesine eklendi';
-  }
 
   @override
   String get listCreateNewList => 'Yeni Liste Oluştur';
@@ -4961,13 +4896,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Açıklama (opsiyonel)';
-
-  @override
-  String get listPublicList => 'Herkese Açık Liste';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Diğerleri bu listeyi takip edebilir ve görebilir';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5074,9 +5002,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine\'da $name';
   }
-
-  @override
-  String get listCancel => 'İptal';
 
   @override
   String get listCreate => 'Oluştur';
@@ -6133,32 +6058,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonelik güncellenemedi. Lütfen tekrar dene.';
-
-  @override
-  String get discoverListsTitle => 'Listeleri Keşfet';
-
-  @override
-  String get discoverListsFailedToLoad => 'Listeler yüklenemedi';
-
-  @override
-  String get discoverListsLoading => 'Herkese açık listeler keşfediliyor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay listeleri zamanında döndürmedi. Tekrar dene.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hizmet kullanılamıyor.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Herkese açık liste bulunamadı';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Yeni listeler için sonra tekrar bak';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'yazan';
 
   @override
   String get curatedListEmptyTitle => 'Bu listede video yok';
@@ -13462,10 +13361,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Hesabın veya listeye erişimin değişti. Devam etmek için bu sayfayı yeniden aç.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Takipçilerin ve takip ettiklerin arasında ara';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
@@ -13610,4 +13505,97 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Bir etiketi burada bulmak için kendi sayfasından takip et.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Kişi listeleri şu anda kullanılamıyor.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Video listeleri şu anda kullanılamıyor.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Önceki hesabın verileri temizlenemedi. Tekrar dene.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Kişi ara';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name kişisini listeden kaldır';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Liste güncellenemedi. Lütfen tekrar dene.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name kişisini listeye ekle';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Ortak ekle';
+
+  @override
+  String get listMakePublicLabel => 'Herkese açık yap';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine\'da ara...';
+
+  @override
+  String get listCollaboratorsNone => 'Yok';
+
+  @override
+  String get listMakePublicSubtitle => 'Başkaları bu listeyi görebilsin';
+
+  @override
+  String get listVideoNotAdded =>
+      'Listen oluşturuldu, ancak bu video eklenmedi.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.';
+
+  @override
+  String get listRetrySync => 'Şimdi eşitle';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Bu değişiklik doğrulanamadı. Tekrar dene.';
+
+  @override
+  String get listRecoveryPending =>
+      'Bu listede eşitlenmeyi bekleyen değişiklikler var.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.';
+
+  @override
+  String get listAddToLists => 'Listelere ekle';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.';
 }

@@ -39,6 +39,7 @@ Future<List<UserProfile>?> showUserPickerSheet(
   required UserPickerFilterMode filterMode,
   required String title,
   bool autoFocus = false,
+  bool showSelectedProfiles = false,
   String? searchText,
   String? searchHint,
   ValueChanged<UserProfile>? onUserToggled,
@@ -58,6 +59,7 @@ Future<List<UserProfile>?> showUserPickerSheet(
       filterMode: filterMode,
       scrollController: scrollController,
       autoFocus: autoFocus,
+      showSelectedProfiles: showSelectedProfiles,
       title: title,
       searchText: searchText,
       maxCount: maxCount,
@@ -78,6 +80,7 @@ class UserPickerSheet extends ConsumerStatefulWidget {
     required this.title,
     this.scrollController,
     this.autoFocus = false,
+    this.showSelectedProfiles = false,
     this.searchText,
     this.maxCount,
     this.excludePubkeys = const {},
@@ -105,6 +108,9 @@ class UserPickerSheet extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
 
   final bool autoFocus;
+
+  /// Keeps existing picks removable even when the mutual search does not offer them.
+  final bool showSelectedProfiles;
 
   /// Pubkeys the caller already tracks as selected. Their rows render in
   /// the checked state rather than being hidden.
@@ -497,8 +503,9 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
     final disabledPubkeys = widget.onUserToggled == null
         ? widget.excludePubkeys
         : const <String>{};
-    // Only the capped mode moves a pick out of the list and into the chips
-    // row; the callback mode has no chips, so a picked row has to stay put
+    // Capped picks move into the chips row and leave the candidate list.
+    // Callback picks may also show removable chips, but keep their candidate
+    // rows visible so the same user can still be toggled from either place
     // and just render as checked.
     final hidePubkeys = widget.maxCount == null
         ? const <String>{}
@@ -611,7 +618,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
           ),
         ),
 
-        if (widget.maxCount != null)
+        if (widget.maxCount != null || widget.showSelectedProfiles)
           AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
@@ -619,12 +626,15 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
             child: _selectedProfiles.isNotEmpty
                 ? _SelectedChipsRow(
                     profiles: _selectedProfiles,
-                    onRemove: (profile) => setState(() {
-                      _selectedProfiles.removeWhere(
-                        (p) => p.pubkey == profile.pubkey,
-                      );
-                      _selectedPubkeys.remove(profile.pubkey);
-                    }),
+                    onRemove: (profile) {
+                      setState(() {
+                        _selectedProfiles.removeWhere(
+                          (p) => p.pubkey == profile.pubkey,
+                        );
+                        _selectedPubkeys.remove(profile.pubkey);
+                      });
+                      widget.onUserToggled?.call(profile);
+                    },
                   )
                 : const SizedBox.shrink(),
           ),

@@ -139,6 +139,11 @@ void main() {
                 const Scaffold(body: Text('Family Guide Page')),
           ),
           GoRoute(
+            path: RoutePaths.supportCenter,
+            builder: (context, state) =>
+                const Scaffold(body: Text('Recovery support')),
+          ),
+          GoRoute(
             path: RoutePaths.accountDeletionRecovery,
             builder: (context, state) =>
                 const Scaffold(body: Text('Deletion Recovery')),
@@ -384,6 +389,40 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text('Family Guide Page'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'localizes startup cleanup failure and retains login actions',
+        (tester) async {
+          await useTallSurface(tester);
+          when(() => mockAuthService.lastError)
+              .thenReturn('Could not clear account data safely');
+          when(() => mockAuthService.lastFailureReason)
+              .thenReturn(AuthFailureReason.accountCleanupFailed);
+          await sharedPreferences.setString(
+            'pending_account_data_cleanup',
+            'unreadable',
+          );
+          await tester.pumpWidget(createTestWidget());
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.authAccountCleanupFailed), findsOneWidget);
+          expect(
+            find.text('Could not clear account data safely'),
+            findsNothing,
+          );
+          expect(
+            find.bySemanticsIdentifier(SemanticIds.authSignInButton),
+            findsOneWidget,
+          );
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pumpAndSettle();
+          expect(find.text('Recovery support'), findsOneWidget);
+          expect(
+            sharedPreferences.getString('pending_account_data_cleanup'),
+            'unreadable',
+          );
         },
       );
 

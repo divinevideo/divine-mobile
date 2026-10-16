@@ -12,19 +12,104 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
 
-class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {}
+/// Consumer fixture with actual key-derived ownership and readback. Backend
+/// current/legacy native slot behavior is exercised by the package's real tests.
+class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {
+  final identitySnapshots = <String, SecureKeyContainer>{};
+
+  @override
+  Future<bool> hasKeysStrict() async => (await getKeyContainer()) != null;
+
+  @override
+  Future<void> deleteOwnedLoginStrict(
+    String owner, {
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(owner)) {
+      throw const SecureKeyStorageException('Invalid deletion owner');
+    }
+    final coordinate = SecureKeyContainer.fromPublicKey(owner);
+    final npub = coordinate.npub;
+    coordinate.dispose();
+    final beforePrimary = await getKeyContainer();
+    ensureCurrent?.call();
+    final beforeArchive = identitySnapshots[npub];
+    if (beforeArchive != null && beforeArchive.publicKeyHex != owner) {
+      throw const SecureKeyStorageException('Contradictory saved identity');
+    }
+    // These are the same storage-only native fakes the existing assertions
+    // observe. Acknowledgement without a matching readback is not success.
+    await deleteIdentityKeyContainer(npub);
+    ensureCurrent?.call();
+    if (beforePrimary?.publicKeyHex == owner) {
+      await deleteKeys();
+      ensureCurrent?.call();
+    }
+    final afterPrimary = await getKeyContainer();
+    ensureCurrent?.call();
+    if (identitySnapshots.containsKey(npub) ||
+        afterPrimary?.publicKeyHex == owner ||
+        (beforePrimary != null &&
+            beforePrimary.publicKeyHex != owner &&
+            !identical(afterPrimary, beforePrimary))) {
+      throw const SecureKeyStorageException('Owner removal readback failed');
+    }
+  }
+}
+
+Future<SecureKeyContainer?> _identityReadback(
+  _MockSecureKeyStorage storage,
+  SecureKeyContainer? keys,
+) async {
+  if (keys != null) {
+    storage.identitySnapshots[keys.npub] = keys;
+  }
+  return keys;
+}
+
+/// Invokes AuthService's real persistence boundary around a storage-only fake.
+Future<SecureKeyContainer> _completeGeneratedKeys(
+  Invocation invocation,
+  SecureKeyContainer keys,
+  _MockSecureKeyStorage keyStorage,
+) async {
+  final guard =
+      invocation.namedArguments[#primaryWriteGuard]
+          as PrimaryKeyPersistenceGuard;
+  var persisted = false;
+  await guard(keys.publicKeyHex, () async {
+    if (persisted) {
+      throw StateError('PRIMARY was persisted more than once');
+    }
+    persisted = true;
+    // The PRIMARY fake must reflect the same successful native write that
+    // AuthService reads back under its actual activation lease.
+    keyStorage.identitySnapshots[keys.npub] = keys;
+    when(keyStorage.getKeyContainer).thenAnswer((_) async => keys);
+    when(keyStorage.hasKeys).thenAnswer((_) async => true);
+  });
+  if (!persisted) {
+    throw StateError('PRIMARY persistence was not completed');
+  }
+  return keys;
+}
 
 class _MockUserDataCleanupService extends Mock
     implements UserDataCleanupService {}
 
-class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
+class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {
+  final data = <String, String>{};
+}
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 
@@ -58,29 +143,16 @@ const _testNsec =
 const _otherNsec =
     'nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsmhltgl';
 
-/// Runs [body] while silencing unhandled async errors from `_performDiscovery`.
-///
-/// `_setupUserSession` fires `unawaited(_performDiscovery())` which creates a
-/// `NostrClient` that tries to open a WebSocket. In the test environment this
-/// throws asynchronously ("Unsupported operation: Mocked response") and the
-/// test runner flags it as a test failure. Wrapping with `runZonedGuarded`
-/// prevents that unhandled error from reaching the test zone.
-Future<T> _ignoringDiscoveryErrors<T>(Future<T> Function() body) async {
-  final completer = Completer<T>();
-  await runZonedGuarded(
-    () async {
-      try {
-        final result = await body();
-        completer.complete(result);
-      } catch (e, st) {
-        completer.completeError(e, st);
-      }
-    },
-    (error, stack) {
-      // Silently absorb async errors from unawaited _performDiscovery
-    },
+class _MockRelayDiscoveryService extends Mock
+    implements RelayDiscoveryService {}
+
+RelayDiscoveryService _networkFreeDiscovery() {
+  final discovery = _MockRelayDiscoveryService();
+  when(() => discovery.discoverRelays(any())).thenAnswer(
+    (_) async => RelayDiscoveryResult.failure('No network in auth tests'),
   );
-  return completer.future;
+  when(() => discovery.clearCache(any())).thenAnswer((_) async {});
+  return discovery;
 }
 
 void main() {
@@ -111,16 +183,21 @@ void main() {
       () => mockKeyStorage.getIdentityKeyContainer(
         any(),
       ),
-    ).thenAnswer((_) async => testKeyContainer);
+    ).thenAnswer((_) => _identityReadback(mockKeyStorage, testKeyContainer));
     when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
     when(
       () => mockCleanupService.shouldClearDataForUser(any()),
     ).thenReturn(false);
     when(
       () => mockSecureStorage.read(key: any(named: 'key')),
-    ).thenAnswer((_) async => null);
+    ).thenAnswer(
+      (invocation) async =>
+          mockSecureStorage.data[invocation.namedArguments[#key] as String],
+    );
 
     authService = AuthService(
+      relayDiscoveryService: _networkFreeDiscovery(),
+      profileCheckIndexerUrl: 'unsupported://profile.invalid',
       backgroundActivityManager: BackgroundActivityManager(),
       userDataCleanupService: mockCleanupService,
       keyStorage: mockKeyStorage,
@@ -134,8 +211,16 @@ void main() {
 
   void stubIdentityCreation() {
     when(
-      () => mockKeyStorage.generateAndStoreKeys(),
-    ).thenAnswer((_) async => testKeyContainer);
+      () => mockKeyStorage.generateAndStoreKeys(
+        primaryWriteGuard: any(named: 'primaryWriteGuard'),
+      ),
+    ).thenAnswer(
+      (invocation) => _completeGeneratedKeys(
+        invocation,
+        testKeyContainer,
+        mockKeyStorage,
+      ),
+    );
   }
 
   void stubIdentitySwitching() {
@@ -143,16 +228,32 @@ void main() {
       () => mockKeyStorage.switchToIdentity(
         any(),
       ),
-    ).thenAnswer((_) async => true);
+    ).thenAnswer((invocation) async {
+      final npub = invocation.positionalArguments.single as String;
+      final keys = mockKeyStorage.identitySnapshots[npub];
+      if (keys == null) {
+        return false;
+      }
+      when(mockKeyStorage.getKeyContainer).thenAnswer((_) async => keys);
+      when(mockKeyStorage.hasKeys).thenAnswer((_) async => true);
+      return true;
+    });
   }
 
   void stubAccountCleanup() {
-    when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
+    when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {
+      when(mockKeyStorage.getKeyContainer).thenAnswer((_) async => null);
+      when(mockKeyStorage.hasKeys).thenAnswer((_) async => false);
+    });
     when(
       () => mockKeyStorage.deleteIdentityKeyContainer(
         any(),
       ),
-    ).thenAnswer((_) async {});
+    ).thenAnswer((invocation) async {
+      mockKeyStorage.identitySnapshots.remove(
+        invocation.positionalArguments.single as String,
+      );
+    });
     when(
       () => mockCleanupService.clearUserSpecificData(
         reason: any(named: 'reason'),
@@ -169,7 +270,11 @@ void main() {
   void stubSessionPersistence() {
     when(
       () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
-    ).thenAnswer((_) async {});
+    ).thenAnswer((invocation) async {
+      final npub = invocation.positionalArguments.first as String;
+      final keys = invocation.positionalArguments.last as SecureKeyContainer;
+      mockKeyStorage.identitySnapshots[npub] = keys;
+    });
 
     when(
       () => mockCleanupService.claimLegacyRows(any()),
@@ -179,10 +284,20 @@ void main() {
         key: any(named: 'key'),
         value: any(named: 'value'),
       ),
-    ).thenAnswer((_) async {});
+    ).thenAnswer((invocation) async {
+      final key = invocation.namedArguments[#key] as String;
+      final value = invocation.namedArguments[#value] as String?;
+      if (value == null) {
+        mockSecureStorage.data.remove(key);
+      } else {
+        mockSecureStorage.data[key] = value;
+      }
+    });
     when(
       () => mockSecureStorage.delete(key: any(named: 'key')),
-    ).thenAnswer((_) async {});
+    ).thenAnswer((invocation) async {
+      mockSecureStorage.data.remove(invocation.namedArguments[#key] as String);
+    });
   }
 
   void stubSignerLogout() {
@@ -208,7 +323,9 @@ void main() {
 
       expect(authService.authState, equals(AuthState.unauthenticated));
       verifyNever(
-        () => mockKeyStorage.generateAndStoreKeys(),
+        () => mockKeyStorage.generateAndStoreKeys(
+          primaryWriteGuard: any(named: 'primaryWriteGuard'),
+        ),
       );
     });
 
@@ -223,7 +340,9 @@ void main() {
       expect(authService.authState, equals(AuthState.unauthenticated));
       verify(() => mockKeyStorage.hasKeys()).called(1);
       verifyNever(
-        () => mockKeyStorage.generateAndStoreKeys(),
+        () => mockKeyStorage.generateAndStoreKeys(
+          primaryWriteGuard: any(named: 'primaryWriteGuard'),
+        ),
       );
     });
 
@@ -238,7 +357,7 @@ void main() {
           () => mockKeyStorage.getKeyContainer(),
         ).thenAnswer((_) async => testKeyContainer);
 
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         expect(authService.authState, equals(AuthState.authenticated));
         expect(
@@ -570,7 +689,7 @@ void main() {
     });
 
     test('adds account to known accounts after createNewIdentity', () async {
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       final accounts = await authService.getKnownAccounts();
       expect(accounts, hasLength(1));
@@ -580,8 +699,8 @@ void main() {
 
     test('updates existing account instead of duplicating', () async {
       // Create identity twice with the same keys
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
+      await authService.createNewIdentity();
 
       final accounts = await authService.getKnownAccounts();
       // Should have 1 account, not 2
@@ -590,7 +709,7 @@ void main() {
     });
 
     test('updates lastUsedAt when re-adding existing account', () async {
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
       final firstAccounts = await authService.getKnownAccounts();
       final firstUsedAt = DateTime.utc(2000);
       final prefs = await SharedPreferences.getInstance();
@@ -600,7 +719,7 @@ void main() {
           firstAccounts.single.copyWith(lastUsedAt: firstUsedAt).toJson(),
         ]),
       );
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       final secondAccounts = await authService.getKnownAccounts();
       expect(secondAccounts, hasLength(1));
@@ -619,16 +738,18 @@ void main() {
     });
 
     test('deletes existing keys before creating new identity', () async {
-      await _ignoringDiscoveryErrors(authService.createAnonymousAccount);
+      await authService.createAnonymousAccount();
 
       verify(() => mockKeyStorage.deleteKeys()).called(1);
       verify(
-        () => mockKeyStorage.generateAndStoreKeys(),
+        () => mockKeyStorage.generateAndStoreKeys(
+          primaryWriteGuard: any(named: 'primaryWriteGuard'),
+        ),
       ).called(1);
     });
 
     test('accepts terms after creating identity', () async {
-      await _ignoringDiscoveryErrors(authService.createAnonymousAccount);
+      await authService.createAnonymousAccount();
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('age_verified_16_plus'), isTrue);
@@ -636,24 +757,26 @@ void main() {
     });
 
     test('sets auth state to authenticated', () async {
-      await _ignoringDiscoveryErrors(authService.createAnonymousAccount);
+      await authService.createAnonymousAccount();
 
       expect(authService.authState, equals(AuthState.authenticated));
     });
 
     test('throws when identity creation fails', () async {
       when(
-        () => mockKeyStorage.generateAndStoreKeys(),
+        () => mockKeyStorage.generateAndStoreKeys(
+          primaryWriteGuard: any(named: 'primaryWriteGuard'),
+        ),
       ).thenThrow(Exception('key generation failed'));
 
       await expectLater(
-        _ignoringDiscoveryErrors(authService.createAnonymousAccount),
+        authService.createAnonymousAccount(),
         throwsA(isA<Exception>()),
       );
     });
 
     test('registers account in known accounts', () async {
-      await _ignoringDiscoveryErrors(authService.createAnonymousAccount);
+      await authService.createAnonymousAccount();
 
       final accounts = await authService.getKnownAccounts();
       expect(accounts, hasLength(1));
@@ -671,19 +794,15 @@ void main() {
 
     setUp(() async {
       // Create an authenticated session first
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
     });
 
     test('archives Amber info when present', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
       // Set up Amber info to be found
-      when(
-        () => mockSecureStorage.read(key: 'amber_pubkey'),
-      ).thenAnswer((_) async => pubkeyHex);
-      when(
-        () => mockSecureStorage.read(key: 'amber_package'),
-      ).thenAnswer((_) async => 'com.example.amber');
+      mockSecureStorage.data['amber_pubkey'] = pubkeyHex;
+      mockSecureStorage.data['amber_package'] = 'com.example.amber';
 
       // Non-destructive sign-out triggers _archiveSignerInfo
       await authService.signOut();
@@ -705,16 +824,25 @@ void main() {
     test('archives bunker URL when present', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
-      when(
-        () => mockSecureStorage.read(key: 'bunker_info'),
-      ).thenAnswer((_) async => 'bunker://relay.example.com');
+      final bunkerUrl = Uri(
+        scheme: 'bunker',
+        host: 'b' * 64,
+        queryParameters: {
+          'relay': 'wss://relay.example.invalid',
+          'userPubkey': pubkeyHex,
+        },
+      ).toString();
+      // Existing account-bound native archive; no remote connection proof.
+      // The remote signer key and account owner intentionally differ.
+      mockSecureStorage.data['bunker_info'] = bunkerUrl;
+      mockSecureStorage.data['bunker_info_$pubkeyHex'] = bunkerUrl;
 
       await authService.signOut();
 
       verify(
         () => mockSecureStorage.write(
           key: 'bunker_info_$pubkeyHex',
-          value: 'bunker://relay.example.com',
+          value: bunkerUrl,
         ),
       ).called(1);
     });
@@ -728,9 +856,7 @@ void main() {
         'scope': 'policy:full',
         'user_pubkey': pubkeyHex,
       });
-      when(
-        () => mockSecureStorage.read(key: 'keycast_session'),
-      ).thenAnswer((_) async => sessionJson);
+      mockSecureStorage.data['keycast_session'] = sessionJson;
 
       await authService.signOut();
 
@@ -762,11 +888,13 @@ void main() {
         'scope': 'policy:full',
         'user_pubkey': otherPubkeyHex,
       });
-      when(
-        () => mockSecureStorage.read(key: 'keycast_session'),
-      ).thenAnswer((_) async => otherSessionJson);
+      mockSecureStorage.data['keycast_session'] = otherSessionJson;
 
-      await authService.signOut();
+      await expectLater(
+        authService.signOut(),
+        throwsA(isA<UserDataCleanupException>()),
+      );
+      expect(mockSecureStorage.data['keycast_session'], otherSessionJson);
 
       // The current user's archive key must NOT contain the other
       // user's session. Either nothing is written, or if something is
@@ -794,11 +922,13 @@ void main() {
           'scope': 'policy:full',
           // No user_pubkey — legacy session
         });
-        when(
-          () => mockSecureStorage.read(key: 'keycast_session'),
-        ).thenAnswer((_) async => legacySessionJson);
+        mockSecureStorage.data['keycast_session'] = legacySessionJson;
 
-        await authService.signOut();
+        await expectLater(
+          authService.signOut(),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(mockSecureStorage.data['keycast_session'], legacySessionJson);
 
         // Legacy session must NOT be written to the per-account
         // archive because its ownership is unverifiable.
@@ -830,13 +960,23 @@ void main() {
       );
     });
 
-    test('handles archiving errors gracefully', () async {
+    test('unreadable native signer storage keeps logout incomplete', () async {
       when(
         () => mockSecureStorage.read(key: 'amber_pubkey'),
       ).thenThrow(Exception('storage failure'));
 
-      // Should not throw
-      await expectLater(authService.signOut(), completes);
+      // Unknown native state cannot certify complete logout or be discarded.
+      await expectLater(
+        authService.signOut(),
+        throwsA(
+          isA<Exception>().having(
+            (error) => error.toString(),
+            'controlled native refusal',
+            'Exception: storage failure',
+          ),
+        ),
+      );
+      expect(authService.committedAccountActivationReceipt, isNull);
     });
   });
 
@@ -848,7 +988,7 @@ void main() {
     });
 
     setUp(() async {
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
     });
 
     test('archives the OAuth session while staying signed in', () async {
@@ -913,7 +1053,7 @@ void main() {
     });
 
     setUp(() async {
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
     });
 
     test('puts this account back as the persisted auth source', () async {
@@ -965,11 +1105,9 @@ void main() {
       // Android platform — it will throw on test platform, but we can verify
       // the restore happened
       try {
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.amber,
-          ),
+        await authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.amber,
         );
       } catch (_) {
         // Expected: _reconnectAmber requires Android platform
@@ -995,11 +1133,9 @@ void main() {
       ).thenAnswer((_) async => 'bunker://relay.example.com');
 
       try {
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.bunker,
-          ),
+        await authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.bunker,
         );
       } catch (_) {
         // Expected: _reconnectBunker requires network
@@ -1032,24 +1168,39 @@ void main() {
         () => mockSecureStorage.read(key: 'keycast_session'),
       ).thenAnswer((_) async => sessionJson);
 
-      try {
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.divineOAuth,
-          ),
-        );
-      } catch (_) {
-        // Expected: signInWithDivineOAuth needs oauthClient
-      }
+      await authService.signInForAccount(
+        pubkeyHex,
+        AuthenticationSource.divineOAuth,
+      );
 
-      // Verify session was written to active session key
-      verify(
+      // Archive restore and the guarded owner-bound recommit both persist the
+      // same account. Verify payload ownership and the native terminal proof.
+      final activePayloads = verify(
         () => mockSecureStorage.write(
           key: 'keycast_session',
-          value: any(named: 'value'),
+          value: captureAny(named: 'value'),
         ),
-      ).called(1);
+      ).captured.cast<String>();
+      expect(activePayloads, hasLength(2));
+      for (final payload in activePayloads) {
+        final restored = KeycastSession.fromJson(
+          jsonDecode(payload) as Map<String, dynamic>,
+        );
+        expect(restored.userPubkey, pubkeyHex);
+        expect(restored.bunkerUrl, 'wss://keycast.example.com');
+        expect(restored.accessToken, 'test_token');
+        expect(restored.scope, 'policy:full');
+      }
+      expect(authService.authState, AuthState.authenticated);
+      expect(authService.currentPublicKeyHex, pubkeyHex);
+      final receipt = authService.committedAccountActivationReceipt!;
+      expect(receipt.ownerPubkey, pubkeyHex);
+      expect(receipt.isCurrent, isTrue);
+      expect(
+        await mockSecureStorage.read(key: 'keycast_refresh_token'),
+        isNull,
+      );
+      expect(await mockSecureStorage.read(key: 'keycast_auth_handle'), isNull);
     });
 
     test(
@@ -1094,11 +1245,9 @@ void main() {
         // refresh should be skipped (userPubkey != pubkeyHex), and
         // the method should throw SessionExpiredException.
         await expectLater(
-          _ignoringDiscoveryErrors(
-            () => authService.signInForAccount(
-              pubkeyHex,
-              AuthenticationSource.divineOAuth,
-            ),
+          authService.signInForAccount(
+            pubkeyHex,
+            AuthenticationSource.divineOAuth,
           ),
           throwsA(isA<SessionExpiredException>()),
         );
@@ -1138,11 +1287,9 @@ void main() {
         ).thenAnswer((_) async => null);
 
         await expectLater(
-          _ignoringDiscoveryErrors(
-            () => authService.signInForAccount(
-              requestedPubkeyHex,
-              AuthenticationSource.divineOAuth,
-            ),
+          authService.signInForAccount(
+            requestedPubkeyHex,
+            AuthenticationSource.divineOAuth,
           ),
           throwsA(isA<SessionExpiredException>()),
         );
@@ -1169,11 +1316,9 @@ void main() {
 
       // Use automatic source so signInForAccount follows the simple
       // importedKeys/automatic path
-      await _ignoringDiscoveryErrors(
-        () => authService.signInForAccount(
-          pubkeyHex,
-          AuthenticationSource.automatic,
-        ),
+      await authService.signInForAccount(
+        pubkeyHex,
+        AuthenticationSource.automatic,
       );
 
       final prefs = await SharedPreferences.getInstance();
@@ -1186,11 +1331,9 @@ void main() {
     test('does no restore for automatic/importedKeys/none sources', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
-      await _ignoringDiscoveryErrors(
-        () => authService.signInForAccount(
-          pubkeyHex,
-          AuthenticationSource.automatic,
-        ),
+      await authService.signInForAccount(
+        pubkeyHex,
+        AuthenticationSource.automatic,
       );
 
       // Should not read any per-account archive keys
@@ -1206,11 +1349,9 @@ void main() {
       () async {
         final pubkeyHex = testKeyContainer.publicKeyHex;
 
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.automatic,
-          ),
+        await authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.automatic,
         );
 
         // Bunker global key must be cleared
@@ -1230,11 +1371,9 @@ void main() {
       () async {
         final pubkeyHex = testKeyContainer.publicKeyHex;
 
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.importedKeys,
-          ),
+        await authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.importedKeys,
         );
 
         // Bunker global key must be cleared
@@ -1260,11 +1399,9 @@ void main() {
     test('signs in with automatic source using stored identity keys', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
-      await _ignoringDiscoveryErrors(
-        () => authService.signInForAccount(
-          pubkeyHex,
-          AuthenticationSource.automatic,
-        ),
+      await authService.signInForAccount(
+        pubkeyHex,
+        AuthenticationSource.automatic,
       );
 
       expect(authService.authState, equals(AuthState.authenticated));
@@ -1279,11 +1416,9 @@ void main() {
       () async {
         final pubkeyHex = testKeyContainer.publicKeyHex;
 
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.importedKeys,
-          ),
+        await authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.importedKeys,
         );
 
         expect(authService.authState, equals(AuthState.authenticated));
@@ -1305,11 +1440,9 @@ void main() {
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
 
       await expectLater(
-        _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.automatic,
-          ),
+        authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.automatic,
         ),
         throwsA(
           isA<AccountRestoreFailedException>()
@@ -1345,11 +1478,9 @@ void main() {
         ).thenAnswer((_) async => primaryKeyContainer);
 
         await expectLater(
-          _ignoringDiscoveryErrors(
-            () => authService.signInForAccount(
-              requestedPubkeyHex,
-              AuthenticationSource.automatic,
-            ),
+          authService.signInForAccount(
+            requestedPubkeyHex,
+            AuthenticationSource.automatic,
           ),
           throwsA(
             isA<AccountRestoreFailedException>()
@@ -1380,10 +1511,7 @@ void main() {
 
     test('throws for AuthenticationSource.none', () async {
       await expectLater(
-        _ignoringDiscoveryErrors(
-          () =>
-              authService.signInForAccount('a' * 64, AuthenticationSource.none),
-        ),
+        authService.signInForAccount('a' * 64, AuthenticationSource.none),
         throwsA(
           isA<Exception>().having(
             (e) => e.toString(),
@@ -1403,11 +1531,9 @@ void main() {
       ).thenAnswer((_) async => null);
 
       await expectLater(
-        _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.amber,
-          ),
+        authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.amber,
         ),
         throwsA(
           isA<Exception>().having(
@@ -1428,11 +1554,9 @@ void main() {
       ).thenAnswer((_) async => null);
 
       await expectLater(
-        _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.bunker,
-          ),
+        authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.bunker,
         ),
         throwsA(
           isA<Exception>().having(
@@ -1456,11 +1580,9 @@ void main() {
       ).thenAnswer((_) async => null);
 
       await expectLater(
-        _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.divineOAuth,
-          ),
+        authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.divineOAuth,
         ),
         throwsA(isA<SessionExpiredException>()),
       );
@@ -1484,13 +1606,11 @@ void main() {
         () => mockKeyStorage.getIdentityKeyContainer(
           any(),
         ),
-      ).thenAnswer((_) async => testKeyContainer);
+      ).thenAnswer((_) => _identityReadback(mockKeyStorage, testKeyContainer));
 
-      await _ignoringDiscoveryErrors(
-        () => authService.signInForAccount(
-          pubkeyHex,
-          AuthenticationSource.divineOAuth,
-        ),
+      await authService.signInForAccount(
+        pubkeyHex,
+        AuthenticationSource.divineOAuth,
       );
 
       expect(authService.authState, equals(AuthState.authenticated));
@@ -1519,11 +1639,9 @@ void main() {
       ).thenAnswer((_) async => null);
 
       await expectLater(
-        _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.divineOAuth,
-          ),
+        authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.divineOAuth,
         ),
         throwsA(isA<SessionExpiredException>()),
       );
@@ -1532,11 +1650,9 @@ void main() {
     test('adds account to known accounts after successful sign-in', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
-      await _ignoringDiscoveryErrors(
-        () => authService.signInForAccount(
-          pubkeyHex,
-          AuthenticationSource.automatic,
-        ),
+      await authService.signInForAccount(
+        pubkeyHex,
+        AuthenticationSource.automatic,
       );
 
       final accounts = await authService.getKnownAccounts();
@@ -1588,7 +1704,7 @@ void main() {
       storage['amber_package'] = 'com.example.amber';
 
       // Create an authenticated session
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       // Sign out (non-destructive) — archives signer info
       await authService.signOut();
@@ -1603,11 +1719,9 @@ void main() {
 
       // Restore signer info via signInForAccount
       try {
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.amber,
-          ),
+        await authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.amber,
         );
       } catch (_) {
         // Expected: _reconnectAmber requires Android platform
@@ -1657,7 +1771,7 @@ void main() {
       storage['keycast_session'] = jsonEncode(sessionData);
 
       // Create an authenticated session
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       // Sign out (non-destructive) — archives OAuth session
       await authService.signOut();
@@ -1670,11 +1784,9 @@ void main() {
 
       // Restore signer info
       try {
-        await _ignoringDiscoveryErrors(
-          () => authService.signInForAccount(
-            pubkeyHex,
-            AuthenticationSource.divineOAuth,
-          ),
+        await authService.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.divineOAuth,
         );
       } catch (_) {
         // Expected: signInWithDivineOAuth needs oauthClient
@@ -1769,7 +1881,7 @@ void main() {
           () => mockKeyStorage.getKeyContainer(),
         ).thenAnswer((_) async => localKeyContainer);
 
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         // Session must NOT be cleared — it is the authoritative side.
         expect(
@@ -1852,7 +1964,7 @@ void main() {
         () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => localKeyContainer);
 
-      await _ignoringDiscoveryErrors(authService.initialize);
+      await authService.initialize();
 
       // Stale session must be cleared
       expect(
@@ -1917,7 +2029,7 @@ void main() {
         () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => localKeyContainer);
 
-      await _ignoringDiscoveryErrors(authService.initialize);
+      await authService.initialize();
 
       // Ambiguous → safe default: clear session
       expect(storage['keycast_session'], isNull);
@@ -1960,9 +2072,9 @@ void main() {
         () => mockKeyStorage.getIdentityKeyContainer(
           accountBContainer.npub,
         ),
-      ).thenAnswer((_) async => accountBContainer);
+      ).thenAnswer((_) => _identityReadback(mockKeyStorage, accountBContainer));
 
-      await _ignoringDiscoveryErrors(authService.initialize);
+      await authService.initialize();
 
       expect(authService.authState, equals(AuthState.authenticated));
       expect(
@@ -1992,7 +2104,7 @@ void main() {
           () => mockKeyStorage.getKeyContainer(),
         ).thenAnswer((_) async => accountBContainer);
 
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         expect(authService.authState, equals(AuthState.authenticated));
         expect(
@@ -2020,7 +2132,7 @@ void main() {
           () => mockKeyStorage.getKeyContainer(),
         ).thenAnswer((_) async => testKeyContainer);
 
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         expect(authService.authState, equals(AuthState.authenticated));
         expect(
@@ -2049,7 +2161,7 @@ void main() {
           () => mockKeyStorage.getKeyContainer(),
         ).thenAnswer((_) async => testKeyContainer);
 
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         expect(authService.authState, equals(AuthState.authenticated));
         expect(
@@ -2066,7 +2178,7 @@ void main() {
         kKnownAccountsKey: '[]',
       });
 
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
       await authService.signOut(deleteKeys: true);
 
       final prefs = await SharedPreferences.getInstance();
@@ -2082,7 +2194,7 @@ void main() {
           kKnownAccountsKey: '[]',
         });
 
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         await authService.signOut(deleteKeys: true);
 
         final prefs = await SharedPreferences.getInstance();
@@ -2094,7 +2206,7 @@ void main() {
     );
 
     test(
-      'remove keys completes sign-out when cleanup fails after key deletion',
+      'remove keys retires authentication but reports failed local cleanup',
       () async {
         SharedPreferences.setMockInitialValues({
           'authentication_source': 'automatic',
@@ -2102,7 +2214,7 @@ void main() {
           kKnownAccountsKey: '[]',
         });
 
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         final expectedNpub = testKeyContainer.npub;
         when(
           () => mockCleanupService.clearUserSpecificData(
@@ -2113,9 +2225,20 @@ void main() {
           ),
         ).thenThrow(StateError('cleanup failed'));
 
-        await authService.signOut(
-          deleteKeys: true,
-          abortOnKeyDeletionFailure: true,
+        await expectLater(
+          authService.signOut(
+            deleteKeys: true,
+            abortOnKeyDeletionFailure: true,
+          ),
+          throwsA(
+            isA<UserDataCleanupException>()
+                .having(
+                  (error) => error.message,
+                  'message',
+                  'Signed out but local user data cleanup failed',
+                )
+                .having((error) => error.cause, 'cause', isA<StateError>()),
+          ),
         );
 
         final prefs = await SharedPreferences.getInstance();
@@ -2123,6 +2246,12 @@ void main() {
         expect(prefs.getString('last_used_npub'), isNull);
         expect(await authService.getKnownAccounts(), isEmpty);
         expect(authService.authState, equals(AuthState.unauthenticated));
+        expect(authService.committedAccountActivationReceipt, isNull);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isTrue,
+        );
         verify(
           () => mockKeyStorage.deleteIdentityKeyContainer(
             expectedNpub,
@@ -2141,7 +2270,7 @@ void main() {
           kKnownAccountsKey: '[]',
         });
 
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
 
         final deletedKeys = <String>[];
         when(() => mockSecureStorage.delete(key: any(named: 'key'))).thenAnswer(
@@ -2181,7 +2310,7 @@ void main() {
           kKnownAccountsKey: '[]',
         });
 
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
 
         final deletedKeys = <String>[];
         when(() => mockSecureStorage.delete(key: any(named: 'key'))).thenAnswer(
@@ -2217,6 +2346,8 @@ void main() {
       () async {
         await authService.dispose();
         authService = AuthService(
+          relayDiscoveryService: _networkFreeDiscovery(),
+          profileCheckIndexerUrl: 'unsupported://profile.invalid',
           backgroundActivityManager: BackgroundActivityManager(),
           userDataCleanupService: mockCleanupService,
           keyStorage: mockKeyStorage,
@@ -2229,7 +2360,7 @@ void main() {
           kKnownAccountsKey: '[]',
         });
 
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
 
         final deletedKeys = <String>[];
         when(() => mockSecureStorage.delete(key: any(named: 'key'))).thenAnswer(
@@ -2259,7 +2390,7 @@ void main() {
         kKnownAccountsKey: '[]',
       });
 
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
       await authService.signOut();
 
       final prefs = await SharedPreferences.getInstance();
@@ -2274,7 +2405,7 @@ void main() {
           kKnownAccountsKey: '[]',
         });
 
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         // Capture the pubkey hex before signOut disposes the container.
         final expectedPubkey = testKeyContainer.publicKeyHex;
         await authService.signOut(deleteKeys: true);
@@ -2299,7 +2430,7 @@ void main() {
         kKnownAccountsKey: '[]',
       });
 
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
       // Capture the pubkey hex before signOut disposes the container.
       final expectedPubkey = testKeyContainer.publicKeyHex;
       await authService.signOut();
@@ -2316,7 +2447,7 @@ void main() {
     });
 
     test('_setupUserSession persists last_used_npub', () async {
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('last_used_npub'), equals(testKeyContainer.npub));
@@ -2347,6 +2478,8 @@ void main() {
           'account', () async {
         var prefetchCalls = 0;
         authService = AuthService(
+          relayDiscoveryService: _networkFreeDiscovery(),
+          profileCheckIndexerUrl: 'unsupported://profile.invalid',
           backgroundActivityManager: BackgroundActivityManager(),
           userDataCleanupService: mockCleanupService,
           keyStorage: mockKeyStorage,
@@ -2367,7 +2500,7 @@ void main() {
           () => mockKeyStorage.getKeyContainer(),
         ).thenAnswer((_) async => testKeyContainer);
 
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         expect(authService.authState, equals(AuthState.authenticated));
         expect(prefetchCalls, 0);
@@ -2388,6 +2521,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       var prefetchCalls = 0;
       authService = AuthService(
+        relayDiscoveryService: _networkFreeDiscovery(),
+        profileCheckIndexerUrl: 'unsupported://profile.invalid',
         backgroundActivityManager: BackgroundActivityManager(),
         userDataCleanupService: UserDataCleanupService(prefs),
         keyStorage: mockKeyStorage,
@@ -2402,7 +2537,7 @@ void main() {
         () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => testKeyContainer);
 
-      await _ignoringDiscoveryErrors(authService.initialize);
+      await authService.initialize();
 
       expect(authService.authState, AuthState.authenticated);
       expect(prefetchCalls, 0);
@@ -2415,6 +2550,8 @@ void main() {
       final prefetchStarted = Completer<void>();
       final prefetchFinished = Completer<void>();
       authService = AuthService(
+        relayDiscoveryService: _networkFreeDiscovery(),
+        profileCheckIndexerUrl: 'unsupported://profile.invalid',
         backgroundActivityManager: BackgroundActivityManager(),
         userDataCleanupService: mockCleanupService,
         keyStorage: mockKeyStorage,
@@ -2437,7 +2574,7 @@ void main() {
         () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => testKeyContainer);
 
-      await _ignoringDiscoveryErrors(authService.initialize);
+      await authService.initialize();
 
       expect(authService.authState, equals(AuthState.authenticated));
       await prefetchStarted.future;
@@ -2478,10 +2615,10 @@ void main() {
           () => mockKeyStorage.getIdentityKeyContainer(
             accountA.npub,
           ),
-        ).thenAnswer((_) async => accountA);
+        ).thenAnswer((_) => _identityReadback(mockKeyStorage, accountA));
 
         // Sign in as B
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         expect(authService.isAuthenticated, isTrue);
         final removedNpub = testKeyContainer.npub;
 
@@ -2574,6 +2711,25 @@ void main() {
         authService.debugSetCurrentKeyContainer(testKeyContainer);
         final archiveKey =
             '${archiveKeyPrefix}_${testKeyContainer.publicKeyHex}';
+        final ownedRaw = switch (signer) {
+          'Amber' => testKeyContainer.publicKeyHex,
+          'Bunker' => Uri(
+            scheme: 'bunker',
+            host: 'b' * 64,
+            queryParameters: {
+              'relay': 'wss://relay.example.invalid',
+              'userPubkey': testKeyContainer.publicKeyHex,
+            },
+          ).toString(),
+          'OAuth' => jsonEncode({
+            'bunker_url': 'wss://keycast.example.invalid',
+            'access_token': 'fixture_account_token',
+            'scope': 'policy:full',
+            'user_pubkey': testKeyContainer.publicKeyHex,
+          }),
+          _ => throw StateError('Unknown fixture signer'),
+        };
+        mockSecureStorage.data[archiveKey] = ownedRaw;
         when(
           () => mockSecureStorage.delete(key: archiveKey),
         ).thenThrow(StateError('keychain unavailable'));
@@ -2584,7 +2740,9 @@ void main() {
         );
 
         verify(() => mockSecureStorage.delete(key: archiveKey)).called(1);
+        expect(mockSecureStorage.data[archiveKey], ownedRaw);
         expect(authService.authState, AuthState.unauthenticated);
+        expect(authService.committedAccountActivationReceipt, isNull);
       });
     }
 
@@ -2615,7 +2773,7 @@ void main() {
       ).thenAnswer((_) async => remainingAccount);
       when(
         () => mockKeyStorage.getIdentityKeyContainer(remainingAccount.npub),
-      ).thenAnswer((_) async => remainingAccount);
+      ).thenAnswer((_) => _identityReadback(mockKeyStorage, remainingAccount));
       when(
         () => mockCleanupService.deleteAccountData(
           deletedAccount.publicKeyHex,
@@ -2647,7 +2805,16 @@ void main() {
     test('named local deletion preserves an active account session', () async {
       final deletedAccount = SecureKeyContainer.fromPublicKey('b' * 64);
       final activeAccount = SecureKeyContainer.fromNsec(_otherNsec);
-      authService.debugSetCurrentKeyContainer(activeAccount);
+      mockKeyStorage.identitySnapshots[activeAccount.npub] = activeAccount;
+      when(
+        () => mockKeyStorage.getIdentityKeyContainer(activeAccount.npub),
+      ).thenAnswer((_) => _identityReadback(mockKeyStorage, activeAccount));
+      await authService.signInForAccount(
+        activeAccount.publicKeyHex,
+        AuthenticationSource.automatic,
+      );
+      final activeReceipt = authService.committedAccountActivationReceipt!;
+      expect(activeReceipt.isCurrent, isTrue);
       when(
         () => mockKeyStorage.getKeyContainer(),
       ).thenAnswer((_) async => activeAccount);
@@ -2670,6 +2837,11 @@ void main() {
       ).called(1);
       verifyNever(() => mockKeyStorage.deleteKeys());
       expect(authService.currentPublicKeyHex, activeAccount.publicKeyHex);
+      expect(
+        authService.committedAccountActivationReceipt,
+        same(activeReceipt),
+      );
+      expect(activeReceipt.isCurrent, isTrue);
     });
 
     test('named local deletion removes login material when signer cleanup '
@@ -2682,6 +2854,8 @@ void main() {
           preserveActiveSession: false,
         ),
       ).thenAnswer((_) async => 0);
+      mockSecureStorage.data['amber_pubkey_${deletedAccount.publicKeyHex}'] =
+          deletedAccount.publicKeyHex;
       when(
         () => mockSecureStorage.delete(key: any(named: 'key')),
       ).thenThrow(StateError('signer cleanup failed'));
@@ -2769,7 +2943,7 @@ void main() {
         kKnownAccountsKey: knownAccounts,
       });
 
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       // No remaining account has actual restorable key material.
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
@@ -2808,7 +2982,7 @@ void main() {
           'authentication_source': 'automatic',
           kKnownAccountsKey: '[]',
         });
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+        await authService.createNewIdentity();
         expect(authService.isAuthenticated, isTrue);
         final expectedNpub = testKeyContainer.npub;
 
@@ -2834,7 +3008,7 @@ void main() {
         'authentication_source': 'automatic',
         kKnownAccountsKey: '[]',
       });
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       await authService.signOut(deleteKeys: true);
 
@@ -2859,7 +3033,7 @@ void main() {
       });
 
       // Act: sign in — _setupUserSession should clear the anchor.
-      await _ignoringDiscoveryErrors(authService.createNewIdentity);
+      await authService.createNewIdentity();
 
       // Assert: anchor is gone.
       final prefs = await SharedPreferences.getInstance();
@@ -3059,7 +3233,7 @@ void main() {
           kKnownAccountsKey: '[]',
         });
 
-        await _ignoringDiscoveryErrors(authService.initialize);
+        await authService.initialize();
 
         // Normal same-account restore must complete as authenticated.
         expect(
@@ -3124,7 +3298,7 @@ void main() {
         kKnownAccountsKey: '[]',
       });
 
-      await _ignoringDiscoveryErrors(authService.initialize);
+      await authService.initialize();
 
       // Without an anchor the guard is inactive; normal restore completes.
       expect(
@@ -3219,6 +3393,8 @@ void main() {
         });
 
         final localAuthService = AuthService(
+          relayDiscoveryService: _networkFreeDiscovery(),
+          profileCheckIndexerUrl: 'unsupported://profile.invalid',
           backgroundActivityManager: BackgroundActivityManager(),
           userDataCleanupService: mockCleanupService,
           keyStorage: mockKeyStorage,
@@ -3307,6 +3483,8 @@ void main() {
         });
 
         final localAuthService = AuthService(
+          relayDiscoveryService: _networkFreeDiscovery(),
+          profileCheckIndexerUrl: 'unsupported://profile.invalid',
           backgroundActivityManager: BackgroundActivityManager(),
           userDataCleanupService: mockCleanupService,
           keyStorage: mockKeyStorage,

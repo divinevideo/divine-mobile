@@ -375,6 +375,17 @@ void main() {
             4,
             reason: 'the slot the stalled render held must be given back',
           );
+
+          // Settle the gated native work before leaving fake time.
+          for (final index in [0, 2, 3]) {
+            native
+                .allowRenderToFinishAt(index)
+                .completeError(
+                  const editor.RenderCanceledException(),
+                );
+          }
+          async.flushMicrotasks();
+          expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
         });
       });
 
@@ -401,6 +412,17 @@ void main() {
           expect(native.renderedTaskIds[1], startsWith('speed_'));
           expect(native.renderedTaskIds[1], isNot(native.renderedTaskIds[0]));
           expect(service.isRendering(stalled), isTrue);
+
+          // The original stalled task and its retry both belong to this test.
+          for (final index in [0, 1]) {
+            native
+                .allowRenderToFinishAt(index)
+                .completeError(
+                  const editor.RenderCanceledException(),
+                );
+          }
+          async.flushMicrotasks();
+          expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
         });
       });
     });

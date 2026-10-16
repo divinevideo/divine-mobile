@@ -44,7 +44,8 @@ class PersonalEventCacheService {
   /// Reset the active user session without deleting the stored rows.
   ///
   /// Signing out hides the cache rather than clearing it, so signing back in
-  /// restores it. Only [clearCache] and cache recovery delete anything.
+  /// restores it. [clearCache] and cache recovery delete cached events;
+  /// explicit outbound intents remain until destructive owner cleanup.
   void resetCurrentUser() {
     _initializationToken++;
     _isInitialized = false;
@@ -307,7 +308,7 @@ class PersonalEventCacheService {
       // Scoped to the owner: the table is shared across accounts on one
       // device, and the Hive implementation this replaced cleared every
       // account's rows here.
-      await _dao.deleteAllForOwner(currentUserPubkey);
+      await _dao.deleteCachedEvents(pubkey: currentUserPubkey);
 
       Log.info(
         '🧹 Cleared personal event cache for ${pubkeyForLogs(currentUserPubkey)}',
@@ -323,7 +324,7 @@ class PersonalEventCacheService {
     }
   }
 
-  /// Clears the live mirror and stored rows for every account on this device.
+  /// Clears cached events for every account, preserving outbound retry intents.
   ///
   /// Used only by whole-app cache recovery. The active owner stays initialized
   /// so events published after the recovery can still be cached normally.
@@ -332,7 +333,7 @@ class PersonalEventCacheService {
     _events.clear();
 
     try {
-      await _dao.deleteAll();
+      await _dao.deleteCachedEvents();
     } catch (e) {
       Log.error(
         'Failed to clear all personal event caches: $e',

@@ -63,6 +63,20 @@ abstract final class Nip51PeopleListCodec {
   /// every bell the user has set.
   static const Set<String> reservedDTags = {blockedDTag, notifyDTag};
 
+  /// Kind 30000 identifiers other clients use for machinery, not curation.
+  ///
+  /// Each is a set nobody would browse, so public discovery and search skip
+  /// them; the owner's own collection is untouched.
+  ///
+  /// * `mute`: per-client mute sets.
+  /// * `dm-contacts`: DM address books.
+  /// * `dm-archive`: archived DM threads.
+  static const Set<String> machineryDTags = {
+    'mute',
+    'dm-contacts',
+    'dm-archive',
+  };
+
   /// Encodes [list] into a [PeopleListEventPayload].
   ///
   /// When [sourceTags] is supplied, the payload is a membership edit over the
@@ -115,6 +129,70 @@ abstract final class Nip51PeopleListCodec {
     }
 
     return PeopleListEventPayload(kind: kind, tags: tags);
+  }
+
+  /// Encodes a change to [list]'s name and description over the complete
+  /// source event.
+  ///
+  /// The `title` tag is rewritten to [UserList.name] in place, or added after
+  /// the `d` tag when the source has none. The `description` tag is rewritten
+  /// to [UserList.description] in place, added after the title when the
+  /// source has none, or dropped when the description is empty. Any further
+  /// `title` or `description` tag is dropped, since each names one value.
+  /// Every other source tag is kept verbatim in its position and
+  /// [sourceContent] passes through without interpretation, so members, the
+  /// image and private items written by another client survive the edit.
+  ///
+  /// Throws [ArgumentError] when [sourceTags] does not carry the `d` tag of
+  /// [list].
+  static PeopleListEventPayload encodeInfoEdit(
+    UserList list, {
+    required List<List<String>> sourceTags,
+    required String sourceContent,
+  }) {
+    if (_firstTagValue(sourceTags, 'd') != list.id) {
+      throw ArgumentError.value(
+        sourceTags,
+        'sourceTags',
+        'must contain the d tag represented by the list',
+      );
+    }
+    final description = list.description?.trim() ?? '';
+    final descriptionTag = description.isEmpty
+        ? null
+        : ['description', description];
+    var titleWritten = false;
+    var descriptionWritten = descriptionTag == null;
+    final tags = <List<String>>[];
+
+    for (final tag in sourceTags) {
+      switch (tag.firstOrNull) {
+        case 'title':
+          if (!titleWritten) {
+            tags.add(['title', list.name]);
+            titleWritten = true;
+          }
+        case 'description':
+          if (!descriptionWritten) {
+            tags.add(descriptionTag!);
+            descriptionWritten = true;
+          }
+        default:
+          tags.add(List<String>.of(tag));
+      }
+    }
+
+    if (!titleWritten) {
+      tags.insert(_afterTag(tags, 'd'), ['title', list.name]);
+    }
+    if (!descriptionWritten) {
+      tags.insert(_afterTag(tags, 'title'), descriptionTag!);
+    }
+    return PeopleListEventPayload(
+      kind: kind,
+      tags: tags,
+      content: sourceContent,
+    );
   }
 
   /// Encodes an app-managed reserved list into a [PeopleListEventPayload].
@@ -265,6 +343,12 @@ abstract final class Nip51PeopleListCodec {
       tags: tags,
       content: sourceContent,
     );
+  }
+
+  /// Index just past the first tag named [name], or the end when absent.
+  static int _afterTag(List<List<String>> tags, String name) {
+    final index = tags.indexWhere((tag) => tag.firstOrNull == name);
+    return index == -1 ? tags.length : index + 1;
   }
 
   static String? _firstTagValue(List<List<String>> tags, String name) {

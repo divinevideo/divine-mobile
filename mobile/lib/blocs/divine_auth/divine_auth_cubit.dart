@@ -7,6 +7,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -367,6 +368,17 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       // above flips AuthService to `authenticated` before returning, which
       // can reroute off the auth screen and close this cubit.
       emitIfOpen(const DivineAuthSuccess());
+    } on UserDataCleanupException catch (error, stackTrace) {
+      addError(error, stackTrace);
+      final current = state;
+      if (current is DivineAuthFormState) {
+        emitIfOpen(
+          current.copyWith(
+            isSubmitting: false,
+            signInFailureReason: SignInFailureReason.accountCleanupFailed,
+          ),
+        );
+      }
     } on OAuthException catch (e, stackTrace) {
       Log.error(
         'OAuth exchange failed: ${e.message}',
@@ -445,7 +457,13 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     if (current is! DivineAuthFormState) return;
     if (current.isSubmitting || current.isSkipping) return;
 
-    emit(current.copyWith(isSkipping: true, clearGeneralError: true));
+    emit(
+      current.copyWith(
+        isSkipping: true,
+        clearGeneralError: true,
+        clearSignInFailureReason: true,
+      ),
+    );
 
     try {
       await _authService.createAnonymousAccount();
@@ -461,6 +479,17 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       // this cubit. Nothing is lost: the redirect runs off auth state, and
       // no listener acts on DivineAuthSuccess here.
       emitIfOpen(const DivineAuthSuccess());
+    } on UserDataCleanupException catch (error, stackTrace) {
+      addError(error, stackTrace);
+      final currentState = state;
+      if (currentState is DivineAuthFormState) {
+        emitIfOpen(
+          currentState.copyWith(
+            isSkipping: false,
+            signInFailureReason: SignInFailureReason.accountCleanupFailed,
+          ),
+        );
+      }
     } catch (e, stackTrace) {
       Log.error(
         'Anonymous account creation failed: $e',

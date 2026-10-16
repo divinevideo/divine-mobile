@@ -8,6 +8,8 @@ import 'dart:async';
 
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/auth_result.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -65,6 +67,7 @@ class NostrConnectCoordinator {
   final NostrConnectSessionFactory _sessionFactory;
 
   NostrConnectSession? _session;
+  int _sessionGeneration = 0;
   Future<AuthResult>? _waitFuture;
   Timer? _callbackHandoffTimer;
   Timer? _callbackHandoffCancelTimer;
@@ -119,18 +122,23 @@ class NostrConnectCoordinator {
         ];
 
     // Create the session
-    _session = _sessionFactory(relays);
+    final session = _sessionFactory(relays);
+    _sessionGeneration += 1;
+    _session = session;
 
     // Start the session (generates keypair and URL, connects to relays)
-    await _session!.start();
+    await session.start();
+    if (!identical(_session, session)) {
+      throw const AccountActivationRetiredException();
+    }
 
     Log.info(
-      'NostrConnect session started, URL: ${_session!.connectUrl}',
+      'NostrConnect session started, URL: ${session.connectUrl}',
       name: 'NostrConnectCoordinator',
       category: LogCategory.auth,
     );
 
-    return _session!;
+    return session;
   }
 
   /// Wait for the bunker to respond to a nostrconnect:// URL.
@@ -180,18 +188,21 @@ class NostrConnectCoordinator {
       category: LogCategory.auth,
     );
 
+    final session = _session!;
+    final generation = _sessionGeneration;
     _onWaitStarted();
 
     try {
       // Keep a local reference in case session is cancelled during await
-      final session = _session!;
 
       // Wait for the bunker to connect
       final result = await session.waitForConnection(timeout: timeout);
 
       // Check if session was cancelled while we were waiting
-      if (_session == null) {
-        _onWaitFailed();
+      if (!identical(_session, session)) {
+        if (_session == null && _sessionGeneration == generation + 1) {
+          _onWaitFailed();
+        }
         return AuthResult.nostrConnectFailure(
           NostrConnectFailureReason.cancelled,
         );
@@ -234,13 +245,38 @@ class NostrConnectCoordinator {
       );
 
       final authResult = await _onConnected(result);
+      if (!identical(_session, session)) {
+        return AuthResult.nostrConnectFailure(
+          NostrConnectFailureReason.cancelled,
+        );
+      }
 
       // Clean up session (signer is now managing connections)
-      _session?.dispose();
+      session.dispose();
       _session = null;
 
       return authResult;
+    } on AccountActivationRetiredException {
+      return AuthResult.nostrConnectFailure(
+        NostrConnectFailureReason.cancelled,
+      );
+    } on UserDataCleanupException catch (e) {
+      if (!identical(_session, session)) {
+        return AuthResult.nostrConnectFailure(
+          NostrConnectFailureReason.cancelled,
+        );
+      }
+      _onConnectFailed(e);
+      return const AuthResult(
+        success: false,
+        failureReason: AuthFailureReason.accountCleanupFailed,
+      );
     } catch (e) {
+      if (!identical(_session, session)) {
+        return AuthResult.nostrConnectFailure(
+          NostrConnectFailureReason.cancelled,
+        );
+      }
       Log.error(
         'NostrConnect failed: $e',
         name: 'NostrConnectCoordinator',
@@ -258,6 +294,7 @@ class NostrConnectCoordinator {
   ///
   /// Safe to call even if no session is active.
   void cancel() {
+    _sessionGeneration += 1;
     _waitFuture = null;
     _isCallbackHandoffActive = false;
     _callbackHandoffTimer?.cancel();
