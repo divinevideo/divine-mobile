@@ -61,6 +61,7 @@ import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/stop_motion_playback_clock.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_cut_area_overlay.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_feed_preview_overlay.dart';
@@ -125,9 +126,12 @@ class VideoEditorCanvas extends StatelessWidget {
     if (previous.isSplitting && !current.isSplitting) return true;
 
     // A background thumbnail refresh (e.g. after a split) changes only the
-    // clip's poster path, which the player composition doesn't use — skip the
+    // clip's poster path, and a shape mask is drawn over the frame rather
+    // than played — the player composition uses neither, so skip the
     // redundant reload.
-    if (_onlyThumbnailPathsChanged(previous.clips, current.clips)) return false;
+    if (_onlyNonPlaybackFieldsChanged(previous.clips, current.clips)) {
+      return false;
+    }
 
     return !current.isTrimDragging &&
         !previous.isTrimDragging &&
@@ -205,19 +209,20 @@ class VideoEditorCanvas extends StatelessWidget {
       detachResult is ClipDetachSuccess ||
       DetachedClipLayerData.historyContainsDetachedClip(editorStateHistory);
 
-  /// Whether [current] differs from [previous] *only* in clip thumbnail paths.
+  /// Whether [current] differs from [previous] *only* in clip thumbnail paths
+  /// and shape masks, neither of which the player plays.
   ///
   /// Conservative: any difference in a composition-relevant field (video,
   /// trims, duration, volume, speed, transition, …) returns `false`, so the
   /// player still reloads for real edits.
-  static bool _onlyThumbnailPathsChanged(
+  static bool _onlyNonPlaybackFieldsChanged(
     List<DivineVideoClip> previous,
     List<DivineVideoClip> current,
   ) {
     if (identical(previous, current) || previous.length != current.length) {
       return false;
     }
-    var anyThumbnailDiff = false;
+    var anyDiff = false;
     for (var i = 0; i < previous.length; i++) {
       final a = previous[i];
       final b = current[i];
@@ -235,9 +240,11 @@ class VideoEditorCanvas extends StatelessWidget {
           a.transition != b.transition) {
         return false;
       }
-      if (a.thumbnailPath != b.thumbnailPath) anyThumbnailDiff = true;
+      if (a.thumbnailPath != b.thumbnailPath || a.mask != b.mask) {
+        anyDiff = true;
+      }
     }
-    return anyThumbnailDiff;
+    return anyDiff;
   }
 
   /// The timeline position that keeps the playhead on the same source frame
@@ -468,6 +475,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
           a.transition != b.transition ||
+          a.mask != b.mask ||
           // Frame edits (hold changes, delete, reorder) are the whole edit
           // surface of a stop-motion clip — without this the clip manager
           // (publish render, autosave, metadata preview) and undo/redo never
@@ -1588,8 +1596,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                         bodySize: widget.bodySize,
                         renderSize: widget.renderSize,
                         playTime: VideoEditorScope.of(context).playTimeNotifier,
-                        frameBuilder: (frame) =>
-                            VideoEditorEffectsPreview(child: frame),
+                        // The mask cover goes over the effects, as the
+                        // export draws it over the effected track.
+                        frameBuilder: (frame) => VideoEditorClipMaskPreview(
+                          child: VideoEditorEffectsPreview(child: frame),
+                        ),
                       ),
                       Positioned.fill(
                         child: ValueListenableBuilder<int>(

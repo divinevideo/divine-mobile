@@ -9129,6 +9129,52 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '선택한 레이어가 비쳐 보이는 정도 설정';
 
   @override
+  String get videoEditorShapeMaskLabel => '모양 마스크';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => '선택한 항목을 모양 안에 표시';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      '드래그해서 모양을 옮기세요. 핀치하면 크기를 바꾸거나 돌릴 수 있고, 핸들을 드래그하면 늘릴 수 있어요.';
+
+  @override
+  String get videoEditorShapeMaskNone => '없음';
+
+  @override
+  String get videoEditorShapeMaskCircle => '원';
+
+  @override
+  String get videoEditorShapeMaskRectangle => '직사각형';
+
+  @override
+  String get videoEditorShapeMaskHeart => '하트';
+
+  @override
+  String get videoEditorShapeMaskLinear => '선형';
+
+  @override
+  String get videoEditorShapeMaskInvert => '반전';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => '부드러움';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => '선명하게';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => '부드럽게';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => '모서리';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => '각지게';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => '둥글게';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';
 
   @override
@@ -12011,6 +12057,17 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => '또는 증명을 게시';
 
   @override
@@ -12071,6 +12128,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => '잘 안 됐어. 한 번 더 해봐.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => '핸들부터 입력해.';
@@ -12940,4 +13005,29 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
+
+  @override
+  String get messagesDirect => '다이렉트';
+
+  @override
+  String get messagesRooms => '채팅방';
+
+  @override
+  String get messagesPublicTestRooms => '공개 테스트 채팅방';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      '이 테스트 채팅방은 공개되어 있어요. 접근할 수 있는 사람은 누구나 메시지를 읽을 수 있어요.';
+
+  @override
+  String get messagesNoRooms => '아직 채팅방이 없어요';
+
+  @override
+  String get followedHashtagsTitle => '팔로우 중인 해시태그';
+
+  @override
+  String get manageHashtags => '해시태그 관리';
+
+  @override
+  String get followedHashtagsEmpty => '해시태그 페이지에서 팔로우하면 여기에 표시됩니다.';
 }

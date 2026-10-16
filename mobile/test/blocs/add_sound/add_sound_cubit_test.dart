@@ -191,6 +191,33 @@ void main() {
         expect(reclaimed, isEmpty);
       });
 
+      test(
+        'a cancelled re-pick under another account does not adopt the copy',
+        () async {
+          AudioImportPickedFile? nextPick = AudioImportPickedFile(
+            path: source.path,
+            name: 'pick.mp3',
+          );
+          final cubit = build(pickFile: () async => nextPick);
+          addTearDown(cubit.close);
+          await cubit.pickFileAndImport();
+          final copiedPath = cubit.state.audio!.localFilePath;
+
+          accountId = 'account-b';
+          nextPick = null;
+          await cubit.pickFileAndImport();
+          expect(cubit.state.audio?.localFilePath, copiedPath);
+
+          await cubit.save();
+
+          // The copy was imported under account-a: it must not be written
+          // into account-b's library just because b opened the picker.
+          expect(cubit.state.failure, AddSoundFailure.accountChanged);
+          expect(savedSounds, isEmpty);
+          expect(reclaimed, equals([copiedPath]));
+        },
+      );
+
       test('an unsupported extension reports an unsupported format', () async {
         final cubit = build(
           pickFile: () async =>
@@ -448,6 +475,26 @@ void main() {
         expect(cubit.state.failure, AddSoundFailure.accountRestricted);
       });
 
+      test(
+        'an account change during the share skips the library write',
+        () async {
+          stubPublish(() async {
+            accountId = 'account-b';
+            return LocalAudioPublished(_publishedEvent());
+          });
+          final cubit = await sharingCubit();
+          addTearDown(cubit.close);
+          final copiedPath = cubit.state.audio!.localFilePath;
+
+          await cubit.save();
+
+          expect(cubit.state.failure, AddSoundFailure.accountChanged);
+          expect(cubit.state.audio, isNull);
+          expect(savedSounds, isEmpty);
+          expect(reclaimed, equals([copiedPath]));
+        },
+      );
+
       test('retries a failed library write without publishing again', () async {
         stubPublish(() async => LocalAudioPublished(_publishedEvent()));
         var attempts = 0;
@@ -535,6 +582,48 @@ void main() {
 
         // The save never took ownership, so nothing else will ever reclaim it.
         expect(reclaimed, equals([copiedPath]));
+      });
+
+      test('reclaims the copy when a share in flight then fails', () async {
+        final gate = Completer<LocalAudioPublishResult>();
+        stubPublish(() => gate.future);
+        final cubit = await sharingCubit();
+        final copiedPath = cubit.state.audio!.localFilePath;
+        final save = cubit.save();
+        await cubit.close();
+        expect(reclaimed, isEmpty);
+
+        gate.complete(
+          const LocalAudioPublishFailed(LocalAudioPublishFailure.uploadFailed),
+        );
+        await save;
+
+        expect(reclaimed, equals([copiedPath]));
+      });
+
+      test('reclaims both copies when a re-pick is in flight', () async {
+        Completer<AudioImportPickedFile?>? pickGate;
+        final cubit = build(
+          pickFile: () =>
+              pickGate?.future ??
+              Future.value(
+                AudioImportPickedFile(path: source.path, name: 'pick.mp3'),
+              ),
+        );
+        await cubit.pickFileAndImport();
+        final firstPath = cubit.state.audio!.localFilePath;
+
+        pickGate = Completer<AudioImportPickedFile?>();
+        final repick = cubit.pickFileAndImport();
+        await cubit.close();
+        pickGate.complete(
+          AudioImportPickedFile(path: source.path, name: 'pick.mp3'),
+        );
+        await repick;
+
+        expect(reclaimed, hasLength(2));
+        expect(reclaimed.first, firstPath);
+        expect(reclaimed.last, isNot(firstPath));
       });
 
       test('does not reclaim a copy whose save then succeeds', () async {

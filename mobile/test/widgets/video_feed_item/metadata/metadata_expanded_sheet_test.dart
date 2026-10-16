@@ -529,6 +529,25 @@ void main() {
       },
     );
 
+    testWidgetsWithSurfaceSize(
+      'keeps a hashtag too long to be a chip in the description',
+      (tester) async {
+        final pastedList = 'VineHashtagsMasterList' * 10;
+        final video = _makeVideo(
+          title: 'Vine video',
+          content: 'Caption\n#$pastedList',
+          hashtags: [pastedList],
+        );
+
+        await tester.pumpWidget(
+          buildSubject(child: MetadataExpandedSheet(video: video)),
+        );
+
+        expect(find.text('Caption\n#$pastedList'), findsOneWidget);
+        expect(find.text(pastedList), findsNothing);
+      },
+    );
+
     testWidgetsWithSurfaceSize('trims blank lines around the description', (
       tester,
     ) async {

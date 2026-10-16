@@ -9497,6 +9497,53 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili katmanın ne kadar saydam olacağını ayarla';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Şekil maskesi';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Seçili öğeyi bir şeklin içinde göster';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Şekli taşımak için sürükle. Boyutunu değiştirmek ya da döndürmek için iki parmağınla sıkıştır, uzatmak için bir tutamacı sürükle.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Yok';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Daire';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Dikdörtgen';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Kalp';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Doğrusal';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Tersine çevir';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Yumuşaklık';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Keskin';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Yumuşak';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Köşeler';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Köşeli';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Yuvarlak';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
 
   @override
@@ -12550,6 +12597,17 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Ya da bir kanıt paylaş';
 
   @override
@@ -12612,6 +12670,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'Olmadı. Bir daha dene.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Önce kullanıcı adını gir.';
@@ -13518,4 +13584,30 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
+
+  @override
+  String get messagesDirect => 'Doğrudan';
+
+  @override
+  String get messagesRooms => 'Odalar';
+
+  @override
+  String get messagesPublicTestRooms => 'Herkese açık test odaları';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.';
+
+  @override
+  String get messagesNoRooms => 'Henüz oda yok';
+
+  @override
+  String get followedHashtagsTitle => 'Takip edilen etiketler';
+
+  @override
+  String get manageHashtags => 'Etiketleri yönet';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Bir etiketi burada bulmak için kendi sayfasından takip et.';
 }

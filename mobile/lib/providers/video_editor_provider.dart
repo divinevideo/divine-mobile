@@ -204,6 +204,19 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   int _renderGeneration = 0;
   Future<void>? _activeRenderFuture;
 
+  /// Whether Post details is waiting on the final render: set when a render
+  /// is started for it, cleared when the user leaves it ([cancelRenderVideo])
+  /// or a new editor session starts ([initialize], [reset]).
+  ///
+  /// Lets [invalidateFinalRenderedClip] render again when background work,
+  /// such as a take's provenance signing, lands after the export finished.
+  bool _finalRenderAwaited = false;
+
+  /// Bumped by every [invalidateFinalRenderedClip], also while no finished
+  /// render exists, so a running render can tell that the edit changed under
+  /// it.
+  int _editRevision = 0;
+
   /// When true, [triggerAutosave] is a no-op.
   ///
   /// Set to `true` by [initFromPublishedVideo] and intentionally never reset.
@@ -244,6 +257,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// change, to ensure a re-render is required before publishing.
   /// Also deletes the rendered file from disk since it's stored in Documents.
   void invalidateFinalRenderedClip() {
+    _editRevision++;
     final clip = state.finalRenderedClip;
     if (clip == null) return;
 
@@ -254,15 +268,20 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
     if (state.isProcessing) {
       runProviderDetached(
-        cancelRenderVideo(),
+        _cancelActiveRender(),
         'cancel the invalidated video render',
         logName: 'VideoEditorNotifier',
       );
     }
 
     state = state.copyWith(clearFinalRenderedClip: true);
+    _renderAgainIfAwaited();
+    _deleteRenderedClipFiles(clip);
+  }
 
-    // Delete the old rendered file from disk to free up space
+  /// Deletes a rendered video the edit no longer uses. Renders are stored in
+  /// Documents, so nothing else frees the space.
+  void _deleteRenderedClipFiles(DivineVideoClip clip) {
     final db = ref.read(databaseProvider);
     _editorBackgroundWork.track(
       FileCleanupService.deleteRecordingClipFiles(
@@ -271,6 +290,31 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         clipsDao: db.clipsDao,
       ),
     );
+  }
+
+  /// Renders again when Post details waits on a render it no longer has:
+  /// [invalidateFinalRenderedClip] discarded it, or a post lost it
+  /// ([setPosting]).
+  ///
+  /// The user cannot edit from Post details, so this is background work that
+  /// finished after the export, most often the take's provenance signing.
+  /// Without a new render the preview spins and Post stays disabled until the
+  /// app is restarted.
+  void _renderAgainIfAwaited() {
+    if (!_finalRenderAwaited) return;
+    final generation = _renderGeneration;
+    // Deferred past the caller: an invalidation is issued before the change
+    // it reports is written to the state the render reads.
+    scheduleMicrotask(() {
+      if (!ref.mounted || !_finalRenderAwaited) return;
+      if (generation != _renderGeneration) return;
+      if (state.finalRenderedClip != null || state.isPosting) return;
+      runProviderDetached(
+        startRenderVideo(),
+        'render the discarded final video again',
+        logName: 'VideoEditorNotifier',
+      );
+    });
   }
 
   /// Initialize the video editor with an optional draft.
@@ -289,6 +333,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       isSavingDraft: false,
       allowAudioReuse: audioSharingEnabled,
     );
+    _finalRenderAwaited = false;
 
     // If the editor screen is opened from a draft, we initialize it here.
     if (draftId != null && draftId.isNotEmpty) {
@@ -339,6 +384,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .read(audioSharingPreferenceServiceProvider)
         .isAudioSharingEnabled;
     state = VideoEditorProviderState(allowAudioReuse: audioSharingEnabled);
+    _finalRenderAwaited = false;
+    // A render still running belongs to the session this ends; its result
+    // must not land in the next one.
+    _renderGeneration++;
     _autosaveTimer?.cancel();
     _autosaveSession++;
     // New-session requests must not reuse the cancelled session's follow-up.
@@ -1460,6 +1509,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Combines all clips, applies audio settings, and creates the final
   /// rendered clip for publishing.
   Future<void> startRenderVideo() {
+    _finalRenderAwaited = true;
     if (state.finalRenderedClip != null) {
       setProcessing(false);
       return Future<void>.value();
@@ -1506,6 +1556,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         ? null
         : _clips.first.targetAspectRatio.name;
     void tagOutcome(String outcome) => trace.putAttribute('outcome', outcome);
+    final editRevision = _editRevision;
 
     try {
       final renderParameters = _buildRenderParameters();
@@ -1537,6 +1588,29 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       tagOutcome('success');
 
       final (finalRenderedClip, proofManifestJson) = result;
+
+      // The edit changed while this render ran, for example a take's proof
+      // landed, so its video is out of date. It is left to finish rather than
+      // cancelled because cancelling does not stop its signing step, and two
+      // renders would then sign the same recordings at once.
+      if (editRevision != _editRevision) {
+        Log.info(
+          '🔄 Edit changed during the render, rendering again',
+          name: 'VideoEditorNotifier',
+          category: .video,
+        );
+        _deleteRenderedClipFiles(finalRenderedClip);
+        if (_finalRenderAwaited) {
+          runProviderDetached(
+            startRenderVideo(),
+            'render the edit that changed during the render',
+            logName: 'VideoEditorNotifier',
+          );
+        } else {
+          state = state.copyWith(isProcessing: false);
+        }
+        return;
+      }
 
       Log.info(
         '✅ Video rendered successfully - duration: '
@@ -1729,7 +1803,15 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   }
 
   /// Cancel an ongoing video render operation.
-  Future<void> cancelRenderVideo() async {
+  ///
+  /// Called when the user leaves Post details, so a later change no longer
+  /// renders again on its own.
+  Future<void> cancelRenderVideo() {
+    _finalRenderAwaited = false;
+    return _cancelActiveRender();
+  }
+
+  Future<void> _cancelActiveRender() async {
     final generation = ++_renderGeneration;
     final activeRender = _activeRenderFuture;
     await VideoEditorRenderService.cancelTask(draftId);
@@ -1779,6 +1861,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   void setPosting({required bool value}) {
     if (!ref.mounted) return;
     state = state.copyWith(isPosting: value);
+    // A take update during the handoff threw the render away and failed the
+    // post; render again so the user can post once it is done.
+    if (!value && state.finalRenderedClip == null && !state.isProcessing) {
+      _renderAgainIfAwaited();
+    }
   }
 
   /// Publish the video to the Nostr network.

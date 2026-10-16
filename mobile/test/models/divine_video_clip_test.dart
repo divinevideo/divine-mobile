@@ -10,6 +10,8 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerMask, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 void main() {
@@ -237,6 +239,30 @@ void main() {
         equalized.copyWith(trimStart: const Duration(seconds: 1)).equalizer,
         const model.EqualizerSettings([0, 0, 0, 2, 0, 0, 0, 0, 0, 0]),
       );
+    });
+  });
+
+  group('DivineVideoClip.mask', () {
+    const mask = LayerMask(
+      shape: LayerMaskShape.heart,
+      center: Offset(0.4, 0.6),
+      feather: 0.1,
+    );
+
+    test('round-trips through JSON and is absent without one', () {
+      final plain = clip('/videos/clip.mp4');
+      final masked = plain.copyWith(mask: mask);
+
+      expect(plain.toJson(), isNot(contains('mask')));
+      expect(DivineVideoClip.fromJson(masked.toJson(), '/videos').mask, mask);
+      expect(DivineVideoClip.fromJson(plain.toJson(), '/videos').mask, isNull);
+    });
+
+    test('survives a split or duplicate, and clearMask removes it', () {
+      final masked = clip('/videos/clip.mp4').copyWith(mask: mask);
+
+      expect(masked.copyWith(id: 'c2').mask, mask);
+      expect(masked.copyWith(clearMask: true).mask, isNull);
     });
   });
 

@@ -6,6 +6,7 @@ import 'package:creator_sync/creator_sync.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
+import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
@@ -237,6 +239,9 @@ class UserDataCleanupService {
     }
 
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
+    await remove(
+      SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
+    );
     for (final kind in SyncItemKind.values) {
       await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
     }
@@ -246,6 +251,7 @@ class UserDataCleanupService {
     await remove(FollowingCacheRecord.storageKey(userPubkey));
     await remove(followingPrefetchMarkerKey(userPubkey));
     await remove(MinorAccountReviewStatusStore.storageKey(userPubkey));
+    await remove(MessagesPreferenceService.storageKey(userPubkey));
     await remove(RelayDiscoveryService.cacheStorageKey(userNpub));
 
     await onDatabaseCleanup?.call(
@@ -351,6 +357,7 @@ class UserDataCleanupService {
       }
 
       for (final key in [
+        SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
         FollowingCacheRecord.storageKey(userPubkey),
         followingPrefetchMarkerKey(userPubkey),
         MinorAccountReviewStatusStore.storageKey(userPubkey),

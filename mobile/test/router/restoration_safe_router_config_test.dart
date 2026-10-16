@@ -87,7 +87,9 @@ Future<RouteInformation> _savedStateFromRetiredLocation(
   );
   expect(saved, isNotNull, reason: 'go_router must encode a state to restore');
   expect(saved!.state, isNot(isA<RouteInformationState<Object?>>()));
-  return saved;
+  // Legacy builds reported the source URI even with another screen pushed.
+  // Preserve that historical envelope independently of today's URL policy.
+  return RouteInformation(uri: Uri.parse('/retired'), state: saved.state);
 }
 
 void main() {
@@ -96,6 +98,11 @@ void main() {
       testWidgets('recovers when the saved root location no longer resolves', (
         tester,
       ) async {
+        final previousPolicy = GoRouter.optionURLReflectsImperativeAPIs;
+        GoRouter.optionURLReflectsImperativeAPIs = true;
+        addTearDown(
+          () => GoRouter.optionURLReflectsImperativeAPIs = previousPolicy,
+        );
         final saved = await _savedStateFromRetiredLocation(tester);
 
         final router = _buildRouter(withRetiredRoute: false);

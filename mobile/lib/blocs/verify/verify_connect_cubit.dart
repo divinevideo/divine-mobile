@@ -2,12 +2,16 @@
 // ABOUTME: publishes the confirmed claim to the identity event.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:analytics/analytics.dart';
 import 'package:bloc/bloc.dart';
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/verify/verify_proof_input.dart';
 import 'package:openvine/blocs/verify/verify_rejection.dart';
+import 'package:openvine/utils/async_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -23,7 +27,8 @@ typedef VerifyOAuthLauncher = Future<Uri?> Function(Uri authorizationUrl);
 /// Both routes end the same way: the verifier confirms the account, and only
 /// then is the `i` tag published. The web flow leaves publishing as a second
 /// button, which is how people end up verified with no checkmark (#6154).
-class VerifyConnectCubit extends Cubit<VerifyConnectState> {
+class VerifyConnectCubit extends Cubit<VerifyConnectState>
+    with CloseGuardedEmit<VerifyConnectState> {
   /// Creates a [VerifyConnectCubit] for [platform].
   VerifyConnectCubit({
     required IdentityClaimsRepository repository,
@@ -32,11 +37,15 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
     required VerifyOAuthLauncher launchOAuth,
     required String oauthReturnUrl,
     required AnalyticsEventSink analytics,
+    Random? random,
+    Future<void> Function(Duration)? wait,
   }) : _repository = repository,
        _analytics = analytics,
        _pubkey = pubkey,
        _launchOAuth = launchOAuth,
        _oauthReturnUrl = oauthReturnUrl,
+       _random = random ?? Random.secure(),
+       _wait = wait,
        super(VerifyConnectState(platform: platform));
 
   final IdentityClaimsRepository _repository;
@@ -44,6 +53,21 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
   final VerifyOAuthLauncher _launchOAuth;
   final AnalyticsEventSink _analytics;
   final String _oauthReturnUrl;
+  final Random _random;
+  // Tests pass their own; otherwise the wait is [_async]'s, so closing the
+  // cubit ends it.
+  final Future<void> Function(Duration)? _wait;
+  final _async = AsyncScope(debugName: 'VerifyConnectCubit');
+
+  // The sign-in waiting for approval. Kept out of state: its code and secret
+  // never go into state, logs or analytics.
+  _PendingSignIn? _pending;
+
+  // About ten seconds of waiting for a sign-in the verifier hasn't seen yet,
+  // however long each answer takes.
+  static const _confirmAttempts = 5;
+  static const _confirmRetryDelay = Duration(seconds: 2);
+  static const _confirmWindow = Duration(seconds: 10);
 
   /// Records the account handle the user is claiming.
   void identityChanged(String identity) {
@@ -58,6 +82,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
   /// Asks the verifier to check the proof post, then publishes the claim.
   Future<void> submitProof() async {
     if (state.isBusy || !state.canSubmitProof) return;
+    // A signed sign-in carries the links as they were when it was signed, so
+    // publishing it after this would drop the link made here.
+    if (_pending?.signed != null) return;
 
     // A pasted post link has to be taken apart before it is sent: most
     // verifiers rebuild the URL from the handle and a bare id, so a link in
@@ -143,30 +170,47 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
     );
   }
 
-  /// Runs the platform's OAuth login, then publishes the claim it confirms.
+  /// Starts the platform's sign-in, and once it returns, asks the person to
+  /// approve linking the account it named.
   Future<void> connectWithOAuth() async {
     if (state.isBusy) return;
-    if (state.platform.key == 'bluesky' && state.identity.isEmpty) {
+    final platform = state.platform.key;
+    final typedHandle = _bareHandle(state.identity);
+    if (platform == 'bluesky' && typedHandle.isEmpty) {
       return _fail(VerifyConnectError.handleRequired);
     }
-
+    _pending = null;
     emit(
-      state.copyWith(status: VerifyConnectStatus.authorizing, clearError: true),
+      state.copyWith(
+        status: VerifyConnectStatus.authorizing,
+        clearError: true,
+        clearSignedInAccount: true,
+      ),
     );
 
-    // Twitter and YouTube ship an OAuth route the deployment has no
-    // credentials for; the start endpoint answers 503 rather than redirecting,
-    // and a browser session opened on that page never comes back. Resolving
-    // the redirect here catches that without asking the verifier to start the
-    // flow twice.
+    // The id ties the return to this screen; the secret, which only goes to
+    // the verifier when confirming, ties the sign-in to this app.
+    final signInId = _randomHex(16);
+    final startSecret = SignInSecrets.newSecret(_random);
+    final startCheck = SignInSecrets.startCheckFor(startSecret);
+
     final Uri? authorizationUrl;
     try {
-      authorizationUrl = await _repository.resolveOAuthLaunchUri(
-        platform: state.platform.key,
+      authorizationUrl = await _repository.startSignIn(
+        platform: platform,
         pubkey: _pubkey,
-        returnUrl: _oauthReturnUrl,
-        handle: state.identity.isEmpty ? null : state.identity,
+        returnUrl: '$_oauthReturnUrl?signin=$signInId',
+        startCheck: startCheck,
+        handle: platform == 'bluesky' ? typedHandle : null,
       );
+    } on VerifierNetworkException catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      return _fail(VerifyConnectError.verifierUnreachable);
+    } on VerifierTimeoutException catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      return _fail(VerifyConnectError.verifierUnreachable);
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
@@ -186,36 +230,217 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
       return _fail(VerifyConnectError.oauthFailed);
     }
     if (isClosed) return;
-
     if (callback == null) {
       emit(state.copyWith(status: VerifyConnectStatus.editing));
       return;
     }
 
+    // The return address can carry a one-time code, so it's never logged.
     final params = callback.queryParameters;
-    final identity = params['identity'] ?? '';
-    // A success the provider could not name would publish a claim nothing can
-    // ever verify, so it is treated as a refusal rather than a link.
-    if (params['oauth_verified'] != 'true' || identity.isEmpty) {
-      // The verifier's reason is free-form and not fit to show, but without it
-      // in the log a provider-side refusal is undiagnosable.
+    // The refusal's text came in on the return address, so only a fixed
+    // reason name is logged.
+    if (params.containsKey('oauth_error')) {
       Log.warning(
-        'Verifier OAuth refused ${state.platform.key}: '
-        '${params['oauth_error'] ?? 'no reason given'}',
+        'Verifier sign-in for $platform did not complete: refused',
         name: 'VerifyConnectCubit',
       );
       return _fail(VerifyConnectError.oauthFailed);
     }
+    final identity = params['identity'] ?? '';
+    final matches =
+        params['signin'] == signInId &&
+        params['platform'] == platform &&
+        identity.isNotEmpty &&
+        (platform != 'bluesky' ||
+            identity.toLowerCase() == typedHandle.toLowerCase());
+    if (!matches) {
+      Log.warning(
+        'Verifier sign-in return did not match the $platform sign-in this '
+        'screen started',
+        name: 'VerifyConnectCubit',
+      );
+      return _fail(VerifyConnectError.oauthFailed);
+    }
+    final code = params['oauth_confirm'] ?? '';
+    if (code.isEmpty) {
+      Log.warning(
+        'Verifier sign-in for $platform came back without a confirmation code',
+        name: 'VerifyConnectCubit',
+      );
+      return _fail(VerifyConnectError.signInNotConfirmed);
+    }
 
-    await _publish(
-      IdentityClaim(
+    _pending = _PendingSignIn(
+      code: code,
+      startSecret: startSecret,
+      startCheck: startCheck,
+      claim: IdentityClaim(
         pubkey: _pubkey,
-        platform: state.platform.key,
+        platform: platform,
         identity: identity,
         proof: IdentityClaim.oauthProof,
       ),
     );
+    emit(
+      state.copyWith(
+        status: VerifyConnectStatus.awaitingApproval,
+        signedInAccount: identity,
+      ),
+    );
   }
+
+  /// Links the account the sign-in returned: signs the identity event with
+  /// the value tied to this sign-in, has the verifier confirm it, then
+  /// publishes that same event.
+  Future<void> approveSignIn() async {
+    final pending = _pending;
+    if (pending == null || state.isBusy) return;
+    emit(
+      state.copyWith(status: VerifyConnectStatus.publishing, clearError: true),
+    );
+    try {
+      final signed = pending.signed ??= await _repository.signClaim(
+        pending.claim,
+        confirmBinding: SignInSecrets.confirmBindingFor(
+          pending.code,
+          pending.startCheck,
+        ),
+      );
+      if (_superseded(pending)) return;
+      if (!pending.confirmed) {
+        final confirmation = await _confirm(pending, signed);
+        if (confirmation == null || _superseded(pending)) return;
+        // Counted only when the verifier names the account this sign-in is
+        // for, as on the verifier's own page. A resend would get the same
+        // answer, so the sign-in ends.
+        final claim = pending.claim;
+        if (confirmation.platform != claim.platform ||
+            confirmation.identity.toLowerCase() !=
+                claim.identity.toLowerCase()) {
+          Log.warning(
+            'Verifier confirmed another account for the ${claim.platform} '
+            'sign-in',
+            name: 'VerifyConnectCubit',
+          );
+          return _fail(VerifyConnectError.signInNotConfirmed);
+        }
+        pending.confirmed = true;
+      }
+      await _repository.publishSignedClaim(signed);
+    } on IdentityClaimNotSignedException {
+      // _failKeepingSignIn already stops once the page has closed.
+      _logNotSigned(pending.claim.platform);
+      return _failKeepingSignIn(VerifyConnectError.notSigned);
+    } on SignInConfirmException catch (error) {
+      if (_superseded(pending)) return;
+      Log.warning(
+        'Verifier did not confirm the ${pending.claim.platform} sign-in '
+        '(${error.refusal.name})',
+        name: 'VerifyConnectCubit',
+      );
+      // Too many requests says nothing about the sign-in, so it stays to
+      // approve again, as on the verifier's own page.
+      if (error.statusCode == 429) {
+        return _failKeepingSignIn(VerifyConnectError.verifierUnreachable);
+      }
+      return _fail(VerifyConnectError.signInNotConfirmed);
+    } on VerifierClientException catch (error, stackTrace) {
+      if (_superseded(pending)) return;
+      addError(error, stackTrace);
+      return _failKeepingSignIn(VerifyConnectError.verifierUnreachable);
+    } on IdentityClaimReadException catch (error, stackTrace) {
+      if (_superseded(pending)) return;
+      addError(error, stackTrace);
+      return _failKeepingSignIn(VerifyConnectError.linksUnreadable);
+    } on Object catch (error, stackTrace) {
+      if (_superseded(pending)) return;
+      addError(error, stackTrace);
+      return _failKeepingSignIn(VerifyConnectError.publishFailed);
+    }
+    // Defence in depth: nothing replaces _pending while approve holds isBusy.
+    // Closing the page while publishing is left to emitIfOpen.
+    if (!identical(_pending, pending)) return;
+    _pending = null;
+    emitIfOpen(
+      state.copyWith(
+        status: VerifyConnectStatus.linked,
+        identity: pending.claim.identity,
+        linkedClaim: pending.claim,
+        clearSignedInAccount: true,
+      ),
+    );
+  }
+
+  /// Forgets the sign-in waiting for approval. Ignored while approving: by
+  /// then the link may already be counted.
+  void cancelSignIn() {
+    if (state.isBusy) return;
+    _pending = null;
+    emit(
+      state.copyWith(
+        status: VerifyConnectStatus.editing,
+        clearError: true,
+        clearSignedInAccount: true,
+      ),
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _async.dispose();
+    return super.close();
+  }
+
+  // Sends the same signed event every time: the verifier answers a repeat of
+  // the event it confirmed the same way, and refuses a re-signed one as used.
+  // Null when the approve was superseded while waiting to try again.
+  Future<SignInConfirmation?> _confirm(
+    _PendingSignIn pending,
+    SignedIdentityClaim signed,
+  ) async {
+    final deadline = clock.now().add(_confirmWindow);
+    for (var attempt = 1; ; attempt++) {
+      try {
+        return await _repository.confirmSignIn(
+          code: pending.code,
+          startSecret: pending.startSecret,
+          signed: signed,
+        );
+      } on VerifierClientException catch (error) {
+        final outOfTime = clock.now().add(_confirmRetryDelay).isAfter(deadline);
+        if (!_worthRetrying(error) ||
+            attempt >= _confirmAttempts ||
+            outOfTime) {
+          rethrow;
+        }
+        // Closing cancels this wait by throwing AsyncCancelledException,
+        // which approveSignIn's catch drops once it sees the cubit closed.
+        await (_wait ?? _async.delay)(_confirmRetryDelay);
+        if (_superseded(pending)) return null;
+      }
+    }
+  }
+
+  // A sign-in the verifier hasn't seen yet, or a request that got no usable
+  // answer. Every other answer is final for this attempt.
+  static bool _worthRetrying(VerifierClientException error) => switch (error) {
+    SignInConfirmException(:final refusal) => refusal == SignInRefusal.notFound,
+    VerifierApiException(:final statusCode) => statusCode >= 500,
+    VerifierTimeoutException() || VerifierNetworkException() => true,
+  };
+
+  // The cubit closed, or [pending] is no longer the sign-in waiting, so an
+  // approve still running for it must not publish or emit.
+  bool _superseded(_PendingSignIn pending) =>
+      isClosed || !identical(_pending, pending);
+
+  String _randomHex(int bytes) => [
+    for (var i = 0; i < bytes; i++)
+      _random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ].join();
+
+  static String _bareHandle(String typed) =>
+      typed.trim().replaceFirst(RegExp('^@'), '').trim();
 
   Future<void> _publish(
     IdentityClaim claim, {
@@ -228,13 +453,19 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
         replacingIdentity: replacingIdentity,
       );
       if (isClosed) return;
+      // Linked now, so no sign-in is left waiting to approve.
+      _pending = null;
       emit(
         state.copyWith(
           status: VerifyConnectStatus.linked,
           identity: claim.identity,
           linkedClaim: claim,
+          clearSignedInAccount: true,
         ),
       );
+    } on IdentityClaimNotSignedException {
+      _logNotSigned(claim.platform);
+      _fail(VerifyConnectError.notSigned);
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
@@ -246,14 +477,53 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState> {
     }
   }
 
+  // The signer declined or failed. It reports its own faults, so this is
+  // logged rather than filed again (#9340).
+  static void _logNotSigned(String platform) => Log.warning(
+    'The $platform link was not signed',
+    name: 'VerifyConnectCubit',
+  );
+
+  // Back to editing, so any sign-in waiting for approval goes too.
   void _fail(VerifyConnectError error) {
     if (isClosed) return;
+    _pending = null;
     emit(
       state.copyWith(
         status: VerifyConnectStatus.editing,
         error: error,
         errorAttempt: state.errorAttempt + 1,
+        clearSignedInAccount: true,
       ),
     );
   }
+
+  void _failKeepingSignIn(VerifyConnectError error) {
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        status: VerifyConnectStatus.awaitingApproval,
+        error: error,
+        errorAttempt: state.errorAttempt + 1,
+      ),
+    );
+  }
+}
+
+class _PendingSignIn {
+  _PendingSignIn({
+    required this.code,
+    required this.startSecret,
+    required this.startCheck,
+    required this.claim,
+  });
+
+  final String code;
+  final String startSecret;
+  final String startCheck;
+  final IdentityClaim claim;
+
+  // Signed once, and sent again unchanged on a retry.
+  SignedIdentityClaim? signed;
+  bool confirmed = false;
 }

@@ -955,6 +955,7 @@ void main() {
           selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer((inv) async {
         final rumorEvent = inv.namedArguments[#rumorEvent] as Event;
@@ -1198,6 +1199,7 @@ void main() {
             targetRelays: any(named: 'targetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
             selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       });
@@ -1252,6 +1254,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -1292,6 +1295,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -1342,6 +1346,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -1901,6 +1906,7 @@ void main() {
             targetRelays: any(named: 'targetRelays'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
             selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       });
@@ -1978,6 +1984,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -2004,13 +2011,13 @@ void main() {
       // throws into a catch, which no test failure would show.
       setUp(stubReadCursorRowMatched);
 
-      Event createGiftWrapEvent({String? id}) {
+      Event createGiftWrapEvent({String? id, int createdAt = 1700000000}) {
         return Event.fromJson({
           'id': id ?? _giftWrapEventId,
           'pubkey':
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          'created_at': 1700000000,
+          'created_at': createdAt,
           'kind': EventKind.giftWrap,
           'tags': [
             ['p', _validPubkeyA],
@@ -2120,6 +2127,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -2220,6 +2229,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -2817,12 +2828,20 @@ void main() {
         stubDaoInserts();
 
         final controller = StreamController<Event>();
+        void Function(int)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
-        ).thenAnswer((_) => controller.stream);
+        ).thenAnswer((invocation) {
+          storedEventsEnd =
+              invocation.namedArguments[#onStoredEventsEnd]
+                  as void Function(int)?;
+          return controller.stream;
+        });
 
         final syncState = _FakeDmSyncState();
         final repository = createRepository(
@@ -2832,6 +2851,7 @@ void main() {
 
         await repository.startListening();
         controller.add(giftWrap);
+        storedEventsEnd!(1);
         await Future<void>.delayed(Duration.zero);
 
         expect(syncState.recorded, hasLength(1));
@@ -2866,12 +2886,20 @@ void main() {
           stubDaoInserts();
 
           final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
-          ).thenAnswer((_) => controller.stream);
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
 
           final syncState = _FakeDmSyncState();
           final repository = createRepository(
@@ -2881,6 +2909,7 @@ void main() {
 
           await repository.startListening();
           controller.add(giftWrap);
+          storedEventsEnd!(1);
           await Future<void>.delayed(Duration.zero);
 
           expect(syncState.recordedWire, hasLength(1));
@@ -2911,18 +2940,27 @@ void main() {
           ).thenAnswer((_) async => true);
 
           final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
-          ).thenAnswer((_) => controller.stream);
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
 
           final syncState = _FakeDmSyncState();
           final repository = createRepository(syncState: syncState);
 
           await repository.startListening();
           controller.add(giftWrap);
+          storedEventsEnd!(1);
           await Future<void>.delayed(Duration.zero);
 
           expect(syncState.recordedWire, hasLength(1));
@@ -2930,6 +2968,543 @@ void main() {
           // A duplicate persisted no message, so the rumor boundary — which
           // tracks send times for ordering — must not move.
           expect(syncState.recorded, isEmpty);
+
+          await controller.close();
+          await repository.stopListening();
+        },
+      );
+
+      test(
+        'saves a held catch-up stamp once the hold limit passes without the '
+        'batch ending (#10191)',
+        () {
+          fakeAsync((async) {
+            // A relay that never finishes its stored events must not stop the
+            // window from moving for the whole session.
+            final giftWrap = createGiftWrapEvent();
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            ).thenAnswer((_) async => true);
+            final controller = StreamController<Event>();
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) => controller.stream);
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            controller.add(giftWrap);
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(minutes: 1, seconds: 59));
+            expect(syncState.recordedWire, isEmpty);
+
+            async.elapse(const Duration(seconds: 1));
+            expect(syncState.recordedWire.single.createdAt, 1700000000);
+
+            unawaited(controller.close());
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'holds stamps again when a reconnect replays after the hold limit '
+        'passed (#10191)',
+        () {
+          fakeAsync((async) {
+            final newer = createGiftWrapEvent();
+            final older = createGiftWrapEvent(
+              id: _giftWrapEventId2,
+              createdAt: 1699900000,
+            );
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(any()),
+            ).thenAnswer((_) async => true);
+            final controller = StreamController<Event>();
+            void Function()? storedEventsStart;
+            void Function(int)? storedEventsEnd;
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((invocation) {
+              storedEventsStart =
+                  invocation.namedArguments[#onStoredEventsStart]
+                      as void Function()?;
+              storedEventsEnd =
+                  invocation.namedArguments[#onStoredEventsEnd]
+                      as void Function(int)?;
+              return controller.stream;
+            });
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            controller.add(newer);
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(minutes: 2));
+            expect(syncState.recordedWire, hasLength(1));
+
+            storedEventsStart!();
+            controller.add(older);
+            async.flushMicrotasks();
+            expect(syncState.recordedWire, hasLength(1));
+
+            storedEventsEnd!(2);
+            async.flushMicrotasks();
+            expect(syncState.recordedWire, hasLength(2));
+            expect(syncState.recordedWire.last.createdAt, 1699900000);
+
+            unawaited(controller.close());
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'stops the hold limit once a catch-up ends with nothing held '
+        '(#10191)',
+        () {
+          fakeAsync((async) {
+            final live = StreamController<Event>();
+            void Function(int)? storedEventsEnd;
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((invocation) {
+              storedEventsEnd =
+                  invocation.namedArguments[#onStoredEventsEnd]
+                      as void Function(int)?;
+              return live.stream;
+            });
+            final repository = createRepository();
+            bool holdLimitPending() => async.pendingTimers.any(
+              (timer) => timer.duration == const Duration(minutes: 2),
+            );
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            expect(holdLimitPending(), isTrue);
+
+            storedEventsEnd!(0);
+            async.flushMicrotasks();
+            expect(holdLimitPending(), isFalse);
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+            unawaited(live.close());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'stopListening stops the hold limit before it awaits anything, as a '
+        'widget test tearing down requires (#10191)',
+        () {
+          fakeAsync((async) {
+            final live = StreamController<Event>();
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) => live.stream);
+            final repository = createRepository();
+            bool holdLimitPending() => async.pendingTimers.any(
+              (timer) => timer.duration == const Duration(minutes: 2),
+            );
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            expect(holdLimitPending(), isTrue);
+
+            unawaited(repository.stopListening());
+            expect(holdLimitPending(), isFalse);
+
+            async.flushMicrotasks();
+            unawaited(live.close());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'a subscription that fails drops its held catch-up instead of saving '
+        'it later (#10191)',
+        () {
+          fakeAsync((async) {
+            final giftWrap = createGiftWrapEvent();
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            ).thenAnswer((_) async => true);
+            final streams = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) {
+              final stream = StreamController<Event>();
+              streams.add(stream);
+              return stream.stream;
+            });
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            int holdLimits() => async.pendingTimers
+                .where((timer) => timer.duration == const Duration(minutes: 2))
+                .length;
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            streams.first.add(giftWrap);
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(seconds: 100));
+            streams.first.addError(StateError('relay gone'));
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(seconds: 3));
+            expect(streams, hasLength(2));
+            expect(holdLimits(), 1);
+
+            // Past the failed subscription's limit, inside the new one's.
+            async.elapse(const Duration(seconds: 30));
+            expect(syncState.recordedWire, isEmpty);
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'a subscription whose stream closes drops its held catch-up instead '
+        'of saving it later (#10191)',
+        () {
+          fakeAsync((async) {
+            final giftWrap = createGiftWrapEvent();
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            ).thenAnswer((_) async => true);
+            final streams = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) {
+              final stream = StreamController<Event>();
+              streams.add(stream);
+              return stream.stream;
+            });
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+            int holdLimits() => async.pendingTimers
+                .where((timer) => timer.duration == const Duration(minutes: 2))
+                .length;
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            streams.first.add(giftWrap);
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(seconds: 100));
+            unawaited(streams.first.close());
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(seconds: 3));
+            expect(streams, hasLength(2));
+            expect(holdLimits(), 1);
+
+            // Past the failed subscription's limit, inside the new one's.
+            async.elapse(const Duration(seconds: 30));
+            expect(syncState.recordedWire, isEmpty);
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'holds the rumor boundary with the wire stamp during a catch-up '
+        '(#10191)',
+        () async {
+          final newer = createGiftWrapEvent();
+          final older = createGiftWrapEvent(
+            id: _giftWrapEventId2,
+            createdAt: 1699990000,
+          );
+          final newerRumor = createRumorEvent();
+          final olderRumor = createRumorEvent(
+            id: 'b' * 64,
+            createdAt: 1699990000,
+          );
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(any()),
+          ).thenAnswer((_) async => false);
+          stubDaoInserts();
+          final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
+          final syncState = _FakeDmSyncState();
+          final repository = createRepository(
+            rumorDecryptor: (_, wrap) async =>
+                wrap.id == newer.id ? newerRumor : olderRumor,
+            syncState: syncState,
+          );
+
+          await repository.startListening();
+          controller
+            ..add(newer)
+            ..add(older);
+          await pumpEventQueue();
+          expect(
+            syncState.recorded,
+            isEmpty,
+            reason: 'without a wire stamp the next launch reads this one',
+          );
+
+          storedEventsEnd!(2);
+          await pumpEventQueue();
+          expect(
+            syncState.recorded.map((seen) => seen.createdAt),
+            containsAll(<int>[1700000000, 1699990000]),
+          );
+
+          await controller.close();
+          await repository.stopListening();
+        },
+      );
+
+      test(
+        'a stored-events start after stopListening arms no hold limit '
+        '(#10191)',
+        () {
+          fakeAsync((async) {
+            final live = StreamController<Event>();
+            void Function()? storedEventsStart;
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((invocation) {
+              storedEventsStart =
+                  invocation.namedArguments[#onStoredEventsStart]
+                      as void Function()?;
+              return live.stream;
+            });
+            final repository = createRepository();
+            bool holdLimitPending() => async.pendingTimers.any(
+              (timer) => timer.duration == const Duration(minutes: 2),
+            );
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            unawaited(repository.stopListening());
+            storedEventsStart!();
+            expect(holdLimitPending(), isFalse);
+
+            async.flushMicrotasks();
+            unawaited(live.close());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'a subscribe that throws leaves no hold limit behind (#10191)',
+        () {
+          fakeAsync((async) {
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenThrow(StateError('client gone'));
+            final repository = createRepository();
+
+            Object? thrown;
+            unawaited(
+              repository.startListening().catchError((Object error) {
+                thrown = error;
+              }),
+            );
+            async.flushMicrotasks();
+            expect(thrown, isA<StateError>());
+            expect(
+              async.pendingTimers.where(
+                (timer) => timer.duration == const Duration(minutes: 2),
+              ),
+              isEmpty,
+            );
+          });
+        },
+      );
+
+      test(
+        'a held wrap finishing after its subscription failed saves nothing '
+        '(#10191)',
+        () {
+          fakeAsync((async) {
+            final giftWrap = createGiftWrapEvent();
+            final dedup = Completer<bool>();
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            ).thenAnswer((_) => dedup.future);
+            final streams = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) {
+              final stream = StreamController<Event>();
+              streams.add(stream);
+              return stream.stream;
+            });
+            final syncState = _FakeDmSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            streams.first.add(giftWrap);
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(minutes: 2));
+            streams.first.addError(StateError('relay gone'));
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(seconds: 3));
+            expect(streams, hasLength(2));
+
+            dedup.complete(true);
+            async.flushMicrotasks();
+            expect(syncState.recordedWire, isEmpty);
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
+        'holds the stamp of a wrap the decrypt retry recovers during a '
+        'catch-up (#10191)',
+        () async {
+          final giftWrap = createGiftWrapEvent();
+          final rumor = createRumorEvent();
+          final pendingDao = _MockPendingGiftWrapsDao();
+          when(
+            () => pendingDao.deleteExhausted(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxAttempts: any(named: 'maxAttempts'),
+            ),
+          ).thenAnswer((_) async => 0);
+          when(
+            () => pendingDao.getRetryable(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxAttempts: any(named: 'maxAttempts'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              PendingGiftWrap(
+                giftWrapId: _giftWrapEventId,
+                ownerPubkey: _validPubkeyA,
+                rawJson: jsonEncode(giftWrap.toJson()),
+                createdAt: 1700000000,
+                attempts: 1,
+              ),
+            ],
+          );
+          when(
+            () => pendingDao.deletePending(
+              giftWrapId: any(named: 'giftWrapId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          ).thenAnswer((_) async => false);
+          stubDaoInserts();
+          final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
+          final syncState = _FakeDmSyncState();
+          final repository = createRepository(
+            rumorDecryptor: (_, _) async => rumor,
+            pendingGiftWrapsDao: pendingDao,
+            syncState: syncState,
+          );
+
+          await repository.startListening();
+          await repository.retryPendingDecryptions();
+          await pumpEventQueue();
+          expect(
+            syncState.recordedWire,
+            isEmpty,
+            reason: 'the live batch it races with has not been handled yet',
+          );
+
+          storedEventsEnd!(0);
+          await pumpEventQueue();
+          expect(syncState.recordedWire.single.createdAt, 1700000000);
 
           await controller.close();
           await repository.stopListening();
@@ -2958,12 +3533,20 @@ void main() {
         stubDaoInserts();
 
         final controller = StreamController<Event>();
+        void Function(int)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
-        ).thenAnswer((_) => controller.stream);
+        ).thenAnswer((invocation) {
+          storedEventsEnd =
+              invocation.namedArguments[#onStoredEventsEnd]
+                  as void Function(int)?;
+          return controller.stream;
+        });
 
         final syncState = _FakeDmSyncState();
         final repository = createRepository(
@@ -2973,6 +3556,7 @@ void main() {
 
         await repository.startListening();
         controller.add(nip04Event);
+        storedEventsEnd!(1);
         await Future<void>.delayed(Duration.zero);
 
         expect(syncState.recorded, hasLength(1));
@@ -3008,6 +3592,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -3194,6 +3780,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -3259,6 +3847,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -3327,6 +3917,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -3385,6 +3977,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -3441,6 +4035,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -3507,6 +4103,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -3647,6 +4245,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -3824,6 +4424,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           final repository = createRepository(
@@ -3941,6 +4543,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -3999,6 +4603,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -4063,6 +4669,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -4137,6 +4745,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -4207,6 +4817,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -4295,6 +4907,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -4323,6 +4937,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(
@@ -4336,6 +4952,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).called(1);
 
@@ -4349,6 +4967,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(
@@ -4363,6 +4983,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).called(1);
 
@@ -4376,6 +4998,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(
@@ -4401,6 +5025,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) {
           final controller = StreamController<Event>();
@@ -4422,6 +5048,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).called(2);
 
@@ -4455,6 +5083,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         );
         // But the repository should still be initialized so send() works.
@@ -4494,6 +5124,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(
@@ -4542,6 +5174,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -4554,6 +5188,8 @@ void main() {
                     () => mockNostrClient.subscribe(
                       captureAny(),
                       subscriptionId: any(named: 'subscriptionId'),
+                      onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                      onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
                     ),
                   ).captured.single
                   as List<nostr_filter.Filter>;
@@ -4575,6 +5211,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -4587,6 +5225,8 @@ void main() {
                     () => mockNostrClient.subscribe(
                       captureAny(),
                       subscriptionId: any(named: 'subscriptionId'),
+                      onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                      onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
                     ),
                   ).captured.single
                   as List<nostr_filter.Filter>;
@@ -4614,6 +5254,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -4628,6 +5270,8 @@ void main() {
                     () => mockNostrClient.subscribe(
                       captureAny(),
                       subscriptionId: any(named: 'subscriptionId'),
+                      onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                      onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
                     ),
                   ).captured.single
                   as List<nostr_filter.Filter>;
@@ -4660,6 +5304,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -4674,6 +5320,8 @@ void main() {
                     () => mockNostrClient.subscribe(
                       captureAny(),
                       subscriptionId: any(named: 'subscriptionId'),
+                      onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                      onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
                     ),
                   ).captured.single
                   as List<nostr_filter.Filter>;
@@ -4731,6 +5379,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer(
             (invocation) => relay.subscribe(
@@ -5815,6 +6465,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           final repository = createRepository(
@@ -5857,6 +6509,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -5869,6 +6523,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: captureAny(named: 'tempRelays'),
               targetRelays: captureAny(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).captured;
           // tempRelays dials the advertised inbox in ADDITION to the pool.
@@ -5897,6 +6553,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -5909,6 +6567,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: captureAny(named: 'tempRelays'),
               targetRelays: captureAny(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).captured;
           expect(captured, [isNull, isNull]);
@@ -5984,6 +6644,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           // Answered on purpose: an unanswered read resolves to `failed`,
@@ -6042,6 +6704,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           when(
@@ -6134,6 +6798,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           when(
@@ -6172,6 +6838,8 @@ void main() {
               subscriptionId: dmInboxSubscriptionId(_validPubkeyA),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           );
 
@@ -6184,6 +6852,8 @@ void main() {
                       subscriptionId: dmInboxSubscriptionId(_validPubkeyB),
                       tempRelays: any(named: 'tempRelays'),
                       targetRelays: any(named: 'targetRelays'),
+                      onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                      onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
                     ),
                   ).captured.single
                   as List<nostr_filter.Filter>;
@@ -6592,6 +7262,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           when(
@@ -10295,6 +10967,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => subscription.stream);
           // The session after the break defers on its gift-wrap pages before
@@ -11229,6 +11903,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -11299,6 +11975,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -11351,6 +12029,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -11392,6 +12072,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -11441,6 +12123,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -11498,6 +12182,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           when(
@@ -11559,6 +12245,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           when(
@@ -12685,6 +13373,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -12779,6 +13468,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -12975,6 +13666,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -13026,6 +13719,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -13191,6 +13886,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -13743,6 +14440,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -13899,6 +14598,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -13991,6 +14692,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -14801,6 +15504,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -14872,6 +15576,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -15035,6 +15741,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -15157,6 +15864,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -15229,6 +15938,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -15326,6 +16037,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -15411,6 +16124,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -15454,6 +16169,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -15518,6 +16235,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -15608,6 +16327,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -15671,6 +16392,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -15754,6 +16477,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -15807,12 +16532,20 @@ void main() {
 
         Future<_FakeDmSyncState> deliverDuplicate() async {
           final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
-          ).thenAnswer((_) => controller.stream);
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
           final syncState = _FakeDmSyncState();
           final repository = createRepository(
             nip04Decryptor: (_, _) async => 'should not reach',
@@ -15821,6 +16554,7 @@ void main() {
           );
           await repository.startListening();
           controller.add(createNip04Event());
+          storedEventsEnd!(1);
           await Future<void>.delayed(Duration.zero);
           await controller.close();
           await repository.stopListening();
@@ -15892,12 +16626,20 @@ void main() {
         );
 
         final controller = StreamController<Event>();
+        void Function(int)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
-        ).thenAnswer((_) => controller.stream);
+        ).thenAnswer((invocation) {
+          storedEventsEnd =
+              invocation.namedArguments[#onStoredEventsEnd]
+                  as void Function(int)?;
+          return controller.stream;
+        });
 
         final syncState = _FakeDmSyncState();
         final repository = createRepository(
@@ -15907,6 +16649,7 @@ void main() {
 
         await repository.startListening();
         controller.add(nip04Event);
+        storedEventsEnd!(1);
         await Future<void>.delayed(Duration.zero);
 
         verifyNever(
@@ -15978,12 +16721,20 @@ void main() {
           );
 
           final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
-          ).thenAnswer((_) => controller.stream);
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
 
           final syncState = _FakeDmSyncState();
           final repository = createRepository(
@@ -15993,6 +16744,7 @@ void main() {
 
           await repository.startListening();
           controller.add(nip04Event);
+          storedEventsEnd!(1);
           await dedupStarted.future;
 
           final nextUserSelfConversationId = DmRepository.computeConversationId(
@@ -16012,6 +16764,94 @@ void main() {
           dedupResult.complete(true);
           await Future<void>.delayed(Duration.zero);
 
+          // The switch abandoned the subscription that delivered the event, so
+          // its held stamp is dropped instead of being saved for either
+          // account. The delivering account asks for that window again
+          // (#10191).
+          expect(syncState.recordedWire, isEmpty);
+
+          await controller.close();
+          await repository.stopListening();
+        },
+      );
+
+      test(
+        'duplicate NIP-04 wire boundary stays scoped to the event owner during '
+        'an account switch when it arrives live',
+        () async {
+          final nip04Event = createNip04Event();
+          final dedupStarted = Completer<void>();
+          final dedupResult = Completer<bool>();
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          ).thenAnswer((_) {
+            dedupStarted.complete();
+            return dedupResult.future;
+          });
+          when(
+            () => mockDirectMessagesDao.getMessageById(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer(
+            (_) async => const DirectMessageRow(
+              id: _rumorEventId,
+              conversationId: 'own-duplicate',
+              senderPubkey: _validPubkeyB,
+              content: 'duplicate',
+              createdAt: 1700000000,
+              giftWrapId: _rumorEventId,
+              messageKind: 4,
+              ownerPubkey: _validPubkeyA,
+              isDeleted: false,
+              twinCollapsed: false,
+            ),
+          );
+
+          final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
+
+          final syncState = _FakeDmSyncState();
+          final repository = createRepository(
+            nip04Decryptor: (_, _) async => 'should not reach',
+            syncState: syncState,
+          );
+
+          await repository.startListening();
+          storedEventsEnd!(0);
+          controller.add(nip04Event);
+          await dedupStarted.future;
+
+          final nextUserSelfConversationId = DmRepository.computeConversationId(
+            [_validPubkeyB, _validPubkeyB],
+          );
+          when(
+            () => mockConversationsDao.getConversation(
+              nextUserSelfConversationId,
+              ownerPubkey: _validPubkeyB,
+            ),
+          ).thenAnswer((_) async => null);
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          dedupResult.complete(true);
+          await pumpEventQueue();
+
           expect(syncState.recordedWire, hasLength(1));
           expect(syncState.recordedWire.single.pubkey, _validPubkeyA);
           expect(syncState.recordedWire.single.createdAt, nip04Event.createdAt);
@@ -16020,7 +16860,6 @@ void main() {
           await repository.stopListening();
         },
       );
-
       test(
         'persisted NIP-04 boundaries stay scoped to the event owner during '
         'an account switch',
@@ -16035,12 +16874,20 @@ void main() {
           stubDaoInserts();
 
           final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
-          ).thenAnswer((_) => controller.stream);
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
 
           final syncState = _FakeDmSyncState();
           final repository = createRepository(
@@ -16053,6 +16900,7 @@ void main() {
 
           await repository.startListening();
           controller.add(nip04Event);
+          storedEventsEnd!(1);
           await decryptStarted.future;
 
           // The decrypt is a remote-signer round trip on the real path, so
@@ -16067,6 +16915,72 @@ void main() {
           decryptResult.complete('Hello over NIP-04');
           await Future<void>.delayed(Duration.zero);
 
+          // The switch abandoned the subscription that delivered the event, so
+          // its held stamps are dropped instead of being saved for either
+          // account (#10191).
+          expect(syncState.recordedWire, isEmpty);
+          expect(syncState.recorded, isEmpty);
+
+          await controller.close();
+          await repository.stopListening();
+        },
+      );
+
+      test(
+        'persisted NIP-04 boundaries stay scoped to the event owner during '
+        'an account switch when it arrives live',
+        () async {
+          final nip04Event = createNip04Event();
+          final decryptStarted = Completer<void>();
+          final decryptResult = Completer<String?>();
+
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(any()),
+          ).thenAnswer((_) async => false);
+          stubDaoInserts();
+
+          final controller = StreamController<Event>();
+          void Function(int)? storedEventsEnd;
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
+
+          final syncState = _FakeDmSyncState();
+          final repository = createRepository(
+            nip04Decryptor: (_, _) {
+              decryptStarted.complete();
+              return decryptResult.future;
+            },
+            syncState: syncState,
+          );
+
+          await repository.startListening();
+          storedEventsEnd!(0);
+          controller.add(nip04Event);
+          await decryptStarted.future;
+
+          // The decrypt is a remote-signer round trip on the real path, so
+          // this is the widest window a switch can land in — wider than the
+          // dedup read the sibling test above covers. Unlike the NIP-17
+          // handler, this one has no generation guard to abandon on.
+          repository.setCredentials(
+            userPubkey: _validPubkeyC,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          decryptResult.complete('Hello over NIP-04');
+          await pumpEventQueue();
+
           expect(syncState.recordedWire, hasLength(1));
           expect(syncState.recordedWire.single.pubkey, _validPubkeyA);
           expect(syncState.recordedWire.single.createdAt, nip04Event.createdAt);
@@ -16077,7 +16991,6 @@ void main() {
           await repository.stopListening();
         },
       );
-
       test('skips NIP-04 events with no p tag', () async {
         final nip04Event = createNip04Event(tags: []);
 
@@ -16090,6 +17003,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -16146,6 +17061,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -16241,6 +17158,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -16429,6 +17348,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -16601,6 +17522,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -16675,6 +17597,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -16765,6 +17688,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -17238,6 +18162,7 @@ void main() {
                       selfWrapOnSoftUnconfirmed: any(
                         named: 'selfWrapOnSoftUnconfirmed',
                       ),
+                      onSelfWrapDue: any(named: 'onSelfWrapDue'),
                     ),
                   ).captured.single
                   as Event;
@@ -17416,6 +18341,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -17469,6 +18395,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -17889,6 +18816,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -18015,6 +18943,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -18035,6 +18964,7 @@ void main() {
                     rumorEvent: captureAny(named: 'rumorEvent'),
                     recipientPubkey: any(named: 'recipientPubkey'),
                     awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -18051,6 +18981,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) => publish.future);
 
@@ -18063,6 +18994,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
         publish.complete(
@@ -18085,6 +19017,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer(
           (_) async => NIP17SendResult.success(
@@ -18101,6 +19034,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: true,
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).called(1);
       });
@@ -18113,6 +19047,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.failure('no relay'));
 
@@ -18137,6 +19072,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         ).thenAnswer((_) async => const NIP17SendResult.blocked('blocked'));
 
@@ -18208,6 +19144,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: _validPubkeyB,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -18221,6 +19158,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: _validPubkeyC,
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer((_) async => const NIP17SendResult.blocked('blocked'));
 
@@ -18278,6 +19216,7 @@ void main() {
               rumorEvent: any(named: 'rumorEvent'),
               recipientPubkey: any(named: 'recipientPubkey'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
@@ -18298,6 +19237,7 @@ void main() {
                       rumorEvent: captureAny(named: 'rumorEvent'),
                       recipientPubkey: any(named: 'recipientPubkey'),
                       awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                      onSelfWrapDue: any(named: 'onSelfWrapDue'),
                     ),
                   ).captured.single
                   as Event;
@@ -18339,6 +19279,7 @@ void main() {
             rumorEvent: any(named: 'rumorEvent'),
             recipientPubkey: any(named: 'recipientPubkey'),
             awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
           ),
         );
       });
@@ -18370,6 +19311,7 @@ void main() {
               targetRelays: any(named: 'targetRelays'),
               selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
               awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer(
             (invocation) async => NIP17SendResult.success(
@@ -18427,6 +19369,7 @@ void main() {
                 targetRelays: captureAny(named: 'targetRelays'),
                 selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
                 awaitRecipientOk: any(named: 'awaitRecipientOk'),
+                onSelfWrapDue: any(named: 'onSelfWrapDue'),
               ),
             ).captured;
             expect(
@@ -18752,6 +19695,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -18901,6 +19846,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -19076,6 +20023,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -19214,6 +20163,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -19377,6 +20328,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
 
@@ -20521,6 +21474,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(
@@ -20947,6 +21902,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
@@ -21102,6 +22059,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
@@ -21468,6 +22427,8 @@ void main() {
           () => mockNostrClient.subscribe(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
+            onStoredEventsStart: any(named: 'onStoredEventsStart'),
+            onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
         ).thenAnswer((_) => controller.stream);
         when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
@@ -22212,6 +23173,20 @@ void main() {
               dmProtocol: any(named: 'dmProtocol'),
             ),
           ).thenAnswer((_) async {});
+          void Function(int)? storedEventsEnd;
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((invocation) {
+            storedEventsEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(int)?;
+            return controller.stream;
+          });
           final repository = createRepository(
             processedGiftWrapsDao: ledger,
             syncState: syncState,
@@ -22220,6 +23195,7 @@ void main() {
           await repository.startListening();
 
           controller.add(giftWrap());
+          storedEventsEnd!(1);
           await Future<void>.delayed(Duration.zero);
           await Future<void>.delayed(Duration.zero);
 
@@ -22924,6 +23900,7 @@ void main() {
                     selfWrapOnSoftUnconfirmed: any(
                       named: 'selfWrapOnSoftUnconfirmed',
                     ),
+                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
                   ),
                 ).captured.single
                 as Event;
@@ -23026,6 +24003,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(2);
 
@@ -23182,6 +24160,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).captured.cast<Event>();
           expect(sentRumors, hasLength(2));
@@ -23360,6 +24339,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).captured.cast<Event>();
           expect(sentRumors, hasLength(2));
@@ -23419,6 +24399,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).captured.cast<Event>();
           expect(sentRumors, hasLength(2));
@@ -23523,6 +24504,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
 
@@ -23554,6 +24537,8 @@ void main() {
             () => mockNostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller2.stream);
 
@@ -24377,6 +25362,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -25787,6 +26773,7 @@ void main() {
                 selfWrapOnSoftUnconfirmed: any(
                   named: 'selfWrapOnSoftUnconfirmed',
                 ),
+                onSelfWrapDue: any(named: 'onSelfWrapDue'),
               ),
             ).called(1);
           }
@@ -26159,6 +27146,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -26267,6 +27255,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           expect(
@@ -27640,6 +28629,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -28371,6 +29361,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
 
@@ -28388,6 +29379,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -29081,6 +30073,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -29117,6 +30110,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
         },
@@ -29393,6 +30387,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
           verifyNever(
@@ -29454,6 +30449,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },
@@ -29530,6 +30526,7 @@ void main() {
               selfWrapOnSoftUnconfirmed: any(
                 named: 'selfWrapOnSoftUnconfirmed',
               ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           );
         },

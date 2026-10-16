@@ -17,6 +17,7 @@ import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
+import 'package:pro_image_editor/pro_image_editor.dart' show LayerMask;
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -54,6 +55,7 @@ class DivineVideoClip {
     this.categoryId,
     this.archivedAt,
     this.transition,
+    this.mask,
     this.chromaKey,
     this.chromaKeySourcePath,
     this.captureChromaKey,
@@ -225,6 +227,15 @@ class DivineVideoClip {
   /// tail into the first clip's head so a looping player restarts seamlessly.
   /// Drives both the live editor preview and the final rendered composition.
   final ClipTransition? transition;
+
+  /// The shape mask the clip shows through, or `null` to show the whole
+  /// frame.
+  ///
+  /// Measured in the exported frame, the part of the canvas the video keeps,
+  /// and never baked into [video]: the preview and the export both cover what
+  /// the mask hides with black while the clip plays, fading the cover across
+  /// a dissolve, slide, push or wipe on either side (see `clipMaskWindows`).
+  final LayerMask? mask;
 
   /// Green-screen settings the clip's file was last baked with, or `null` when
   /// it carries no key.
@@ -610,6 +621,8 @@ class DivineVideoClip {
     DateTime? archivedAt,
     ClipTransition? transition,
     bool clearTransition = false,
+    LayerMask? mask,
+    bool clearMask = false,
     ClipChromaKey? chromaKey,
     String? chromaKeySourcePath,
     bool clearChromaKey = false,
@@ -684,6 +697,8 @@ class DivineVideoClip {
       categoryId: categoryId ?? this.categoryId,
       archivedAt: archivedAt ?? this.archivedAt,
       transition: clearTransition ? null : (transition ?? this.transition),
+      // Kept by a split or duplicate: both parts keep the look of the clip.
+      mask: clearMask ? null : (mask ?? this.mask),
       chromaKey: isNewLogicalClip || clearChromaKey
           ? null
           : (chromaKey ?? this.chromaKey),
@@ -757,6 +772,7 @@ class DivineVideoClip {
         'reversedVideoPath': p.basename(reversedVideoPath!),
       if (proofManifestJson != null) 'proofManifestJson': proofManifestJson,
       if (transition != null) 'transition': transition!.toMap(),
+      if (mask case final mask?) 'mask': mask.toMap(),
       if (chromaKey != null) 'chromaKey': chromaKey!.toJson(),
       if (chromaKeySourcePath != null)
         'chromaKeySourcePath': p.basename(chromaKeySourcePath!),
@@ -905,6 +921,7 @@ class DivineVideoClip {
       ),
       proofManifestJson: json['proofManifestJson'] as String?,
       transition: _transitionFromJson(json['transition']),
+      mask: _maskFromJson(json['mask']),
       chromaKey: _chromaKeyFromJson(
         json['chromaKey'],
         documentsPath,
@@ -990,6 +1007,24 @@ class DivineVideoClip {
     } catch (error, stackTrace) {
       Log.error(
         'Dropping unparseable clip transition; falling back to a hard cut',
+        name: 'DivineVideoClip',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  /// Parses the persisted shape mask, degrading to `null` when it can't be
+  /// read. Same rationale as [_transitionFromJson]: the clip then shows its
+  /// whole frame rather than taking the draft load down with it.
+  static LayerMask? _maskFromJson(Object? raw) {
+    if (raw is! Map) return null;
+    try {
+      return LayerMask.fromMap(raw.cast<String, dynamic>());
+    } catch (error, stackTrace) {
+      Log.error(
+        'Dropping unparseable clip mask; showing the whole frame',
         name: 'DivineVideoClip',
         error: error,
         stackTrace: stackTrace,

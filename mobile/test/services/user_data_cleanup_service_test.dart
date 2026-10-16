@@ -4,6 +4,7 @@
 import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -11,6 +12,7 @@ import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -815,6 +817,58 @@ void main() {
     });
 
     group('deleteAccountData', () {
+      test('removes only the deleted account hashtag follows', () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = 'b' * 64;
+        final deletedStore = SharedPreferencesHashtagSubscriptionStore(
+          prefs: prefs,
+          pubkey: deletedPubkey,
+        );
+        final otherStore = SharedPreferencesHashtagSubscriptionStore(
+          prefs: prefs,
+          pubkey: otherPubkey,
+        );
+        await deletedStore.write('["one"]');
+        await otherStore.write('["two"]');
+        await service.clearUserSpecificData(
+          isIdentityChange: true,
+          userPubkey: deletedPubkey,
+        );
+        expect(await deletedStore.read(), '["one"]');
+        expect(await otherStore.read(), '["two"]');
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+        expect(await deletedStore.read(), isNull);
+        expect(await otherStore.read(), '["two"]');
+      });
+
+      test(
+        'destructive session cleanup removes only that account follows',
+        () async {
+          final deletedPubkey = 'a' * 64;
+          final otherPubkey = 'b' * 64;
+          final deletedStore = SharedPreferencesHashtagSubscriptionStore(
+            prefs: prefs,
+            pubkey: deletedPubkey,
+          );
+          final otherStore = SharedPreferencesHashtagSubscriptionStore(
+            prefs: prefs,
+            pubkey: otherPubkey,
+          );
+          await deletedStore.write('["one"]');
+          await otherStore.write('["two"]');
+          await service.clearUserSpecificData(
+            deleteUserData: true,
+            userPubkey: deletedPubkey,
+          );
+          expect(await deletedStore.read(), isNull);
+          expect(await otherStore.read(), '["two"]');
+        },
+      );
+
       test(
         'deletes owner-scoped data without clearing shared preferences',
         () async {
@@ -896,6 +950,23 @@ void main() {
 
         expect(store.lastKnownRestrictedFor(deletedPubkey), isNull);
         expect(store.lastKnownRestrictedFor(otherPubkey), isTrue);
+      });
+
+      test("forgets only that account's Messages section choice", () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = 'b' * 64;
+        final preference = MessagesPreferenceService(prefs);
+        await preference.selectRooms(deletedPubkey, selected: true);
+        await preference.selectRooms(otherPubkey, selected: true);
+
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+
+        expect(preference.roomsSelected(deletedPubkey), isFalse);
+        expect(preference.roomsSelected(otherPubkey), isTrue);
       });
 
       test('deletes device-wide user data when no session is active', () async {

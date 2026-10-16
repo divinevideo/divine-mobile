@@ -9669,6 +9669,53 @@ class AppLocalizationsEn extends AppLocalizations {
       'Set how see-through the selected layer is';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Shape mask';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Show the selected item inside a shape';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Drag to move the shape. Pinch to resize or turn it, or drag a handle to stretch it.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'None';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Circle';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rectangle';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Heart';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Invert';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Softness';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Sharp';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Soft';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Corners';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Square';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Round';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override
@@ -12711,6 +12758,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Or post a proof';
 
   @override
@@ -12774,6 +12832,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get verifyErrorOauthFailed =>
       'That didn\'t go through. Give it another go.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Enter your handle first.';
@@ -13685,4 +13751,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Leaving this here.';
+
+  @override
+  String get messagesDirect => 'Direct';
+
+  @override
+  String get messagesRooms => 'Rooms';
+
+  @override
+  String get messagesPublicTestRooms => 'Public test rooms';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'These test rooms are public. Anyone with access can read your messages.';
+
+  @override
+  String get messagesNoRooms => 'No rooms yet';
+
+  @override
+  String get followedHashtagsTitle => 'Followed hashtags';
+
+  @override
+  String get manageHashtags => 'Manage hashtags';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Follow a hashtag from its page to find it here.';
 }

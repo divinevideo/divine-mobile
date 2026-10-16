@@ -17,6 +17,8 @@ caption_generator 100
 categories_repository 100
 collaborator_repository 96
 comments_repository 80
+concord_protocol 85
+concord_repository 90
 content_blocklist_repository 100
 content_policy 100
 count_formatter 100
@@ -37,6 +39,7 @@ feed_tuning_repository 100
 follow_repository 100
 funnelcake_api_client 44
 hashtag_repository 30
+hashtag_subscription_repository 100
 iap_repository 90
 image_metadata_stripper 100
 infinite_video_feed 100

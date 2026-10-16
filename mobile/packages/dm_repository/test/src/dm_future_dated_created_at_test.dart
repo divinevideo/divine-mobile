@@ -86,6 +86,8 @@ void main() {
           subscriptionId: any(named: 'subscriptionId'),
           tempRelays: any(named: 'tempRelays'),
           targetRelays: any(named: 'targetRelays'),
+          onStoredEventsStart: any(named: 'onStoredEventsStart'),
+          onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
         ),
       ).thenAnswer((_) => relay.stream);
 

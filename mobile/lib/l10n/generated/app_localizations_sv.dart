@@ -9575,6 +9575,53 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ställ in hur genomskinligt det valda lagret är';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Formmask';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Visa det markerade objektet inuti en form';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Dra för att flytta formen. Nyp för att ändra storlek på den eller vrida den, eller dra i ett handtag för att sträcka ut den.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Ingen';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Cirkel';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Rektangel';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Hjärta';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linjär';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Invertera';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Mjukhet';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Skarp';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Mjuk';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Hörn';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Raka';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Rundade';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
 
   @override
@@ -12625,6 +12672,17 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Eller posta ett bevis';
 
   @override
@@ -12687,6 +12745,14 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'Det gick inte igenom. Testa igen.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Fyll i ditt handle först.';
@@ -13599,4 +13665,30 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Lämnar det här.';
+
+  @override
+  String get messagesDirect => 'Direkt';
+
+  @override
+  String get messagesRooms => 'Rum';
+
+  @override
+  String get messagesPublicTestRooms => 'Offentliga testrum';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Dessa testrum är offentliga. Alla med åtkomst kan läsa dina meddelanden.';
+
+  @override
+  String get messagesNoRooms => 'Inga rum ännu';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtaggar du följer';
+
+  @override
+  String get manageHashtags => 'Hantera hashtaggar';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Följ en hashtagg på dess sida för att hitta den här.';
 }

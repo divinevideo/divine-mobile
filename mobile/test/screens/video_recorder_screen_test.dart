@@ -21,6 +21,8 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -29,6 +31,7 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
@@ -67,6 +70,25 @@ class _NonAutosaveVideoEditorNotifier extends VideoEditorNotifier {
 class _AutosaveVideoEditorNotifier extends VideoEditorNotifier {
   @override
   VideoEditorProviderState build() => VideoEditorProviderState();
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
 }
 
 /// Mock for CameraPermissionBloc
@@ -979,16 +1001,25 @@ void main() {
         recorderMode: VideoRecorderMode.capture,
       );
 
-      Future<void> pumpOpen(
+      Future<_MockDraftStorageService> pumpOpen(
         WidgetTester tester, {
         required bool autoRecord,
         required VideoEditorNotifier Function() videoEditor,
         DivineVideoDraft? autosavedDraft,
+        Object? autosaveLookupError,
+        bool failAutosaveLookupOnce = false,
       }) async {
         final mockDraftStorage = _MockDraftStorageService();
-        when(
-          mockDraftStorage.getAutosaveDraft,
-        ).thenAnswer((_) async => autosavedDraft);
+        var autosaveReads = 0;
+        when(mockDraftStorage.getAutosaveDraft).thenAnswer((_) {
+          autosaveReads++;
+          final shouldFail =
+              autosaveLookupError != null &&
+              (!failAutosaveLookupOnce || autosaveReads == 1);
+          return shouldFail
+              ? Future.error(autosaveLookupError)
+              : Future.value(autosavedDraft);
+        });
         final mockClipLibrary = _MockClipLibraryService();
         when(mockClipLibrary.getAllClips).thenAnswer((_) async => []);
 
@@ -1020,6 +1051,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump();
+        return mockDraftStorage;
       }
 
       testWidgets(
@@ -1035,6 +1067,22 @@ void main() {
           );
 
           verify(() => recorderBloc.add(autoStartInit)).called(1);
+        },
+      );
+
+      testWidgets(
+        'reads the autosave once when the open starts recording',
+        (tester) async {
+          await testPrefs.setBool('why_six_seconds_shown', true);
+
+          final draftStorage = await pumpOpen(
+            tester,
+            autoRecord: true,
+            videoEditor: _AutosaveVideoEditorNotifier.new,
+          );
+
+          verify(() => recorderBloc.add(autoStartInit)).called(1);
+          verify(draftStorage.getAutosaveDraft).called(1);
         },
       );
 
@@ -1099,6 +1147,92 @@ void main() {
           verifyNever(() => recorderBloc.add(autoStartInit));
         },
       );
+
+      group('when the autosave check fails', () {
+        late CrashReporter originalReporter;
+        late _RecordingCrashReporter reporter;
+
+        setUp(() {
+          originalReporter = detachedFailureReporter;
+          reporter = _RecordingCrashReporter();
+          detachedFailureReporter = reporter;
+        });
+
+        tearDown(() {
+          detachedFailureReporter = originalReporter;
+        });
+
+        testWidgets(
+          'reports a programming error from the autosave check to crash '
+          'reporting instead of leaking it',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            final failure = StateError('draft store unavailable');
+
+            await pumpOpen(
+              tester,
+              autoRecord: false,
+              videoEditor: _AutosaveVideoEditorNotifier.new,
+              autosaveLookupError: failure,
+            );
+
+            expect(tester.takeException(), isNull);
+            expect(
+              reporter.recordedErrors,
+              [
+                isA<Reportable<Object>>().having(
+                  (error) => error.unwrap(),
+                  'unwrap',
+                  same(failure),
+                ),
+              ],
+            );
+          },
+        );
+
+        testWidgets(
+          'reports an explicitly reportable first lookup failure even if a '
+          'second lookup would succeed',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+            final failure = Reportable(
+              Exception('synthetic autosave invariant'),
+              context: 'recorder test',
+            );
+
+            await pumpOpen(
+              tester,
+              autoRecord: true,
+              videoEditor: _AutosaveVideoEditorNotifier.new,
+              autosaveLookupError: failure,
+              failAutosaveLookupOnce: true,
+            );
+
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, [same(failure)]);
+          },
+        );
+
+        testWidgets(
+          'still opens the camera, without recording, on a hold-to-record '
+          'open',
+          (tester) async {
+            await testPrefs.setBool('why_six_seconds_shown', true);
+
+            await pumpOpen(
+              tester,
+              autoRecord: true,
+              videoEditor: _AutosaveVideoEditorNotifier.new,
+              autosaveLookupError: Exception('draft store unavailable'),
+            );
+
+            verify(() => recorderBloc.add(captureOnlyInit)).called(1);
+            verifyNever(() => recorderBloc.add(autoStartInit));
+            expect(tester.takeException(), isNull);
+            expect(reporter.recordedErrors, isEmpty);
+          },
+        );
+      });
     });
 
     group('Autosave Restore Flow', () {

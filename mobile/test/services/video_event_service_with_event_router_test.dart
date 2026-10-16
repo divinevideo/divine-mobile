@@ -38,6 +38,8 @@ class MockNostrService implements NostrClient {
     void Function()? onEose,
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
+    void Function()? onStoredEventsStart,
+    void Function(int deliveredEventCount)? onStoredEventsEnd,
   }) {
     _subscriptionFilters.addAll(filters);
 

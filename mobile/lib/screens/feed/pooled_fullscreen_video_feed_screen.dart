@@ -36,6 +36,7 @@ import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/screens/feed/feed_tuning_snackbar.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
@@ -623,7 +624,15 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                     prev.currentVideo == null && curr.currentVideo != null,
                 listener: (context, state) {
                   final video = state.currentVideo;
-                  if (video != null) CommentsScreen.show(context, video);
+                  if (video == null) return;
+                  runDetached(
+                    Future<void>.sync(
+                      () => CommentsScreen.show(context, video),
+                    ),
+                    'open comments from fullscreen feed',
+                    logName: 'FullscreenFeedContent',
+                    category: LogCategory.video,
+                  );
                 },
               ),
             // Dispatch FullscreenFeedVideoUnavailable when the active video's

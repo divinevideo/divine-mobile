@@ -516,12 +516,14 @@ void main() {
         String counterparty, {
         List<Override> extraOverrides = const [],
         UserProfile? profile,
+        bool isRemovalProtected = false,
       }) {
         when(() => mockPreviewCubit.state).thenReturn(
           RequestPreviewState(
             status: RequestPreviewStatus.loaded,
             messageCount: 1,
             participantPubkeys: [counterparty],
+            isRemovalProtected: isRemovalProtected,
           ),
         );
 
@@ -669,16 +671,10 @@ void main() {
         }
 
         for (final custody in RetiredKeyCustody.values) {
-          testWidgets('${custody.name}: still closed, and still no removal', (
-            tester,
-          ) async {
+          testWidgets('${custody.name}: still closed', (tester) async {
             await pumpPreviewFor(tester, custody);
 
             expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
-            expect(
-              find.text(l10n.messageRequestDeclineAndRemoveButton),
-              findsNothing,
-            );
           });
         }
       });
@@ -696,12 +692,16 @@ void main() {
 
       // #6971. Removal here is permanent — it writes a tombstone that
       // suppresses relay replay for the account's lifetime — and the notice is
-      // the user's only copy of why they were actioned.
-      testWidgets('a retired moderation notice offers no removal', (
+      // the user's only copy of why they were actioned. Which conversations
+      // are protected is the repository's answer, which the cubit carries.
+      testWidgets('a notice the repository protects offers no removal', (
         tester,
       ) async {
         await tester.pumpWidget(
-          buildModerationSubject(kLegacyModerationPubkeys.first),
+          buildModerationSubject(
+            kLegacyModerationPubkeys.first,
+            isRemovalProtected: true,
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -715,21 +715,11 @@ void main() {
         );
       });
 
-      testWidgets('the current moderation key offers no removal either', (
-        tester,
-      ) async {
-        // The pin lifts a current-key thread out of Requests today, so this is
-        // insurance for the next rotation rather than a live path.
-        await tester.pumpWidget(buildModerationSubject(kModerationPubkeyHex));
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text(l10n.messageRequestDeclineAndRemoveButton),
-          findsNothing,
-        );
-      });
-
-      testWidgets('a group with a moderation participant offers no removal', (
+      // #10151. A room's members are whoever its author listed, so naming a
+      // moderation account does not make it a notice. The repository says
+      // which conversations are protected; the view must not second-guess it
+      // from the participants.
+      testWidgets('a group with a moderation participant offers removal', (
         tester,
       ) async {
         when(() => mockPreviewCubit.state).thenReturn(
@@ -745,7 +735,7 @@ void main() {
 
         expect(
           find.text(l10n.messageRequestDeclineAndRemoveButton),
-          findsNothing,
+          findsOneWidget,
         );
       });
 
@@ -779,6 +769,78 @@ void main() {
               l10n.inboxSupportRowTitle,
               l10n.messageRequestMessageCount(1),
             ),
+          ),
+          findsNothing,
+        );
+      });
+
+      // #10151. A room that includes a retired key can never be sent to, so
+      // it reads as closed wherever that member sorts, without the reason that
+      // belongs to the one-to-one.
+      testWidgets('a group with a retired moderation member reads as closed, '
+          'without the moderation reason', (tester) async {
+        when(() => mockPreviewCubit.state).thenReturn(
+          RequestPreviewState(
+            status: RequestPreviewStatus.loaded,
+            messageCount: 1,
+            participantPubkeys: [otherPubkey, kLegacyModerationPubkeys.first],
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.dmRetiredThreadClosedTitle), findsOneWidget);
+        expect(find.text(l10n.dmRetiredThreadClosedBody), findsNothing);
+      });
+
+      // #10151. A room's members are whoever its author listed, so a room
+      // is never named, pictured or badged for the moderation account in it,
+      // even in production, where that account's own profile carries Divine's
+      // name.
+      testWidgets('a group that includes the moderation account is named for '
+          'another member, without the wordmark', (tester) async {
+        final subject = buildModerationSubject(
+          otherPubkey,
+          extraOverrides: [
+            userProfileReactiveProvider(kModerationPubkeyHex).overrideWith(
+              (ref) => Stream.value(
+                UserProfile(
+                  pubkey: kModerationPubkeyHex,
+                  displayName: l10n.inboxSupportRowTitle,
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: 'f' * 64,
+                ),
+              ),
+            ),
+          ],
+        );
+        when(() => mockPreviewCubit.state).thenReturn(
+          const RequestPreviewState(
+            status: RequestPreviewStatus.loaded,
+            messageCount: 1,
+            participantPubkeys: [kModerationPubkeyHex, otherPubkey],
+          ),
+        );
+
+        await tester.pumpWidget(subject);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            l10n.inboxGroupConversationTitle(
+              UserProfile.defaultDisplayNameFor(otherPubkey),
+              1,
+            ),
+          ),
+          findsWidgets,
+        );
+        expect(find.textContaining(l10n.inboxSupportRowTitle), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.logo,
           ),
           findsNothing,
         );

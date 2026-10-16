@@ -44,6 +44,7 @@ workspace:
   - packages/creator_sync
   - packages/curated_list_repository
   - packages/curation_repository
+  - packages/hashtag_subscription_repository
   - packages/divine_blurhash
   - packages/divine_ui
   - packages/db_client
@@ -52,6 +53,8 @@ workspace:
   - packages/divine_quick_actions
   - packages/divine_status_client
   - packages/dm_repository
+  - packages/concord_protocol
+  - packages/concord_repository
   - packages/divine_video_player
   - packages/feed_repository
   - packages/feed_tuning_repository
@@ -188,6 +191,8 @@ dependencies:
   infinite_video_feed:
     path: packages/infinite_video_feed
   dm_repository:
+  concord_protocol:
+  concord_repository:
   visibility_detector: ^0.4.0+2 # Detect widget visibility for proper video control
   wakelock_plus: ^1.5.2 # Prevent screen timeout during active video recording
   image: ^4.1.7 # Image processing for GIF generation
@@ -260,6 +265,9 @@ dependencies:
 
   # Curated List Repository - NIP-51 kind 30005 curated video lists
   curated_list_repository:
+
+  # Account-scoped, device-local hashtag subscriptions
+  hashtag_subscription_repository:
 
   # Curation Repository - NIP-51 video curation sets and content discovery
   curation_repository:
@@ -396,7 +404,7 @@ dependencies:
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
   pro_video_editor: ^2.35.0
-  pro_image_editor: ^14.12.0
+  pro_image_editor: ^14.14.0
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0

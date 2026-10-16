@@ -283,12 +283,19 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                   ),
                   AnimatedReveal(
                     child: state.sharePublicly && attribution != null
-                        ? IgnorePointer(
-                            ignoring: !state.canEdit,
-                            child: PublicAudioCreditEditor(
-                              key: ValueKey(audio.id),
-                              attribution: attribution,
-                              onChanged: cubit.updateAttribution,
+                        // ExcludeFocus as well as IgnorePointer: a field still
+                        // focused when Share is tapped would keep taking
+                        // keystrokes the cubit drops, so a retry would publish
+                        // a credit other than the one on screen.
+                        ? ExcludeFocus(
+                            excluding: !state.canEdit,
+                            child: IgnorePointer(
+                              ignoring: !state.canEdit,
+                              child: PublicAudioCreditEditor(
+                                key: ValueKey(audio.id),
+                                attribution: attribution,
+                                onChanged: cubit.updateAttribution,
+                              ),
                             ),
                           )
                         : null,

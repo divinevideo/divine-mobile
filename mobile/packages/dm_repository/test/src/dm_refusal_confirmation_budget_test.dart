@@ -498,6 +498,8 @@ void main() {
             () => nostrClient.subscribe(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => const Stream<Event>.empty());
           final activeRead = Completer<QueryResult>();

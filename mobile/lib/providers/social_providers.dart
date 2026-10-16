@@ -1005,6 +1005,13 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'scheduledPosts',
             () => db.scheduledPostsDao.deleteAllForUser(userPubkey),
           );
+          // Concord rooms keep the account's signed seals and unsent outbox
+          // across every relay and channel scope. A plain switch keeps them,
+          // like the DM tables; a removed account's must not outlive it.
+          await requiredDelete(
+            'concordStore',
+            () => db.concordStoreDao.clearAccount(userPubkey),
+          );
         }
       };
 

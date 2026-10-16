@@ -251,6 +251,8 @@ class VideosRepository {
   final VideoWarningLabelsResolver? _warningLabelsResolver;
   final FunnelcakeApiClient? _funnelcakeApiClient;
   final InMemoryFeedCache? _inMemoryFeedCache;
+  // Bound variable hashtag keys to at most 1,000 videos (20 first pages).
+  final _cachedHashtagKeys = <String>{};
   final SeenVideoLookup? _seenVideoLookup;
 
   /// Randomness behind the Classics feed's per-session slice and shuffle.
@@ -292,7 +294,9 @@ class VideosRepository {
   void clearInMemoryFeedCache({String? key}) {
     if (key != null) {
       _inMemoryFeedCache?.remove(key);
+      _cachedHashtagKeys.remove(key);
     } else {
+      _cachedHashtagKeys.clear();
       _inMemoryFeedCache?.clear();
     }
   }
@@ -499,6 +503,9 @@ class VideosRepository {
     final seenVideoKeys = <String>{};
     var pageCount = 0;
     int? nextBefore;
+    // One row past the page, so a full read usually still fills it after its
+    // oldest second is left for the next read.
+    final readLimit = limit + 1;
 
     while (visible.length < limit) {
       nextBefore = null;
@@ -506,7 +513,7 @@ class VideosRepository {
       final filter = Filter(
         kinds: [_videoKind],
         authors: authors,
-        limit: limit,
+        limit: readLimit,
         // A relay `until` is inclusive; the shared bound is exclusive.
         until: pageBefore == null ? null : pageBefore - 1,
       );
@@ -520,11 +527,10 @@ class VideosRepository {
         break;
       }
 
-      // Each relay, and the local cache, answers with its own newest [limit]
-      // events, so only the newest [limit] of the merged answer are complete:
-      // below them a dense source stopped returning rows a sparse one reached.
-      // The page ends there and the older rows come back on the next page.
-      final events = _newestEventsWithTies(read.events, limit);
+      final page = read.events.length < readLimit
+          ? null
+          : _completeRelayRows(read.events, readLimit);
+      final events = page?.events ?? read.events;
 
       // Order on the clock this walk pages on, as Funnelcake does.
       final videos = _transformAndFilter(events, sortByCreatedAt: false)
@@ -534,15 +540,18 @@ class VideosRepository {
         await _hydrateVideosWithBulkStats(videos),
         seenVideoKeys: seenVideoKeys,
       );
-      final oldest = events.map((event) => event.createdAt).reduce(min);
-      if (read.events.length < limit) {
-        if (read.timedOut) nextBefore = oldest;
+      if (page == null) {
+        if (read.timedOut) {
+          nextBefore = events.map((event) => event.createdAt).reduce(min);
+        }
         break;
       }
 
-      if (oldest == pageBefore) break;
-      pageBefore = oldest;
-      nextBefore = oldest;
+      // NostrClient drops rows above `until`, so the bound always moves down
+      // there; this backstops a source that answers above it.
+      if (pageBefore != null && page.before >= pageBefore) break;
+      pageBefore = page.before;
+      nextBefore = page.before;
     }
 
     return _FollowingFetchResult(
@@ -2010,15 +2019,35 @@ class VideosRepository {
     }
   }
 
-  /// The newest [limit] of [events], plus any older event that shares the
-  /// [limit]-th one's `created_at`: the next page starts strictly before that
-  /// second, so an event left out at it would never be read.
-  List<Event> _newestEventsWithTies(List<Event> events, int limit) {
-    if (events.length <= limit) return events;
+  /// The rows of a full relay read to keep, and the exclusive bound the next
+  /// read starts from.
+  ///
+  /// Each relay, and the client, keeps only the newest [readLimit] rows, so a
+  /// full read can stop partway through the second of its [readLimit]-th row.
+  /// Rows newer than that second are complete, and the next read asks for
+  /// that second again. When nothing is newer, the read is all one second and
+  /// asking again would return it unchanged, so the walk keeps it and moves
+  /// below it. Rows beyond [readLimit] in one second are out of reach of an
+  /// `until`-and-`limit` read.
+  ({List<Event> events, int before}) _completeRelayRows(
+    List<Event> events,
+    int readLimit,
+  ) {
     final sorted = [...events]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final boundary = sorted[limit - 1].createdAt;
-    return sorted.where((event) => event.createdAt >= boundary).toList();
+    final boundary = sorted[readLimit - 1].createdAt;
+    final newer = [
+      for (final event in sorted)
+        if (event.createdAt > boundary) event,
+    ];
+    if (newer.isNotEmpty) return (events: newer, before: boundary + 1);
+    return (
+      events: [
+        for (final event in sorted)
+          if (event.createdAt == boundary) event,
+      ],
+      before: boundary,
+    );
   }
 
   /// The oldest revision time (`created_at`, in seconds) in [stats], or
@@ -2331,13 +2360,12 @@ class VideosRepository {
 
   /// Fetches the hashtag feed from the Funnelcake REST API.
   ///
-  /// Fetches trending and classic videos for [hashtag] in parallel and
-  /// interleaves them 1:1 (trending first), deduplicating classics that
-  /// also appear in trending (by event ID or vine ID, case-insensitive).
-  /// Both lists pass through the same filtering pipeline as
-  /// [_transformVideoStats] — block filter, transport scheme, expiration,
-  /// content preferences. The endpoint is anonymous, so the injected
-  /// block filter is the only block/mute enforcement on this path (#948).
+  /// Fetches one ranked page, including classic videos already ranked by the
+  /// endpoint. A separate classics query must not gate visible results.
+  /// Results pass through the shared block, transport and content filters.
+  /// Nonempty pages are cached for one minute for immediate re-entry and
+  /// grid-to-player navigation. Call [clearInMemoryFeedCache] for refresh.
+  /// Cached reads reapply current visibility policy.
   ///
   /// Returns a failed result when [hashtag] is blank, the API client is
   /// unavailable, or the fetch fails or exceeds [timeout] — the REST feed
@@ -2352,15 +2380,37 @@ class VideosRepository {
       return const HashtagFeedVideosResult.failure();
     }
 
-    try {
-      final results = await Future.wait([
-        getVideosByHashtag(hashtag: trimmed, limit: 50),
-        getClassicVideosByHashtag(hashtag: trimmed, limit: 50),
-      ]).timeout(timeout);
-
+    final cacheKey = 'hashtag:${trimmed.toLowerCase()}';
+    final cached = _inMemoryFeedCache?.get(cacheKey);
+    if (cached != null) {
       return HashtagFeedVideosResult.success(
-        _interleaveHashtagVideos(results[0], results[1]),
+        applyContentPreferences(
+          cached.videos.where((video) => !video.isExpired).toList(),
+        ),
       );
+    }
+
+    try {
+      final videos = await getVideosByHashtag(
+        hashtag: trimmed,
+        limit: 50,
+      ).timeout(timeout);
+      if (videos.isNotEmpty && _inMemoryFeedCache != null) {
+        _cachedHashtagKeys
+          ..remove(cacheKey)
+          ..add(cacheKey);
+        if (_cachedHashtagKeys.length > 20) {
+          final oldest = _cachedHashtagKeys.first;
+          _cachedHashtagKeys.remove(oldest);
+          _inMemoryFeedCache.remove(oldest);
+        }
+        _inMemoryFeedCache.set(
+          cacheKey,
+          HomeFeedResult(videos: List.unmodifiable(videos)),
+          ttl: const Duration(minutes: 1),
+        );
+      }
+      return HashtagFeedVideosResult.success(videos);
     } on Exception catch (e, stackTrace) {
       Log.error(
         'getHashtagFeedVideos failed for "#$trimmed"',
@@ -2371,40 +2421,6 @@ class VideosRepository {
       );
       return const HashtagFeedVideosResult.failure();
     }
-  }
-
-  /// Interleaves trending and classic hashtag videos 1:1 for a balanced
-  /// feed. Classics that already appear in trending (by event ID or vine
-  /// ID, case-insensitive) are dropped; when one list runs out, the
-  /// remainder of the other is appended.
-  List<VideoEvent> _interleaveHashtagVideos(
-    List<VideoEvent> trending,
-    List<VideoEvent> classics,
-  ) {
-    final trendingIds = <String>{};
-    for (final video in trending) {
-      if (video.id.isNotEmpty) trendingIds.add(video.id.toLowerCase());
-      final vineId = video.vineId;
-      if (vineId != null && vineId.isNotEmpty) {
-        trendingIds.add(vineId.toLowerCase());
-      }
-    }
-
-    final uniqueClassics = classics.where((video) {
-      final vineId = video.vineId;
-      return !trendingIds.contains(video.id.toLowerCase()) &&
-          (vineId == null || !trendingIds.contains(vineId.toLowerCase()));
-    }).toList();
-
-    final result = <VideoEvent>[];
-    final maxLen = trending.length > uniqueClassics.length
-        ? trending.length
-        : uniqueClassics.length;
-    for (var i = 0; i < maxLen; i++) {
-      if (i < trending.length) result.add(trending[i]);
-      if (i < uniqueClassics.length) result.add(uniqueClassics[i]);
-    }
-    return result;
   }
 
   /// Deduplicates videos by logical feed identity and sorts by popularity

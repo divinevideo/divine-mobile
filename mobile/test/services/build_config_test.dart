@@ -34,7 +34,7 @@ void main() {
       expect(config.getDefault(FeatureFlag.debugTools), isTrue);
     });
 
-    test('videoReplies should be enabled by default in debug builds', () {
+    test('videoReplies should be enabled by default in all builds', () {
       const config = BuildConfiguration();
 
       expect(config.getDefault(FeatureFlag.videoReplies), isTrue);
@@ -131,6 +131,16 @@ void main() {
       expect(
         config.getEnvironmentKey(FeatureFlag.groupMessages),
         equals('FF_GROUP_MESSAGES'),
+      );
+    });
+
+    test('concordChat is off by default and maps to FF_CONCORD_CHAT', () {
+      const config = BuildConfiguration();
+
+      expect(config.getDefault(FeatureFlag.concordChat), isFalse);
+      expect(
+        config.getEnvironmentKey(FeatureFlag.concordChat),
+        equals('FF_CONCORD_CHAT'),
       );
     });
 

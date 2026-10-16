@@ -90,6 +90,7 @@ void main() {
           selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer((_) async => const NIP17SendResult.failure('stubbed'));
       when(
@@ -177,6 +178,7 @@ void main() {
           selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       );
     });
@@ -255,6 +257,7 @@ void main() {
           selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).called(1);
     });

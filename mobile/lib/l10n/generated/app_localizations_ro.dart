@@ -9792,6 +9792,53 @@ class AppLocalizationsRo extends AppLocalizations {
       'Setează cât de transparent e stratul selectat';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Mască de formă';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Arată elementul selectat într-o formă';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Trage ca să muți forma. Ciupește ca să o redimensionezi sau să o rotești, ori trage de un mâner ca să o întinzi.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Niciuna';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Cerc';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Dreptunghi';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Inimă';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Liniară';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Inversează';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Moliciune';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Clară';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Moale';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Colțuri';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Drepte';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Rotunjite';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
 
   @override
@@ -12890,6 +12937,17 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Sau postează o dovadă';
 
   @override
@@ -12952,6 +13010,14 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'N-a mers. Mai încearcă o dată.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Scrie mai întâi handle-ul tău.';
@@ -13873,4 +13939,30 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Las asta aici.';
+
+  @override
+  String get messagesDirect => 'Directe';
+
+  @override
+  String get messagesRooms => 'Camere';
+
+  @override
+  String get messagesPublicTestRooms => 'Camere publice de test';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Aceste camere de test sunt publice. Oricine are acces îți poate citi mesajele.';
+
+  @override
+  String get messagesNoRooms => 'Încă nu există camere';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtaguri urmărite';
+
+  @override
+  String get manageHashtags => 'Gestionează hashtagurile';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.';
 }

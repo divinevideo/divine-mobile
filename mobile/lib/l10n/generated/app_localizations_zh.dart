@@ -9026,6 +9026,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '设置所选图层的透明程度';
 
   @override
+  String get videoEditorShapeMaskLabel => '形状蒙版';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => '将所选项目显示在形状内';
+
+  @override
+  String get videoEditorShapeMaskHint => '拖动可移动形状。双指捏合可调整大小或旋转，拖动控制点可拉伸形状。';
+
+  @override
+  String get videoEditorShapeMaskNone => '无';
+
+  @override
+  String get videoEditorShapeMaskCircle => '圆形';
+
+  @override
+  String get videoEditorShapeMaskRectangle => '矩形';
+
+  @override
+  String get videoEditorShapeMaskHeart => '心形';
+
+  @override
+  String get videoEditorShapeMaskLinear => '线性';
+
+  @override
+  String get videoEditorShapeMaskInvert => '反转';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => '柔和度';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => '锐利';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => '柔和';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => '边角';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => '直角';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => '圆角';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
 
   @override
@@ -11848,6 +11893,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => '或者发一条证明';
 
   @override
@@ -11908,6 +11964,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => '没成功。再试一次吧。';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => '先填你的 handle。';
@@ -12771,4 +12835,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => '把这个留在这里。';
+
+  @override
+  String get messagesDirect => '私信';
+
+  @override
+  String get messagesRooms => '聊天室';
+
+  @override
+  String get messagesPublicTestRooms => '公开测试聊天室';
+
+  @override
+  String get messagesPublicTestDisclosure => '这些测试聊天室是公开的。任何有访问权限的人都可以阅读你的消息。';
+
+  @override
+  String get messagesNoRooms => '暂无聊天室';
+
+  @override
+  String get followedHashtagsTitle => '已关注的话题标签';
+
+  @override
+  String get manageHashtags => '管理话题标签';
+
+  @override
+  String get followedHashtagsEmpty => '在话题标签页面关注后，即可在这里找到。';
 }

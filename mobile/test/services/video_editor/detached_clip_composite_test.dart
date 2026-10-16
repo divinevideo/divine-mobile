@@ -15,6 +15,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         ChromaKey,
         ClipTransition,
         ClipTransitionType,
+        EditorLayerImage,
         EditorVideo,
         KeyframeClockPoint,
         SegmentFit;
@@ -645,6 +646,46 @@ void main() {
       // through, which a single H.264 track could never do.
       expect(layer.chromaKey, key);
       expect(layer.chromaKey!.isTransparent, isTrue);
+    });
+
+    test('hands the shape mask matte to the layer', () {
+      final matte = EditorLayerImage.memory(Uint8List.fromList([1, 2, 3]));
+
+      final layer = buildDetachedClipVideoLayer(
+        item: item(_clip()),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
+        timelineMap: identityMap,
+        speedFlattened: false,
+        mask: matte,
+      );
+
+      // On the layer, where the composition stretches it over the clip's own
+      // frame before placing it, so it turns and moves with the clip.
+      expect(layer.mask, same(matte));
+    });
+
+    test('renders the matte at the size the clip is placed at, before its '
+        'turn', () {
+      final upright = item(_clip());
+      final turned = item(
+        _clip(),
+        rotation: math.pi / 4,
+        logicalSize: rotatedSquare,
+      );
+
+      for (final exportItem in [upright, turned]) {
+        final size = detachedClipExportSize(
+          item: exportItem,
+          bodySize: bodySize,
+          videoSize: videoSize,
+          targetAspectRatio: targetAspectRatio,
+        );
+        expect(size.width, closeTo(90 * scale, 0.001));
+        expect(size.height, closeTo(90 * scale, 0.001));
+      }
     });
 
     test('leaves a layer without a green screen unkeyed', () {

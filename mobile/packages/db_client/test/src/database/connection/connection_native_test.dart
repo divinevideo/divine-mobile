@@ -1301,6 +1301,7 @@ void main() {
         'removed_message_ids',
         'vanished_profiles',
         'personal_events',
+        'concord_store_entries',
       ];
       expect(
         [

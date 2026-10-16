@@ -1,5 +1,5 @@
 // ABOUTME: The file types the audio file pickers offer.
-// ABOUTME: Shared by the editor's import row and the standalone sound upload.
+// ABOUTME: Shared by the editor's import row and the library's Add sound page.
 
 import 'package:file_selector/file_selector.dart';
 

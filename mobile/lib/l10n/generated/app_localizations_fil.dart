@@ -9653,6 +9653,53 @@ class AppLocalizationsFil extends AppLocalizations {
       'I-set kung gaano ka-transparent ang napiling layer';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Shape mask';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Ipakita ang napiling item sa loob ng isang hugis';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'I-drag para ilipat ang hugis. I-pinch para baguhin ang laki o iikot ito, o i-drag ang isang handle para i-stretch ito.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Wala';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Bilog';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Parihaba';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Puso';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Baligtarin';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Lambot';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Matalas';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Malambot';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Mga sulok';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Kuwadrado';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Pabilog';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override
@@ -12739,6 +12786,17 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'O mag-post ng patunay';
 
   @override
@@ -12801,6 +12859,14 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'Hindi natuloy. Subukan ulit.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Ilagay muna ang handle mo.';
@@ -13713,4 +13779,31 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Iiwan ko ito rito.';
+
+  @override
+  String get messagesDirect => 'Direkta';
+
+  @override
+  String get messagesRooms => 'Mga silid';
+
+  @override
+  String get messagesPublicTestRooms =>
+      'Mga pampublikong silid para sa pagsubok';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Pampubliko ang mga silid na ito para sa pagsubok. Mababasa ng sinumang may access ang mga mensahe mo.';
+
+  @override
+  String get messagesNoRooms => 'Wala pang mga silid';
+
+  @override
+  String get followedHashtagsTitle => 'Mga sinusundang hashtag';
+
+  @override
+  String get manageHashtags => 'Pamahalaan ang mga hashtag';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Sundan ang isang hashtag sa pahina nito para makita ito rito.';
 }

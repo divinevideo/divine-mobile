@@ -255,6 +255,34 @@ void main() {
         expect(toggle.notificationCount, equals(7));
       });
 
+      testWidgets('offers Direct and Rooms in Messages when the chat test '
+          'is on', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            // The chips and room rows are Material widgets; the app hosts
+            // the inbox inside the shell's Scaffold.
+            wrapInScaffold: true,
+            additionalOverrides: [
+              featureFlagStateProvider.overrideWithValue({
+                FeatureFlag.concordChat: true,
+              }),
+              isDmRestrictedProvider.overrideWithValue(false),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Messages'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.messagesRooms));
+        await tester.pump();
+        expect(find.text(l10n.messagesPublicTestRooms), findsOneWidget);
+        expect(find.text('general'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('renders $FollowingBar in messages tab', (tester) async {
         await tester.pumpWidget(buildSubject());
         await tester.pump();
@@ -2328,13 +2356,12 @@ void main() {
           expect(find.text(l10n.inboxActionBlockVanishedAccount), findsNothing);
         });
 
-        // Report and Block are withheld from every group and Remove from a
-        // removal-protected thread (#8391), so a group holding a protected
-        // member has no action left. Its row takes no long-press handler, so
-        // it neither opens an empty sheet nor advertises a gesture it cannot
-        // honour.
+        // Report and Block are withheld from every group, so a group that
+        // cannot be removed has no action left. Its row takes no long-press
+        // handler, so it neither opens an empty sheet nor advertises a gesture
+        // it cannot honour.
         testWidgets(
-          'a group holding a removal-protected member has no long-press',
+          'a group that cannot be removed has no long-press',
           (tester) async {
             final actionsCubit = _MockConversationActionsCubit();
             final conversation = groupConversation(subject: 'Weekend trip');

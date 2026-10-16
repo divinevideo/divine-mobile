@@ -33,6 +33,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onChromaKey,
     this.isChromaKeying = false,
     this.hasChromaKey = false,
+    this.onShapeMask,
+    this.hasShapeMask = false,
     this.onOpacity,
     this.hasOpacity = false,
     this.onReversed,
@@ -151,6 +153,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the active clip already carries a green screen, which
   /// highlights the action so the effect is visible from the timeline.
   final bool hasChromaKey;
+
+  /// Opens the shape mask editor for the selected clip or layer.
+  final VoidCallback? onShapeMask;
+
+  /// Whether the selected clip or layer already shows through a shape mask,
+  /// which highlights the action the way [hasChromaKey] does.
+  final bool hasShapeMask;
 
   /// Opens the opacity slider for a layer.
   final VoidCallback? onOpacity;
@@ -336,6 +345,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
             onPressed: isChromaKeying ? null : onChromaKey,
             isLoading: isChromaKeying,
             type: hasChromaKey ? .primary : .secondary,
+          ),
+        if (onShapeMask != null)
+          TimelineActionButton(
+            icon: .heart,
+            label: context.l10n.videoEditorShapeMaskLabel,
+            semanticLabel: context.l10n.videoEditorShapeMaskSemanticLabel,
+            onPressed: onShapeMask,
+            type: hasShapeMask ? .primary : .secondary,
           ),
         if (onOpacity != null)
           TimelineActionButton(

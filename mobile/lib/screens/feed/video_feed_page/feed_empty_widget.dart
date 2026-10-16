@@ -67,6 +67,9 @@ class FeedEmptyWidget extends StatelessWidget {
   }
 
   String _getEmptyMessage(BuildContext context, VideoFeedBlocState state) {
+    if (state.source.type == VideoFeedSourceType.subscribedHashtag) {
+      return context.l10n.hashtagFeedEmptyTitle(state.source.displayTag!);
+    }
     if ((state.mode == FeedMode.following || state.mode == FeedMode.forYou) &&
         state.error == VideoFeedError.noFollowedUsers) {
       return context.l10n.feedNoFollowedUsers;

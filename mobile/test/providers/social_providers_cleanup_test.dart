@@ -632,6 +632,62 @@ void main() {
       );
     });
 
+    test(
+      "deleting an account drops only that account's Concord room data",
+      () async {
+        // Concord rows hold the account's signed seals and its unsent outbox,
+        // so they must not outlive the account. A plain switch keeps them,
+        // like the DM tables.
+        for (final pubkey in [_pubkeyA, _pubkeyB]) {
+          await db.concordStoreDao.put(
+            account: pubkey,
+            scope: 'wss://relay.example/general',
+            key: 'sealed',
+            value: '{}',
+          );
+        }
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+        expect(
+          await db.concordStoreDao.get(
+            account: _pubkeyA,
+            scope: 'wss://relay.example/general',
+            key: 'sealed',
+          ),
+          isNotNull,
+          reason: 'a plain switch keeps the room data',
+        );
+
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+        expect(
+          await db.concordStoreDao.get(
+            account: _pubkeyA,
+            scope: 'wss://relay.example/general',
+            key: 'sealed',
+          ),
+          isNull,
+        );
+        expect(
+          await db.concordStoreDao.get(
+            account: _pubkeyB,
+            scope: 'wss://relay.example/general',
+            key: 'sealed',
+          ),
+          isNotNull,
+          reason: "the surviving account's room data must be untouched",
+        );
+      },
+    );
+
     test('non-destructive cleanup preserves pending uploads', () async {
       final subscription = container.listen(
         userDataCleanupServiceProvider,

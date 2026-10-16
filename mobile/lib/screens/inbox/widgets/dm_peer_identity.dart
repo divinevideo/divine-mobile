@@ -55,9 +55,10 @@ DmPeerLabels dmPeerLabels(BuildContext context) => DmPeerLabels(
 /// there so `ConversationListBloc` can index rows by the string they render
 /// (#8204).
 ///
-/// [peerName] is what [dmPeerDisplayName] resolved for the row's first peer. It
-/// is passed in rather than resolved here because a 1:1 name needs a profile
-/// lookup this function has no business performing.
+/// [peerName] is what [dmPeerDisplayName] resolved for the member
+/// [dmConversationNamedPeer] names the conversation for. It is passed in rather
+/// than resolved here because a 1:1 name needs a profile lookup this function
+/// has no business performing.
 String dmConversationDisplayTitle(
   BuildContext context, {
   required List<String> participantPubkeys,
@@ -86,8 +87,10 @@ String dmConversationDisplayTitle(
 ///
 /// [isVanished] and [moderation] are required rather than defaulted so every
 /// caller has to decide what to pass. Reactive widgets read them from
-/// `profileVanishedProvider` and `moderationPresentationProvider`, with
-/// `ConversationTile` as the reference call site.
+/// `profileVanishedProvider` and `moderationPresentationProvider`; a
+/// conversation surface takes the member and presentation from
+/// `dmConversationNamedPeer`, with `ConversationTile` as the reference call
+/// site.
 String dmPeerDisplayName(
   BuildContext context, {
   required String pubkeyHex,

@@ -9576,6 +9576,53 @@ class AppLocalizationsUr extends AppLocalizations {
       'منتخب لیئر کتنی شفاف ہو، یہ طے کریں';
 
   @override
+  String get videoEditorShapeMaskLabel => 'شیپ ماسک';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'منتخب آئٹم کو ایک شکل کے اندر دکھائیں';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'شکل کو منتقل کرنے کے لیے گھسیٹیں۔ سائز بدلنے یا گھمانے کے لیے چٹکی لیں، یا کھینچنے کے لیے ہینڈل گھسیٹیں۔';
+
+  @override
+  String get videoEditorShapeMaskNone => 'کوئی نہیں';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'دائرہ';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'مستطیل';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'دل';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'لکیری';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'الٹ دیں';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'نرمی';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'تیز';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'نرم';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'کونے';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'چوکور';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'گول';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
 
   @override
@@ -12615,6 +12662,17 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'یا ثبوت پوسٹ کریں';
 
   @override
@@ -12677,6 +12735,14 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'بات نہیں بنی۔ ایک بار پھر کوشش کریں۔';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'پہلے اپنا ہینڈل درج کریں۔';
@@ -13588,4 +13654,30 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
+
+  @override
+  String get messagesDirect => 'براہ راست';
+
+  @override
+  String get messagesRooms => 'کمرے';
+
+  @override
+  String get messagesPublicTestRooms => 'عوامی آزمائشی کمرے';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'یہ آزمائشی کمرے عوامی ہیں۔ رسائی رکھنے والا کوئی بھی شخص آپ کے پیغامات پڑھ سکتا ہے۔';
+
+  @override
+  String get messagesNoRooms => 'ابھی کوئی کمرہ نہیں';
+
+  @override
+  String get followedHashtagsTitle => 'فالو کیے گئے ہیش ٹیگز';
+
+  @override
+  String get manageHashtags => 'ہیش ٹیگز کا نظم کریں';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔';
 }

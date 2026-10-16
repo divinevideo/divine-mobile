@@ -6,6 +6,9 @@ import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 
 void main() {
   group('VideoFeedSourceTypeAnalytics', () {
+    test('hashtag sources have their own attribution', () {
+      expect(VideoFeedSourceType.subscribedHashtag.analyticsTag, 'hashtag');
+    });
     test('every source type has a distinct, stable tag', () {
       // These strings are written to funnelcake's
       // view_traffic_sources.source_detail and queried historically. Renaming
@@ -34,7 +37,7 @@ void main() {
       // is visible at review time when someone adds a feed mode.
       expect(
         VideoFeedSourceType.values.length,
-        5,
+        6,
         reason:
             'new feed mode added: give it an analyticsTag and update this '
             'test, otherwise its views land in an unattributed bucket',

@@ -9557,6 +9557,52 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية الطبقة المحددة';
 
   @override
+  String get videoEditorShapeMaskLabel => 'قناع الشكل';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => 'عرض العنصر المحدد داخل شكل';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'السحب لتحريك الشكل، والقرص بإصبعين لتغيير حجمه أو تدويره، أو سحب مقبض لمدّه.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'بلا';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'دائرة';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'مستطيل';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'قلب';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'خطي';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'عكس';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'النعومة';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'حادة';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'ناعمة';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'الزوايا';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'مربعة';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'مستديرة';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'كشف تلقائي';
 
   @override
@@ -12601,6 +12647,17 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'أو انشر إثباتاً';
 
   @override
@@ -12663,6 +12720,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'لم تنجح العملية. جرّب مرة أخرى.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'أدخل المُعرّف أولاً.';
@@ -13583,4 +13648,29 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'أترك هذا هنا.';
+
+  @override
+  String get messagesDirect => 'مباشرة';
+
+  @override
+  String get messagesRooms => 'الغرف';
+
+  @override
+  String get messagesPublicTestRooms => 'غرف اختبار عامة';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'غرف الاختبار هذه عامة. يمكن لأي شخص لديه صلاحية الوصول قراءة رسائلك.';
+
+  @override
+  String get messagesNoRooms => 'لا توجد غرف بعد';
+
+  @override
+  String get followedHashtagsTitle => 'الوسوم التي تتابعها';
+
+  @override
+  String get manageHashtags => 'إدارة الوسوم';
+
+  @override
+  String get followedHashtagsEmpty => 'تابع وسمًا من صفحته لتجده هنا.';
 }

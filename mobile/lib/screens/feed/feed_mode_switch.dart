@@ -3,8 +3,10 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:openvine/features/hashtag_follows/view/followed_hashtags_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
@@ -60,7 +62,8 @@ class FeedModeSwitch extends StatelessWidget {
                   : BlocBuilder<VideoFeedBloc, VideoFeedBlocState>(
                       buildWhen: (prev, curr) =>
                           prev.source != curr.source ||
-                          prev.subscribedLists != curr.subscribedLists,
+                          prev.subscribedLists != curr.subscribedLists ||
+                          prev.followedHashtags != curr.followedHashtags,
                       builder: (context, state) => _FeedModeContent(
                         onTap: () => _showFeedModeBottomSheet(context, state),
                         label: _labelForSource(state, context.l10n),
@@ -104,9 +107,23 @@ class FeedModeSwitch extends StatelessWidget {
             value: 'list:${list.id}',
           ),
         ),
+        ...state.followedHashtags.map(
+          (tag) => VineBottomSheetSelectionOptionData(
+            label: '#${tag.displayTag}',
+            value: 'hashtag:${tag.canonicalTag}',
+          ),
+        ),
+        VineBottomSheetSelectionOptionData(
+          label: l10n.manageHashtags,
+          value: 'manageHashtags',
+        ),
       ],
     );
 
+    if (selected == 'manageHashtags' && context.mounted) {
+      await context.push(FollowedHashtagsPage.path);
+      return;
+    }
     if (selected != null && context.mounted) {
       context.read<VideoFeedBloc>().add(
         VideoFeedSourceChanged(_sourceForSelection(selected, state)),
@@ -116,6 +133,14 @@ class FeedModeSwitch extends StatelessWidget {
 }
 
 VideoFeedSource _sourceForSelection(String selected, VideoFeedBlocState state) {
+  for (final tag in state.followedHashtags) {
+    if (selected == 'hashtag:${tag.canonicalTag}') {
+      return VideoFeedSource.subscribedHashtag(
+        hashtag: tag.canonicalTag,
+        displayTag: tag.displayTag,
+      );
+    }
+  }
   if (selected == 'forYou') {
     return const VideoFeedSource.forYou();
   }
@@ -140,6 +165,7 @@ VideoFeedSource _sourceForSelection(String selected, VideoFeedBlocState state) {
 String _labelForSource(VideoFeedBlocState state, AppLocalizations l10n) {
   final source = state.source;
   return switch (source.type) {
+    VideoFeedSourceType.subscribedHashtag => source.labelFallback,
     VideoFeedSourceType.forYou => l10n.feedModeForYou,
     VideoFeedSourceType.following => l10n.feedModeFollowing,
     VideoFeedSourceType.newVideos => l10n.feedModeNew,

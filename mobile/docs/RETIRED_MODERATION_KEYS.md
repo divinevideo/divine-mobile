@@ -92,10 +92,11 @@ role uses the shared support identity.
 |---|---|
 | Official name ("Divine Moderation"), inbox search name and bundled wordmark avatar — kept for a retired key nobody can sign as (`unrecovered`, `destroyed`) | `dm_peer_identity.dart` (`dmPeerDisplayName`, `dmPeerAvatar`) and `dm_peer_name.dart`, reached from the inbox row, request row and preview, thread header, empty-conversation state, following strip, reactions sheet and the recipient pickers; resolved by `moderationPresentationOf` |
 | Neutral "Former moderation account" name and the default placeholder avatar, with no handle line — withdrawn official name and wordmark, and the key's own kind-0 name, picture and NIP-05 are ignored too; the thread header shows no subtitle, not a social-proof line — for a retired key someone could still sign as (`archived`, `compromised`) | the same helpers plus `dmPeerHandle`, through `ModerationPresentation.former` |
-| Conversation and request rows labelled closed | `conversation_tile.dart` and `request_tile.dart`, via `isRetiredModerationAccount` |
-| Composer closed; banner routes replies to the current support key | `conversation_view.dart`, via `isRetiredModerationAccount` and `kModerationPubkeyHex` |
+| A room is named and pictured for its first member that is not a moderation key, and never carries Divine's name, wordmark or handle — a room's members are whoever its author listed (#10151). A room whose other members are all moderation keys is named for a former key ahead of an official one, keeping that key's neutral name | `dmConversationNamedPeer` in `dm_peer_name.dart`, read by the same surfaces |
+| Conversation and request rows labelled closed — a room too when any member is a retired key, since a room send is refused whole when any member is (#10151) | `conversation_tile.dart` and `request_tile.dart`, via `isRetiredModerationAccount` |
+| Composer closed; banner routes replies to the current support key. A room that includes a retired key is closed too, with only the closed line (#10151) | `conversation_view.dart`, via `isRetiredModerationAccount` and `kModerationPubkeyHex` |
 | Pinned support row, unread partition, and retired predicates wired into list state | `inbox_page.dart`, `message_requests_page.dart`, `app_shell_badge_scope.dart`, and `ConversationListBloc` |
-| Destructive request action withheld for moderation threads, whatever the custody | `request_preview_view.dart`, via `isModerationAccount` |
+| Destructive request action withheld for a one-to-one with a moderation key, whatever the custody; a room is removable like any other (#10151) | `RequestPreviewCubit`, via `DmRepository.isRemovalProtected` |
 | Outbound sends refused and retained as non-retryable evidence | `dmSendPolicyProvider` → `DmSendPolicyDecision.terminallyBlockedRetain` |
 | Pre-rotation threads excluded from pinned-support adoption | `DmRepository.extractPinnedSupport` |
 | Labeler subscription migrated to the current key | `ModerationLabelService._migrateLegacyPubkey` |
@@ -107,7 +108,8 @@ role uses the shared support identity.
 `isModerationAccount` answers *"is this the moderation team's thread"* and is
 true for every retired key whatever its custody: it is the **safety**
 predicate (the request-removal policy and the withheld decline action), so
-those protections never depend on who might hold a key.
+those protections never depend on who might hold a key. They apply to a
+one-to-one only (#10151).
 `isRetiredModerationAccount` answers *"is this a key we can still talk to"*.
 Neither chooses a name or an avatar. **Presentation** follows recorded custody
 through `moderationPresentationOf`, which the UI reads from

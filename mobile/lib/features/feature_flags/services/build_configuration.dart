@@ -29,10 +29,9 @@ class BuildConfiguration {
       case FeatureFlag.profileListFeatures:
         return const bool.fromEnvironment('FF_PROFILE_LIST_FEATURES');
       case FeatureFlag.videoReplies:
-        const isReleaseBuild = bool.fromEnvironment('dart.vm.product');
         return const bool.fromEnvironment(
           'FF_VIDEO_REPLIES',
-          defaultValue: !isReleaseBuild,
+          defaultValue: true,
         );
       case FeatureFlag.advancedRelaySettings:
         return const bool.fromEnvironment('FF_ADVANCED_RELAY_SETTINGS');
@@ -70,6 +69,10 @@ class BuildConfiguration {
         // flag gates the picker that starts a group and filing a room someone
         // else starts as a room.
         return const bool.fromEnvironment('FF_GROUP_MESSAGES');
+      case FeatureFlag.concordChat:
+        // Default OFF: the POC signs with the account's real key into a
+        // stream anyone can read, so only reviewer builds opt in (#10094).
+        return const bool.fromEnvironment('FF_CONCORD_CHAT');
     }
   }
 
@@ -118,6 +121,8 @@ class BuildConfiguration {
         return 'FF_POST_PUBLISH_CONFIRMATION_TREATMENT';
       case FeatureFlag.groupMessages:
         return 'FF_GROUP_MESSAGES';
+      case FeatureFlag.concordChat:
+        return 'FF_CONCORD_CHAT';
     }
   }
 }

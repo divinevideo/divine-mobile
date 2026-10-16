@@ -2,18 +2,36 @@
 // ABOUTME: claim is published only once the verifier has confirmed it.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockIdentityClaimsRepository extends Mock
     implements IdentityClaimsRepository {}
 
 class _MockAnalyticsEventSink extends Mock implements AnalyticsEventSink {}
+
+class _MockSignedIdentityClaim extends Mock implements SignedIdentityClaim {}
+
+/// A source whose every byte is zero, so the start secret is 'A' x 43.
+class _ZeroRandom implements Random {
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  bool nextBool() => false;
+}
 
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -84,7 +102,10 @@ void main() {
     late _MockIdentityClaimsRepository repository;
     late _MockAnalyticsEventSink analytics;
     late List<Uri> launched;
-    late Uri? callback;
+    late String? startedReturnUrl;
+    late String? startedCheck;
+    // What the verifier sends back; the default echoes this sign-in's id.
+    late Uri? Function(Uri returnUrl) answer;
 
     setUpAll(() {
       registerFallbackValue(
@@ -95,6 +116,7 @@ void main() {
           proof: 'abc',
         ),
       );
+      registerFallbackValue(_MockSignedIdentityClaim());
     });
 
     setUp(() {
@@ -107,8 +129,15 @@ void main() {
         ),
       ).thenAnswer((_) async {});
       launched = [];
-      callback = Uri.parse(
-        '$_returnUrl?oauth_verified=true&platform=twitter&identity=jack',
+      startedReturnUrl = null;
+      startedCheck = null;
+      answer = (returnUrl) => returnUrl.replace(
+        queryParameters: {
+          ...returnUrl.queryParameters,
+          'platform': 'twitter',
+          'identity': 'jack',
+          'oauth_confirm': 'C' * 43,
+        },
       );
       when(
         () => repository.verifyClaim(any()),
@@ -120,27 +149,39 @@ void main() {
         ),
       ).thenAnswer((_) async => []);
       when(
-        () => repository.resolveOAuthLaunchUri(
+        () => repository.startSignIn(
           platform: any(named: 'platform'),
           pubkey: any(named: 'pubkey'),
           returnUrl: any(named: 'returnUrl'),
+          startCheck: any(named: 'startCheck'),
           handle: any(named: 'handle'),
         ),
-      ).thenAnswer(
-        (_) async => Uri.parse('https://provider.example/authorize?state=s'),
-      );
+      ).thenAnswer((invocation) async {
+        startedReturnUrl = invocation.namedArguments[#returnUrl] as String;
+        startedCheck = invocation.namedArguments[#startCheck] as String;
+        return Uri.parse('https://provider.example/authorize?state=s');
+      });
     });
 
-    VerifyConnectCubit build(VerifierPlatform platform) => VerifyConnectCubit(
+    VerifyConnectCubit build(
+      VerifierPlatform platform, {
+      VerifyOAuthLauncher? launchOAuth,
+      Random? random,
+      Future<void> Function(Duration)? wait,
+    }) => VerifyConnectCubit(
       repository: repository,
       pubkey: _pubkey,
       platform: platform,
       oauthReturnUrl: _returnUrl,
       analytics: analytics,
-      launchOAuth: (uri) async {
-        launched.add(uri);
-        return callback;
-      },
+      random: random ?? Random(1),
+      wait: wait ?? (_) async {},
+      launchOAuth:
+          launchOAuth ??
+          (uri) async {
+            launched.add(uri);
+            return answer(Uri.parse(startedReturnUrl!));
+          },
     );
 
     // The claim published, and the identity it was told to replace.
@@ -485,6 +526,31 @@ void main() {
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'says a verified link the signer declined was not signed',
+        build: () => build(_github),
+        setUp: () {
+          when(() => repository.publishClaim(any())).thenThrow(
+            const IdentityClaimNotSignedException(
+              'Could not sign the identity event',
+            ),
+          );
+        },
+        act: (cubit) async {
+          cubit
+            ..identityChanged('octocat')
+            ..proofChanged('abc');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          expect(cubit.state.error, equals(VerifyConnectError.notSigned));
+          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
+        },
+        // The signer reports its own faults; a decline is the person's
+        // choice, so neither is filed again here (#9340).
+        errors: () => const [],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
         'separates an unreadable link list from a failed publish',
         build: () => build(_github),
         setUp: () {
@@ -603,120 +669,122 @@ void main() {
 
     group('connectWithOAuth', () {
       blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'never opens a browser when the flow is not configured',
-        build: () => build(_twitter),
-        setUp: () {
-          when(
-            () => repository.resolveOAuthLaunchUri(
-              platform: any(named: 'platform'),
-              pubkey: any(named: 'pubkey'),
-              returnUrl: any(named: 'returnUrl'),
-              handle: any(named: 'handle'),
-            ),
-          ).thenAnswer((_) async => null);
-        },
+        'starts with a start check and a sign-in id, then waits for approval naming the account',
+        build: () => build(_twitter, random: _ZeroRandom()),
         act: (cubit) => cubit.connectWithOAuth(),
         verify: (cubit) {
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.signedInAccount, 'jack');
           expect(
-            cubit.state.error,
-            equals(VerifyConnectError.oauthUnavailable),
-          );
-          expect(launched, isEmpty);
-          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
-        },
-      );
-
-      blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'returns to editing when resolving the OAuth URL throws',
-        build: () => build(_twitter),
-        setUp: () {
-          when(
-            () => repository.resolveOAuthLaunchUri(
-              platform: any(named: 'platform'),
-              pubkey: any(named: 'pubkey'),
-              returnUrl: any(named: 'returnUrl'),
-              handle: any(named: 'handle'),
+            startedReturnUrl,
+            matches(
+              RegExp(
+                r'^https://divine\.video/app/callback\?signin=[0-9a-f]{32}$',
+              ),
             ),
-          ).thenThrow(const FormatException('bad start URL'));
-        },
-        act: (cubit) => cubit.connectWithOAuth(),
-        verify: (cubit) {
-          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
-          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
-          expect(launched, isEmpty);
-        },
-        errors: () => [isA<FormatException>()],
-      );
-
-      blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'publishes the account the provider confirmed',
-        build: () => build(_twitter),
-        act: (cubit) => cubit.connectWithOAuth(),
-        verify: (cubit) {
-          expect(cubit.state.status, equals(VerifyConnectStatus.linked));
-          final claim =
-              verify(
-                    () => repository.publishClaim(captureAny()),
-                  ).captured.single
-                  as IdentityClaim;
-          expect(claim.identity, equals('jack'));
-          expect(claim.proof, equals(IdentityClaim.oauthProof));
-          expect(launched, hasLength(1));
-          expect(cubit.state.linkedClaim, equals(claim));
-        },
-      );
-
-      blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'returns to the form without an error when dismissed',
-        build: () => build(_twitter),
-        setUp: () => callback = null,
-        act: (cubit) => cubit.connectWithOAuth(),
-        verify: (cubit) {
-          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
-          expect(cubit.state.error, isNull);
+          );
+          // The secret from an all-zero source is 'A' x 43. The start sends
+          // its hash, never the secret itself.
+          expect(startedCheck, SignInSecrets.startCheckFor('A' * 43));
+          expect(startedCheck, isNot('A' * 43));
+          expect(
+            launched,
+            equals([Uri.parse('https://provider.example/authorize?state=s')]),
+          );
+          verifyNever(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          );
           verifyNever(() => repository.publishClaim(any()));
         },
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'treats a denied callback as a failure',
+        'refuses a return whose sign-in id is not this one, and signs nothing',
         build: () => build(_twitter),
-        setUp: () => callback = Uri.parse(
-          '$_returnUrl?oauth_error=Verification%20failed',
+        setUp: () => answer = (returnUrl) => Uri.parse(
+          '$_returnUrl?signin=${'0' * 32}&platform=twitter&identity=mallory'
+          '&oauth_confirm=${'C' * 43}',
         ),
         act: (cubit) => cubit.connectWithOAuth(),
         verify: (cubit) {
-          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
-          verifyNever(() => repository.publishClaim(any()));
+          expect(cubit.state.error, VerifyConnectError.oauthFailed);
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.signedInAccount, isNull);
+          verifyNever(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          );
         },
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'keeps an expected provider refusal out of Bloc errors',
+        'refuses a return for another platform',
         build: () => build(_twitter),
-        setUp: () => callback = Uri.parse(
-          '$_returnUrl?oauth_error=Verification%20failed',
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'youtube',
+            'identity': 'jack',
+            'oauth_confirm': 'C' * 43,
+          },
         ),
         act: (cubit) => cubit.connectWithOAuth(),
-        verify: (cubit) {
-          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
-        },
-        // Free-form verifier refusals are expected domain outcomes. They are
-        // warning logs, not Bloc errors, so they cannot be misclassified as
-        // reportable StateErrors by DivineBlocObserver.
-        errors: () => const [],
+        verify: (cubit) =>
+            expect(cubit.state.error, VerifyConnectError.oauthFailed),
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'refuses a success that names no account',
-        build: () => build(_twitter),
-        setUp: () => callback = Uri.parse(
-          '$_returnUrl?oauth_verified=true&platform=twitter&identity=',
+        'refuses a Bluesky return for a handle other than the one typed',
+        build: () => build(_bluesky),
+        seed: () => const VerifyConnectState(
+          platform: _bluesky,
+          identity: '@Alice.bsky.social ',
+        ),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'bluesky',
+            'identity': 'mallory.bsky.social',
+            'oauth_confirm': 'C' * 43,
+          },
+        ),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) =>
+            expect(cubit.state.error, VerifyConnectError.oauthFailed),
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'accepts the typed Bluesky handle written with @, spaces or capitals, and starts with it bare',
+        build: () => build(_bluesky),
+        seed: () => const VerifyConnectState(
+          platform: _bluesky,
+          identity: '@Alice.bsky.social ',
+        ),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'bluesky',
+            'identity': 'alice.bsky.social',
+            'oauth_confirm': 'C' * 43,
+          },
         ),
         act: (cubit) => cubit.connectWithOAuth(),
         verify: (cubit) {
-          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
-          verifyNever(() => repository.publishClaim(any()));
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          verify(
+            () => repository.startSignIn(
+              platform: 'bluesky',
+              pubkey: _pubkey,
+              returnUrl: any(named: 'returnUrl'),
+              startCheck: any(named: 'startCheck'),
+              handle: 'Alice.bsky.social',
+            ),
+          ).called(1);
         },
       );
 
@@ -731,43 +799,190 @@ void main() {
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'passes the bluesky handle to the start URL, and starts once',
-        build: () => build(_bluesky),
-        setUp: () => callback = Uri.parse(
-          '$_returnUrl?oauth_verified=true&platform=bluesky'
-          '&identity=alice.bsky.social',
+        'treats a return without a code as not confirmed, and publishes nothing',
+        build: () => build(_twitter),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'twitter',
+            'identity': 'jack',
+            'oauth_verified': 'true',
+          },
         ),
-        act: (cubit) async {
-          cubit.identityChanged('alice.bsky.social');
-          await cubit.connectWithOAuth();
-        },
-        verify: (_) {
-          // Bluesky's start resolves the PDS and pushes a PAR to it, so the
-          // browser has to open on the resolved provider URL rather than on
-          // the start endpoint a second time.
-          verify(
-            () => repository.resolveOAuthLaunchUri(
-              platform: 'bluesky',
-              pubkey: _pubkey,
-              returnUrl: _returnUrl,
-              handle: 'alice.bsky.social',
-            ),
-          ).called(1);
-          expect(
-            launched,
-            equals([Uri.parse('https://provider.example/authorize?state=s')]),
-          );
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+          verifyNever(() => repository.publishClaim(any()));
         },
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'treats an empty code as not confirmed',
+        build: () => build(_twitter),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'twitter',
+            'identity': 'jack',
+            'oauth_confirm': '',
+          },
+        ),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+          expect(cubit.state.signedInAccount, isNull);
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'refuses a return that names no account',
+        build: () => build(_twitter),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'twitter',
+            'identity': '',
+            'oauth_confirm': 'C' * 43,
+          },
+        ),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
+          expect(cubit.state.signedInAccount, isNull);
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'treats a refused sign-in as a failure, kept out of Bloc errors',
+        build: () => build(_twitter),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'oauth_error': 'cancelled or declined at Twitter',
+          },
+        ),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
+          expect(cubit.state.signedInAccount, isNull);
+        },
+        // Verifier refusals are expected domain outcomes. They are warning
+        // logs, not Bloc errors, so they cannot be misclassified as
+        // reportable StateErrors by DivineBlocObserver.
+        errors: () => const [],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'goes back to editing when the person closes the sign-in',
+        build: () => build(_twitter),
+        setUp: () => answer = (_) => null,
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.error, isNull);
+        },
+      );
+
+      test(
+        'starting again forgets the account the last sign-in named',
+        () async {
+          final cubit = build(_twitter);
+          await cubit.connectWithOAuth();
+          expect(cubit.state.signedInAccount, 'jack');
+
+          answer = (_) => null;
+          await cubit.connectWithOAuth();
+
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.signedInAccount, isNull);
+          await cubit.close();
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'never opens a browser when sign-in is not set up',
+        build: () => build(_twitter),
+        setUp: () => when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenAnswer((_) async => null),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.oauthUnavailable);
+          expect(launched, isEmpty);
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'says the verifier is unreachable when the start request cannot get through',
+        build: () => build(_twitter),
+        setUp: () => when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierNetworkException('down')),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          expect(launched, isEmpty);
+        },
+        errors: () => [isA<VerifierNetworkException>()],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'says the verifier is unreachable when the start request times out',
+        build: () => build(_twitter),
+        setUp: () => when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierTimeoutException('slow')),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          expect(launched, isEmpty);
+        },
+        errors: () => [isA<VerifierTimeoutException>()],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'returns to editing when the start request is refused',
+        build: () => build(_twitter),
+        setUp: () => when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierApiException(400, 'bad return_url')),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
+          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
+          expect(launched, isEmpty);
+        },
+        errors: () => [isA<VerifierApiException>()],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
         'reports a browser session that threw',
-        build: () => VerifyConnectCubit(
-          repository: repository,
-          pubkey: _pubkey,
-          platform: _twitter,
-          oauthReturnUrl: _returnUrl,
-          analytics: analytics,
+        build: () => build(
+          _twitter,
           launchOAuth: (_) async => throw const FormatException('bad callback'),
         ),
         act: (cubit) => cubit.connectWithOAuth(),
@@ -779,12 +994,8 @@ void main() {
 
       test('returns quietly when closed before the browser returns', () async {
         final browser = Completer<Uri?>();
-        final cubit = VerifyConnectCubit(
-          repository: repository,
-          pubkey: _pubkey,
-          platform: _twitter,
-          oauthReturnUrl: _returnUrl,
-          analytics: analytics,
+        final cubit = build(
+          _twitter,
           launchOAuth: (uri) {
             launched.add(uri);
             return browser.future;
@@ -794,11 +1005,824 @@ void main() {
         final connect = cubit.connectWithOAuth();
         await pumpEventQueue();
         await cubit.close();
-        browser.complete(callback);
+        browser.complete(answer(Uri.parse(startedReturnUrl!)));
 
         await connect;
-        verifyNever(() => repository.publishClaim(any()));
+        expect(cubit.state.status, VerifyConnectStatus.authorizing);
       });
+
+      test(
+        'logs a refused sign-in by platform and a fixed reason, not the text the return carried',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          final cubit = build(_twitter);
+          answer = (returnUrl) => returnUrl.replace(
+            queryParameters: {
+              ...returnUrl.queryParameters,
+              'oauth_error': 'cancelled or declined at Twitter',
+            },
+          );
+          await cubit.connectWithOAuth();
+          final logged = LogCaptureService()
+              .getRecentLogs()
+              .map((entry) => entry.message)
+              .join('\n');
+          expect(
+            logged,
+            contains('Verifier sign-in for twitter did not complete: refused'),
+          );
+          expect(logged, isNot(contains('cancelled or declined')));
+          await cubit.close();
+        },
+      );
+
+      test('never logs the return address or the code', () async {
+        // Same capture other cubit tests read (divine_auth_cubit_test.dart).
+        await LogCaptureService().clearAllLogs();
+        final cubit = build(_twitter);
+        answer = (returnUrl) => Uri.parse(
+          '$_returnUrl?signin=${'0' * 32}&platform=twitter&identity=x'
+          '&oauth_confirm=${'C' * 43}',
+        );
+        await cubit.connectWithOAuth();
+        final logged = LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .join('\n');
+        expect(logged, contains('did not match the twitter sign-in'));
+        expect(logged, isNot(contains('C' * 43)));
+        expect(logged, isNot(contains('signin=')));
+        await cubit.close();
+      });
+    });
+
+    group('approveSignIn', () {
+      late SignedIdentityClaim signed;
+      const confirmed = SignInConfirmation(
+        platform: 'twitter',
+        identity: 'jack',
+      );
+      // The binding for start secret 'A' x 43 (an all-zero source) and code
+      // 'C' x 43, worked out with Node's crypto by the shared rule whose test
+      // vector signin_confirmation_test.dart pins.
+      const zeroSecretBinding = 'F8UKdZkRqEKITNU-P3wPqQDvlfkyRzqqbNJ4htvVaSI';
+
+      When<Future<SignInConfirmation>> whenConfirm() => when(
+        () => repository.confirmSignIn(
+          code: any(named: 'code'),
+          startSecret: any(named: 'startSecret'),
+          signed: any(named: 'signed'),
+        ),
+      );
+
+      void expectConfirmCalls(int times) => verify(
+        () => repository.confirmSignIn(
+          code: any(named: 'code'),
+          startSecret: any(named: 'startSecret'),
+          signed: signed,
+        ),
+      ).called(times);
+
+      setUp(() {
+        signed = _MockSignedIdentityClaim();
+        when(
+          () => repository.signClaim(
+            any(),
+            confirmBinding: any(named: 'confirmBinding'),
+          ),
+        ).thenAnswer((_) async => signed);
+        whenConfirm().thenAnswer((_) async => confirmed);
+        when(
+          () => repository.publishSignedClaim(any()),
+        ).thenAnswer((_) async => []);
+      });
+
+      Future<VerifyConnectCubit> waiting({
+        Future<void> Function(Duration)? wait,
+      }) async {
+        final cubit = build(_twitter, random: _ZeroRandom(), wait: wait);
+        await cubit.connectWithOAuth();
+        expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+        return cubit;
+      }
+
+      test(
+        'signs with the bound value, confirms, then publishes the same event',
+        () async {
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          final binding = verify(
+            () => repository.signClaim(
+              captureAny(),
+              confirmBinding: captureAny(named: 'confirmBinding'),
+            ),
+          ).captured;
+          expect((binding[0] as IdentityClaim).identity, 'jack');
+          expect(
+            binding[1],
+            SignInSecrets.confirmBindingFor('C' * 43, startedCheck!),
+          );
+          expect(binding[1], zeroSecretBinding);
+          verifyInOrder([
+            () => repository.confirmSignIn(
+              code: 'C' * 43,
+              startSecret: any(named: 'startSecret'),
+              signed: signed,
+            ),
+            () => repository.publishSignedClaim(signed),
+          ]);
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          expect(cubit.state.linkedClaim?.identity, 'jack');
+          // Linked, so no account is left waiting to approve, as on the proof
+          // path.
+          expect(cubit.state.signedInAccount, isNull);
+
+          // The sign-in is used up, so approving again publishes nothing more.
+          await cubit.approveSignIn();
+          verifyNever(() => repository.publishSignedClaim(any()));
+          await cubit.close();
+        },
+      );
+
+      test('confirms with the secret whose hash the start sent', () async {
+        final cubit = await waiting();
+        await cubit.approveSignIn();
+        final sent = verify(
+          () => repository.confirmSignIn(
+            code: any(named: 'code'),
+            startSecret: captureAny(named: 'startSecret'),
+            signed: any(named: 'signed'),
+          ),
+        ).captured;
+        expect(
+          SignInSecrets.startCheckFor(sent.single as String),
+          startedCheck,
+        );
+        expect(sent.single, 'A' * 43);
+        await cubit.close();
+      });
+
+      test(
+        'tries again while the verifier has not seen the sign-in yet, with the same signed event',
+        () async {
+          var calls = 0;
+          whenConfirm().thenAnswer((_) async {
+            calls++;
+            if (calls < 3) {
+              throw SignInConfirmException(404, SignInRefusal.notFound);
+            }
+            return confirmed;
+          });
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expectConfirmCalls(3);
+          verify(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          ).called(1);
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          await cubit.close();
+        },
+      );
+
+      test('stops waiting to try again once closed', () {
+        fakeAsync((async) {
+          whenConfirm().thenThrow(
+            SignInConfirmException(404, SignInRefusal.notFound),
+          );
+          // No wait passed in, so the cubit's own is the one closed.
+          final cubit = VerifyConnectCubit(
+            repository: repository,
+            pubkey: _pubkey,
+            platform: _twitter,
+            oauthReturnUrl: _returnUrl,
+            analytics: analytics,
+            random: _ZeroRandom(),
+            launchOAuth: (_) async => answer(Uri.parse(startedReturnUrl!)),
+          );
+          unawaited(cubit.connectWithOAuth());
+          async.flushMicrotasks();
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+
+          var finished = false;
+          unawaited(cubit.approveSignIn().then((_) => finished = true));
+          async.flushMicrotasks();
+          expectConfirmCalls(1);
+
+          unawaited(cubit.close());
+          async.flushMicrotasks();
+
+          // Done at once, without the two seconds passing.
+          expect(finished, isTrue);
+          async.elapse(const Duration(seconds: 10));
+          verifyNever(() => repository.publishSignedClaim(any()));
+          verifyNever(
+            () => repository.confirmSignIn(
+              code: any(named: 'code'),
+              startSecret: any(named: 'startSecret'),
+              signed: any(named: 'signed'),
+            ),
+          );
+        });
+      });
+
+      test('waits two seconds between tries', () async {
+        final waits = <Duration>[];
+        whenConfirm().thenThrow(
+          SignInConfirmException(404, SignInRefusal.notFound),
+        );
+        final cubit = await waiting(wait: (delay) async => waits.add(delay));
+        await cubit.approveSignIn();
+        expect(waits, List.filled(4, const Duration(seconds: 2)));
+        await cubit.close();
+      });
+
+      for (final (name, failure) in <(String, Object)>[
+        ('a server error', const VerifierApiException(503, 'returned 503')),
+        ('a plain 500', const VerifierApiException(500, 'returned 500')),
+        ('a network failure', const VerifierNetworkException('lost')),
+        ('a timeout', const VerifierTimeoutException('slow')),
+      ]) {
+        test('tries again after $name, with the same signed event', () async {
+          var calls = 0;
+          whenConfirm().thenAnswer((_) async {
+            calls++;
+            if (calls < 3) throw failure;
+            return confirmed;
+          });
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expectConfirmCalls(3);
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          await cubit.close();
+        });
+      }
+
+      test('does not try again after an answer below 500', () async {
+        whenConfirm().thenThrow(
+          const VerifierApiException(499, 'returned 499'),
+        );
+        final cubit = await waiting();
+        await cubit.approveSignIn();
+        expectConfirmCalls(1);
+        expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+        expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+        await cubit.close();
+      });
+
+      test('stops trying again once about ten seconds have passed', () async {
+        var now = DateTime.utc(2026, 10, 14);
+        await withClock(Clock(() => now), () async {
+          // Each answer takes a second to arrive.
+          whenConfirm().thenAnswer((_) async {
+            now = now.add(const Duration(seconds: 1));
+            throw SignInConfirmException(404, SignInRefusal.notFound);
+          });
+          final cubit = await waiting(
+            wait: (delay) async => now = now.add(delay),
+          );
+          await cubit.approveSignIn();
+          // Tries at 0, 3, 6 and 9 seconds; a fifth would start at 12.
+          expectConfirmCalls(4);
+          verifyNever(() => repository.publishSignedClaim(any()));
+          expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+          await cubit.close();
+        });
+      });
+
+      test(
+        'a request that times out is not tried again past ten seconds',
+        () async {
+          var now = DateTime.utc(2026, 10, 14);
+          await withClock(Clock(() => now), () async {
+            whenConfirm().thenAnswer((_) async {
+              now = now.add(const Duration(seconds: 10));
+              throw const VerifierTimeoutException('slow');
+            });
+            final cubit = await waiting(
+              wait: (delay) async => now = now.add(delay),
+            );
+            await cubit.approveSignIn();
+            expectConfirmCalls(1);
+            expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+            expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+            await cubit.close();
+          });
+        },
+      );
+
+      test(
+        'gives up after about ten seconds of not found, without publishing',
+        () async {
+          whenConfirm().thenThrow(
+            SignInConfirmException(404, SignInRefusal.notFound),
+          );
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expectConfirmCalls(5);
+          verifyNever(() => repository.publishSignedClaim(any()));
+          expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.signedInAccount, isNull);
+          await cubit.close();
+        },
+      );
+
+      test(
+        'keeps the approval after about ten seconds of server errors',
+        () async {
+          whenConfirm().thenThrow(
+            const VerifierApiException(503, 'returned 503'),
+          );
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expectConfirmCalls(5);
+          verifyNever(() => repository.publishSignedClaim(any()));
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          expect(cubit.state.signedInAccount, 'jack');
+          await cubit.close();
+        },
+      );
+
+      test(
+        'a final refusal is not retried, nothing is published, and the account is forgotten',
+        () async {
+          whenConfirm().thenThrow(
+            SignInConfirmException(401, SignInRefusal.notYours),
+          );
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expectConfirmCalls(1);
+          verifyNever(() => repository.publishSignedClaim(any()));
+          expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.signedInAccount, isNull);
+
+          // The refusal ended the sign-in, so approving again does nothing.
+          await cubit.approveSignIn();
+          verify(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          ).called(1);
+          verifyNever(
+            () => repository.confirmSignIn(
+              code: any(named: 'code'),
+              startSecret: any(named: 'startSecret'),
+              signed: any(named: 'signed'),
+            ),
+          );
+          await cubit.close();
+        },
+      );
+
+      test(
+        'a rate-limited confirmation is not retried and keeps the approval',
+        () async {
+          whenConfirm().thenThrow(
+            SignInConfirmException(429, SignInRefusal.other),
+          );
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expectConfirmCalls(1);
+          verifyNever(() => repository.publishSignedClaim(any()));
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          await cubit.close();
+        },
+      );
+
+      test(
+        'a success that does not name the account is not retried or published',
+        () async {
+          whenConfirm().thenThrow(
+            const VerifierApiException(200, 'no account named'),
+          );
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expectConfirmCalls(1);
+          verifyNever(() => repository.publishSignedClaim(any()));
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          await cubit.close();
+        },
+      );
+
+      for (final (name, confirmation) in <(String, SignInConfirmation)>[
+        (
+          'another platform',
+          const SignInConfirmation(platform: 'youtube', identity: 'jack'),
+        ),
+        (
+          'another account',
+          const SignInConfirmation(platform: 'twitter', identity: 'mallory'),
+        ),
+      ]) {
+        test(
+          'a success naming $name ends the sign-in without publishing',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            whenConfirm().thenAnswer((_) async => confirmation);
+            final cubit = await waiting();
+            await cubit.approveSignIn();
+            expectConfirmCalls(1);
+            verifyNever(() => repository.publishSignedClaim(any()));
+            expect(cubit.state.status, VerifyConnectStatus.editing);
+            expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+            expect(cubit.state.signedInAccount, isNull);
+            final logged = LogCaptureService()
+                .getRecentLogs()
+                .map((entry) => entry.message)
+                .join('\n');
+            expect(
+              logged,
+              contains('Verifier confirmed another account for the twitter'),
+            );
+            expect(logged, isNot(contains(confirmation.identity)));
+
+            // A resend gets the same answer, so nothing is left to approve.
+            await cubit.approveSignIn();
+            verify(
+              () => repository.signClaim(
+                any(),
+                confirmBinding: any(named: 'confirmBinding'),
+              ),
+            ).called(1);
+            verifyNever(
+              () => repository.confirmSignIn(
+                code: any(named: 'code'),
+                startSecret: any(named: 'startSecret'),
+                signed: any(named: 'signed'),
+              ),
+            );
+            await cubit.close();
+          },
+        );
+      }
+
+      test('counts a success naming the account in other capitals', () async {
+        whenConfirm().thenAnswer(
+          (_) async =>
+              const SignInConfirmation(platform: 'twitter', identity: 'JACK'),
+        );
+        final cubit = await waiting();
+        await cubit.approveSignIn();
+        verify(() => repository.publishSignedClaim(signed)).called(1);
+        expect(cubit.state.status, VerifyConnectStatus.linked);
+        await cubit.close();
+      });
+
+      test(
+        'after a lost answer, approving again resends the identical signed event',
+        () async {
+          var calls = 0;
+          whenConfirm().thenAnswer((_) async {
+            calls++;
+            if (calls <= 5) throw const VerifierNetworkException('lost');
+            return confirmed;
+          });
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          await cubit.approveSignIn();
+          verify(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          ).called(1);
+          expectConfirmCalls(6);
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          await cubit.close();
+        },
+      );
+
+      test(
+        'when publishing fails after confirming, trying again publishes without confirming again',
+        () async {
+          var publishes = 0;
+          when(() => repository.publishSignedClaim(any())).thenAnswer((
+            _,
+          ) async {
+            publishes++;
+            if (publishes == 1) {
+              throw const IdentityClaimPublishException('no relay');
+            }
+            return [];
+          });
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expect(cubit.state.error, VerifyConnectError.publishFailed);
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          await cubit.approveSignIn();
+          expectConfirmCalls(1);
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          await cubit.close();
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'when the signer declines, says it was not signed and keeps the approval',
+        setUp: () =>
+            when(
+              () => repository.signClaim(
+                any(),
+                confirmBinding: any(named: 'confirmBinding'),
+              ),
+            ).thenThrow(
+              const IdentityClaimNotSignedException(
+                'Could not sign the identity event',
+              ),
+            ),
+        build: () => build(_twitter, random: _ZeroRandom()),
+        act: (cubit) async {
+          await cubit.connectWithOAuth();
+          await cubit.approveSignIn();
+        },
+        verify: (cubit) {
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.error, VerifyConnectError.notSigned);
+          expect(cubit.state.signedInAccount, 'jack');
+          verifyNever(
+            () => repository.confirmSignIn(
+              code: any(named: 'code'),
+              startSecret: any(named: 'startSecret'),
+              signed: any(named: 'signed'),
+            ),
+          );
+        },
+        // The signer reports its own faults; a decline is the person's
+        // choice, so neither is filed again here (#9340).
+        errors: () => const [],
+      );
+
+      test(
+        'when the current links cannot be read, the approval stays and says so',
+        () async {
+          when(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          ).thenThrow(const IdentityClaimReadException('no relay answered'));
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.error, VerifyConnectError.linksUnreadable);
+          await cubit.close();
+        },
+      );
+
+      test(
+        'links no proof post while a signed sign-in waits, so approving again cannot drop it',
+        () async {
+          whenConfirm().thenThrow(const VerifierNetworkException('lost'));
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          cubit
+            ..identityChanged('jack')
+            ..proofChanged('1234567890');
+          expect(cubit.state.canSubmitProof, isTrue);
+          await cubit.submitProof();
+          verifyNever(() => repository.verifyClaim(any()));
+          verifyNever(() => repository.publishClaim(any()));
+          await cubit.close();
+        },
+      );
+
+      test(
+        'ignores cancel while approving, and finishes the link it started',
+        () async {
+          final confirming = Completer<SignInConfirmation>();
+          whenConfirm().thenAnswer((_) => confirming.future);
+          final cubit = await waiting();
+          final approving = cubit.approveSignIn();
+          await pumpEventQueue();
+          cubit.cancelSignIn();
+          expect(cubit.state.status, VerifyConnectStatus.publishing);
+          expect(cubit.state.signedInAccount, 'jack');
+          confirming.complete(confirmed);
+          await approving;
+          verify(() => repository.publishSignedClaim(signed)).called(1);
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          await cubit.close();
+        },
+      );
+
+      test(
+        'ignores a new sign-in while approving, and finishes the link it started',
+        () async {
+          final confirming = Completer<SignInConfirmation>();
+          whenConfirm().thenAnswer((_) => confirming.future);
+          final cubit = await waiting();
+          final approving = cubit.approveSignIn();
+          await pumpEventQueue();
+          await cubit.connectWithOAuth();
+          confirming.complete(confirmed);
+          await approving;
+          verify(
+            () => repository.startSignIn(
+              platform: any(named: 'platform'),
+              pubkey: any(named: 'pubkey'),
+              returnUrl: any(named: 'returnUrl'),
+              startCheck: any(named: 'startCheck'),
+              handle: any(named: 'handle'),
+            ),
+          ).called(1);
+          verify(() => repository.publishSignedClaim(signed)).called(1);
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          expect(cubit.state.linkedClaim?.identity, 'jack');
+          await cubit.close();
+        },
+      );
+
+      test(
+        'a proof link made while a sign-in waits ends the sign-in',
+        () async {
+          final cubit = await waiting();
+          cubit
+            ..identityChanged('jack')
+            ..proofChanged('1234567890');
+          await cubit.submitProof();
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          expect(cubit.state.signedInAccount, isNull);
+          await cubit.approveSignIn();
+          verifyNever(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          );
+          await cubit.close();
+        },
+      );
+
+      test('a second tap while approving signs nothing more', () async {
+        final signing = Completer<SignedIdentityClaim>();
+        when(
+          () => repository.signClaim(
+            any(),
+            confirmBinding: any(named: 'confirmBinding'),
+          ),
+        ).thenAnswer((_) => signing.future);
+        final cubit = await waiting();
+        final first = cubit.approveSignIn();
+        final second = cubit.approveSignIn();
+        signing.complete(signed);
+        await Future.wait([first, second]);
+        verify(
+          () => repository.signClaim(
+            any(),
+            confirmBinding: any(named: 'confirmBinding'),
+          ),
+        ).called(1);
+        expect(cubit.state.status, VerifyConnectStatus.linked);
+        await cubit.close();
+      });
+
+      test(
+        'a proof post refused while a sign-in waits also ends the sign-in',
+        () async {
+          when(
+            () => repository.verifyClaim(any()),
+          ).thenAnswer((_) async => _result(verified: false));
+          final cubit = await waiting();
+          cubit
+            ..identityChanged('jack')
+            ..proofChanged('1234567890');
+          await cubit.submitProof();
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.signedInAccount, isNull);
+          await cubit.approveSignIn();
+          verifyNever(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          );
+          await cubit.close();
+        },
+      );
+
+      test('publishes nothing when closed while signing', () async {
+        final signing = Completer<SignedIdentityClaim>();
+        when(
+          () => repository.signClaim(
+            any(),
+            confirmBinding: any(named: 'confirmBinding'),
+          ),
+        ).thenAnswer((_) => signing.future);
+        final cubit = await waiting();
+        final approving = cubit.approveSignIn();
+        await pumpEventQueue();
+        await cubit.close();
+        signing.complete(signed);
+        await approving;
+        verifyNever(
+          () => repository.confirmSignIn(
+            code: any(named: 'code'),
+            startSecret: any(named: 'startSecret'),
+            signed: any(named: 'signed'),
+          ),
+        );
+        verifyNever(() => repository.publishSignedClaim(any()));
+      });
+
+      test('publishes nothing when closed while confirming', () async {
+        final confirming = Completer<SignInConfirmation>();
+        whenConfirm().thenAnswer((_) => confirming.future);
+        final cubit = await waiting();
+        final approving = cubit.approveSignIn();
+        await pumpEventQueue();
+        await cubit.close();
+        confirming.complete(confirmed);
+        await approving;
+        expectConfirmCalls(1);
+        verifyNever(() => repository.publishSignedClaim(any()));
+      });
+
+      test('stays quiet when closed while publishing', () async {
+        final publishing = Completer<List<List<String>>>();
+        when(
+          () => repository.publishSignedClaim(any()),
+        ).thenAnswer((_) => publishing.future);
+        final cubit = await waiting();
+        final approving = cubit.approveSignIn();
+        await pumpEventQueue();
+        await cubit.close();
+        publishing.complete([]);
+        // Emitting after close throws, which would fail this await.
+        await expectLater(approving, completes);
+        expect(cubit.state.status, VerifyConnectStatus.publishing);
+      });
+
+      test(
+        'publishes nothing when closed while waiting to try again',
+        () async {
+          final retry = Completer<void>();
+          whenConfirm().thenThrow(
+            SignInConfirmException(404, SignInRefusal.notFound),
+          );
+          final cubit = await waiting(wait: (_) => retry.future);
+          final approving = cubit.approveSignIn();
+          await pumpEventQueue();
+          await cubit.close();
+          retry.complete();
+          await approving;
+          expectConfirmCalls(1);
+          verifyNever(() => repository.publishSignedClaim(any()));
+        },
+      );
+
+      test(
+        'logs a refused confirmation by platform and reason, never the code, secret or binding',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          whenConfirm().thenThrow(
+            SignInConfirmException(401, SignInRefusal.notYours),
+          );
+          final cubit = await waiting();
+          await cubit.approveSignIn();
+          final logged = LogCaptureService()
+              .getRecentLogs()
+              .map((entry) => entry.message)
+              .join('\n');
+          expect(logged, contains('twitter sign-in (notYours)'));
+          for (final secret in [
+            'C' * 43,
+            'A' * 43,
+            zeroSecretBinding,
+            startedCheck!,
+          ]) {
+            expect(logged, isNot(contains(secret)));
+          }
+          await cubit.close();
+        },
+      );
+
+      test(
+        'cancelSignIn forgets the sign-in and goes back to editing',
+        () async {
+          final cubit = await waiting();
+          cubit.cancelSignIn();
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.signedInAccount, isNull);
+          await cubit.approveSignIn();
+          verifyNever(
+            () => repository.signClaim(
+              any(),
+              confirmBinding: any(named: 'confirmBinding'),
+            ),
+          );
+          await cubit.close();
+        },
+      );
     });
 
     group('needsIdentityInput', () {

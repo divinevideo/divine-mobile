@@ -8,6 +8,56 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/app/startup/startup_coordinator.dart';
 import 'package:openvine/features/app/startup/startup_metrics.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+/// Records every non-fatal and holds it in flight until [finishReports], so a
+/// test can observe what the coordinator does while a report is pending.
+class _PendingCrashReporter implements CrashReporter {
+  final reports = <({Object error, String? reason})>[];
+  final _inFlight = Completer<void>();
+
+  void finishReports() => _inFlight.complete();
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) {
+    reports.add((error: error, reason: reason));
+    return _inFlight.future;
+  }
+}
+
+/// Fails every non-fatal report, as a crash reporter that is down would.
+class _FailingCrashReporter implements CrashReporter {
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) => Future.error(StateError('Crash reporter is down'));
+}
+
+/// The coordinator's warning and error lines in the unified log, which is
+/// what a bug report carries.
+List<LogEntry> _coordinatorFailureLogs() => LogCaptureService()
+    .getRecentLogs(minLevel: LogLevel.warning)
+    .where((entry) => entry.name == 'StartupCoordinator')
+    .toList();
 
 void main() {
   group('StartupCoordinator', () {
@@ -338,6 +388,183 @@ void main() {
 
       // Should complete without throwing; optional failure is logged only
       await initFuture;
+    });
+
+    group('service failure reporting', () {
+      setUp(() => LogCaptureService().clearAllLogs());
+      tearDown(() => LogCaptureService().clearAllLogs());
+
+      test('finishes initialization only after an optional service failure '
+          'is reported', () {
+        fakeAsync((async) {
+          final crashReporter = _PendingCrashReporter();
+          final failure = Exception('Optional service failed');
+          final coordinator = StartupCoordinator(crashReporter: crashReporter)
+            ..registerService(
+              name: 'OptionalService',
+              phase: StartupPhase.deferred,
+              initialize: () async {
+                throw failure;
+              },
+              optional: true,
+            );
+
+          var initialized = false;
+          unawaited(coordinator.initialize().then((_) => initialized = true));
+          async.flushMicrotasks();
+
+          expect(crashReporter.reports, [
+            (
+              error: failure,
+              reason: 'Service initialization failed: OptionalService',
+            ),
+          ]);
+          expect(initialized, isFalse);
+
+          crashReporter.finishReports();
+          async.flushMicrotasks();
+
+          expect(initialized, isTrue);
+        });
+      });
+
+      test('rethrows a required service failure only after it is reported', () {
+        fakeAsync((async) {
+          final crashReporter = _PendingCrashReporter();
+          final failure = Exception('Required service failed');
+          final coordinator = StartupCoordinator(crashReporter: crashReporter)
+            ..registerService(
+              name: 'RequiredService',
+              phase: StartupPhase.critical,
+              initialize: () async {
+                throw failure;
+              },
+            );
+
+          Object? thrown;
+          unawaited(
+            coordinator.initialize().catchError((Object error) {
+              thrown = error;
+            }),
+          );
+          async.flushMicrotasks();
+
+          expect(crashReporter.reports, hasLength(1));
+          expect(thrown, isNull);
+
+          crashReporter.finishReports();
+          async.flushMicrotasks();
+
+          expect(thrown, same(failure));
+        });
+      });
+
+      test('logs an optional service failure with its stack trace before '
+          'its report completes', () {
+        fakeAsync((async) {
+          final crashReporter = _PendingCrashReporter();
+          final coordinator = StartupCoordinator(crashReporter: crashReporter)
+            ..registerService(
+              name: 'OptionalService',
+              phase: StartupPhase.deferred,
+              initialize: () async {
+                throw Exception('Optional service failed');
+              },
+              optional: true,
+            );
+
+          unawaited(coordinator.initialize());
+          async.flushMicrotasks();
+
+          expect(
+            _coordinatorFailureLogs(),
+            contains(
+              isA<LogEntry>()
+                  .having((entry) => entry.level, 'level', LogLevel.warning)
+                  .having(
+                    (entry) => entry.message,
+                    'message',
+                    'Optional service OptionalService failed to initialize: '
+                        'Exception: Optional service failed',
+                  )
+                  .having((entry) => entry.stackTrace, 'stackTrace', isNotNull),
+            ),
+          );
+
+          crashReporter.finishReports();
+          async.flushMicrotasks();
+        });
+      });
+
+      test('logs a required service failure with its stack trace before its '
+          'report completes', () {
+        fakeAsync((async) {
+          final crashReporter = _PendingCrashReporter();
+          final coordinator = StartupCoordinator(crashReporter: crashReporter)
+            ..registerService(
+              name: 'RequiredService',
+              phase: StartupPhase.critical,
+              initialize: () async {
+                throw Exception('Required service failed');
+              },
+            );
+
+          unawaited(coordinator.initialize().catchError((Object _) {}));
+          async.flushMicrotasks();
+
+          expect(
+            _coordinatorFailureLogs(),
+            contains(
+              isA<LogEntry>()
+                  .having((entry) => entry.level, 'level', LogLevel.error)
+                  .having(
+                    (entry) => entry.message,
+                    'message',
+                    'Failed to initialize RequiredService',
+                  )
+                  .having((entry) => entry.stackTrace, 'stackTrace', isNotNull),
+            ),
+          );
+
+          crashReporter.finishReports();
+          async.flushMicrotasks();
+        });
+      });
+
+      test('rethrows a required failure when its report fails', () async {
+        final failure = Exception('Required service failed');
+        final coordinator =
+            StartupCoordinator(crashReporter: _FailingCrashReporter())
+              ..registerService(
+                name: 'RequiredService',
+                phase: StartupPhase.critical,
+                initialize: () async {
+                  throw failure;
+                },
+              );
+
+        await expectLater(coordinator.initialize(), throwsA(same(failure)));
+      });
+
+      test('finishes initialization when an optional service failure cannot '
+          'be reported', () async {
+        final coordinator =
+            StartupCoordinator(crashReporter: _FailingCrashReporter())
+              ..registerService(
+                name: 'OptionalService',
+                phase: StartupPhase.deferred,
+                initialize: () async {
+                  throw Exception('Optional service failed');
+                },
+                optional: true,
+              );
+
+        await expectLater(coordinator.initialize(), completes);
+        expect(
+          _coordinatorFailureLogs().map((entry) => entry.message),
+          contains('Failed to report the OptionalService failure'),
+        );
+      });
     });
 
     test('should calculate initialization bottlenecks', () {

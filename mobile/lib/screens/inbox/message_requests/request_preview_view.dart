@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -79,9 +80,9 @@ class RequestPreviewView extends ConsumerWidget {
     // fallback rejects it with "Pubkey cannot be empty" and the relay fallback
     // then goes looking for the empty string.
     //
-    // `loaded` is gated on the pubkey rather than the status because
-    // `_resolveParticipants` returns `[]` for a conversation the local
-    // database does not have, reaching this same layout without ever failing.
+    // `loaded` is gated on the pubkey rather than the status because the
+    // cubit resolves no participants for a conversation the local database
+    // does not have, reaching this same layout without ever failing.
     if (status == RequestPreviewStatus.loading) {
       return _UnresolvedRequestScaffold(
         child: DivineCircularProgressIndicator(
@@ -102,19 +103,29 @@ class RequestPreviewView extends ConsumerWidget {
     final currentPubkey =
         ref.watch(authServiceProvider).currentPublicKeyHex ?? '';
 
-    final profileAsync = ref.watch(userProfileReactiveProvider(otherPubkey));
+    // The member the card describes and links to: the peer of a one-to-one,
+    // and a room's first member that is not a moderation key, without
+    // Divine's branding (#10151).
+    final named = dmConversationNamedPeer(
+      participantPubkeys: participantPubkeys,
+      currentUserPubkey: currentPubkey,
+      moderationPresentation: ref.watch(moderationPresentationResolverProvider),
+    );
+    final namedPubkey = named.pubkey;
+
+    final profileAsync = ref.watch(userProfileReactiveProvider(namedPubkey));
 
     final profile = profileAsync.asData?.value;
     final isResolving = ref.watch(
-      profileIdentityResolvingProvider(otherPubkey),
+      profileIdentityResolvingProvider(namedPubkey),
     );
 
     // Same treatment as [ConversationTile]. This screen also links straight
     // through to [OtherProfileScreen], which already names a vanished account
     // for the state — so without this the same tap sequence showed a generated
     // handle and then "Deleted account" (#8185).
-    final isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
-    final moderation = ref.watch(moderationPresentationProvider(otherPubkey));
+    final isDeleted = ref.watch(profileVanishedProvider(namedPubkey));
+    final moderation = named.moderation;
 
     // Suppressing the profile object as well as the name matches
     // [OtherProfileScreen], which nulls its own header profile on a vanish
@@ -134,13 +145,13 @@ class RequestPreviewView extends ConsumerWidget {
     final stats = isDeleted
         ? null
         : ref
-              .watch(userProfileStatsReactiveProvider(otherPubkey))
+              .watch(userProfileStatsReactiveProvider(namedPubkey))
               .asData
               ?.value;
 
     final peerName = dmPeerDisplayName(
       context,
-      pubkeyHex: otherPubkey,
+      pubkeyHex: namedPubkey,
       isVanished: isDeleted,
       moderation: moderation,
       profile: visibleProfile,
@@ -159,7 +170,7 @@ class RequestPreviewView extends ConsumerWidget {
     // for its peer and must.
     final isIdentityResolving = isResolving && displayName.isEmpty;
     final visualDisplayName = displayName.isEmpty
-        ? UserProfile.defaultDisplayNameFor(otherPubkey)
+        ? UserProfile.defaultDisplayNameFor(namedPubkey)
         : displayName;
 
     return Scaffold(
@@ -200,13 +211,19 @@ class RequestPreviewView extends ConsumerWidget {
                 // A vanished account shows no counts and no shimmer waiting
                 // for counts that will never arrive.
                 statsPending: !isDeleted && stats == null,
-                otherPubkey: otherPubkey,
+                otherPubkey: namedPubkey,
                 currentPubkey: currentPubkey,
                 messageCount: messageCount,
                 messages: messages,
                 isResolving: isIdentityResolving,
                 isVanished: isDeleted,
                 moderation: moderation,
+                // A room is refused whole when any member is, so a room that
+                // includes a retired key is as closed as the one-to-one.
+                isClosedThread: participantPubkeys.any(
+                  isRetiredModerationAccount,
+                ),
+                isGroup: participantPubkeys.length > 1,
               ),
             ),
             _ActionButtons(
@@ -326,11 +343,15 @@ class _ProfileContent extends StatelessWidget {
     required this.isResolving,
     required this.isVanished,
     required this.moderation,
+    required this.isClosedThread,
+    required this.isGroup,
   });
 
   final String displayName;
   final UserProfile? profile;
   final ProfileStats? stats;
+  final bool isClosedThread;
+  final bool isGroup;
 
   /// Whether counts are still expected to arrive for this account.
   ///
@@ -435,8 +456,8 @@ class _ProfileContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              if (isRetiredModerationAccount(otherPubkey))
-                const _ClosedNoticeDescription()
+              if (isClosedThread)
+                _ClosedNoticeDescription(isGroup: isGroup)
               else
                 _MessageCountDescription(
                   displayName: displayName,
@@ -703,8 +724,14 @@ class _StatsLineState extends State<_StatsLine> {
 /// Deliberately copy only. The thread behind "View messages" carries the
 /// redirect to the live support account, and this screen has been kept light
 /// on controls since #8090 pulled one back out of it.
+///
+/// A room keeps only the closed line: the reason describes Divine
+/// Moderation's move, and a room's members are whoever its author listed
+/// (#10151).
 class _ClosedNoticeDescription extends StatelessWidget {
-  const _ClosedNoticeDescription();
+  const _ClosedNoticeDescription({required this.isGroup});
+
+  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -722,13 +749,14 @@ class _ClosedNoticeDescription extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          Text(
-            l10n.dmRetiredThreadClosedBody,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.onSurfaceVariant,
+          if (!isGroup)
+            Text(
+              l10n.dmRetiredThreadClosedBody,
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );
@@ -798,6 +826,9 @@ class _ActionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final conversationId = context.read<RequestPreviewCubit>().conversationId;
+    final isRemovalProtected = context.select(
+      (RequestPreviewCubit cubit) => cubit.state.isRemovalProtected,
+    );
 
     return _ActionBar(
       children: [
@@ -818,9 +849,11 @@ class _ActionButtons extends StatelessWidget {
         ),
         // An enforcement notice is not a request to decline. Removing it is
         // permanent and it is the user's only copy of why they were actioned,
-        // so the action is not offered (#6971). The cubit refuses it too, for
-        // the unresolved states below that cannot name the peer.
-        if (!participantPubkeys.any(isModerationAccount))
+        // so the action is not offered (#6971). Which conversations those are
+        // is the repository's answer, not the participants' identities: a
+        // room that names the moderation account is not its notice (#10151).
+        // The cubit refuses it too, for the unresolved states below.
+        if (!isRemovalProtected)
           _DeclineAndRemoveButton(displayName: displayName),
       ],
     );
@@ -830,9 +863,9 @@ class _ActionButtons extends StatelessWidget {
 /// The one action that survives an unresolved counterparty: `declineRequest`
 /// takes the conversation ID, not the participants.
 ///
-/// Not rendered at all once the peer resolves to a Divine moderation identity
-/// — see [_ActionButtons]. It stays here because this branch has no peer to
-/// test, so the refusal comes back from the cubit instead.
+/// Not rendered at all once the repository reports the conversation protected
+/// — see [_ActionButtons]. It stays on the unresolved branches, which have no
+/// such answer yet, so a refusal comes back from the cubit instead.
 ///
 /// [displayName] is null on the unresolved-counterparty states, where there is
 /// no name to put in the confirmation snackbar; the decline still runs.

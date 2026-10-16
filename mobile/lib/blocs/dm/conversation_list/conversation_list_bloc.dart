@@ -348,7 +348,7 @@ class ConversationListBloc
             (c) =>
                 !known.contains(c.id) &&
                 !state.profileNames.containsKey(
-                  _otherParticipant(c, userPubkey),
+                  _namedParticipant(c, userPubkey),
                 ),
           );
           if (hasNewUnresolved) {
@@ -516,7 +516,7 @@ class ConversationListBloc
     // fallback while the row rendered the real kind-0 name. Searching for the
     // name on screen found nothing.
     final unresolved = [...state.conversations, ...state.blockedConversations]
-        .map((c) => _otherParticipant(c, userPubkey))
+        .map((c) => _namedParticipant(c, userPubkey))
         .where((pk) => !profileNames.containsKey(pk))
         .toSet()
         .toList();
@@ -620,6 +620,15 @@ class ConversationListBloc
     return rows
       ..sort((a, b) => b.effectiveTimestamp.compareTo(a.effectiveTimestamp));
   }
+
+  /// The member a row is named for, whose name search has to resolve to
+  /// match what the row renders (#10151).
+  String _namedParticipant(DmConversation conversation, String self) =>
+      dmConversationNamedPeer(
+        participantPubkeys: conversation.participantPubkeys,
+        currentUserPubkey: self,
+        moderationPresentation: _moderationPresentation,
+      ).pubkey;
 
   static String _otherParticipant(DmConversation conversation, String self) {
     return dmConversationFirstPeer(
@@ -784,9 +793,16 @@ class ConversationListBloc
     if (query.isEmpty) return result;
     final normalized = query.toLowerCase();
     return result.where((c) {
-      final other = _otherParticipant(c, userPubkey);
+      // Named as the row names it, so a room is never matched by the name of
+      // the moderation account in it (#10151).
+      final named = dmConversationNamedPeer(
+        participantPubkeys: c.participantPubkeys,
+        currentUserPubkey: userPubkey,
+        moderationPresentation: _moderationPresentation,
+      );
       final peerName = _peerName(
-        other,
+        named.pubkey,
+        moderation: named.moderation,
         profileNames: profileNames,
         vanishedPubkeys: vanishedPubkeys,
         peerLabels: peerLabels,
@@ -822,7 +838,13 @@ class ConversationListBloc
                 )
                 .map((entry) => entry.name!.toLowerCase())
           : [peerName.toLowerCase()];
-      final preview = peerLabels != null && _retiredModerationAccount(other)
+      // Any member, as the row decides it: a room that includes a retired key
+      // is closed wherever that member sorts (#10151).
+      final isClosed = dmConversationPeerPubkeys(
+        participantPubkeys: c.participantPubkeys,
+        currentUserPubkey: userPubkey,
+      ).any(_retiredModerationAccount);
+      final preview = peerLabels != null && isClosed
           ? peerLabels.retiredConversationClosed.toLowerCase()
           : c.lastMessageContent?.toLowerCase() ?? '';
       return name.contains(normalized) ||
@@ -833,14 +855,15 @@ class ConversationListBloc
     }).toList();
   }
 
-  /// The name the row for [pubkey] renders, resolved the same way
-  /// `ConversationTile` resolves it.
+  /// The name the row for [pubkey] renders, presented as [moderation], resolved
+  /// the same way `ConversationTile` resolves it.
   ///
   /// Falls back to the profile-or-generated value while [peerLabels] is null,
   /// which is the pre-delivery window only — matching the substitutes needs the
   /// strings, and there is nothing better to match on until they arrive.
   String _peerName(
     String pubkey, {
+    required ModerationPresentation moderation,
     required Map<String, String> profileNames,
     required Set<String> vanishedPubkeys,
     required DmPeerLabels? peerLabels,
@@ -852,7 +875,7 @@ class ConversationListBloc
     return dmPeerName(
       pubkeyHex: pubkey,
       isVanished: vanishedPubkeys.contains(pubkey),
-      moderation: _moderationPresentation(pubkey),
+      moderation: moderation,
       labels: peerLabels,
       profileName: profileName,
     );

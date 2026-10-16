@@ -18,15 +18,18 @@ class FeedModePreferenceStore {
     required String? userPubkey,
     required FollowRepository followRepository,
     required CuratedListRepository curatedListRepository,
+    HashtagSubscriptionRepository? hashtagSubscriptionRepository,
   }) : _sharedPreferences = sharedPreferences,
        _userPubkey = userPubkey,
        _followRepository = followRepository,
-       _curatedListRepository = curatedListRepository;
+       _curatedListRepository = curatedListRepository,
+       _hashtagSubscriptionRepository = hashtagSubscriptionRepository;
 
   final SharedPreferences? _sharedPreferences;
   final String? _userPubkey;
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
+  final HashtagSubscriptionRepository? _hashtagSubscriptionRepository;
 
   /// Account-scoped key the selected source is stored under.
   String get key => _userPubkey == null
@@ -75,7 +78,8 @@ class FeedModePreferenceStore {
     // A legacy list preference cannot be proven to belong to the authenticated
     // account because the curated-list bridge can briefly hold stale data
     // across account switches. Only restore list selections from scoped keys.
-    if (migratedSource.type == VideoFeedSourceType.subscribedList) {
+    if (migratedSource.type == VideoFeedSourceType.subscribedList ||
+        migratedSource.type == VideoFeedSourceType.subscribedHashtag) {
       return null;
     }
 
@@ -85,6 +89,20 @@ class FeedModePreferenceStore {
 
   /// Resolves a persisted value to a [VideoFeedSource], or `null` when unknown.
   VideoFeedSource? sourceFromValue(String saved) {
+    if (saved.startsWith('hashtag:')) {
+      final canonical = saved.substring('hashtag:'.length);
+      for (final tag
+          in _hashtagSubscriptionRepository?.subscriptions ??
+              <HashtagSubscription>[]) {
+        if (tag.canonicalTag == canonical) {
+          return VideoFeedSource.subscribedHashtag(
+            hashtag: canonical,
+            displayTag: tag.displayTag,
+          );
+        }
+      }
+      return null;
+    }
     if (saved.startsWith('list:')) {
       final listId = saved.substring('list:'.length);
       final list = _curatedListRepository.getListById(listId);

@@ -65,9 +65,10 @@ typedef LocalAudioPublisherReader = LocalAudioEventPublisher Function();
 ///   record is kept, and a retry repeats only the write: a published sound
 ///   with no library row could not be deleted, since deletion resolves the
 ///   record from the library and nothing else lists a standalone sound.
-/// * **Account guard.** The account is captured when a file is picked. If it
-///   changes while a copy or save is in flight, the work is abandoned rather
-///   than writing one account's sound into another account's library.
+/// * **Account guard.** Each copy is bound to the account that imported it
+///   ([AddSoundState.accountId]). If the account changes while a copy or save
+///   is in flight, the work is abandoned rather than writing one account's
+///   sound into another account's library.
 /// * **Cleanup.** A copy no private library record came to own — cancelled,
 ///   replaced by another pick, abandoned, or superseded by its published
 ///   upload — is handed to the reclaimer, which deletes it only when no draft
@@ -109,19 +110,16 @@ class AddSoundCubit extends Cubit<AddSoundState>
   /// confirmed as their own work.
   final String? _publisherPubkey;
 
-  /// The account that picked the current file, captured before the picker
-  /// opens.
-  String? _initiatingAccountId;
-
   /// Opens the picker and copies the chosen file into library storage.
   ///
-  /// A cancelled or failed pick keeps the file picked before it; a successful
-  /// one replaces it and reclaims the replaced copy.
+  /// A cancelled or failed pick keeps the file picked before it, still bound
+  /// to the account that imported it; a successful one replaces it and
+  /// reclaims the replaced copy.
   Future<void> pickFileAndImport() async {
     if (state.isBusy || state.isPublished) return;
     final previous = state.audio;
 
-    _initiatingAccountId = _viewerAccountId();
+    final accountId = _viewerAccountId();
     emitIfOpen(state.copyWith(status: AddSoundStatus.importing, failure: null));
 
     final AudioImportPickedFile? picked;
@@ -171,7 +169,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
       await _reclaim(audio);
       return;
     }
-    if (_accountChanged()) {
+    if (_viewerAccountId() != accountId) {
       emitIfOpen(const AddSoundState(failure: AddSoundFailure.accountChanged));
       await _reclaim(audio);
       if (previous != null) await _reclaim(previous);
@@ -182,6 +180,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
       AddSoundState(
         status: AddSoundStatus.ready,
         audio: audio,
+        accountId: accountId,
         sharePublicly: state.sharePublicly,
         // The credit opens as the publisher's own work: that is the case
         // sharing exists for, and turning it off is one tap.
@@ -246,15 +245,18 @@ class AddSoundCubit extends Cubit<AddSoundState>
     emitIfOpen(state.copyWith(status: AddSoundStatus.saving, failure: null));
 
     final AudioEvent record;
+    AudioEvent? published;
     if (sharePublicly) {
-      final published = state.publishedSound ?? await _publish(audio);
+      published = state.publishedSound ?? await _publish(audio);
       if (published == null) {
         if (isClosed) await _reclaim(audio);
         return;
       }
       if (_accountChanged()) {
-        // The share went out as the account that started it; its library
-        // row belongs to that account, not the one now signed in.
+        // The share is already public, signed by whichever account was
+        // signed in when the publisher signed it after the upload, so it may
+        // not belong to the account now signed in: keep it out of that
+        // account's library.
         emitIfOpen(
           const AddSoundState(failure: AddSoundFailure.accountChanged),
         );
@@ -274,7 +276,11 @@ class AddSoundCubit extends Cubit<AddSoundState>
       );
       savedToLibrary = true;
       emitIfOpen(
-        state.copyWith(status: AddSoundStatus.saved, savedResult: result),
+        state.copyWith(
+          status: AddSoundStatus.saved,
+          savedResult: result,
+          publishedSound: published,
+        ),
       );
     } catch (error, stackTrace) {
       Log.error(
@@ -290,6 +296,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
         state.copyWith(
           status: AddSoundStatus.ready,
           failure: AddSoundFailure.saveFailed,
+          publishedSound: published,
         ),
       );
     }
@@ -328,7 +335,6 @@ class AddSoundCubit extends Cubit<AddSoundState>
       );
       switch (result) {
         case LocalAudioPublished(audio: final published):
-          emitIfOpen(state.copyWith(publishedSound: published));
           return published;
         case LocalAudioPublishFailed(:final failure):
           _failSave(switch (failure) {
@@ -355,7 +361,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
   AddSoundStatus get _restingStatus =>
       state.audio == null ? AddSoundStatus.idle : AddSoundStatus.ready;
 
-  bool _accountChanged() => _viewerAccountId() != _initiatingAccountId;
+  bool _accountChanged() => _viewerAccountId() != state.accountId;
 
   void _failImport(AddSoundFailure failure) {
     emitIfOpen(state.copyWith(status: _restingStatus, failure: failure));

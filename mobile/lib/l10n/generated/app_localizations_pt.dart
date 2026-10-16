@@ -9656,6 +9656,53 @@ class AppLocalizationsPt extends AppLocalizations {
       'Ajustar a transparência da camada selecionada';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Máscara de forma';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Mostrar o item selecionado dentro de uma forma';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Arraste para mover a forma. Faça um movimento de pinça para redimensionar ou girar, ou arraste uma alça para esticar.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Nenhuma';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Círculo';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Retângulo';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Coração';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Inverter';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Suavidade';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Nítida';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Suave';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Cantos';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Retos';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Arredondados';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detetar automaticamente';
 
   @override
@@ -12731,6 +12778,17 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Ou publique uma prova';
 
   @override
@@ -12793,6 +12851,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'Não rolou. Tenta mais uma vez.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Digite seu handle primeiro.';
@@ -13712,4 +13778,30 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Vou deixar isso aqui.';
+
+  @override
+  String get messagesDirect => 'Diretas';
+
+  @override
+  String get messagesRooms => 'Salas';
+
+  @override
+  String get messagesPublicTestRooms => 'Salas públicas de teste';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Estas salas de teste são públicas. Qualquer pessoa com acesso pode ler suas mensagens.';
+
+  @override
+  String get messagesNoRooms => 'Ainda não há salas';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtags que você segue';
+
+  @override
+  String get manageHashtags => 'Gerenciar hashtags';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Siga uma hashtag na página dela para encontrá-la aqui.';
 }

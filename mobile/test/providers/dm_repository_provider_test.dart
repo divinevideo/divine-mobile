@@ -86,6 +86,8 @@ void main() {
         () => mockNostrClient.subscribe(
           any(),
           subscriptionId: any(named: 'subscriptionId'),
+          onStoredEventsStart: any(named: 'onStoredEventsStart'),
+          onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
         ),
       ).thenAnswer((_) => const Stream<Event>.empty());
       when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
@@ -162,6 +164,8 @@ void main() {
         () => mockNostrClient.subscribe(
           any(),
           subscriptionId: any(named: 'subscriptionId'),
+          onStoredEventsStart: any(named: 'onStoredEventsStart'),
+          onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
         ),
       ).called(1);
       expect(repository.isInitialized, isTrue);
@@ -340,6 +344,8 @@ void main() {
         () => mockNostrClient.subscribe(
           any(),
           subscriptionId: any(named: 'subscriptionId'),
+          onStoredEventsStart: any(named: 'onStoredEventsStart'),
+          onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
         ),
       );
       expect(repository.isInitialized, isFalse);

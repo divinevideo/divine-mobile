@@ -6520,6 +6520,66 @@
   "@videoEditorOpacitySemanticLabel": {
     "description": "Accessibility label for the Opacity button in the timeline controls of a layer: a text, sticker, drawing or a clip detached onto the canvas."
   },
+  "videoEditorShapeMaskLabel": "Shape mask",
+  "@videoEditorShapeMaskLabel": {
+    "description": "Caption of the button in the timeline controls of a clip, or of a layer (text, sticker, drawing or a clip detached onto the canvas), and title of the screen it opens, where the item is shown only inside a shape (circle, rectangle, heart) or faded out through a soft straight edge. Named to sit beside \"Color mask\" (videoEditorChromaKeyLabel), which hides a color instead: translate \"mask\" the same way that key does. Keep it short — it sits under a 52dp icon."
+  },
+  "videoEditorShapeMaskSemanticLabel": "Show the selected item inside a shape",
+  "@videoEditorShapeMaskSemanticLabel": {
+    "description": "Accessibility label for the Shape mask button in the timeline controls of a clip or a layer."
+  },
+  "videoEditorShapeMaskHint": "Drag to move the shape. Pinch to resize or turn it, or drag a handle to stretch it.",
+  "@videoEditorShapeMaskHint": {
+    "description": "Accessibility label of the shape mask screen's canvas, saying what the gestures on it do: one finger moves the shape, two fingers resize and turn it, and the round handles on its sides stretch it in one direction."
+  },
+  "videoEditorShapeMaskNone": "None",
+  "@videoEditorShapeMaskNone": {
+    "description": "Option on the shape mask screen that removes the mask, so the whole item shows. Shown under a 52dp tile."
+  },
+  "videoEditorShapeMaskCircle": "Circle",
+  "@videoEditorShapeMaskCircle": {
+    "description": "Shape option on the shape mask screen: the item shows inside a circle, which can be stretched into an oval. Shown under a 52dp tile."
+  },
+  "videoEditorShapeMaskRectangle": "Rectangle",
+  "@videoEditorShapeMaskRectangle": {
+    "description": "Shape option on the shape mask screen: the item shows inside a rectangle whose corners can be rounded. Shown under a 52dp tile."
+  },
+  "videoEditorShapeMaskHeart": "Heart",
+  "@videoEditorShapeMaskHeart": {
+    "description": "Shape option on the shape mask screen: the item shows inside a heart. Shown under a 52dp tile."
+  },
+  "videoEditorShapeMaskLinear": "Linear",
+  "@videoEditorShapeMaskLinear": {
+    "description": "Shape option on the shape mask screen: a straight line across the item; it shows on one side of the line, and softness turns the line into a gradient that fades it out. Use the term video editors use for this mask type. Shown under a 52dp tile."
+  },
+  "videoEditorShapeMaskInvert": "Invert",
+  "@videoEditorShapeMaskInvert": {
+    "description": "Toggle on the shape mask screen that swaps inside and outside: the item shows everywhere except inside the shape. Shown under a 52dp tile."
+  },
+  "videoEditorShapeMaskSoftnessLabel": "Softness",
+  "@videoEditorShapeMaskSoftnessLabel": {
+    "description": "Name of the slider on the shape mask screen that sets how soft the edge of the shape is, from a hard cut to a wide fade."
+  },
+  "videoEditorShapeMaskSoftnessSharp": "Sharp",
+  "@videoEditorShapeMaskSoftnessSharp": {
+    "description": "Label under the left end of the softness slider on the shape mask screen: a hard edge."
+  },
+  "videoEditorShapeMaskSoftnessSoft": "Soft",
+  "@videoEditorShapeMaskSoftnessSoft": {
+    "description": "Label under the right end of the softness slider on the shape mask screen: a wide, gradual fade."
+  },
+  "videoEditorShapeMaskCornersLabel": "Corners",
+  "@videoEditorShapeMaskCornersLabel": {
+    "description": "Name of the slider on the shape mask screen that sets how round the corners of the rectangle shape are."
+  },
+  "videoEditorShapeMaskCornersSquare": "Square",
+  "@videoEditorShapeMaskCornersSquare": {
+    "description": "Label under the left end of the corners slider on the shape mask screen: square corners."
+  },
+  "videoEditorShapeMaskCornersRound": "Round",
+  "@videoEditorShapeMaskCornersRound": {
+    "description": "Label under the right end of the corners slider on the shape mask screen: fully rounded corners."
+  },
   "videoEditorChromaKeyAutoDetect": "Auto-detect",
   "videoEditorChromaKeyPresetGreen": "Green",
   "videoEditorChromaKeyPresetBlue": "Blue",
@@ -9024,6 +9084,28 @@
       }
     }
   },
+  "verifyConnectSignedInTitle": "Signed in to {platform} as {account}.",
+  "@verifyConnectSignedInTitle": {
+    "description": "Shown after signing in at a platform, before linking the account it returned to the person's Divine account.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Twitter / X"
+      },
+      "account": {
+        "type": "String",
+        "example": "jack"
+      }
+    }
+  },
+  "verifyConnectSignedInCta": "Link to my Divine account",
+  "@verifyConnectSignedInCta": {
+    "description": "Button that confirms linking the signed-in account."
+  },
+  "verifyConnectSignedInCancel": "Cancel",
+  "@verifyConnectSignedInCancel": {
+    "description": "Button that drops a sign-in without linking it."
+  },
   "verifyConnectProofTitle": "Or post a proof",
   "@verifyConnectProofTitle": {
     "description": "Section header above the proof-post form. Reads as an alternative when a sign-in route is also offered."
@@ -9095,6 +9177,14 @@
   "verifyErrorOauthFailed": "That didn't go through. Give it another go.",
   "@verifyErrorOauthFailed": {
     "description": "Error shown when the platform sign-in ended without a usable confirmation."
+  },
+  "verifyErrorSignInNotConfirmed": "That sign-in couldn't be confirmed. Sign in again.",
+  "@verifyErrorSignInNotConfirmed": {
+    "description": "The verifier didn't confirm a sign-in link; the person needs to sign in again."
+  },
+  "verifyErrorNotSigned": "Signing didn't go through, so nothing was linked. Try again.",
+  "@verifyErrorNotSigned": {
+    "description": "Error shown when linking an account stops because the person's signer declined or failed to sign the update. It can follow a platform sign-in or a proof post that checked out; either way nothing was published, and the person can try again."
   },
   "verifyErrorHandleRequired": "Enter your handle first.",
   "@verifyErrorHandleRequired": {
@@ -9935,5 +10025,37 @@
   },
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
+  },
+  "messagesDirect": "Direct",
+  "messagesRooms": "Rooms",
+  "messagesPublicTestRooms": "Public test rooms",
+  "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
+  "messagesNoRooms": "No rooms yet",
+  "@messagesDirect": {
+    "description": "Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip."
+  },
+  "@messagesRooms": {
+    "description": "Label of the chip in the Messages tab that shows community chat rooms. Sits beside the Direct chip."
+  },
+  "@messagesPublicTestRooms": {
+    "description": "Heading above the room list in Messages while rooms are an internal public test."
+  },
+  "@messagesPublicTestDisclosure": {
+    "description": "Warning shown above the room list and inside every room: these test rooms are public, so anyone with access can read what is sent."
+  },
+  "@messagesNoRooms": {
+    "description": "Empty state of the room list in Messages when there is no room to show."
+  },
+  "followedHashtagsTitle": "Followed hashtags",
+  "@followedHashtagsTitle": {
+    "description": "Title of the account-scoped followed hashtags screen."
+  },
+  "manageHashtags": "Manage hashtags",
+  "@manageHashtags": {
+    "description": "Home source picker action opening followed hashtag management."
+  },
+  "followedHashtagsEmpty": "Follow a hashtag from its page to find it here.",
+  "@followedHashtagsEmpty": {
+    "description": "Empty state explaining how to follow a hashtag."
   }
 }

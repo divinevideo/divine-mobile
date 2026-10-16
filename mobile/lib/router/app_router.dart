@@ -24,6 +24,7 @@ import 'package:openvine/router/router_refresh_listenable.dart';
 import 'package:openvine/router/routes/account_deletion_recovery_routes.dart';
 import 'package:openvine/router/routes/apps_routes.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
+import 'package:openvine/router/routes/chat_routes.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
@@ -142,6 +143,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     );
   });
 
+  // A pushed hashtag (and other full-screen routes) must be shareable and
+  // reloadable at its visible URL while retaining the source page for Back.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   final router = GoRouter(
     navigatorKey: NavigatorKeys.root,
     // Start at /welcome - redirect logic will navigate to appropriate route.
@@ -170,6 +174,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ...shellRoutes(),
       ...searchRoutes(),
       ...messagingRoutes(),
+      ...chatRoutes(ref),
       ...accountDeletionRecoveryRoutes(),
       ...minorAccountReviewRoutes(),
       ...listsRoutes(ref),

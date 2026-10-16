@@ -17,6 +17,7 @@ import 'package:openvine/features/creation_analytics/creation_analytics_tracker.
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
@@ -24,6 +25,8 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/camera_permission_gate.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
@@ -207,8 +210,9 @@ class VideoRecorderView extends ConsumerStatefulWidget {
   /// The auto-start is skipped when the open would first show a prompt (the
   /// first-run "why six seconds?" sheet or an autosaved-session offer): the
   /// user is answering a sheet, not holding a shutter, and a recording that
-  /// starts underneath it would be a surprise. The camera still opens in
-  /// capture mode.
+  /// starts underneath it would be a surprise. It is also skipped when the
+  /// autosave lookup fails, because the open cannot tell whether an offer
+  /// will follow. The camera still opens in capture mode.
   final bool autoRecord;
 
   @override
@@ -245,21 +249,34 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     );
 
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      _pauseBackgroundPlayback();
-      final autoStartRecording =
-          widget.autoRecord && await _opensStraightToPreview();
-      if (!mounted) return;
-      _initializeCamera(
-        recorderMode: _requestedRecorderMode,
-        autoStartRecording: autoStartRecording,
-      );
-      await _maybeShowWhySixSeconds();
-      if (!mounted) return;
-      _checkAutosavedChanges();
-    });
+    // The scheduler drops a frame callback's returned future, so runDetached
+    // owns the open's failures instead of the app's last-resort zone handler.
+    addPostFrameCallbackIfMounted(
+      () => runDetached(
+        _openRecorder(),
+        "run the recorder's first-frame work",
+        logName: 'VideoRecorderScreen',
+        category: .video,
+      ),
+    );
     Log.info('📹 Initialized', name: 'VideoRecorderScreen', category: .video);
+  }
+
+  /// The open's first-frame work: pause feed playback, initialize the camera,
+  /// then show the one-time prompt and offer an autosaved session back.
+  Future<void> _openRecorder() async {
+    _pauseBackgroundPlayback();
+    final autoStartRecording =
+        widget.autoRecord && await _opensStraightToPreview();
+    if (!mounted) return;
+    _initializeCamera(
+      recorderMode: _requestedRecorderMode,
+      autoStartRecording: autoStartRecording,
+    );
+    await _maybeShowWhySixSeconds();
+    // An auto-recording open already found nothing to offer.
+    if (!mounted || autoStartRecording) return;
+    await offerAutosavedSession(context, ref, openEditorOnRestore: true);
   }
 
   /// The mode the open asks the bloc for, or `null` to restore the
@@ -274,11 +291,27 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         .getString(VideoRecorderMode.persistenceKey),
   );
 
-  /// Whether the open reaches the live preview with no prompt in between —
-  /// see [VideoRecorderView.autoRecord].
+  /// Whether the open is known to reach the live preview with no prompt in
+  /// between — see [VideoRecorderView.autoRecord].
   Future<bool> _opensStraightToPreview() async {
     if (_isWhySixSecondsPending) return false;
-    return await findOfferableAutosavedDraft(ref) == null;
+    try {
+      return await findOfferableAutosavedDraft(ref) == null;
+    } on Exception catch (error, stackTrace) {
+      // Explicit invariant failures belong to the detached-work reporter,
+      // just like programming errors that bypass this Exception fallback.
+      if (error is ReportableError) rethrow;
+      // An unreadable autosave cannot rule out the offer, so open the camera
+      // without recording instead of not opening it at all.
+      Log.warning(
+        'Autosave lookup failed; opening without auto-record',
+        name: 'VideoRecorderScreen',
+        category: .video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   /// Whether the one-time "Why six seconds?" prompt is still due.
@@ -332,9 +365,6 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
       ),
     );
   }
-
-  Future<void> _checkAutosavedChanges() =>
-      offerAutosavedSession(context, ref, openEditorOnRestore: true);
 
   /// Force all background video playback to pause while camera is open.
   void _pauseBackgroundPlayback() {

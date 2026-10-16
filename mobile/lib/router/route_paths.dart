@@ -19,6 +19,7 @@ abstract final class RoutePaths {
   static const badges = '/badges';
   static const blossomSettings = '/blossom-settings';
   static const blueskySettings = '/bluesky-settings';
+  static const chat = '/chat';
   static const clipRecovery = '/clip-recovery';
   static const contentFilters = '/content-filters';
   static const contentPreferences = '/content-preferences';
@@ -31,6 +32,7 @@ abstract final class RoutePaths {
   static const emailVerification = '/verify-email';
   static const explore = '/explore';
   static const followersBase = '/followers';
+  static const followedHashtags = '/followed-hashtags';
   static const followingBase = '/following';
 
   /// Subject segment of [followingNew].

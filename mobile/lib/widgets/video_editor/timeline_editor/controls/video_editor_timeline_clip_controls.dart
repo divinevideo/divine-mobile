@@ -20,6 +20,7 @@ import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:openvine/utils/image_orientation.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
@@ -136,6 +137,13 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
           index < state.clips.length &&
           !state.clips[index].equalizer.isNone;
     });
+    final hasShapeMask = context.select((ClipEditorBloc bloc) {
+      final state = bloc.state;
+      final index = state.currentClipIndex;
+      return index >= 0 &&
+          index < state.clips.length &&
+          state.clips[index].mask != null;
+    });
 
     // A colour or photo standing in for a detached clip is a backdrop, not
     // footage. Splitting, reversing, speeding up or extracting audio from a
@@ -161,6 +169,8 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         onDelete: isLastClip ? null : () => _deleteClip(context),
         onDuplicated: () => _duplicateClip(context),
         onTransform: () => _transformClip(context),
+        onShapeMask: () => _editShapeMask(context),
+        hasShapeMask: hasShapeMask,
         onMultiSelect: isLastClip ? null : () => _startMultiSelect(context),
         onDone: () => context.read<ClipEditorBloc>().add(
           const ClipEditorEditingStopped(),
@@ -188,6 +198,8 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       onChromaKey: () => _editChromaKey(context),
       isChromaKeying: isChromaKeyingCurrentClip,
       hasChromaKey: hasChromaKey,
+      onShapeMask: () => _editShapeMask(context),
+      hasShapeMask: hasShapeMask,
       onExtractAudio: () => _requestExtractAudio(context),
       onReversed: () => _reverseClip(context),
       // A recorded green screen still waiting to bake would land on the raw
@@ -250,6 +262,15 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     bloc.add(
       ClipEditorClipTransformRequested(clipId: clip.id, transform: transform),
     );
+  }
+
+  Future<void> _editShapeMask(BuildContext context) async {
+    final state = context.read<ClipEditorBloc>().state;
+    if (state.currentClipIndex < 0 ||
+        state.currentClipIndex >= state.clips.length) {
+      return;
+    }
+    await editClipMask(context, state.clips[state.currentClipIndex].id);
   }
 
   Future<void> _editChromaKey(BuildContext context) async {

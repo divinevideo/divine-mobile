@@ -9664,6 +9664,53 @@ class AppLocalizationsBg extends AppLocalizations {
       'Задай колко прозрачен да е избраният слой';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Маска с форма';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Покажи избрания елемент във форма';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Плъзни, за да преместиш формата. Събери или разтвори два пръста, за да я оразмериш или завъртиш, или плъзни дръжка, за да я разтегнеш.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Без';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Кръг';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Правоъгълник';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Сърце';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Линейна';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Обърни';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Мекота';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Остра';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Мека';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Ъгли';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Прави';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Заоблени';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
 
   @override
@@ -12749,6 +12796,17 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Или публикувай доказателство';
 
   @override
@@ -12811,6 +12869,14 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'Не се получи. Пробвай отново.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Първо въведи своя handle.';
@@ -13724,4 +13790,30 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Оставям това тук.';
+
+  @override
+  String get messagesDirect => 'Лични';
+
+  @override
+  String get messagesRooms => 'Стаи';
+
+  @override
+  String get messagesPublicTestRooms => 'Публични тестови стаи';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Тези тестови стаи са публични. Всеки с достъп може да чете съобщенията ти.';
+
+  @override
+  String get messagesNoRooms => 'Все още няма стаи';
+
+  @override
+  String get followedHashtagsTitle => 'Следвани хаштагове';
+
+  @override
+  String get manageHashtags => 'Управление на хаштагове';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Последвайте хаштаг от страницата му, за да го намерите тук.';
 }

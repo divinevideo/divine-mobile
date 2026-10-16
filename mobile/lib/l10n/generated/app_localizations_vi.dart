@@ -9539,6 +9539,53 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt mức trong suốt cho lớp đã chọn';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Mặt nạ hình dạng';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Hiển thị mục đã chọn bên trong một hình';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Kéo để di chuyển hình. Chụm hai ngón để đổi kích thước hoặc xoay, hoặc kéo tay nắm để kéo giãn.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Không';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Hình tròn';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Hình chữ nhật';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Trái tim';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Tuyến tính';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Đảo ngược';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Độ mềm';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Sắc nét';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Mềm';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Góc';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Vuông';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Bo tròn';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
 
   @override
@@ -12568,6 +12615,17 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Hoặc đăng một bằng chứng';
 
   @override
@@ -12630,6 +12688,14 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'Chưa xong. Thử lại lần nữa nhé.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Nhập handle của bạn trước đã.';
@@ -13535,4 +13601,30 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Để điều này ở đây.';
+
+  @override
+  String get messagesDirect => 'Trực tiếp';
+
+  @override
+  String get messagesRooms => 'Phòng';
+
+  @override
+  String get messagesPublicTestRooms => 'Phòng thử nghiệm công khai';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Các phòng thử nghiệm này là công khai. Bất kỳ ai có quyền truy cập đều có thể đọc tin nhắn của bạn.';
+
+  @override
+  String get messagesNoRooms => 'Chưa có phòng nào';
+
+  @override
+  String get followedHashtagsTitle => 'Hashtag đang theo dõi';
+
+  @override
+  String get manageHashtags => 'Quản lý hashtag';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Theo dõi hashtag từ trang của nó để tìm thấy ở đây.';
 }

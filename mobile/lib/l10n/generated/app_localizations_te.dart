@@ -9843,6 +9843,53 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఎంచుకున్న లేయర్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
 
   @override
+  String get videoEditorShapeMaskLabel => 'ఆకార మాస్క్';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'ఎంచుకున్న అంశాన్ని ఒక ఆకారంలో చూపించండి';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'ఆకారాన్ని కదిలించడానికి లాగండి. పరిమాణం మార్చడానికి లేదా తిప్పడానికి పించ్ చేయండి, లేదా సాగదీయడానికి హ్యాండిల్‌ను లాగండి.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'ఏదీ లేదు';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'వృత్తం';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'దీర్ఘచతురస్రం';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'హృదయం';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'రేఖీయ';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'విలోమం';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'మృదుత్వం';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'పదునైన';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'మృదువైన';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'మూలలు';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'చతురస్రం';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'గుండ్రని';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';
 
   @override
@@ -12963,6 +13010,17 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'లేదా రుజువును పోస్ట్ చేయండి';
 
   @override
@@ -13025,6 +13083,14 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'అది జరగలేదు. మరొకసారి ఇవ్వండి.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired =>
@@ -13940,4 +14006,30 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
+
+  @override
+  String get messagesDirect => 'నేరుగా';
+
+  @override
+  String get messagesRooms => 'గదులు';
+
+  @override
+  String get messagesPublicTestRooms => 'బహిరంగ పరీక్ష గదులు';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'ఈ పరీక్ష గదులు బహిరంగమైనవి. ప్రవేశం ఉన్న ఎవరైనా మీ సందేశాలను చదవగలరు.';
+
+  @override
+  String get messagesNoRooms => 'ఇంకా గదులు లేవు';
+
+  @override
+  String get followedHashtagsTitle => 'అనుసరిస్తున్న హ్యాష్‌ట్యాగ్‌లు';
+
+  @override
+  String get manageHashtags => 'హ్యాష్‌ట్యాగ్‌లను నిర్వహించండి';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.';
 }

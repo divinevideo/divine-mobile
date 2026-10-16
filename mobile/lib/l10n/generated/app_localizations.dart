@@ -16265,6 +16265,96 @@ abstract class AppLocalizations {
   /// **'Set how see-through the selected layer is'**
   String get videoEditorOpacitySemanticLabel;
 
+  /// Caption of the button in the timeline controls of a clip, or of a layer (text, sticker, drawing or a clip detached onto the canvas), and title of the screen it opens, where the item is shown only inside a shape (circle, rectangle, heart) or faded out through a soft straight edge. Named to sit beside "Color mask" (videoEditorChromaKeyLabel), which hides a color instead: translate "mask" the same way that key does. Keep it short — it sits under a 52dp icon.
+  ///
+  /// In en, this message translates to:
+  /// **'Shape mask'**
+  String get videoEditorShapeMaskLabel;
+
+  /// Accessibility label for the Shape mask button in the timeline controls of a clip or a layer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the selected item inside a shape'**
+  String get videoEditorShapeMaskSemanticLabel;
+
+  /// Accessibility label of the shape mask screen's canvas, saying what the gestures on it do: one finger moves the shape, two fingers resize and turn it, and the round handles on its sides stretch it in one direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move the shape. Pinch to resize or turn it, or drag a handle to stretch it.'**
+  String get videoEditorShapeMaskHint;
+
+  /// Option on the shape mask screen that removes the mask, so the whole item shows. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get videoEditorShapeMaskNone;
+
+  /// Shape option on the shape mask screen: the item shows inside a circle, which can be stretched into an oval. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle'**
+  String get videoEditorShapeMaskCircle;
+
+  /// Shape option on the shape mask screen: the item shows inside a rectangle whose corners can be rounded. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Rectangle'**
+  String get videoEditorShapeMaskRectangle;
+
+  /// Shape option on the shape mask screen: the item shows inside a heart. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Heart'**
+  String get videoEditorShapeMaskHeart;
+
+  /// Shape option on the shape mask screen: a straight line across the item; it shows on one side of the line, and softness turns the line into a gradient that fades it out. Use the term video editors use for this mask type. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Linear'**
+  String get videoEditorShapeMaskLinear;
+
+  /// Toggle on the shape mask screen that swaps inside and outside: the item shows everywhere except inside the shape. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Invert'**
+  String get videoEditorShapeMaskInvert;
+
+  /// Name of the slider on the shape mask screen that sets how soft the edge of the shape is, from a hard cut to a wide fade.
+  ///
+  /// In en, this message translates to:
+  /// **'Softness'**
+  String get videoEditorShapeMaskSoftnessLabel;
+
+  /// Label under the left end of the softness slider on the shape mask screen: a hard edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharp'**
+  String get videoEditorShapeMaskSoftnessSharp;
+
+  /// Label under the right end of the softness slider on the shape mask screen: a wide, gradual fade.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft'**
+  String get videoEditorShapeMaskSoftnessSoft;
+
+  /// Name of the slider on the shape mask screen that sets how round the corners of the rectangle shape are.
+  ///
+  /// In en, this message translates to:
+  /// **'Corners'**
+  String get videoEditorShapeMaskCornersLabel;
+
+  /// Label under the left end of the corners slider on the shape mask screen: square corners.
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get videoEditorShapeMaskCornersSquare;
+
+  /// Label under the right end of the corners slider on the shape mask screen: fully rounded corners.
+  ///
+  /// In en, this message translates to:
+  /// **'Round'**
+  String get videoEditorShapeMaskCornersRound;
+
   /// No description provided for @videoEditorChromaKeyAutoDetect.
   ///
   /// In en, this message translates to:
@@ -21153,6 +21243,24 @@ abstract class AppLocalizations {
   /// **'Continue with {platform}'**
   String verifyConnectOauthCta(String platform);
 
+  /// Shown after signing in at a platform, before linking the account it returned to the person's Divine account.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in to {platform} as {account}.'**
+  String verifyConnectSignedInTitle(String platform, String account);
+
+  /// Button that confirms linking the signed-in account.
+  ///
+  /// In en, this message translates to:
+  /// **'Link to my Divine account'**
+  String get verifyConnectSignedInCta;
+
+  /// Button that drops a sign-in without linking it.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get verifyConnectSignedInCancel;
+
   /// Section header above the proof-post form. Reads as an alternative when a sign-in route is also offered.
   ///
   /// In en, this message translates to:
@@ -21260,6 +21368,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That didn\'t go through. Give it another go.'**
   String get verifyErrorOauthFailed;
+
+  /// The verifier didn't confirm a sign-in link; the person needs to sign in again.
+  ///
+  /// In en, this message translates to:
+  /// **'That sign-in couldn\'t be confirmed. Sign in again.'**
+  String get verifyErrorSignInNotConfirmed;
+
+  /// Error shown when linking an account stops because the person's signer declined or failed to sign the update. It can follow a platform sign-in or a proof post that checked out; either way nothing was published, and the person can try again.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing didn\'t go through, so nothing was linked. Try again.'**
+  String get verifyErrorNotSigned;
 
   /// Error shown when Bluesky sign-in is started without a handle, which it needs to find the user's server.
   ///
@@ -22670,6 +22790,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
+
+  /// Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get messagesDirect;
+
+  /// Label of the chip in the Messages tab that shows community chat rooms. Sits beside the Direct chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms'**
+  String get messagesRooms;
+
+  /// Heading above the room list in Messages while rooms are an internal public test.
+  ///
+  /// In en, this message translates to:
+  /// **'Public test rooms'**
+  String get messagesPublicTestRooms;
+
+  /// Warning shown above the room list and inside every room: these test rooms are public, so anyone with access can read what is sent.
+  ///
+  /// In en, this message translates to:
+  /// **'These test rooms are public. Anyone with access can read your messages.'**
+  String get messagesPublicTestDisclosure;
+
+  /// Empty state of the room list in Messages when there is no room to show.
+  ///
+  /// In en, this message translates to:
+  /// **'No rooms yet'**
+  String get messagesNoRooms;
+
+  /// Title of the account-scoped followed hashtags screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Followed hashtags'**
+  String get followedHashtagsTitle;
+
+  /// Home source picker action opening followed hashtag management.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage hashtags'**
+  String get manageHashtags;
+
+  /// Empty state explaining how to follow a hashtag.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow a hashtag from its page to find it here.'**
+  String get followedHashtagsEmpty;
 }
 
 class _AppLocalizationsDelegate

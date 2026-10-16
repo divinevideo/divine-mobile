@@ -60,13 +60,14 @@ final class LocalAudioPublishFailed extends LocalAudioPublishResult {
 /// Publishes a device-local audio file as the signed-in user's Kind 1063.
 ///
 /// Two callers share it: `VideoAudioPublisher`, which passes the coordinate of
-/// the video the sound is published beside, and the standalone sound upload,
-/// which passes none — a sound uploaded on its own has no source video, and
-/// nothing that reads Kind 1063 requires the `a` tag.
+/// the video the sound is published beside, and `AddSoundCubit`, which shares
+/// a sound added from the library and passes none — a sound shared on its own
+/// has no source video, and nothing that reads Kind 1063 requires the `a` tag.
 ///
 /// Saving the published sound to My Sounds is the caller's job: the video
-/// pipeline writes the library directly, while the upload screen goes through
-/// `SavedSoundsBloc` so the tab updates and the waveform probe runs.
+/// pipeline writes the library directly, while the Add sound page wires
+/// `AddSoundCubit` to `SavedSoundsBloc` so the tab updates and the waveform
+/// probe runs.
 class LocalAudioEventPublisher {
   LocalAudioEventPublisher({
     required SignedEventRelayPublisher relayPublisher,

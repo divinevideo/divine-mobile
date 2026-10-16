@@ -9490,6 +9490,53 @@ class AppLocalizationsId extends AppLocalizations {
       'Atur seberapa transparan lapisan yang dipilih';
 
   @override
+  String get videoEditorShapeMaskLabel => 'Masking bentuk';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel =>
+      'Tampilkan item yang dipilih di dalam bentuk';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'Seret untuk memindahkan bentuk. Cubit untuk mengubah ukuran atau memutarnya, atau seret pegangan untuk merentangkannya.';
+
+  @override
+  String get videoEditorShapeMaskNone => 'Tidak ada';
+
+  @override
+  String get videoEditorShapeMaskCircle => 'Lingkaran';
+
+  @override
+  String get videoEditorShapeMaskRectangle => 'Persegi panjang';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'Hati';
+
+  @override
+  String get videoEditorShapeMaskLinear => 'Linear';
+
+  @override
+  String get videoEditorShapeMaskInvert => 'Balikkan';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => 'Kelembutan';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'Tajam';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'Lembut';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => 'Sudut';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => 'Siku';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => 'Bulat';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
 
   @override
@@ -12530,6 +12577,17 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'Atau posting bukti';
 
   @override
@@ -12592,6 +12650,14 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'Gagal. Coba sekali lagi.';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => 'Isi handle kamu dulu.';
@@ -13494,4 +13560,30 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'Kutinggalkan ini di sini.';
+
+  @override
+  String get messagesDirect => 'Langsung';
+
+  @override
+  String get messagesRooms => 'Ruang';
+
+  @override
+  String get messagesPublicTestRooms => 'Ruang uji publik';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'Ruang uji ini bersifat publik. Siapa pun yang memiliki akses dapat membaca pesanmu.';
+
+  @override
+  String get messagesNoRooms => 'Belum ada ruang';
+
+  @override
+  String get followedHashtagsTitle => 'Tagar yang diikuti';
+
+  @override
+  String get manageHashtags => 'Kelola tagar';
+
+  @override
+  String get followedHashtagsEmpty =>
+      'Ikuti tagar dari halamannya untuk menemukannya di sini.';
 }

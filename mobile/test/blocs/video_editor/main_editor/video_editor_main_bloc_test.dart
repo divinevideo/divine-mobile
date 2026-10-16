@@ -552,6 +552,39 @@ void main() {
       );
     });
 
+    group(VideoEditorMaskEditingChanged, () {
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'hands the screen to the canvas while a shape mask is edited',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoEditorMaskEditingChanged(isEditing: true)),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.isEditingMask, 'isEditingMask', isTrue)
+              .having(
+                (s) => s.isCanvasFullscreen,
+                'isCanvasFullscreen',
+                isTrue,
+              ),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'gives the screen back when the mask editor closes',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(isEditingMask: true),
+        act: (bloc) =>
+            bloc.add(const VideoEditorMaskEditingChanged(isEditing: false)),
+        expect: () => [
+          isA<VideoEditorMainState>().having(
+            (s) => s.isCanvasFullscreen,
+            'isCanvasFullscreen',
+            isFalse,
+          ),
+        ],
+      );
+    });
+
     group(VideoEditorDetachedClipOpacityPreviewChanged, () {
       blocTest<VideoEditorMainBloc, VideoEditorMainState>(
         'shows the dragged opacity on its layer',

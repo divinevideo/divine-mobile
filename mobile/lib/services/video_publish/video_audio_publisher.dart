@@ -104,8 +104,8 @@ class VideoAudioPublisher {
   final AudioExtractionService? _audioExtractionService;
   final SavedSoundsService? _savedSoundsService;
 
-  /// Mints the Kind 1063 for an imported file; shared with the standalone
-  /// sound upload, which calls it without a source-video coordinate.
+  /// Mints the Kind 1063 for an imported file; shared with `AddSoundCubit`,
+  /// which calls it without a source-video coordinate.
   final LocalAudioEventPublisher _localAudioPublisher;
 
   /// Reads the current cross-device sync repository at call time, or null

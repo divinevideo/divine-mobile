@@ -16,6 +16,7 @@ class RequestPreviewState extends Equatable {
     this.messageCount = 0,
     this.participantPubkeys = const [],
     this.messages = const [],
+    this.isRemovalProtected = false,
   });
 
   final RequestPreviewStatus status;
@@ -23,17 +24,23 @@ class RequestPreviewState extends Equatable {
   final List<String> participantPubkeys;
   final List<DmMessage> messages;
 
+  /// Whether the repository refuses to remove this conversation, so the view
+  /// withholds "Decline and remove" rather than offering a refusal.
+  final bool isRemovalProtected;
+
   RequestPreviewState copyWith({
     RequestPreviewStatus? status,
     int? messageCount,
     List<String>? participantPubkeys,
     List<DmMessage>? messages,
+    bool? isRemovalProtected,
   }) {
     return RequestPreviewState(
       status: status ?? this.status,
       messageCount: messageCount ?? this.messageCount,
       participantPubkeys: participantPubkeys ?? this.participantPubkeys,
       messages: messages ?? this.messages,
+      isRemovalProtected: isRemovalProtected ?? this.isRemovalProtected,
     );
   }
 
@@ -43,6 +50,7 @@ class RequestPreviewState extends Equatable {
     messageCount,
     participantPubkeys,
     messages,
+    isRemovalProtected,
   ];
 }
 
@@ -72,7 +80,8 @@ class RequestPreviewCubit extends Cubit<RequestPreviewState> {
   /// The conversation ID this preview is for.
   final String conversationId;
 
-  /// Loads message count and resolves participant pubkeys if needed.
+  /// Loads message count, resolves participant pubkeys if needed, and asks the
+  /// repository whether the stored conversation may be removed.
   ///
   /// The #176 gate runs BEFORE any repository read and checks only the
   /// route-provided pubkeys: resolving counterparties from the DB is itself
@@ -109,12 +118,16 @@ class RequestPreviewCubit extends Cubit<RequestPreviewState> {
         return;
       }
 
-      // Use provided pubkeys if available, otherwise load from DB. Only
-      // non-restricted users reach the DB fallback: a restricted user with
-      // empty extras was already denied above.
+      // Read after the gate: a restricted user with empty extras was already
+      // denied above. Removal acts on this stored row, so protection is asked
+      // about it rather than about the route's participants.
+      final conversation = await _dmRepository.getConversation(conversationId);
+      final isRemovalProtected =
+          conversation != null &&
+          _dmRepository.isRemovalProtected(conversation);
       final pubkeys = _initialParticipantPubkeys.isNotEmpty
           ? _initialParticipantPubkeys
-          : await _resolveParticipants();
+          : _peersOf(conversation);
 
       final messageCount = await _dmRepository.countMessagesInConversation(
         conversationId,
@@ -131,6 +144,7 @@ class RequestPreviewCubit extends Cubit<RequestPreviewState> {
             messageCount: messageCount,
             participantPubkeys: pubkeys,
             messages: messages,
+            isRemovalProtected: isRemovalProtected,
           ),
         );
       }
@@ -144,13 +158,11 @@ class RequestPreviewCubit extends Cubit<RequestPreviewState> {
     }
   }
 
-  Future<List<String>> _resolveParticipants() async {
-    final conversation = await _dmRepository.getConversation(conversationId);
+  List<String> _peersOf(DmConversation? conversation) {
     if (conversation == null) return [];
-    final userPubkey = _dmRepository.userPubkey;
     return dmConversationPeerPubkeys(
       participantPubkeys: conversation.participantPubkeys,
-      currentUserPubkey: userPubkey,
+      currentUserPubkey: _dmRepository.userPubkey,
     );
   }
 }

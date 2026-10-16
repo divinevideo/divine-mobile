@@ -9113,6 +9113,52 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '選択したレイヤーの透け具合を設定';
 
   @override
+  String get videoEditorShapeMaskLabel => 'シェイプマスク';
+
+  @override
+  String get videoEditorShapeMaskSemanticLabel => '選択した項目を図形の中に表示';
+
+  @override
+  String get videoEditorShapeMaskHint =>
+      'ドラッグして図形を移動します。ピンチでサイズの変更や回転ができ、ハンドルをドラッグすると引き伸ばせます。';
+
+  @override
+  String get videoEditorShapeMaskNone => 'なし';
+
+  @override
+  String get videoEditorShapeMaskCircle => '円';
+
+  @override
+  String get videoEditorShapeMaskRectangle => '長方形';
+
+  @override
+  String get videoEditorShapeMaskHeart => 'ハート';
+
+  @override
+  String get videoEditorShapeMaskLinear => '線形';
+
+  @override
+  String get videoEditorShapeMaskInvert => '反転';
+
+  @override
+  String get videoEditorShapeMaskSoftnessLabel => '柔らかさ';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSharp => 'シャープ';
+
+  @override
+  String get videoEditorShapeMaskSoftnessSoft => 'ソフト';
+
+  @override
+  String get videoEditorShapeMaskCornersLabel => '角';
+
+  @override
+  String get videoEditorShapeMaskCornersSquare => '四角';
+
+  @override
+  String get videoEditorShapeMaskCornersRound => '丸';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
 
   @override
@@ -11990,6 +12036,17 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String verifyConnectSignedInTitle(String platform, String account) {
+    return 'Signed in to $platform as $account.';
+  }
+
+  @override
+  String get verifyConnectSignedInCta => 'Link to my Divine account';
+
+  @override
+  String get verifyConnectSignedInCancel => 'Cancel';
+
+  @override
   String get verifyConnectProofTitle => 'または証明を投稿';
 
   @override
@@ -12051,6 +12108,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get verifyErrorOauthFailed => 'うまくいかなかった。もう一度試してみて。';
+
+  @override
+  String get verifyErrorSignInNotConfirmed =>
+      'That sign-in couldn\'t be confirmed. Sign in again.';
+
+  @override
+  String get verifyErrorNotSigned =>
+      'Signing didn\'t go through, so nothing was linked. Try again.';
 
   @override
   String get verifyErrorHandleRequired => '先にハンドルを入力してね。';
@@ -12924,4 +12989,29 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ideasDescriptionSix => 'ここに置いておきます。';
+
+  @override
+  String get messagesDirect => 'ダイレクト';
+
+  @override
+  String get messagesRooms => 'ルーム';
+
+  @override
+  String get messagesPublicTestRooms => '公開テストルーム';
+
+  @override
+  String get messagesPublicTestDisclosure =>
+      'これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。';
+
+  @override
+  String get messagesNoRooms => 'まだルームはありません';
+
+  @override
+  String get followedHashtagsTitle => 'フォロー中のハッシュタグ';
+
+  @override
+  String get manageHashtags => 'ハッシュタグを管理';
+
+  @override
+  String get followedHashtagsEmpty => 'ハッシュタグのページでフォローすると、ここに表示されます。';
 }

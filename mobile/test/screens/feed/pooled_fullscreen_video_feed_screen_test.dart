@@ -33,8 +33,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/comments/comments_screen.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
@@ -51,6 +53,7 @@ import 'package:openvine/widgets/video_feed_item/fullscreen_sponsor_disclosure.d
 import 'package:openvine/widgets/video_feed_item/inline_comment_composer_bar.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 import '../../test_data/video_test_data.dart';
@@ -284,6 +287,7 @@ void main() {
       String? sponsorName,
       ViewTrafficSource trafficSource = ViewTrafficSource.unknown,
       String? sourceDetail,
+      bool autoOpenComments = false,
       VoidCallback? onBack,
     }) {
       return MultiBlocProvider(
@@ -299,6 +303,7 @@ void main() {
           sponsorName: sponsorName,
           trafficSource: trafficSource,
           sourceDetail: sourceDetail,
+          autoOpenComments: autoOpenComments,
           onBack: onBack,
         ),
       );
@@ -308,11 +313,13 @@ void main() {
       FullscreenFeedState? state,
       List<Override>? additionalOverrides,
       MockAuthService? mockAuthService,
+      MockNostrClient? mockNostrService,
       String? contextTitle,
       String? sponsorName,
       MediaQueryData? mediaQueryData,
       ViewTrafficSource trafficSource = ViewTrafficSource.unknown,
       String? sourceDetail,
+      bool autoOpenComments = false,
       VoidCallback? onBack,
     }) {
       final effectiveState = state ?? FullscreenFeedState();
@@ -323,11 +330,13 @@ void main() {
         sponsorName: sponsorName,
         trafficSource: trafficSource,
         sourceDetail: sourceDetail,
+        autoOpenComments: autoOpenComments,
         onBack: onBack,
       );
       return testMaterialApp(
         additionalOverrides: additionalOverrides,
         mockAuthService: mockAuthService,
+        mockNostrService: mockNostrService,
         mockProfileRepository: mockProfileRepository,
         mockNip05VerificationService: mockNip05VerificationService,
         home: mediaQueryData == null
@@ -364,6 +373,72 @@ void main() {
           ).called(1);
         },
       );
+    });
+
+    group('auto-open comments', () {
+      Future<void> deliverFirstVideo(WidgetTester tester) async {
+        final ready = FullscreenFeedState(
+          status: FullscreenFeedStatus.ready,
+          videos: createTestVideos(),
+        );
+        when(() => mockBloc.state).thenReturn(ready);
+        stateController.add(ready);
+        await tester.pump();
+      }
+
+      testWidgets('opens the comments sheet once the first video arrives', (
+        tester,
+      ) async {
+        // The sheet's comments bloc stops its relay watch when the tree is
+        // torn down at the end of the test.
+        final nostr = createMockNostrService();
+        when(() => nostr.unsubscribe(any())).thenAnswer((_) async {});
+
+        await tester.pumpWidget(
+          buildSubject(autoOpenComments: true, mockNostrService: nostr),
+        );
+        expect(find.byType(OutboxBridges), findsNothing);
+
+        await deliverFirstVideo(tester);
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byType(OutboxBridges), findsOneWidget);
+      });
+
+      testWidgets('logs a comments sheet that fails to open', (tester) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+
+        await tester.pumpWidget(
+          buildSubject(
+            autoOpenComments: true,
+            additionalOverrides: [
+              surfacePerformanceTrackerProvider.overrideWith(
+                (ref) => throw StateError('tracker unavailable'),
+              ),
+            ],
+          ),
+        );
+        await deliverFirstVideo(tester);
+
+        expect(tester.takeException(), isNull);
+        final failures = logCapture
+            .getRecentLogs()
+            .where(
+              (entry) =>
+                  entry.name == 'FullscreenFeedContent' &&
+                  entry.level == LogLevel.error,
+            )
+            .toList();
+        expect(failures, hasLength(1));
+        expect(failures.single.category, equals(LogCategory.video));
+        expect(
+          failures.single.message,
+          startsWith('Failed to open comments from fullscreen feed: '),
+        );
+        expect(failures.single.message, contains('tracker unavailable'));
+      });
     });
 
     group('state rendering', () {

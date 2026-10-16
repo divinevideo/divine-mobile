@@ -28,14 +28,95 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 22', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 22);
+    test('current schema version is 23', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 23);
     });
 
-    test('v22 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(22);
+    test(
+      'v22 migrates to v23 with writable account-scoped chat storage',
+      () async {
+        final schema = await verifier.schemaAt(22);
+        final db = AppDatabase(schema.newConnection());
+        await verifier.migrateAndValidate(db, 23);
+        await db.concordStoreDao.put(
+          account: 'a' * 64,
+          scope: 'relay/channel',
+          key: 'wrap',
+          value: 'ciphertext',
+        );
+        expect(
+          await db.concordStoreDao.get(
+            account: 'a' * 64,
+            scope: 'relay/channel',
+            key: 'wrap',
+          ),
+          'ciphertext',
+        );
+        await db.close();
+      },
+    );
+
+    test(
+      'a chat preview v22 database keeps its outbox and gains DM environment',
+      () async {
+        // Preview v22 added Concord storage before main used v22 for the
+        // DM environment column. Reproduce that released preview shape.
+        final schema = await verifier.schemaAt(21);
+        schema.rawDatabase.execute(
+          'CREATE TABLE concord_store_entries ('
+          'account TEXT NOT NULL, scope TEXT NOT NULL, '
+          '"key" TEXT NOT NULL, value TEXT NOT NULL, '
+          'PRIMARY KEY (account, scope, "key"))',
+        );
+        schema.rawDatabase.execute('PRAGMA user_version = 22');
+        schema.rawDatabase.execute(
+          'INSERT INTO concord_store_entries '
+          '(account, scope, key, value) VALUES (?, ?, ?, ?)',
+          ['a' * 64, 'relay/channel', 'pending', 'sealed outbox'],
+        );
+        schema.rawDatabase.execute(
+          'INSERT INTO outgoing_dms '
+          '(id, conversation_id, recipient_pubkey, content, created_at, '
+          'rumor_event_json, recipient_wrap_status, self_wrap_status, '
+          'queued_at, owner_pubkey) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            'preview-queued-dm',
+            'conversation',
+            'b' * 64,
+            'held offline',
+            1700000000,
+            '{}',
+            'failed',
+            'sent',
+            1700000000,
+            'a' * 64,
+          ],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+        await verifier.migrateAndValidate(db, 23);
+        expect(
+          await db.concordStoreDao.get(
+            account: 'a' * 64,
+            scope: 'relay/channel',
+            key: 'pending',
+          ),
+          'sealed outbox',
+        );
+        final retryable = await db.outgoingDmsDao.getRetryableForOwner(
+          ownerPubkey: 'a' * 64,
+          maxRetries: 3,
+          environment: 'staging',
+        );
+        expect(retryable.map((dm) => dm.id), ['preview-queued-dm']);
+        expect(retryable.single.environment, isNull);
+      },
+    );
+
+    test('v23 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(23);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       await db.close();
     });
 
@@ -415,10 +496,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v22', () async {
+    test('v8 schema migrates to v23', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -440,45 +521,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v22', () async {
+    test('v7 schema migrates to v23', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       await db.close();
     });
 
-    test('v6 schema migrates to v22', () async {
+    test('v6 schema migrates to v23', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       await db.close();
     });
 
-    test('v5 schema migrates to v22', () async {
+    test('v5 schema migrates to v23', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       await db.close();
     });
 
-    test('v3 schema migrates to v22', () async {
+    test('v3 schema migrates to v23', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       await db.close();
     });
 
-    test('v2 schema migrates to v22', () async {
+    test('v2 schema migrates to v23', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v22', () async {
+    test('legacy v1 schema migrates to v23', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 22);
+      await verifier.migrateAndValidate(db, 23);
       await db.close();
     });
 
@@ -609,7 +690,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 22);
+        await verifier.migrateAndValidate(db, 23);
 
         final retryable = await db.outgoingDmsDao.getRetryableForOwner(
           ownerPubkey: ownerPubkey,
