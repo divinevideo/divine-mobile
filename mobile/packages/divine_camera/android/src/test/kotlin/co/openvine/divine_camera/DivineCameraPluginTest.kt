@@ -3,6 +3,7 @@ package co.openvine.divine_camera
 import android.app.Activity
 import android.content.Context
 import android.hardware.camera2.CameraMetadata
+import androidx.activity.ComponentActivity
 import androidx.camera.video.Quality
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -15,7 +16,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -163,17 +166,6 @@ internal class DivineCameraLogSinkOwnershipTest {
     @After
     fun resetAfter() {
         DivineCameraLog.sink = null
-    }
-
-    private fun engineBinding(): FlutterPlugin.FlutterPluginBinding {
-        val binding = Mockito.mock(FlutterPlugin.FlutterPluginBinding::class.java)
-        Mockito.`when`(binding.binaryMessenger)
-            .thenReturn(Mockito.mock(BinaryMessenger::class.java))
-        Mockito.`when`(binding.applicationContext)
-            .thenReturn(Mockito.mock(Context::class.java))
-        Mockito.`when`(binding.textureRegistry)
-            .thenReturn(Mockito.mock(TextureRegistry::class.java))
-        return binding
     }
 
     private fun activityBinding(): ActivityPluginBinding {
@@ -498,4 +490,72 @@ internal class RejectionTolerantExecutorServiceTest {
         assertTrue(executor.awaitTermination(2, TimeUnit.SECONDS))
         assertTrue(executor.isTerminated)
     }
+}
+
+/**
+ * The plugin hands the activity's foreground state to the remote record
+ * control, which holds its media session only while resumed, so a headset
+ * press while Divine is in the background cannot record (#10196).
+ */
+@RunWith(RobolectricTestRunner::class)
+internal class DivineCameraPluginRemoteRecordControlTest {
+    @After
+    fun resetSink() {
+        // onMethodCall claims the process-wide diagnostics sink.
+        DivineCameraLog.sink = null
+    }
+
+    private fun enabledRemoteRecordControl(activity: Activity): VolumeKeyHandler {
+        val engine = engineBinding(context = RuntimeEnvironment.getApplication())
+        val binding = Mockito.mock(ActivityPluginBinding::class.java)
+        Mockito.`when`(binding.activity).thenReturn(activity)
+
+        val plugin = DivineCameraPlugin()
+        plugin.onAttachedToEngine(engine)
+        plugin.onAttachedToActivity(binding)
+        plugin.onMethodCall(
+            MethodCall("setRemoteRecordControlEnabled", mapOf("enabled" to true)),
+            Mockito.mock(MethodChannel.Result::class.java),
+        )
+        return assertNotNull(plugin.volumeKeyHandler)
+    }
+
+    @Test
+    fun mediaSession_isReleasedWhileTheActivityIsStopped() {
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val control = enabledRemoteRecordControl(activity.get())
+        assertTrue(control.isMediaSessionClaimed())
+
+        activity.pause().stop()
+        assertFalse(control.isMediaSessionClaimed())
+
+        activity.start().resume()
+        assertTrue(control.isMediaSessionClaimed())
+    }
+
+    @Test
+    fun enabledWhileStopped_claimsTheSessionOnResume() {
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java)
+            .setup()
+            .pause()
+            .stop()
+        val control = enabledRemoteRecordControl(activity.get())
+        assertFalse(control.isMediaSessionClaimed())
+
+        activity.start().resume()
+
+        assertTrue(control.isMediaSessionClaimed())
+    }
+}
+
+private fun engineBinding(
+    context: Context = Mockito.mock(Context::class.java),
+): FlutterPlugin.FlutterPluginBinding {
+    val binding = Mockito.mock(FlutterPlugin.FlutterPluginBinding::class.java)
+    Mockito.`when`(binding.binaryMessenger)
+        .thenReturn(Mockito.mock(BinaryMessenger::class.java))
+    Mockito.`when`(binding.applicationContext).thenReturn(context)
+    Mockito.`when`(binding.textureRegistry)
+        .thenReturn(Mockito.mock(TextureRegistry::class.java))
+    return binding
 }
