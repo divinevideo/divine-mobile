@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
+import 'package:openvine/blocs/nostr_id_search/nostr_id_search_cubit.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
@@ -22,7 +23,6 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:videos_repository/videos_repository.dart';
 
 /// Page that creates and wires the search BLoCs, then renders
 /// [SearchResultsView].
@@ -178,6 +178,15 @@ class _SearchResultsScope extends ConsumerWidget {
             hashtagRepository: hashtagRepository,
           ),
         ),
+        // Created on the first build, before any edit, so the text a route
+        // prefilled is the cubit's starting query.
+        BlocProvider(
+          create: (_) => NostrIdSearchCubit(
+            profileRepository: profileRepository,
+            videosRepository: videosRepository,
+            initialQuery: controller.text,
+          ),
+        ),
       ],
       child: _NostrIdAutoOpenScope(
         controller: controller,
@@ -205,37 +214,25 @@ class _SearchResultsScope extends ConsumerWidget {
   }
 }
 
-/// Opens a pasted or typed Nostr identifier instead of running a text search.
+/// Opens the profile or video that a typed or pasted Nostr identifier names.
 ///
-/// A search field is the one place a user is likely to paste an `npub1`,
-/// `note1`, `nevent1`, `naddr1`, or raw id from elsewhere. Those name an
-/// entity the text-search sources cannot match, so [resolveNostrSearchTarget]
-/// recognises a *complete* identifier and the matching screen is opened. A
-/// partial prefix, ordinary text, and an identifier that resolves to nothing
-/// all fall through to the search BLoCs unchanged.
-class _NostrIdAutoOpenScope extends ConsumerStatefulWidget {
+/// Forwards every change of the search text to [NostrIdSearchCubit] and
+/// navigates when it resolves one. The text search runs for every query
+/// either way.
+class _NostrIdAutoOpenScope extends StatefulWidget {
   const _NostrIdAutoOpenScope({required this.controller, required this.child});
 
   final TextEditingController controller;
   final Widget child;
 
   @override
-  ConsumerState<_NostrIdAutoOpenScope> createState() =>
-      _NostrIdAutoOpenScopeState();
+  State<_NostrIdAutoOpenScope> createState() => _NostrIdAutoOpenScopeState();
 }
 
-class _NostrIdAutoOpenScopeState extends ConsumerState<_NostrIdAutoOpenScope> {
-  // The last text we classified. The controller also notifies on
-  // selection-only edits (cursor moves, focus changes); comparing the text
-  // avoids reclassifying the same query on every one of those. It starts at
-  // the text already in the field, so focusing a query prefilled by the
-  // route opens nothing until the user edits it.
-  late String _lastClassifiedQuery;
-
+class _NostrIdAutoOpenScopeState extends State<_NostrIdAutoOpenScope> {
   @override
   void initState() {
     super.initState();
-    _lastClassifiedQuery = widget.controller.text.trim();
     widget.controller.addListener(_onControllerChanged);
   }
 
@@ -244,7 +241,6 @@ class _NostrIdAutoOpenScopeState extends ConsumerState<_NostrIdAutoOpenScope> {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.controller, widget.controller)) {
       oldWidget.controller.removeListener(_onControllerChanged);
-      _lastClassifiedQuery = widget.controller.text.trim();
       widget.controller.addListener(_onControllerChanged);
     }
   }
@@ -256,62 +252,36 @@ class _NostrIdAutoOpenScopeState extends ConsumerState<_NostrIdAutoOpenScope> {
   }
 
   void _onControllerChanged() {
-    final query = widget.controller.text.trim();
-    if (query == _lastClassifiedQuery) return;
-    _lastClassifiedQuery = query;
-    // Cheap pure classification first; only a complete identifier triggers a
-    // lookup, so typing ordinary text costs nothing.
-    if (resolveNostrSearchTarget(query) == null) return;
     runDetached(
-      _openIdentifier(query),
-      'open Nostr id search result',
+      context.read<NostrIdSearchCubit>().queryChanged(widget.controller.text),
+      'resolve Nostr id search query',
       logName: 'SearchResultsPage',
       category: LogCategory.ui,
     );
   }
 
-  Future<void> _openIdentifier(String query) async {
-    final resolver = NostrIdSearchResolver(
-      profileExists: (hexPubkey) async {
-        final repository = ref.read(profileRepositoryProvider);
-        if (repository == null) return false;
-        final cached = await repository.getCachedProfile(pubkey: hexPubkey);
-        if (cached != null) return true;
-        return await repository.fetchFreshProfile(pubkey: hexPubkey) != null;
-      },
-      // A video the viewer's filters hide still exists: it opens like its
-      // note1 does, and the detail screen names the setting (#7892).
-      videoExists: (routeId) async {
-        final repository = ref.read(videosRepositoryProvider);
-        final lookup = await repository.lookupVideoForRouteId(routeId);
-        return lookup is! VideoRouteMissing;
-      },
-    );
-
-    final action = await resolver.resolve(query);
-    if (!mounted) return;
-    // Drop the result if the field changed while a lookup was in flight, so a
-    // slow resolution never yanks the user to a screen for a query they have
-    // already replaced.
-    if (widget.controller.text.trim() != query) return;
-
-    switch (action) {
-      case OpenProfileAction(:final hexPubkey):
-        context.pushOtherProfile(hexPubkey);
-      case OpenVideoAction(:final routeId):
-        runDetached(
-          context.push<void>(VideoDetailScreen.pathForId(routeId)),
-          'open video from search',
-          logName: 'SearchResultsPage',
-          category: LogCategory.ui,
-        );
-      case null:
-        break;
-    }
-  }
-
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    return BlocListener<NostrIdSearchCubit, NostrIdSearchState>(
+      listenWhen: (_, current) => current.action != null,
+      listener: (context, state) {
+        switch (state.action) {
+          case OpenProfileAction(:final hexPubkey):
+            context.pushOtherProfile(hexPubkey);
+          case OpenVideoAction(:final routeId):
+            runDetached(
+              context.push<void>(VideoDetailScreen.pathForId(routeId)),
+              'open video from search',
+              logName: 'SearchResultsPage',
+              category: LogCategory.ui,
+            );
+          case null:
+            break;
+        }
+      },
+      child: widget.child,
+    );
+  }
 }
 
 /// Retires stale preview work without remounting the field or other searches.

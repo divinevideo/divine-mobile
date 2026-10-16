@@ -1,6 +1,7 @@
 // ABOUTME: Classifies a search query as a Nostr identifier and decides what
 // ABOUTME: to open, reusing the NIP-19 decoders the app already ships.
 
+import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -43,7 +44,7 @@ final class NostrAmbiguousTarget extends NostrSearchTarget {
 }
 
 /// What the caller should open, or null when nothing matched.
-sealed class NostrIdOpenAction {
+sealed class NostrIdOpenAction extends Equatable {
   const NostrIdOpenAction();
 }
 
@@ -52,6 +53,9 @@ final class OpenProfileAction extends NostrIdOpenAction {
   const OpenProfileAction(this.hexPubkey);
 
   final String hexPubkey;
+
+  @override
+  List<Object?> get props => [hexPubkey];
 }
 
 /// Open the video addressed by [routeId] (`/video/<routeId>`).
@@ -59,6 +63,9 @@ final class OpenVideoAction extends NostrIdOpenAction {
   const OpenVideoAction(this.routeId);
 
   final String routeId;
+
+  @override
+  List<Object?> get props => [routeId];
 }
 
 /// Classifies [rawQuery] as a Nostr identifier.
