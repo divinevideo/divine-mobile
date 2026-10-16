@@ -66,6 +66,11 @@ class SoundRequestsRepository {
   Future<T> _run<T>(Future<T> Function() action) {
     final result = _tail.then((_) {
       _checkOpen();
+      // Reject before reading state or awaiting source resolution: restoration
+      // during an action must not invalidate its initial deduplication checks.
+      if (!_restored) {
+        throw const SoundRequestException('Sound request state unavailable');
+      }
       return action();
     });
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});

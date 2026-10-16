@@ -374,7 +374,8 @@ void main() {
             ..data[viewer] = stored
             ..readGate = gate;
           final transport = Transport([]);
-          final repo = repository(viewer, transport, store, Publisher());
+          final publisher = Publisher();
+          final repo = repository(viewer, transport, store, publisher);
           addTearDown(repo.close);
           final started = startPending ? repo.start() : null;
           await expectLater(
@@ -382,6 +383,7 @@ void main() {
             throwsA(isA<SoundRequestException>()),
           );
           expect(store.data[viewer], same(stored));
+          expect(publisher.resolves, 0);
           expect(transport.intents, isEmpty);
           gate.complete();
           await started;
