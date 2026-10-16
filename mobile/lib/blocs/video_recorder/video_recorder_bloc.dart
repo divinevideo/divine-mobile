@@ -964,9 +964,7 @@ class VideoRecorderBloc
 
     if (state.recordingLockedForNavigation ||
         !_cameraService.canRecord ||
-        state.isRecording ||
-        state.isStartingRecording ||
-        state.isStoppingRecording ||
+        state.hasRecordingInFlight ||
         (remainingDuration < const Duration(milliseconds: 30) &&
             state.recorderMode.hasRecordingLimit)) {
       Log.debug(
