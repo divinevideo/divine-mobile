@@ -75,8 +75,8 @@ void main() {
 
       test('the max-duration auto-stop reports every outcome', () {
         final callback = declarationAt(
-          controllerSource,
-          'autoStopCallback = { result, error ->',
+          declarationAt(controllerSource, 'private fun autoStopRecording()'),
+          'stopArbiter.beginStop { result, error ->',
         );
 
         expect(callback, contains(send));
@@ -107,7 +107,7 @@ void main() {
       });
 
       // A Stop, the max-duration auto-stop and a release each report through
-      // their own path, and the Finalize branch consumes those callbacks.
+      // their own path, and the Finalize branch consumes the pending stop.
       // Judging "unrequested" after that would report every Stop a second
       // time and save the take twice.
       test('an unrequested finalize is judged before the stop callbacks are '
@@ -129,11 +129,7 @@ void main() {
         );
         expect(
           requested,
-          lessThan(finalize.indexOf('manualStopCallback = null')),
-        );
-        expect(
-          requested,
-          lessThan(finalize.indexOf('autoStopCallback = null')),
+          lessThan(finalize.indexOf('stopArbiter.finish(')),
         );
         expect(
           finalize.substring(
@@ -141,8 +137,7 @@ void main() {
             finalize.indexOf('isRecording = false', requested),
           ),
           allOf(
-            contains('manualStopCallback != null'),
-            contains('autoStopCallback != null'),
+            contains('stopArbiter.isStopPending'),
             contains('isReleased'),
           ),
         );

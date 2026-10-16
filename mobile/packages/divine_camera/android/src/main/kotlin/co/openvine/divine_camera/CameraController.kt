@@ -229,8 +229,7 @@ class CameraController(
     private var recordingStartTime: Long = 0
     private var currentRecordingFile: File? = null
     private var videoQuality: Quality = Quality.FHD
-    private var maxDurationRunnable: Runnable? = null
-    private var autoStopCallback: ((Map<String, Any?>?, String?) -> Unit)? = null
+    private val stopArbiter = RecordingStopArbiter(mainHandler)
 
     // Fires once the incoming camera has produced enough frames after a lens
     // switch (see [switchSettleFramesRemaining]) to resolve the switch. The
@@ -2462,17 +2461,13 @@ class CameraController(
 
                                 // Schedule auto-stop if maxDuration is set
                                 if (maxDurationMs != null && maxDurationMs > 0) {
-                                    maxDurationRunnable = Runnable {
+                                    stopArbiter.scheduleMaxDuration(maxDurationMs.toLong()) {
                                         DivineCameraLog.d(
                                             TAG,
                                             "Max duration reached (${maxDurationMs}ms) - auto-stopping recording"
                                         )
                                         autoStopRecording()
                                     }
-                                    mainHandler.postDelayed(
-                                        maxDurationRunnable!!,
-                                        maxDurationMs.toLong()
-                                    )
                                 }
 
                                 // Notify Flutter that recording truly started
@@ -2483,14 +2478,11 @@ class CameraController(
 
                         is VideoRecordEvent.Finalize -> {
                             val wasTrulyStarted = recordingTrulyStarted
-                            val stopRequested = manualStopCallback != null ||
-                                autoStopCallback != null ||
+                            val stopRequested = stopArbiter.isStopPending ||
                                 isReleased
                             isRecording = false
                             recordingTrulyStarted = false
-                            // Cancel any pending auto-stop
-                            maxDurationRunnable?.let { mainHandler.removeCallbacks(it) }
-                            maxDurationRunnable = null
+                            stopArbiter.cancelMaxDuration()
 
                             if (event.hasError()) {
                                 DivineCameraLog.error(
@@ -2543,6 +2535,12 @@ class CameraController(
                                     currentRecordingFile = null
                                     recording = null
 
+                                    // A stop that is still waiting asked to end the
+                                    // recording that just failed, which left no file.
+                                    // Left pending, it would refuse every stop of the
+                                    // retried recording, the time limit's included.
+                                    stopArbiter.finish(null, "Recording stopped before first keyframe")
+
                                     // Consume the startRecordingCallback so it is not called yet
                                     val savedCallback = startRecordingCallback!!
                                     startRecordingCallback = null
@@ -2594,28 +2592,12 @@ class CameraController(
                                 )
                             } else null
 
-                            // Handle manual stop callback (from stopRecording)
-                            manualStopCallback?.let { manualCallback ->
-                                if (result != null) {
-                                    DivineCameraLog.d(TAG, "Manual stop recording result: $result")
-                                    manualCallback(result, null)
-                                } else {
-                                    DivineCameraLog.w(TAG, "Manual stop: Recording file not found or empty")
-                                    manualCallback(null, "Recording file not found or empty")
-                                }
-                                manualStopCallback = null
-                            }
-
-                            // Handle auto-stop callback (from max duration)
-                            autoStopCallback?.let { autoCallback ->
-                                if (result != null) {
-                                    DivineCameraLog.d(TAG, "Auto-stop recording result: $result")
-                                    autoCallback(result, null)
-                                } else {
-                                    autoCallback(null, "Recording file not found")
-                                }
-                                autoStopCallback = null
-                            }
+                            // Only the stop that ended the recording gets the file:
+                            // the manual one or the time limit's, never both.
+                            stopArbiter.finish(
+                                result,
+                                if (result == null) "Recording file not found or empty" else null
+                            )
 
                             // Nobody asked for this stop (the app went to the
                             // background, or the camera was taken away), so
@@ -2674,13 +2656,8 @@ class CameraController(
             return
         }
 
-        DivineCameraLog.d(TAG, "Auto-stopping recording...")
-        
-        // Disable auto-flash torch if it was enabled
-        disableAutoFlashTorch()
-
-        // Set the callback that will be invoked when Finalize event fires
-        autoStopCallback = { result, error ->
+        // Invoked by the Finalize event.
+        val claimed = stopArbiter.beginStop { result, error ->
             if (result != null) {
                 DivineCameraLog.d(TAG, "Auto-stop completed, notifying listener: $result")
             } else {
@@ -2693,17 +2670,26 @@ class CameraController(
             // which tells Dart the recording is over (#9261).
             onAutoStopListener?.invoke(result ?: emptyMap())
         }
+        if (!claimed) {
+            DivineCameraLog.d(TAG, "Max duration reached while another stop is finishing - leaving the take to it")
+            return
+        }
+
+        DivineCameraLog.d(TAG, "Auto-stopping recording...")
+
+        // Disable auto-flash torch if it was enabled
+        disableAutoFlashTorch()
 
         currentRecording.stop()
-        // The Finalize event will handle the callback via autoStopCallback
     }
-
-    // Callback for manual stop recording - will be invoked when Finalize event fires
-    private var manualStopCallback: ((Map<String, Any?>?, String?) -> Unit)? = null
 
     /**
      * Stops video recording and returns the result.
      * Waits for the Finalize event to ensure the file is fully written.
+     *
+     * Answers "Not recording" when another stop already began — in practice
+     * the max-duration auto-stop, which owns the take from then on and
+     * reports it through [onAutoStopListener].
      */
     fun stopRecording(callback: (Map<String, Any?>?, String?) -> Unit) {
         val currentRecording = recording
@@ -2717,23 +2703,36 @@ class CameraController(
         if (!recordingTrulyStarted) {
             DivineCameraLog.w(TAG, "Stopping recording before first keyframe - will return empty result")
             // The startRecordingCallback will be notified via Finalize event
-            // We still need to call manualStopCallback, but it will get null result
+            // We still need to call the stop callback, but it will get null result
+        }
+
+        // Invoked by the Finalize event. Claiming the stop cancels the
+        // max-duration timer, which could otherwise fire while CameraX
+        // finalizes and stop the same take a second time.
+        val claimed = stopArbiter.beginStop { result, error ->
+            if (result != null) {
+                DivineCameraLog.d(TAG, "Manual stop recording result: $result")
+            } else {
+                DivineCameraLog.w(TAG, "Manual stop: $error")
+            }
+            callback(result, error)
+        }
+        if (!claimed) {
+            DivineCameraLog.d(TAG, "Stop requested while another stop is finishing - leaving the take to it")
+            callback(null, "Not recording")
+            return
         }
 
         try {
             DivineCameraLog.d(TAG, "Stopping recording...")
-            
+
             // Disable auto-flash torch if it was enabled
             disableAutoFlashTorch()
-            // Store callback to be invoked when Finalize event fires
-            manualStopCallback = callback
-            
-            currentRecording.stop()
-            // The Finalize event handler will call the callback when file is ready
 
+            currentRecording.stop()
         } catch (e: Exception) {
             DivineCameraLog.e(TAG, "Failed to stop recording", e)
-            manualStopCallback = null
+            stopArbiter.abandonStop()
             callback(null, "Failed to stop recording: ${e.message}")
         }
     }

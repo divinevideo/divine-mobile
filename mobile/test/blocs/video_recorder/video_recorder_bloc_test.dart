@@ -7,6 +7,7 @@ import 'package:divine_camera/divine_camera.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio, AudioEvent;
@@ -71,6 +72,23 @@ class _RecordingTraceMonitor implements PerformanceTraceMonitor {
 }
 
 class _MockClipManager extends Mock implements ClipManagerNotifier {}
+
+/// Uses the real recording timer and addClip; library I/O is outside this test.
+class _RecordingClipManager extends ClipManagerNotifier {
+  @override
+  Future<bool> saveClipToLibrary(DivineVideoClip clip) async => true;
+}
+
+class _RecordingVideoEditor extends VideoEditorNotifier {
+  @override
+  VideoEditorProviderState build() => VideoEditorProviderState();
+
+  @override
+  void invalidateFinalRenderedClip() {}
+
+  @override
+  void triggerAutosave() {}
+}
 
 class _MockVideoEditor extends Mock implements VideoEditorNotifier {}
 
@@ -1906,9 +1924,9 @@ void main() {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
           // stopRecording() must still run so the periodic duration timer
-          // is cancelled (resetRecording() alone would leave it running).
+          // is cancelled; the in-progress segment is cleared too.
           verify(() => clipManager.stopRecording()).called(1);
-          verify(() => clipManager.resetRecording()).called(1);
+          verify(() => clipManager.clearActiveRecordingDuration()).called(1);
         },
       );
 
@@ -2074,6 +2092,182 @@ void main() {
         },
       );
 
+      group('racing a Stop tap at the recording limit', () {
+        late void Function(EditorVideo? video) autoStopCallback;
+
+        VideoRecorderBloc buildRecordingBloc() =>
+            buildBloc(
+              cameraServiceFactory:
+                  ({
+                    required onUpdateState,
+                    required onAutoStopped,
+                    onScreenFlashChanged,
+                  }) {
+                    autoStopCallback = onAutoStopped;
+                    return cameraService;
+                  },
+            )..emit(
+              const VideoRecorderBlocState(
+                recordingState: VideoRecorderState.recording,
+              ),
+            );
+
+        /// A take as the camera service reports it. Each report is its own
+        /// [EditorVideo], as in production; only the file is shared.
+        EditorVideo reportedTake() {
+          final video = _MockEditorVideo();
+          when(
+            () => video.file,
+          ).thenReturn(EditorVideo.file('/takes/VID_1.mp4').file);
+          // Parks the detached enrichment, which this group does not cover.
+          when(video.safeFilePath)
+              .thenAnswer((_) => Completer<String>().future);
+          return video;
+        }
+
+        void stubAddClip() {
+          when(
+            () => clipManager.addClip(
+              video: any(named: 'video'),
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
+            ),
+          ).thenAnswer(
+            (invocation) => DivineVideoClip(
+              id: 'take',
+              video: invocation.namedArguments[#video] as EditorVideo,
+              duration: const Duration(milliseconds: 6300),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(
+            () => clipManager.saveClipToLibrary(any()),
+          ).thenAnswer((_) async => true);
+        }
+
+        List<EditorVideo> addedTakes() => verify(
+          () => clipManager.addClip(
+            video: captureAny(named: 'video'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            lensMetadata: any(named: 'lensMetadata'),
+            limitClipDuration: any(named: 'limitClipDuration'),
+            captureChromaKey: any(named: 'captureChromaKey'),
+          ),
+        ).captured.cast<EditorVideo>();
+
+        test('a limit-wins take retains its real recorded duration', () {
+          fakeAsync((async) {
+            final container = ProviderContainer(
+              overrides: [
+                clipManagerProvider.overrideWith(_RecordingClipManager.new),
+                videoEditorProvider.overrideWith(_RecordingVideoEditor.new),
+              ],
+            );
+            final realClipManager = container.read(
+              clipManagerProvider.notifier,
+            );
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => null);
+            final bloc =
+                VideoRecorderBloc(
+                  readClipManager: () => realClipManager,
+                  readVideoEditor: () => videoEditor,
+                  readVideoEditorState: VideoEditorProviderState.new,
+                  readSharedPreferences: () => prefs,
+                  cameraServiceFactory:
+                      ({
+                        required onUpdateState,
+                        required onAutoStopped,
+                        onScreenFlashChanged,
+                      }) {
+                        autoStopCallback = onAutoStopped;
+                        return cameraService;
+                      },
+                )..emit(
+                  const VideoRecorderBlocState(
+                    recordingState: VideoRecorderState.recording,
+                  ),
+                );
+            realClipManager.startRecording();
+            async.elapse(const Duration(seconds: 6));
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              const Duration(seconds: 6),
+            );
+
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            async.flushMicrotasks();
+            expect(bloc.state.isRecording, isFalse);
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              Duration.zero,
+            );
+            autoStopCallback(reportedTake());
+            async.flushMicrotasks();
+
+            expect(realClipManager.clips, hasLength(1));
+            expect(
+              realClipManager.clips.single.duration,
+              const Duration(seconds: 6),
+            );
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+            container.dispose();
+          });
+        });
+
+        test(
+          'adds the take once when the limit reports it again (#10194)',
+          () async {
+            stubAddClip();
+            final stoppedTake = reportedTake();
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => stoppedTake);
+            final bloc = buildRecordingBloc();
+            addTearDown(bloc.close);
+
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            autoStopCallback(reportedTake());
+            await pumpEventQueue();
+
+            expect(addedTakes(), [stoppedTake]);
+            expect(bloc.state.isRecording, isFalse);
+          },
+        );
+
+        test(
+          'keeps the take the limit reports when the Stop tap got nothing',
+          () async {
+            stubAddClip();
+            // The limit began stopping first, so the camera refused the tap.
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => null);
+            final bloc = buildRecordingBloc();
+            addTearDown(bloc.close);
+
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            final limitTake = reportedTake();
+            autoStopCallback(limitTake);
+            await pumpEventQueue();
+
+            expect(addedTakes(), [limitTake]);
+            expect(bloc.state.isRecording, isFalse);
+            // The clip manager measures the take with its recording clock, so
+            // the empty Stop result must not zero it before the take arrives.
+            verifyNever(() => clipManager.resetRecording());
+          },
+        );
+      });
+
       group('when nothing was captured', () {
         setUp(stubRecorderDefaults);
         late void Function(EditorVideo? video) autoStopCallback;
@@ -2114,7 +2308,7 @@ void main() {
             expect(bloc.state.isStoppingRecording, isFalse);
             // Stops the recording clock and drops the in-progress segment.
             verify(() => clipManager.stopRecording()).called(1);
-            verify(() => clipManager.resetRecording()).called(1);
+            verify(() => clipManager.clearActiveRecordingDuration()).called(1);
             verifyNever(
               () => clipManager.addClip(
                 video: any(named: 'video'),

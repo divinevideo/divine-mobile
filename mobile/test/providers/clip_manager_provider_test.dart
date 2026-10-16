@@ -123,6 +123,57 @@ void main() {
     });
 
     group('resetRecording', () {
+      test('keeps a late auto-stop take at its frozen duration', () {
+        fakeAsync((async) {
+          final notifier = container.read(clipManagerProvider.notifier)
+            ..startRecording();
+          async.elapse(const Duration(seconds: 6));
+          notifier.stopRecording();
+          expect(
+            container.read(clipManagerProvider).activeRecordingDuration,
+            const Duration(seconds: 6),
+          );
+
+          // A refused manual stop has no file yet; the native auto-stop
+          // delivers the real take after this empty result has been handled.
+          notifier.clearActiveRecordingDuration();
+          expect(
+            container.read(clipManagerProvider).activeRecordingDuration,
+            Duration.zero,
+          );
+          final clip = notifier.addClip(
+            video: EditorVideo.file('/takes/late.mp4'),
+            originalAspectRatio: 9 / 16,
+            targetAspectRatio: .vertical,
+            limitClipDuration: true,
+          );
+
+          expect(clip.duration, const Duration(seconds: 6));
+        });
+      });
+
+      test('a new take resets time retained for a late result', () {
+        fakeAsync((async) {
+          final notifier = container.read(clipManagerProvider.notifier)
+            ..startRecording();
+          async.elapse(const Duration(seconds: 6));
+          notifier
+            ..stopRecording()
+            ..clearActiveRecordingDuration()
+            ..startRecording();
+          async.elapse(const Duration(seconds: 2));
+          notifier.stopRecording();
+          final clip = notifier.addClip(
+            video: EditorVideo.file('/takes/next.mp4'),
+            originalAspectRatio: 9 / 16,
+            targetAspectRatio: .vertical,
+            limitClipDuration: true,
+          );
+
+          expect(clip.duration, const Duration(seconds: 2));
+        });
+      });
+
       test(
         'clears the in-progress duration of a recording that made no clip',
         () {
@@ -144,6 +195,42 @@ void main() {
               container.read(clipManagerProvider).activeRecordingDuration,
               Duration.zero,
             );
+          });
+        },
+      );
+    });
+
+    group('clearActiveRecordingDuration', () {
+      test(
+        'keeps the frozen duration for a take the recording limit hands '
+        'over after an empty stop (#10194)',
+        () {
+          fakeAsync((async) {
+            final notifier = container.read(clipManagerProvider.notifier)
+              ..startRecording();
+            async.elapse(const Duration(milliseconds: 50));
+            notifier.stopRecording();
+            final frozen = container
+                .read(clipManagerProvider)
+                .activeRecordingDuration;
+            expect(frozen, greaterThan(Duration.zero));
+
+            notifier.clearActiveRecordingDuration();
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              Duration.zero,
+            );
+
+            final clip = notifier.addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/path/to/take.mp4'),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            );
+
+            // resetRecording() would have zeroed the clock, and the take
+            // would be added as a 0:00 clip.
+            expect(clip.duration, greaterThanOrEqualTo(frozen));
           });
         },
       );
@@ -172,6 +259,32 @@ void main() {
       tearDown(() {
         VideoEditorRenderService.limitClipDurationOverride = null;
         NativeProofModeService.proofFileOverride = null;
+      });
+
+      test('a late auto-stop take still trims to the remaining budget', () {
+        fakeAsync((async) {
+          final notifier = container.read(clipManagerProvider.notifier)
+            ..startRecording();
+          async.elapse(
+            VideoEditorConstants.maxDuration +
+                const Duration(milliseconds: 100),
+          );
+          notifier
+            ..stopRecording()
+            ..clearActiveRecordingDuration();
+          final clip = notifier.addClip(
+            video: EditorVideo.file('/takes/over-limit.mp4'),
+            originalAspectRatio: 9 / 16,
+            targetAspectRatio: .vertical,
+            limitClipDuration: true,
+          );
+
+          expect(clip.duration, VideoEditorConstants.maxDuration);
+          expect(clip.processingCompleter, isNotNull);
+          completeTrim(true);
+          async.flushMicrotasks();
+          expect(clip.processingCompleter!.isCompleted, isTrue);
+        });
       });
 
       test('settles background work when disposed during trim', () async {

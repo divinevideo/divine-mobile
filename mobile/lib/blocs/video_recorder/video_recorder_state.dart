@@ -101,6 +101,7 @@ class VideoRecorderBlocState extends Equatable {
     this.chromaKey = _initialChromaKey,
     this.chromaKeyMeasurementStatus = ChromaKeyMeasurementStatus.idle,
     this.unrecordedChromaKeyImagePath,
+    this.stoppedTakePath,
   });
 
   /// Recorder mode from the camera.
@@ -306,6 +307,13 @@ class VideoRecorderBlocState extends Equatable {
   /// usual clip cleanup takes over, so this goes back to `null`.
   final String? unrecordedChromaKeyImagePath;
 
+  /// File of the take the last stop finished, until the next take starts.
+  ///
+  /// A second stop result for this file is the same take reported twice — a
+  /// Stop tap and the recording limit both ending it — and is dropped, so the
+  /// take is not added as two clips.
+  final String? stoppedTakePath;
+
   /// Whether a wall measurement is running.
   bool get isMeasuringChromaKey =>
       chromaKeyMeasurementStatus == ChromaKeyMeasurementStatus.detecting;
@@ -401,6 +409,8 @@ class VideoRecorderBlocState extends Equatable {
     ChromaKeyMeasurementStatus? chromaKeyMeasurementStatus,
     String? unrecordedChromaKeyImagePath,
     bool clearUnrecordedChromaKeyImagePath = false,
+    String? stoppedTakePath,
+    bool clearStoppedTakePath = false,
   }) {
     return VideoRecorderBlocState(
       recorderMode: recorderMode ?? this.recorderMode,
@@ -459,6 +469,9 @@ class VideoRecorderBlocState extends Equatable {
       unrecordedChromaKeyImagePath: clearUnrecordedChromaKeyImagePath
           ? null
           : (unrecordedChromaKeyImagePath ?? this.unrecordedChromaKeyImagePath),
+      stoppedTakePath: clearStoppedTakePath
+          ? null
+          : (stoppedTakePath ?? this.stoppedTakePath),
     );
   }
 
@@ -507,5 +520,6 @@ class VideoRecorderBlocState extends Equatable {
     chromaKey,
     chromaKeyMeasurementStatus,
     unrecordedChromaKeyImagePath,
+    stoppedTakePath,
   ];
 }

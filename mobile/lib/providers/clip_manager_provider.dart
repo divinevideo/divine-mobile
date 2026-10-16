@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:divine_camera/divine_camera.dart' show CameraLensMetadata;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' as model show AspectRatio;
@@ -52,7 +53,7 @@ final capturedChromaKeyBakerProvider = Provider<CapturedChromaKeyBaker>(
 class ClipManagerNotifier extends Notifier<ClipManagerState> {
   int _clipCounter = 0;
   Timer? _recordingDurationTimer;
-  final _recordStopwatch = Stopwatch();
+  final Stopwatch _recordStopwatch = clock.stopwatch();
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
 
@@ -202,6 +203,18 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
       name: 'ClipManagerNotifier',
       category: .video,
     );
+  }
+
+  /// Hides the in-progress segment of a recording whose stop produced no clip,
+  /// but keeps the duration the stopwatch froze at.
+  ///
+  /// When the recording limit stops a take just before a Stop tap does, the
+  /// camera refuses the tap and hands the take over a moment later through
+  /// the limit (#10194). [addClip] measures that take with the frozen
+  /// duration, which [resetRecording] would have zeroed. The next
+  /// [startRecording] resets it.
+  void clearActiveRecordingDuration() {
+    state = state.copyWith(activeRecordingDuration: .zero);
   }
 
   /// Add a new recorded clip to the list.

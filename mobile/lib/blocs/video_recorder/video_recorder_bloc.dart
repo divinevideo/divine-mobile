@@ -969,7 +969,11 @@ class VideoRecorderBloc
     }
 
     emit(
-      state.copyWith(isStartingRecording: true, baseZoomLevel: state.zoomLevel),
+      state.copyWith(
+        isStartingRecording: true,
+        baseZoomLevel: state.zoomLevel,
+        clearStoppedTakePath: true,
+      ),
     );
     unawaited(HapticService.recordingFeedback());
 
@@ -1166,6 +1170,20 @@ class VideoRecorderBloc
 
     if (!state.isRecording && event.result == null) return;
 
+    final stoppedTakePath = state.stoppedTakePath;
+    if (stoppedTakePath != null &&
+        event.result?.file?.path == stoppedTakePath) {
+      // The camera reported the take this recorder already stopped a second
+      // time. Adding it again would leave two clips on one file (#10194).
+      Log.info(
+        '⏭️  Ignoring a second stop result for the take already stopped: '
+        '$stoppedTakePath',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
     Log.info(
       '⏹️  Stopping recording and processing clip...',
       name: 'VideoRecorderBloc',
@@ -1228,6 +1246,7 @@ class VideoRecorderBloc
       state.copyWith(
         recordingState: VideoRecorderState.idle,
         isStoppingRecording: false,
+        stoppedTakePath: videoResult?.file?.path,
       ),
     );
     if (videoResult == null) {
@@ -1238,7 +1257,10 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
       addError(const RecordingProducedNoVideoException(), StackTrace.current);
-      clipManager.resetRecording();
+      // Keeps the frozen duration: when the recording limit stopped the take
+      // first, the camera refused this stop and still hands the take over,
+      // and that clip is measured with it.
+      clipManager.clearActiveRecordingDuration();
       return;
     }
 
