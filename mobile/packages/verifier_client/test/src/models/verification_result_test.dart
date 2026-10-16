@@ -96,31 +96,44 @@ void main() {
     });
 
     group('isInconclusive', () {
-      VerificationResult unverified({String? code}) => VerificationResult(
-        platform: 'github',
-        identity: 'octocat',
-        verified: false,
-        checkedAt: 1,
-        cached: false,
-        code: code,
-      );
+      VerificationResult resultWith({String? code, bool verified = false}) =>
+          VerificationResult(
+            platform: 'github',
+            identity: 'octocat',
+            verified: verified,
+            checkedAt: 1,
+            cached: false,
+            code: code,
+          );
 
       test('is true when the verifier could not check the claim', () {
         expect(
-          unverified(code: 'temporarily_unavailable').isInconclusive,
+          resultWith(code: 'temporarily_unavailable').isInconclusive,
           isTrue,
         );
       });
 
       test('is false for a rejection', () {
         expect(
-          unverified(code: 'discord_author_mismatch').isInconclusive,
+          resultWith(code: 'discord_author_mismatch').isInconclusive,
           isFalse,
         );
       });
 
       test('is false for a rejection without a code', () {
-        expect(unverified().isInconclusive, isFalse);
+        expect(resultWith().isInconclusive, isFalse);
+      });
+
+      // A confirmed claim is a verdict, whatever code rides along with it, so
+      // it must never be read as "couldn't check".
+      test('is false for a verified result', () {
+        expect(
+          resultWith(
+            code: 'temporarily_unavailable',
+            verified: true,
+          ).isInconclusive,
+          isFalse,
+        );
       });
     });
 
