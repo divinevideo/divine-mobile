@@ -12,9 +12,10 @@ import 'package:openvine/providers/video_editor_provider.dart';
 ///
 /// The preview's failure overlay only has room for a retry button — the
 /// default capture card is 112px wide — so the words live here. Most failures
-/// get "Generation failed"; a device out of storage gets the sentence that
-/// says what to do, because a blind retry walks the user into the same wall
-/// (#7125). Renders nothing while no render has failed.
+/// get "Generation failed"; a device out of storage (#7125) or out of decoders
+/// for the detached clips (#10141) gets the sentence that says what to do,
+/// because a blind retry walks the user into the same wall. Renders nothing
+/// while no render has failed.
 class VideoMetadataRenderFailureBanner extends ConsumerWidget {
   /// Creates the banner, laid out with [padding] only while it is visible.
   const VideoMetadataRenderFailureBanner({
@@ -44,15 +45,18 @@ class VideoMetadataRenderFailureBanner extends ConsumerWidget {
 
 /// The copy for [reason].
 ///
-/// A full disk and a sound that could not be fetched each change what the
-/// user is told, because the remedy differs: free up space, or get back on
-/// the network and retry. Everything else gets the generic failure.
+/// A full disk, a sound that could not be fetched and more detached clips than
+/// the device can decode each change what the user is told, because the remedy
+/// differs: free up space, get back on the network and retry, or put some
+/// clips back on the timeline. Everything else gets the generic failure.
 String _message(AppLocalizations l10n, VideoRenderFailureReason? reason) =>
     switch (reason) {
       VideoRenderFailureReason.insufficientStorage =>
         l10n.publishErrorLowStorage,
       VideoRenderFailureReason.audioUnavailable =>
         l10n.publishErrorServerUnreachable,
+      VideoRenderFailureReason.tooManyDetachedClips =>
+        l10n.publishErrorTooManyDetachedClips,
       _ => l10n.videoMetadataGenerationFailed,
     };
 

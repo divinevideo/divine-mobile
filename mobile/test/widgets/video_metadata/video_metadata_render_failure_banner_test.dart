@@ -69,6 +69,23 @@ void main() {
         expect(find.text(l10n.videoMetadataGenerationFailed), findsNothing);
       });
 
+      testWidgets('what to change when the device ran out of decoders', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            renderFailed: true,
+            reason: VideoRenderFailureReason.tooManyDetachedClips,
+          ),
+        );
+
+        expect(
+          find.text(l10n.publishErrorTooManyDetachedClips),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.videoMetadataGenerationFailed), findsNothing);
+      });
+
       testWidgets('the generic copy for every other failure', (tester) async {
         await tester.pumpWidget(
           buildWidget(

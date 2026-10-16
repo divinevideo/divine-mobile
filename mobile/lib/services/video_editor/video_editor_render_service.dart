@@ -665,12 +665,23 @@ class VideoEditorRenderService {
       );
 
       return outputPath;
-    } on VideoRenderFailedException {
+    } on VideoRenderFailedException catch (e, stack) {
       // Already classified (the test override's null return, a sound that
       // could not be fetched) — re-wrapping it below would report it a second
       // time under the wrong cause. The normalized clips written so far are
       // still ours to remove.
       await _cleanupTempFiles([...tempFilePaths, ?finalOutputPath]);
+      // A device out of decoders is still a failed export we need to see, the
+      // way a full disk is (#7125): only the user's message is specific to it.
+      // Reported as the native failure underneath, which is how it was grouped
+      // before it had a reason of its own (#10141).
+      if (e.reason == VideoRenderFailureReason.tooManyDetachedClips) {
+        VideoRenderWatchdog.reportFailure(
+          e.cause ?? e,
+          stack,
+          reportEveryFailure: reportEveryFailure,
+        );
+      }
       rethrow;
     } on RenderCanceledException catch (e) {
       Log.info(

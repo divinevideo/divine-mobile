@@ -7593,6 +7593,14 @@ class AppLocalizationsId extends AppLocalizations {
       'Teks dan stiker di draf ini tidak bisa disiapkan. Buka di editor, lalu posting lagi.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Perangkatmu tidak bisa mengekspor klip terlepas sebanyak ini sekaligus. Kembalikan beberapa ke timeline lalu coba lagi.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Perangkatmu tidak bisa mengekspor klip terlepas sebanyak ini sekaligus. Buka draf di editor, kembalikan beberapa ke timeline, lalu posting lagi.';
+
+  @override
   String get publishErrorUnknownServer => 'Server tidak dikenal';
 
   @override

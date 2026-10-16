@@ -1,15 +1,18 @@
 // ABOUTME: Tests the export's second pass — when it runs, what it hands the
 // ABOUTME: base render, and the composition it builds over the finished track.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
+import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' as pie;
@@ -25,6 +28,9 @@ class _FakePathProvider extends Fake
 /// Records the render tasks the pass submits, without touching a codec.
 class _RecordingProVideoEditor extends ProVideoEditor {
   final tasks = <VideoRenderData>[];
+
+  /// Thrown by every render instead of finishing it, when set.
+  Object? renderError;
 
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
@@ -50,6 +56,8 @@ class _RecordingProVideoEditor extends ProVideoEditor {
     NativeLogLevel? nativeLogLevel,
   }) async {
     tasks.add(renderData);
+    final error = renderError;
+    if (error != null) throw error;
     return outputPath;
   }
 }
@@ -227,6 +235,105 @@ void main() {
         expect(editor.tasks, hasLength(2));
         expect(editor.tasks.first.videoSegments!.single.playbackSpeed, 2);
         expect(editor.tasks.last.composition, isNotNull);
+      });
+
+      group('when the device runs out of codecs', () {
+        /// Runs the pass to its end under fake time, so the encoder retries'
+        /// settle delays elapse instantly, and returns what it threw.
+        (Object?, StackTrace?) failureWithStackOf(Object renderError) {
+          Object? failure;
+          StackTrace? stackTrace;
+          fakeAsync((async) {
+            editor.renderError = renderError;
+            DetachedClipRenderPass? pass;
+            unawaited(prepare([_detachedLayer(_clip())]).then((p) => pass = p));
+            async.flushMicrotasks();
+            File(pass!.basePath).writeAsBytesSync(const [1]);
+            unawaited(
+              run(pass!).then<void>(
+                (_) {},
+                onError: (Object e, StackTrace s) {
+                  failure = e;
+                  stackTrace = s;
+                },
+              ),
+            );
+            async.elapse(const Duration(seconds: 10));
+          });
+          return (failure, stackTrace);
+        }
+
+        Object? failureOf(Object renderError) =>
+            failureWithStackOf(renderError).$1;
+
+        /// A transient codec failure naming [codeName], the way Android
+        /// reports one.
+        RenderEncoderException starved(String codeName) =>
+            RenderEncoderException.transient(
+              'codec resources are exhausted',
+              NativeFailureDetails(
+                domain:
+                    'ch.waio.pro_video_editor.src.features.render.models.'
+                    'CodecResourceExhaustedException',
+                codeName: codeName,
+              ),
+            );
+
+        test('blames the detached clips once every retry failed', () {
+          // How `pro_video_editor` reported the decoders a Galaxy S26 could
+          // not start for 12 detached clips (#10141).
+          final failure = failureOf(starved('ERROR_CODE_DECODER_INIT_FAILED'));
+
+          expect(
+            failure,
+            isA<VideoRenderFailedException>()
+                .having(
+                  (e) => e.reason,
+                  'reason',
+                  VideoRenderFailureReason.tooManyDetachedClips,
+                )
+                .having(
+                  (e) => e.traceValue,
+                  'traceValue',
+                  'too_many_detached_clips:codec_exhausted',
+                ),
+          );
+          expect(
+            editor.tasks,
+            hasLength(3),
+            reason: 'the encoder retries run before the clips are blamed',
+          );
+        });
+
+        test("keeps the native failure's stack for the crash report", () {
+          final (_, stackTrace) = failureWithStackOf(
+            starved('ERROR_CODE_DECODER_INIT_FAILED'),
+          );
+
+          // Where the native render threw, not where the pass reclassified it:
+          // the export reports the failure with this stack, and it should match
+          // what it reported before the failure had a reason of its own.
+          expect(stackTrace.toString(), contains('renderVideoToFile'));
+        });
+
+        test('leaves a starved encoder unclassified', () {
+          // Fewer detached clips would not free the encoder.
+          final encoder = starved('ERROR_CODE_ENCODER_INIT_FAILED');
+
+          expect(failureOf(encoder), same(encoder));
+        });
+
+        test('leaves a shortage the platform does not name unclassified', () {
+          const unnamed = RenderEncoderException.transient('exhausted');
+
+          expect(failureOf(unnamed), same(unnamed));
+        });
+
+        test('leaves an unsupported encoder unclassified', () {
+          const unsupported = RenderEncoderException('profile rejected');
+
+          expect(failureOf(unsupported), same(unsupported));
+        });
       });
 
       test('ships the base track when the body size is unknown', () async {

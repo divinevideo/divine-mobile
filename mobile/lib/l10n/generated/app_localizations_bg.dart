@@ -7747,6 +7747,14 @@ class AppLocalizationsBg extends AppLocalizations {
       'Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и публикувай пак.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Устройството ти не може да експортира толкова много откачени клипове наведнъж. Върни няколко на времевата линия и опитай пак.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Устройството ти не може да експортира толкова много откачени клипове наведнъж. Отвори черновата в редактора, върни няколко на времевата линия и публикувай пак.';
+
+  @override
   String get publishErrorUnknownServer => 'Неизвестен сървър';
 
   @override

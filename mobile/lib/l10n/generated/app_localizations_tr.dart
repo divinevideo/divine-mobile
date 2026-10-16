@@ -7597,6 +7597,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar paylaş.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Birkaçını zaman çizelgesine geri koyup tekrar dene.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Taslağı düzenleyicide aç, birkaçını zaman çizelgesine geri koy ve tekrar paylaş.';
+
+  @override
   String get publishErrorUnknownServer => 'Bilinmeyen sunucu';
 
   @override

@@ -3825,6 +3825,8 @@
   "publishErrorPermissionDenied": "Divine tidak mempunyai kebenaran untuk memuat naik. Semak kebenaran apl dalam tetapan anda dan cuba lagi.",
   "publishErrorOutOfMemory": "Peranti anda kekurangan memori. Tutup beberapa apl dan cuba lagi.",
   "publishErrorOverlaysUnavailable": "Teks dan pelekat pada draf ini tidak dapat disediakan. Buka ia dalam penyunting, kemudian siarkan semula.",
+  "publishErrorTooManyDetachedClips": "Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Kembalikan beberapa ke garis masa dan cuba lagi.",
+  "publishErrorDraftTooManyDetachedClips": "Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Buka draf dalam penyunting, kembalikan beberapa ke garis masa, kemudian siarkan semula.",
   "publishErrorUnknownServer": "Pelayan tidak diketahui",
   "searchFilterPillSemanticLabel": "Penapis: {filter}",
   "@searchFilterPillSemanticLabel": {

@@ -195,6 +195,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// The box the preview frame fills, which a clip mask is measured in.
   final _clipFrameTracker = VideoEditorFrameTracker();
 
+  /// Whether an export holds the preview decoders, set by the canvas.
+  final _previewReleasedNotifier = ValueNotifier<bool>(false);
+
   /// Track ids whose missing duration we already tried to backfill, so a
   /// failed probe isn't retried on every audio-track change.
   final Set<String> _durationHealAttempted = {};
@@ -422,6 +425,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _liveVolumeNotifier.dispose();
     _liveEqualizerNotifier.dispose();
     _liveClipMaskNotifier.dispose();
+    _previewReleasedNotifier.dispose();
     super.dispose();
   }
 
@@ -1210,6 +1214,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               liveEqualizerNotifier: _liveEqualizerNotifier,
               liveClipMaskNotifier: _liveClipMaskNotifier,
               clipFrameTracker: _clipFrameTracker,
+              previewReleasedNotifier: _previewReleasedNotifier,
               fromLibrary: widget.fromLibrary,
               onOpenCamera: () => _runDetached(
                 _openCamera(

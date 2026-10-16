@@ -7680,6 +7680,14 @@ class AppLocalizationsMs extends AppLocalizations {
       'Teks dan pelekat pada draf ini tidak dapat disediakan. Buka ia dalam penyunting, kemudian siarkan semula.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Kembalikan beberapa ke garis masa dan cuba lagi.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Buka draf dalam penyunting, kembalikan beberapa ke garis masa, kemudian siarkan semula.';
+
+  @override
   String get publishErrorUnknownServer => 'Pelayan tidak diketahui';
 
   @override

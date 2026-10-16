@@ -47,6 +47,8 @@
   "publishErrorPermissionDenied": "Divine non ha il permesso di caricare. Controlla i permessi dell'app nelle impostazioni e riprova.",
   "publishErrorOutOfMemory": "Memoria insufficiente sul dispositivo. Chiudi alcune app e riprova.",
   "publishErrorOverlaysUnavailable": "Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e ripubblica.",
+  "publishErrorTooManyDetachedClips": "Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Rimettine alcune nella timeline e riprova.",
+  "publishErrorDraftTooManyDetachedClips": "Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Apri la bozza nell’editor, rimettine alcune nella timeline e ripubblica.",
   "publishErrorUnknownServer": "Server sconosciuto",
     "dmReactionsSheetTitle": "Reazioni",
     "dmReactionsViewA11yLabel": "Vedi chi ha reagito",

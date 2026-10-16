@@ -7640,6 +7640,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không chuẩn bị được chữ và nhãn dán trên bản nháp này. Mở nó trong trình chỉnh sửa rồi đăng lại.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Thiết bị của bạn không thể xuất cùng lúc nhiều clip đã tách rời như vậy. Đưa vài clip trở lại timeline rồi thử lại nhé.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Thiết bị của bạn không thể xuất cùng lúc nhiều clip đã tách rời như vậy. Mở bản nháp trong trình chỉnh sửa, đưa vài clip trở lại timeline rồi đăng lại nhé.';
+
+  @override
   String get publishErrorUnknownServer => 'Máy chủ không xác định';
 
   @override

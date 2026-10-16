@@ -7758,6 +7758,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e ripubblica.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Rimettine alcune nella timeline e riprova.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Apri la bozza nell’editor, rimettine alcune nella timeline e ripubblica.';
+
+  @override
   String get publishErrorUnknownServer => 'Server sconosciuto';
 
   @override
