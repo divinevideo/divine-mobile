@@ -70,7 +70,7 @@ Detach (picture-in-picture):
 - The gap it leaves can be closed, or held with a solid color or a photo.
 - A detached layer can be moved, resized and rotated on the canvas, split, duplicated, deleted, cropped to any aspect ratio, turned by 90° or flipped (Transform), made see-through (opacity 0–100 %), moved with keyframes, color-masked and shape-masked. It has no enter or leave animation. A clip detached with a shape mask takes the mask onto its layer.
 - Back to timeline puts the clip back as a timeline clip, into the color or photo slot it left if that is still there. Otherwise it goes in at the playhead: at the clip boundary under it, or right after the clip the playhead is inside. Only the part its layer showed comes back, as trim. Its placement, opacity, live color mask and shape mask stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
-- There is no fixed limit on detached clips, but the export decodes all of them at once, so a device runs out of video decoders at some number. The post screen then asks to put a few back on the timeline instead of offering a retry.
+- There is no fixed limit on detached clips, but the export decodes all of them at once, so a device runs out of video decoders at some number. When Android reports this decoder limit, the post screen asks to put a few back on the timeline; the retry button remains available.
 
 Color mask (chroma key, formerly "Green screen"):
 
