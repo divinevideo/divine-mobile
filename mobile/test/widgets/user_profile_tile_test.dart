@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
@@ -132,6 +133,9 @@ void main() {
             lastPostedAt: clock.now(),
           );
 
+          // Activity would join the same line, so exact-text checks alone
+          // could not see a relationship, handle or count that still renders.
+          expect(find.byType(UserIndicatorLine), findsNothing);
           expect(find.text(l10n.socialProofMutual), findsNothing);
           expect(find.text('@aeontropy'), findsNothing);
         },
