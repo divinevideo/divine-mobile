@@ -1173,13 +1173,15 @@ void main() {
         expect(tester.takeException(), isNull);
         final logs = logCapture.getRecentLogs();
         expect(logs, hasLength(1));
-        expect(logs.single.level, LogLevel.error);
-        expect(logs.single.name, 'MinorAccountReviewScreen');
-        expect(logs.single.category, LogCategory.ui);
+        expect(logs.single.level, equals(LogLevel.error));
+        expect(logs.single.name, equals('MinorAccountReviewScreen'));
+        expect(logs.single.category, equals(LogCategory.ui));
         expect(
           logs.single.message,
-          'Failed to open under-13 support instructions from the appeal: '
-          'Exception: route failed',
+          equals(
+            'Failed to open under-13 support instructions from the appeal: '
+            'Exception: route failed',
+          ),
         );
       });
 
