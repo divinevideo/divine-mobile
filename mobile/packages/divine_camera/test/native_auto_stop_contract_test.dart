@@ -66,12 +66,18 @@ void main() {
     });
 
     group('Android', () {
+      const send = 'onAutoStopListener?.invoke(result ?: emptyMap())';
+      late final String controllerSource;
+
+      setUpAll(() {
+        controllerSource = readAndroidNativeSource('CameraController.kt');
+      });
+
       test('the max-duration auto-stop reports every outcome', () {
         final callback = declarationAt(
-          readAndroidNativeSource('CameraController.kt'),
+          controllerSource,
           'autoStopCallback = { result, error ->',
         );
-        const send = 'onAutoStopListener?.invoke(result ?: emptyMap())';
 
         expect(callback, contains(send));
         expect(callback, isNot(contains('return@')));
@@ -80,6 +86,23 @@ void main() {
           isNot(contains(send)),
         );
         expect(declarationAt(callback, '} else {'), isNot(contains(send)));
+      });
+
+      // The counterpart of the iOS interruption salvage: CameraX finalizes
+      // on its own when the app goes to the background (#10199).
+      test('an unrequested finalize reports every outcome', () {
+        final report = declarationAt(
+          controllerSource,
+          'if (isUnsolicitedFinalize(',
+        );
+
+        expect(report, contains(send));
+        expect(report, isNot(contains('return@')));
+        expect(
+          declarationAt(report, 'if (result != null) {'),
+          isNot(contains(send)),
+        );
+        expect(declarationAt(report, '} else {'), isNot(contains(send)));
       });
     });
   });
