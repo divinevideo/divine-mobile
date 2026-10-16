@@ -29,7 +29,9 @@ class SoundRequestPreferencesStore implements SoundRequestStore {
     final encoded = jsonEncode(snapshot.toJson());
     final write = _writes.then((_) async {
       if (!await _prefs.setString(_key(ownerPubkey), encoded)) {
-        throw StateError('Sound request state could not be persisted');
+        throw const SoundRequestException(
+          'Sound request state could not be persisted',
+        );
       }
     });
     _writes = write.then<void>((_) {}, onError: (Object _, StackTrace _) {});

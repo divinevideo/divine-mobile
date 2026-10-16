@@ -67,7 +67,7 @@ class SoundRequestsRepository {
   }
 
   void _checkOpen() {
-    if (_closed) throw StateError('Sound requests closed');
+    if (_closed) throw const SoundRequestException('Sound requests closed');
   }
 
   void _report(Object error, StackTrace stack) {
@@ -262,7 +262,7 @@ class SoundRequestsRepository {
     final source = await _publisher.resolve(videoAddress);
     _checkOpen();
     if (!source.requestable || source.allowReuse) {
-      throw StateError('Sound is not requestable');
+      throw const SoundRequestException('Sound is not requestable');
     }
     final generation = _state.requests.values
         .where(
@@ -355,7 +355,7 @@ class SoundRequestsRepository {
         return;
       }
       if (soundRequestCreator(address) != ownerPubkey || !source.requestable) {
-        throw StateError('Video cannot enable sound reuse');
+        throw const SoundRequestException('Video cannot enable sound reuse');
       }
       var audio = source.allowReuse
           ? source.audioEventId

@@ -12,7 +12,7 @@ class SoundRequestDmClient implements SoundRequestTransport {
   final String ownerPubkey;
   void _checkAccount() {
     if (_repository.userPubkey != ownerPubkey) {
-      throw StateError('DM account changed');
+      throw const SoundRequestException('DM account changed');
     }
   }
 
@@ -45,7 +45,9 @@ class SoundRequestDmClient implements SoundRequestTransport {
       additionalTags: intent.tags,
     );
     _checkAccount();
-    if (!result.accepted) throw StateError('Sound request delivery refused');
+    if (!result.accepted) {
+      throw const SoundRequestException('Sound request delivery refused');
+    }
     return result.queuedRumorId!;
   }
 
@@ -59,6 +61,8 @@ class SoundRequestDmClient implements SoundRequestTransport {
     }
     final result = await _repository.recoverFullSend(rumorId: rumorId);
     _checkAccount();
-    if (!result.success) throw StateError('Sound request delivery pending');
+    if (!result.success) {
+      throw const SoundRequestException('Sound request delivery pending');
+    }
   }
 }

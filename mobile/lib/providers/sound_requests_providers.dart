@@ -47,7 +47,9 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
               a.eventCreatedAt ?? a.createdAt,
             ),
           );
-      if (matching.isEmpty) throw StateError('Source video unavailable');
+      if (matching.isEmpty) {
+        throw const SoundRequestException('Source video unavailable');
+      }
       final video = matching.first;
       final policy = await videos.refreshAudioReusePolicy(video);
       final requestable =
@@ -68,10 +70,12 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
     acquireMedia: (video) async {
       final url = await video.getPlayableUrl();
       if (url == null || url.isEmpty) {
-        throw StateError('Source media unavailable');
+        throw const SoundRequestException('Source media unavailable');
       }
       final file = await cache.cacheFile(url, key: video.id);
-      if (file == null) throw StateError('Source media download failed');
+      if (file == null) {
+        throw const SoundRequestException('Source media download failed');
+      }
       return file.path;
     },
     publishOriginal: (video, path) => publish.publishOriginalSound(

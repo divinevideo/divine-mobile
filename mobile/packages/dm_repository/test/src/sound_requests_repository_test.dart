@@ -229,6 +229,24 @@ void main() {
     );
   });
 
+  group('request', () {
+    test(
+      'a source that is no longer requestable is an expected failure',
+      () async {
+        final publisher = Publisher()..enabled = true;
+        final transport = Transport([]);
+        final repo = repository(viewer, transport, MemoryStore(), publisher);
+        addTearDown(repo.close);
+        await repo.start();
+        await expectLater(
+          repo.request(address),
+          throwsA(isA<SoundRequestException>()),
+        );
+        expect(transport.intents, isEmpty);
+      },
+    );
+  });
+
   group('dismiss', () {
     test(
       'dismissing the last failed approval does not approve later requests',

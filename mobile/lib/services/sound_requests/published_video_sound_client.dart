@@ -24,7 +24,7 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
 
   void _checkAccount() {
     if (currentOwner() != ownerPubkey) {
-      throw StateError('Sound request account changed');
+      throw const SoundRequestException('Sound request account changed');
     }
   }
 
@@ -68,7 +68,9 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
   void _checkPublication(SoundRequestSource source) {
     _checkAccount();
     if (source.video.pubkey != ownerPubkey || !source.requestable) {
-      throw StateError('Source audio cannot be published by this account');
+      throw const SoundRequestException(
+        'Source audio cannot be published by this account',
+      );
     }
   }
 
@@ -78,7 +80,7 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
     if (source.video.hasAudioReference) {
       final original = await _linkedOriginal(source);
       if (original == null) {
-        throw StateError('Linked original sound unavailable');
+        throw const SoundRequestException('Linked original sound unavailable');
       }
       return original.id;
     }
@@ -87,7 +89,7 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
     final id = await publishOriginal(source.video, path);
     _checkAccount();
     if (!NostrHexUtils.isValidEventId(id)) {
-      throw StateError('Original sound publication failed');
+      throw const SoundRequestException('Original sound publication failed');
     }
     return id!;
   }
@@ -101,7 +103,9 @@ class PublishedVideoSoundClient implements SoundRequestPublisher {
     final latest = await resolve(source.video.addressableId!);
     _checkPublication(latest);
     if (!await replaceMetadata(latest.video, audioEventId)) {
-      throw StateError('Video audio metadata publication failed');
+      throw const SoundRequestException(
+        'Video audio metadata publication failed',
+      );
     }
     _checkAccount();
   }

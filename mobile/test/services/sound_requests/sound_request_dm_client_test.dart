@@ -64,4 +64,52 @@ void main() {
       },
     );
   });
+
+  group('delivery failures', () {
+    late _Repository repository;
+    late SoundRequestDmClient client;
+    final intent = SoundRequestSendIntent(
+      key: 'stable',
+      recipient: recipient,
+      content: 'Please enable',
+      tags: soundRequestTags(videoAddress: '34236:$recipient:clip'),
+      createdAt: 1,
+      videoAddress: '34236:$recipient:clip',
+    );
+
+    setUp(() {
+      repository = _Repository();
+      when(() => repository.userPubkey).thenReturn(owner);
+      when(
+        repository.watchSoundRequestMessages,
+      ).thenAnswer((_) => Stream.value([]));
+      client = SoundRequestDmClient(repository: repository, ownerPubkey: owner);
+    });
+
+    test('a send policy refusal is an expected failure', () async {
+      when(
+        () => repository.enqueueSend(
+          recipientPubkey: recipient,
+          content: 'Please enable',
+          idempotencyKey: 'stable',
+          createdAt: 1,
+          additionalTags: any(named: 'additionalTags'),
+        ),
+      ).thenAnswer((_) async => const EnqueueSendResult.blocked('blocked'));
+      await expectLater(
+        client.enqueue(intent),
+        throwsA(isA<SoundRequestException>()),
+      );
+    });
+
+    test('an undelivered retry is an expected failure', () async {
+      when(
+        () => repository.recoverFullSend(rumorId: rumor),
+      ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
+      await expectLater(
+        client.retry(rumor),
+        throwsA(isA<SoundRequestException>()),
+      );
+    });
+  });
 }

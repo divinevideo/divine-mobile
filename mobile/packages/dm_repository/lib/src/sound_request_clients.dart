@@ -27,6 +27,22 @@ enum SoundRequestStatus {
   failed,
 }
 
+/// An expected sound request failure, such as an unavailable source video,
+/// refused or pending delivery, or an account change mid-operation.
+///
+/// Unlike a [StateError], it marks no programming error, so the app logs it
+/// without sending a crash report.
+class SoundRequestException implements Exception {
+  /// Creates an exception with a diagnostic [message].
+  const SoundRequestException(this.message);
+
+  /// Diagnostic description for logs.
+  final String message;
+
+  @override
+  String toString() => 'SoundRequestException: $message';
+}
+
 /// Account-scoped DM history and durable outgoing delivery.
 abstract interface class SoundRequestTransport {
   /// Watches persisted application messages across conversations.

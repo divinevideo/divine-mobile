@@ -63,7 +63,10 @@ void main() {
             expect(replaced, isTrue);
             expect(extracted, isFalse);
           } else {
-            await expectLater(client.publishAudio(source), throwsStateError);
+            await expectLater(
+              client.publishAudio(source),
+              throwsA(isA<SoundRequestException>()),
+            );
           }
         },
       );
@@ -105,7 +108,7 @@ void main() {
         active = 'd' * 64;
         await expectLater(
           client.enableReuse(source, soundId),
-          throwsStateError,
+          throwsA(isA<SoundRequestException>()),
         );
         expect(replaced, isFalse);
       },
