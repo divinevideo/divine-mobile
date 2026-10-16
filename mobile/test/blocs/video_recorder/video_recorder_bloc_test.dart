@@ -778,6 +778,9 @@ void main() {
         stubRecorderDefaults();
         when(() => cameraService.switchCamera()).thenAnswer((_) async => true);
         when(() => cameraService.setLens(any())).thenAnswer((_) async => true);
+        when(
+          () => cameraService.setVideoStabilizationMode(any()),
+        ).thenAnswer((_) async => true);
       });
 
       // A rebind mid-take ends it without a clip on Android, and leaves iOS
@@ -811,6 +814,22 @@ void main() {
               bloc.add(const VideoRecorderLensSet(DivineCameraLens.front)),
           expect: () => const <VideoRecorderBlocState>[],
           verify: (_) => verifyNever(() => cameraService.setLens(any())),
+        );
+
+        // On Android a stabilization change rebinds the camera too.
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'ignores a stabilization change while the take is $phase',
+          build: buildBloc,
+          seed: () => seed,
+          act: (bloc) => bloc.add(
+            const VideoRecorderStabilizationModeSet(
+              DivineVideoStabilizationMode.cinematic,
+            ),
+          ),
+          expect: () => const <VideoRecorderBlocState>[],
+          verify: (_) => verifyNever(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ),
         );
       }
 

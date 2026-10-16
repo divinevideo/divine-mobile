@@ -746,7 +746,9 @@ class VideoRecorderBloc
     VideoRecorderStabilizationModeSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    if (state.isRecording) return;
+    // On Android a stabilization change rebinds the camera, the same hazard
+    // as a front/back switch.
+    if (state.hasRecordingInFlight) return;
     if (event.mode == state.videoStabilizationMode) return;
     // Already on a mode that hides the control: keep the pick, but do not
     // start a rebind. Upload's camera is paused, and a rebind would restart it.
