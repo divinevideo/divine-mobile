@@ -120,12 +120,14 @@ void main() {
         await tester.pump();
 
         // Two fingers on the shape, spread far past both sides of the item.
-        final first = await tester.startGesture(const Offset(150, 300));
-        final second = await tester.startGesture(const Offset(170, 300));
+        // The handles sit at (190, 300) and (160, 330); both fingers land
+        // more than their 32 px touch radius away, so neither grabs one.
+        final first = await tester.startGesture(const Offset(140, 280));
+        final second = await tester.startGesture(const Offset(160, 280));
         await tester.pump();
         for (var step = 1; step <= 10; step++) {
-          await first.moveTo(Offset(150 - step * 30, 300));
-          await second.moveTo(Offset(170 + step * 30, 300));
+          await first.moveTo(Offset(140 - step * 30, 280));
+          await second.moveTo(Offset(160 + step * 30, 280));
           await tester.pump();
         }
         await first.up();
