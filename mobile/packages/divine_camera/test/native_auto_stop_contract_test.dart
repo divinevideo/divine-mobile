@@ -66,12 +66,18 @@ void main() {
     });
 
     group('Android', () {
+      const send = 'onAutoStopListener?.invoke(result ?: emptyMap())';
+      late final String controllerSource;
+
+      setUpAll(() {
+        controllerSource = readAndroidNativeSource('CameraController.kt');
+      });
+
       test('the max-duration auto-stop reports every outcome', () {
         final callback = declarationAt(
-          readAndroidNativeSource('CameraController.kt'),
+          controllerSource,
           'autoStopCallback = { result, error ->',
         );
-        const send = 'onAutoStopListener?.invoke(result ?: emptyMap())';
 
         expect(callback, contains(send));
         expect(callback, isNot(contains('return@')));
@@ -80,6 +86,90 @@ void main() {
           isNot(contains(send)),
         );
         expect(declarationAt(callback, '} else {'), isNot(contains(send)));
+      });
+
+      // The counterpart of the iOS interruption salvage: CameraX finalizes
+      // on its own when the app goes to the background (#10199).
+      test('an unrequested finalize reports every outcome', () {
+        const sendTake = 'onAutoStopListener?.invoke(take ?: emptyMap())';
+        final report = declarationAt(
+          controllerSource,
+          'if (isUnsolicitedFinalize(',
+        );
+
+        expect(report, contains(sendTake));
+        expect(report, isNot(contains('return@')));
+        expect(
+          declarationAt(report, 'if (take != null) {'),
+          isNot(contains(sendTake)),
+        );
+        expect(declarationAt(report, '} else {'), isNot(contains(sendTake)));
+      });
+
+      // A Stop, the max-duration auto-stop and a release each report through
+      // their own path, and the Finalize branch consumes those callbacks.
+      // Judging "unrequested" after that would report every Stop a second
+      // time and save the take twice.
+      test('an unrequested finalize is judged before the stop callbacks are '
+          'consumed', () {
+        final finalize = declarationAt(
+          controllerSource,
+          'is VideoRecordEvent.Finalize -> {',
+        );
+        final started = finalize.indexOf(
+          'val wasTrulyStarted = recordingTrulyStarted',
+        );
+        final requested = finalize.indexOf('val stopRequested = ');
+
+        expect(started, isNonNegative);
+        expect(requested, isNonNegative);
+        expect(
+          started,
+          lessThan(finalize.indexOf('recordingTrulyStarted = false')),
+        );
+        expect(
+          requested,
+          lessThan(finalize.indexOf('manualStopCallback = null')),
+        );
+        expect(
+          requested,
+          lessThan(finalize.indexOf('autoStopCallback = null')),
+        );
+        expect(
+          finalize.substring(
+            requested,
+            finalize.indexOf('isRecording = false', requested),
+          ),
+          allOf(
+            contains('manualStopCallback != null'),
+            contains('autoStopCallback != null'),
+            contains('isReleased'),
+          ),
+        );
+        expect(
+          declarationAt(finalize, 'if (isUnsolicitedFinalize('),
+          allOf(
+            contains('trulyStarted = wasTrulyStarted'),
+            contains('stopRequested = stopRequested'),
+          ),
+        );
+      });
+
+      // CameraX stops on its own for broken encoders too, and documents that
+      // output as not properly constructed: only a playable file is the take.
+      test('an unrequested finalize hands over only a playable file', () {
+        final report = declarationAt(
+          controllerSource,
+          'if (isUnsolicitedFinalize(',
+        );
+
+        expect(
+          report,
+          contains(
+            'val take = result?.takeIf '
+            '{ isFinalizedOutputPlayable(event.error) }',
+          ),
+        );
       });
     });
   });

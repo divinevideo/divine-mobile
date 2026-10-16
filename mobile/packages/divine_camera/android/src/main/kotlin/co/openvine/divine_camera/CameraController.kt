@@ -106,6 +106,17 @@ class CameraController(
     // [resumePreview] only has to rebind them.
     private var isPaused: Boolean = false
 
+    // Set when the current Recorder lost its video source mid-recording and
+    // can no longer be trusted to start another recording (see
+    // [isRecorderUnusableAfterFinalize]). The next resume or recording start
+    // binds a fresh one; building any new VideoCapture clears it.
+    private var recorderNeedsReplacement: Boolean = false
+
+    // Set by [release]. A recording stopped by the release is not reported to
+    // Flutter: the camera is gone, and a late Finalize must not reach the
+    // next controller's recording.
+    private var isReleased: Boolean = false
+
     // Screen brightness for front camera "torch" mode
     private var isScreenFlashEnabled: Boolean = false
     private var screenFlashFeatureEnabled: Boolean = true
@@ -332,6 +343,74 @@ class CameraController(
             hasTexture: Boolean,
         ): SurfaceProvision =
             if (hasTexture) SurfaceProvision.CREATE else SurfaceProvision.DECLINE
+
+        /**
+         * Whether a finalized recording ended without anyone asking for it, so
+         * Flutter has to hear about it through the auto-stop listener.
+         *
+         * CameraX finalizes on its own when the video source goes inactive —
+         * the app went to the background, or the camera was taken away. Once
+         * Flutter was told the recording started ([trulyStarted]), nothing
+         * else would tell it the recording is over: the UI would keep a
+         * running timer, and the captured part would stay an orphan file
+         * (#10199). A Dart stop, the max-duration auto-stop and a release are
+         * all [stopRequested] and report through their own paths.
+         */
+        internal fun isUnsolicitedFinalize(
+            trulyStarted: Boolean,
+            stopRequested: Boolean,
+        ): Boolean = trulyStarted && !stopRequested
+
+        /**
+         * Whether the file a finalized recording left behind is a playable
+         * take. CameraX keeps the frames recorded before a lost video source
+         * or a reached limit, but documents the output of an unknown, encoder
+         * or recorder error as not properly constructed. CameraX also stops
+         * on its own for those, so an unrequested finalize must not hand that
+         * file to Flutter as the take: it would be saved to the draft and
+         * attested like a real recording.
+         */
+        internal fun isFinalizedOutputPlayable(finalizeError: Int): Boolean =
+            when (finalizeError) {
+                VideoRecordEvent.Finalize.ERROR_NONE,
+                VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE,
+                VideoRecordEvent.Finalize.ERROR_INSUFFICIENT_STORAGE,
+                VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED,
+                VideoRecordEvent.Finalize.ERROR_DURATION_LIMIT_REACHED -> true
+                else -> false
+            }
+
+        /**
+         * Whether a recording that stopped before its first keyframe should be
+         * retried at a lower quality. That is how a hardware encoder that
+         * rejects the requested resolution shows up, but a video source that
+         * went inactive (the app went to the background) is not an encoder
+         * failure, and retrying would rebuild the camera in the background at
+         * a needlessly lower quality.
+         */
+        internal fun shouldRetryStartAtLowerQuality(finalizeError: Int): Boolean =
+            finalizeError != VideoRecordEvent.Finalize.ERROR_NONE &&
+                finalizeError != VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE
+
+        /**
+         * Whether the Recorder that produced a finalized recording has to be
+         * replaced before it can record again.
+         *
+         * When CameraX (1.5.3, unchanged in 1.6.1) stops a recording because
+         * the video source went inactive, the Recorder keeps the dead encoder
+         * surface as its active surface. The next time the source goes
+         * inactive — any unbind, such as the pause on the way back from the
+         * background — it waits for a reset that never comes, and every later
+         * recording stays in PENDING_RECORDING ("need reset flag = true")
+         * until the camera is reopened (#10199). A Recorder that was already
+         * swapped out ([isCurrentRecorder] false, e.g. by a lens switch) is
+         * gone anyway.
+         */
+        internal fun isRecorderUnusableAfterFinalize(
+            finalizeError: Int,
+            isCurrentRecorder: Boolean,
+        ): Boolean = isCurrentRecorder &&
+            finalizeError == VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE
 
         /** Returns the next lower quality, or null if already at minimum. */
         fun lowerQuality(current: Quality): Quality? = when (current) {
@@ -1006,6 +1085,27 @@ class CameraController(
         .build()
 
     /**
+     * Builds the VideoCapture use case around a fresh [Recorder], mirroring
+     * the front camera's output when [mirrorFrontCameraOutput] asks for it.
+     * The fresh Recorder replaces one that lost its video source, so it also
+     * clears [recorderNeedsReplacement].
+     */
+    private fun buildVideoCapture(aspectRatio: Int): VideoCapture<Recorder> {
+        recorderNeedsReplacement = false
+        return VideoCapture.Builder(buildRecorder(aspectRatio))
+            .setMirrorMode(
+                if (mirrorFrontCameraOutput &&
+                    currentLens == CameraSelector.LENS_FACING_FRONT
+                ) {
+                    MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
+                } else {
+                    MirrorMode.MIRROR_MODE_OFF
+                }
+            )
+            .build()
+    }
+
+    /**
      * Resolves the audio source for a new Recorder from the input devices
      * connected right now. Falls back to the CameraX default when the
      * AudioManager is unavailable.
@@ -1173,18 +1273,7 @@ class CameraController(
             }
 
             // Build video capture with same aspect ratio as preview
-            // Mirror front camera video to match preview
-            val recorder = buildRecorder(targetAspectRatio)
-
-            // Mirror front camera video output based on mirrorFrontCameraOutput setting
-            videoCapture = VideoCapture.Builder(recorder)
-                .setMirrorMode(
-                    if (mirrorFrontCameraOutput && currentLens == CameraSelector.LENS_FACING_FRONT)
-                        MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
-                    else
-                        MirrorMode.MIRROR_MODE_OFF
-                )
-                .build()
+            videoCapture = buildVideoCapture(targetAspectRatio)
 
             DivineCameraLog.d(TAG, "Binding use cases to lifecycle...")
 
@@ -1347,17 +1436,7 @@ class CameraController(
             }
 
             // Create recorder with same quality and aspect ratio
-            val recorder = buildRecorder(targetAspectRatio)
-
-            // Mirror front camera video output based on mirrorFrontCameraOutput setting
-            videoCapture = VideoCapture.Builder(recorder)
-                .setMirrorMode(
-                    if (mirrorFrontCameraOutput && currentLens == CameraSelector.LENS_FACING_FRONT)
-                        MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
-                    else
-                        MirrorMode.MIRROR_MODE_OFF
-                )
-                .build()
+            videoCapture = buildVideoCapture(targetAspectRatio)
 
             // Bind use cases to the new camera
             camera = bindUseCasesWithPhoto(provider, cameraSelector)
@@ -1942,20 +2021,7 @@ class CameraController(
                 }, 100)
             }
 
-            val recorder = buildRecorder(targetAspectRatio)
-
-            videoCapture = VideoCapture.Builder(recorder)
-                .setMirrorMode(
-                    if (mirrorFrontCameraOutput &&
-                        currentLens ==
-                        CameraSelector.LENS_FACING_FRONT
-                    ) {
-                        MirrorMode.MIRROR_MODE_ON_FRONT_ONLY
-                    } else {
-                        MirrorMode.MIRROR_MODE_OFF
-                    }
-                )
-                .build()
+            videoCapture = buildVideoCapture(targetAspectRatio)
 
             camera = bindUseCasesWithPhoto(provider, cameraSelector)
 
@@ -2300,6 +2366,22 @@ class CameraController(
             return
         }
 
+        // Normally [resumePreview] has already swapped it; this covers a
+        // source lost without a background round trip (the camera was taken
+        // by another app).
+        if (recorderNeedsReplacement) {
+            val provider = cameraProvider
+            if (provider != null) {
+                try {
+                    replaceRecorder(provider)
+                } catch (e: Exception) {
+                    DivineCameraLog.e(TAG, "Failed to replace the recorder before recording", e)
+                    callback("Failed to start recording: ${e.message}")
+                    return
+                }
+            }
+        }
+
         startRecordingInternal(maxDurationMs, useCache, outputDirectory, callback)
     }
 
@@ -2343,7 +2425,8 @@ class CameraController(
             // Store callback so it can be called from Finalize if recording is stopped early
             startRecordingCallback = callback
 
-            recording = videoCap.output
+            val recorder = videoCap.output
+            recording = recorder
                 .prepareRecording(context, outputOptions)
                 .withAudioEnabled()
                 .start(ContextCompat.getMainExecutor(context)) { event ->
@@ -2399,6 +2482,10 @@ class CameraController(
                         }
 
                         is VideoRecordEvent.Finalize -> {
+                            val wasTrulyStarted = recordingTrulyStarted
+                            val stopRequested = manualStopCallback != null ||
+                                autoStopCallback != null ||
+                                isReleased
                             isRecording = false
                             recordingTrulyStarted = false
                             // Cancel any pending auto-stop
@@ -2420,10 +2507,25 @@ class CameraController(
                                 )
                             }
 
+                            if (isRecorderUnusableAfterFinalize(
+                                    finalizeError = event.error,
+                                    isCurrentRecorder = videoCapture?.output === recorder
+                                )
+                            ) {
+                                DivineCameraLog.warning(
+                                    "Recorder lost its video source — a fresh one will " +
+                                        "be bound before the next recording",
+                                    name = "DivineCamera.Recording"
+                                )
+                                recorderNeedsReplacement = true
+                            }
+
                             // If startRecordingCallback is still set, recording was stopped before first keyframe.
                             // This typically means the hardware encoder rejected the resolution.
                             // Try to reinitialize with a lower quality before giving up.
-                            if (startRecordingCallback != null && event.hasError()) {
+                            if (startRecordingCallback != null &&
+                                shouldRetryStartAtLowerQuality(event.error)
+                            ) {
                                 val lower = lowerQuality(videoQuality)
                                 if (lower != null && encoderRetryCount < MAX_ENCODER_RETRIES) {
                                     encoderRetryCount++
@@ -2471,7 +2573,8 @@ class CameraController(
                                     startRecordingCallback = null
                                 }
                             } else {
-                                // Normal finalize — either successful or user-stopped
+                                // Normal finalize — successful, user-stopped, or
+                                // the video source went away before the first frame
                                 startRecordingCallback?.let { startCallback ->
                                     DivineCameraLog.w(TAG, "Recording stopped before first keyframe - notifying Flutter")
                                     startCallback("Recording stopped before first keyframe")
@@ -2512,6 +2615,38 @@ class CameraController(
                                     autoCallback(null, "Recording file not found")
                                 }
                                 autoStopCallback = null
+                            }
+
+                            // Nobody asked for this stop (the app went to the
+                            // background, or the camera was taken away), so
+                            // tell Flutter the recording is over and hand it
+                            // what was captured, like the iOS interruption
+                            // salvage does.
+                            if (isUnsolicitedFinalize(
+                                    trulyStarted = wasTrulyStarted,
+                                    stopRequested = stopRequested
+                                )
+                            ) {
+                                val take = result?.takeIf { isFinalizedOutputPlayable(event.error) }
+                                if (take != null) {
+                                    DivineCameraLog.info(
+                                        "Recording ended without a stop request " +
+                                            "(error ${event.error}) — saving what was " +
+                                            "captured: $take",
+                                        name = "DivineCamera.Recording"
+                                    )
+                                } else {
+                                    DivineCameraLog.error(
+                                        "Recording ended without a stop request " +
+                                            "(error ${event.error}) with nothing to save" +
+                                            if (result != null) " (output not playable)" else "",
+                                        name = "DivineCamera.Recording"
+                                    )
+                                }
+                                // Sent even when nothing was saved: an empty
+                                // map has no filePath, which tells Dart the
+                                // recording is over (#9261).
+                                onAutoStopListener?.invoke(take ?: emptyMap())
                             }
 
                             currentRecordingFile = null
@@ -2638,7 +2773,9 @@ class CameraController(
      * Resumes the camera preview, rebinding the use cases a releasing
      * [pausePreview] unbound. The preview keeps its Flutter texture, so the
      * Dart side needs no rebuild; zoom and torch are restored because
-     * reopening the camera resets both.
+     * reopening the camera resets both. A Recorder that lost its video
+     * source while the app was away is replaced here, so the next recording
+     * starts on a working one.
      */
     fun resumePreview(callback: (Map<String, Any?>?, String?) -> Unit) {
         DivineCameraLog.d(TAG, "Resuming preview")
@@ -2655,16 +2792,42 @@ class CameraController(
             return
         }
 
-        if (isPaused) {
-            try {
-                rebindAfterPause(provider)
-            } catch (e: Exception) {
-                DivineCameraLog.e(TAG, "Failed to rebind camera on resume", e)
-                callback(null, "Failed to resume preview: ${e.message}")
-                return
+        try {
+            if (recorderNeedsReplacement && recording == null) {
+                replaceRecorder(provider)
             }
+            if (isPaused) {
+                rebindAfterPause(provider)
+            }
+        } catch (e: Exception) {
+            DivineCameraLog.e(TAG, "Failed to rebind camera on resume", e)
+            callback(null, "Failed to resume preview: ${e.message}")
+            return
         }
         callback(getCameraState(), null)
+    }
+
+    /**
+     * Swaps in a fresh Recorder for one that lost its video source (see
+     * [isRecorderUnusableAfterFinalize]). While paused only the use case is
+     * swapped and the resume binds it; otherwise the camera is rebound,
+     * which restarts it. A failed rebind leaves the camera paused, so the
+     * next resume retries it.
+     */
+    private fun replaceRecorder(provider: ProcessCameraProvider) {
+        DivineCameraLog.info(
+            "Replacing the recorder that lost its video source",
+            name = "DivineCamera.Recording"
+        )
+        val wasBound = !isPaused
+        if (wasBound) {
+            provider.unbindAll()
+            isPaused = true
+        }
+        videoCapture = buildVideoCapture(AspectRatio.RATIO_16_9)
+        if (wasBound) {
+            rebindAfterPause(provider)
+        }
     }
 
     /**
@@ -2782,6 +2945,7 @@ class CameraController(
         // Always restore screen brightness
         forceDisableScreenFlash()
         
+        isReleased = true
         try {
             recording?.stop()
             recording = null
