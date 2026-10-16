@@ -13781,4 +13781,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'تم الحفظ';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'تم إرسال الفيديو للمراجعة.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'تم إرسال الفيديو';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'يُرسل الفيديو بشكل خاص إلى فريقي الدعم والثقة والسلامة في Divine لمراجعته. لن يُنشر أو يُشارك مع مستخدمين آخرين.';
 }

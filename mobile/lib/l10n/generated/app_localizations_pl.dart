@@ -14078,4 +14078,15 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Zapisano';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Twój film został przesłany do sprawdzenia.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Film przesłany';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Twój film jest przesyłany prywatnie do zespołów wsparcia oraz zaufania i bezpieczeństwa Divine do sprawdzenia. Nie jest publikowany ani udostępniany innym użytkownikom.';
 }

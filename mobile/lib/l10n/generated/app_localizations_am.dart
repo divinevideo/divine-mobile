@@ -13450,4 +13450,14 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'ተቀምጧል';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => 'ቪዲዮዎ ለግምገማ ተልኳል።';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'ቪዲዮው ተልኳል';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'ቪዲዮዎ ለግምገማ በግል ወደ Divine ድጋፍ እና እምነትና ደህንነት ቡድኖች ይላካል። አይታተምም ወይም ከሌሎች ተጠቃሚዎች ጋር አይጋራም።';
 }

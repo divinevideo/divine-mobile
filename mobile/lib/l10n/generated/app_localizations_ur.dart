@@ -13788,4 +13788,15 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'محفوظ ہو گیا';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'آپ کی ویڈیو جائزے کے لیے جمع ہو گئی ہے۔';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'ویڈیو جمع ہو گئی';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'آپ کی ویڈیو جائزے کے لیے نجی طور پر Divine کی سپورٹ اور اعتماد و حفاظت کی ٹیموں کو بھیجی جاتی ہے۔ اسے شائع نہیں کیا جاتا اور نہ ہی دوسرے صارفین کے ساتھ شیئر کیا جاتا ہے۔';
 }

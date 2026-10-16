@@ -13694,4 +13694,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Tersimpan';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videomu telah dikirim untuk ditinjau.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video terkirim';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Video Anda dikirim secara pribadi ke tim Dukungan serta Kepercayaan dan Keamanan Divine untuk ditinjau. Video tidak dipublikasikan atau dibagikan kepada pengguna lain.';
 }

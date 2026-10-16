@@ -13718,4 +13718,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Kaydedildi';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videon incelenmek üzere gönderildi.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video gönderildi';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Videonuz incelenmek üzere Divine Destek ve Güven ve Güvenlik ekiplerine özel olarak gönderilir. Yayınlanmaz veya diğer kullanıcılarla paylaşılmaz.';
 }

@@ -13120,4 +13120,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '保存済み';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => '動画を確認のために送信しました。';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => '動画を送信しました';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      '動画は確認のため、Divineのサポートおよびトラスト＆セーフティのチームに非公開で送信されます。公開されたり、他のユーザーと共有されたりすることはありません。';
 }

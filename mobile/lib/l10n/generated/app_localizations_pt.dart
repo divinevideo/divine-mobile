@@ -13912,4 +13912,15 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Salvo';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Seu vídeo foi enviado para análise.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Vídeo enviado';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Seu vídeo é enviado de forma privada às equipes de suporte e de confiança e segurança da Divine para análise. Ele não é publicado nem compartilhado com outros usuários.';
 }

@@ -13960,4 +13960,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Gespeichert';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Dein Video wurde zur Prüfung eingereicht.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video eingereicht';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Dein Video wird vertraulich an die Teams für Support sowie Vertrauen und Sicherheit von Divine zur Prüfung gesendet. Es wird nicht veröffentlicht oder mit anderen Nutzern geteilt.';
 }

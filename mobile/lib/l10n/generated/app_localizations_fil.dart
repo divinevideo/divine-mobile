@@ -13914,4 +13914,15 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Na-save';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Naipasa na ang video mo para sa pagsusuri.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Naipasa na ang video';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Pribadong ipinapadala ang iyong video sa mga team ng Suporta at Tiwala at Kaligtasan ng Divine para suriin. Hindi ito inilalathala o ibinabahagi sa ibang mga user.';
 }
