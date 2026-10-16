@@ -12903,7 +12903,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'Публикувай своя npub от този профил и постави линка. Името на профила трябва да включва инстанцията — mastodon.social/@alice, не само alice.';
+      'Публикувай своя npub от този профил и постави линка. Името на профила трябва да включва инстанцията — mastodon.social/@example, не само example.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12950,7 +12950,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'Твоят Divine профил казва: „Аз съм @alice в Twitter“.';
+      'Твоят Divine профил казва: „Аз съм @example в Twitter“.';
 
   @override
   String get verifyHowItWorksOtherSide =>

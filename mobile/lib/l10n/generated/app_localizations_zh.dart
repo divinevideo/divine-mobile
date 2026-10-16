@@ -11996,7 +11996,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      '用那个账号发一条带 npub 的嘟文，然后贴上链接。账号名要带实例 — mastodon.social/@alice，不是只写 alice。';
+      '用那个账号发一条带 npub 的嘟文，然后贴上链接。账号名要带实例 — mastodon.social/@example，不是只写 example。';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12037,7 +12037,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      '你的 Divine 资料说：“我是 Twitter 上的 @alice。”';
+      '你的 Divine 资料说：“我是 Twitter 上的 @example。”';
 
   @override
   String get verifyHowItWorksOtherSide =>

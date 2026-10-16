@@ -12722,7 +12722,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'Đăng npub của bạn từ tài khoản đó, rồi dán liên kết. Tên tài khoản phải kèm máy chủ — mastodon.social/@alice, không chỉ alice.';
+      'Đăng npub của bạn từ tài khoản đó, rồi dán liên kết. Tên tài khoản phải kèm máy chủ — mastodon.social/@example, không chỉ example.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12768,7 +12768,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'Hồ sơ Divine của bạn nói: “Tôi là @alice trên Twitter.”';
+      'Hồ sơ Divine của bạn nói: “Tôi là @example trên Twitter.”';
 
   @override
   String get verifyHowItWorksOtherSide =>

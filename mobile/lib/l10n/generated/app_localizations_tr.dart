@@ -12704,7 +12704,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'npub\'ını o hesaptan paylaş ve bağlantıyı yapıştır. Hesap adı sunucuyu da içermeli — mastodon.social/@alice, sadece alice değil.';
+      'npub\'ını o hesaptan paylaş ve bağlantıyı yapıştır. Hesap adı sunucuyu da içermeli — mastodon.social/@example, sadece example değil.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12750,7 +12750,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'Divine profilin diyor ki: “Twitter\'da @alice benim.”';
+      'Divine profilin diyor ki: “Twitter\'da @example benim.”';
 
   @override
   String get verifyHowItWorksOtherSide =>

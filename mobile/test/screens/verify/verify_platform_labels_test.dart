@@ -101,6 +101,68 @@ void main() {
         );
       }
     });
+
+    // The verifier's own form placeholders, so web and app ask for the same
+    // thing. Only reserved example names, never a name a real person may own.
+    test('identity hints match the verifier form', () {
+      expect(verifyIdentityHint('github'), 'octocat');
+      expect(verifyIdentityHint('twitter'), 'example');
+      expect(verifyIdentityHint('mastodon'), 'mastodon.social/@example');
+      expect(verifyIdentityHint('telegram'), 'mychannel');
+      expect(verifyIdentityHint('bluesky'), 'example.bsky.social');
+      expect(verifyIdentityHint('discord'), 'your Discord username');
+      expect(verifyIdentityHint('youtube'), 'UC… or @channelhandle');
+      expect(verifyIdentityHint('tiktok'), 'username');
+    });
+
+    test('proof hints use the same example names', () {
+      expect(
+        verifyProofHint('github'),
+        'https://gist.github.com/octocat/abc123…',
+      );
+      expect(verifyProofHint('twitter'), 'https://x.com/example/status/123…');
+      expect(
+        verifyProofHint('mastodon'),
+        'https://mastodon.social/@example/123…',
+      );
+      expect(verifyProofHint('telegram'), 'https://t.me/mychannel/123');
+      expect(
+        verifyProofHint('bluesky'),
+        'https://bsky.app/profile/example.bsky.social/post/123…',
+      );
+      expect(verifyProofHint('discord'), 'https://discord.com/channels/…');
+      expect(
+        verifyProofHint('youtube'),
+        'https://www.youtube.com/watch?v=…',
+      );
+      expect(
+        verifyProofHint('tiktok'),
+        'https://www.tiktok.com/@example/video/123…',
+      );
+    });
+  });
+
+  group('example names in translated copy', () {
+    test('no locale teaches a real-looking account name', () {
+      for (final locale in AppLocalizations.supportedLocales) {
+        final t = lookupAppLocalizations(locale);
+        for (final text in [
+          t.verifyConnectProofExplainerMastodon,
+          t.verifyHowItWorksYourSide,
+        ]) {
+          expect(
+            text.toLowerCase(),
+            isNot(contains('alice')),
+            reason: '${locale.languageCode} uses a name a real person may own',
+          );
+          expect(
+            text,
+            contains('example'),
+            reason: '${locale.languageCode} lost the reserved example name',
+          );
+        }
+      }
+    });
   });
 
   group('oauthPlatforms', () {

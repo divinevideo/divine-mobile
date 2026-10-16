@@ -9094,7 +9094,7 @@
       },
       "account": {
         "type": "String",
-        "example": "jack"
+        "example": "example"
       }
     }
   },
@@ -9210,7 +9210,7 @@
   "@verifyConnectProofExplainerTwitter": {
     "description": "Twitter/X proof instructions. The verifier reads the tweet and looks for the npub in its text."
   },
-  "verifyConnectProofExplainerMastodon": "Post your npub from that account, then paste the link. The account name needs its instance — mastodon.social/@alice, not just alice.",
+  "verifyConnectProofExplainerMastodon": "Post your npub from that account, then paste the link. The account name needs its instance — mastodon.social/@example, not just example.",
   "@verifyConnectProofExplainerMastodon": {
     "description": "Mastodon proof instructions. Also warns that the account name must carry the instance, because the verifier needs it to find the server."
   },
@@ -9264,7 +9264,7 @@
   "@verifyHowItWorksIntro": {
     "description": "Opening line of the explainer, introducing the handshake metaphor used on verify.divine.video."
   },
-  "verifyHowItWorksYourSide": "Your Divine profile says: “I'm @alice on Twitter.”",
+  "verifyHowItWorksYourSide": "Your Divine profile says: “I'm @example on Twitter.”",
   "@verifyHowItWorksYourSide": {
     "description": "First half of the handshake: what the user's Divine profile claims. The quoted example uses a placeholder handle, not a real one."
   },

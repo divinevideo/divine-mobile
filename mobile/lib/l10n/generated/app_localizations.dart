@@ -21420,7 +21420,7 @@ abstract class AppLocalizations {
   /// Mastodon proof instructions. Also warns that the account name must carry the instance, because the verifier needs it to find the server.
   ///
   /// In en, this message translates to:
-  /// **'Post your npub from that account, then paste the link. The account name needs its instance — mastodon.social/@alice, not just alice.'**
+  /// **'Post your npub from that account, then paste the link. The account name needs its instance — mastodon.social/@example, not just example.'**
   String get verifyConnectProofExplainerMastodon;
 
   /// Telegram proof instructions. Verification reads a public channel message, so a private chat cannot work.
@@ -21492,7 +21492,7 @@ abstract class AppLocalizations {
   /// First half of the handshake: what the user's Divine profile claims. The quoted example uses a placeholder handle, not a real one.
   ///
   /// In en, this message translates to:
-  /// **'Your Divine profile says: “I\'m @alice on Twitter.”'**
+  /// **'Your Divine profile says: “I\'m @example on Twitter.”'**
   String get verifyHowItWorksYourSide;
 
   /// Second half of the handshake: what the external account confirms.

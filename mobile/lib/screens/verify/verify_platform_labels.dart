@@ -58,15 +58,16 @@ String verifyPlatformLabel(String platform) {
 ///
 /// Mirrors the placeholders in the verifier's own form
 /// (`divine-identify-verification-service/src/index.ts`), so someone moving
-/// between web and app is asked for the same thing.
+/// between web and app is asked for the same thing. Names are reserved
+/// examples (`example`), never a name a real person might own.
 String verifyIdentityHint(String platform) {
   return switch (platform.toLowerCase()) {
     'github' => 'octocat',
-    'twitter' => 'jack',
-    'mastodon' => 'mastodon.social/@alice',
+    'twitter' => 'example',
+    'mastodon' => 'mastodon.social/@example',
     'telegram' => 'mychannel',
-    'bluesky' => 'alice.bsky.social',
-    'discord' => 'alice',
+    'bluesky' => 'example.bsky.social',
+    'discord' => 'your Discord username',
     'youtube' => 'UC… or @channelhandle',
     'tiktok' => 'username',
     _ => '',
@@ -74,16 +75,19 @@ String verifyIdentityHint(String platform) {
 }
 
 /// Example of the proof a platform expects.
+///
+/// Account names follow [verifyIdentityHint]. The verifier's form shows no
+/// example link for Bluesky or TikTok, so those two are built from it.
 String verifyProofHint(String platform) {
   return switch (platform.toLowerCase()) {
     'github' => 'https://gist.github.com/octocat/abc123…',
-    'twitter' => 'https://x.com/jack/status/123…',
-    'mastodon' => 'https://mastodon.social/@alice/123…',
+    'twitter' => 'https://x.com/example/status/123…',
+    'mastodon' => 'https://mastodon.social/@example/123…',
     'telegram' => 'https://t.me/mychannel/123',
-    'bluesky' => 'https://bsky.app/profile/alice/post/123…',
+    'bluesky' => 'https://bsky.app/profile/example.bsky.social/post/123…',
     'discord' => 'https://discord.com/channels/…',
     'youtube' => 'https://www.youtube.com/watch?v=…',
-    'tiktok' => 'https://www.tiktok.com/@user/video/123…',
+    'tiktok' => 'https://www.tiktok.com/@example/video/123…',
     _ => '',
   };
 }

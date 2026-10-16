@@ -424,7 +424,7 @@ void main() {
     testWidgets('keeps the typed handle when the OAuth block appears', (
       tester,
     ) async {
-      // Not verifyIdentityHint('bluesky') — that is 'alice.bsky.social', and
+      // Not verifyIdentityHint('bluesky') — that is 'example.bsky.social', and
       // find.text would match the hint of an empty field.
       // appOAuthSupportProvider resolves a frame or two after the screen
       // opens, and the handle field moves from the proof block up into the
