@@ -134,6 +134,7 @@ void main() {
         await second.up();
         await tester.pump();
 
+        expect(changes, isNotEmpty);
         final mask = changes.last!;
         final halfWidth = mask.size.width / 2;
         expect(mask.size.width, greaterThan(circle.size.width));
