@@ -78,11 +78,83 @@ class _FakeDetachedClipPlayer implements DetachedClipPlayer {
     muteCalls.add(muted);
   }
 
+  /// Whether [dispose] tore this player down.
+  bool disposed = false;
+
   @override
   void detach() {}
 
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    disposed = true;
+  }
+}
+
+/// A companion player whose controller renders as a texture without a
+/// decoder behind it.
+_FakeDetachedClipPlayer _fakePlayer() {
+  final controller = _MockDivineVideoPlayerController();
+  when(() => controller.usesWebBackend).thenReturn(false);
+  when(() => controller.usesLinuxBackend).thenReturn(false);
+  when(() => controller.useTexture).thenReturn(true);
+  when(() => controller.textureId).thenReturn(1);
+  when(() => controller.state).thenReturn(const DivineVideoPlayerState());
+  when(
+    () => controller.stateStream,
+  ).thenAnswer((_) => const Stream<DivineVideoPlayerState>.empty());
+  when(
+    () => controller.firstFrameRendered,
+  ).thenAnswer((_) => Completer<bool>().future);
+  return _FakeDetachedClipPlayer(controller, _clip());
+}
+
+/// Mounts a detached layer for [meta] inside the editor's scope and main bloc,
+/// the way the canvas does.
+Future<void> _pumpEditorLayer(
+  WidgetTester tester, {
+  required Map<String, dynamic> meta,
+  required VideoEditorMainBloc editor,
+  ValueNotifier<bool>? previewReleased,
+}) async {
+  final bodySize = ValueNotifier<Size>(Size.zero);
+  addTearDown(bodySize.dispose);
+  final zoom = ValueNotifier<Matrix4>(Matrix4.identity());
+  addTearDown(zoom.dispose);
+  final playTime = ValueNotifier<Duration>(Duration.zero);
+  addTearDown(playTime.dispose);
+  final advancing = ValueNotifier<bool>(false);
+  addTearDown(advancing.dispose);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: BlocProvider<VideoEditorMainBloc>.value(
+        value: editor,
+        child: VideoEditorScope(
+          editorKey: GlobalKey(),
+          removeAreaKey: GlobalKey(),
+          onAddStickers: () {},
+          onOpenCamera: () {},
+          onOpenClipsEditor: () {},
+          onOpenMusicLibrary: () {},
+          onOpenVoiceOver: () {},
+          onOpenCaptions: () {},
+          onOpenEffects: () {},
+          onAddEditTextLayer: ([_]) async => null,
+          originalClipAspectRatio: 9 / 16,
+          bodySizeNotifier: bodySize,
+          zoomMatrixNotifier: zoom,
+          playTimeNotifier: playTime,
+          playheadAdvancingNotifier: advancing,
+          previewReleasedNotifier: previewReleased,
+          fromLibrary: false,
+          child: _layerHost(DetachedClipLayerView(meta: meta)),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
 }
 
 DivineVideoClip _clip({
@@ -436,61 +508,10 @@ void main() {
       required Map<String, dynamic> meta,
       required _MockVideoEditorMainBloc editor,
     }) async {
-      final controller = _MockDivineVideoPlayerController();
-      when(() => controller.usesWebBackend).thenReturn(false);
-      when(() => controller.usesLinuxBackend).thenReturn(false);
-      when(() => controller.useTexture).thenReturn(true);
-      when(() => controller.textureId).thenReturn(1);
-      when(() => controller.state).thenReturn(const DivineVideoPlayerState());
-      when(
-        () => controller.stateStream,
-      ).thenAnswer((_) => const Stream<DivineVideoPlayerState>.empty());
-      when(
-        () => controller.firstFrameRendered,
-      ).thenAnswer((_) => Completer<bool>().future);
-
-      final fake = _FakeDetachedClipPlayer(controller, _clip());
+      final fake = _fakePlayer();
       final key = detachedClipPlayerKey(meta)!;
       await detachedClipPlayers.acquire(key, () async => fake);
-
-      final bodySize = ValueNotifier<Size>(Size.zero);
-      addTearDown(bodySize.dispose);
-      final zoom = ValueNotifier<Matrix4>(Matrix4.identity());
-      addTearDown(zoom.dispose);
-      final playTime = ValueNotifier<Duration>(Duration.zero);
-      addTearDown(playTime.dispose);
-      final advancing = ValueNotifier<bool>(false);
-      addTearDown(advancing.dispose);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: BlocProvider<VideoEditorMainBloc>.value(
-            value: editor,
-            child: VideoEditorScope(
-              editorKey: GlobalKey(),
-              removeAreaKey: GlobalKey(),
-              onAddStickers: () {},
-              onOpenCamera: () {},
-              onOpenClipsEditor: () {},
-              onOpenMusicLibrary: () {},
-              onOpenVoiceOver: () {},
-              onOpenCaptions: () {},
-              onOpenEffects: () {},
-              onAddEditTextLayer: ([_]) async => null,
-              originalClipAspectRatio: 9 / 16,
-              bodySizeNotifier: bodySize,
-              zoomMatrixNotifier: zoom,
-              playTimeNotifier: playTime,
-              playheadAdvancingNotifier: advancing,
-              fromLibrary: false,
-              child: _layerHost(DetachedClipLayerView(meta: meta)),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
+      await _pumpEditorLayer(tester, meta: meta, editor: editor);
       return fake;
     }
 
@@ -557,6 +578,119 @@ void main() {
       );
       await tester.pump();
       expect(fake.muteCalls, [true]);
+    });
+  });
+
+  group('while an export holds the decoders', () {
+    late Directory tempDir;
+    late PathProviderPlatform originalPathProvider;
+    late VideoEditorMainBloc editor;
+    late ValueNotifier<bool> previewReleased;
+    late Map<String, dynamic> meta;
+    late String key;
+
+    setUp(() async {
+      tempDir = Directory.systemTemp.createTempSync('detached_release');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = _FakePathProvider(tempDir.path);
+      detachedClipPlayers.resetForTesting();
+      resetCachedDocumentsPath();
+      await getDocumentsPath();
+      editor = VideoEditorMainBloc();
+      previewReleased = ValueNotifier<bool>(false);
+      meta = DetachedClipLayerData(clip: _clip(), layerId: 'layer-1').toMeta();
+      key = detachedClipPlayerKey(meta)!;
+    });
+
+    tearDown(() async {
+      detachedClipPlayers.resetForTesting();
+      previewReleased.dispose();
+      await editor.close();
+      resetCachedDocumentsPath();
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+
+    /// Mounts the layer over [player], parked in the slot the layer asks for,
+    /// with the layer as its only holder.
+    Future<void> pumpLayerOver(
+      WidgetTester tester,
+      _FakeDetachedClipPlayer player,
+    ) async {
+      await detachedClipPlayers.acquire(key, () async => player);
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        previewReleased: previewReleased,
+      );
+      detachedClipPlayers.release(key);
+    }
+
+    DivineVideoPlayer? shownPlayer(WidgetTester tester) {
+      final players = find.byType(DivineVideoPlayer);
+      return players.evaluate().isEmpty ? null : tester.widget(players);
+    }
+
+    testWidgets('gives its player back so the export can open the decoder', (
+      tester,
+    ) async {
+      final fake = _fakePlayer();
+      await pumpLayerOver(tester, fake);
+      expect(shownPlayer(tester)?.controller, same(fake.controller));
+
+      previewReleased.value = true;
+      // What the canvas does next: without the layer letting go first, the
+      // pool would keep the player for its grace window, decoder and all.
+      await detachedClipPlayers.disposeIdle();
+      await tester.pump();
+
+      expect(fake.disposed, isTrue);
+      expect(detachedClipPlayers.entryCount, 0);
+      expect(shownPlayer(tester), isNull, reason: 'the poster stands in');
+    });
+
+    testWidgets('opens no player while the export runs', (tester) async {
+      previewReleased.value = true;
+
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        previewReleased: previewReleased,
+      );
+      await tester.pump();
+
+      // A remount under the metadata screen would otherwise take a decoder
+      // straight back from the export.
+      expect(detachedClipPlayers.entryCount, 0);
+      expect(find.byType(DetachedClipLayerView), findsOneWidget);
+    });
+
+    testWidgets('plays again once the editor has the decoders back', (
+      tester,
+    ) async {
+      await pumpLayerOver(tester, _fakePlayer());
+      previewReleased.value = true;
+      await detachedClipPlayers.disposeIdle();
+      await tester.pump();
+
+      // Parked idle in the slot the layer asks for, in place of a decoder.
+      final second = _fakePlayer();
+      unawaited(detachedClipPlayers.acquire(key, () async => second));
+      await tester.pump();
+      detachedClipPlayers.release(key);
+
+      previewReleased.value = false;
+      await tester.pump();
+      await tester.pump();
+
+      expect(shownPlayer(tester)?.controller, same(second.controller));
+      expect(second.disposed, isFalse);
+
+      // Unmounting releases the player into its grace window; drop the timer.
+      await tester.pumpWidget(const SizedBox.shrink());
+      detachedClipPlayers.resetForTesting();
     });
   });
 

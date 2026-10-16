@@ -33,6 +33,9 @@ class GracePeriodRegistry<T extends Object> {
 
   final Map<String, _Entry<T>> _entries = {};
 
+  /// Teardowns started by a reap that have not finished yet.
+  final Set<Future<void>> _pendingDisposals = {};
+
   /// Live entries, for tests to assert nothing is leaked.
   @visibleForTesting
   int get entryCount => _entries.length;
@@ -88,13 +91,35 @@ class GracePeriodRegistry<T extends Object> {
     entry.reaper = Timer(graceWindow, () => _reap(key));
   }
 
+  /// Tears down every value nothing holds right now, without waiting out
+  /// [graceWindow], and completes once those and any teardown already under
+  /// way are done.
+  ///
+  /// For when the caller knows no remount is coming. The editor calls it
+  /// before an export: an idle detached-clip player sitting out its grace
+  /// window still holds a decoder the export needs (#10141). Values that are
+  /// still held are left alone.
+  Future<void> disposeIdle() async {
+    final idle = [
+      for (final MapEntry(:key, :value) in _entries.entries)
+        if (value.refs == 0) key,
+    ];
+    for (final key in idle) {
+      _entries[key]?.cancelReaper();
+      _reap(key);
+    }
+    await Future.wait(List.of(_pendingDisposals));
+  }
+
   void _reap(String key) {
     final entry = _entries[key];
     // A late re-acquire wins: it cancelled the timer and bumped refs, and this
     // callback can still be queued behind that.
     if (entry == null || entry.refs > 0) return;
     _entries.remove(key);
-    unawaited(_dispose(entry));
+    final disposal = _dispose(entry);
+    _pendingDisposals.add(disposal);
+    unawaited(disposal.whenComplete(() => _pendingDisposals.remove(disposal)));
   }
 
   Future<void> _dispose(_Entry<T> entry) async {
@@ -119,6 +144,7 @@ class GracePeriodRegistry<T extends Object> {
       entry.cancelReaper();
     }
     _entries.clear();
+    _pendingDisposals.clear();
   }
 }
 

@@ -46,6 +46,7 @@ class VideoEditorScope extends InheritedWidget {
     this.liveEqualizerNotifier,
     this.liveClipMaskNotifier,
     this.clipFrameTracker,
+    this.previewReleasedNotifier,
     this.onAddAudioVisualizer,
     super.child = const SizedBox.shrink(),
     super.key,
@@ -154,6 +155,15 @@ class VideoEditorScope extends InheritedWidget {
   /// video the export keeps, which a timeline clip's mask is measured in.
   /// Optional, like [canvasBodyKey].
   final VideoEditorFrameTracker? clipFrameTracker;
+
+  /// Whether the canvas has handed its preview decoders to an export.
+  ///
+  /// True while the metadata screen covers the editor and renders the video.
+  /// Each detached clip then gives its player back and shows its poster: the
+  /// export decodes every detached clip at once, and a player left open is a
+  /// decoder the device cannot give the export (#10141). Optional, like
+  /// [canvasBodyKey].
+  final ValueNotifier<bool>? previewReleasedNotifier;
 
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
@@ -287,5 +297,6 @@ class VideoEditorScope extends InheritedWidget {
       cancelLiveVolumePreview != oldWidget.cancelLiveVolumePreview ||
       liveEqualizerNotifier != oldWidget.liveEqualizerNotifier ||
       liveClipMaskNotifier != oldWidget.liveClipMaskNotifier ||
-      clipFrameTracker != oldWidget.clipFrameTracker;
+      clipFrameTracker != oldWidget.clipFrameTracker ||
+      previewReleasedNotifier != oldWidget.previewReleasedNotifier;
 }

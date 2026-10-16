@@ -124,6 +124,12 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   /// the still over live video — once per remount.
   bool _resumed = false;
 
+  /// The editor's word that an export holds the decoders, or `null` outside
+  /// the editor.
+  ValueNotifier<bool>? _previewReleased;
+
+  bool get _isPreviewReleased => _previewReleased?.value ?? false;
+
   @override
   void initState() {
     super.initState();
@@ -197,7 +203,38 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _listenForPreviewRelease(
+      VideoEditorScope.maybeOf(context)?.previewReleasedNotifier,
+    );
     _follow();
+  }
+
+  void _listenForPreviewRelease(ValueNotifier<bool>? released) {
+    if (identical(released, _previewReleased)) return;
+    _previewReleased?.removeListener(_onPreviewReleasedChanged);
+    _previewReleased = released?..addListener(_onPreviewReleasedChanged);
+  }
+
+  /// Gives the player back while an export holds the decoders, and opens a
+  /// new one once the editor has them again.
+  ///
+  /// Lets go synchronously, so the canvas finds every player idle right after
+  /// it flips the notifier and can tear them all down before the export.
+  void _onPreviewReleasedChanged() {
+    if (!_isPreviewReleased) {
+      unawaited(_load());
+      return;
+    }
+    // Also supersedes a load still in flight, which lets go of its player as
+    // soon as it lands.
+    _loadGeneration++;
+    _player?.detach();
+    final key = _heldKey;
+    if (key != null) detachedClipPlayers.release(key);
+    _heldKey = null;
+    // The next player is a new one, so it fades in over the poster again.
+    _resumed = false;
+    if (_player != null) setState(() => _player = null);
   }
 
   /// Points the player at the playhead and the layer's current time window.
@@ -257,6 +294,8 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
 
   @override
   void dispose() {
+    _previewReleased?.removeListener(_onPreviewReleasedChanged);
+    _previewReleased = null;
     _loadGeneration++;
     // Detached, not torn down: the registry holds the player briefly so the
     // remount that follows a drag picks the same one back up, mid-playback.
@@ -278,7 +317,12 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
 
     final key = detachedClipPlayerKey(widget.meta);
     final documentsPath = await getDocumentsPath();
-    if (superseded()) return;
+    if (superseded()) {
+      // Nobody else will: `_heldKey` was cleared above, so neither the load
+      // that superseded this one nor `dispose` knows about the old player.
+      if (previousKey != null) detachedClipPlayers.release(previousKey);
+      return;
+    }
 
     final data = DetachedClipLayerData.fromMeta(widget.meta, documentsPath);
     final clip = data?.clip;
@@ -291,6 +335,13 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
       _chromaKey = data?.chromaKey;
     });
 
+    // An export holds the decoders: show the poster for now, and load again
+    // when the editor gets them back.
+    if (_isPreviewReleased) {
+      if (previousKey != null) detachedClipPlayers.release(previousKey);
+      return;
+    }
+
     final player = await detachedClipPlayers.acquire(
       key,
       () => DetachedClipPlayer.open(clip),
@@ -301,6 +352,9 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
 
     if (superseded()) {
       detachedClipPlayers.release(key);
+      // An export took the decoders while this player was opening, so it must
+      // not sit out the grace window.
+      if (_isPreviewReleased) unawaited(detachedClipPlayers.disposeIdle());
       return;
     }
 

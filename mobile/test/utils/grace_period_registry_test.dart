@@ -176,5 +176,64 @@ void main() {
         expect(() => registry.release('never-acquired'), returnsNormally);
       });
     });
+
+    group('disposeIdle', () {
+      test('tears an idle value down without waiting out the window', () {
+        fakeAsync((async) {
+          unawaited(registry.acquire('a', build));
+          async.flushMicrotasks();
+          registry.release('a');
+
+          // An export is about to need the decoder the idle value holds, and
+          // three seconds of grace is three seconds it cannot have it.
+          unawaited(registry.disposeIdle());
+          async.flushMicrotasks();
+
+          expect(disposed, ['a']);
+          expect(registry.entryCount, 0);
+          expect(async.pendingTimers, isEmpty);
+        });
+      });
+
+      test('leaves a value that is still held', () {
+        fakeAsync((async) {
+          unawaited(registry.acquire('held', () => build('held')));
+          unawaited(registry.acquire('idle', () => build('idle')));
+          async.flushMicrotasks();
+          registry.release('idle');
+
+          unawaited(registry.disposeIdle());
+          async.flushMicrotasks();
+
+          expect(disposed, ['idle']);
+          expect(registry.acquireIfReady('held')?.disposed, isFalse);
+        });
+      });
+
+      test('waits for a teardown the grace window already started', () {
+        fakeAsync((async) {
+          final teardown = Completer<void>();
+          final slow = GracePeriodRegistry<_Resource>(
+            graceWindow: grace,
+            dispose: (_) => teardown.future,
+          );
+          addTearDown(slow.resetForTesting);
+          unawaited(slow.acquire('a', build));
+          async.flushMicrotasks();
+          slow.release('a');
+          async.elapse(grace * 2);
+          expect(slow.entryCount, 0, reason: 'the reaper has started');
+
+          var done = false;
+          unawaited(slow.disposeIdle().then((_) => done = true));
+          async.flushMicrotasks();
+          expect(done, isFalse, reason: 'the decoder is still being released');
+
+          teardown.complete();
+          async.flushMicrotasks();
+          expect(done, isTrue);
+        });
+      });
+    });
   });
 }

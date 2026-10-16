@@ -55,6 +55,7 @@ import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
@@ -1799,6 +1800,23 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     await player.dispose();
   }
 
+  /// Tears down every detached clip's player along with the preview player.
+  ///
+  /// The export composites each detached clip with a decoder of its own on top
+  /// of the timeline track's. Every player left open holds one more, and on
+  /// Android the export then fails to start a decoder once the device runs out:
+  /// 12 detached clips failed this way on a Galaxy S26 (#10141). Setting
+  /// [released] makes each layer let go of its player synchronously, so the
+  /// pool finds all of them idle and can tear them down at once rather than
+  /// after its grace window.
+  Future<void> _releaseDetachedClipPlayers(
+    ValueNotifier<bool>? released,
+  ) async {
+    if (released == null || !mounted) return;
+    released.value = true;
+    await detachedClipPlayers.disposeIdle();
+  }
+
   /// Schedules the timeline sounds on the stop-motion audio engine, mirroring
   /// the native `setAudioTracks` mapping: each sound's window comes from its
   /// timeline item, and the source is clipped to the sound's own start offset
@@ -2368,7 +2386,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // is actually driven by the push (the canvas context resolves to the inner
     // route, which the outer push never animates). Falls back to the canvas
     // context — timeout-bounded — when the scope didn't provide it.
-    final awaitCover = VideoEditorScope.of(context).awaitPushCoverTransition;
+    final scope = VideoEditorScope.of(context);
+    final awaitCover = scope.awaitPushCoverTransition;
+    final previewReleased = scope.previewReleasedNotifier;
     final gate = _decoderReleaseGate = Completer<void>();
     _isMetadataRouteActive = true;
     final navigation = context.push(
@@ -2380,7 +2400,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             context,
             timeout: VideoEditorConstants.coverTransitionTimeout,
           ));
-      await _releasePlayer();
+      await Future.wait([
+        _releasePlayer(),
+        _releaseDetachedClipPlayers(previewReleased),
+      ]);
     } finally {
       // Always open the gate so the render can never wedge, even if the release
       // throws.
@@ -2397,14 +2420,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (!mounted) return;
     // Stop-motion has no player to rebuild (_clipPaths is empty, which the
     // guard below would take as "nothing to resume"); restarting its ticker is
-    // the whole resume.
-    if (_isStopMotionComposition) {
-      if (wasPlaying) _stopMotionClock.play(from: resumePosition);
-      return;
+    // the whole resume, apart from the detached clips.
+    if (_isStopMotionComposition && wasPlaying) {
+      _stopMotionClock.play(from: resumePosition);
     }
-    if (_clipPaths.isEmpty) return;
     await ref.read(videoEditorProvider.notifier).waitForRenderIdle();
-    if (!mounted || _clipPaths.isEmpty) return;
+    // A second Done during the wait started another export, which needs the
+    // decoders now; its own return reopens the players.
+    if (!mounted || _isMetadataRouteActive) return;
+    // Opens the detached clips' players again, alongside the preview player.
+    previewReleased?.value = false;
+    if (_isStopMotionComposition || _clipPaths.isEmpty) return;
     await _initializePlayer(_clipPaths, startPosition: resumePosition);
     if (mounted && wasPlaying) {
       await _videoPlayer?.play();
