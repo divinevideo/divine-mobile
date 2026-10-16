@@ -1123,9 +1123,12 @@ void main() {
           ).thenAnswer((_) async {});
           var openCalls = 0;
 
+          // A parent-video resolution, so only the band puts this case on the
+          // under-13 path; the unknown-band test below covers the resolution.
           await _pumpAppeal(
             tester,
             ageBand: SuspectedAgeBand.under13,
+            allowedResolution: MinorReviewResolutionType.parentVideoOrEmail,
             goRouter: goRouter,
             openSupportMessages: () async {
               openCalls++;
@@ -1219,19 +1222,35 @@ void main() {
       // "Continue" used to reach that through the Support Center menu, the
       // Report a Bug path this issue closes.
       testWidgets(
-        'a 16+ support-review case offers no Continue into the menu',
+        'a 16+ support-review case offers no Continue, only private support',
         (
           tester,
         ) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
+          var openCalls = 0;
           await _pumpAppeal(
             tester,
             ageBand: SuspectedAgeBand.age16PlusClaimed,
             state: MinorReviewCaseState.restrictedPendingUserResponse,
             allowedResolution: MinorReviewResolutionType.supportReviewOnly,
+            goRouter: goRouter,
+            openSupportMessages: () async {
+              openCalls++;
+              return true;
+            },
           );
 
           expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
-          expect(find.text(l10n.supportContactSupport), findsOneWidget);
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pumpAndSettle();
+
+          expect(openCalls, equals(1));
+          verifyNever(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          );
         },
       );
 
@@ -1239,19 +1258,35 @@ void main() {
       // button is already the right next step, so there is no Continue into
       // the Support Center menu for it either.
       testWidgets(
-        'an unrecognised resolution offers no Continue into the menu',
+        'an unrecognised resolution offers no Continue, only private support',
         (
           tester,
         ) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
+          var openCalls = 0;
           await _pumpAppeal(
             tester,
             ageBand: SuspectedAgeBand.age13To15,
             state: MinorReviewCaseState.restrictedPendingUserResponse,
             allowedResolution: MinorReviewResolutionType.unknown,
+            goRouter: goRouter,
+            openSupportMessages: () async {
+              openCalls++;
+              return true;
+            },
           );
 
           expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
-          expect(find.text(l10n.supportContactSupport), findsOneWidget);
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pumpAndSettle();
+
+          expect(openCalls, equals(1));
+          verifyNever(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          );
         },
       );
 
