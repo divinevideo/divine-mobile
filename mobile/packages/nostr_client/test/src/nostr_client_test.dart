@@ -2666,7 +2666,7 @@ void main() {
 
       test('hands the stored-events callbacks to the relay pool', () {
         void Function()? start;
-        void Function(int)? end;
+        void Function(StoredEventsEnd)? end;
         when(
           () => mockNostr.subscribe(
             any(),
@@ -2687,11 +2687,15 @@ void main() {
                   as void Function()?;
           end =
               invocation.namedArguments[#onStoredEventsEnd]
-                  as void Function(int)?;
+                  as void Function(StoredEventsEnd)?;
           return invocation.namedArguments[#id] as String;
         });
         var starts = 0;
-        final ends = <int>[];
+        final ends = <StoredEventsEnd>[];
+        const reported = StoredEventsEnd(
+          deliveredEventCount: 7,
+          possiblyCappedRelays: {'wss://capped.example': 1700000000},
+        );
 
         client.subscribe(
           [
@@ -2701,10 +2705,10 @@ void main() {
           onStoredEventsEnd: ends.add,
         );
         start!();
-        end!(7);
+        end!(reported);
 
         expect(starts, 1);
-        expect(ends, [7]);
+        expect(ends, [same(reported)]);
       });
 
       test(

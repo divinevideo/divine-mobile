@@ -10,13 +10,51 @@
 //   - historyDrainCompletedBefore: whether it has ever been done, which a
 //     forced recovery pass leaves intact
 //   - historyDrainCursor: the drain's resumable pagination boundary
+//   - catchUpDebt: the parts of past catch-up windows relays may have
+//     withheld at their result cap, still to be read
 //
 // Timestamps are unix seconds matching Nostr event timestamps. Used by
 // DmRepository to bound subscription and pagination queries so cost is
 // proportional to recent activity, not lifetime message count.
 // See docs/plans/2026-04-05-dm-scaling-fix-design.md.
 
+import 'dart:convert';
+
+import 'package:meta/meta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// One relay's part of a catch-up window that it may have withheld at its
+/// result cap and that has not been read yet: its events at or above
+/// [floor] and at or below [until], or with no upper bound when [until] is
+/// null. See #10192.
+@immutable
+class DmCatchUpDebt {
+  /// Creates the unread range [floor]..[until] of [relay].
+  const DmCatchUpDebt({required this.relay, required this.floor, this.until});
+
+  /// The relay's URL.
+  final String relay;
+
+  /// The lowest outer `created_at` still to be read: the window's `since:`.
+  final int floor;
+
+  /// The highest outer `created_at` still to be read, or null when nothing
+  /// bounds it.
+  final int? until;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DmCatchUpDebt &&
+      other.relay == relay &&
+      other.floor == floor &&
+      other.until == until;
+
+  @override
+  int get hashCode => Object.hash(relay, floor, until);
+
+  @override
+  String toString() => 'DmCatchUpDebt($relay, $floor..${until ?? 'top'})';
+}
 
 /// Persists per-pubkey DM sync boundaries in SharedPreferences.
 class DmSyncState {
@@ -34,6 +72,7 @@ class DmSyncState {
   static const _groupRecoveryVersionPrefix = 'dm.groupRecoveryVersion.';
   static const _drainInboxCoveredPrefix = 'dm.drainCoveredOwnInbox.';
   static const _drainCompletedBeforePrefix = 'dm.historyDrainCompletedBefore.';
+  static const _catchUpDebtPrefix = 'dm.catchUpDebt.';
   static const _drainCompletionMigrationPrefix =
       'dm.historyDrainCompletionMigration.';
 
@@ -459,6 +498,101 @@ class DmSyncState {
     await _prefs.setInt('$_groupRecoveryVersionPrefix$pubkey', version);
   }
 
+  /// The parts of past catch-up windows, for [pubkey], that relays may have
+  /// withheld at their result cap and that have not been read yet, one
+  /// entry per relay. A malformed record reads as empty.
+  List<DmCatchUpDebt> catchUpDebt(String pubkey) {
+    final raw = _prefs.getString('$_catchUpDebtPrefix$pubkey');
+    if (raw == null) return const [];
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return [
+        for (final entry in decoded.cast<Map<String, dynamic>>())
+          DmCatchUpDebt(
+            relay: entry['relay'] as String,
+            floor: entry['floor'] as int,
+            until: entry['until'] as int?,
+          ),
+      ];
+    } on Object {
+      // A record this version cannot read is dropped rather than failing
+      // every catch-up; the window it guarded was saved long ago.
+      return const [];
+    }
+  }
+
+  /// Records [debts] for [pubkey]. A relay already recorded keeps one range
+  /// covering both: the lower floor and the higher top, where no top at all
+  /// is the highest.
+  Future<void> addCatchUpDebt(
+    String pubkey,
+    Iterable<DmCatchUpDebt> debts,
+  ) async {
+    final byRelay = {
+      for (final debt in catchUpDebt(pubkey)) debt.relay: debt,
+    };
+    for (final debt in debts) {
+      final previous = byRelay[debt.relay];
+      if (previous == null) {
+        byRelay[debt.relay] = debt;
+        continue;
+      }
+      final previousUntil = previous.until;
+      final until = debt.until;
+      byRelay[debt.relay] = DmCatchUpDebt(
+        relay: debt.relay,
+        floor: previous.floor < debt.floor ? previous.floor : debt.floor,
+        until: previousUntil == null || until == null
+            ? null
+            : (previousUntil > until ? previousUntil : until),
+      );
+    }
+    await _writeCatchUpDebt(pubkey, byRelay.values);
+  }
+
+  /// Records that [relay]'s debt for [pubkey] has been read down to
+  /// [until], so a later walk resumes there.
+  Future<void> setCatchUpDebtUntil(
+    String pubkey,
+    String relay,
+    int until,
+  ) async {
+    await _writeCatchUpDebt(pubkey, [
+      for (final debt in catchUpDebt(pubkey))
+        if (debt.relay == relay)
+          DmCatchUpDebt(relay: relay, floor: debt.floor, until: until)
+        else
+          debt,
+    ]);
+  }
+
+  /// Forgets [relay]'s debt for [pubkey], once it has been read or the relay
+  /// is no longer read at all.
+  Future<void> clearCatchUpDebt(String pubkey, String relay) async {
+    await _writeCatchUpDebt(pubkey, [
+      for (final debt in catchUpDebt(pubkey))
+        if (debt.relay != relay) debt,
+    ]);
+  }
+
+  Future<void> _writeCatchUpDebt(
+    String pubkey,
+    Iterable<DmCatchUpDebt> debts,
+  ) async {
+    final key = '$_catchUpDebtPrefix$pubkey';
+    if (debts.isEmpty) {
+      await _prefs.remove(key);
+      return;
+    }
+    await _prefs.setString(
+      key,
+      jsonEncode([
+        for (final debt in debts)
+          {'relay': debt.relay, 'floor': debt.floor, 'until': debt.until},
+      ]),
+    );
+  }
+
   /// Removes all sync state for [pubkey]. Called on account switch.
   Future<void> clear(String pubkey) async {
     await _prefs.remove('$_newestPrefix$pubkey');
@@ -472,6 +606,7 @@ class DmSyncState {
     await _prefs.remove('$_drainInboxCoveredPrefix$pubkey');
     await _prefs.remove('$_drainCompletedBeforePrefix$pubkey');
     await _prefs.remove('$_drainCompletionMigrationPrefix$pubkey');
+    await _prefs.remove('$_catchUpDebtPrefix$pubkey');
   }
 
   /// Removes all DM sync state entries for every pubkey.
@@ -493,7 +628,8 @@ class DmSyncState {
               key.startsWith(_groupRecoveryVersionPrefix) ||
               key.startsWith(_drainInboxCoveredPrefix) ||
               key.startsWith(_drainCompletedBeforePrefix) ||
-              key.startsWith(_drainCompletionMigrationPrefix),
+              key.startsWith(_drainCompletionMigrationPrefix) ||
+              key.startsWith(_catchUpDebtPrefix),
         )
         .toList();
     for (final key in keysToRemove) {

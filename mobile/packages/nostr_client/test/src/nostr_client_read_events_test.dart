@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockRelayManager extends Mock implements RelayManager {}
@@ -1842,5 +1843,37 @@ void main() {
         await setup.occupants;
       },
     );
+  });
+
+  group('NostrClient.storedEventsPossiblyCapped', () {
+    test('tells a capped batch before every relay has answered', () async {
+      final nostr = _newNostr();
+      final capping = _ScriptedRelay('wss://capping.example')
+        ..info = RelayInfo('', '', '', '', const [], '', '', maxLimit: 1);
+      final slow = _ScriptedRelay('wss://slow.example');
+      expect(await nostr.relayPool.add(capping), isTrue);
+      expect(await nostr.relayPool.add(slow), isTrue);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://capping.example', 'wss://slow.example'],
+      );
+      final note = (await _signedNotes(nostr, 1)).single;
+      final subscription = client
+          .subscribe(
+            [_textNotes()],
+            subscriptionId: 'capped-probe',
+            onStoredEventsEnd: (_) {},
+          )
+          .listen((_) {});
+      await pumpEventQueue();
+
+      await capping.deliver(['EVENT', 'capped-probe', note.toJson()]);
+      await capping.deliver(['EOSE', 'capped-probe']);
+
+      expect(client.storedEventsPossiblyCapped('capped-probe'), {
+        'wss://capping.example': note.createdAt,
+      });
+      await subscription.cancel();
+    });
   });
 }

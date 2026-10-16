@@ -1877,8 +1877,9 @@ class NostrClient {
   ///
   /// [onStoredEventsEnd] fires when every relay that can still send stored
   /// events has finished, with the number of events this subscription has
-  /// received so far; unlike [onEose], an unreachable relay does not hold it
-  /// up. [onStoredEventsStart] fires when a relay sends them again, after a
+  /// received so far and the relays whose batch may have stopped at their
+  /// result-size limit; unlike [onEose], an unreachable relay does not hold
+  /// it up. [onStoredEventsStart] fires when a relay sends them again, after a
   /// reconnect or a REQ re-sent after AUTH. See
   /// [Subscription.onStoredEventsEnd].
   /// Like [onEose], both belong to the call that opens the subscription: a
@@ -1895,7 +1896,7 @@ class NostrClient {
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
     void Function()? onStoredEventsStart,
-    void Function(int deliveredEventCount)? onStoredEventsEnd,
+    void Function(StoredEventsEnd end)? onStoredEventsEnd,
   }) {
     final effectiveTempRelays = _allowedRelays(tempRelays);
     final effectiveTargetRelays = _allowedRelays(targetRelays);
@@ -1990,6 +1991,14 @@ class NostrClient {
 
     return controller.stream;
   }
+
+  /// The relays whose stored batch for the live subscription
+  /// [subscriptionId] has been judged possibly capped since its stored
+  /// events last ended, without ending that phase; see
+  /// [StoredEventsEnd.possiblyCappedRelays]. A subscriber that stops waiting
+  /// for a slow relay reads this before acting on what has arrived.
+  Map<String, int?> storedEventsPossiblyCapped(String subscriptionId) =>
+      _nostr.storedEventsPossiblyCapped(subscriptionId);
 
   /// Unsubscribes from a subscription
   Future<void> unsubscribe(String subscriptionId) async {

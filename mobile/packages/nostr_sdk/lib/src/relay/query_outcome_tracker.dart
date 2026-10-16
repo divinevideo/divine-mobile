@@ -1,8 +1,6 @@
 // ABOUTME: RelayPool's per-query bookkeeping: how each relay answered a
 // ABOUTME: one-shot query, judged into a QueryOutcome and one diagnostic line.
 
-import 'dart:math' as math;
-
 import 'package:meta/meta.dart';
 
 import '../../event.dart';
@@ -12,6 +10,7 @@ import '../../relay/query_result.dart';
 import '../../relay/relay.dart';
 import '../../relay/relay_diagnostics.dart';
 import '../../relay/relay_type.dart';
+import 'relay_answer_tally.dart';
 
 /// What the pool can still expect from a relay that took the `REQ` and has
 /// sent no terminal frame for it.
@@ -42,21 +41,11 @@ enum _Standing { answered, noAnswer, closed, dropped }
 typedef _Judgement = ({_Standing standing, String label});
 
 /// One relay's part in a query.
-class _RelayTally {
-  _RelayTally(this.relay, int filterCount)
-    : eventsPerFilter = List<int>.filled(filterCount, 0);
+class _RelayTally extends RelayAnswerTally {
+  _RelayTally(this.relay, super.filterCount);
 
   /// The relay object most recently seen under this url.
   Relay relay;
-
-  /// `EVENT` frames that matched each filter, by filter index.
-  final List<int> eventsPerFilter;
-
-  /// `EVENT` frames from this relay that matched any filter.
-  int events = 0;
-
-  /// The oldest `created_at` among those frames; null while there are none.
-  int? oldestCreatedAt;
 
   /// Whether this relay took the `REQ`; null while the fan-out is still
   /// writing it.
@@ -66,17 +55,6 @@ class _RelayTally {
 
   /// The NIP-01 prefix of the relay's `CLOSED` reason.
   String? closedReason;
-
-  /// NIP-67 hints from the relay's latest `EOSE`.
-  Set<String> hints = const <String>{};
-
-  /// `EVENT` frames from this relay that matched none of the query's
-  /// filters.
-  int outsideFilter = 0;
-
-  /// `EVENT` frames from this relay that the pool rejected before judging
-  /// them against the filters: not an event, or not validly signed.
-  int rejected = 0;
 
   /// Whether the relay took part: it took the `REQ`, may still be taking it,
   /// or answered it.
@@ -104,8 +82,6 @@ class QueryOutcomeTracker {
   /// The NIP-01 prefix a relay's own `CLOSED` names a NIP-42 refusal with.
   static const _authRequiredReason = 'auth-required';
 
-  static const _finishHint = 'finish';
-  static const _moreHint = 'more';
   static const _authHint = 'auth';
 
   /// The query's subscription id.
@@ -143,18 +119,7 @@ class QueryOutcomeTracker {
   /// [event] has already passed the query's filters, so a single-filter query
   /// counts it without matching it again.
   void recordEvent(Relay relay, Event event) {
-    final tally = _tallyFor(relay)..events += 1;
-    final oldest = tally.oldestCreatedAt;
-    if (oldest == null || event.createdAt < oldest) {
-      tally.oldestCreatedAt = event.createdAt;
-    }
-    if (_filters.length == 1) {
-      tally.eventsPerFilter[0] += 1;
-      return;
-    }
-    for (var i = 0; i < _filters.length; i++) {
-      if (_filters[i].checkEvent(event)) tally.eventsPerFilter[i] += 1;
-    }
+    _tallyFor(relay).recordEvent(event, _filters);
   }
 
   /// Records an `EVENT` frame [relay] sent for the query that matched none of
@@ -175,19 +140,12 @@ class QueryOutcomeTracker {
   }
 
   /// Records [relay]'s `EOSE` [frame] for the query, keeping the NIP-67
-  /// hints it carries.
-  ///
-  /// Hints are the string elements of a list in the frame's third position.
-  /// A third element that is not a list is ignored, as are elements that are
-  /// not strings and hint values nothing here acts on.
+  /// hints it carries; see [RelayAnswerTally.recordEoseHints].
   void recordEose(Relay relay, List<dynamic> frame) {
-    final hints = frame.length > 2 ? frame[2] : null;
     _tallyFor(relay)
       ..terminalFrame = _TerminalFrame.eose
       ..closedReason = null
-      ..hints = hints is List
-          ? {...hints.whereType<String>()}
-          : const <String>{};
+      ..recordEoseHints(frame);
   }
 
   /// Records [relay]'s `CLOSED` for the query. [reasonCategory] is the
@@ -339,35 +297,9 @@ class QueryOutcomeTracker {
       .map((judgement) => judgement.standing)
       .reduce((a, b) => a.index >= b.index ? a : b);
 
-  /// Whether [tally]'s relay may have stopped at its result-size limit.
-  ///
-  /// A cache relay never has: it serves the pool's own copies of what relays
-  /// sent, so reaching a limit says nothing a relay withheld. Any other relay
-  /// may when it sent events outside the query's filters, or frames the pool
-  /// rejected: either may have spent its limit on something nobody can use.
-  /// Otherwise a NIP-67 `more` hint settles it as capped and `finish` as not.
-  /// Failing both, it may when its events for some filter reached
-  /// `min(limit ?? max_limit, max_limit)`, with `max_limit` from the relay's
-  /// NIP-11 document. A relay that publishes none may when those events
-  /// reached the filter's `limit` or, with no `limit` either, numbered at
-  /// least one.
-  bool _isCapped(_RelayTally tally) {
-    if (tally.relay.relayStatus.relayType == RelayType.cache) return false;
-    if (tally.outsideFilter > 0 || tally.rejected > 0) return true;
-    if (tally.hints.contains(_moreHint)) return true;
-    if (tally.hints.contains(_finishHint)) return false;
-    final maxLimit = tally.relay.info?.maxLimit;
-    for (var i = 0; i < _filters.length; i++) {
-      final limit = _filters[i].limit;
-      final events = tally.eventsPerFilter[i];
-      if (maxLimit != null) {
-        if (events >= math.min(limit ?? maxLimit, maxLimit)) return true;
-      } else if (limit != null ? events >= limit : events > 0) {
-        return true;
-      }
-    }
-    return false;
-  }
+  /// Whether [tally]'s relay may have stopped at its result-size limit; see
+  /// [RelayAnswerTally.mayBeCapped].
+  bool _isCapped(_RelayTally tally) => tally.mayBeCapped(tally.relay, _filters);
 
   /// NIP-67: `finish` confirms a relay sent every matching stored event.
   /// `more` beside it contradicts that, `auth` says more may follow a NIP-42
@@ -382,8 +314,8 @@ class QueryOutcomeTracker {
     return answered.isNotEmpty &&
         answered.every(
           (tally) =>
-              tally.hints.contains(_finishHint) &&
-              !tally.hints.contains(_moreHint) &&
+              tally.hints.contains(RelayAnswerTally.finishHint) &&
+              !tally.hints.contains(RelayAnswerTally.moreHint) &&
               !tally.hints.contains(_authHint) &&
               tally.outsideFilter == 0 &&
               tally.rejected == 0,

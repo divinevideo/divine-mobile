@@ -767,5 +767,117 @@ void main() {
         expect(state.newestWireSyncedAt(pkB), isNull);
       });
     });
+
+    group('catch-up debt', () {
+      const relayA = 'wss://a.example';
+      const relayB = 'wss://b.example';
+
+      test('is empty when nothing was recorded', () {
+        expect(state.catchUpDebt(pkA), isEmpty);
+      });
+
+      test('records each relay with its floor and top', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest),
+        ]);
+
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest),
+        ]);
+        expect(state.catchUpDebt(pkB), isEmpty);
+      });
+
+      test(
+        'merges a relay recorded again into one range covering both',
+        () async {
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsMid, until: tsNewer),
+          ]);
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          ]);
+
+          expect(state.catchUpDebt(pkA), const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+        },
+      );
+
+      test('an unbounded top wins a merge', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+        ]);
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsMid),
+        ]);
+
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+      });
+
+      test("moves a relay's top down as it is read", () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+
+        await state.setCatchUpDebtUntil(pkA, relayA, tsMid);
+
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+      });
+
+      test('forgets one relay once it is read', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+
+        await state.clearCatchUpDebt(pkA, relayA);
+
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+      });
+
+      test('clear removes it for the given pubkey only', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+        await state.addCatchUpDebt(pkB, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+
+        await state.clear(pkA);
+
+        expect(state.catchUpDebt(pkA), isEmpty);
+        expect(state.catchUpDebt(pkB), hasLength(1));
+      });
+
+      test('clearAll removes it for every pubkey', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+        await state.addCatchUpDebt(pkB, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+
+        await state.clearAll();
+
+        expect(state.catchUpDebt(pkA), isEmpty);
+        expect(state.catchUpDebt(pkB), isEmpty);
+      });
+
+      test('reads a malformed record as empty', () async {
+        await prefs.setString('dm.catchUpDebt.$pkA', 'not json');
+
+        expect(state.catchUpDebt(pkA), isEmpty);
+      });
+    });
   });
 }
