@@ -49,6 +49,13 @@ class UserRankingSignalsLoader {
   final bool Function(String pubkey)? _isBlocked;
   final DateTime Function() _now;
 
+  /// How far ahead of now a cached video may be dated and still count.
+  ///
+  /// `created_at` is author-signed, so a future value would score as posted
+  /// just now for as long as it stays cached. Matches the follower-date bound
+  /// in `FollowRepository`.
+  static const _maxFuturePostSkew = Duration(minutes: 5);
+
   /// Whether [pubkey] is eligible under the current owner and block policy.
   ///
   /// Synchronous and performs no I/O, so cached fallback paths can enforce
@@ -116,6 +123,8 @@ class UserRankingSignalsLoader {
     }
     if (candidates.isEmpty) return {};
     final keys = candidates.toList(growable: false);
+    final latestPostedAt =
+        _now().add(_maxFuturePostSkew).millisecondsSinceEpoch ~/ 1000;
     final (followers, stats, videos, verifications, profiles) =
         await (
           _myFollowersDao.followerSubset(
@@ -126,6 +135,7 @@ class UserRankingSignalsLoader {
           _nostrEventsDao.newestCreatedAtByAuthor(
             authors: keys,
             kinds: NIP71VideoKinds.getAllVideoKinds(),
+            notAfter: latestPostedAt,
           ),
           _nip05VerificationsDao.getValidVerifications(keys),
           _profileRepository?.getCachedProfiles(pubkeys: keys) ??

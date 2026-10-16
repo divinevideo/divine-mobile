@@ -32,11 +32,13 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
   /// Returns each author's newest cached timestamp across [kinds].
   ///
-  /// Authors without matching events are omitted. Queries group in SQLite and
-  /// read at most 500 authors per batch.
+  /// Authors without matching events are omitted, and so are events dated
+  /// after [notAfter], in epoch seconds. Queries group in SQLite and read at
+  /// most 500 authors per batch.
   Future<Map<String, int>> newestCreatedAtByAuthor({
     required List<String> authors,
     required List<int> kinds,
+    int? notAfter,
   }) async {
     if (authors.isEmpty || kinds.isEmpty) return {};
 
@@ -47,12 +49,15 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       final end = start + batchSize < authors.length
           ? start + batchSize
           : authors.length;
+      var filter =
+          nostrEvents.pubkey.isIn(authors.sublist(start, end)) &
+          nostrEvents.kind.isIn(kinds);
+      if (notAfter != null) {
+        filter = filter & nostrEvents.createdAt.isSmallerOrEqualValue(notAfter);
+      }
       final query = selectOnly(nostrEvents)
         ..addColumns([nostrEvents.pubkey, newest])
-        ..where(
-          nostrEvents.pubkey.isIn(authors.sublist(start, end)) &
-              nostrEvents.kind.isIn(kinds),
-        )
+        ..where(filter)
         ..groupBy([nostrEvents.pubkey]);
       for (final row in await query.get()) {
         results[row.read(nostrEvents.pubkey)!] = row.read(newest)!;
