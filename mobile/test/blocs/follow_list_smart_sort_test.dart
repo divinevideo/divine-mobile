@@ -5,6 +5,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/follow_list_ranking.dart';
 import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/blocs/my_followers/my_followers_bloc.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
@@ -24,6 +25,33 @@ const _self =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 
 void main() {
+  test(
+    'shared picker ranking keeps successful loader omissions authoritative',
+    () async {
+      final loader = _MockLoader();
+      when(() => loader.load(any())).thenAnswer(
+        (_) async => {_b: const UserRankingSignals(pubkey: _b)},
+      );
+      final signals = await loadFollowListRankingSignals(
+        pubkeys: [_a, _b],
+        loader: loader,
+        logName: 'test',
+        onError: (_, _) {},
+      );
+      final ranked = rankFollowListSnapshot(
+        pubkeys: [_a, _b],
+        signals: signals,
+        names: const {},
+        isEligible: (_) => true,
+        isSmartOrderReady: false,
+        previousSmartOrder: const [],
+        now: DateTime(2026),
+      );
+      expect(ranked.eligible, {_b});
+      expect(ranked.smartOrder, [_b]);
+    },
+  );
+
   group('MyFollowingBloc Smart sort', () {
     late _MockFollowRepository repository;
     late _MockBlocklist blocklist;

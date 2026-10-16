@@ -403,11 +403,25 @@ void main() {
     testWidgets('lists equal-score followers in deterministic Smart order', (
       tester,
     ) async {
-      await pumpScreen(tester);
+      final loader = _MockRankingLoader();
+      when(() => loader.loadCachedDisplayNames(any())).thenAnswer(
+        (_) async => {
+          newestFollower: 'Zulu',
+          oldestFollower: 'Alpha',
+          undatedFollower: 'Mike',
+        },
+      );
+      when(() => loader.load(any())).thenAnswer(
+        (call) async => {
+          for (final key in call.positionalArguments.single as Iterable<String>)
+            key: UserRankingSignals(pubkey: key),
+        },
+      );
+      await pumpScreen(tester, loader: loader);
 
       expect(
         visibleOrder(tester),
-        equals([newestFollower, oldestFollower, undatedFollower]),
+        equals([oldestFollower, undatedFollower, newestFollower]),
       );
     });
 

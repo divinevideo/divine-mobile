@@ -257,9 +257,9 @@ void main() {
       () async {
         final checkpoints = MyFollowersSyncState();
         await checkpoints.stampFull(_pubkeyA, 123);
-        await checkpoints.stampAttempt(_pubkeyA, 456);
+        await checkpoints.stampFullAttempt(_pubkeyA, 456);
         await checkpoints.stampFull(_pubkeyB, 789);
-        await checkpoints.stampAttempt(_pubkeyB, 900);
+        await checkpoints.stampFullAttempt(_pubkeyB, 900);
         await db.myFollowersDao.upsertAll(
           ownerPubkey: _pubkeyA,
           followers: [(pubkey: _reactionIdA, followedAt: 100)],
@@ -288,11 +288,13 @@ void main() {
           full: null,
           incremental: null,
           attempt: null,
+          fullAttempt: null,
         ));
         expect(await checkpoints.read(_pubkeyB), (
           full: 789,
           incremental: 789,
           attempt: 900,
+          fullAttempt: 900,
         ));
         expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
         expect(await db.myFollowersDao.followersOf(_pubkeyB), [
