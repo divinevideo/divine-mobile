@@ -817,6 +817,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
         });
         if (deleteUserData && userPubkey != null) {
           await requiredCleanup(
+            'conversationDismissals',
+            () => db.conversationsDao.clearDismissalsForOwner(userPubkey),
+          );
+          await requiredCleanup(
             'removedConversations',
             () => db.removedConversationsDao.clearAllForUser(userPubkey),
           );

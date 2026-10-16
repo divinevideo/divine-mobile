@@ -35,6 +35,7 @@ const legacyV1NormalizationRepairTables = <String>[
   'identity_verifications',
   'vanished_profiles',
   'seen_videos',
+  'conversation_dismissals',
 ];
 
 /// Indexes created by legacy-v1 normalization that the v2 recovery probe
@@ -79,6 +80,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     DirectMessages,
     DmMessageReactions,
     Conversations,
+    ConversationDismissals,
     OutgoingDms,
     PendingViewEvents,
     PendingReports,
@@ -284,6 +286,7 @@ class AppDatabase extends _$AppDatabase {
           'is_dismissed',
           'INTEGER NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1))',
         );
+        await _repairConversationDismissals();
       }
       // Earlier table rebuilds use the current definition. Honor intermediate
       // targets by withholding a column that belongs to v24.
@@ -311,12 +314,31 @@ class AppDatabase extends _$AppDatabase {
         await _migrateToV12OwnerScopedDmKeys();
         await _repairSchemaV14();
         await _repairSchemaV20();
+        await _repairConversationDismissals();
       }
 
       // Run cleanup of expired data on every app startup
       await runStartupCleanup();
     },
   );
+
+  /// Creates or repairs the independent v24 dismissal store.
+  Future<void> _repairConversationDismissals() async {
+    if (!await _tableExists('conversation_dismissals')) {
+      await createMigrator().createTable(conversationDismissals);
+    }
+    // Preserve dismissals made by the earlier v24 build. This also repairs a
+    // current-version database whose independent marker table is missing.
+    await customStatement('''
+      INSERT OR IGNORE INTO conversation_dismissals
+        (conversation_id, owner_pubkey, boundary_timestamp, known_message_ids)
+      SELECT c.id, c.owner_pubkey, COALESCE(c.last_message_timestamp, 0),
+        COALESCE((SELECT json_group_array(d.id) FROM direct_messages d
+          WHERE d.conversation_id = c.id AND d.owner_pubkey = c.owner_pubkey
+            AND d.created_at >= COALESCE(c.last_message_timestamp, 0)), '[]')
+      FROM conversations c WHERE c.is_dismissed = 1
+    ''');
+  }
 
   /// Owner-scopes the DM message and conversation keys (#6645).
   ///

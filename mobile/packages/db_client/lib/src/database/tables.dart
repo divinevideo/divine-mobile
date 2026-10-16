@@ -1082,8 +1082,8 @@ class Conversations extends Table {
   BoolColumn get isRead =>
       boolean().withDefault(const Constant(true)).named('is_read')();
 
-  /// Locally dismissed request. Messages remain stored and recoverable.
-  /// A strictly newer message clears this marker.
+  /// Cached dismissal projection. [ConversationDismissals] retains the state
+  /// when sign-out or account switching clears these conversation rows.
   BoolColumn get isDismissed =>
       boolean().withDefault(const Constant(false)).named('is_dismissed')();
 
@@ -1778,6 +1778,23 @@ class ProcessedGiftWraps extends Table {
 
   @override
   Set<Column> get primaryKey => {giftWrapId};
+}
+
+/// Account-lifetime dismissal state independent of cached conversation rows.
+class ConversationDismissals extends Table {
+  TextColumn get conversationId => text()();
+  TextColumn get ownerPubkey => text()();
+
+  /// Latest message time when dismissed, not wall-clock time. Older relay
+  /// history cannot undo dismissal, even when the conversation is rebuilt.
+  IntColumn get boundaryTimestamp => integer()();
+
+  /// IDs already present at the boundary second. A distinct incoming message
+  /// in that second restores the thread; replaying one of these does not.
+  TextColumn get knownMessageIds => text().withDefault(const Constant('[]'))();
+
+  @override
+  Set<Column> get primaryKey => {conversationId, ownerPubkey};
 }
 
 /// Owner-scoped record of a conversation the user removed locally.

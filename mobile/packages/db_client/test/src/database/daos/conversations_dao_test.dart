@@ -149,6 +149,15 @@ void main() {
           ))!.isDismissed,
           isTrue,
         );
+        await database.directMessagesDao.insertMessage(
+          id: 'd' * 64,
+          conversationId: 'a' * 64,
+          senderPubkey: 'c' * 64,
+          content: 'New message',
+          createdAt: 101,
+          giftWrapId: 'e' * 64,
+          ownerPubkey: 'b' * 64,
+        );
         await seed('b' * 64, timestamp: 101);
         final row = (await dao.getConversation(
           'a' * 64,

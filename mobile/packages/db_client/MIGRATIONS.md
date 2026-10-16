@@ -191,21 +191,30 @@ creating the Concord table idempotently, preserving both queues for either v22
 shape. Migration tests cover fresh v23 databases, the full legacy upgrade chain,
 main's v22, and the chat preview's v22 with queued data.
 
-Version 24 adds `conversations.is_dismissed`, the local marker for a
-conversation or message request the user put aside without deleting it.
+Version 24 adds `conversations.is_dismissed` and the independent, owner-scoped
+`conversation_dismissals` table for a conversation or message request the user
+put aside without deleting it. The conversation boolean is a cached projection;
+the independent marker survives ordinary sign-out and account switching.
 Dismissing also marks the thread read through the existing read cursor; the
 marker itself is never published. A message newer than the stored latest one
 clears it, as does a distinct message received in the same second, while relay
-replay, older history and the preview refresh after a deletion keep it. It lives
-on the conversation row, so sign-out and account switch clear it with the
-account's other conversation rows, and a conversation rebuilt from relay
-history afterwards comes back undismissed. The step adds the column through the
+replay, older history and the preview refresh after a deletion keep it. The
+marker stores the latest-message timestamp at dismissal and the IDs already
+present at that boundary second. After cache cleanup, replaying those IDs keeps
+the rebuilt conversation dismissed and read; a distinct incoming ID at the same
+second (or a newer incoming message) removes the marker. Outgoing messages do
+not clear dismissal. Explicit Restore clears it too. Only explicit account-local
+data deletion purges that owner's remaining saved markers; other accounts stay
+isolated. Cross-device synchronization remains out of scope.
+
+The step creates the independent table and adds the cached column through the
 idempotent `_addColumnIfMissing` and checks `to` as well as `from`, like the v20
 and v22 steps. The v12 rebuild uses the current table definition, so a
 migration test that stops below v24 drops the column again. The repair probe
-lists the column, so a database already stamped v24 without it, such as one
-opened by a build that used v24 for a different schema, is rebuilt on its next
-open.
+lists the column and table, so an earlier v24 database missing either is repaired
+on open. Existing dismissed rows seed the independent store without losing
+their conversation data. This recovery does not replace reconciling migration
+versions and generated snapshots if another schema-changing PR lands first.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
