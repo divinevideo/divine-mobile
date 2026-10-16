@@ -773,6 +773,58 @@ void main() {
       );
     });
 
+    group('with a take in flight', () {
+      setUp(() {
+        stubRecorderDefaults();
+        when(() => cameraService.switchCamera()).thenAnswer((_) async => true);
+        when(() => cameraService.setLens(any())).thenAnswer((_) async => true);
+      });
+
+      // A rebind mid-take ends it without a clip on Android, and leaves iOS
+      // writing a recording the recorder can no longer stop.
+      final takesInFlight = <String, VideoRecorderBlocState>{
+        'starting': const VideoRecorderBlocState(isStartingRecording: true),
+        'running': const VideoRecorderBlocState(
+          recordingState: VideoRecorderState.recording,
+        ),
+        'stopping': const VideoRecorderBlocState(
+          recordingState: VideoRecorderState.recording,
+          isStoppingRecording: true,
+        ),
+      };
+
+      for (final MapEntry(key: phase, value: seed) in takesInFlight.entries) {
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'ignores a camera switch while the take is $phase',
+          build: buildBloc,
+          seed: () => seed,
+          act: (bloc) => bloc.add(const VideoRecorderCameraSwitched()),
+          expect: () => const <VideoRecorderBlocState>[],
+          verify: (_) => verifyNever(() => cameraService.switchCamera()),
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'ignores a lens change while the take is $phase',
+          build: buildBloc,
+          seed: () => seed,
+          act: (bloc) =>
+              bloc.add(const VideoRecorderLensSet(DivineCameraLens.front)),
+          expect: () => const <VideoRecorderBlocState>[],
+          verify: (_) => verifyNever(() => cameraService.setLens(any())),
+        );
+      }
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'applies a lens change once no take is in flight',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoRecorderLensSet(DivineCameraLens.front)),
+        verify: (_) => verify(
+          () => cameraService.setLens(DivineCameraLens.front),
+        ).called(1),
+      );
+    });
+
     group('VideoRecorderStabilizationModeSet', () {
       setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
@@ -2126,6 +2178,81 @@ void main() {
 
         expect(bloc.state.isScreenFlashActive, isFalse);
       });
+    });
+
+    group('native camera re-sync', () {
+      setUp(stubRecorderDefaults);
+      late void Function({bool? forceCameraRebuild}) updateStateCallback;
+
+      VideoRecorderBloc buildBlocCapturingUpdateState() => buildBloc(
+        cameraServiceFactory:
+            ({
+              required onUpdateState,
+              required onAutoStopped,
+              onScreenFlashChanged,
+            }) {
+              updateStateCallback = onUpdateState;
+              return cameraService;
+            },
+      );
+
+      // Reading idle while the native take runs hides the stop button and
+      // lets the shutter start a second take on top of it.
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps a starting take, its countdown and a pending stop',
+        build: buildBlocCapturingUpdateState,
+        seed: () => const VideoRecorderBlocState(
+          recordingState: VideoRecorderState.recording,
+          isStartingRecording: true,
+          pendingStopAfterStart: true,
+          countdownValue: 2,
+        ),
+        act: (_) => updateStateCallback(forceCameraRebuild: true),
+        expect: () => [
+          isA<VideoRecorderBlocState>()
+              .having((s) => s.cameraRebuildCount, 'cameraRebuildCount', 1)
+              .having(
+                (s) => s.recordingState,
+                'recordingState',
+                VideoRecorderState.recording,
+              )
+              .having(
+                (s) => s.isStartingRecording,
+                'isStartingRecording',
+                isTrue,
+              )
+              .having(
+                (s) => s.pendingStopAfterStart,
+                'pendingStopAfterStart',
+                isTrue,
+              )
+              .having((s) => s.countdownValue, 'countdownValue', 2),
+        ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps a take that is being finalized',
+        build: buildBlocCapturingUpdateState,
+        seed: () => const VideoRecorderBlocState(
+          recordingState: VideoRecorderState.recording,
+          isStoppingRecording: true,
+        ),
+        act: (_) => updateStateCallback(forceCameraRebuild: true),
+        expect: () => [
+          isA<VideoRecorderBlocState>()
+              .having((s) => s.cameraRebuildCount, 'cameraRebuildCount', 1)
+              .having(
+                (s) => s.recordingState,
+                'recordingState',
+                VideoRecorderState.recording,
+              )
+              .having(
+                (s) => s.isStoppingRecording,
+                'isStoppingRecording',
+                isTrue,
+              ),
+        ],
+      );
     });
 
     group('sequential() transformer contract', () {

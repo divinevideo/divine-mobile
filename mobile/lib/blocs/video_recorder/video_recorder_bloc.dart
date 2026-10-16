@@ -695,6 +695,17 @@ class VideoRecorderBloc
     VideoRecorderCameraSwitched event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    // A rebind mid-take ends it without a clip on Android, and leaves iOS
+    // writing a recording the recorder can no longer stop.
+    if (state.hasRecordingInFlight) {
+      Log.debug(
+        '🔄 Camera switch ignored - recording in progress',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
     // Flag the switch up front so the preview blurs its frozen last frame
     // while the native camera rebinds. `_emitCameraSync` rebuilds the state
     // from scratch and drops this flag once the new lens is live; the
@@ -779,6 +790,17 @@ class VideoRecorderBloc
     VideoRecorderLensSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    // Same rebind hazard as a front/back switch.
+    if (state.hasRecordingInFlight) {
+      Log.debug(
+        '🔄 Lens change to ${event.lens.displayName} ignored - '
+        'recording in progress',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
     final success = await _cameraService.setLens(event.lens);
     if (!success) {
       Log.warning(
@@ -2316,9 +2338,10 @@ class VideoRecorderBloc
   /// Rebuilds [state] from the current [CameraService] values.
   ///
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
-  /// was entered from), overlay and grid toggles, the stop-motion session, the
-  /// chroma-key setup and, while the camera is initialized, the screen flash
-  /// carry over; flash resets to `off` and every other field to its default.
+  /// was entered from), overlay and grid toggles, the take in flight, the
+  /// stop-motion session, the chroma-key setup and, while the camera is
+  /// initialized, the screen flash carry over; flash resets to `off` and every
+  /// other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
   /// not a flip to the other one: its still shows the wall behind the lens it
@@ -2358,6 +2381,13 @@ class VideoRecorderBloc
         recorderMode: state.recorderMode,
         modeBeforeUpload: state.modeBeforeUpload,
         showGridLines: state.showGridLines,
+        // The native take outlives a re-sync. Reading idle here would hide the
+        // stop button and let the shutter start a second take on top of it.
+        recordingState: state.recordingState,
+        countdownValue: state.countdownValue,
+        isStartingRecording: state.isStartingRecording,
+        isStoppingRecording: state.isStoppingRecording,
+        pendingStopAfterStart: state.pendingStopAfterStart,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
         // split into several one-frame recordings (and lose frames on

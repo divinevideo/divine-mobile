@@ -338,6 +338,12 @@ class VideoRecorderBlocState extends Equatable {
   /// native start. [isRecording] is true for the whole countdown already.
   bool get isCapturingFootage => isRecording && !isStartingRecording;
 
+  /// Whether a take is starting, running or still being finalized.
+  ///
+  /// A camera rebind in this window ends the take without a clip.
+  bool get hasRecordingInFlight =>
+      isRecording || isStartingRecording || isStoppingRecording;
+
   /// Whether camera is initialized and not in error state.
   bool get isInitialized =>
       isCameraInitialized && recordingState != VideoRecorderState.error;

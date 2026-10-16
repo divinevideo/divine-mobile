@@ -189,6 +189,52 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('switches the camera when the flip button is tapped', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DivineIconButton).first);
+        await tester.pump();
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderCameraSwitched()),
+        ).called(1);
+      });
+
+      // The row only fades out while recording, and a fully transparent
+      // button still takes taps. A flip mid-take ends it without a clip.
+      testWidgets('ignores taps on the hidden actions while recording', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(recordingState: VideoRecorderState.recording),
+        );
+        await tester.pumpAndSettle();
+
+        for (var i = 0; i < 3; i++) {
+          await tester.tap(
+            find.byType(DivineIconButton).at(i),
+            warnIfMissed: false,
+          );
+          await tester.pump();
+        }
+
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderCameraSwitched()),
+        );
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderGridLinesToggled()),
+        );
+        verifyNever(
+          () => recorderBloc.add(
+            const VideoRecorderShowLastClipOverlayToggled(),
+          ),
+        );
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
       testWidgets('shows snackbar when ghost frame is toggled', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
