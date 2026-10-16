@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:openvine/platform_io.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -196,9 +197,18 @@ class ApiService {
         );
       }
 
+      // relay-manager rejects a video part that is not labelled video/* with
+      // a 415, and http defaults file parts to application/octet-stream. The
+      // camera writes MP4 on both platforms.
       final request = http.MultipartRequest('POST', uri)
         ..fields['email'] = email
-        ..files.add(await http.MultipartFile.fromPath('video', videoPath));
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'video',
+            videoPath,
+            contentType: MediaType('video', 'mp4'),
+          ),
+        );
 
       final token = await _authService?.createAuthToken(
         url: uri.toString(),
