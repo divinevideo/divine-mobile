@@ -9625,6 +9625,36 @@ class AppLocalizationsJa extends AppLocalizations {
       'キーフレームを追加し、再生ヘッドを動かしてから、レイヤーを移動・拡大縮小・回転します。レイヤーはキーフレームからキーフレームへなめらかに動きます。';
 
   @override
+  String get videoEditorTrackLabel => 'トラッキング';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel => '動くものにレイヤーを追従させる';
+
+  @override
+  String get videoEditorTrackRegionHint => '追従させたい対象を枠で囲んでください';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => '枠のサイズを変更';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'トラッキングを開始';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'クリップ全体で追跡しています…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'このクリップではトラッキングできません。';
+
+  @override
+  String get videoEditorTrackNotFollowed => '追跡できませんでした。もっと細部のあるものを枠で囲んでください。';
+
+  @override
+  String get videoEditorTrackFailed => 'トラッキングに失敗しました。もう一度お試しください。';
+
+  @override
+  String get videoEditorTrackLostPartway => '途中で見失いました。そこから先はレイヤーが静止します。';
+
+  @override
   String get videoEditorKeyframeEffect => 'エフェクト';
 
   @override

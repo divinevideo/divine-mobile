@@ -10221,6 +10221,40 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add a keyframe, move the playhead, then move, resize or turn the layer. It glides from keyframe to keyframe.';
 
   @override
+  String get videoEditorTrackLabel => 'Track';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Make the layer follow something that moves';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Frame what this should follow';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'Resize the frame';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Start tracking';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Following it through the clip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Tracking doesn\'t work on this clip.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Couldn\'t follow that. Frame something with more detail.';
+
+  @override
+  String get videoEditorTrackFailed => 'Tracking didn\'t work. Try again.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Lost sight of it partway. The layer holds still from there.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effect';
 
   @override

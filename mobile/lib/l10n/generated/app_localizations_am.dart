@@ -9890,6 +9890,39 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ንብርብሩን ያንቀሳቅሱ፣ መጠኑን ይቀይሩ ወይም ያሽከርክሩ። ንብርብሩ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።';
 
   @override
+  String get videoEditorTrackLabel => 'መከታተል';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'ንብርብሩ የሚንቀሳቀስን ነገር እንዲከተል ማድረግ';
+
+  @override
+  String get videoEditorTrackRegionHint => 'መከተል ያለበትን ነገር በክፈፍ ያስገቡ';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'የክፈፉን መጠን መቀየር';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'መከታተል መጀመር';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'በቅንጥቡ ውስጥ እየተከታተለ ነው…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'በዚህ ቅንጥብ ላይ መከታተል አይሰራም።';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'ሊከተለው አልተቻለም። ብዙ ዝርዝር ያለውን ነገር በክፈፍ ያስገቡ።';
+
+  @override
+  String get videoEditorTrackFailed => 'መከታተሉ አልተሳካም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'በመሃል ጠፋ። ከዚያ በኋላ ንብርብሩ እንደቆመ ይቆያል።';
+
+  @override
   String get videoEditorKeyframeEffect => 'ውጤት';
 
   @override

@@ -38,6 +38,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/layer_keyframe_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/playhead_on_keyframe_builder.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_tracking_actions.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart';
 import 'package:pro_image_editor/features/filter_editor/types/filter_state.dart';
@@ -172,6 +173,10 @@ class _LayerOverlayControls extends StatelessWidget {
             : null,
         hasKeyframes: layer?.hasKeyframes ?? false,
         isOnKeyframe: isOnKeyframe,
+        // Follows a moving object: the track becomes the layer's keyframes.
+        onTrack: canTrackLayer(layer)
+            ? () => _trackLayer(context: context)
+            : null,
         // Animations are off for a detached clip: the export composites it as a
         // `VideoLayer`, and neither that nor the `VideoSegment` under it carries
         // an `animations` field the way a rasterized `ImageLayer` does. Offering
@@ -255,6 +260,12 @@ class _LayerOverlayControls extends StatelessWidget {
     final layer = _liveLayer(context);
     if (layer == null) return;
     await editLayerKeyframes(context, layer, item: item);
+  }
+
+  Future<void> _trackLayer({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await trackLayerObject(context, layer, item: item);
   }
 
   /// Whether [layer] is see-through anywhere: in a keyframe, or on its own.

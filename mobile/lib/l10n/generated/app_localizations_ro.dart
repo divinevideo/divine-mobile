@@ -10342,6 +10342,43 @@ class AppLocalizationsRo extends AppLocalizations {
       'Adaugă un cadru cheie, mută capul de redare, apoi mută, redimensionează sau rotește stratul. Stratul alunecă de la un cadru cheie la altul.';
 
   @override
+  String get videoEditorTrackLabel => 'Urmărește';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Fă stratul să urmărească ceva ce se mișcă';
+
+  @override
+  String get videoEditorTrackRegionHint =>
+      'Încadrează ce trebuie să urmărească';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Redimensionează cadrul';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Începe urmărirea';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Îl urmăresc prin clip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Urmărirea nu funcționează pe acest clip.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Nu s-a putut urmări. Încadrează ceva cu mai multe detalii.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Urmărirea nu a reușit. Încearcă din nou.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Pierdut din vedere pe parcurs. De acolo, stratul rămâne pe loc.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efect';
 
   @override

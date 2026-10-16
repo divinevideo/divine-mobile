@@ -10244,6 +10244,42 @@ class AppLocalizationsIt extends AppLocalizations {
       'Aggiungi un fotogramma chiave, sposta la testina di riproduzione, poi sposta, ridimensiona o ruota il livello. Scorre da un fotogramma chiave all\'altro.';
 
   @override
+  String get videoEditorTrackLabel => 'Traccia';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Fai seguire al livello qualcosa che si muove';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Inquadra ciò che deve seguire';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Ridimensiona il riquadro';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Avvia il tracciamento';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Lo seguo lungo il clip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Il tracciamento non funziona su questo clip.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Impossibile seguirlo. Inquadra qualcosa con più dettagli.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Il tracciamento non è riuscito. Riprova.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Perso di vista a metà strada. Da lì il livello resta fermo.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effetto';
 
   @override

@@ -23,6 +23,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_p
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_tracking_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_overlay_controls.dart';
@@ -50,8 +51,10 @@ class VideoEditorScaffold extends StatelessWidget {
         backgroundColor: context.vineColors.surfaceContainerHigh,
         resizeToAvoidBottomInset: false,
         floatingActionButton: const _AddElementFab(),
-        body: ClipEditorResultListeners(
-          child: _ScaffoldBody(isLoading: isLoading),
+        body: LayerTrackingResultListener(
+          child: ClipEditorResultListeners(
+            child: _ScaffoldBody(isLoading: isLoading),
+          ),
         ),
       ),
     );
@@ -93,6 +96,8 @@ class _ScaffoldBody extends StatelessWidget {
         ),
 
         const ClipOperationProgressOverlays(),
+
+        const LayerTrackingProgressOverlay(),
       ],
     );
   }
@@ -250,11 +255,15 @@ class _OverlayControls extends StatelessWidget {
               current.isLayerInteractionActive ||
           previous.openSubEditor != current.openSubEditor ||
           previous.isPlacingSlidePoint != current.isPlacingSlidePoint ||
-          previous.isEditingMask != current.isEditingMask,
+          previous.isEditingMask != current.isEditingMask ||
+          previous.isMarkingTrackRegion != current.isMarkingTrackRegion,
       builder: (context, state) => switch (state) {
-        // The point picker and the mask editor bring their own controls and
-        // own the whole screen.
-        _ when state.isPlacingSlidePoint || state.isEditingMask =>
+        // The point picker, the mask editor and the tracking region picker
+        // bring their own controls and own the whole screen.
+        _
+            when state.isPlacingSlidePoint ||
+                state.isEditingMask ||
+                state.isMarkingTrackRegion =>
           const SizedBox.shrink(),
         _ when state.isLayerInteractionActive => const SizedBox(),
         // Text-Editor

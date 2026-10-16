@@ -552,6 +552,45 @@ void main() {
       );
     });
 
+    group(VideoEditorTrackRegionMarkingChanged, () {
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'hands the screen to the canvas while a tracked object is framed',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoEditorTrackRegionMarkingChanged(isMarking: true),
+        ),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having(
+                (s) => s.isMarkingTrackRegion,
+                'isMarkingTrackRegion',
+                isTrue,
+              )
+              .having(
+                (s) => s.isCanvasFullscreen,
+                'isCanvasFullscreen',
+                isTrue,
+              ),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'gives the screen back when the region is framed',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(isMarkingTrackRegion: true),
+        act: (bloc) => bloc.add(
+          const VideoEditorTrackRegionMarkingChanged(isMarking: false),
+        ),
+        expect: () => [
+          isA<VideoEditorMainState>().having(
+            (s) => s.isCanvasFullscreen,
+            'isCanvasFullscreen',
+            isFalse,
+          ),
+        ],
+      );
+    });
+
     group(VideoEditorMaskEditingChanged, () {
       blocTest<VideoEditorMainBloc, VideoEditorMainState>(
         'hands the screen to the canvas while a shape mask is edited',

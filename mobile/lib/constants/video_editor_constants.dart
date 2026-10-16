@@ -162,6 +162,32 @@ class VideoEditorConstants {
   static const maxBouncePercent = 200;
   static const bounceStepPercent = 10;
 
+  /// The most frames per second tracking reads. A 60 fps clip is followed
+  /// at 30, which halves the work and still keeps a keyframe per frame
+  /// before the path is simplified.
+  static const trackingMaxFrameRate = 30.0;
+
+  /// How far, in canvas pixels, a layer following a tracked object may stray
+  /// from the tracked path where the path is cut down to fewer keyframes.
+  /// One pixel, under three in a 1080 px export: the cut is invisible, while
+  /// a tighter one keeps a keyframe for nearly every frame of real footage,
+  /// whose path is never quite straight, and crowds the layer's timeline bar.
+  static const trackingKeyframeTolerance = 1.0;
+
+  /// What a change of scale or opacity counts as in canvas pixels when the
+  /// tracked path is cut down: the size of a typical layer, so a 1 % size
+  /// change weighs as much as moving that layer's edge by 1 % of it.
+  static const trackingKeyframeReferenceSize = 80.0;
+
+  /// The side of the region a track starts with, as a share of the shorter
+  /// side of the visible frame.
+  static const trackingDefaultRegionShare = 0.28;
+
+  /// The smallest side a tracked region can be dragged down to, as a share
+  /// of the shorter side of the visible frame. Smaller holds too little
+  /// detail to follow.
+  static const trackingMinRegionShare = 0.08;
+
   /// How long a single export may run before it is treated as never returning.
   ///
   /// A liveness bound, not a performance budget: a real export of the

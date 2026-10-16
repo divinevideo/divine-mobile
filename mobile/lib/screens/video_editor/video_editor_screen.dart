@@ -13,6 +13,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
+import 'package:openvine/blocs/video_editor/layer_tracking/layer_tracking_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
@@ -1164,6 +1165,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         BlocProvider(create: (_) => VideoEditorTextBloc()),
         BlocProvider.value(value: _timelineOverlayBloc),
         BlocProvider.value(value: _clipEditorBloc),
+        BlocProvider(create: (_) => LayerTrackingCubit()),
       ],
       child: BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
         listenWhen: (previous, current) =>

@@ -10037,6 +10037,40 @@ class AppLocalizationsId extends AppLocalizations {
       'Tambahkan keyframe, geser playhead, lalu pindahkan, ubah ukuran, atau putar lapisan. Lapisan akan meluncur dari keyframe ke keyframe.';
 
   @override
+  String get videoEditorTrackLabel => 'Lacak';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Buat lapisan mengikuti sesuatu yang bergerak';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Bingkai apa yang harus diikuti';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'Ubah ukuran bingkai';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Mulai melacak';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Mengikutinya di sepanjang klip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Pelacakan tidak bisa dipakai di klip ini.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Tidak bisa mengikutinya. Bingkai sesuatu yang lebih detail.';
+
+  @override
+  String get videoEditorTrackFailed => 'Pelacakan gagal. Coba lagi.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Kehilangan jejak di tengah jalan. Lapisan diam dari situ.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efek';
 
   @override

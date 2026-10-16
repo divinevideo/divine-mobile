@@ -10172,6 +10172,41 @@ class AppLocalizationsNl extends AppLocalizations {
       'Voeg een keyframe toe, verplaats de afspeelkop en verschuif, schaal of draai dan de laag. Die glijdt van keyframe naar keyframe.';
 
   @override
+  String get videoEditorTrackLabel => 'Volgen';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Laat de laag iets volgen dat beweegt';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Kader in wat dit moet volgen';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Kader vergroten of verkleinen';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Volgen starten';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Volgt het door de clip…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'Volgen werkt niet op deze clip.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Dat lukte niet om te volgen. Kader iets in met meer details.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Volgen is niet gelukt. Probeer het opnieuw.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Halverwege uit het oog verloren. Vanaf daar staat de laag stil.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effect';
 
   @override

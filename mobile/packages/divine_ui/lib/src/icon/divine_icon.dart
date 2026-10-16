@@ -77,6 +77,10 @@ enum DivineIconName {
   copySimpleFill('copy_simple_fill'),
   cropSquare('crop_square'),
   cropPortrait('crop_portrait'),
+
+  /// An outline crosshair: following a point, as the video editor's Track
+  /// action pins a layer to a moving object.
+  crosshair('crosshair'),
   diamond('diamond'),
   diamondFill('diamond_fill'),
   divineMark('divine_mark'),

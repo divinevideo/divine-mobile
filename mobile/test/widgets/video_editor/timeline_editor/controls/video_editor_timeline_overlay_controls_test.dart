@@ -260,6 +260,8 @@ void main() {
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorOpacityLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorKeyframesLabel), findsOneWidget);
+      // Keyframes move it, so a track can too.
+      expect(find.text(l10n.videoEditorTrackLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorReattachLabel), findsOneWidget);
       // A detached clip is composited as a VideoLayer, which carries no
       // animations field — offering the action would animate it in the editor
@@ -302,6 +304,7 @@ void main() {
       expect(find.text(l10n.videoEditorOpacityLabel), findsNothing);
       // A drifting hidden area would uncover what it hides.
       expect(find.text(l10n.videoEditorKeyframesLabel), findsNothing);
+      expect(find.text(l10n.videoEditorTrackLabel), findsNothing);
     });
 
     group('audio visualizer', () {

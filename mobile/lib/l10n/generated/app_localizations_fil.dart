@@ -10206,6 +10206,41 @@ class AppLocalizationsFil extends AppLocalizations {
       'Magdagdag ng keyframe, ilipat ang playhead, tapos ilipat, i-resize o i-rotate ang layer. Dadausdos ito mula keyframe hanggang keyframe.';
 
   @override
+  String get videoEditorTrackLabel => 'Track';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Pasundan sa layer ang isang bagay na gumagalaw';
+
+  @override
+  String get videoEditorTrackRegionHint => 'I-frame ang dapat nitong sundan';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'I-resize ang frame';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Simulan ang tracking';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Sinusundan ito sa buong clip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Hindi gumagana ang tracking sa clip na ito.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Hindi ito masundan. Mag-frame ng bagay na mas detalyado.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Hindi gumana ang tracking. Subukan ulit.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Nawala ito sa kalagitnaan. Hindi na gagalaw ang layer mula roon.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effect';
 
   @override

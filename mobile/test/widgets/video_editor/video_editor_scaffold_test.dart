@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
+import 'package:openvine/blocs/video_editor/layer_tracking/layer_tracking_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -122,6 +123,9 @@ void main() {
                 value: clipBlocOverride ?? clipBloc,
               ),
               BlocProvider<VideoEditorFilterBloc>.value(value: filterBloc),
+              BlocProvider<LayerTrackingCubit>(
+                create: (_) => LayerTrackingCubit(),
+              ),
               if (effectsCubit != null)
                 BlocProvider<VideoEditorEffectsCubit>.value(
                   value: effectsCubit,

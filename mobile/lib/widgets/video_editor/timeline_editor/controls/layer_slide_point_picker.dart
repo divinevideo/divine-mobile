@@ -105,8 +105,8 @@ Offset layerSlideAnchor(Layer layer, AnimationPhase phase) {
 }
 
 /// The canvas as it currently sits on screen, or `null` when it is not mounted
-/// or not measurable.
-@visibleForTesting
+/// or not measurable. Shared by the canvas pickers: the slide point here and
+/// the region a layer is tracked to.
 LayerCanvasProjection? canvasProjectionOf(VideoEditorScope scope) {
   final bodyRect = scope.canvasBodyRect;
   if (bodyRect == null) return null;
@@ -186,22 +186,22 @@ class LayerCanvasProjection {
     return bodyRect.topLeft + canvasOrigin + zoomed * coverScale;
   }
 
-  /// [point] — a point on screen — as a canvas fraction.
-  Offset? toFraction(Offset point) {
+  /// [point] — a point on screen — as a layer coordinate.
+  Offset toLayer(Offset point) {
     final local = point - bodyRect.topLeft - canvasOrigin;
     final zoomed = local / coverScale;
-    final absolute = Offset(
-      (zoomed.dx - _zoomTranslation.dx) / _zoomScale,
-      (zoomed.dy - _zoomTranslation.dy) / _zoomScale,
-    );
-    return LayerSlidePoints.fractionOf(
-      Offset(
-        absolute.dx - canvasSize.width / 2,
-        absolute.dy - canvasSize.height / 2,
-      ),
-      canvasSize,
+    return Offset(
+      (zoomed.dx - _zoomTranslation.dx) / _zoomScale - canvasSize.width / 2,
+      (zoomed.dy - _zoomTranslation.dy) / _zoomScale - canvasSize.height / 2,
     );
   }
+
+  /// How many screen pixels one layer pixel spans.
+  double get screenPixelsPerLayerPixel => coverScale * _zoomScale;
+
+  /// [point] — a point on screen — as a canvas fraction.
+  Offset? toFraction(Offset point) =>
+      LayerSlidePoints.fractionOf(toLayer(point), canvasSize);
 
   /// [fraction] of the canvas as a point on screen.
   Offset screenOfFraction(Offset fraction) => toScreen(
