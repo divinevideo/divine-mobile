@@ -46,9 +46,12 @@ double _recency(
   return maximum * math.pow(0.5, age / halfLife.inMicroseconds);
 }
 
-/// Whether an interaction or either direction of follow is known locally.
+/// Whether the viewer has messaged or follows this account.
+///
+/// Following the viewer does not count: anyone can follow anyone, so a
+/// lookalike account could otherwise buy promotion over the real one.
 bool isKnown(UserRankingSignals s) =>
-    s.lastInteractionAt != null || s.youFollow || s.followsYou == true;
+    s.lastInteractionAt != null || s.youFollow;
 
 /// Orders public keys by score, then case-insensitive name, then full key.
 ///

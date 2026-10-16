@@ -119,9 +119,10 @@ more than about 18.
   replaces `_sortedByPeerName` for the preloaded contacts. Local filtering
   while typing keeps the ranked order.
 - **Search** (`UserSearchBloc`). Server results arrive in pages, sorted by
-  follower count. Within each page, people you already know (an interaction or
-  a follow relationship) are moved to the front in score order. Everyone else
-  keeps the server's order. Earlier pages are never reordered. An empty query
+  follower count. Within each page, people you already know (you messaged them
+  or you follow them) are moved to the front in score order. Following you is
+  not enough, because anyone can follow anyone. Everyone else keeps the
+  server's order. Earlier pages are never reordered. An empty query
   still shows no list, because this design adds no new empty state.
 - **My following / my followers** (`MyFollowingBloc`, `MyFollowersBloc`).
   These get a new `smart` sort, and it becomes the default. `newestFirst` and

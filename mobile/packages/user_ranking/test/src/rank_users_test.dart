@@ -199,10 +199,10 @@ void main() {
         isTrue,
       );
     });
-    test('a follower alone is known', () {
+    test('a follower alone is not known', () {
       expect(
         isKnown(const UserRankingSignals(pubkey: _a, followsYou: true)),
-        isTrue,
+        isFalse,
       );
     });
     test('activity and verification do not imply a relationship', () {
@@ -337,7 +337,7 @@ void main() {
   });
 
   group('promoteKnown', () {
-    test('ranks known users first and preserves unknown arrival order', () {
+    test('ranks known users first and keeps followers in arrival order', () {
       const page = [_e, _b, _d, _a, _c];
       final signals = {
         _a: const UserRankingSignals(pubkey: _a, youFollow: true),
@@ -351,8 +351,8 @@ void main() {
       };
       expect(promoteKnown(page, signals, now: _now, nameOf: _nameOf), [
         _a,
-        _b,
         _e,
+        _b,
         _d,
         _c,
       ]);
