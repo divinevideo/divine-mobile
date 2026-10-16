@@ -724,6 +724,20 @@ void main() {
       verifyNever(() => client.queryEvents(any()));
       expect(dao.rows, isEmpty);
     });
+    test(
+      'stamps written while the clock ran ahead do not stall sync',
+      () async {
+        final ahead = now + const Duration(days: 365).inSeconds;
+        await stamp(full: ahead, incremental: ahead);
+        await MyFollowersSyncState().stampFullAttempt(owner, ahead);
+        when(
+          () => client.queryEvents(any()),
+        ).thenAnswer((_) async => [contact(first, 100)]);
+        await repository.syncMyFollowers();
+        expect(dao.replacements, 1);
+        expect(dao.rows[owner], {first: 100});
+      },
+    );
     test('a signer that cannot publish yet does not block the read', () async {
       canSign = false;
       when(
