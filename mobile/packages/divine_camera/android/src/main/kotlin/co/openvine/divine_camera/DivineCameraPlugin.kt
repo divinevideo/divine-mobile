@@ -42,8 +42,7 @@ class DivineCameraPlugin :
     // back; a pause alone (notification shade, permission dialog) keeps it.
     private var activityLifecycle: Lifecycle? = null
 
-    // Read from the lifecycle rather than tracked by hand, so it is also right
-    // for an activity attached while paused.
+    // Read from the lifecycle rather than kept in step by hand.
     private val isActivityInForeground: Boolean
         get() = activityLifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED) == true
 
@@ -584,7 +583,6 @@ class DivineCameraPlugin :
     private fun stopObservingActivityLifecycle() {
         activityLifecycle?.removeObserver(activityLifecycleObserver)
         activityLifecycle = null
-        volumeKeyHandler?.onEnterBackground()
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
