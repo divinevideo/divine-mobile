@@ -1652,6 +1652,7 @@ class AppDatabase extends _$AppDatabase {
         'owner_pubkey',
         'dm_protocol',
         'last_read_timestamp',
+        'is_dismissed',
       ],
       'pending_product_events': ['owner_pubkey'],
       'dm_message_reactions': ['recipient_pubkeys'],
