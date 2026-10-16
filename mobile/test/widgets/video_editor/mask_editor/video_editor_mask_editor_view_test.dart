@@ -122,6 +122,8 @@ void main() {
         // Two fingers on the shape, spread far past both sides of the item.
         // The handles sit at (190, 300) and (160, 330); both fingers land
         // more than their 32 px touch radius away, so neither grabs one.
+        // Neither passes `pointer:`: a fixed id can equal the automatic one
+        // the other finger takes from flutter_test's shared counter (#10245).
         final first = await tester.startGesture(const Offset(140, 280));
         final second = await tester.startGesture(const Offset(160, 280));
         await tester.pump();
