@@ -3,8 +3,10 @@
 
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -71,6 +73,35 @@ void main() {
         );
       },
     );
+
+    testWidgets('missing handle leaves activity visible in a narrow row', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.pumpWidget(
+        buildSubject(
+          isSelected: false,
+          enabled: true,
+          handle: null,
+          videoCount: 18,
+          lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+        ),
+      );
+      final activity = find.text(
+        '${l10n.searchUserVideoCount(18, '18')} · '
+        '${l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2)))}',
+      );
+      expect(activity, findsOneWidget);
+      expect(
+        tester.renderObject<RenderParagraph>(activity).didExceedMaxLines,
+        isFalse,
+      );
+      expect(find.textContaining(_pubkey), findsNothing);
+    });
 
     testWidgets('renders display name and handle', (tester) async {
       await tester.pumpWidget(
@@ -190,8 +221,11 @@ void main() {
         );
 
         expect(find.byType(PersonPickableRow), findsOneWidget);
-        // The pubkey itself is rendered as the handle fallback line.
-        expect(find.text(_pubkey), findsOneWidget);
+        expect(
+          find.text(UserProfile.defaultDisplayNameFor(_pubkey)),
+          findsOneWidget,
+        );
+        expect(find.text(_pubkey), findsNothing);
       },
     );
   });

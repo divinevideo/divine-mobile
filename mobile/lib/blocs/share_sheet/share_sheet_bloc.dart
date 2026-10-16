@@ -352,12 +352,12 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         : [...state.selectedRecipients, recipient];
 
     // Find People can pick someone who isn't in the contacts row yet —
-    // append them so their selection tick is visible without moving the
-    // contacts already on screen.
+    // prepend them so the selected contact is visible when the picker closes.
+    // Keep every existing contact in its current relative order.
     final inContacts = state.contacts.any((c) => c.pubkey == recipient.pubkey);
     final updatedContacts = inContacts
         ? state.contacts
-        : [...state.contacts, recipient];
+        : [recipient, ...state.contacts];
 
     emit(
       state.copyWith(
