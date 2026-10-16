@@ -1,5 +1,0 @@
-5000 synthetic candidates; scoring + sorting only
-Runtime: 3.13.2 (stable) (Tue Aug 25 01:01:12 2026 -0700) on "macos_arm64"; macos
-First invocation: 12.459 ms
-20 subsequent invocations: median 1.339 ms, min 1.237 ms, max 1.977 ms
-Host JIT timings do not establish the 50 ms phone budget.

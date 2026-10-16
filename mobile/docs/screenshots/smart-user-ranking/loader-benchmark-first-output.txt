@@ -1,6 +1,0 @@
-00:00 +0: loading /Users/rabble/code/divine/divine-mobile/.worktrees/smart-user-ranking/mobile/test/task17_loader_benchmark_test.dart
-00:00 +0: manual host benchmark real SQLite loader and cached name read
-Shell: HOST REAL SQLITE: 5000 profiles/stats/videos/follows; 2500 followers, 1000 accepted DMs, 715 verifications.
-Shell: Full loader.load + loadCachedDisplayNames; reopen-first 304.127 ms; warm 10 median 139.1045 ms min 108.071 max 152.68.
-Shell: Flutter-test host JIT, not profile-device; seeded OS caches; follow membership mock uses real in-memory set; DM adapter maps real DAO rows, no repository decryption overhead. Does NOT verify 50 ms phone budget.
-00:02 +1: All tests passed!
