@@ -267,7 +267,6 @@ void main() {
         // to the manifest; add it here only when it is wired into a different
         // job or workflow, and say which.
         const runsElsewhere = <String, String>{
-          'check_async_safety_ceiling.sh': 'its own Async Safety job: rewrites analysis_options.yaml in place',
           'check_codemagic_groups.sh': 'Codemagic Variable Groups job',
           'check_store_url_identifiers.sh': 'CI Configuration Tests job',
           'check_web_bundle_file_size.sh': 'Web Bundle Size job',

@@ -4,9 +4,8 @@ include: package:very_good_analysis/analysis_options.yaml
 # core was extracted from lib/services/ and authored under the app's lint
 # configuration; mirroring that posture avoids introducing new lint debt during
 # the move while keeping the package on the same very_good_analysis baseline.
-# `discarded_futures` and `unawaited_futures` are deliberately NOT relaxed here:
-# the app covers them with an app-scoped ratchet, so inside the package they
-# stay enforced by this package's own analyze step.
+# `discarded_futures` and `unawaited_futures` are deliberately NOT relaxed here,
+# matching the app, which enforces both since #9118.
 analyzer:
   exclude:
     - "**/*.g.dart"

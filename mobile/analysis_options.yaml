@@ -22,7 +22,6 @@ analyzer:
     avoid_types_on_closure_parameters: ignore
     cascade_invocations: ignore
     comment_references: ignore
-    discarded_futures: ignore
     inference_failure_on_collection_literal: ignore
     inference_failure_on_function_invocation: ignore
     inference_failure_on_function_return_type: ignore
@@ -31,7 +30,6 @@ analyzer:
     prefer_int_literals: ignore
     sort_constructors_first: ignore
     strict_raw_type: ignore
-    unawaited_futures: ignore
 
 linter:
   rules:

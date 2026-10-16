@@ -265,6 +265,34 @@ void main() {
       },
     );
 
+    test('the committed budget file budgets only jobs the gate waits on', () {
+      // A budget for a removed or renamed job never matches again; the gate
+      // only lists it as unseen on every run, so nothing else flags it.
+      final committed = File(
+        p.join(repoRoot, '.github', 'ci-timing-budgets.json'),
+      ).readAsStringSync();
+      final budgetJobs =
+          (jsonDecode(committed) as Map<String, dynamic>)['jobs']
+              as Map<String, dynamic>;
+      expect(budgetJobs, isNotEmpty);
+
+      final gateJobs = mobileCiGateJobNames();
+      for (final budgetName in budgetJobs.keys) {
+        expect(
+          gateJobs.any(
+            (name) =>
+                budgetNameForGateJob(
+                  jobName: name,
+                  budgetNames: [budgetName],
+                ) !=
+                null,
+          ),
+          isTrue,
+          reason: '$budgetName budgets a job the Mobile CI gate does not need',
+        );
+      }
+    });
+
     test('the committed budget still catches a slow rendered shard', () {
       // The gate reads job names from the GitHub API, where a matrix name is
       // already rendered ('Tests (shard 0/4)'). Keying the budget on the raw

@@ -1,9 +1,11 @@
 include: package:very_good_analysis/analysis_options.yaml
 
-# These relaxations mirror the app's analysis_options.yaml. The analytics code
-# was extracted from lib/services/ and was authored under the app's lint
-# configuration; mirroring it here avoids introducing new lint debt during the
-# move while keeping the package on the same very_good_analysis baseline.
+# These relaxations mirror the app's analysis_options.yaml as it was when the
+# analytics code was extracted from lib/services/; mirroring it avoided
+# introducing new lint debt during the move while keeping the package on the
+# same very_good_analysis baseline. The app has since enabled
+# `discarded_futures` and `unawaited_futures` (#9118); this package still
+# relaxes both.
 analyzer:
   exclude:
     - "build/**"

@@ -278,8 +278,10 @@ Flutter 3.47.2 upgrade.
   from the manifest `mobile/scripts/ci/guards.tsv`, four wide on the 4-vCPU
   runner, and replays each guard's output in manifest order. Locally, all 62
   guards at `--jobs 4`: **85s wall for 315s of summed guard time**.
-- `Async Safety` is its own job, because it rewrites `analysis_options.yaml`
-  in place while it runs.
+- At the time of this measurement, `Async Safety` was its own job because the
+  ratchet rewrote `analysis_options.yaml` in place. #10242 later retired the
+  job once #9118's baseline reached zero and enabled both diagnostics directly
+  in the analyzer.
 - `Tests` runs 8 shards instead of 4. Byte-weighted, the heaviest 8-shard
   bucket carries 55% of the heaviest 4-shard bucket (3.2 MB vs 5.8 MB).
 
@@ -291,7 +293,7 @@ including the three native-gated ones):
 | `Mobile CI` wall | 9.7m | **5.0m** (299s) |
 | `Generated Files` | 540s | 148s |
 | `Guards` | — | 224s (driver 179s wall for 706s summed) |
-| `Async Safety` | — | 120s |
+| `Async Safety` (since retired) | — | 120s |
 | `Tests`, slowest leg | 306s (4 shards) | 278s (8 shards; legs 151–278s) |
 | `Web Bundle Size` | 246s | 271s |
 
@@ -314,8 +316,7 @@ the org's plan is the only thing runner minutes spend.
 Not done, and worth doing next: the detectors are all syntactic
 (`parseString`) libraries that `test/tools/` already imports, so one Dart
 entrypoint could parse each file once and hand the unit to every detector —
-~200s of summed guard time would become ~15s. And retiring the async-safety
-baseline to zero (#9118) retires its job.
+~200s of summed guard time would become ~15s.
 
 ## How these were measured
 
