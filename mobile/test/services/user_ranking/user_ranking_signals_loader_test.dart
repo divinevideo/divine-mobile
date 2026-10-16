@@ -327,6 +327,8 @@ void main() {
       'provider rebuilds for identity and repository swaps with block policy',
       () async {
         final blocklist = _MockContentBlocklistRepository();
+        when(() => blocklist.shouldFilterFromFeeds(any()))
+            .thenAnswer((call) => call.positionalArguments.single == blocked);
         when(() => blocklist.currentState).thenReturn(
           ContentPolicyState(
             currentUserPubkey: viewer,
@@ -415,11 +417,75 @@ void main() {
     );
 
     test(
+      'picker eligibility matches policy without copying its state per row',
+      () async {
+        final ownMute = _key(6);
+        final reverseBlock = _key(7);
+        final reverseMute = _key(8);
+        final state = ContentPolicyState(
+          currentUserPubkey: viewer,
+          mutedPubkeys: {ownMute},
+          blockedPubkeys: {blocked, viewer},
+          pubkeysBlockingUs: {reverseBlock},
+          pubkeysMutingUs: {reverseMute},
+        );
+        final blocklist = _MockContentBlocklistRepository();
+        when(() => blocklist.currentState).thenReturn(state);
+        when(() => blocklist.shouldFilterFromFeeds(any())).thenAnswer((call) {
+          final key = call.positionalArguments.single as String;
+          return state.blockedPubkeys.contains(key) ||
+              state.mutedPubkeys.contains(key) ||
+              state.pubkeysBlockingUs.contains(key) ||
+              state.pubkeysMutingUs.contains(key);
+        });
+        final container = ProviderContainer(
+          overrides: [
+            databaseProvider.overrideWithValue(database),
+            dmRepositoryProvider.overrideWithValue(dms),
+            followRepositoryProvider.overrideWithValue(follows),
+            profileRepositoryProvider.overrideWithValue(null),
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            nostrSessionProvider.overrideWith(
+              () => _TestNostrSession(
+                NostrSessionReadiness.identityKnown(pubkey: viewer),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final loader = container.read(userRankingSignalsLoaderProvider);
+        final policy = ContentPolicyEngine.defaultRules();
+        for (final key in [
+          viewer,
+          blocked,
+          ownMute,
+          reverseBlock,
+          reverseMute,
+          stranger,
+        ]) {
+          expect(
+            loader.isEligible(key),
+            key != viewer &&
+                policy.evaluate(PolicyInput(pubkey: key), state) is! Block,
+          );
+        }
+        verifyNever(() => blocklist.currentState);
+      },
+    );
+
+    test(
       'own follow-list loader hides only accounts the viewer blocked',
       () async {
         final muter = _key(6);
         final blocker = _key(7);
         final blocklist = _MockContentBlocklistRepository();
+        when(() => blocklist.shouldFilterFromFeeds(any())).thenAnswer(
+          (call) => {
+            muter,
+            blocker,
+            blocked,
+          }.contains(call.positionalArguments.single),
+        );
         when(() => blocklist.currentState).thenReturn(
           ContentPolicyState(
             currentUserPubkey: viewer,

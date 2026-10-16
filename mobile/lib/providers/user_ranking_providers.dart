@@ -1,7 +1,6 @@
 // ABOUTME: Account-scoped dependency wiring for local user-ranking signals.
 // ABOUTME: Rebuilds the stateless loader when its repositories or identity change.
 
-import 'package:content_policy/content_policy.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -15,12 +14,9 @@ part 'user_ranking_providers.g.dart';
 @riverpod
 UserRankingSignalsLoader userRankingSignalsLoader(Ref ref) {
   final blocklist = ref.watch(contentBlocklistRepositoryProvider);
-  final policy = ref.watch(contentPolicyEngineProvider);
   return _rankingSignalsLoader(
     ref,
-    isBlocked: (pubkey) =>
-        policy.evaluate(PolicyInput(pubkey: pubkey), blocklist.currentState)
-            is Block,
+    isBlocked: blocklist.shouldFilterFromFeeds,
   );
 }
 

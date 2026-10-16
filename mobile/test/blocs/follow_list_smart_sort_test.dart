@@ -25,32 +25,34 @@ const _self =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 
 void main() {
-  test(
-    'shared picker ranking keeps successful loader omissions authoritative',
-    () async {
-      final loader = _MockLoader();
-      when(() => loader.load(any())).thenAnswer(
-        (_) async => {_b: const UserRankingSignals(pubkey: _b)},
-      );
-      final signals = await loadFollowListRankingSignals(
-        pubkeys: [_a, _b],
-        loader: loader,
-        logName: 'test',
-        onError: (_, _) {},
-      );
-      final ranked = rankFollowListSnapshot(
-        pubkeys: [_a, _b],
-        signals: signals,
-        names: const {},
-        isEligible: (_) => true,
-        isSmartOrderReady: false,
-        previousSmartOrder: const [],
-        now: DateTime(2026),
-      );
-      expect(ranked.eligible, {_b});
-      expect(ranked.smartOrder, [_b]);
-    },
-  );
+  group('follow list ranking helpers', () {
+    test(
+      'shared picker ranking keeps successful loader omissions authoritative',
+      () async {
+        final loader = _MockLoader();
+        when(() => loader.load(any())).thenAnswer(
+          (_) async => {_b: const UserRankingSignals(pubkey: _b)},
+        );
+        final signals = await loadFollowListRankingSignals(
+          pubkeys: [_a, _b],
+          loader: loader,
+          logName: 'test',
+          onError: (_, _) {},
+        );
+        final ranked = rankFollowListSnapshot(
+          pubkeys: [_a, _b],
+          signals: signals,
+          names: const {},
+          isEligible: (_) => true,
+          isSmartOrderReady: false,
+          previousSmartOrder: const [],
+          now: DateTime(2026),
+        );
+        expect(ranked.eligible, {_b});
+        expect(ranked.smartOrder, [_b]);
+      },
+    );
+  });
 
   group('MyFollowingBloc Smart sort', () {
     late _MockFollowRepository repository;
@@ -240,6 +242,29 @@ void main() {
         bloc.add(const MyFollowingBlocklistChanged());
         await pumpEventQueue();
         expect(bloc.state.followingPubkeys, [_b]);
+      },
+    );
+
+    test(
+      'an unfollow removes membership without waiting for ranking reads',
+      () async {
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowingListLoadRequested());
+        load([_a, _b]);
+        await pumpEventQueue();
+        final pending = Completer<Map<String, UserRankingSignals>>();
+        when(() => loader.load([_b])).thenAnswer((_) => pending.future);
+        updates.add([_b]);
+        await pumpEventQueue();
+        try {
+          expect(bloc.state.rawFollowingPubkeys, [_b]);
+          expect(bloc.state.isFollowing(_a), isFalse);
+          expect(bloc.state.followingPubkeys, [_b]);
+          verifyNever(() => loader.load([_b]));
+        } finally {
+          pending.complete({_b: const UserRankingSignals(pubkey: _b)});
+        }
       },
     );
 

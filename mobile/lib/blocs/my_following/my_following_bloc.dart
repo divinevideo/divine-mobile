@@ -325,6 +325,27 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     // in flight, even though it belongs to another event-handler bucket.
     emit(state.copyWith(repositoryRevision: state.repositoryRevision + 1));
     final revision = state.repositoryRevision;
+    final previousKeys = state.rawFollowingPubkeys.toSet();
+    if (_rankForList &&
+        state.isSmartOrderReady &&
+        event.pubkeys.every(previousKeys.contains)) {
+      // Removing an existing row changes membership, not the retained ranking.
+      final keys = event.pubkeys.toSet();
+      emitIfOpen(
+        state.copyWith(
+          status: MyFollowingStatus.success,
+          rawFollowingPubkeys: event.pubkeys,
+          followingPubkeys: _visiblePubkeys(event.pubkeys),
+          smartOrder: state.smartOrder.where(keys.contains).toList(),
+          rankingSignals: {
+            for (final entry in state.rankingSignals.entries)
+              if (keys.contains(entry.key)) entry.key: entry.value,
+          },
+          isRefreshing: false,
+        ),
+      );
+      return;
+    }
     final next = await _rankedState(
       event.pubkeys,
       isRefreshing: false,
