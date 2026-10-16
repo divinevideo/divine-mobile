@@ -38,8 +38,9 @@ class FollowListSearchBloc
   ///
   /// [subjectPubkey] is whose list this is, and [listKind] which side of it —
   /// together they address the server-side search. An empty [subjectPubkey]
-  /// runs on-device matching only; push the real one in later with
-  /// [FollowListSearchSubjectPubkeyChanged].
+  /// runs on-device matching only. Once the real key resolves, the own-list
+  /// screens build a replacement from this BLoC's state, which reruns an
+  /// active query.
   ///
   /// [profileRepository] is nullable because `profileRepositoryProvider` is
   /// gated on Nostr readiness and hands over the real instance after cold
@@ -70,7 +71,6 @@ class FollowListSearchBloc
       _onProfileRepositoryChanged,
       transformer: restartable(),
     );
-    on<FollowListSearchSubjectPubkeyChanged>(_onSubjectPubkeyChanged);
     if (initialState.isActive) {
       add(
         FollowListSearchQueryChanged(
@@ -84,10 +84,7 @@ class FollowListSearchBloc
   final FollowRepository _followRepository;
   final FollowListKind _listKind;
 
-  /// Swappable for the same reason as [_profileRepository]: on the own-list
-  /// screens this starts empty during cold boot and is pushed in by
-  /// [FollowListSearchSubjectPubkeyChanged] once auth restores.
-  String _subjectPubkey;
+  final String _subjectPubkey;
 
   /// Swappable rather than final for the same reason as
   /// `ConversationListBloc._profileRepository`: re-pointing this one field is
@@ -163,17 +160,6 @@ class FollowListSearchBloc
     // A query typed before the repository resolved matched on fallback names
     // only; complete it now that real profiles are reachable.
     await _resolveSearchTerms(emit);
-  }
-
-  Future<void> _onSubjectPubkeyChanged(
-    FollowListSearchSubjectPubkeyChanged event,
-    Emitter<FollowListSearchState> emit,
-  ) async {
-    if (event.pubkey == _subjectPubkey) return;
-    _subjectPubkey = event.pubkey;
-    // A query typed before auth restored ran on-device only. Now that the
-    // server-side search is addressable, run it for the query still on screen.
-    await _searchRemotely(emit, query: state.query);
   }
 
   /// Fill [FollowListSearchState.searchTerms] for candidates that have none.
