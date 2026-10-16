@@ -784,7 +784,7 @@
   "videoActionLike": "ልክ እንደ ቪዲዮ",
   "videoActionAutoLabel": "ማጠናቀር",
   "videoActionLikeLabel": "እንደ",
-  "videoActionReplyLabel": "መመለስ",
+  "videoActionReplyLabel": "መልስ",
   "videoActionRepostLabel": "እንደገና ይለጥፉ",
   "videoActionShareLabel": "አጋራ",
   "videoActionAboutLabel": "ስለ",
@@ -3151,7 +3151,7 @@
   "videoRecorderClipUndoLabel": "ቀልብስ",
   "libraryTrashEmptyTitle": "መጣያው ባዶ ነው።",
   "libraryTrashEmptySubtitle": "የተሰረዙ ክሊፖች ለ30 ቀናት እዚህ ይቆያሉ ከዚያም በቋሚነት ይወገዳሉ።",
-  "libraryTrashRestoreLabel": "መመለስ",
+  "libraryTrashRestoreLabel": "መልስ",
   "libraryTrashDeleteNowLabel": "አሁን ሰርዝ",
   "libraryTrashEmptyAllLabel": "መጣያን ባዶ አድርግ",
   "libraryTrashDeleteConfirmTitle": "አሁኑኑ ክሊፑን ሰርዝ?",
@@ -3782,7 +3782,7 @@
   "badgesRecipientAcceptedStatus": "ተቀባዩ ተቀብሎታል",
   "badgesRecipientWaitingStatus": "ተቀባይን በመጠባበቅ ላይ",
   "badgesHiddenSectionTitle": "{count, plural, =1{የተደበቀ ({count})} other{የተደበቁ ({count})}}",
-  "badgesActionRestore": "መመለስ",
+  "badgesActionRestore": "መልስ",
   "badgesHiddenSnackbar": "ባጁ ተደብቋል",
   "badgesHiddenSnackbarUndo": "ቀልብስ",
   "badgesTabAwarded": "የተቀበልካቸው",
@@ -3828,7 +3828,7 @@
   "badgeDetailRevokeTitle": "ይህን ባጅ ትመልሰዋለህ?",
   "badgeDetailRevokeBody": "ይህ ሪሌዮች ለዚህ ሰው የሰጠኸውን ሽልማት እንዲያስወግዱ ይጠይቃል። ሪሌዮች ሊከለክሉ ይችላሉ፣ ባጁን በመገለጫቸው ላይ ሰክተውት ከሆነም እስኪያስወግዱት ድረስ እዚያው ይቆያል። ለማንኛውም አይነገራቸውም።",
   "badgeDetailRevokeSelfBody": "ይህ ሪሌዮች ለራስህ የሰጠኸውን ሽልማት እንዲያስወግዱ ይጠይቃል፣ ባጁንም ከመገለጫህ ላይ ያነሳል። ሪሌዮቹ ስረዛውን ካልተቀበሉት ምንም አይለወጥም።",
-  "badgeDetailRevokeConfirm": "መመለስ",
+  "badgeDetailRevokeConfirm": "መልስ",
   "badgeDetailRevokeSuccess": "ባጁ ተመልሷል",
   "badgeDetailBlockClaimantsAction": "የባጅ ጠያቂዎችን አግድ",
   "badgeDetailBlockClaimantsTitle": "የባጅ ጠያቂዎችን አግድ",
@@ -4152,7 +4152,7 @@
   "commentsSortTop": "ከፍተኛ",
   "commentsSortOld": "አሮጌ",
   "commentsSortSemanticLabel": "የአስተያየቶች ቅደም ተከተል",
-  "commentReply": "መመለስ",
+  "commentReply": "መልስ",
   "commentReplySemanticLabel": "ለአስተያየቱ መልስ ስጥ",
   "commentUpvoteLabel": "አስተያየቱን ደግፍ",
   "commentRemoveUpvoteLabel": "ድጋፉን አስወግድ",
@@ -4424,7 +4424,7 @@
   "@feedTuningLessLabel": {
     "description": "Indicator and snackbar text when the user swipes left to get fewer videos like the current one."
   },
-  "feedTuningUndo": "መመለስ",
+  "feedTuningUndo": "መልስ",
   "@feedTuningUndo": {
     "description": "Snackbar action that retracts a just-published feed-tuning swipe."
   },

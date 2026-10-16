@@ -70,7 +70,7 @@
   "publishErrorUnknownServer": "Bilinmeyen sunucu",
   "dmReactionsSheetTitle": "Tepkiler",
   "dmReactionsViewA11yLabel": "Kimlerin tepki verdiğini gör",
-  "dmReactionRemoveAction": "Kenara ayır",
+  "dmReactionRemoveAction": "Kaldır",
   "dmReactionRetryAction": "Yeniden dene",
   "dmMessageBubbleVideoReplyHint": "Atıfta bulunulan videoyu aç",
   "commonSomethingWentWrong": "Bir hata oluştu",
@@ -835,7 +835,7 @@
     }
   },
   "relaySettingsCancel": "İptal",
-  "relaySettingsRemove": "Kenara ayır",
+  "relaySettingsRemove": "Kaldır",
   "relaySettingsRemovedRelay": "Röle kaldırıldı: {relayUrl}",
   "@relaySettingsRemovedRelay": {
     "placeholders": {
@@ -2078,7 +2078,7 @@
     }
   },
   "inboxRemoveConfirmBodyGroup": "Bu, grup sohbetini gelen kutundan kaldırır. Biri gruba tekrar yazarsa yeni bir sohbet başlar.",
-  "inboxRemoveConfirmConfirm": "Kenara ayır",
+  "inboxRemoveConfirmConfirm": "Kaldır",
   "inboxRemoveConfirmTitle": "Sohbet kaldırılsın mı?",
   "inboxRemovedConversation": "Sohbet kaldırıldı",
   "inboxRestorePausedTitle": "Bazı sohbetler tam geri yüklenmedi",
@@ -2961,7 +2961,7 @@
   "videoMetadataPostSemanticLabel": "Paylaş düğmesi",
   "videoMetadataPublishVideoHint": "Videoyu akışa yayınla",
   "videoMetadataPostingVideoHint": "Videon hazırlanıyor",
-  "videoMetadataRemoveSemanticLabel": "Kenara ayır",
+  "videoMetadataRemoveSemanticLabel": "Kaldır",
   "videoMetadataSaveForLaterButton": "Sonra Kaydet",
   "videoMetadataSaveForLaterSemanticLabel": "Sonra kaydet düğmesi",
   "videoMetadataSaveToDraftsHint": "Videoyu taslağa ve {destination}'a kaydet",
@@ -3178,7 +3178,7 @@
   "peopleListsInNLists": "{count, plural, =1{1 listede} other{{count} listede}}",
   "peopleListsRemoveConfirmTitle": "{name} kaldırılsın mı?",
   "peopleListsRemoveConfirmBody": "Bu kişi listeden kaldırılacak.",
-  "peopleListsRemove": "Kenara ayır",
+  "peopleListsRemove": "Kaldır",
   "peopleListsRemovedFromList": "{name} listeden kaldırıldı",
   "peopleListsUndo": "Geri al",
   "peopleListsProfileLongPressHint": "{name} profili. Kaldırmak için uzun bas.",
@@ -3686,7 +3686,7 @@
   "badgesAwardedEmptySubtitle": "Biri sana bir Nostr rozeti verdiğinde burada görünecek.",
   "badgesStatusAccepted": "Kabul edildi",
   "badgesStatusNotAccepted": "Kabul edilmedi",
-  "badgesActionRemove": "Kenara ayır",
+  "badgesActionRemove": "Kaldır",
   "badgesActionAccept": "Kabul Et",
   "badgesActionReject": "Reddet",
   "badgesIssuedEmptyTitle": "Henüz verilmiş rozet yok",

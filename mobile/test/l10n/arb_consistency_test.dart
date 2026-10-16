@@ -8,6 +8,22 @@ import 'package:test/test.dart';
 
 void main() {
   group('ARB consistency', () {
+    test('conversation dismissal and removal have distinct action labels', () {
+      final arbFiles = Directory('lib/l10n').listSync().whereType<File>().where(
+        (file) => file.path.endsWith('.arb'),
+      );
+      for (final file in arbFiles) {
+        final arb = _readArb(file);
+        expect(arb['inboxRequestDismiss'], isA<String>());
+        expect(arb['inboxRemoveConfirmConfirm'], isA<String>());
+        expect(
+          arb['inboxRequestDismiss'],
+          isNot(arb['inboxRemoveConfirmConfirm']),
+          reason: '${file.path} must distinguish keeping history from removal',
+        );
+      }
+    });
+
     test('all locales define the same message keys as app_en.arb', () {
       final l10nDir = Directory('lib/l10n');
       final arbFiles =
