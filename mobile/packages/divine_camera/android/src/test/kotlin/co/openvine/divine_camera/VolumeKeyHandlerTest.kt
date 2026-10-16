@@ -62,13 +62,22 @@ internal class VolumeKeyHandlerTest {
         handler.onEnterBackground()
         now += 60_000L
         handler.onBecomeActive()
+        assertTrue(handler.isMediaSessionClaimed())
         now += 1_000L
 
-        handler.handleMediaButtonEvent(
+        val consumed = handler.handleMediaButtonEvent(
             KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE)
         )
 
+        assertTrue(consumed)
         assertTrue(triggers.isEmpty())
+
+        // Positive control: the same press records once the cooldown is over.
+        now += 2_000L
+        handler.handleMediaButtonEvent(
+            KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE)
+        )
+        assertEquals(listOf("bluetooth"), triggers)
     }
 
     @Test
