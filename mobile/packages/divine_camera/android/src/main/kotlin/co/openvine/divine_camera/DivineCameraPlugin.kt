@@ -42,15 +42,18 @@ class DivineCameraPlugin :
     // is in the foreground (#10196). Stopping releases it, resuming claims it
     // back; a pause alone (notification shade, permission dialog) keeps it.
     private var activityLifecycle: Lifecycle? = null
-    private var isActivityInForeground = false
+
+    // Read from the lifecycle rather than tracked by hand, so it is also right
+    // for an activity attached while paused.
+    private val isActivityInForeground: Boolean
+        get() = activityLifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED) == true
+
     private val activityLifecycleObserver = object : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
-            isActivityInForeground = true
             volumeKeyHandler?.onBecomeActive()
         }
 
         override fun onStop(owner: LifecycleOwner) {
-            isActivityInForeground = false
             volumeKeyHandler?.onEnterBackground()
         }
     }
@@ -574,8 +577,6 @@ class DivineCameraPlugin :
         cameraController = null
     }
 
-    // Adding the observer replays the activity's current state, so
-    // isActivityInForeground is right before the first enable.
     private fun observeActivityLifecycle(binding: ActivityPluginBinding) {
         activityLifecycle = (binding.activity as? LifecycleOwner)?.lifecycle
         activityLifecycle?.addObserver(activityLifecycleObserver)
@@ -584,7 +585,6 @@ class DivineCameraPlugin :
     private fun stopObservingActivityLifecycle() {
         activityLifecycle?.removeObserver(activityLifecycleObserver)
         activityLifecycle = null
-        isActivityInForeground = false
         volumeKeyHandler?.onEnterBackground()
     }
 

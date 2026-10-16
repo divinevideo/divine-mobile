@@ -551,6 +551,19 @@ internal class DivineCameraPluginRemoteRecordControlTest {
     }
 
     @Test
+    fun enabledWhilePaused_claimsTheSession() {
+        // Paused but visible (notification shade, permission dialog) is still
+        // the foreground, even for an activity attached in that state.
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java)
+            .setup()
+            .pause()
+
+        val control = enabledRemoteRecordControl(activity.get())
+
+        assertTrue(control.isMediaSessionClaimed())
+    }
+
+    @Test
     fun enabledWhileStopped_claimsTheSessionOnResume() {
         val activity = Robolectric.buildActivity(ComponentActivity::class.java)
             .setup()
