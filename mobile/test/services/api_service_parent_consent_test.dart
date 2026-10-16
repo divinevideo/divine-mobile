@@ -132,6 +132,38 @@ void main() {
       expect(body, contains('filename="consent.mp4"'));
     });
 
+    test('labels the video part as video/mp4', () async {
+      http.Request? captured;
+      final client = MockClient((request) async {
+        captured = request;
+        return http.Response('', 201);
+      });
+      final api = ApiService(
+        client: client,
+        authService: _RecordingNip98AuthService(),
+        relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
+        appVersion: '1.0.20',
+      );
+
+      await api.submitMinorAccountReviewParentConsent(
+        caseId: 'case-123',
+        email: 'parent@example.com',
+        videoPath: clip.path,
+      );
+
+      // relay-manager rejects a video part whose Content-Type is not video/*
+      // with a 415, so the default application/octet-stream never uploads.
+      final boundary = captured!.headers['Content-Type']!.split(
+        'boundary=',
+      )[1];
+      final videoPart = utf8
+          .decode(captured!.bodyBytes)
+          .split('--$boundary')
+          .singleWhere((part) => part.contains('name="video"'));
+      final partHeaders = videoPart.split('\r\n\r\n').first.toLowerCase();
+      expect(partHeaders, contains('content-type: video/mp4'));
+    });
+
     test('creates the NIP-98 token without a payload', () async {
       final client = MockClient((request) async => http.Response('', 201));
       final auth = _RecordingNip98AuthService();
