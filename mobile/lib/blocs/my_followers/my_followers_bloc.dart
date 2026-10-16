@@ -46,7 +46,6 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
              ? const MyFollowersState()
              : _retained(
                  initialState,
-                 rankingSignalsLoader,
                  contentBlocklistRepository,
                ),
        ) {
@@ -63,13 +62,10 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
 
   static MyFollowersState _retained(
     MyFollowersState snapshot,
-    UserRankingSignalsLoader? loader,
     ContentBlocklistRepository blocklist,
   ) {
     bool eligible(String key) =>
-        (loader?.isEligible(key) ?? true) &&
-        !blocklist.isBlocked(key) &&
-        !blocklist.isFollowSevered(key);
+        !blocklist.isBlocked(key) && !blocklist.isFollowSevered(key);
     return snapshot.copyWith(
       rawFollowersPubkeys: List.unmodifiable(snapshot.rawFollowersPubkeys),
       followersPubkeys: List.unmodifiable(
@@ -106,15 +102,6 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
                       datedCount: datedCount,
                     ) ??
                 state.smartOrder.where(rawPubkeys.toSet().contains).toList())
-            .where(
-              (pubkey) =>
-                  !_rankForList ||
-                  !state.isSmartOrderReady ||
-                  state.rankingSignals.containsKey(pubkey),
-            )
-            .where(
-              (key) => !_rankForList || _rankingSignalsLoader!.isEligible(key),
-            )
             .toList(),
     blocklistRepository: _blocklistRepository,
   );
@@ -215,7 +202,7 @@ class MyFollowersBloc extends Bloc<MyFollowersEvent, MyFollowersState>
         pubkeys: pubkeys,
         signals: signals,
         names: names,
-        isEligible: _rankingSignalsLoader.isEligible,
+        isEligible: (key) => !_blocklistRepository.isBlocked(key),
         isSmartOrderReady: state.isSmartOrderReady,
         previousSmartOrder: state.smartOrder,
         now: DateTime.now(),

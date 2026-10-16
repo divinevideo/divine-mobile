@@ -306,7 +306,7 @@ void main() {
           const MyFollowersState(status: MyFollowersStatus.loading),
           MyFollowersState(
             isSmartOrderReady: true,
-            smartOrder: ([validPubkey('blocked'), validPubkey('ok')]..sort()),
+            smartOrder: [validPubkey('ok')],
             rankingSignals: {
               for (final key in [validPubkey('blocked'), validPubkey('ok')])
                 key: UserRankingSignals(pubkey: key),
@@ -352,6 +352,20 @@ void main() {
             eligibilityRevision: 1,
             isSmartOrderReady: true,
             smartOrder: ([validPubkey('a'), validPubkey('b')]..sort()),
+            rankingSignals: {
+              for (final key in [validPubkey('a'), validPubkey('b')])
+                key: UserRankingSignals(pubkey: key),
+            },
+
+            status: MyFollowersStatus.success,
+            followersPubkeys: [validPubkey('b')],
+            rawFollowersPubkeys: [validPubkey('a'), validPubkey('b')],
+            authoritativeFollowerCount: 2,
+          ),
+          MyFollowersState(
+            eligibilityRevision: 1,
+            isSmartOrderReady: true,
+            smartOrder: [validPubkey('b')],
             rankingSignals: {
               for (final key in [validPubkey('a'), validPubkey('b')])
                 key: UserRankingSignals(pubkey: key),
@@ -540,7 +554,6 @@ void main() {
           MyFollowersState(
             isSmartOrderReady: true,
             smartOrder: ([
-              validPubkey('newest'),
               validPubkey('oldest'),
               validPubkey('undated'),
             ]..sort()),

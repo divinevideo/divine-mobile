@@ -104,7 +104,10 @@ void main() {
         bloc.add(const MyFollowingListLoadRequested());
         load([_a, _b]);
         await pumpEventQueue();
+        load([_a, _b, _c]);
+        await pumpEventQueue();
         verify(() => loader.refreshInBackground([_a, _b])).called(1);
+        verifyNever(() => loader.refreshInBackground([_a, _b, _c]));
       },
     );
 
@@ -188,6 +191,30 @@ void main() {
       },
     );
 
+    test(
+      'keeps owned following omitted by the picker policy in every sort',
+      () async {
+        when(() => loader.isEligible(_a)).thenReturn(false);
+        when(() => loader.load(any())).thenAnswer(
+          (_) async => {_b: const UserRankingSignals(pubkey: _b)},
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowingListLoadRequested());
+        load([_a, _b]);
+        await pumpEventQueue();
+        for (final order in FollowListSort.values) {
+          bloc.add(MyFollowingSortOrderChanged(order));
+          await pumpEventQueue();
+          expect(bloc.state.followingPubkeys, containsAll([_a, _b]));
+        }
+        when(() => blocklist.isBlocked(_a)).thenReturn(true);
+        bloc.add(const MyFollowingBlocklistChanged());
+        await pumpEventQueue();
+        expect(bloc.state.followingPubkeys, [_b]);
+      },
+    );
+
     test('equal scores sort by cached display name before pubkey', () async {
       when(() => loader.load(any())).thenAnswer(
         (_) async => {
@@ -230,6 +257,7 @@ void main() {
         var calls = 0;
         final pending = Completer<Map<String, UserRankingSignals>>();
         when(() => loader.isEligible(_a)).thenAnswer((_) => !blocked);
+        when(() => blocklist.isBlocked(_a)).thenAnswer((_) => blocked);
         when(() => loader.load(any())).thenAnswer((call) {
           if (calls++ == 0) return pending.future;
           return Future.value({
@@ -261,6 +289,7 @@ void main() {
         var blocked = true;
         final pending = Completer<Map<String, UserRankingSignals>>();
         when(() => loader.isEligible(_a)).thenAnswer((_) => !blocked);
+        when(() => blocklist.isBlocked(_a)).thenAnswer((_) => blocked);
         when(() => loader.load(any())).thenAnswer(
           (call) async => {
             for (final key
@@ -305,6 +334,7 @@ void main() {
       () async {
         var blocked = true;
         when(() => loader.isEligible(_a)).thenAnswer((_) => !blocked);
+        when(() => blocklist.isBlocked(_a)).thenAnswer((_) => blocked);
         when(() => loader.load(any())).thenAnswer(
           (_) async => {
             if (!blocked)
@@ -325,24 +355,28 @@ void main() {
       },
     );
 
-    test('successful signal omissions remain hidden in every sort', () async {
-      when(() => loader.load(any())).thenAnswer(
-        (_) async => {
-          _b: const UserRankingSignals(pubkey: _b),
-        },
-      );
-      final bloc = createBloc();
-      addTearDown(bloc.close);
-      bloc.add(const MyFollowingListLoadRequested());
-      load([_self, _a, _b]);
-      await pumpEventQueue();
-      expect(bloc.state.followingPubkeys, [_b]);
-      for (final order in FollowListSort.values) {
-        bloc.add(MyFollowingSortOrderChanged(order));
+    test(
+      'viewer-blocked signal omissions remain hidden in every sort',
+      () async {
+        when(() => blocklist.isBlocked(_a)).thenReturn(true);
+        when(() => loader.load(any())).thenAnswer(
+          (_) async => {
+            _b: const UserRankingSignals(pubkey: _b),
+          },
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowingListLoadRequested());
+        load([_a, _b]);
         await pumpEventQueue();
         expect(bloc.state.followingPubkeys, [_b]);
-      }
-    });
+        for (final order in FollowListSort.values) {
+          bloc.add(MyFollowingSortOrderChanged(order));
+          await pumpEventQueue();
+          expect(bloc.state.followingPubkeys, [_b]);
+        }
+      },
+    );
 
     blocTest<MyFollowingBloc, MyFollowingState>(
       'ranking failure reports the error and retains only eligible rows',
@@ -354,7 +388,7 @@ void main() {
       build: createBloc,
       act: (bloc) async {
         bloc.add(const MyFollowingListLoadRequested());
-        load([_self, _a, _b]);
+        load([_a, _b]);
         await pumpEventQueue();
       },
       verify: (bloc) {
@@ -464,7 +498,10 @@ void main() {
         const CacheResult.live(FollowersSnapshot(pubkeys: [_a], count: 50)),
       );
       await pumpEventQueue();
+      load([_a, _b]);
+      await pumpEventQueue();
       verify(() => loader.refreshInBackground([_a])).called(1);
+      verifyNever(() => loader.refreshInBackground([_a, _b]));
     });
 
     test(
@@ -489,6 +526,30 @@ void main() {
         await pumpEventQueue();
         expect(bloc.state.followersPubkeys, [_a, _c, _b]);
         verify(() => loader.load(any())).called(1);
+      },
+    );
+
+    test(
+      'keeps owned followers omitted by the picker policy in every sort',
+      () async {
+        when(() => loader.isEligible(_a)).thenReturn(false);
+        when(() => loader.load(any())).thenAnswer(
+          (_) async => {_b: const UserRankingSignals(pubkey: _b)},
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowersListLoadRequested());
+        load([_a, _b]);
+        await pumpEventQueue();
+        for (final order in FollowListSort.values) {
+          bloc.add(MyFollowersSortOrderChanged(order));
+          await pumpEventQueue();
+          expect(bloc.state.followersPubkeys, containsAll([_a, _b]));
+        }
+        when(() => blocklist.isBlocked(_a)).thenReturn(true);
+        bloc.add(const MyFollowersBlocklistChanged());
+        await pumpEventQueue();
+        expect(bloc.state.followersPubkeys, [_b]);
       },
     );
 
@@ -534,6 +595,7 @@ void main() {
         var calls = 0;
         final pending = Completer<Map<String, UserRankingSignals>>();
         when(() => loader.isEligible(_a)).thenAnswer((_) => !blocked);
+        when(() => blocklist.isBlocked(_a)).thenAnswer((_) => blocked);
         when(() => loader.load(any())).thenAnswer((call) {
           if (calls++ == 0) return pending.future;
           return Future.value({
@@ -565,6 +627,7 @@ void main() {
         var blocked = true;
         final pending = Completer<Map<String, UserRankingSignals>>();
         when(() => loader.isEligible(_a)).thenAnswer((_) => !blocked);
+        when(() => blocklist.isBlocked(_a)).thenAnswer((_) => blocked);
         when(() => loader.load(any())).thenAnswer(
           (call) async => {
             for (final key
@@ -609,6 +672,7 @@ void main() {
       () async {
         var blocked = true;
         when(() => loader.isEligible(_a)).thenAnswer((_) => !blocked);
+        when(() => blocklist.isBlocked(_a)).thenAnswer((_) => blocked);
         when(() => loader.load(any())).thenAnswer(
           (_) async => {
             if (!blocked)
@@ -629,24 +693,28 @@ void main() {
       },
     );
 
-    test('successful signal omissions remain hidden in every sort', () async {
-      when(() => loader.load(any())).thenAnswer(
-        (_) async => {
-          _b: const UserRankingSignals(pubkey: _b),
-        },
-      );
-      final bloc = createBloc();
-      addTearDown(bloc.close);
-      bloc.add(const MyFollowersListLoadRequested());
-      load([_self, _a, _b]);
-      await pumpEventQueue();
-      expect(bloc.state.followersPubkeys, [_b]);
-      for (final order in FollowListSort.values) {
-        bloc.add(MyFollowersSortOrderChanged(order));
+    test(
+      'viewer-blocked signal omissions remain hidden in every sort',
+      () async {
+        when(() => blocklist.isBlocked(_a)).thenReturn(true);
+        when(() => loader.load(any())).thenAnswer(
+          (_) async => {
+            _b: const UserRankingSignals(pubkey: _b),
+          },
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowersListLoadRequested());
+        load([_a, _b]);
         await pumpEventQueue();
         expect(bloc.state.followersPubkeys, [_b]);
-      }
-    });
+        for (final order in FollowListSort.values) {
+          bloc.add(MyFollowersSortOrderChanged(order));
+          await pumpEventQueue();
+          expect(bloc.state.followersPubkeys, [_b]);
+        }
+      },
+    );
 
     blocTest<MyFollowersBloc, MyFollowersState>(
       'ranking failure reports the error and retains only eligible rows',
@@ -658,7 +726,7 @@ void main() {
       build: createBloc,
       act: (bloc) async {
         bloc.add(const MyFollowersListLoadRequested());
-        load([_self, _a, _b]);
+        load([_a, _b]);
         await pumpEventQueue();
       },
       verify: (bloc) {
