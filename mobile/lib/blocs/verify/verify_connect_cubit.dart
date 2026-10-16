@@ -12,6 +12,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/verify/verify_proof_input.dart';
 import 'package:openvine/blocs/verify/verify_rejection.dart';
 import 'package:openvine/utils/async_utils.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -124,11 +125,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         '${result.error ?? 'no reason given'}',
         name: 'VerifyConnectCubit',
       );
-      unawaited(
-        _logOutcome(
-          name: 'verify_proof_unavailable',
-          parameters: {'platform': claim.platform},
-        ),
+      _logOutcome(
+        name: 'verify_proof_unavailable',
+        parameters: {'platform': claim.platform},
       );
       return _fail(VerifyConnectError.verifierUnreachable);
     }
@@ -151,14 +150,12 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       // no signal at all we cannot tell one stuck person from everybody.
       // `reason` is a fixed vocabulary and `platform` is a platform key, so
       // neither carries the npub, the handle, the link or the message.
-      unawaited(
-        _logOutcome(
-          name: 'verify_proof_rejected',
-          parameters: {
-            'platform': claim.platform,
-            'reason': result.code ?? 'none',
-          },
-        ),
+      _logOutcome(
+        name: 'verify_proof_rejected',
+        parameters: {
+          'platform': claim.platform,
+          'reason': result.code ?? 'none',
+        },
       );
       return _fail(verifyErrorForCode(result.code));
     }
@@ -501,21 +498,18 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     name: 'VerifyConnectCubit',
   );
 
-  // Fire-and-forget, so a failed write is logged here rather than escaping as
-  // an uncaught error.
-  Future<void> _logOutcome({
+  // Fire-and-forget, so a failed write is logged rather than escaping as an
+  // uncaught error. runDetached still sends a broken invariant (a StateError
+  // or TypeError) to crash reporting, where a bare catch would hide it.
+  void _logOutcome({
     required String name,
     required Map<String, Object> parameters,
-  }) async {
-    try {
-      await _analytics.logEvent(name: name, parameters: parameters);
-    } catch (error) {
-      Log.warning(
-        'Verify analytics event $name failed: $error',
-        name: 'VerifyConnectCubit',
-      );
-    }
-  }
+  }) => runDetached(
+    _analytics.logEvent(name: name, parameters: parameters),
+    'record the $name analytics event',
+    logName: 'VerifyConnectCubit',
+    category: LogCategory.system,
+  );
 
   // Back to editing, so any sign-in waiting for approval goes too.
   void _fail(VerifyConnectError error) {

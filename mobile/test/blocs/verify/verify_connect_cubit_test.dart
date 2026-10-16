@@ -11,6 +11,9 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -31,6 +34,25 @@ class _ZeroRandom implements Random {
 
   @override
   bool nextBool() => false;
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
 }
 
 const _pubkey =
@@ -386,6 +408,64 @@ void main() {
             expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
           },
         );
+
+        group('crash reporting', () {
+          late CrashReporter originalReporter;
+          late _RecordingCrashReporter reporter;
+
+          setUp(() {
+            originalReporter = detachedFailureReporter;
+            reporter = _RecordingCrashReporter();
+            detachedFailureReporter = reporter;
+            when(() => repository.verifyClaim(any())).thenAnswer(
+              (_) async =>
+                  _result(verified: false, code: 'discord_bot_no_access'),
+            );
+          });
+
+          tearDown(() => detachedFailureReporter = originalReporter);
+
+          Future<void> submit(VerifyConnectCubit cubit) async {
+            cubit
+              ..identityChanged('alice')
+              ..proofChanged('https://discord.com/channels/1/2/3');
+            await cubit.submitProof();
+            await pumpEventQueue();
+          }
+
+          // A StateError is a broken invariant in the analytics code, not an
+          // outage, so it has to reach crash reporting rather than only the
+          // log (.claude/rules/error_handling.md, "Detached work").
+          blocTest<VerifyConnectCubit, VerifyConnectState>(
+            'reports a broken invariant',
+            build: () => build(_discord),
+            act: submit,
+            verify: (_) {
+              expect(reporter.recordedErrors, hasLength(1));
+              expect(
+                (reporter.recordedErrors.single as Reportable<Object>).unwrap(),
+                isA<StateError>(),
+              );
+            },
+          );
+
+          blocTest<VerifyConnectCubit, VerifyConnectState>(
+            'does not report an operational failure',
+            setUp: () {
+              when(
+                () => analytics.logEvent(
+                  name: any(named: 'name'),
+                  parameters: any(named: 'parameters'),
+                ),
+              ).thenAnswer((_) async => throw Exception('offline'));
+            },
+            build: () => build(_discord),
+            act: submit,
+            verify: (_) {
+              expect(reporter.recordedErrors, isEmpty);
+            },
+          );
+        });
       });
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
