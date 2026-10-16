@@ -293,17 +293,19 @@ void main() {
         final checkpoints = MyFollowersSyncState();
         await repository.syncMyFollowers();
         await checkpoints.stampFull(otherOwner, 123);
-        await checkpoints.stampAttempt(otherOwner, 456);
+        await checkpoints.stampFullAttempt(otherOwner, 456);
         await checkpoints.clear(owner);
         expect(await checkpoints.read(owner), (
           full: null,
           incremental: null,
           attempt: null,
+          fullAttempt: null,
         ));
         expect(await checkpoints.read(otherOwner), (
           full: 123,
           incremental: 123,
           attempt: 456,
+          fullAttempt: 456,
         ));
         when(
           () => client.queryEvents(any()),
@@ -338,13 +340,15 @@ void main() {
 
     test('successful empty seed is not repeated on the next open', () async {
       await repository.syncMyFollowers();
+      now += 901;
       await repository.syncMyFollowers();
-      verify(() => client.queryEvents(any())).called(1);
+      verify(() => client.queryEvents(any())).called(2);
+      expect(dao.replacements, 1);
       expect(dao.rows[owner], isEmpty);
     });
 
     test(
-      'partial full attempt retries after fifteen minutes, not a week',
+      'partial full attempts retry daily with merge-only incrementals between',
       () async {
         when(
           () => client.readEvents(any(), requireAllRelaysSettled: true),
@@ -366,6 +370,11 @@ void main() {
           () => client.readEvents(any(), requireAllRelaysSettled: true),
         ).called(1);
         now += 901;
+        await repository.syncMyFollowers();
+        verify(() => client.queryEvents(any())).called(1);
+        expect(dao.replacements, 0);
+        expect(dao.rows[owner], {first: 100});
+        now += 86400;
         when(
           () => client.readEvents(any(), requireAllRelaysSettled: true),
         ).thenAnswer(
@@ -386,9 +395,91 @@ void main() {
       },
     );
 
+    test(
+      'picker emits while background sync is pending and persists in order',
+      () async {
+        dao.rows[owner] = {stale: 50};
+        await stamp(incremental: now - 901);
+        final started = Completer<void>();
+        final response = Completer<List<Event>>();
+        when(() => client.queryEvents(any())).thenAnswer((_) {
+          started.complete();
+          return response.future;
+        });
+        final sync = repository.syncMyFollowers();
+        await started.future;
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer(
+          (_) async => PaginatedPubkeys(pubkeys: [first], total: 1),
+        );
+        when(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.complete,
+            confirmedExhaustive: true,
+          ),
+        );
+        final emissions = <List<String>>[];
+        final stream = repository.streamMyFollowers().forEach(emissions.add);
+        await pumpEventQueue();
+        expect(emissions, [
+          [first],
+        ]);
+        expect(dao.rows[owner], {stale: 50});
+        response.complete([contact(second, now)]);
+        await sync;
+        await stream;
+        expect(dao.rows[owner], {first: null});
+        expect(dao.replacements, 1);
+      },
+    );
+
+    test(
+      'queued picker persistence rejects an account switched during fetch',
+      () async {
+        await stamp(incremental: now - 901);
+        final started = Completer<void>();
+        final response = Completer<List<Event>>();
+        when(() => client.queryEvents(any())).thenAnswer((_) {
+          started.complete();
+          return response.future;
+        });
+        final sync = repository.syncMyFollowers();
+        await started.future;
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer(
+          (_) async => PaginatedPubkeys(pubkeys: [first], total: 1),
+        );
+        when(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.complete,
+            confirmedExhaustive: true,
+          ),
+        );
+        final emissions = <List<String>>[];
+        final stream = repository.streamMyFollowers().forEach(emissions.add);
+        await pumpEventQueue();
+        expect(emissions, [
+          [first],
+        ]);
+        when(() => client.publicKey).thenReturn(otherOwner);
+        response.complete([contact(second, now)]);
+        await sync;
+        await stream;
+        expect(dao.rows, isEmpty);
+        expect((await MyFollowersSyncState().read(otherOwner)).full, isNull);
+        expect(repository.relationshipTo(first), FollowRelationship.none);
+      },
+    );
+
     for (final fullPath in ['get', 'stream']) {
       test(
-        '$fullPath serializes full fetch with incremental and credits completion',
+        '$fullPath orders partial full persistence before an eligible incremental',
         () async {
           dao.rows[owner] = {first: 100};
           await stamp(incremental: now - 901);
@@ -407,6 +498,7 @@ void main() {
               ? repository.getMyFollowers()
               : repository.streamMyFollowers().toList();
           await started.future;
+          now += 901;
           final incremental = repository.syncMyFollowers();
           await pumpEventQueue();
           // The incremental fetch must not overlap an older full snapshot.
@@ -414,16 +506,16 @@ void main() {
           response.complete(
             QueryResult(
               events: [contact(first, 100)],
-              endedBy: QueryEnd.complete,
-              confirmedExhaustive: true,
+              endedBy: QueryEnd.deadline,
             ),
           );
           await full;
           await incremental;
-          verifyNever(() => client.queryEvents(any()));
+          verify(() => client.queryEvents(any())).called(1);
+          expect(dao.rows[owner], {first: 100, second: now});
           expect(
             (await SharedPreferences.getInstance()).getInt(
-              'my_followers_full_sync_$owner',
+              'my_followers_incremental_sync_$owner',
             ),
             now,
           );
@@ -877,7 +969,7 @@ void main() {
           expect(checkpoint.attempt, now);
           await repository.syncMyFollowers();
           expect(outcomes, hasLength(1));
-          now += 901;
+          now += 86401;
           await repository.syncMyFollowers();
           expect(outcomes, hasLength(2));
           expect(outcomes.last.possiblyCapped, isTrue);
@@ -887,7 +979,7 @@ void main() {
 
           // A later uncapped response can authoritatively remove the old row.
           relay.info = null;
-          now += 901;
+          now += 86401;
           await repository.syncMyFollowers();
           expect(outcomes, hasLength(3));
           expect(outcomes.last.possiblyCapped, isFalse);
