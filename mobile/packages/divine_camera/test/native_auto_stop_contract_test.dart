@@ -132,11 +132,7 @@ void main() {
         );
         expect(
           requested,
-          lessThan(finalize.indexOf('manualStopCallback = null')),
-        );
-        expect(
-          requested,
-          lessThan(finalize.indexOf('autoStopCallback = null')),
+          lessThan(finalize.indexOf('stopArbiter.finish(')),
         );
         expect(
           finalize.substring(
@@ -144,8 +140,7 @@ void main() {
             finalize.indexOf('isRecording = false', requested),
           ),
           allOf(
-            contains('manualStopCallback != null'),
-            contains('autoStopCallback != null'),
+            contains('stopArbiter.isStopping'),
             contains('isReleased'),
           ),
         );
