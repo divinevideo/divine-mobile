@@ -12,6 +12,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/verify/verify_proof_input.dart';
 import 'package:openvine/blocs/verify/verify_rejection.dart';
 import 'package:openvine/utils/async_utils.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -116,25 +117,19 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     }
     if (isClosed) return;
 
-    if (!result.verified && result.code == verifierUnavailableCode) {
-      // The verifier could not check the proof right now: the platform did not
-      // answer, or a check limit was hit. That is no verdict on the proof, so
-      // it is logged and counted apart from a rejection: a dashboard that
-      // ignores `reason` would otherwise read an outage as a spike in rejected
-      // proofs. Analytics gets only the platform key, so nothing that
-      // identifies anyone, and the person is told to try again.
+    if (result.isInconclusive) {
+      // No verdict on the proof, so it is counted apart from a rejection: a
+      // dashboard that ignores `reason` would read an outage as rejections.
       Log.warning(
         'Verifier could not check ${claim.platform}:${claim.identity}: '
         '${result.error ?? 'no reason given'}',
         name: 'VerifyConnectCubit',
       );
-      unawaited(
-        _analytics.logEvent(
-          name: 'verify_proof_unavailable',
-          parameters: {'platform': claim.platform},
-        ),
+      _logOutcome(
+        name: 'verify_proof_unavailable',
+        parameters: {'platform': claim.platform},
       );
-      return _fail(verifyErrorForCode(result.code));
+      return _fail(VerifyConnectError.verifierUnreachable);
     }
 
     if (!result.verified) {
@@ -155,14 +150,12 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       // no signal at all we cannot tell one stuck person from everybody.
       // `reason` is a fixed vocabulary and `platform` is a platform key, so
       // neither carries the npub, the handle, the link or the message.
-      unawaited(
-        _analytics.logEvent(
-          name: 'verify_proof_rejected',
-          parameters: {
-            'platform': claim.platform,
-            'reason': result.code ?? 'none',
-          },
-        ),
+      _logOutcome(
+        name: 'verify_proof_rejected',
+        parameters: {
+          'platform': claim.platform,
+          'reason': result.code ?? 'none',
+        },
       );
       return _fail(verifyErrorForCode(result.code));
     }
@@ -503,6 +496,19 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   static void _logNotSigned(String platform) => Log.warning(
     'The $platform link was not signed',
     name: 'VerifyConnectCubit',
+  );
+
+  // Fire-and-forget, so a failed write is logged rather than escaping as an
+  // uncaught error. runDetached still sends a broken invariant (a StateError
+  // or TypeError) to crash reporting, where a bare catch would hide it.
+  void _logOutcome({
+    required String name,
+    required Map<String, Object> parameters,
+  }) => runDetached(
+    _analytics.logEvent(name: name, parameters: parameters),
+    'record the $name analytics event',
+    logName: 'VerifyConnectCubit',
+    category: LogCategory.system,
   );
 
   // Back to editing, so any sign-in waiting for approval goes too.

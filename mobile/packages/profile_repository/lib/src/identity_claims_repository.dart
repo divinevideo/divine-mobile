@@ -214,16 +214,6 @@ class IdentityClaimsRepository {
   /// results (divine-identify-verification-service/src/utils/cache.ts:4).
   static const Duration verifiedTtl = Duration(hours: 24);
 
-  /// The verifier's stable code for "couldn't be checked right now": the
-  /// platform did not answer, the check itself failed, or the verifier's own
-  /// rate limit was hit
-  /// (divine-identify-verification-service/src/routes/verify.ts). In each case
-  /// there is no verdict on the proof, so a batch containing it must not write
-  /// new verdicts to the local snapshot; otherwise an outage or a rate-limit
-  /// burst could overwrite real verdicts. (Per-claim confirmed negatives inside
-  /// such a batch are conclusive and are still pruned.)
-  static const String _temporarilyUnavailableCode = 'temporarily_unavailable';
-
   final VerifierClient _verifierClient;
   final IdentityVerificationsDao? _verificationsDao;
   final NostrClient? _nostrClient;
@@ -1244,12 +1234,12 @@ class IdentityClaimsRepository {
   /// On success the persistent snapshot for [pubkey] is updated: verified
   /// tuples are stored with the batch's minimum `checked_at`; a zero-verified
   /// response deletes the snapshot. Only positive verdicts are ever persisted —
-  /// and when any result is inconclusive (see [_temporarilyUnavailableCode]) no
-  /// new verdicts are written, so a rate-limit burst or a platform outage
-  /// cannot overwrite real verdicts. The one exception: entries whose own
-  /// result is a confirmed negative are pruned from the snapshot even in an
-  /// inconclusive batch, so a negated claim cannot keep resurrecting from
-  /// cache.
+  /// and when any result is inconclusive (see
+  /// [VerificationResult.isInconclusive]) no new verdicts are written, so a
+  /// rate-limit burst or a platform outage cannot overwrite real verdicts. The
+  /// one exception: entries whose own result is a confirmed negative are
+  /// pruned from the snapshot even in an inconclusive batch, so a negated
+  /// claim cannot keep resurrecting from cache.
   ///
   /// Throws [VerifierClientException] subtypes.
   Future<_VerificationOutcome> _verifyClaims({
@@ -1267,12 +1257,12 @@ class IdentityClaimsRepository {
     };
     final inconclusiveKeys = <String>{
       for (final r in results)
-        if (_isInconclusiveResult(r))
+        if (r.isInconclusive)
           '${r.platform.toLowerCase()}:${r.identity.toLowerCase()}',
     };
     final confirmedNegativeKeys = <String>{
       for (final r in results)
-        if (!r.verified && !_isInconclusiveResult(r))
+        if (!r.verified && !r.isInconclusive)
           '${r.platform.toLowerCase()}:${r.identity.toLowerCase()}',
     };
     final verified = claims
@@ -1394,9 +1384,6 @@ class IdentityClaimsRepository {
       );
     }
   }
-
-  static bool _isInconclusiveResult(VerificationResult result) =>
-      !result.verified && result.code == _temporarilyUnavailableCode;
 
   /// Normalized comparison tuple for snapshot matching.
   static (String, String, String) _tupleOf(IdentityClaim claim) =>
