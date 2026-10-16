@@ -95,6 +95,35 @@ void main() {
       });
     });
 
+    group('isInconclusive', () {
+      VerificationResult unverified({String? code}) => VerificationResult(
+        platform: 'github',
+        identity: 'octocat',
+        verified: false,
+        checkedAt: 1,
+        cached: false,
+        code: code,
+      );
+
+      test('is true when the verifier could not check the claim', () {
+        expect(
+          unverified(code: 'temporarily_unavailable').isInconclusive,
+          isTrue,
+        );
+      });
+
+      test('is false for a rejection', () {
+        expect(
+          unverified(code: 'discord_author_mismatch').isInconclusive,
+          isFalse,
+        );
+      });
+
+      test('is false for a rejection without a code', () {
+        expect(unverified().isInconclusive, isFalse);
+      });
+    });
+
     group('clean values', () {
       test('parses the clean proof and account the verifier sends', () {
         final result = VerificationResult.fromJson(const {

@@ -54,13 +54,23 @@ class VerificationResult extends Equatable {
 
   /// Stable machine-readable reason the claim isn't verified, when the verifier
   /// sends one. Most codes are rejections, but `temporarily_unavailable` means
-  /// the claim couldn't be checked right now: no verdict either way.
+  /// the claim couldn't be checked right now: no verdict either way (see
+  /// [isInconclusive]).
   ///
   /// Unlike [error], this is safe to branch on: the service treats these as a
   /// fixed vocabulary. It is null for platforms that have not adopted codes and
   /// for any deployment older than them, so a caller must have a fallback —
   /// and must keep it for values a newer service invents.
   final String? code;
+
+  /// Whether the verifier could not check the claim right now, so the result
+  /// is no verdict on the proof either way.
+  ///
+  /// The verifier says so when the platform did not answer, the check itself
+  /// failed, or its per-pubkey or per-platform limit was hit. Its per-IP limit
+  /// answers HTTP 429 instead, which the client throws as a
+  /// `VerifierApiException` rather than returning a result.
+  bool get isInconclusive => !verified && code == _temporarilyUnavailableCode;
 
   /// The proof to publish instead of the one sent, when the verifier
   /// confirmed the claim and reduced the proof to a simpler stable form: a
@@ -94,6 +104,9 @@ class VerificationResult extends Equatable {
     canonicalIdentity,
   ];
 }
+
+// Set in divine-identify-verification-service/src/routes/verify.ts.
+const _temporarilyUnavailableCode = 'temporarily_unavailable';
 
 // A clean value is optional extra, so a malformed one is ignored rather than
 // failing the parse: in a batch that would fail every claim's result.
