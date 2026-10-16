@@ -1,5 +1,10 @@
 # Smart User Ranking Implementation Plan
 
+> **Status:** historical. Part A shipped in #10155 and Parts B and C in
+> #10172, at schema v24 because main took v22 and v23 first. Review rounds
+> changed parts of this plan, so the code and the design spec are the source
+> of truth.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rank every user list (share sheet, DM picker, search, follow lists,
@@ -257,22 +262,22 @@ Change each one's mirrored test.
 
 Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase origin/main` before starting.
 
-### Task 5 (B1): The `my_followers` Drift table and DAO (schema v22)
+### Task 5 (B1): The `my_followers` Drift table and DAO (schema v24)
 
 **Files:**
 - Modify: `mobile/packages/db_client/lib/src/database/tables.dart`. Add `MyFollowers` after `RemovedMessageIds`, and give it a doc comment stating the retention policy from spec §5.
 - Create: `mobile/packages/db_client/lib/src/database/daos/my_followers_dao.dart`. Export it from `daos/daos.dart`.
 - Modify: `app_database.dart`:
   - register the table and DAO in `@DriftDatabase`;
-  - `schemaVersion => 22`;
-  - add the `onUpgrade` step `if (from < 22 && to >= 22) await m.createTable(myFollowers);`.
+  - `schemaVersion => 24`;
+  - add the `onUpgrade` step `if (from < 24 && to >= 24) await m.createTable(myFollowers);`.
 - Generate:
   - run `dart run build_runner build --delete-conflicting-outputs`, then `dart run drift_dev make-migrations`;
-  - commit `drift_schemas/app_database/drift_schema_v22.json`, the regenerated `app_database.steps.dart` and `test/drift/app_database/generated/*`.
-- Modify: `packages/db_client/MIGRATIONS.md`. Bump "Current Schema Version" to 22 and add a v22 paragraph.
+  - commit `drift_schemas/app_database/drift_schema_v24.json`, the regenerated `app_database.steps.dart` and `test/drift/app_database/generated/*`.
+- Modify: `packages/db_client/MIGRATIONS.md`. Bump "Current Schema Version" to 24 and add a v24 paragraph.
 - Test:
   - `test/src/database/daos/my_followers_dao_test.dart`
-  - `test/drift/app_database/migration_test.dart`. Bump the two "current version" tests to 22, retarget the `vN migrates to v22` tests, and add `a v21 database gains my_followers`.
+  - `test/drift/app_database/migration_test.dart`. Bump the two "current version" tests to 24, retarget the `vN migrates to v24` tests, and add `a v21/v22/v23 database gains my_followers`.
 
 **Interfaces:**
 
@@ -301,11 +306,11 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
   - `replaceAll` drops followers missing from the input;
   - `followerSubset` with 1,200 candidates returns the correct intersection;
   - `clearAllForUser` leaves other owners alone.
-- [ ] **Step 2:** Write the failing migration test. `a v21 database gains my_followers` uses `verifier.schemaAt(21)`, then `migrateAndValidate(db, 22)`, then `upsertAll` and `followersOf` round-trip.
+- [ ] **Step 2:** Write the failing migration test. `a v21 database gains my_followers` (and the v22 and v23 variants) uses `verifier.schemaAt(21)`, then `migrateAndValidate(db, 24)`, then `upsertAll` and `followersOf` round-trip.
 - [ ] **Step 3: Run** `cd mobile/packages/db_client && mise exec -- flutter test`. Expect it to fail.
 - [ ] **Step 4: Implement** and generate, as listed under Files.
 - [ ] **Step 5: Run** the db_client tests and expect them to pass.
-- [ ] **Step 6: Commit:** `feat(db_client): add owner-scoped my_followers table (schema v22)`.
+- [ ] **Step 6: Commit:** `feat(db_client): add owner-scoped my_followers table (schema v24)`.
 
 ### Task 6 (B2): `FollowRepository` persists and syncs the follower set
 
@@ -693,5 +698,5 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
 
   Record both numbers in the PR body; the budget is 50 ms on a mid-range phone. Do not use a tagged test for this: under `very_good test --optimization`, a tag does not exclude a bundled file, so the benchmark would run in CI.
 - [ ] **Step 3:** `git fetch origin && git rebase origin/main && git push --force-with-lease -u origin feat/smart-user-ranking`.
-- [ ] **Step 4:** Open the PR with `gh pr create --base main --title "feat(people): rank user lists by closeness using an on-device social graph"`. The body has one section each for the local social graph and for ranking. It flags the default-sort change and schema v22, and includes screenshots of the share sheet, the DM picker and the following list.
+- [ ] **Step 4:** Open the PR with `gh pr create --base main --title "feat(people): rank user lists by closeness using an on-device social graph"`. The body has one section each for the local social graph and for ranking. It flags the default-sort change and schema v24, and includes screenshots of the share sheet, the DM picker and the following list.
 - [ ] **Step 5:** Run `gh pr checks <n> --watch`. Fix anything red, then request reviewers per `PR_REVIEW_TEAMS.md`.
