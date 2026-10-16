@@ -1759,7 +1759,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// and plays each clip's volume and equalizer itself.
     ///
     /// A lap longer than [LoopPcm.maxLoopSeconds] keeps the player's sound,
-    /// unequalized on a timeline, until it is trimmed shorter.
+    /// which plays without the equalizer — of a single clip or a timeline —
+    /// until it is trimmed shorter.
     private func startClipAudioLoop() {
         releaseClipAudioLoop()
         let generation = clipAudioGeneration
