@@ -1,5 +1,7 @@
 // ABOUTME: Widget tests that pasting a Nostr identifier in search opens it.
 
+import 'dart:async';
+
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -36,6 +38,13 @@ void main() {
       '81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95';
   final npub = NostrKeyUtils.encodePubKey(authorHex);
   final note1 = Nip19.encodeNoteId(hexId);
+  final video = VideoEvent(
+    id: hexId,
+    pubkey: authorHex,
+    createdAt: 1700000000,
+    content: '',
+    timestamp: DateTime.utc(2023, 11, 14),
+  );
 
   setUpAll(() {
     registerFallbackValue(defaultVideoSearchSort);
@@ -167,15 +176,7 @@ void main() {
         when(
           () => mockVideosRepository.lookupVideoForRouteId(hexId),
         ).thenAnswer(
-          (_) async => VideoRouteHiddenByFilter(
-            VideoEvent(
-              id: hexId,
-              pubkey: authorHex,
-              createdAt: 1700000000,
-              content: '',
-              timestamp: DateTime.utc(2023, 11, 14),
-            ),
-          ),
+          (_) async => VideoRouteHiddenByFilter(video),
         );
 
         await tester.pumpWidget(createTestWidget());
@@ -183,6 +184,26 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('video:$hexId'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'drops a lookup that finishes after the query was replaced',
+      (tester) async {
+        final videoLookup = Completer<VideoRouteLookupResult>();
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(hexId),
+        ).thenAnswer((_) => videoLookup.future);
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.enterText(find.byType(TextField), hexId);
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'cats');
+        videoLookup.complete(VideoRouteFound(video));
+        await tester.pumpAndSettle();
+
+        expect(find.text('video:$hexId'), findsNothing);
+        expect(find.byType(SearchResultsPage), findsOneWidget);
       },
     );
 
