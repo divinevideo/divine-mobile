@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:divine_camera/divine_camera.dart' show CameraLensMetadata;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' as model show AspectRatio;
@@ -52,7 +53,7 @@ final capturedChromaKeyBakerProvider = Provider<CapturedChromaKeyBaker>(
 class ClipManagerNotifier extends Notifier<ClipManagerState> {
   int _clipCounter = 0;
   Timer? _recordingDurationTimer;
-  final _recordStopwatch = Stopwatch();
+  final Stopwatch _recordStopwatch = clock.stopwatch();
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
 

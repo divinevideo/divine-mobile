@@ -7,6 +7,7 @@ import 'package:divine_camera/divine_camera.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio, AudioEvent;
@@ -71,6 +72,23 @@ class _RecordingTraceMonitor implements PerformanceTraceMonitor {
 }
 
 class _MockClipManager extends Mock implements ClipManagerNotifier {}
+
+/// Uses the real recording timer and addClip; library I/O is outside this test.
+class _RecordingClipManager extends ClipManagerNotifier {
+  @override
+  Future<bool> saveClipToLibrary(DivineVideoClip clip) async => true;
+}
+
+class _RecordingVideoEditor extends VideoEditorNotifier {
+  @override
+  VideoEditorProviderState build() => VideoEditorProviderState();
+
+  @override
+  void invalidateFinalRenderedClip() {}
+
+  @override
+  void triggerAutosave() {}
+}
 
 class _MockVideoEditor extends Mock implements VideoEditorNotifier {}
 
@@ -2142,6 +2160,68 @@ void main() {
             captureChromaKey: any(named: 'captureChromaKey'),
           ),
         ).captured.cast<EditorVideo>();
+
+        test('a limit-wins take retains its real recorded duration', () {
+          fakeAsync((async) {
+            final container = ProviderContainer(
+              overrides: [
+                clipManagerProvider.overrideWith(_RecordingClipManager.new),
+                videoEditorProvider.overrideWith(_RecordingVideoEditor.new),
+              ],
+            );
+            final realClipManager = container.read(
+              clipManagerProvider.notifier,
+            );
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => null);
+            final bloc =
+                VideoRecorderBloc(
+                  readClipManager: () => realClipManager,
+                  readVideoEditor: () => videoEditor,
+                  readVideoEditorState: VideoEditorProviderState.new,
+                  readSharedPreferences: () => prefs,
+                  cameraServiceFactory:
+                      ({
+                        required onUpdateState,
+                        required onAutoStopped,
+                        onScreenFlashChanged,
+                      }) {
+                        autoStopCallback = onAutoStopped;
+                        return cameraService;
+                      },
+                )..emit(
+                  const VideoRecorderBlocState(
+                    recordingState: VideoRecorderState.recording,
+                  ),
+                );
+            realClipManager.startRecording();
+            async.elapse(const Duration(seconds: 6));
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              const Duration(seconds: 6),
+            );
+
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            async.flushMicrotasks();
+            expect(bloc.state.isRecording, isFalse);
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              Duration.zero,
+            );
+            autoStopCallback(reportedTake());
+            async.flushMicrotasks();
+
+            expect(realClipManager.clips, hasLength(1));
+            expect(
+              realClipManager.clips.single.duration,
+              const Duration(seconds: 6),
+            );
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+            container.dispose();
+          });
+        });
 
         test(
           'adds the take once when the limit reports it again (#10194)',
