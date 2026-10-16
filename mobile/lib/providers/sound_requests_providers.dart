@@ -18,6 +18,7 @@ import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/sound_requests/published_video_sound_client.dart';
 import 'package:openvine/services/sound_requests/sound_request_dm_client.dart';
 import 'package:openvine/services/sound_requests/sound_request_preferences_store.dart';
+import 'package:openvine/services/video_sharing_service.dart';
 
 final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
   ref,
@@ -98,8 +99,9 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
     },
     fetchSound: sounds.fetchSoundById,
   );
-  String link(String address) =>
-      'https://divine.video/video/${Uri.encodeComponent(address.split(':').sublist(2).join(':'))}';
+  String link(String address) => VideoSharingService.shareUrlForStableId(
+    Uri.encodeComponent(address.split(':').sublist(2).join(':')),
+  );
   final repository = SoundRequestsRepository(
     ownerPubkey: owner,
     transport: SoundRequestDmClient(repository: dm, ownerPubkey: owner),
