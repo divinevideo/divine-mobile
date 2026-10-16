@@ -268,6 +268,33 @@ void main() {
       },
     );
 
+    test(
+      'a failed unfollow rollback restores membership without ranking waits',
+      () async {
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowingListLoadRequested());
+        load([_a, _b]);
+        await pumpEventQueue();
+        updates.add([_b]);
+        await pumpEventQueue();
+        expect(bloc.state.isFollowing(_a), isFalse);
+        final pending = Completer<Map<String, UserRankingSignals>>();
+        when(() => loader.load([_b, _a])).thenAnswer((_) => pending.future);
+        updates.add([_b, _a]);
+        await pumpEventQueue();
+        try {
+          expect(bloc.state.isFollowing(_a), isTrue);
+          expect(bloc.state.followingPubkeys, [_a, _b]);
+          verifyNever(() => loader.load([_b, _a]));
+        } finally {
+          pending.complete({
+            for (final key in [_a, _b]) key: UserRankingSignals(pubkey: key),
+          });
+        }
+      },
+    );
+
     test('equal scores sort by cached display name before pubkey', () async {
       when(() => loader.load(any())).thenAnswer(
         (_) async => {

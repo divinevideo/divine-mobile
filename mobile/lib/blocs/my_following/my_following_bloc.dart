@@ -101,6 +101,9 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
   final FollowRepository _followRepository;
   final ContentBlocklistRepository _blocklistRepository;
   StreamSubscription<List<String>>? _followingSubscription;
+  // Keep the last ranked membership so a failed optimistic edit can roll back
+  // without re-reading the local stores. This snapshot belongs to this bloc.
+  MyFollowingState? _lastRankedSnapshot;
 
   /// Filter pubkeys by removing blocked users.
   List<String> _filterPubkeys(List<String> pubkeys) =>
@@ -325,20 +328,26 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     // in flight, even though it belongs to another event-handler bucket.
     emit(state.copyWith(repositoryRevision: state.repositoryRevision + 1));
     final revision = state.repositoryRevision;
-    final previousKeys = state.rawFollowingPubkeys.toSet();
+    final rankedSnapshot = _lastRankedSnapshot ?? state;
     if (_rankForList &&
         state.isSmartOrderReady &&
-        event.pubkeys.every(previousKeys.contains)) {
+        event.pubkeys.every(rankedSnapshot.rankingSignals.containsKey)) {
       // Removing an existing row changes membership, not the retained ranking.
       final keys = event.pubkeys.toSet();
+      final smartOrder = rankedSnapshot.smartOrder
+          .where(keys.contains)
+          .toList();
+      final ordered =
+          state.sortOrder.followSortOrder?.fromFollowOrder(event.pubkeys) ??
+          smartOrder;
       emitIfOpen(
         state.copyWith(
           status: MyFollowingStatus.success,
           rawFollowingPubkeys: event.pubkeys,
-          followingPubkeys: _visiblePubkeys(event.pubkeys),
-          smartOrder: state.smartOrder.where(keys.contains).toList(),
+          followingPubkeys: _filterPubkeys(ordered),
+          smartOrder: smartOrder,
           rankingSignals: {
-            for (final entry in state.rankingSignals.entries)
+            for (final entry in rankedSnapshot.rankingSignals.entries)
               if (keys.contains(entry.key)) entry.key: entry.value,
           },
           isRefreshing: false,
@@ -356,7 +365,9 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
 
   void _emitRanked(MyFollowingState next) {
     final first = !state.isSmartOrderReady && next.isSmartOrderReady;
-    if (emitIfOpen(next) && first && _rankForList) {
+    if (!emitIfOpen(next)) return;
+    _lastRankedSnapshot = next;
+    if (first && _rankForList) {
       _rankingSignalsLoader!.refreshInBackground(next.followingPubkeys);
     }
   }
@@ -450,7 +461,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
       isRefreshing: state.isRefreshing,
     );
     if (!emit.isDone && identical(rawPubkeys, state.rawFollowingPubkeys)) {
-      emitIfOpen(refreshed);
+      _emitRanked(refreshed);
     }
   }
 
