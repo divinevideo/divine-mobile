@@ -28,10 +28,11 @@ class SoundRequestsCubit extends Cubit<SoundRequestsState> {
           emit(state.copyWith(snapshot: snapshot));
         }
       },
+      // Background reconciliation failures are not the outcome of the user's
+      // last action; affected requests carry their own failed status.
       onError: (Object error, StackTrace stack) {
         if (!isClosed && identical(_repository, repository)) {
           addError(error, stack);
-          emit(state.copyWith(operation: SoundRequestOperation.failed));
         }
       },
     );

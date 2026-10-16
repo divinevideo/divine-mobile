@@ -31,5 +31,26 @@ void main() {
       expect(cubit.state.operation, SoundRequestOperation.idle);
       expect(cubit.state.snapshot, const SoundRequestSnapshot());
     });
+
+    test(
+      'a background reconciliation error does not fail the last action',
+      () async {
+        final repo = _Repository();
+        final updates = StreamController<SoundRequestSnapshot>();
+        addTearDown(updates.close);
+        when(() => repo.ownerPubkey).thenReturn('owner');
+        when(repo.watchState).thenAnswer((_) => updates.stream);
+        when(repo.start).thenAnswer((_) async {});
+        when(() => repo.request('address')).thenAnswer((_) async => 'request');
+        final cubit = SoundRequestsCubit();
+        addTearDown(cubit.close);
+        await cubit.connect(repo);
+        expect(await cubit.request('address'), isTrue);
+        updates.addError(const SoundRequestException('offline'));
+        await pumpEventQueue();
+        expect(cubit.state.target, 'address');
+        expect(cubit.state.operation, SoundRequestOperation.sent);
+      },
+    );
   });
 }
