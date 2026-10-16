@@ -106,6 +106,55 @@ void main() {
         expect(declarationAt(report, '} else {'), isNot(contains(sendTake)));
       });
 
+      // A Stop, the max-duration auto-stop and a release each report through
+      // their own path, and the Finalize branch consumes those callbacks.
+      // Judging "unrequested" after that would report every Stop a second
+      // time and save the take twice.
+      test('an unrequested finalize is judged before the stop callbacks are '
+          'consumed', () {
+        final finalize = declarationAt(
+          controllerSource,
+          'is VideoRecordEvent.Finalize -> {',
+        );
+        final started = finalize.indexOf(
+          'val wasTrulyStarted = recordingTrulyStarted',
+        );
+        final requested = finalize.indexOf('val stopRequested = ');
+
+        expect(started, isNonNegative);
+        expect(requested, isNonNegative);
+        expect(
+          started,
+          lessThan(finalize.indexOf('recordingTrulyStarted = false')),
+        );
+        expect(
+          requested,
+          lessThan(finalize.indexOf('manualStopCallback = null')),
+        );
+        expect(
+          requested,
+          lessThan(finalize.indexOf('autoStopCallback = null')),
+        );
+        expect(
+          finalize.substring(
+            requested,
+            finalize.indexOf('isRecording = false', requested),
+          ),
+          allOf(
+            contains('manualStopCallback != null'),
+            contains('autoStopCallback != null'),
+            contains('isReleased'),
+          ),
+        );
+        expect(
+          declarationAt(finalize, 'if (isUnsolicitedFinalize('),
+          allOf(
+            contains('trulyStarted = wasTrulyStarted'),
+            contains('stopRequested = stopRequested'),
+          ),
+        );
+      });
+
       // CameraX stops on its own for broken encoders too, and documents that
       // output as not properly constructed: only a playable file is the take.
       test('an unrequested finalize hands over only a playable file', () {
