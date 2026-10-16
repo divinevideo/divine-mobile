@@ -369,7 +369,11 @@ class _LoadedView extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         if (!appealDuplicatesPrimary) ...[
+          // Keyed so a refresh that adds a primary action above it moves the
+          // button rather than rebuilding it, which would drop an open that
+          // is still in flight.
           _AppealSupportButton(
+            key: const ValueKey('appealSupport'),
             path: appealPath,
             openSupportMessages: openSupportMessages,
             composeEmail: composeEmail,
@@ -533,6 +537,7 @@ class _AppealSupportButton extends StatelessWidget {
     this.path,
     this.openSupportMessages,
     this.composeEmail,
+    super.key,
   });
 
   /// The screen the appeal opens, or null to open private support.
