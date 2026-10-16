@@ -222,6 +222,39 @@ void main() {
       expect(stored.map((m) => m.id), containsAll(['a' * 64, 'b' * 64]));
     });
 
+    test(
+      'a distinct same-second message resurfaces a dismissed thread',
+      () async {
+        await deliverNip17(
+          wrapId: 'w' * 64,
+          rumorId: 'a' * 64,
+          text: 'first',
+          createdAt: _baseCreatedAt,
+        );
+        final conversationId = (await conversationsDao.getAllConversations(
+          ownerPubkey: _owner,
+        )).single.id;
+        await repository.setConversationDismissed(
+          conversationId,
+          dismissed: true,
+        );
+        await deliverNip17(
+          wrapId: 'x' * 64,
+          rumorId: 'b' * 64,
+          text: 'second',
+          createdAt: _baseCreatedAt,
+        );
+
+        final row = (await conversationsDao.getConversation(
+          conversationId,
+          ownerPubkey: _owner,
+        ))!;
+        expect(await storedMessages(), hasLength(2));
+        expect(row.isDismissed, isFalse);
+        expect(row.isRead, isFalse);
+      },
+    );
+
     test('the cross-protocol twin of the first is still collapsed', () async {
       await deliverNip17(
         wrapId: 'w' * 64,
