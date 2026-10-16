@@ -331,7 +331,7 @@ Then:
   (or equivalent primary vs secondary code paths) where relevant.
 - [ ] CI: `build / build` (divine_ui coverage), `Analyze`,
   `Tests (shard N/total)` for every shard, `Goldens`, aggregate
-  `Mobile CI`, `Format`, `Generated Files`, `Guards`, `Async Safety` all green before requesting
+  `Mobile CI`, `Format`, `Generated Files`, `Guards` all green before requesting
   review — plus `iOS Native Tests` whenever the change touches `mobile/ios`,
   a package's `ios/` or `darwin/` directory, a `pubspec.yaml`/`pubspec.lock`
   that decides plugin registration, or the workflow and detector themselves.
