@@ -367,6 +367,31 @@ class VideoEditorCanvas extends StatelessWidget {
     required int currentGeneration,
   }) => generation == currentGeneration;
 
+  /// Runs [releases] together and completes once every one has settled.
+  ///
+  /// Never throws: a release that threw used to end the Done flow before it
+  /// reopened the players, leaving every preview on its poster for the rest
+  /// of the session. [runDetached] still logs and reports each failure.
+  @visibleForTesting
+  static Future<void> releaseDecodersForExport(
+    List<Future<void> Function()> releases,
+  ) async {
+    await Future.wait([
+      for (final release in releases) _settled(Future.sync(release)),
+    ]);
+  }
+
+  static Future<void> _settled(Future<void> release) {
+    runDetached(
+      release,
+      'release a decoder before export',
+      logName: 'VideoEditorCanvas',
+      category: LogCategory.video,
+    );
+    // The failure is runDetached's to report; this only marks completion.
+    return release.then<void>((_) {}, onError: (_) {});
+  }
+
   /// Decides how to reconcile the clip [snapshot] read from the editor's
   /// current undo/redo history entry with the app clip state.
   ///
@@ -2400,9 +2425,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             context,
             timeout: VideoEditorConstants.coverTransitionTimeout,
           ));
-      await Future.wait([
-        _releasePlayer(),
-        _releaseDetachedClipPlayers(previewReleased),
+      await VideoEditorCanvas.releaseDecodersForExport([
+        _releasePlayer,
+        () => _releaseDetachedClipPlayers(previewReleased),
       ]);
     } finally {
       // Always open the gate so the render can never wedge, even if the release

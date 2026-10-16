@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart' show PlatformException;
@@ -543,6 +544,42 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('VideoEditorCanvas.releaseDecodersForExport', () {
+    test('completes once every release has settled', () async {
+      final preview = Completer<void>();
+      final detached = Completer<void>();
+      var released = false;
+      unawaited(
+        VideoEditorCanvas.releaseDecodersForExport([
+          () => preview.future,
+          () => detached.future,
+        ]).then((_) => released = true),
+      );
+
+      preview.complete();
+      await pumpEventQueue();
+      expect(released, isFalse, reason: 'a detached clip still holds one');
+
+      detached.complete();
+      await pumpEventQueue();
+      expect(released, isTrue);
+    });
+
+    test('carries on past a release that throws', () async {
+      var detachedReleased = false;
+
+      // The Done flow awaits this before it can reopen the players on return.
+      await expectLater(
+        VideoEditorCanvas.releaseDecodersForExport([
+          () async => throw PlatformException(code: 'DISPOSE_FAILED'),
+          () async => detachedReleased = true,
+        ]),
+        completes,
+      );
+      expect(detachedReleased, isTrue);
     });
   });
 
