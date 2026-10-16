@@ -7498,6 +7498,14 @@ class AppLocalizationsAm extends AppLocalizations {
       'የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይለጥፉ።';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'መሣሪያዎ ይህን ያህል የተነጠሉ ቅንጥቦችን በአንድ ጊዜ ወደ ውጭ መላክ አይችልም። ጥቂቶቹን ወደ ጊዜ መስመሩ ይመልሱ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'መሣሪያዎ ይህን ያህል የተነጠሉ ቅንጥቦችን በአንድ ጊዜ ወደ ውጭ መላክ አይችልም። ረቂቁን በአራሚው ውስጥ ይክፈቱት፣ ጥቂቶቹን ወደ ጊዜ መስመሩ ይመልሱ፣ ከዚያ እንደገና ይለጥፉ።';
+
+  @override
   String get publishErrorUnknownServer => 'ያልታወቀ አገልጋይ';
 
   @override

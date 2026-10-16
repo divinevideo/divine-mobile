@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -543,6 +546,92 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('VideoEditorCanvas.releaseDecodersForExport', () {
+    test('completes once every release has settled', () async {
+      final preview = Completer<void>();
+      final detached = Completer<void>();
+      var released = false;
+      unawaited(
+        VideoEditorCanvas.releaseDecodersForExport([
+          () => preview.future,
+          () => detached.future,
+        ]).then((_) => released = true),
+      );
+
+      preview.complete();
+      await pumpEventQueue();
+      expect(released, isFalse, reason: 'a detached clip still holds one');
+
+      detached.complete();
+      await pumpEventQueue();
+      expect(released, isTrue);
+    });
+
+    test('carries on past a release that throws', () async {
+      var detachedReleased = false;
+
+      // The Done flow awaits this before it can reopen the players on return.
+      await expectLater(
+        VideoEditorCanvas.releaseDecodersForExport([
+          () async => throw PlatformException(code: 'DISPOSE_FAILED'),
+          () async => detachedReleased = true,
+        ]),
+        completes,
+      );
+      expect(detachedReleased, isTrue);
+    });
+
+    test('stops waiting for a release that never settles', () {
+      fakeAsync((async) {
+        var released = false;
+        unawaited(
+          VideoEditorCanvas.releaseDecodersForExport([
+            () => Completer<void>().future,
+          ]).then((_) => released = true),
+        );
+
+        async.elapse(
+          VideoEditorConstants.decoderReleaseTimeout -
+              const Duration(milliseconds: 1),
+        );
+        expect(released, isFalse);
+
+        // The export would otherwise never start.
+        async.elapse(const Duration(milliseconds: 1));
+        expect(released, isTrue);
+      });
+    });
+  });
+
+  group('VideoEditorCanvas.isLatestDoneAfterRender', () {
+    test('lets the Done that started the export reopen the players', () {
+      expect(
+        VideoEditorCanvas.isLatestDoneAfterRender(
+          done: 1,
+          latestDone: () => 1,
+          waitForRenderIdle: () async {},
+        ),
+        completion(isTrue),
+      );
+    });
+
+    test('hands the return to a Done that landed during the wait', () async {
+      var latestDone = 1;
+      final render = Completer<void>();
+      final isLatest = VideoEditorCanvas.isLatestDoneAfterRender(
+        done: 1,
+        latestDone: () => latestDone,
+        waitForRenderIdle: () => render.future,
+      );
+
+      // Back from the post screen and Done again while the first export runs.
+      latestDone = 2;
+      render.complete();
+
+      expect(await isLatest, isFalse);
     });
   });
 

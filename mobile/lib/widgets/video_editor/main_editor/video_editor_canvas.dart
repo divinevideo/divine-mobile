@@ -55,6 +55,7 @@ import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
@@ -366,6 +367,61 @@ class VideoEditorCanvas extends StatelessWidget {
     required int currentGeneration,
   }) => generation == currentGeneration;
 
+  /// Runs [releases] together and completes once every one has settled, or
+  /// after [VideoEditorConstants.decoderReleaseTimeout] at the latest.
+  ///
+  /// Never throws: a release that threw used to end the Done flow before it
+  /// reopened the players, leaving every preview on its poster for the rest
+  /// of the session. [runDetached] still logs and reports each failure. The
+  /// export waits on this, so one that never settles must not hold it back.
+  @visibleForTesting
+  static Future<void> releaseDecodersForExport(
+    List<Future<void> Function()> releases,
+  ) async {
+    const timeout = VideoEditorConstants.decoderReleaseTimeout;
+    await Future.wait([
+      for (final release in releases) _settled(Future.sync(release)),
+    ]).timeout(
+      timeout,
+      onTimeout: () {
+        Log.warning(
+          '🎬 Decoders still releasing after ${timeout.inSeconds}s; '
+          'starting the export anyway',
+          name: 'VideoEditorCanvas',
+          category: LogCategory.video,
+        );
+        return const [];
+      },
+    );
+  }
+
+  /// Waits out the export, then says whether the Done numbered [done] still
+  /// owns the editor's return.
+  ///
+  /// A later Done started an export of its own and reopens the players on its
+  /// own return. An earlier Done whose wait outlives it must not reopen them
+  /// while that export runs, so [latestDone] is read after the wait.
+  @visibleForTesting
+  static Future<bool> isLatestDoneAfterRender({
+    required int done,
+    required int Function() latestDone,
+    required Future<void> Function() waitForRenderIdle,
+  }) async {
+    await waitForRenderIdle();
+    return done == latestDone();
+  }
+
+  static Future<void> _settled(Future<void> release) {
+    runDetached(
+      release,
+      'release a decoder before export',
+      logName: 'VideoEditorCanvas',
+      category: LogCategory.video,
+    );
+    // The failure is runDetached's to report; this only marks completion.
+    return release.then<void>((_) {}, onError: (_) {});
+  }
+
   /// Decides how to reconcile the clip [snapshot] read from the editor's
   /// current undo/redo history entry with the app clip state.
   ///
@@ -564,6 +620,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// so this is always created (in [_handleDone]) before it is awaited.
   Completer<void>? _decoderReleaseGate;
   bool _isMetadataRouteActive = false;
+
+  /// Bumped by every Done, so only the latest one reopens the players.
+  int _doneGeneration = 0;
 
   /// Closes the [InterruptedRenderMonitor] marker of the layer capture that
   /// pro_image_editor runs between [_handleDone] and [_handleEditorComplete].
@@ -1799,6 +1858,23 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     await player.dispose();
   }
 
+  /// Tears down every detached clip's player along with the preview player.
+  ///
+  /// The export composites each detached clip with a decoder of its own on top
+  /// of the timeline track's. Every player left open holds one more, and on
+  /// Android the export then fails to start a decoder once the device runs out:
+  /// 12 detached clips failed this way on a Galaxy S26 (#10141). Setting
+  /// [released] makes each layer let go of its player synchronously, so the
+  /// pool finds all of them idle and can tear them down at once rather than
+  /// after its grace window.
+  Future<void> _releaseDetachedClipPlayers(
+    ValueNotifier<bool>? released,
+  ) async {
+    if (released == null || !mounted) return;
+    released.value = true;
+    await detachedClipPlayers.disposeIdle();
+  }
+
   /// Schedules the timeline sounds on the stop-motion audio engine, mirroring
   /// the native `setAudioTracks` mapping: each sound's window comes from its
   /// timeline item, and the source is clipped to the sound's own start offset
@@ -2346,6 +2422,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
     );
+    final done = ++_doneGeneration;
     // A stop-motion composition has no native player — its playback is the
     // widget-driven ticker, whose playing state lives in the bloc. Read before
     // _stopMotionClock.pause() below clears it.
@@ -2368,7 +2445,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // is actually driven by the push (the canvas context resolves to the inner
     // route, which the outer push never animates). Falls back to the canvas
     // context — timeout-bounded — when the scope didn't provide it.
-    final awaitCover = VideoEditorScope.of(context).awaitPushCoverTransition;
+    final scope = VideoEditorScope.of(context);
+    final awaitCover = scope.awaitPushCoverTransition;
+    final previewReleased = scope.previewReleasedNotifier;
     final gate = _decoderReleaseGate = Completer<void>();
     _isMetadataRouteActive = true;
     final navigation = context.push(
@@ -2380,7 +2459,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             context,
             timeout: VideoEditorConstants.coverTransitionTimeout,
           ));
-      await _releasePlayer();
+      await VideoEditorCanvas.releaseDecodersForExport([
+        _releasePlayer,
+        () => _releaseDetachedClipPlayers(previewReleased),
+      ]);
     } finally {
       // Always open the gate so the render can never wedge, even if the release
       // throws.
@@ -2397,14 +2479,23 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (!mounted) return;
     // Stop-motion has no player to rebuild (_clipPaths is empty, which the
     // guard below would take as "nothing to resume"); restarting its ticker is
-    // the whole resume.
-    if (_isStopMotionComposition) {
-      if (wasPlaying) _stopMotionClock.play(from: resumePosition);
-      return;
+    // the whole resume, apart from the detached clips.
+    if (_isStopMotionComposition && wasPlaying) {
+      _stopMotionClock.play(from: resumePosition);
     }
-    if (_clipPaths.isEmpty) return;
-    await ref.read(videoEditorProvider.notifier).waitForRenderIdle();
-    if (!mounted || _clipPaths.isEmpty) return;
+    final isLatestDone = await VideoEditorCanvas.isLatestDoneAfterRender(
+      done: done,
+      latestDone: () => _doneGeneration,
+      waitForRenderIdle: ref
+          .read(videoEditorProvider.notifier)
+          .waitForRenderIdle,
+    );
+    // A later Done started another export, which needs the decoders now; its
+    // own return reopens the players.
+    if (!mounted || !isLatestDone) return;
+    // Opens the detached clips' players again, alongside the preview player.
+    previewReleased?.value = false;
+    if (_isStopMotionComposition || _clipPaths.isEmpty) return;
     await _initializePlayer(_clipPaths, startPosition: resumePosition);
     if (mounted && wasPlaying) {
       await _videoPlayer?.play();

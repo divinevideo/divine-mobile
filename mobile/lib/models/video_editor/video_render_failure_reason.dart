@@ -25,7 +25,15 @@ enum VideoRenderFailureReason {
   /// the user picked. The editor preview plays the same sound straight from
   /// the network, so a silent export used to be the only sign the download
   /// had failed — and it came after the post was already public.
-  audioUnavailable('audio_unavailable');
+  audioUnavailable('audio_unavailable'),
+
+  /// The device ran out of decoders compositing the detached clips (#10141).
+  ///
+  /// The export decodes all detached clips at once, one decoder each, on top
+  /// of the timeline track. Past what the device can open, a retry fails the
+  /// same way, so the UI asks the user to put some clips back on the timeline
+  /// instead.
+  tooManyDetachedClips('too_many_detached_clips');
 
   const VideoRenderFailureReason(this.traceValue);
 
