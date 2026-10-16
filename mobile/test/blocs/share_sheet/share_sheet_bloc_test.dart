@@ -317,6 +317,28 @@ void main() {
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
+        'ties use pubkeys for absent names',
+        setUp: () {
+          signals({
+            alice: UserRankingSignals(pubkey: alice),
+            bob: UserRankingSignals(pubkey: bob),
+          });
+          when(
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => [profile(bob, 'A')]);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([bob, alice]),
+          readyWith([bob]),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
         'an account with no follows still includes a DM-only counterpart',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
@@ -485,7 +507,7 @@ void main() {
         () async {
           final hydration = Completer<Map<String, UserProfile>>();
           when(() => mockFollowRepository.followingPubkeys)
-              .thenReturn([bob, alice]);
+              .thenReturn([alice, bob]);
           when(
             () => mockProfileRepository.getCachedProfiles(
               pubkeys: any(named: 'pubkeys'),
@@ -504,7 +526,7 @@ void main() {
           when(() => mockRankingSignalsLoader.refreshInBackground(any()))
               .thenAnswer((_) {
                 expect(bloc.state.status, ShareSheetStatus.ready);
-                expect(bloc.state.contacts.map((c) => c.pubkey), [bob, alice]);
+                expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob]);
                 verifyNever(
                   () => mockProfileRepository.fetchBatchProfiles(
                     pubkeys: any(named: 'pubkeys'),
@@ -515,18 +537,18 @@ void main() {
           await bloc.stream.firstWhere(
             (s) => s.status == ShareSheetStatus.ready,
           );
-          expect(bloc.state.contacts.map((c) => c.pubkey), [bob, alice]);
+          expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob]);
           bloc.add(
             ShareSheetRecipientToggled(
               ShareableUser(pubkey: carol, displayName: 'Picked Carol'),
             ),
           );
           await pumpEventQueue();
-          expect(bloc.state.contacts.map((c) => c.pubkey), [bob, alice, carol]);
+          expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob, carol]);
           hydration.complete({bob: profile(bob, 'Zebra')});
           await pumpEventQueue();
-          expect(bloc.state.contacts.map((c) => c.pubkey), [bob, alice, carol]);
-          expect(bloc.state.contacts.first.displayName, 'Zebra');
+          expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob, carol]);
+          expect(bloc.state.contacts[1].displayName, 'Zebra');
           expect(bloc.state.selectedRecipients.single.pubkey, carol);
           await bloc.close();
         },

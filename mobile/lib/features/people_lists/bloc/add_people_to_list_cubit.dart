@@ -14,6 +14,7 @@ import 'package:openvine/features/people_lists/models/people_list_candidate.dart
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 /// Cubit backing the full-screen add-people picker for a people list.
 ///
@@ -104,11 +105,16 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// this map at every emit so sort order and filter inputs stay in sync.
   final Map<String, PeopleListCandidate> _candidatesByPubkey = {};
 
+  // New relationship rows get permanent positions only once their local
+  // signals and display metadata are ready, never from a pubkey-only sort.
+  final Set<String> _pendingCandidates = {};
+
   /// Load candidates. Emits [AddPeopleToListStatus.ready] on success and
   /// [AddPeopleToListStatus.failure] on error.
   Future<void> started() async {
     if (isClosed) return;
     final snapshot = state;
+    _pendingCandidates.clear();
     final revision = snapshot.loadRevision + 1;
     emitIfOpen(
       state.copyWith(
@@ -313,7 +319,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     }
 
     if (newlyAdded.isNotEmpty) {
-      unawaited(_hydrateProfiles(newlyAdded, state.loadRevision));
+      _pendingCandidates.addAll(newlyAdded);
+      unawaited(_prepareNewCandidates(newlyAdded, state.loadRevision));
     }
 
     _emitCandidates();
@@ -336,9 +343,52 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     }
 
     if (newlyAdded.isNotEmpty) {
-      unawaited(_hydrateProfiles(newlyAdded, state.loadRevision));
+      _pendingCandidates.addAll(newlyAdded);
+      unawaited(_prepareNewCandidates(newlyAdded, state.loadRevision));
     }
 
+    _emitCandidates();
+  }
+
+  Future<void> _prepareNewCandidates(List<String> pubkeys, int revision) async {
+    final signals = await loadFollowListRankingSignals(
+      pubkeys: pubkeys,
+      loader: _rankingSignalsLoader,
+      logName: 'AddPeopleToListCubit',
+      onError: (error, stackTrace) =>
+          _reportRankingError(error, stackTrace, revision),
+    );
+    if (!_isCurrent(revision)) return;
+    await _hydrateProfiles(pubkeys, revision, waitForFresh: true);
+    if (!_isCurrent(revision)) return;
+    final order = rankUsers(
+      signals.values.where(
+        (signal) => _rankingSignalsLoader.isEligible(signal.pubkey),
+      ),
+      now: DateTime.now(),
+      nameOf: (key) {
+        final name = _candidatesByPubkey[key]?.displayName?.trim();
+        return name == null || name.isEmpty ? key : name;
+      },
+    );
+    for (final key in pubkeys) {
+      _pendingCandidates.remove(key);
+      if (!order.contains(key)) _candidatesByPubkey.remove(key);
+    }
+    final positions = Map<String, int>.of(state.candidatePositions);
+    for (final key in order) {
+      positions.putIfAbsent(key, () => positions.length);
+    }
+    emitIfOpen(
+      state.copyWith(
+        rankingSignals: Map.unmodifiable({...state.rankingSignals, ...signals}),
+        rankingCandidatePubkeys: Set.unmodifiable({
+          ...state.rankingCandidatePubkeys,
+          ...pubkeys,
+        }),
+        candidatePositions: Map.unmodifiable(positions),
+      ),
+    );
     _emitCandidates();
   }
 
@@ -354,7 +404,11 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// a background [ProfileRepository.fetchFreshProfile] — when that
   /// completes (or fails), the candidate row is updated and a new state
   /// is emitted.
-  Future<void> _hydrateProfiles(List<String> pubkeys, int revision) async {
+  Future<void> _hydrateProfiles(
+    List<String> pubkeys,
+    int revision, {
+    bool waitForFresh = false,
+  }) async {
     final repo = _profileRepository;
     if (repo == null) return;
 
@@ -366,7 +420,11 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
         if (cached != null && _applyProfile(pk, cached)) {
           changed = true;
         } else {
-          unawaited(_fetchFreshAndApply(pk, revision));
+          if (waitForFresh) {
+            await _fetchFreshAndApply(pk, revision);
+          } else {
+            unawaited(_fetchFreshAndApply(pk, revision));
+          }
         }
       } catch (error, stackTrace) {
         if (!_isCurrent(revision)) return;
@@ -429,7 +487,11 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   /// Deterministic, stable sort used for [AddPeopleToListState.candidates].
   List<PeopleListCandidate> _sortedCandidates() {
     final list = _candidatesByPubkey.values
-        .where((candidate) => _isEligibleCandidate(candidate.pubkey))
+        .where(
+          (candidate) =>
+              !_pendingCandidates.contains(candidate.pubkey) &&
+              _isEligibleCandidate(candidate.pubkey),
+        )
         .toList();
     list.sort(_compareCandidates);
     return List.unmodifiable(list);

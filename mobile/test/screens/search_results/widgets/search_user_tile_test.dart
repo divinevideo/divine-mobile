@@ -40,6 +40,7 @@ void main() {
       Nip05VerificationStatus verificationStatus = Nip05VerificationStatus.none,
       FollowRelationship relationship = FollowRelationship.none,
       DateTime? lastPostedAt,
+      int? videoCount,
     }) {
       return testProviderScope(
         additionalOverrides: [
@@ -54,11 +55,49 @@ void main() {
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: SearchUserTile(profile: profile, lastPostedAt: lastPostedAt),
+            body: SearchUserTile(
+              profile: profile,
+              lastPostedAt: lastPostedAt,
+              videoCount: videoCount,
+            ),
           ),
         ),
       );
     }
+
+    testWidgets('positive current count wins over the ranking cache', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(rawData: const {'video_count': 18}),
+          videoCount: 2,
+        ),
+      );
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(2, '2')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('ambiguous current zero retains a positive cached count', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(rawData: const {'video_count': 0}),
+          videoCount: 2,
+        ),
+      );
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(2, '2')),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('adds cached recent post to the pinned existing details', (
       tester,

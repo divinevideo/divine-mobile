@@ -37,7 +37,12 @@ class SearchUserTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final videoCount = this.videoCount ?? profile.restVideoCount;
+    // A positive people-search count is current evidence. Search responses
+    // can also carry an ambiguous zero, so retain cached activity in that case.
+    final currentCount = profile.restVideoCount;
+    final videoCount = currentCount != null && currentCount > 0
+        ? currentCount
+        : this.videoCount ?? currentCount;
     final claimedNip05 = profile.shortDisplayNip05;
     final shouldCheckNip05 = claimedNip05 != null && claimedNip05.isNotEmpty;
     final verificationStatus = shouldCheckNip05
