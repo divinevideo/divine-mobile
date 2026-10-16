@@ -667,6 +667,51 @@ void main() {
       expect(find.byType(DetachedClipLayerView), findsOneWidget);
     });
 
+    testWidgets('waits for a player still opening before export proceeds', (
+      tester,
+    ) async {
+      final opening = Completer<DetachedClipPlayer?>();
+      unawaited(detachedClipPlayers.acquire(key, () => opening.future));
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        previewReleased: previewReleased,
+      );
+      detachedClipPlayers.release(key);
+      previewReleased.value = true;
+      var released = false;
+      unawaited(detachedClipPlayers.disposeIdle().then((_) => released = true));
+      await tester.pump();
+      expect(released, isFalse, reason: 'opening still owns a decoder');
+
+      final fake = _fakePlayer();
+      opening.complete(fake);
+      await tester.pump();
+      expect(released, isTrue);
+      expect(fake.disposed, isTrue);
+      expect(detachedClipPlayers.entryCount, 0);
+    });
+
+    testWidgets('does not retain an idle player when mounted during export', (
+      tester,
+    ) async {
+      final fake = _fakePlayer();
+      await detachedClipPlayers.acquire(key, () async => fake);
+      detachedClipPlayers.release(key);
+      previewReleased.value = true;
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        previewReleased: previewReleased,
+      );
+      await detachedClipPlayers.disposeIdle();
+      await tester.pump();
+      expect(fake.disposed, isTrue);
+      expect(shownPlayer(tester), isNull);
+    });
+
     testWidgets('plays again once the editor has the decoders back', (
       tester,
     ) async {

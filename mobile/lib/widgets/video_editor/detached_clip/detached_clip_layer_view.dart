@@ -213,6 +213,8 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     if (identical(released, _previewReleased)) return;
     _previewReleased?.removeListener(_onPreviewReleasedChanged);
     _previewReleased = released?..addListener(_onPreviewReleasedChanged);
+    // initState may have resumed a pooled player before the scope was known.
+    if (_isPreviewReleased) _onPreviewReleasedChanged();
   }
 
   /// Gives the player back while an export holds the decoders, and opens a
@@ -311,23 +313,20 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     final generation = ++_loadGeneration;
     bool superseded() => !mounted || generation != _loadGeneration;
 
-    final previousKey = _heldKey;
     _player?.detach();
-    _heldKey = null;
 
     final key = detachedClipPlayerKey(widget.meta);
     final documentsPath = await getDocumentsPath();
-    if (superseded()) {
-      // Nobody else will: `_heldKey` was cleared above, so neither the load
-      // that superseded this one nor `dispose` knows about the old player.
-      if (previousKey != null) detachedClipPlayers.release(previousKey);
-      return;
-    }
+    // Keep ownership visible across every await: a release signal or dispose
+    // must be able to return even a player that has not finished opening.
+    if (superseded()) return;
 
+    final previousKey = _heldKey;
     final data = DetachedClipLayerData.fromMeta(widget.meta, documentsPath);
     final clip = data?.clip;
     if (clip == null || key == null) {
       if (previousKey != null) detachedClipPlayers.release(previousKey);
+      _heldKey = null;
       return;
     }
     setState(() {
@@ -339,26 +338,23 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // when the editor gets them back.
     if (_isPreviewReleased) {
       if (previousKey != null) detachedClipPlayers.release(previousKey);
+      _heldKey = null;
       return;
     }
 
-    final player = await detachedClipPlayers.acquire(
+    final opening = detachedClipPlayers.acquire(
       key,
       () => DetachedClipPlayer.open(clip),
     );
     // Released only after the acquire, so reloading onto the same source keeps
     // the entry alive instead of dropping it to zero refs in between.
     if (previousKey != null) detachedClipPlayers.release(previousKey);
-
-    if (superseded()) {
-      detachedClipPlayers.release(key);
-      // An export took the decoders while this player was opening, so it must
-      // not sit out the grace window.
-      if (_isPreviewReleased) unawaited(detachedClipPlayers.disposeIdle());
-      return;
-    }
-
     _heldKey = key;
+    final player = await opening;
+
+    // The superseding load, release signal or dispose owns the reference now.
+    if (superseded()) return;
+
     setState(() => _player = player);
     // `superseded()` above already proved this state is still mounted, but the
     // lint cannot see through the closure.
