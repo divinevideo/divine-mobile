@@ -220,8 +220,17 @@ class _SearchResultsScope extends ConsumerWidget {
             ),
           ),
         ),
+        // The route paints no background of its own while the Scaffold above
+        // is offstage.
         if (profileRepository == null)
-          const Center(child: DivineCircularProgressIndicator()),
+          ColoredBox(
+            color: context.vineColors.surface,
+            child: const Center(
+              child: DivineCircularProgressIndicator(
+                color: VineTheme.vineGreen,
+              ),
+            ),
+          ),
       ],
     );
   }

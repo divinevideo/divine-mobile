@@ -755,6 +755,20 @@ void main() {
 
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
+      final context = tester.element(
+        find.byType(DivineCircularProgressIndicator),
+      );
+      expect(
+        find.ancestor(
+          of: find.byType(DivineCircularProgressIndicator),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is ColoredBox &&
+                widget.color == context.vineColors.surface,
+          ),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows search when the profile repository becomes available', (
