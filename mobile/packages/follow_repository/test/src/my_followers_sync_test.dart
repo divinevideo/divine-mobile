@@ -94,6 +94,60 @@ class _UnreadableFollowersDao extends _MemoryFollowersDao {
   ) async => throw StateError('database is locked');
 }
 
+class _FlakyFollowersDao extends _MemoryFollowersDao {
+  bool failReads = false;
+  @override
+  Future<List<({String pubkey, int? followedAt})>> followersOf(String owner) {
+    if (failReads) throw StateError('database is locked');
+    return super.followersOf(owner);
+  }
+}
+
+class _UnwritableFollowersDao extends _MemoryFollowersDao {
+  void Function()? beforeFailure;
+  @override
+  Future<void> replaceAll({
+    required String ownerPubkey,
+    required Iterable<({String pubkey, int? followedAt})> followers,
+    required int seenAt,
+  }) async {
+    beforeFailure?.call();
+    throw StateError('database is full');
+  }
+}
+
+class _CappedFollowerIndexer extends _CompleteFollowerIndexer {
+  _CappedFollowerIndexer(
+    super.url,
+    super.relayStatus,
+    super.follower, {
+    this.count = 1,
+    int? maxLimit = 1,
+  }) {
+    if (maxLimit != null) {
+      info = RelayInfo('', '', '', '', const [], '', '', maxLimit: maxLimit);
+    }
+  }
+  final int count;
+  late List<dynamic> request;
+  @override
+  Future<bool> doConnect() async {
+    request = List<dynamic>.of(pendingMessages.first);
+    for (var i = 0; i < count; i++) {
+      await onMessage?.call(this, [
+        'EVENT',
+        'test',
+        {
+          'pubkey': i == 0 ? follower : i.toRadixString(16).padLeft(64, '0'),
+          'created_at': 100,
+        },
+      ]);
+    }
+    await onMessage?.call(this, ['EOSE', 'test']);
+    return true;
+  }
+}
+
 class _PartialRelay extends RelayBase {
   _PartialRelay(super.url, super.relayStatus, this.follower);
   final String follower;
@@ -688,6 +742,143 @@ void main() {
         expect(dao.replacements, 1);
       },
     );
+    for (final failure in ['read', 'write']) {
+      for (final path in ['get', 'stream', 'cached']) {
+        test(
+          '$path returns live followers despite durable $failure failure',
+          () async {
+            dao = failure == 'read'
+                ? _UnreadableFollowersDao()
+                : _UnwritableFollowersDao();
+            await repository.dispose();
+            repository = build();
+            when(
+              () => client.queryEvents(any()),
+            ).thenAnswer((_) async => [contact(first, 100)]);
+            if (path == 'get') {
+              expect(await repository.getMyFollowers(), [first]);
+            } else if (path == 'stream') {
+              expect(await repository.streamMyFollowers().toList(), [
+                [first],
+              ]);
+            } else {
+              final cacheDao = FakeCacheDao();
+              await CacheSync.init(dao: cacheDao);
+              await cacheDao.write(
+                key: '$owner:my_followers',
+                payload: FollowersSnapshot(pubkeys: [stale], count: 1).toJson(),
+              );
+              final results = await repository
+                  .watchMyFollowersCached()
+                  .toList();
+              expect(results.first.data.pubkeys, [stale]);
+              expect(results.last.isLive, isTrue);
+              expect(results.last.data.pubkeys, [first]);
+            }
+            expect(
+              repository.relationshipTo(first),
+              FollowRelationship.followsYou,
+            );
+            expect((await MyFollowersSyncState().read(owner)).full, isNull);
+          },
+        );
+      }
+    }
+
+    test(
+      'indexer advertises a smaller cap so EOSE cannot prune known rows',
+      () async {
+        dao.rows[owner] = {stale: 50};
+        await repository.dispose();
+        late _CappedFollowerIndexer indexer;
+        repository = build(
+          indexers: ['wss://capped.example'],
+          relayFactory: (url, status) =>
+              indexer = _CappedFollowerIndexer(url, status, first),
+        );
+        await repository.syncMyFollowers();
+        final request = indexer.request;
+        expect((request[2] as Map<String, dynamic>)['limit'], 5000);
+        expect(dao.rows[owner], {stale: 50, first: 100});
+        expect(dao.replacements, 0);
+        expect((await MyFollowersSyncState().read(owner)).full, isNull);
+      },
+    );
+
+    test(
+      'indexer EOSE at the requested limit remains merge-only without NIP-11',
+      () async {
+        dao.rows[owner] = {stale: 50};
+        await repository.dispose();
+        repository = build(
+          indexers: ['wss://capped.example'],
+          relayFactory: (url, status) => _CappedFollowerIndexer(
+            url,
+            status,
+            first,
+            count: 5000,
+            maxLimit: null,
+          ),
+        );
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner], hasLength(5001));
+        expect(dao.rows[owner]![stale], 50);
+        expect(dao.replacements, 0);
+        expect((await MyFollowersSyncState().read(owner)).full, isNull);
+      },
+    );
+
+    test(
+      'partial storage fallback keeps earlier in-memory followers',
+      () async {
+        final flakyDao = _FlakyFollowersDao();
+        dao = flakyDao;
+        await repository.dispose();
+        repository = build();
+        when(
+          () => client.queryEvents(any()),
+        ).thenAnswer((_) async => [contact(first, 100)]);
+        await repository.getMyFollowers();
+        final completedAt = now;
+        now += 901;
+        flakyDao.failReads = true;
+        when(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).thenAnswer(
+          (_) async => QueryResult(
+            events: [contact(second, 200)],
+            endedBy: QueryEnd.deadline,
+          ),
+        );
+        expect(await repository.getMyFollowers(), [second]);
+        expect(repository.relationshipTo(first), FollowRelationship.followsYou);
+        expect(
+          repository.relationshipTo(second),
+          FollowRelationship.followsYou,
+        );
+        expect((await MyFollowersSyncState().read(owner)).full, completedAt);
+      },
+    );
+
+    test(
+      'failed persistence cannot cache followers into a switched account',
+      () async {
+        final failingDao = _UnwritableFollowersDao()
+          ..beforeFailure = () =>
+              when(() => client.publicKey).thenReturn(otherOwner);
+        dao = failingDao;
+        await repository.dispose();
+        repository = build();
+        when(
+          () => client.queryEvents(any()),
+        ).thenAnswer((_) async => [contact(first, 100)]);
+        expect(await repository.getMyFollowers(), [first]);
+        expect(repository.relationshipTo(first), FollowRelationship.none);
+        expect((await MyFollowersSyncState().read(owner)).full, isNull);
+        expect((await MyFollowersSyncState().read(otherOwner)).full, isNull);
+      },
+    );
+
     test('getMyFollowers persists to the table', () async {
       when(
         () => client.queryEvents(any()),

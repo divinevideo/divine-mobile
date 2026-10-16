@@ -669,9 +669,27 @@ class FollowRepository {
     List<_FollowerRef> refs, {
     required bool complete,
   }) async {
-    await _persistMyFollowers(owner, refs, replace: complete);
-    if (complete && _isCurrentFollowerOwner(owner)) {
-      await _myFollowersSyncState.stampFull(owner, _nowSeconds());
+    try {
+      await _persistMyFollowers(owner, refs, replace: complete);
+      if (complete && _isCurrentFollowerOwner(owner)) {
+        await _myFollowersSyncState.stampFull(owner, _nowSeconds());
+      }
+    } catch (error) {
+      Log.warning(
+        'Failed to persist followers: $error',
+        name: 'FollowRepository',
+        category: LogCategory.system,
+      );
+      // Network success remains usable when the optional durable cache fails.
+      // Incomplete reads retain any relationship observations already in memory.
+      if (_isCurrentFollowerOwner(owner)) {
+        _cacheMyFollowers(owner, [
+          if (!complete && _myFollowersOwner == owner)
+            for (final key in _cachedMyFollowersPubkeys)
+              (pubkey: key, followedAt: null),
+          ...refs,
+        ]);
+      }
     }
   }
 
@@ -944,27 +962,36 @@ class FollowRepository {
     var deliveredDurable = false;
     final dao = _myFollowersDao;
     if (dao != null && owner.isNotEmpty) {
-      final rows = await dao.followersOf(owner);
-      final checkpoint = await _myFollowersSyncState.read(owner);
-      if (!_isCurrentFollowerOwner(owner)) return;
-      if (rows.isNotEmpty || checkpoint.full != null) {
-        _cacheMyFollowers(owner, rows);
-        final persisted = await _loadPersistedStats(owner);
+      try {
+        final rows = await dao.followersOf(owner);
+        final checkpoint = await _myFollowersSyncState.read(owner);
         if (!_isCurrentFollowerOwner(owner)) return;
-        final count =
-            _followerStatsCache[owner]?.stats.followers ??
-            persisted?.followers ??
-            0;
-        deliveredDurable = true;
-        yield CacheResult.cached(
-          FollowersSnapshot(
-            pubkeys: List.unmodifiable(_cachedMyFollowersPubkeys),
-            count: count,
-            datedCount: _cachedMyFollowersDatedCount,
-          ),
+        if (rows.isNotEmpty || checkpoint.full != null) {
+          _cacheMyFollowers(owner, rows);
+          final persisted = await _loadPersistedStats(owner);
+          if (!_isCurrentFollowerOwner(owner)) return;
+          final count =
+              _followerStatsCache[owner]?.stats.followers ??
+              persisted?.followers ??
+              0;
+          deliveredDurable = true;
+          yield CacheResult.cached(
+            FollowersSnapshot(
+              pubkeys: List.unmodifiable(_cachedMyFollowersPubkeys),
+              count: count,
+              datedCount: _cachedMyFollowersDatedCount,
+            ),
+          );
+        }
+      } catch (error) {
+        Log.warning(
+          'Failed to load durable followers: $error',
+          name: 'FollowRepository',
+          category: LogCategory.system,
         );
       }
     }
+    if (_disposed || owner != _nostrClient.publicKey) return;
     await for (final result in CacheSync.watchOne<FollowersSnapshot>(
       key: _myFollowersCacheKey(owner),
       fetch: fetchMyFollowersSnapshot,
@@ -1707,6 +1734,7 @@ class FollowRepository {
       final filter = <String, dynamic>{
         'kinds': <int>[EventKind.contactList],
         '#p': <String>[pubkey],
+        'limit': 5000,
       };
       relay.pendingMessages.add(<dynamic>['REQ', subscriptionId, filter]);
 
@@ -2188,6 +2216,7 @@ class FollowRepository {
       final filter = <String, dynamic>{
         'kinds': <int>[EventKind.contactList],
         '#p': <String>[pubkey],
+        'limit': 5000,
       };
       relay.pendingMessages.add(<dynamic>['REQ', subscriptionId, filter]);
 
@@ -2215,7 +2244,13 @@ class FollowRepository {
         deadline,
         onTimeout: () => false,
       );
-      return (refs: result, anySourceFailed: failed);
+      return (
+        refs: result,
+        // Match the SDK's size-cap rule: EOSE at either the requested bound
+        // or the relay's advertised smaller bound cannot prove absence.
+        anySourceFailed:
+            failed || result.length >= min(5000, relay.info?.maxLimit ?? 5000),
+      );
     } catch (e) {
       Log.warning(
         'Error querying $indexerUrl for followers: $e',
