@@ -58,8 +58,10 @@ String verifyPlatformLabel(String platform) {
 ///
 /// Mirrors the placeholders in the verifier's own form
 /// (`divine-identify-verification-service/src/index.ts`), so someone moving
-/// between web and app is asked for the same thing. Names are reserved
-/// examples (`example`), never a name a real person might own.
+/// between web and app is asked for the same thing. Discord departs from it:
+/// the verifier's placeholder there is an English phrase, and these hints are
+/// not translated. Names are reserved examples (`example`), never a name a
+/// real person might own.
 String verifyIdentityHint(String platform) {
   return switch (platform.toLowerCase()) {
     'github' => 'octocat',
@@ -67,7 +69,7 @@ String verifyIdentityHint(String platform) {
     'mastodon' => 'mastodon.social/@example',
     'telegram' => 'mychannel',
     'bluesky' => 'example.bsky.social',
-    'discord' => 'your Discord username',
+    'discord' => 'example',
     'youtube' => 'UC… or @channelhandle',
     'tiktok' => 'username',
     _ => '',

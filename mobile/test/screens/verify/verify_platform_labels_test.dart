@@ -110,9 +110,14 @@ void main() {
       expect(verifyIdentityHint('mastodon'), 'mastodon.social/@example');
       expect(verifyIdentityHint('telegram'), 'mychannel');
       expect(verifyIdentityHint('bluesky'), 'example.bsky.social');
-      expect(verifyIdentityHint('discord'), 'your Discord username');
       expect(verifyIdentityHint('youtube'), 'UC… or @channelhandle');
       expect(verifyIdentityHint('tiktok'), 'username');
+    });
+
+    // The verifier's Discord placeholder is an English phrase, and the hints
+    // are not translated, so it would reach every locale in English.
+    test('Discord asks for the reserved name, not an English phrase', () {
+      expect(verifyIdentityHint('discord'), 'example');
     });
 
     test('proof hints use the same example names', () {
