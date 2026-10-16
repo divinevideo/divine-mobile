@@ -21,6 +21,7 @@ class VideoRecorderClassicActionsBottom extends StatelessWidget {
     final state = context.select(
       (VideoRecorderBloc b) => (
         isRecording: b.state.isRecording,
+        hasRecordingInFlight: b.state.hasRecordingInFlight,
         isFrontCamera: b.state.isFrontCamera,
         showGridLines: b.state.showGridLines,
         showLastClipOverlay: b.state.showLastClipOverlay,
@@ -49,9 +50,13 @@ class VideoRecorderClassicActionsBottom extends StatelessWidget {
                   : l10n.videoRecorderCameraValueBack,
               size: .small,
               type: .ghostSecondary,
-              onPressed: () => context.read<VideoRecorderBloc>().add(
-                const VideoRecorderCameraSwitched(),
-              ),
+              // The recorder refuses a flip while a take starts or finishes,
+              // so show it disabled instead of dropping the tap.
+              onPressed: state.hasRecordingInFlight
+                  ? null
+                  : () => context.read<VideoRecorderBloc>().add(
+                      const VideoRecorderCameraSwitched(),
+                    ),
             ),
             DivineIconButton(
               icon: .gridNine,

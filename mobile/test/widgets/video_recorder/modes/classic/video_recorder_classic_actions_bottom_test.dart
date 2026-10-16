@@ -37,6 +37,8 @@ void main() {
 
     Widget buildWidget({
       VideoRecorderState recordingState = VideoRecorderState.idle,
+      bool isStartingRecording = false,
+      bool isStoppingRecording = false,
       bool showLastClipOverlay = false,
       bool showGridLines = false,
       bool isFrontCamera = false,
@@ -44,6 +46,8 @@ void main() {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
           recordingState: recordingState,
+          isStartingRecording: isStartingRecording,
+          isStoppingRecording: isStoppingRecording,
           isCameraInitialized: true,
           canRecord: true,
           showLastClipOverlay: showLastClipOverlay,
@@ -234,6 +238,35 @@ void main() {
         );
         expect(find.byType(SnackBar), findsNothing);
       });
+
+      // Before the native start and while a clip is finalized the row is
+      // still visible, but the recorder refuses a flip.
+      for (final (phase, starting, stopping) in [
+        ('starting', true, false),
+        ('being finalized', false, true),
+      ]) {
+        testWidgets('disables the flip button while a take is $phase', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildWidget(
+              isStartingRecording: starting,
+              isStoppingRecording: stopping,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(
+            find.byType(DivineIconButton).first,
+            warnIfMissed: false,
+          );
+          await tester.pump();
+
+          verifyNever(
+            () => recorderBloc.add(const VideoRecorderCameraSwitched()),
+          );
+        });
+      }
 
       testWidgets('shows snackbar when ghost frame is toggled', (tester) async {
         await tester.pumpWidget(buildWidget());

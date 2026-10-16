@@ -44,6 +44,8 @@ void main() {
 
     Widget buildWidget({
       VideoRecorderState recordingState = VideoRecorderState.idle,
+      bool isStartingRecording = false,
+      bool isStoppingRecording = false,
       VideoRecorderMode recorderMode = VideoRecorderMode.capture,
       DivineFlashMode flashMode = DivineFlashMode.auto,
       TimerDuration timerDuration = TimerDuration.off,
@@ -63,6 +65,8 @@ void main() {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
           recordingState: recordingState,
+          isStartingRecording: isStartingRecording,
+          isStoppingRecording: isStoppingRecording,
           recorderMode: recorderMode,
           flashMode: flashMode,
           timerDuration: timerDuration,
@@ -224,6 +228,38 @@ void main() {
         );
         final widget = tester.widget<InkWell>(inkWell);
         expect(widget.onTap, isNull);
+      });
+
+      InkWell switchButton(WidgetTester tester) => tester.widget<InkWell>(
+        find.descendant(
+          of: findByTooltip(l10n.videoRecorderSwitchCameraLabel),
+          matching: find.byType(InkWell),
+        ),
+      );
+
+      testWidgets('is enabled when no take is in flight', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(switchButton(tester).onTap, isNotNull);
+      });
+
+      // Before the native start and while a clip is finalized the rail is
+      // still visible, but the recorder refuses a flip.
+      testWidgets('is disabled while a take is starting', (tester) async {
+        await tester.pumpWidget(buildWidget(isStartingRecording: true));
+        await tester.pumpAndSettle();
+
+        expect(switchButton(tester).onTap, isNull);
+      });
+
+      testWidgets('is disabled while a take is being finalized', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(isStoppingRecording: true));
+        await tester.pumpAndSettle();
+
+        expect(switchButton(tester).onTap, isNull);
       });
     });
 
