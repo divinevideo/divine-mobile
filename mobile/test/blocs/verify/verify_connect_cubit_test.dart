@@ -248,6 +248,45 @@ void main() {
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'counts "could not check right now" as its own outcome, not a rejection',
+        setUp: () async {
+          await LogCaptureService().clearAllLogs();
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async =>
+                _result(verified: false, code: 'temporarily_unavailable'),
+          );
+        },
+        build: () => build(_github),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('octocat')
+            ..proofChanged('abc');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          verify(
+            () => analytics.logEvent(
+              name: 'verify_proof_unavailable',
+              parameters: {'platform': 'github'},
+            ),
+          ).called(1);
+          verifyNever(
+            () => analytics.logEvent(
+              name: 'verify_proof_rejected',
+              parameters: any(named: 'parameters'),
+            ),
+          );
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          final logged = LogCaptureService()
+              .getRecentLogs()
+              .map((entry) => entry.message)
+              .join('\n');
+          expect(logged, contains('Verifier could not check github:octocat'));
+          expect(logged, isNot(contains('Verifier rejected')));
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
         'names an absent code rather than dropping the event',
         setUp: () {
           when(
