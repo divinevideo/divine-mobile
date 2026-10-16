@@ -98,12 +98,24 @@ class _GatedSeamService extends TransitionSeamRenderService {
 class _GatedSpeedService extends ClipSpeedRenderService {
   final pending = <String, Completer<RenderedSpeedClip?>>{};
 
+  /// Renders [cancelRenders] dropped, still waiting to settle.
+  final cancelled = <String, Completer<RenderedSpeedClip?>>{};
+
   @override
   bool isRendering(DivineVideoClip clip) => pending.containsKey(clip.id);
 
   @override
-  Future<RenderedSpeedClip?> render(DivineVideoClip clip) =>
-      pending.putIfAbsent(clip.id, Completer.new).future;
+  Future<RenderedSpeedClip?> render(DivineVideoClip clip) {
+    // Like the real service: a clip at 1× has nothing to render.
+    if ((clip.playbackSpeed ?? 1.0) == 1.0) return Future.value();
+    return pending.putIfAbsent(clip.id, Completer.new).future;
+  }
+
+  @override
+  void cancelRenders() {
+    cancelled.addAll(pending);
+    pending.clear();
+  }
 
   Future<void> land(DivineVideoClip clip) async {
     const rendered = RenderedSpeedClip(
@@ -111,7 +123,7 @@ class _GatedSpeedService extends ClipSpeedRenderService {
       duration: Duration(milliseconds: 1500),
     );
     cacheForTest(clip, rendered);
-    final completer = pending.remove(clip.id)!;
+    final completer = pending.remove(clip.id) ?? cancelled.remove(clip.id)!;
     completer.complete(rendered);
     await completer.future;
   }
@@ -266,6 +278,67 @@ void main() {
         composition.ensureSpeedClipsRendered(clips);
 
         expect(speeds.pending.keys, ['middle']);
+      });
+    });
+
+    group('suspendRenders', () {
+      late DivineVideoClip a;
+      late DivineVideoClip b;
+      late DivineVideoClip fast;
+
+      setUp(() {
+        a = _clip('a', transition: _dissolve);
+        b = _clip('b');
+        fast = _clip('fast', playbackSpeed: 2);
+        clips = [a, b, fast];
+        composition
+          ..ensureSeamsRendered(clips)
+          ..ensureSpeedClipsRendered(clips);
+      });
+
+      test('cancels the running seam and speed renders and starts none until '
+          'resumeRenders', () {
+        expect(seams.pending.keys, [seams.seamKey(a, b, _dissolve)]);
+        expect(speeds.pending.keys, ['fast']);
+        expect(composition.pendingSeamRenders.value, 1);
+
+        composition
+          ..suspendRenders()
+          ..ensureSeamsRendered(clips)
+          ..ensureSpeedClipsRendered(clips);
+
+        expect(seams.cancelled.keys, [seams.seamKey(a, b, _dissolve)]);
+        expect(seams.pending, isEmpty);
+        expect(speeds.cancelled.keys, ['fast']);
+        expect(speeds.pending, isEmpty);
+        expect(composition.pendingSeamRenders.value, 0);
+
+        composition
+          ..resumeRenders()
+          ..ensureSeamsRendered(clips)
+          ..ensureSpeedClipsRendered(clips);
+
+        expect(seams.pending.keys, [seams.seamKey(a, b, _dissolve)]);
+        expect(speeds.pending.keys, ['fast']);
+        expect(composition.pendingSeamRenders.value, 1);
+      });
+
+      test('does not report a render that lands while suspended, and keeps '
+          'it for after resumeRenders', () async {
+        composition.suspendRenders();
+        await seams.land(a, b);
+        await speeds.land(fast);
+
+        expect(seamLandings, 0);
+        expect(speedLandings, 0);
+
+        composition
+          ..resumeRenders()
+          ..ensureSeamsRendered(clips)
+          ..ensureSpeedClipsRendered(clips);
+
+        expect(seams.renderCalls, 1);
+        expect(speeds.pending, isEmpty);
       });
     });
 

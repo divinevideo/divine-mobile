@@ -417,6 +417,55 @@ void main() {
       });
     });
 
+    group('cancelRenders', () {
+      test('cancels the running native renders, drops the queued one and '
+          'keeps the bodies already rendered', () async {
+        final native = _FakeProVideoEditor();
+        editor.ProVideoEditor.instance = native;
+        final kept = clip('kept', playbackSpeed: 2);
+        final service = ClipSpeedRenderService()..cacheForTest(kept, rendered);
+        final first = clip('a0', playbackSpeed: 2);
+
+        final pending = [
+          service.render(first),
+          for (var i = 1; i < 3; i++)
+            service.render(clip('a$i', playbackSpeed: 2)),
+        ];
+        await native.renderStartedAt(1).future;
+        await pumpEventQueue();
+
+        service.cancelRenders();
+        await pumpEventQueue();
+
+        expect(
+          native.cancelledTaskIds,
+          unorderedEquals(native.renderedTaskIds),
+        );
+        expect(service.isRendering(first), isFalse);
+
+        native
+          ..allowRenderToFinishAt(0).complete()
+          ..allowRenderToFinishAt(1).complete();
+        expect(await Future.wait(pending), [null, null, null]);
+        await pumpEventQueue();
+
+        expect(
+          native.renderCount,
+          2,
+          reason: 'the queued third clip must be abandoned, not encoded',
+        );
+        expect(service.cached(kept), same(rendered));
+        expect(service.cached(first), isNull);
+
+        // Asked for again, a cancelled clip reaches the encoder afresh.
+        final again = service.render(first);
+        await native.renderStartedAt(2).future;
+        expect(native.renderCount, 3);
+        native.allowRenderToFinishAt(2).complete();
+        expect(await again, isNotNull);
+      });
+    });
+
     group('disk cleanup', () {
       test(
         'renders speed files under temporary cache instead of documents',

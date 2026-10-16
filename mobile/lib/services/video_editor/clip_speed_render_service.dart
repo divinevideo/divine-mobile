@@ -14,7 +14,12 @@ import 'package:openvine/services/video_editor/video_editor_render_service.dart'
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, ProVideoEditor, VideoRenderData, VideoSegment;
+    show
+        EditorVideo,
+        ProVideoEditor,
+        RenderCanceledException,
+        VideoRenderData,
+        VideoSegment;
 import 'package:unified_logger/unified_logger.dart';
 
 /// A clip body rendered to a plain, normal-rate file with its
@@ -52,7 +57,14 @@ class ClipSpeedRenderService {
 
   final _cache = <String, RenderedSpeedClip>{};
   final _inFlight = <String, Future<RenderedSpeedClip?>>{};
-  int _clearGeneration = 0;
+
+  /// Bumped by [clear] and [cancelRenders]; a render started under an older
+  /// generation discards its result.
+  int _generation = 0;
+
+  /// Native task ids of the renders encoding right now, so [cancelRenders]
+  /// can stop them.
+  final _runningTaskIds = <String>{};
 
   /// Process-wide count of native speed renders started, so every attempt
   /// gets a task id of its own — see [_nativeTaskId].
@@ -117,7 +129,7 @@ class ClipSpeedRenderService {
     // non-null). Re-checked here so the type is provably non-null below.
     final video = clip.video;
     if (video == null) return null;
-    final renderGeneration = _clearGeneration;
+    final renderGeneration = _generation;
     String? tempOutput;
     String? tempPath;
     String? cachePath;
@@ -151,6 +163,7 @@ class ClipSpeedRenderService {
       // — the preview player crops the texture itself, exactly as it does for
       // the raw live-retimed clip, so nothing is double-cropped.
       await _renderSlots.acquire();
+      String? taskId;
       try {
         // The editor may have closed, or this clip may have been edited again,
         // while the request waited for a slot. Bailing here keeps a queued
@@ -164,7 +177,8 @@ class ClipSpeedRenderService {
         // (#9347). The timeout throws through `finally`, which hands the slot
         // on, and the outer catch drops the key so the clip is retried on the
         // next timeline change.
-        final taskId = _nativeTaskId(hash);
+        taskId = _nativeTaskId(hash);
+        _runningTaskIds.add(taskId);
         await VideoRenderWatchdog.run(
           render: VideoEditorRenderService.renderNativeVideoToFile(
             tempOutput,
@@ -189,6 +203,7 @@ class ClipSpeedRenderService {
           reason: 'clip speed render timed out',
         );
       } finally {
+        if (taskId != null) _runningTaskIds.remove(taskId);
         _renderSlots.release();
       }
       if (_isStale(renderGeneration)) {
@@ -225,6 +240,9 @@ class ClipSpeedRenderService {
         category: LogCategory.video,
       );
       return rendered;
+    } on RenderCanceledException {
+      // The native task was cancelled, e.g. by [cancelRenders]; nothing failed.
+      return null;
     } catch (e, stackTrace) {
       Log.error(
         'Clip speed render failed',
@@ -247,7 +265,7 @@ class ClipSpeedRenderService {
     }
   }
 
-  bool _isStale(int renderGeneration) => renderGeneration != _clearGeneration;
+  bool _isStale(int renderGeneration) => renderGeneration != _generation;
 
   /// Loads a previously-rendered file from [path], or `null` (deleting it) when
   /// it can't be read or has no duration — e.g. a truncated file from a kill
@@ -395,11 +413,24 @@ class ClipSpeedRenderService {
   /// derived speed files it owns. In-flight renders are generation-invalidated
   /// so a late native completion cleans itself up instead of repopulating disk.
   void clear() {
-    _clearGeneration++;
+    _generation++;
     final cachedClips = _cache.values.toList();
     _cache.clear();
     _inFlight.clear();
     _deleteCachedFilesSync(cachedClips);
+  }
+
+  /// Stops every render that has not landed yet and keeps the bodies already
+  /// rendered.
+  ///
+  /// A queued render bails once it gets a slot, a running one has its native
+  /// task cancelled, and asking for the clip again starts a fresh attempt.
+  void cancelRenders() {
+    _generation++;
+    _inFlight.clear();
+    for (final taskId in _runningTaskIds) {
+      unawaited(VideoEditorRenderService.cancelTask(taskId));
+    }
   }
 
   /// Seeds the cache directly so [buildSeamAwarePlayerClips] can be exercised
