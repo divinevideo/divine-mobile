@@ -492,16 +492,18 @@ class _LoadedView extends ConsumerWidget {
       );
     }
 
-    // Only parent contact has a next step of its own; for any other resolution
-    // the next step is asking support, which the appeal button does.
-    if (!reviewCase.allowsParentVideoOrEmail) {
-      return null;
-    }
-
-    return _MinorReviewPrimaryAction(
-      label: l10n.minorAccountReviewContinue,
-      path: MinorAccountReviewParentContactScreen.path,
-    );
+    // Exhaustive, so a new resolution cannot compile without being routed.
+    // Every resolution but parent contact is asked of support through the
+    // appeal button; support-email-only never reaches here, being under 13.
+    return switch (reviewCase.allowedResolution) {
+      MinorReviewResolutionType.parentVideoOrEmail => _MinorReviewPrimaryAction(
+        label: l10n.minorAccountReviewContinue,
+        path: MinorAccountReviewParentContactScreen.path,
+      ),
+      MinorReviewResolutionType.supportEmailOnly ||
+      MinorReviewResolutionType.supportReviewOnly ||
+      MinorReviewResolutionType.unknown => null,
+    };
   }
 }
 
