@@ -312,82 +312,73 @@ class VolumeKeyHandler(
      */
     @Suppress("DEPRECATION")
     private fun claimMediaSession() {
-        val session = MediaSessionCompat(context, "DivineCameraRemoteControl")
-        try {
-            session.apply {
-                // Set flags to handle media buttons and transport controls
-                setFlags(
-                    MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
-                    MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
-                )
+        mediaSession = MediaSessionCompat(context, "DivineCameraRemoteControl").apply {
+            // Set flags to handle media buttons and transport controls
+            setFlags(
+                MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+            )
             
-                // Don't use a PendingIntent receiver - handle inline
-                setMediaButtonReceiver(null)
+            // Don't use a PendingIntent receiver - handle inline
+            setMediaButtonReceiver(null)
             
-                // Set playback state to allow receiving media button events
-                setPlaybackState(
-                    PlaybackStateCompat.Builder()
-                        .setState(
-                            PlaybackStateCompat.STATE_PLAYING,
-                            PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                            1.0f
+            // Set playback state to allow receiving media button events
+            setPlaybackState(
+                PlaybackStateCompat.Builder()
+                    .setState(
+                        PlaybackStateCompat.STATE_PLAYING,
+                        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                        1.0f
+                    )
+                    .setActions(
+                        PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                        PlaybackStateCompat.ACTION_STOP
+                    )
+                    .build()
+            )
+            
+            // Handle media button callbacks
+            setCallback(object : MediaSessionCompat.Callback() {
+                override fun onMediaButtonEvent(mediaButtonEvent: Intent?): Boolean {
+                    val keyEvent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        mediaButtonEvent?.getParcelableExtra(
+                            Intent.EXTRA_KEY_EVENT,
+                            KeyEvent::class.java
                         )
-                        .setActions(
-                            PlaybackStateCompat.ACTION_PLAY or
-                            PlaybackStateCompat.ACTION_PAUSE or
-                            PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                            PlaybackStateCompat.ACTION_STOP
-                        )
-                        .build()
-                )
-            
-                // Handle media button callbacks
-                setCallback(object : MediaSessionCompat.Callback() {
-                    override fun onMediaButtonEvent(mediaButtonEvent: Intent?): Boolean {
-                        val keyEvent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            mediaButtonEvent?.getParcelableExtra(
-                                Intent.EXTRA_KEY_EVENT,
-                                KeyEvent::class.java
-                            )
-                        } else {
-                            @Suppress("DEPRECATION")
-                            mediaButtonEvent?.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
-                        }
+                    } else {
+                        @Suppress("DEPRECATION")
+                        mediaButtonEvent?.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
+                    }
                     
-                        if (keyEvent != null && handleMediaButtonEvent(keyEvent)) {
-                            return true
-                        }
-                        return super.onMediaButtonEvent(mediaButtonEvent)
+                    if (keyEvent != null && handleMediaButtonEvent(keyEvent)) {
+                        return true
                     }
+                    return super.onMediaButtonEvent(mediaButtonEvent)
+                }
 
-                    override fun onPlay() {
-                        super.onPlay()
-                        DivineCameraLog.d(TAG, "MediaSession onPlay callback")
-                        triggerWithCooldownCheck()
-                    }
+                override fun onPlay() {
+                    super.onPlay()
+                    DivineCameraLog.d(TAG, "MediaSession onPlay callback")
+                    triggerWithCooldownCheck()
+                }
 
-                    override fun onPause() {
-                        super.onPause()
-                        DivineCameraLog.d(TAG, "MediaSession onPause callback")
-                        triggerWithCooldownCheck()
-                    }
+                override fun onPause() {
+                    super.onPause()
+                    DivineCameraLog.d(TAG, "MediaSession onPause callback")
+                    triggerWithCooldownCheck()
+                }
                 
-                    override fun onStop() {
-                        super.onStop()
-                        DivineCameraLog.d(TAG, "MediaSession onStop callback")
-                        triggerWithCooldownCheck()
-                    }
-                })
+                override fun onStop() {
+                    super.onStop()
+                    DivineCameraLog.d(TAG, "MediaSession onStop callback")
+                    triggerWithCooldownCheck()
+                }
+            })
             
-                isActive = true
-            }
-        } catch (e: Exception) {
-            // Left unreleased, the platform session would stay registered
-            // with nothing holding a reference that could release it.
-            session.release()
-            throw e
+            isActive = true
         }
-        mediaSession = session
         sessionClaimedTimestamp = clock()
         
         DivineCameraLog.i(TAG, "MediaSession created and active for Bluetooth remote control")
