@@ -95,106 +95,114 @@ void main() {
       registerFallbackValue(<({String pubkey, int? followedAt})>[]);
     });
 
-    test(
-      'hydrates relationships from the injected database follower DAO',
-      () async {
-        final follower = '1' * 64;
-        SharedPreferences.setMockInitialValues({});
-        final prefs = await SharedPreferences.getInstance();
-        final database = _MockAppDatabase();
-        final followersDao = _MockMyFollowersDao();
-        when(() => database.profileStatsDao).thenReturn(_MockProfileStatsDao());
-        when(() => database.myFollowersDao).thenReturn(followersDao);
-        when(() => followersDao.followersOf(pubkey)).thenAnswer(
-          (_) async => [
-            (pubkey: follower, followedAt: 100),
-          ],
-        );
-        final client = _MockNostrClient();
-        when(() => client.publicKey).thenReturn(pubkey);
-        when(() => client.hasKeys).thenReturn(false);
-        when(
-          () => client.subscribe(
-            any(),
-            subscriptionId: any(named: 'subscriptionId'),
-          ),
-        ).thenAnswer((_) => const Stream<Event>.empty());
-        when(() => client.unsubscribe(any())).thenAnswer((_) async {});
-        final personalCache = _MockPersonalEventCache();
-        when(() => personalCache.isInitialized).thenReturn(false);
-        final environment = _MockEnvironmentConfig();
-        when(() => environment.indexerRelays).thenReturn(const []);
-        final connectionStatus = _MockConnectionStatus();
-        when(() => connectionStatus.isOnline).thenReturn(true);
-        final auth = _MockAuthService();
-        when(() => auth.canPublishNostrWritesNow).thenReturn(true);
-        final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(client),
-            nostrSessionProvider.overrideWith(
-              () => _TestNostrSession(
-                const NostrSessionReadiness.identityKnown(pubkey: pubkey),
+    for (final (canSign, signer) in [(true, 'ready'), (false, 'starting')]) {
+      test(
+        'hydrates relationships from the injected database follower DAO and '
+        'syncs on foreground while the signer is $signer',
+        () async {
+          final follower = '1' * 64;
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final database = _MockAppDatabase();
+          final followersDao = _MockMyFollowersDao();
+          when(() => database.profileStatsDao)
+              .thenReturn(_MockProfileStatsDao());
+          when(() => database.myFollowersDao).thenReturn(followersDao);
+          when(() => followersDao.followersOf(pubkey)).thenAnswer(
+            (_) async => [
+              (pubkey: follower, followedAt: 100),
+            ],
+          );
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(pubkey);
+          when(() => client.hasKeys).thenReturn(false);
+          when(
+            () => client.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          ).thenAnswer((_) => const Stream<Event>.empty());
+          when(() => client.unsubscribe(any())).thenAnswer((_) async {});
+          final personalCache = _MockPersonalEventCache();
+          when(() => personalCache.isInitialized).thenReturn(false);
+          final environment = _MockEnvironmentConfig();
+          when(() => environment.indexerRelays).thenReturn(const []);
+          final connectionStatus = _MockConnectionStatus();
+          when(() => connectionStatus.isOnline).thenReturn(true);
+          final auth = _MockAuthService();
+          when(() => auth.canPublishNostrWritesNow).thenReturn(canSign);
+          final container = ProviderContainer(
+            overrides: [
+              nostrServiceProvider.overrideWithValue(client),
+              nostrSessionProvider.overrideWith(
+                () => _TestNostrSession(
+                  const NostrSessionReadiness.identityKnown(pubkey: pubkey),
+                ),
               ),
-            ),
-            personalEventCacheServiceProvider.overrideWithValue(personalCache),
-            pendingActionServiceProvider.overrideWithValue(null),
-            authServiceProvider.overrideWithValue(auth),
-            connectionStatusServiceProvider.overrideWithValue(connectionStatus),
-            databaseProvider.overrideWithValue(database),
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            funnelcakeApiClientProvider.overrideWithValue(
-              FunnelcakeApiClient(baseUrl: ''),
-            ),
-            currentEnvironmentProvider.overrideWith(
-              () => _TestEnvironment(environment),
-            ),
-            contentBlocklistRepositoryProvider.overrideWithValue(
-              ContentBlocklistRepository(),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-        final repository = container.read(followRepositoryProvider);
-        expect(repository.relationshipTo(follower), FollowRelationship.none);
-        when(() => client.hasKeys).thenReturn(true);
-        await repository.initialize();
-        expect(
-          repository.relationshipTo(follower),
-          FollowRelationship.followsYou,
-        );
-        verify(() => followersDao.followersOf(pubkey)).called(1);
-        verifyNever(() => client.queryEvents(any()));
-        verifyNever(
-          () => client.readEvents(any(), requireAllRelaysSettled: true),
-        );
-        when(() => client.readEvents(any(), requireAllRelaysSettled: true))
-            .thenAnswer(
-              (_) async => const QueryResult(
-                events: [],
-                endedBy: QueryEnd.complete,
-                confirmedExhaustive: true,
+              personalEventCacheServiceProvider.overrideWithValue(
+                personalCache,
               ),
-            );
-        when(
-          () => followersDao.replaceAll(
-            ownerPubkey: pubkey,
-            followers: any(named: 'followers'),
-            seenAt: any(named: 'seenAt'),
-          ),
-        ).thenAnswer((_) async {});
-        container.read(appForegroundProvider.notifier).setForeground(false);
-        container.read(appForegroundProvider.notifier).setForeground(true);
-        await pumpEventQueue();
-        verify(() => client.readEvents(any(), requireAllRelaysSettled: true))
-            .called(1);
-        container.read(appForegroundProvider.notifier).setForeground(false);
-        container.read(appForegroundProvider.notifier).setForeground(true);
-        await pumpEventQueue();
-        verifyNever(
-          () => client.readEvents(any(), requireAllRelaysSettled: true),
-        );
-      },
-    );
+              pendingActionServiceProvider.overrideWithValue(null),
+              authServiceProvider.overrideWithValue(auth),
+              connectionStatusServiceProvider.overrideWithValue(
+                connectionStatus,
+              ),
+              databaseProvider.overrideWithValue(database),
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              funnelcakeApiClientProvider.overrideWithValue(
+                FunnelcakeApiClient(baseUrl: ''),
+              ),
+              currentEnvironmentProvider.overrideWith(
+                () => _TestEnvironment(environment),
+              ),
+              contentBlocklistRepositoryProvider.overrideWithValue(
+                ContentBlocklistRepository(),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          final repository = container.read(followRepositoryProvider);
+          expect(repository.relationshipTo(follower), FollowRelationship.none);
+          when(() => client.hasKeys).thenReturn(true);
+          await repository.initialize();
+          expect(
+            repository.relationshipTo(follower),
+            FollowRelationship.followsYou,
+          );
+          verify(() => followersDao.followersOf(pubkey)).called(1);
+          verifyNever(() => client.queryEvents(any()));
+          verifyNever(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          );
+          when(() => client.readEvents(any(), requireAllRelaysSettled: true))
+              .thenAnswer(
+                (_) async => const QueryResult(
+                  events: [],
+                  endedBy: QueryEnd.complete,
+                  confirmedExhaustive: true,
+                ),
+              );
+          when(
+            () => followersDao.replaceAll(
+              ownerPubkey: pubkey,
+              followers: any(named: 'followers'),
+              seenAt: any(named: 'seenAt'),
+            ),
+          ).thenAnswer((_) async {});
+          container.read(appForegroundProvider.notifier).setForeground(false);
+          container.read(appForegroundProvider.notifier).setForeground(true);
+          await pumpEventQueue();
+          verify(() => client.readEvents(any(), requireAllRelaysSettled: true))
+              .called(1);
+          container.read(appForegroundProvider.notifier).setForeground(false);
+          container.read(appForegroundProvider.notifier).setForeground(true);
+          await pumpEventQueue();
+          verifyNever(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          );
+        },
+      );
+    }
   });
 
   group('profileReadRepositoryProvider vanish priming (#8208)', () {

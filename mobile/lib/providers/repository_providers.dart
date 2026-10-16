@@ -149,6 +149,9 @@ FollowRepository followRepository(Ref ref) {
     queryContactList: ContactListCompletionHelper.queryContactList,
     isOnline: () =>
         connectionStatus.isOnline && authService.canPublishNostrWritesNow,
+    // Follower sync only reads, so a signer that is still starting must not
+    // skip it the way it defers a follow.
+    isConnected: () => connectionStatus.isOnline,
     queueOfflineAction: pendingActionService != null
         ? ({required bool isFollow, required String pubkey}) async {
             await pendingActionService.queueAction(

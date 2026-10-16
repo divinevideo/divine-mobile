@@ -75,6 +75,7 @@ class FollowRepository {
     MyFollowersDao? myFollowersDao,
     int Function()? nowSeconds,
     IsOnlineCallback? isOnline,
+    IsOnlineCallback? isConnected,
     QueueOfflineFollowCallback? queueOfflineAction,
     QueryContactListCallback? queryContactList,
     RelayFactory? relayFactory,
@@ -92,6 +93,7 @@ class FollowRepository {
        _myFollowersDao = myFollowersDao,
        _nowSeconds = nowSeconds ?? _currentSeconds,
        _isOnline = isOnline,
+       _isConnected = isConnected,
        _queueOfflineAction = queueOfflineAction,
        _indexerRelayUrls = indexerRelayUrls,
        _queryContactList = queryContactList ?? _defaultQueryContactList,
@@ -108,6 +110,12 @@ class FollowRepository {
 
   /// Callback to check if the device is online
   final IsOnlineCallback? _isOnline;
+
+  /// Whether the network is reachable, whatever the signer state.
+  ///
+  /// Gates follower sync, which only reads. [_isOnline] can also require a
+  /// ready signer, because follow and unfollow queue offline from it.
+  final IsOnlineCallback? _isConnected;
 
   /// Callback to queue actions for offline sync
   final QueueOfflineFollowCallback? _queueOfflineAction;
@@ -711,7 +719,7 @@ class FollowRepository {
         _myFollowersDao == null ||
         !_nostrClient.hasKeys ||
         _nostrClient.publicKey.isEmpty ||
-        !(_isOnline?.call() ?? true)) {
+        !(_isConnected?.call() ?? true)) {
       return Future<void>.value();
     }
     final owner = _nostrClient.publicKey;

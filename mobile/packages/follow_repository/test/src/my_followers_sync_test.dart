@@ -239,6 +239,7 @@ void main() {
     late FollowRepository repository;
     late int now;
     late bool online;
+    late bool canSign;
 
     Event contact(String author, int at) => Event(
       author,
@@ -261,7 +262,9 @@ void main() {
       myFollowersDao: withDao ? dao : null,
       profileStatsDao: statsDao,
       nowSeconds: () => now,
-      isOnline: () => online,
+      // The app's isOnline also requires a ready signer.
+      isOnline: () => online && canSign,
+      isConnected: () => online,
       relayFactory: relayFactory,
       indexerQueryTimeout: const Duration(milliseconds: 10),
       indexerOperationTimeout: const Duration(milliseconds: 20),
@@ -280,6 +283,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       now = 1700000000;
       online = true;
+      canSign = true;
       dao = _MemoryFollowersDao();
       client = _MockNostrClient();
       api = _MockApi();
@@ -719,6 +723,14 @@ void main() {
       await repository.syncMyFollowers();
       verifyNever(() => client.queryEvents(any()));
       expect(dao.rows, isEmpty);
+    });
+    test('a signer that cannot publish yet does not block the read', () async {
+      canSign = false;
+      when(
+        () => client.queryEvents(any()),
+      ).thenAnswer((_) async => [contact(first, 100)]);
+      await repository.syncMyFollowers();
+      expect(dao.rows[owner], {first: 100});
     });
     test('no keys does nothing', () async {
       when(() => client.hasKeys).thenReturn(false);
