@@ -239,10 +239,12 @@ open class Proof: NSObject {
             self.initializeWithDefaultKeys()
         }
         
+        // Divine-local (#10197): the media is read once, a chunk at a time, for
+        // both its hash and its signature, instead of being held in memory.
+        guard let pgpKey = pgpKey, let digest = mediaDigest(of: mediaItem) else { return nil }
+        let hash = digest.sha256
+
         guard
-            let pgpKey = pgpKey,
-            let data = mediaItem.data,
-            let hash = sha256(data: data)?.lowercased(),
             let signatureFileUrl = proofFilePath(mediaItem: mediaItem, hash: hash, fileExtension: "asc"),
             let proofFileUrl = proofFilePath(mediaItem: mediaItem, hash: hash, fileExtension: "proof.csv"),
             let proofSignatureFileUrl = proofFilePath(mediaItem: mediaItem, hash: hash, fileExtension: "proof.csv.asc"),
@@ -260,10 +262,8 @@ open class Proof: NSObject {
         print("Building proof \(options.showDeviceIds) \(options.showLocation) \(options.showMobileNetwork)")
         
         do {
-            // Sign the media file (data)
-            let signature = try ObjectivePGP.sign(data, detached: true, using: [pgpKey], passphraseForKey: { (key) -> String? in
-                return passphrase
-            })
+            // Sign the media file
+            let signature = try DetachedSignature.sign(digest, with: pgpKey, passphrase: passphrase)
             let armoredSignature = Armor.armored(signature, as: .signature)
             try armoredSignature.write(to: signatureFileUrl, atomically: true, encoding: .utf8)
         } catch {
@@ -278,7 +278,11 @@ open class Proof: NSObject {
             
             // Notarize
             let synchronousNotarization = self.synchronousNotarization
-            if !options.notarizationProviders.isEmpty {
+            // Providers take the media as `Data`. A file is mapped rather than
+            // read, so its pages are not charged to the app (#10197).
+            if !options.notarizationProviders.isEmpty,
+               let data = mediaItem.data ?? mediaItem.mediaUrl.flatMap({ try? Data(contentsOf: $0, options: .alwaysMapped) })
+            {
                 for notarizationProvider in options.notarizationProviders {
                     if synchronousNotarization {
                         notarizationGroup.enter()
@@ -353,8 +357,7 @@ open class Proof: NSObject {
     
     open func hasProof(mediaItem: MediaItem) -> Bool {
         guard
-            let data = mediaItem.data,
-            let hash = sha256(data: data)?.lowercased(),
+            let hash = mediaDigest(of: mediaItem)?.sha256,
             let signatureFileUrl = proofFilePath(mediaItem: mediaItem, hash: hash, fileExtension: "asc"),
             let proofJsonFileUrl = proofFilePath(mediaItem: mediaItem, hash: hash, fileExtension: "proof.json")
         else { return false }
@@ -370,10 +373,7 @@ open class Proof: NSObject {
         if let mediaItemHash = mediaItem.mediaItemHash {
             proofJsonFileUrl = proofFilePath(mediaItem: mediaItem, hash: mediaItemHash, fileExtension: "proof.json")
         } else {
-            guard
-                let data = mediaItem.data,
-                let hash = sha256(data: data)?.lowercased()
-            else {
+            guard let hash = mediaDigest(of: mediaItem)?.sha256 else {
                 return nil
             }
             proofJsonFileUrl = proofFilePath(mediaItem: mediaItem, hash: hash, fileExtension: "proof.json")
@@ -466,6 +466,27 @@ open class Proof: NSObject {
     public func sha256(data: Data?) -> String? {
         guard let data = data else { return nil }
         return SHA256.hash(data: data).hexStr.lowercased()
+    }
+
+    /// Divine-local (#10197): hashes the media from `data` when it is loaded,
+    /// and otherwise streams it from its file.
+    func mediaDigest(of mediaItem: MediaItem) -> MediaDigest? {
+        let stream: InputStream?
+        if let data = mediaItem.data {
+            stream = InputStream(data: data)
+        } else if let mediaUrl = mediaItem.mediaUrl {
+            stream = InputStream(url: mediaUrl)
+        } else {
+            stream = nil
+        }
+        guard let stream = stream else { return nil }
+
+        do {
+            return try MediaDigest(reading: stream)
+        } catch {
+            print(error.localizedDescription)
+            return nil
+        }
     }
     
     func documentPath(for fileName: String, isDirectory: Bool = false) -> URL? {
