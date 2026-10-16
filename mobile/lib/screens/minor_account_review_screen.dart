@@ -261,12 +261,14 @@ class _LoadedView extends ConsumerWidget {
     // One decision drives both the appeal copy and where its button goes, so
     // the two cannot disagree.
     final isUnder13Path = reviewCase?.isUnder13Path == true;
+    final appealPath = isUnder13Path
+        ? MinorAccountReviewUnder13SupportScreen.path
+        : null;
     final primaryAction = _primaryAction(reviewCase, l10n);
-    // Suppress the appeal button only when the primary action already opens
-    // the very same screen. Comparing destinations keeps that correct if an
-    // under-13 case is ever given a primary action that goes somewhere else.
-    final primaryOpensParentSupport =
-        primaryAction?.path == MinorAccountReviewUnder13SupportScreen.path;
+    // A second button to the screen the primary action opens would only add
+    // a choice with no difference.
+    final appealDuplicatesPrimary =
+        appealPath != null && primaryAction?.path == appealPath;
     final infoCard = _infoCardForCase(reviewCase, supportEmail, l10n);
     final responseClockCard = reviewCase == null
         ? null
@@ -366,11 +368,9 @@ class _LoadedView extends ConsumerWidget {
               : l10n.minorAccountReviewAppealTeenBody,
         ),
         const SizedBox(height: 12),
-        // A primary action that already opens parent support makes this a
-        // second button to the same screen, which would only add a choice.
-        if (!primaryOpensParentSupport) ...[
+        if (!appealDuplicatesPrimary) ...[
           _AppealSupportButton(
-            isUnder13Path: isUnder13Path,
+            path: appealPath,
             openSupportMessages: openSupportMessages,
             composeEmail: composeEmail,
           ),
@@ -523,28 +523,30 @@ Future<void> _openExternalPage(
 
 /// The reconsideration card's contact action.
 ///
-/// Outside the under-13 path this opens private support directly, falling back
-/// to email, as Account Status does. The under-13 path goes to the
-/// parent-support screen instead: a support conversation is filed against the
-/// signed-in account, and that path is built around a parent or guardian
-/// making contact, not the child.
+/// Without a [path] this opens private support directly, falling back to
+/// email, as Account Status does. The under-13 path passes the parent-support
+/// screen instead: a support conversation is filed against the signed-in
+/// account, and that path is built around a parent or guardian making
+/// contact, not the child.
 class _AppealSupportButton extends StatelessWidget {
   const _AppealSupportButton({
-    required this.isUnder13Path,
+    this.path,
     this.openSupportMessages,
     this.composeEmail,
   });
 
-  final bool isUnder13Path;
+  /// The screen the appeal opens, or null to open private support.
+  final String? path;
   final OpenSupportMessages? openSupportMessages;
   final ComposeSupportEmail? composeEmail;
 
   @override
   Widget build(BuildContext context) {
-    if (isUnder13Path) {
+    final path = this.path;
+    if (path != null) {
       return _ContactSupportButton(
         onPressed: () => runDetached(
-          context.push<void>(MinorAccountReviewUnder13SupportScreen.path),
+          context.push<void>(path),
           'open under-13 support instructions from the appeal',
           logName: 'MinorAccountReviewScreen',
           category: LogCategory.ui,
@@ -599,10 +601,6 @@ class _MinorReviewPrimaryAction {
   final String label;
 
   /// Where [open] navigates.
-  ///
-  /// The appeal button below the reconsideration card is suppressed when this
-  /// is the parent-support screen, so the destination is stated here rather
-  /// than inferred from the age path.
   final String path;
 
   void open(BuildContext context) => runDetached(
