@@ -75,8 +75,11 @@ void main() {
 
       test('the max-duration auto-stop reports every outcome', () {
         final callback = declarationAt(
-          controllerSource,
-          'autoStopCallback = { result, error ->',
+          declarationAt(
+            controllerSource,
+            'private fun autoStopRecording()',
+          ),
+          'stopArbiter.beginStop { result, error ->',
         );
 
         expect(callback, contains(send));
