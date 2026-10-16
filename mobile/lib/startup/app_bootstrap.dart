@@ -14,6 +14,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:follow_repository/follow_repository.dart'
+    show MyFollowersSyncState;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/app/divine_app.dart';
@@ -558,6 +560,14 @@ Future<void> startOpenVineApp({
     preferences: sharedPreferences,
   );
 
+  // A reset or salvage empties Drift tables while SharedPreferences survives,
+  // so the sync markers describing those tables must go too: the DM drain
+  // (#5304), and the follower seed, which would otherwise skip an empty table.
+  Future<void> clearSyncStateAfterDatabaseReset() async {
+    await DmSyncState(sharedPreferences).clearAll();
+    await MyFollowersSyncState().clearAll();
+  }
+
   // Resets preserve a backup by default because encrypted backups stay readable
   // under the retained cipher key. The db-unreadable diagnosis is different:
   // it proves the current file is plaintext-shaped corruption, so preserving it
@@ -571,7 +581,7 @@ Future<void> startOpenVineApp({
         // clear the DM sync state so the next inbox open runs a full re-drain
         // instead of skipping it as "already complete" (which had left
         // recovered chats stranded under "Message requests"). See #5304.
-        onDatabaseReset: () => DmSyncState(sharedPreferences).clearAll(),
+        onDatabaseReset: clearSyncStateAfterDatabaseReset,
         recoveryOutcome: DatabaseRecoveryOutcome.recreatedAfterBootstrapFailure,
         persistRecoveryOutcome: databaseRecoveryStore.record,
       );
@@ -596,7 +606,7 @@ Future<void> startOpenVineApp({
         // survives; clear the DM sync state so the next inbox open runs a full
         // re-drain instead of skipping it as "already complete" (which had
         // left recovered chats stranded under "Message requests"). See #5304.
-        onDatabaseReset: () => DmSyncState(sharedPreferences).clearAll(),
+        onDatabaseReset: clearSyncStateAfterDatabaseReset,
         // Recovery succeeds silently (returns a key, never throws), so record
         // it as a non-fatal to surface the corruption rate and any
         // recover-every-launch loop in Crashlytics.
@@ -639,7 +649,7 @@ Future<void> startOpenVineApp({
           await resetUnreadablePlaintextDatabaseCache(
             secureStorage: dbCipherSecureStorage,
             legacySecureStorage: legacyDbCipherSecureStorage,
-            onDatabaseReset: () => DmSyncState(sharedPreferences).clearAll(),
+            onDatabaseReset: clearSyncStateAfterDatabaseReset,
             persistRecoveryOutcome: databaseRecoveryStore.record,
           );
         } else {
