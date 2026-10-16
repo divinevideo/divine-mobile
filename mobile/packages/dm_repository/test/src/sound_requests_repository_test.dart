@@ -53,8 +53,10 @@ class Transport implements SoundRequestTransport {
   bool failDelivery = false;
   int attempts = 0;
   final delivered = <String>{};
+  StreamController<List<DmMessage>>? live;
   @override
-  Stream<List<DmMessage>> watchMessages() => Stream.value(messages);
+  Stream<List<DmMessage>> watchMessages() =>
+      live?.stream ?? Stream.value(messages);
   @override
   Future<String> enqueue(SoundRequestSendIntent intent) async {
     intents[intent.key] = intent;
@@ -76,6 +78,8 @@ class Publisher implements SoundRequestPublisher {
   int metadataPublishes = 0;
   bool failReplacement = false;
   int audioPublishes = 0;
+  int resolves = 0;
+  Completer<void>? resolveGate;
   VideoEvent video = VideoEvent(
     id: 'e' * 64,
     pubkey: creator,
@@ -86,13 +90,17 @@ class Publisher implements SoundRequestPublisher {
     eventKind: 34236,
   );
   @override
-  Future<SoundRequestSource> resolve(String coordinate) async =>
-      SoundRequestSource(
-        video: video,
-        allowReuse: enabled,
-        requestable: true,
-        audioEventId: enabled || retainedAudio ? sound : null,
-      );
+  Future<SoundRequestSource> resolve(String coordinate) async {
+    resolves++;
+    await resolveGate?.future;
+    return SoundRequestSource(
+      video: video,
+      allowReuse: enabled,
+      requestable: true,
+      audioEventId: enabled || retainedAudio ? sound : null,
+    );
+  }
+
   @override
   Future<String> publishAudio(SoundRequestSource source) async {
     audioPublishes++;
@@ -128,6 +136,99 @@ SoundRequestsRepository repository(
   now: () => DateTime.utc(2026, 10, 16),
 );
 void main() {
+  group('start', () {
+    late StreamController<List<DmMessage>> live;
+    late Transport transport;
+
+    setUp(() {
+      live = StreamController();
+      transport = Transport([])..live = live;
+    });
+    tearDown(() => live.close());
+
+    test('unchanged history does not look up pending requests again', () async {
+      final a = requestMessage(viewer, '1' * 64);
+      final publisher = Publisher();
+      final repo = repository(creator, transport, MemoryStore(), publisher);
+      addTearDown(repo.close);
+      live.add([a]);
+      await repo.start();
+      expect(publisher.resolves, 1);
+      for (var i = 0; i < 3; i++) {
+        live.add([a]);
+      }
+      await pumpEventQueue();
+      expect(publisher.resolves, 1);
+    });
+
+    test(
+      'a new request is checked against reuse enabled since the last check',
+      () async {
+        final a = requestMessage(viewer, '1' * 64);
+        final b = requestMessage(second, '2' * 64);
+        final publisher = Publisher();
+        final repo = repository(creator, transport, MemoryStore(), publisher);
+        addTearDown(repo.close);
+        live.add([a]);
+        await repo.start();
+        expect(repo.state.requests[a.id]?.status, SoundRequestStatus.pending);
+        publisher.enabled = true;
+        live.add([a, b]);
+        await pumpEventQueue();
+        expect(publisher.resolves, 2);
+        expect(
+          repo.state.requests.values.map((r) => r.status),
+          everyElement(SoundRequestStatus.ready),
+        );
+        expect(transport.delivered, hasLength(2));
+      },
+    );
+
+    test('history arriving during a pass is reconciled once', () async {
+      final a = requestMessage(viewer, '1' * 64);
+      final b = requestMessage(second, '2' * 64);
+      final c = requestMessage(viewer, '3' * 64);
+      final gate = Completer<void>();
+      final publisher = Publisher()..resolveGate = gate;
+      final repo = repository(creator, transport, MemoryStore(), publisher);
+      addTearDown(repo.close);
+      live.add([a]);
+      final started = repo.start();
+      await pumpEventQueue();
+      expect(publisher.resolves, 1);
+      live
+        ..add([a, b])
+        ..add([a, b, c]);
+      await pumpEventQueue();
+      gate.complete();
+      await started;
+      expect(publisher.resolves, 2);
+      expect(repo.state.requests.keys, containsAll([a.id, b.id, c.id]));
+    });
+
+    test(
+      'an approval awaiting policy is rechecked as history changes',
+      () async {
+        final a = requestMessage(viewer, '1' * 64);
+        final publisher = Publisher()..policyVerified = false;
+        final repo = repository(creator, transport, MemoryStore(), publisher);
+        addTearDown(repo.close);
+        live.add([a]);
+        await repo.start();
+        await repo.approve(a.id);
+        expect(
+          repo.state.requests[a.id]?.status,
+          SoundRequestStatus.awaitingPolicy,
+        );
+        publisher.policyVerified = true;
+        live.add([a]);
+        await pumpEventQueue();
+        expect(repo.state.requests[a.id]?.status, SoundRequestStatus.ready);
+        expect(transport.delivered, hasLength(1));
+      },
+    );
+  });
+
   group('dismiss', () {
     test(
       'dismissing the last failed approval does not approve later requests',

@@ -34,6 +34,9 @@ class SoundRequestsRepository {
   final DateTime Function() _now;
   final _changes = StreamController<SoundRequestSnapshot>.broadcast(sync: true);
   final _attemptedVideos = <String>{};
+  final _reconciledRequests = <String>{};
+  List<DmMessage>? _queuedHistory;
+  bool _historyQueued = false;
   StreamSubscription<List<DmMessage>>? _subscription;
   Future<void> _tail = Future.value();
   SoundRequestSnapshot _state = const SoundRequestSnapshot();
@@ -89,9 +92,18 @@ class SoundRequestsRepository {
     final first = Completer<void>();
     _subscription = _transport.watchMessages().listen(
       (messages) {
+        // Every emission is the full history, so a pass already queued only
+        // needs the newest one; a burst of DM writes must not stack passes
+        // ahead of the user's own actions.
+        _queuedHistory = messages;
+        if (_historyQueued) return;
+        _historyQueued = true;
         unawaited(
           _run(() async {
-            await _ingest(messages);
+            _historyQueued = false;
+            final history = _queuedHistory;
+            _queuedHistory = null;
+            if (history != null) await _ingest(history);
             if (!first.isCompleted) first.complete();
           }).catchError((Object error, StackTrace stack) {
             _report(error, stack);
@@ -164,23 +176,27 @@ class SoundRequestsRepository {
     } on Object catch (e, s) {
       _report(e, s);
     }
-    final addresses = _state.requests.values
-        .where(
-          (r) =>
-              r.requester != ownerPubkey &&
-              r.status != SoundRequestStatus.dismissed &&
-              r.status != SoundRequestStatus.ready,
-        )
-        .map((r) => r.videoAddress)
-        .toSet();
-    for (final address in addresses) {
+    final pendingByAddress = <String, List<String>>{};
+    for (final r in _state.requests.values) {
+      if (r.requester != ownerPubkey &&
+          r.status != SoundRequestStatus.dismissed &&
+          r.status != SoundRequestStatus.ready) {
+        (pendingByAddress[r.videoAddress] ??= []).add(r.id);
+      }
+    }
+    for (final MapEntry(key: address, value: ids) in pendingByAddress.entries) {
+      final approved = _state.approvedVideos.contains(address);
+      // History re-emits on every DM write. An unapproved request is checked
+      // against current reuse once per session; only the creator's own
+      // approvals keep polling while policy indexing catches up.
+      final unchecked = ids.where((id) => !_reconciledRequests.contains(id));
       try {
-        if (_state.approvedVideos.contains(address) &&
-            !_attemptedVideos.contains(address)) {
+        if (approved && !_attemptedVideos.contains(address)) {
           await _publishFor(address);
-        } else {
+        } else if (approved || unchecked.isNotEmpty) {
           final source = await _publisher.resolve(address);
           _checkOpen();
+          _reconciledRequests.addAll(ids);
           if (source.allowReuse && source.audioEventId != null) {
             await _fulfill(address, source.audioEventId!);
             await _drain();
