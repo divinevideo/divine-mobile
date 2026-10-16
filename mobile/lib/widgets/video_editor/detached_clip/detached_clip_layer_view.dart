@@ -211,10 +211,12 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
 
   void _listenForPreviewRelease(ValueNotifier<bool>? released) {
     if (identical(released, _previewReleased)) return;
+    final wasReleased = _isPreviewReleased;
     _previewReleased?.removeListener(_onPreviewReleasedChanged);
     _previewReleased = released?..addListener(_onPreviewReleasedChanged);
-    // initState may have resumed a pooled player before the scope was known.
-    if (_isPreviewReleased) _onPreviewReleasedChanged();
+    // initState may have resumed a pooled player before the scope was known,
+    // and a layer the old notifier held back needs its player again.
+    if (_isPreviewReleased != wasReleased) _onPreviewReleasedChanged();
   }
 
   /// Gives the player back while an export holds the decoders, and opens a

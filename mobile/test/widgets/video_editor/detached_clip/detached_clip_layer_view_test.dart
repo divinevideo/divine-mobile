@@ -759,6 +759,37 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       detachedClipPlayers.resetForTesting();
     });
+
+    testWidgets('plays again when the release notifier is replaced', (
+      tester,
+    ) async {
+      await pumpLayerOver(tester, _fakePlayer());
+      previewReleased.value = true;
+      await detachedClipPlayers.disposeIdle();
+      await tester.pump();
+      expect(shownPlayer(tester), isNull);
+
+      final second = _fakePlayer();
+      unawaited(detachedClipPlayers.acquire(key, () async => second));
+      await tester.pump();
+      detachedClipPlayers.release(key);
+
+      // A rebuilt scope hands the layer a notifier that holds nothing back.
+      final replacement = ValueNotifier<bool>(false);
+      addTearDown(replacement.dispose);
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        previewReleased: replacement,
+      );
+      await tester.pump();
+
+      expect(shownPlayer(tester)?.controller, same(second.controller));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      detachedClipPlayers.resetForTesting();
+    });
   });
 
   group(DetachedClipPoster, () {
