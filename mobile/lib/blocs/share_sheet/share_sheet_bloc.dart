@@ -236,12 +236,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         remainingPubkeys = rankUsers(
           remainingPubkeys.map((pubkey) => snapshot[pubkey]!),
           now: DateTime.now(),
-          nameOf: (pubkey) =>
-              ShareableUser.fromProfile(
-                pubkey,
-                cachedByPubkey[pubkey],
-              ).displayName ??
-              '',
+          nameOf: (pubkey) {
+            final name = ShareableUser.fromProfile(
+              pubkey,
+              cachedByPubkey[pubkey],
+            ).displayName?.trim();
+            return name == null || name.isEmpty ? pubkey : name;
+          },
           interactionTierFirst: true,
         );
       }

@@ -89,6 +89,37 @@ void main() {
     );
 
     test(
+      'confirmed mutuals override missing or stale follower cache signals',
+      () async {
+        when(() => loader.load(any())).thenAnswer(
+          (_) async => {
+            a: UserRankingSignals(pubkey: a, youFollow: true),
+            b: UserRankingSignals(
+              pubkey: b,
+              youFollow: true,
+              followsYou: false,
+              videoCount: 12,
+              lastInteractionAt: DateTime.utc(2026),
+            ),
+          },
+        );
+        final cubit = create();
+        await cubit.started();
+        followers.add([a]);
+        expect(cubit.state.rankingSignals[a]!.youFollow, isTrue);
+        expect(cubit.state.rankingSignals[a]!.followsYou, isTrue);
+        followers.add([a, b]);
+        expect(cubit.state.rankingSignals[b]!.followsYou, isTrue);
+        expect(cubit.state.rankingSignals[b]!.videoCount, 12);
+        expect(
+          cubit.state.rankingSignals[b]!.lastInteractionAt,
+          DateTime.utc(2026),
+        );
+        verify(() => loader.refreshInBackground(any())).called(1);
+      },
+    );
+
+    test(
       'ranks initial mutuals then appends late mutuals under the active query',
       () async {
         final cubit = create();

@@ -24,6 +24,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart';
@@ -160,6 +161,17 @@ class _TestNostrSession extends NostrSession {
 final _profileAvailability = StateProvider<int>((ref) => 0);
 
 final _rankingLoaderSelection = StateProvider<bool>((ref) => false);
+
+List<String> _rowNames(WidgetTester tester) => find
+    .descendant(of: find.byType(ListView), matching: find.byType(Text))
+    .evaluate()
+    .where(
+      (element) =>
+          element.findAncestorWidgetOfExactType<UserIndicatorLine>() == null,
+    )
+    .map((element) => (element.widget as Text).data)
+    .whereType<String>()
+    .toList();
 
 void main() {
   late _MockRankingSignalsLoader rankingLoader;
@@ -671,16 +683,7 @@ void main() {
         );
       });
 
-      List<String> rows(WidgetTester tester) => tester
-          .widgetList<Text>(
-            find.descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Text),
-            ),
-          )
-          .map((t) => t.data)
-          .whereType<String>()
-          .toList();
+      List<String> rows(WidgetTester tester) => _rowNames(tester);
 
       testWidgets("picker lists DM'd mutuals before other mutuals", (
         tester,
@@ -700,12 +703,13 @@ void main() {
           tester,
           profiles: [profile(a, 'Alice'), profile(b, 'Zoe')],
         );
-        expect(rows(tester), [
-          'Zoe',
-          lookupAppLocalizations(const Locale('en')).socialProofMutual,
-          'Alice',
-          lookupAppLocalizations(const Locale('en')).socialProofMutual,
-        ]);
+        expect(rows(tester), ['Zoe', 'Alice']);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).socialProofMutual,
+          ),
+          findsNWidgets(2),
+        );
       });
 
       testWidgets('vanished update keeps positions', (tester) async {
@@ -875,16 +879,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
-          final names = tester
-              .widgetList<Text>(
-                find.descendant(
-                  of: find.byType(ListView),
-                  matching: find.byType(Text),
-                ),
-              )
-              .map((t) => t.data)
-              .whereType<String>()
-              .toList();
+          final names = _rowNames(tester);
           expect(names, ['Maria', 'Aaron']);
         },
       );
@@ -1200,7 +1195,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Viewer'), findsNothing);
-        expect(find.text('Mutual'), findsOneWidget);
+        expect(find.text('Mutual'), findsNWidgets(2));
       });
 
       testWidgets('excludes the viewer case-insensitively', (tester) async {
@@ -1305,7 +1300,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('0/1 Title'), findsOneWidget);
-        await tester.tap(find.text('Mutual'));
+        await tester.tap(find.text('Mutual').first);
         await tester.pumpAndSettle();
 
         expect(find.text('1/1 Title'), findsOneWidget);
@@ -3195,7 +3190,7 @@ void main() {
           vanished: const {},
         );
 
-        expect(find.text('@alice'), findsOneWidget);
+        expect(find.textContaining('@alice'), findsOneWidget);
         expect(find.text('_@alice.divine.video'), findsNothing);
       },
     );

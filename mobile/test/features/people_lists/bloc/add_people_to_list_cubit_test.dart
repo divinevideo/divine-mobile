@@ -144,6 +144,83 @@ void main() {
       verify(() => rankingLoader.refreshInBackground([_alicePubkey])).called(1);
     });
 
+    test('ranks arriving follower rows after hydration and keeps earlier rows and selection stable', () async {
+      when(() => followRepository.followingPubkeys).thenReturn([_alicePubkey]);
+      when(() => profileRepository.getCachedProfile(pubkey: _bobPubkey))
+          .thenAnswer(
+            (_) async => _profile(pubkey: _bobPubkey, displayName: 'Zebra'),
+          );
+      when(() => profileRepository.getCachedProfile(pubkey: _carolPubkey))
+          .thenAnswer(
+            (_) async => _profile(pubkey: _carolPubkey, displayName: 'Aaron'),
+          );
+      final cubit = createCubit();
+      addTearDown(cubit.close);
+      await cubit.started();
+      cubit.candidateToggled(_alicePubkey);
+      followersController.add(
+        const FollowersSnapshot(pubkeys: [_bobPubkey, _carolPubkey], count: 2),
+      );
+      await _flush();
+      expect(cubit.state.candidates.map((c) => c.pubkey), [
+        _alicePubkey,
+        _carolPubkey,
+        _bobPubkey,
+      ]);
+      expect(cubit.state.selectedPubkeys, {_alicePubkey});
+      followersController.add(
+        const FollowersSnapshot(pubkeys: [_bobPubkey, _carolPubkey], count: 2),
+      );
+      await _flush();
+      expect(cubit.state.candidates.map((c) => c.pubkey), [
+        _alicePubkey,
+        _carolPubkey,
+        _bobPubkey,
+      ]);
+      verify(() => rankingLoader.refreshInBackground(any())).called(1);
+    });
+
+    test('waits for missing profiles before ranking each arriving batch by signals and names', () async {
+      final hydrated = Completer<UserProfile?>();
+      when(() => followRepository.followingPubkeys).thenReturn([_alicePubkey]);
+      when(() => profileRepository.fetchFreshProfile(pubkey: _bobPubkey))
+          .thenAnswer((_) => hydrated.future);
+      when(() => profileRepository.getCachedProfile(pubkey: _carolPubkey))
+          .thenAnswer(
+            (_) async => _profile(pubkey: _carolPubkey, displayName: 'Aaron'),
+          );
+      when(() => rankingLoader.load(any())).thenAnswer(
+        (invocation) async => {
+          for (final key
+              in invocation.positionalArguments.single as Iterable<String>)
+            key: UserRankingSignals(
+              pubkey: key,
+              videoCount: key == _bobPubkey ? 100 : null,
+            ),
+        },
+      );
+      final cubit = createCubit();
+      addTearDown(cubit.close);
+      await cubit.started();
+      cubit.candidateToggled(_alicePubkey);
+      followersController.add(
+        const FollowersSnapshot(pubkeys: [_carolPubkey, _bobPubkey], count: 2),
+      );
+      await _flush();
+      expect(cubit.state.candidates.map((c) => c.pubkey), [_alicePubkey]);
+      expect(cubit.state.candidatePositions.containsKey(_bobPubkey), isFalse);
+      expect(cubit.state.selectedPubkeys, {_alicePubkey});
+      hydrated.complete(_profile(pubkey: _bobPubkey, displayName: 'Zebra'));
+      await _flush();
+      expect(cubit.state.candidates.map((c) => c.pubkey), [
+        _alicePubkey,
+        _bobPubkey,
+        _carolPubkey,
+      ]);
+      expect(cubit.state.rankingSignals[_bobPubkey]!.videoCount, 100);
+      expect(cubit.state.selectedPubkeys, {_alicePubkey});
+    });
+
     test('initial state is initial status with empty candidates', () async {
       final cubit = createCubit();
       expect(cubit.state.status, AddPeopleToListStatus.initial);

@@ -13,6 +13,7 @@ import 'package:openvine/blocs/local_user_picker/local_user_picker_state.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 export 'local_user_picker_state.dart';
 
@@ -182,7 +183,7 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
       final currentFollowing = _followRepository.followingPubkeys.toSet();
       final ranked = rankFollowListSnapshot(
         pubkeys: profiles.map((profile) => profile.pubkey).toList(),
-        signals: signals,
+        signals: state.rankingSignals,
         names: {
           for (final profile in profiles)
             profile.pubkey: state.renderedName(profile),
@@ -213,6 +214,25 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
       (followers) {
         if (!isCurrent()) return;
         final followerSet = followers.toSet();
+        final followingSet = _followRepository.followingPubkeys.toSet();
+        // Confirmation is newer than the cached signal snapshot. Preserve its
+        // activity evidence while updating both relationship directions.
+        emitIfOpen(
+          state.copyWith(
+            rankingSignals: {
+              for (final entry in signals.entries)
+                entry.key: UserRankingSignals(
+                  pubkey: entry.key,
+                  youFollow: followingSet.contains(entry.key),
+                  followsYou: followerSet.contains(entry.key),
+                  lastInteractionAt: entry.value.lastInteractionAt,
+                  hasVerifiedNip05: entry.value.hasVerifiedNip05,
+                  videoCount: entry.value.videoCount,
+                  lastPostedAt: entry.value.lastPostedAt,
+                ),
+            },
+          ),
+        );
         final mutuals = candidates
             .where((profile) => followerSet.contains(profile.pubkey))
             .toList();
