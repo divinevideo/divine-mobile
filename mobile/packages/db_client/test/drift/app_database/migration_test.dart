@@ -28,8 +28,19 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 23', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 23);
+    test('current schema version is 24', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 24);
+    });
+
+    test('v23 gains account-scoped sound request workflow state', () async {
+      final schema = await verifier.schemaAt(23);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 24);
+      await db.soundRequestStateDao.writeAccount('a' * 64, {
+        'jobs': {'pending': '{}'},
+      });
+      expect(await db.soundRequestStateDao.readAccount('a' * 64), hasLength(1));
     });
 
     test(

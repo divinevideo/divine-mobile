@@ -9,6 +9,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -17,7 +18,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/sound_requests/published_video_sound_client.dart';
 import 'package:openvine/services/sound_requests/sound_request_dm_client.dart';
-import 'package:openvine/services/sound_requests/sound_request_preferences_store.dart';
+import 'package:openvine/services/sound_requests/sound_request_drift_store.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 
 final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
@@ -105,7 +106,9 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
   final repository = SoundRequestsRepository(
     ownerPubkey: owner,
     transport: SoundRequestDmClient(repository: dm, ownerPubkey: owner),
-    store: SoundRequestPreferencesStore(prefs),
+    store: SoundRequestDriftStore(
+      ref.watch(databaseProvider).soundRequestStateDao,
+    ),
     publisher: publisher,
     requestBody: (address) {
       final l10n = currentAppL10n(prefs);

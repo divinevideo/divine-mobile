@@ -688,6 +688,37 @@ void main() {
       },
     );
 
+    test(
+      'deleting an account clears only its sound request workflow',
+      () async {
+        for (final owner in [_pubkeyA, _pubkeyB]) {
+          await db.soundRequestStateDao.writeAccount(owner, {
+            'jobs': {'pending': '{}'},
+          });
+        }
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+        await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+        expect(
+          await db.soundRequestStateDao.readAccount(_pubkeyA),
+          hasLength(1),
+        );
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+        expect(await db.soundRequestStateDao.readAccount(_pubkeyA), isEmpty);
+        expect(
+          await db.soundRequestStateDao.readAccount(_pubkeyB),
+          hasLength(1),
+        );
+      },
+    );
+
     test('non-destructive cleanup preserves pending uploads', () async {
       final subscription = container.listen(
         userDataCleanupServiceProvider,

@@ -1012,6 +1012,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'concordStore',
             () => db.concordStoreDao.clearAccount(userPubkey),
           );
+          await requiredDelete(
+            'soundRequests',
+            () => db.soundRequestStateDao.clearAccount(userPubkey),
+          );
         }
       };
 

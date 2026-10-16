@@ -121,10 +121,10 @@ ports belonging to another task; no other task's services were stopped.
 - Implement the `sound_request_clients.dart` ports introduced in Task 1 through the adapters below.
 - Create `mobile/packages/dm_repository/lib/src/sound_requests_repository.dart`.
 - Create `mobile/lib/services/sound_requests/sound_request_dm_client.dart`.
-- Create `mobile/lib/services/sound_requests/sound_request_preferences_store.dart`.
+- Create `mobile/lib/services/sound_requests/sound_request_drift_store.dart`.
 - Modify `mobile/packages/dm_repository/lib/dm_repository.dart` exports.
 - Test `mobile/packages/dm_repository/test/src/sound_requests_repository_test.dart`.
-- Test `mobile/test/services/sound_requests/sound_request_preferences_store_test.dart`.
+- Test `mobile/test/services/sound_requests/sound_request_drift_store_test.dart`.
 - Test `mobile/test/services/sound_requests/sound_request_dm_client_test.dart`.
 
 **Interfaces:**
