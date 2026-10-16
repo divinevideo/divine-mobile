@@ -1757,6 +1757,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// mix only equalizes through a processing tap, and `AVPlayerLooper`
     /// stalls with one on every item. Its loop decodes the whole composition
     /// and plays each clip's volume and equalizer itself.
+    ///
+    /// A lap longer than [LoopPcm.maxLoopSeconds] keeps the player's sound,
+    /// unequalized on a timeline, until it is trimmed shorter.
     private func startClipAudioLoop() {
         releaseClipAudioLoop()
         let generation = clipAudioGeneration
@@ -1772,6 +1775,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             source = composition
             shapesVolumes = true
         } else {
+            return
+        }
+        guard source.duration.seconds <= LoopPcm.maxLoopSeconds else {
+            DivineVideoPlayerLog.shared.debug(
+                "Player \(playerId) leaves the sound of a \(source.duration.seconds) s lap "
+                    + "with AVPlayer: longer than a loop is built for",
+                name: "DivineVideoPlayer.AudioLoop"
+            )
             return
         }
         clipAudioDecoding = true

@@ -91,6 +91,36 @@ class LoopPcmTest {
     }
 
     @Test
+    fun `refuses a lap longer than a loop is built for`() {
+        // The pad grows with the lap, not the decode: a 30-minute recording
+        // asked for 347 MB from a 16 MB decode (#10198).
+        assertNull(
+            LoopPcm.prepare(
+                samples = tone(frames = 48_000, channels = 2),
+                channels = 2,
+                sampleRate = 48_000,
+                loopUs = 1_810_000_000L,
+            ),
+        )
+
+        val longest = LoopPcm.prepare(
+            samples = tone(frames = 1000),
+            channels = 1,
+            sampleRate = 1000,
+            loopUs = LoopPcm.MAX_LOOP_US,
+        )!!
+        assertEquals(60_000, longest.loopFrames)
+        assertNull(
+            LoopPcm.prepare(
+                samples = tone(frames = 1000),
+                channels = 1,
+                sampleRate = 1000,
+                loopUs = LoopPcm.MAX_LOOP_US + 1_000L,
+            ),
+        )
+    }
+
+    @Test
     fun `ramps the real tail into the pad rather than the pad itself`() {
         // A ramp over the padded silence would fade nothing while the sound
         // stopped mid-waveform with a click at the decode's end.

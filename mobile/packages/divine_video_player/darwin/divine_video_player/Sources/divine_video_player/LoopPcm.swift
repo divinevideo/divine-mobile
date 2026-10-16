@@ -21,6 +21,12 @@ enum LoopPcm {
     /// them on.
     static let joinMs = 5.0
 
+    /// The longest lap a loop is built for; a longer one keeps the player's
+    /// own sound. The loop holds its whole lap as PCM, and a 15-minute
+    /// recording opened in the editor took the app past its memory limit
+    /// (#10198). See `LoopPcm.kt`'s `MAX_LOOP_US`.
+    static let maxLoopSeconds = 60.0
+
     private static let tailMs = 20.0
     private static let silentLevel: Float = 1.0 / 32768.0
 
@@ -66,7 +72,8 @@ enum LoopPcm {
     /// device. A lap that opens that way, or a decode that ends before the
     /// loop does, has both edges ramped instead.
     ///
-    /// Returns nil when there is no loop to build.
+    /// Returns nil when there is no loop to build, including a lap longer than
+    /// [maxLoopSeconds].
     static func prepare(
         samples: [Float],
         channels: Int,
@@ -74,7 +81,9 @@ enum LoopPcm {
         loopFrames: Int,
         startFrame: Int
     ) -> Prepared? {
-        guard channels > 0, sampleRate > 0, loopFrames > 0 else { return nil }
+        guard channels > 0, sampleRate > 0, loopFrames > 0,
+            Double(loopFrames) <= (maxLoopSeconds * sampleRate).rounded()
+        else { return nil }
         guard let placed = placeOnTimeline(
             samples,
             channels: channels,

@@ -24,6 +24,18 @@ internal object LoopPcm {
     const val JOIN_MS = 5L
 
     /**
+     * The longest lap a loop is built for; a longer one keeps the player's
+     * own sound.
+     *
+     * The loop holds its whole lap as PCM, padded out to the picture's period
+     * however far the decode falls short, so its size follows the lap: a
+     * 30-minute recording opened in the editor asked for 347 MB, past the
+     * Java heap (#10198). The seam the loop hides comes once a lap, which on
+     * a lap this long is rare enough to leave to the player.
+     */
+    const val MAX_LOOP_US = 60_000_000L
+
+    /**
      * The loop, and how its seam was closed.
      *
      * [samples] holds the loop in its first `loopFrames * channels` entries;
@@ -111,7 +123,8 @@ internal object LoopPcm {
      * which is the same cut the player makes with the trimming left on.
      *
      * Returns null when there is no loop to build, including when the sound
-     * starts only after the loop ends.
+     * starts only after the loop ends or the lap is longer than
+     * [MAX_LOOP_US].
      */
     fun prepare(
         samples: ShortArray,
@@ -120,7 +133,7 @@ internal object LoopPcm {
         loopUs: Long,
         startUs: Long = 0L,
     ): Prepared? {
-        if (channels <= 0 || sampleRate <= 0 || loopUs <= 0) return null
+        if (channels <= 0 || sampleRate <= 0 || loopUs <= 0 || loopUs > MAX_LOOP_US) return null
         val loopFrames = Math.round(loopUs.toDouble() * sampleRate / 1_000_000.0)
             .coerceAtMost(Int.MAX_VALUE / (channels.toLong() * BYTES_PER_SAMPLE))
             .toInt()

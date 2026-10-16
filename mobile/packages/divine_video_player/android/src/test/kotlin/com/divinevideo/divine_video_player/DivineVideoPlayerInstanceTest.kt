@@ -1334,6 +1334,26 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `a lap longer than a loop is built for keeps the player's audio`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any(), retainDecoded = any()) } returns null
+            // A 30-minute recording opened in the editor: held as a loop, its
+            // lap took 347 MB and the app with it (#10198).
+            presentDuration(1_810_000L)
+            val disabled = captureAudioTrackDisables()
+
+            instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any(), retainDecoded = any()) }
+            assertEquals(false, disabled.contains(true))
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
     fun `a fresh clip list waits for its own timeline before cutting the audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {

@@ -391,6 +391,14 @@ internal class ClipAudioLoopTrack private constructor(
         /** A feed clip is seconds long; this only bounds a pathological file. */
         private const val MAX_PCM_BYTES = 16 * 1024 * 1024
 
+        /**
+         * How far past the loop point the decode runs. The seam blends at
+         * most [LoopPcm.CROSSFADE_MS] of it; the rest of a source longer than
+         * its lap, such as a long recording trimmed in the editor, is never
+         * played from the loop.
+         */
+        private const val DECODE_PAST_LOOP_US = 1_000_000L
+
         private const val DEQUEUE_TIMEOUT_US = 10_000L
 
         /**
@@ -430,16 +438,21 @@ internal class ClipAudioLoopTrack private constructor(
             retainDecoded: Boolean = false,
         ): ClipAudioLoopTrack? {
             if (loopUs <= 0) return null
-            val decoded = decode(uri, headers, clipStartUs, remoteSourceFactory) ?: return null
+            val decoded =
+                decode(uri, headers, clipStartUs, loopUs, remoteSourceFactory) ?: return null
             return build(decoded, loopUs, equalizer, retainDecoded, label = uri)
         }
 
-        /** Decodes [uri]'s first audio track, unfiltered. See [create]. */
+        /**
+         * Decodes [uri]'s first audio track, unfiltered, up to
+         * [DECODE_PAST_LOOP_US] past the lap's end. See [create].
+         */
         @UnstableApi
         private fun decode(
             uri: String,
             headers: Map<String, String>,
             clipStartUs: Long,
+            loopUs: Long,
             remoteSourceFactory: DataSource.Factory?,
         ): DecodedPcm? {
             val extractor = MediaExtractor()
@@ -492,6 +505,7 @@ internal class ClipAudioLoopTrack private constructor(
                 // track that starts late, or one stamped before zero by its
                 // gapless edit, is placed by [LoopPcm.prepare] from this.
                 var firstPresentationUs: Long? = null
+                val decodeUntilUs = clipStartUs + loopUs + DECODE_PAST_LOOP_US
                 var sawInputEnd = false
                 var sawOutputEnd = false
 
@@ -548,7 +562,9 @@ internal class ClipAudioLoopTrack private constructor(
                                 pcm.write(chunk)
                             }
                             codec.releaseOutputBuffer(out, false)
-                            if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                            if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0 ||
+                                info.presentationTimeUs >= decodeUntilUs
+                            ) {
                                 sawOutputEnd = true
                             }
                         }
