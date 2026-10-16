@@ -82,10 +82,13 @@ NostrSearchTarget? resolveNostrSearchTarget(String rawQuery) {
   }
 
   // Raw NIP-33 coordinate "kind:pubkey:d-tag", gated to video kinds so a
-  // long-form or list coordinate stays a text search.
+  // long-form or list coordinate stays a text search. AId.fromString accepts
+  // any middle part, so the pubkey is checked here; otherwise text such as
+  // "21:30:00" would open a video.
   final coordinate = AId.fromString(query);
   if (coordinate != null &&
-      NIP71VideoKinds.isAcceptableVideoKind(coordinate.kind)) {
+      NIP71VideoKinds.isAcceptableVideoKind(coordinate.kind) &&
+      NostrHexUtils.isValidPubkey(coordinate.pubkey)) {
     return NostrVideoTarget(query);
   }
 

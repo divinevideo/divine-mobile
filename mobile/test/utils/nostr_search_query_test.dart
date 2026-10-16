@@ -87,6 +87,15 @@ void main() {
       expect(resolveNostrSearchTarget(hexId.substring(0, 63)), isNull);
     });
 
+    test('rejects video-kind coordinates whose pubkey is not a full key', () {
+      // AId.fromString accepts any middle part, so text that reads like a
+      // time of day, or a coordinate still being typed, must not open a video.
+      expect(resolveNostrSearchTarget('21:30:00'), isNull);
+      expect(resolveNostrSearchTarget('22:15:00 sunset'), isNull);
+      expect(resolveNostrSearchTarget('34236:81acbb70:'), isNull);
+      expect(resolveNostrSearchTarget('34236:me:$dTag'), isNull);
+    });
+
     test('rejects ordinary text and first-party stable ids', () {
       expect(resolveNostrSearchTarget('cats'), isNull);
       expect(resolveNostrSearchTarget('notebook-clip-42'), isNull);
