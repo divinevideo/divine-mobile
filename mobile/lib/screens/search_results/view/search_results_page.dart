@@ -22,6 +22,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 /// Page that creates and wires the search BLoCs, then renders
 /// [SearchResultsView].
@@ -274,9 +275,12 @@ class _NostrIdAutoOpenScopeState extends ConsumerState<_NostrIdAutoOpenScope> {
         if (cached != null) return true;
         return await repository.fetchFreshProfile(pubkey: hexPubkey) != null;
       },
+      // A video the viewer's filters hide still exists: it opens like its
+      // note1 does, and the detail screen names the setting (#7892).
       videoExists: (routeId) async {
         final repository = ref.read(videosRepositoryProvider);
-        return await repository.fetchVideoWithStatsForRouteId(routeId) != null;
+        final lookup = await repository.lookupVideoForRouteId(routeId);
+        return lookup is! VideoRouteMissing;
       },
     );
 

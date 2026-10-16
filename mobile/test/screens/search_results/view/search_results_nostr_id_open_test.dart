@@ -157,6 +157,31 @@ void main() {
       expect(find.text('video:$note1'), findsOneWidget);
     });
 
+    testWidgets(
+      'pasting the event id of a video the viewer filters out opens it',
+      (tester) async {
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(hexId),
+        ).thenAnswer(
+          (_) async => VideoRouteHiddenByFilter(
+            VideoEvent(
+              id: hexId,
+              pubkey: authorHex,
+              createdAt: 1700000000,
+              content: '',
+              timestamp: DateTime.utc(2023, 11, 14),
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.enterText(find.byType(TextField), hexId);
+        await tester.pumpAndSettle();
+
+        expect(find.text('video:$hexId'), findsOneWidget);
+      },
+    );
+
     testWidgets('ordinary text stays in search', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.enterText(find.byType(TextField), 'cats');
