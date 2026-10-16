@@ -31,6 +31,8 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
+class _MockMyFollowersDao extends Mock implements MyFollowersDao {}
+
 class _TestNostrSession extends NostrSession {
   _TestNostrSession(this.initial);
 
@@ -195,6 +197,34 @@ void main() {
           .thenAnswer((_) async => throw StateError('profile invariant'));
       await expectLater(loader.load([followed]), throwsA(isA<StateError>()));
     });
+
+    test(
+      'rethrows the invariant error when an earlier read also failed',
+      () async {
+        final followers = _MockMyFollowersDao();
+        when(
+          () => followers.followerSubset(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            candidates: any(named: 'candidates'),
+          ),
+        ).thenAnswer((_) async => throw Exception('database locked'));
+        when(
+          () => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+        ).thenAnswer((_) async => throw StateError('profile invariant'));
+        final failing = UserRankingSignalsLoader(
+          dmRepository: dms,
+          followRepository: follows,
+          profileRepository: profiles,
+          myFollowersDao: followers,
+          profileStatsDao: database.profileStatsDao,
+          nostrEventsDao: database.nostrEventsDao,
+          nip05VerificationsDao: database.nip05VerificationsDao,
+          currentUserPubkey: viewer,
+          now: () => now,
+        );
+        await expectLater(failing.load([followed]), throwsA(isA<StateError>()));
+      },
+    );
 
     test(
       'builds signals from local relationships, profiles and video cache',
