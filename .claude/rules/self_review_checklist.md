@@ -268,6 +268,13 @@ Testing:
   test compares null with null and passes. Frozen at zero when the pair is the
   test's only assertion by `check_unpinned_unchanged_assertions.sh` (#8617). See
   [`testing.md`](testing.md#an-unchanged-assertion-needs-a-pinned-baseline).
+- [ ] No gesture in a widget test passes `pointer:`, and no `TestPointer`
+  with a fixed id lands a finger in a test that also takes automatic ids.
+  flutter_test hands out ids from one counter shared by the whole merged
+  isolate, so a fixed id collides with an automatic one only under some
+  seeds and shards, and fails at random in unrelated PRs (#10245). Nothing
+  enforces this yet; see
+  [`testing.md`](testing.md#vgv-merged-isolate--process-global-state).
 - [ ] No new `skip:` / `@Skip`. A failing test on your branch is caused by
   your branch — fix it, delete it, or quarantine it behind a tag, never
   silence it. Frozen per file by `check_skip_ceiling.sh`; a baselined file
