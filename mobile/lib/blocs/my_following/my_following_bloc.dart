@@ -334,9 +334,15 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
         event.pubkeys.every(rankedSnapshot.rankingSignals.containsKey)) {
       // Removing an existing row changes membership, not the retained ranking.
       final keys = event.pubkeys.toSet();
-      final smartOrder = rankedSnapshot.smartOrder
-          .where(keys.contains)
-          .toList();
+      final previousOrder = rankedSnapshot.smartOrder.toSet();
+      final smartOrder = [
+        ...rankedSnapshot.smartOrder.where(keys.contains),
+        ...event.pubkeys.where(
+          (key) =>
+              !previousOrder.contains(key) &&
+              !_blocklistRepository.isBlocked(key),
+        ),
+      ];
       final ordered =
           state.sortOrder.followSortOrder?.fromFollowOrder(event.pubkeys) ??
           smartOrder;

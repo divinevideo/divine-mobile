@@ -295,6 +295,37 @@ void main() {
       },
     );
 
+    test(
+      'membership removal keeps a newly unblocked row during pending ranking',
+      () async {
+        var blocked = true;
+        when(() => blocklist.isBlocked(_a)).thenAnswer((_) => blocked);
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const MyFollowingListLoadRequested());
+        load([_a, _b]);
+        await pumpEventQueue();
+        expect(bloc.state.followingPubkeys, [_b]);
+        final pending = Completer<Map<String, UserRankingSignals>>();
+        when(() => loader.load([_a, _b])).thenAnswer((_) => pending.future);
+        blocked = false;
+        bloc.add(const MyFollowingBlocklistChanged());
+        await pumpEventQueue();
+        updates.add([_a]);
+        await pumpEventQueue();
+        try {
+          expect(bloc.state.rawFollowingPubkeys, [_a]);
+          expect(bloc.state.followingPubkeys, [_a]);
+        } finally {
+          pending.complete({
+            for (final key in [_a, _b]) key: UserRankingSignals(pubkey: key),
+          });
+        }
+        await pumpEventQueue();
+        expect(bloc.state.followingPubkeys, [_a]);
+      },
+    );
+
     test('equal scores sort by cached display name before pubkey', () async {
       when(() => loader.load(any())).thenAnswer(
         (_) async => {
