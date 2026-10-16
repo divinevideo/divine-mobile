@@ -399,7 +399,7 @@ Work in `.worktrees/smart-user-ranking`. Run `git fetch origin && git rebase ori
     It is a const constructor with Equatable-style `==`. Implement it by hand; the package takes no equatable dependency.
   - `abstract final class UserRankingWeights`, holding the constants from Global Constraints.
   - `double scoreUser(UserRankingSignals s, {required DateTime now})`. A future date counts as age 0.
-  - `bool isKnown(UserRankingSignals s)`: `lastInteractionAt != null || youFollow || followsYou == true`.
+  - `bool isKnown(UserRankingSignals s)`: `lastInteractionAt != null || youFollow`. Following the viewer alone does not count.
   - `List<String> rankUsers(Iterable<UserRankingSignals> candidates, {required DateTime now, required String Function(String pubkey) nameOf, bool interactionTierFirst = false})`:
     - Without tiers: sort by score descending, then `nameOf` (case-insensitive), then pubkey.
     - With `interactionTierFirst`: first the candidates with `lastInteractionAt`, by it descending; then the rest by score.
