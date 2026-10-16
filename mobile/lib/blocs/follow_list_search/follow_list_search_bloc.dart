@@ -110,8 +110,8 @@ class FollowListSearchBloc
         : trimmed;
 
     // Emit before resolving so the query lands immediately on the names that
-    // are already known. Remote matches belong to the previous query, so they
-    // are dropped rather than carried over.
+    // are already known. Remote matches answer one query, so they carry over
+    // only when it is unchanged, as when a replacement bloc re-runs it.
     emit(
       state.copyWith(
         query: query,

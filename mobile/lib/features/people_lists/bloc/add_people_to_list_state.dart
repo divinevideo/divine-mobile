@@ -46,7 +46,8 @@ class AddPeopleToListState extends Equatable {
   /// First-visible positions, retained when relationship or metadata changes.
   final Map<String, int> candidatePositions;
 
-  /// Keys submitted in the initial snapshot; successful omissions stay excluded.
+  /// Keys submitted for ranking, later arrivals included; successful omissions
+  /// stay excluded.
   final Set<String> rankingCandidatePubkeys;
 
   /// Identifies the active load so obsolete asynchronous work is discarded.

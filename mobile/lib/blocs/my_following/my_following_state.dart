@@ -43,7 +43,8 @@ final class MyFollowingState extends Equatable {
   /// Frozen first-load ranking, with later arrivals appended.
   final List<String> smartOrder;
 
-  /// Local signals for eligible rows, also available for row presentation.
+  /// Local signals for every member, neutral where the loader had none; rows
+  /// also read them for presentation.
   final Map<String, UserRankingSignals> rankingSignals;
 
   /// Whether the initial local ranking has completed, including empty lists.

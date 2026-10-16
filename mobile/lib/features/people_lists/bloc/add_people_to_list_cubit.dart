@@ -27,17 +27,18 @@ import 'package:user_ranking/user_ranking.dart';
 ///   * mark candidates whose pubkey appears in [existingMemberPubkeys] as
 ///     [PeopleListCandidate.isAlreadyInList] so the UI can render them
 ///     pre-checked and disabled;
-///   * resolve [ProfileRepository] metadata for each candidate without
-///     blocking the picker — cached profiles are used when present, and
-///     a fresh fetch is fired-and-forgotten for the rest.
+///   * resolve [ProfileRepository] metadata: initial rows show at once and
+///     hydrate in the background, while later arrivals are held back until a
+///     cached or fresh profile is ready, with at most four fresh fetches at a
+///     time.
 class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     with CloseGuardedEmit<AddPeopleToListState> {
   /// Creates a new cubit scoped to a single picker instance.
   ///
   /// [existingMemberPubkeys] should contain the full-hex pubkeys already in
   /// the target list. Pass an empty list for a fresh list.
-  /// [initialState] may transfer a snapshot only within the same owner, list,
-  /// when constructor-injected dependencies are refreshed.
+  /// [initialState] may carry a snapshot over only for the same owner and
+  /// list, when constructor-injected dependencies are refreshed.
   AddPeopleToListCubit({
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
@@ -107,7 +108,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
   final Map<String, PeopleListCandidate> _candidatesByPubkey = {};
 
   // New relationship rows get permanent positions only once their local
-  // signals and display metadata are ready, never from a pubkey-only sort.
+  // signals and display metadata are ready; rows that need a fresh profile
+  // fetch are appended in the order those fetches finish.
   final Set<String> _pendingCandidates = {};
   final _profileHydrationQueue =
       Queue<({String pubkey, int revision, UserRankingSignals signals})>();
