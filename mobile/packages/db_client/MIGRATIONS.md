@@ -202,8 +202,9 @@ replay, older history and the preview refresh after a deletion keep it. The
 marker stores the latest-message timestamp at dismissal and the IDs already
 present at that boundary second. After cache cleanup, replaying those IDs keeps
 the rebuilt conversation dismissed and read; a distinct incoming ID at the same
-second (or a newer incoming message) removes the marker. Outgoing messages do
-not clear dismissal. Explicit Restore clears it too. Only explicit account-local
+second (or a newer incoming message) removes the marker. As before, a new
+outgoing message also restores the conversation. Explicit Restore clears it too.
+Only explicit account-local
 data deletion purges that owner's remaining saved markers; other accounts stay
 isolated. Cross-device synchronization remains out of scope.
 

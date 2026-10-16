@@ -21,16 +21,21 @@ void main() {
       await temp.delete(recursive: true);
     });
 
-    Future<void> replay({String? account, int timestamp = 100}) =>
-        database.conversationsDao.upsertConversation(
-          id: id,
-          participantPubkeys: '["$owner","$peer"]',
-          isGroup: false,
-          createdAt: 100,
-          lastMessageTimestamp: timestamp,
-          ownerPubkey: account ?? owner,
-          isRead: false,
-        );
+    Future<void> replay({
+      String? account,
+      int timestamp = 100,
+      bool read = false,
+      bool force = false,
+    }) => database.conversationsDao.upsertConversation(
+      id: id,
+      participantPubkeys: '["$owner","$peer"]',
+      isGroup: false,
+      createdAt: 100,
+      lastMessageTimestamp: timestamp,
+      ownerPubkey: account ?? owner,
+      isRead: read,
+      forceUpdateLastMessage: force,
+    );
 
     Future<void> message(
       String messageId, {
@@ -136,17 +141,95 @@ void main() {
       },
     );
 
+    for (final incoming in [true, false]) {
+      test(
+        'newer ${incoming ? 'incoming' : 'outgoing'} messages restore',
+        () async {
+          await message('d' * 64);
+          await replay();
+          await dismiss();
+          await message(
+            'e' * 64,
+            timestamp: 101,
+            sender: incoming ? peer : owner,
+          );
+          await replay(timestamp: 101, read: !incoming);
+          expect(await isDismissed(), isFalse);
+          expect(
+            (await database.conversationsDao.getConversation(
+              id,
+              ownerPubkey: owner,
+            ))!.isRead,
+            !incoming,
+          );
+        },
+      );
+    }
+
+    test('replaying a previously deleted message retains dismissal', () async {
+      await message('d' * 64);
+      await replay();
+      await message('e' * 64, timestamp: 90);
+      await database.directMessagesDao.markMessageDeleted(
+        'd' * 64,
+        ownerPubkey: owner,
+      );
+      // Sender deletion is a soft-delete; its id remains known even when the
+      // preview is repaired to the older remaining message before dismissal.
+      await replay(timestamp: 90, force: true);
+      await dismiss();
+      await switchAway();
+      // Model the wrap arriving before its kind-5 deletion during recovery.
+      await message('d' * 64);
+      await replay();
+      expect(await isDismissed(), isTrue);
+      await database.directMessagesDao.markMessageDeleted(
+        'd' * 64,
+        ownerPubkey: owner,
+      );
+      await message('e' * 64, timestamp: 90);
+      await replay(timestamp: 90, force: true);
+      expect(await isDismissed(), isTrue);
+    });
+
     test(
-      'newer incoming messages restore but outgoing messages do not',
+      'dismissal remembers message ids from a visible legacy cache row',
       () async {
+        await database.directMessagesDao.insertMessage(
+          id: 'd' * 64,
+          conversationId: id,
+          senderPubkey: peer,
+          content: 'Legacy message',
+          createdAt: 100,
+          giftWrapId: 'e' * 64,
+          ownerPubkey: '',
+        );
+        await replay(account: '');
+        await dismiss();
+        await switchAway();
         await message('d' * 64);
         await replay();
-        await dismiss();
-        await message('e' * 64, timestamp: 101, sender: owner);
-        await replay(timestamp: 101);
         expect(await isDismissed(), isTrue);
-        await message('f' * 64, timestamp: 102);
-        await replay(timestamp: 102);
+      },
+    );
+
+    test(
+      'another known account cannot supply this account’s replay ids',
+      () async {
+        await database.directMessagesDao.insertMessage(
+          id: 'd' * 64,
+          conversationId: id,
+          senderPubkey: peer,
+          content: 'Other account copy',
+          createdAt: 100,
+          giftWrapId: 'e' * 64,
+          ownerPubkey: peer,
+        );
+        await replay();
+        await dismiss();
+        await switchAway();
+        await message('d' * 64);
+        await replay();
         expect(await isDismissed(), isFalse);
       },
     );

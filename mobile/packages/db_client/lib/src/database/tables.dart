@@ -1781,6 +1781,8 @@ class ProcessedGiftWraps extends Table {
 }
 
 /// Account-lifetime dismissal state independent of cached conversation rows.
+/// Retained until Restore, a new message, or explicit account-data deletion;
+/// Ordinary sign-out and switching accounts leave the owner-scoped rows intact.
 class ConversationDismissals extends Table {
   TextColumn get conversationId => text()();
   TextColumn get ownerPubkey => text()();
@@ -1789,8 +1791,8 @@ class ConversationDismissals extends Table {
   /// history cannot undo dismissal, even when the conversation is rebuilt.
   IntColumn get boundaryTimestamp => integer()();
 
-  /// IDs already present at the boundary second. A distinct incoming message
-  /// in that second restores the thread; replaying one of these does not.
+  /// IDs already stored at or after the boundary, including soft-deleted rows.
+  /// This distinguishes replay from a distinct message in the same second.
   TextColumn get knownMessageIds => text().withDefault(const Constant('[]'))();
 
   @override

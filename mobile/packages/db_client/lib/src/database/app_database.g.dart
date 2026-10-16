@@ -12718,8 +12718,8 @@ class ConversationDismissal extends DataClass
   /// history cannot undo dismissal, even when the conversation is rebuilt.
   final int boundaryTimestamp;
 
-  /// IDs already present at the boundary second. A distinct incoming message
-  /// in that second restores the thread; replaying one of these does not.
+  /// IDs already stored at or after the boundary, including soft-deleted rows.
+  /// This distinguishes replay from a distinct message in the same second.
   final String knownMessageIds;
   const ConversationDismissal({
     required this.conversationId,
