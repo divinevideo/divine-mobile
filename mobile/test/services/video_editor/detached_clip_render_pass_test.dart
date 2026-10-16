@@ -240,8 +240,9 @@ void main() {
       group('when the device runs out of codecs', () {
         /// Runs the pass to its end under fake time, so the encoder retries'
         /// settle delays elapse instantly, and returns what it threw.
-        Object? failureOf(Object renderError) {
+        (Object?, StackTrace?) failureWithStackOf(Object renderError) {
           Object? failure;
+          StackTrace? stackTrace;
           fakeAsync((async) {
             editor.renderError = renderError;
             DetachedClipRenderPass? pass;
@@ -249,12 +250,21 @@ void main() {
             async.flushMicrotasks();
             File(pass!.basePath).writeAsBytesSync(const [1]);
             unawaited(
-              run(pass!).then<void>((_) {}, onError: (Object e) => failure = e),
+              run(pass!).then<void>(
+                (_) {},
+                onError: (Object e, StackTrace s) {
+                  failure = e;
+                  stackTrace = s;
+                },
+              ),
             );
             async.elapse(const Duration(seconds: 10));
           });
-          return failure;
+          return (failure, stackTrace);
         }
+
+        Object? failureOf(Object renderError) =>
+            failureWithStackOf(renderError).$1;
 
         test('blames the detached clips once every retry failed', () {
           // How `pro_video_editor` reported the decoders a Galaxy S26 could
@@ -284,6 +294,17 @@ void main() {
             hasLength(3),
             reason: 'the encoder retries run before the clips are blamed',
           );
+        });
+
+        test("keeps the native failure's stack for the crash report", () {
+          final (_, stackTrace) = failureWithStackOf(
+            const RenderEncoderException.transient('exhausted'),
+          );
+
+          // Where the native render threw, not where the pass reclassified it:
+          // the export reports the failure with this stack, and it should match
+          // what it reported before the failure had a reason of its own.
+          expect(stackTrace.toString(), contains('renderVideoToFile'));
         });
 
         test('leaves an unsupported encoder unclassified', () {

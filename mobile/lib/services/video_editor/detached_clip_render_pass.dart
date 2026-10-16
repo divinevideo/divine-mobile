@@ -212,7 +212,7 @@ class DetachedClipRenderPass {
         fallbackAspectRatio: aspectRatio,
         ownerTaskId: taskId,
       );
-    } on RenderEncoderException catch (error) {
+    } on RenderEncoderException catch (error, stackTrace) {
       // Codecs still out of reach after every retry. The base track was just
       // encoded with the same encoder, so what this pass cannot get is a
       // decoder for each detached clip: `pro_video_editor` reports a starved
@@ -225,9 +225,15 @@ class DetachedClipRenderPass {
         name: _logName,
         category: LogCategory.video,
       );
-      throw VideoRenderFailedException(
-        VideoRenderFailureReason.tooManyDetachedClips,
-        cause: error,
+      // Thrown with the native failure's own stack, so the crash report the
+      // export sends for it matches the one it sent before this had a reason
+      // of its own.
+      Error.throwWithStackTrace(
+        VideoRenderFailedException(
+          VideoRenderFailureReason.tooManyDetachedClips,
+          cause: error,
+        ),
+        stackTrace,
       );
     }
 
