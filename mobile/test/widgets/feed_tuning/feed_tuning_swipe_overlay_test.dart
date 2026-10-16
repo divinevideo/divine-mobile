@@ -153,14 +153,8 @@ void main() {
       final tuned = await pumpOverlay(tester);
       final center = tester.getCenter(find.byType(FeedTuningSwipeOverlay));
 
-      final first = await tester.startGesture(
-        center - const Offset(20, 0),
-        pointer: 1,
-      );
-      final second = await tester.startGesture(
-        center + const Offset(20, 0),
-        pointer: 2,
-      );
+      final first = await tester.startGesture(center - const Offset(20, 0));
+      final second = await tester.startGesture(center + const Offset(20, 0));
       await first.moveBy(const Offset(-120, 0));
       await second.moveBy(const Offset(120, 0));
       await first.up();
@@ -175,11 +169,8 @@ void main() {
       final tuned = await pumpOverlay(tester);
       final center = tester.getCenter(find.byType(FeedTuningSwipeOverlay));
 
-      final first = await tester.startGesture(center, pointer: 1);
-      final second = await tester.startGesture(
-        center + const Offset(0, 100),
-        pointer: 2,
-      );
+      final first = await tester.startGesture(center);
+      final second = await tester.startGesture(center + const Offset(0, 100));
       await second.up();
       await first.moveBy(const Offset(200, 0));
       await first.up();

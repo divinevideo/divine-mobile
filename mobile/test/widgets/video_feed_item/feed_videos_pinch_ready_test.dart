@@ -356,19 +356,6 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(kFeedImmersiveFadeDuration);
 }
 
-/// Taps [position] with an explicit [pointer] id.
-///
-/// The id must differ from any finger whose gesture arena is still open (a
-/// pinch lifted moments ago), or the arena rejects the reused id.
-Future<void> _tap(
-  WidgetTester tester,
-  Offset position, {
-  required int pointer,
-}) async {
-  final gesture = await tester.startGesture(position, pointer: pointer);
-  await gesture.up();
-}
-
 /// Lands two fingers 40 apart on [center] and spreads them.
 ///
 /// With [anchored] the first finger stays put, as a thumb resting on the
@@ -378,16 +365,9 @@ Future<void> _pinch(
   WidgetTester tester,
   Offset center, {
   required bool anchored,
-  int basePointer = 1,
 }) async {
-  final first = await tester.startGesture(
-    center - const Offset(20, 0),
-    pointer: basePointer,
-  );
-  final second = await tester.startGesture(
-    center + const Offset(20, 0),
-    pointer: basePointer + 1,
-  );
+  final first = await tester.startGesture(center - const Offset(20, 0));
+  final second = await tester.startGesture(center + const Offset(20, 0));
   await tester.pump();
   if (!anchored) await first.moveTo(center - const Offset(140, 0));
   await second.moveTo(center + const Offset(140, 0));
@@ -441,7 +421,7 @@ void main() {
       final playsBefore = rig.harness.countCalls('play');
       final pausesBefore = rig.harness.countCalls('pause');
 
-      await _pinch(tester, center, anchored: true, basePointer: 3);
+      await _pinch(tester, center, anchored: true);
       await _settle(tester);
 
       expect(rig.immersive.state.isPinned, isFalse);
@@ -466,7 +446,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       // Inside the double-tap window and slop, so the still finger's leftover
       // tap and this one would read as a double tap.
-      await _tap(tester, center - const Offset(20, 0), pointer: 5);
+      await tester.tapAt(center - const Offset(20, 0));
       await _settle(tester);
 
       verifyNever(() => _toggleLike(rig.likes));
@@ -477,9 +457,9 @@ void main() {
       final rig = await _pumpReadyFeed(tester);
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
 
-      await _tap(tester, center, pointer: 1);
+      await tester.tapAt(center);
       await tester.pump(const Duration(milliseconds: 100));
-      await _tap(tester, center, pointer: 2);
+      await tester.tapAt(center);
       await _settle(tester);
 
       verify(() => _toggleLike(rig.likes)).called(1);
@@ -498,7 +478,7 @@ void main() {
       final playsBefore = rig.harness.countCalls('play');
       final pausesBefore = rig.harness.countCalls('pause');
 
-      await _tap(tester, center, pointer: 5);
+      await tester.tapAt(center);
       await _settle(tester);
 
       expect(rig.immersive.state.isPinned, isFalse);
@@ -522,7 +502,7 @@ void main() {
       final playsBefore = rig.harness.countCalls('play');
       final pausesBefore = rig.harness.countCalls('pause');
 
-      final gesture = await tester.startGesture(center, pointer: 1);
+      final gesture = await tester.startGesture(center);
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
 
       expect(rig.immersive.state.isHolding, isTrue);
@@ -544,7 +524,7 @@ void main() {
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
       final playsBefore = rig.harness.countCalls('play');
 
-      final gesture = await tester.startGesture(center, pointer: 1);
+      final gesture = await tester.startGesture(center);
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
       await rig.harness.emitStatus('paused');
       await gesture.cancel();
@@ -564,7 +544,7 @@ void main() {
       final playsBefore = rig.harness.countCalls('play');
       final pausesBefore = rig.harness.countCalls('pause');
 
-      final gesture = await tester.startGesture(center, pointer: 1);
+      final gesture = await tester.startGesture(center);
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
       expect(rig.immersive.state.isHolding, isTrue);
       await gesture.up();
@@ -583,7 +563,7 @@ void main() {
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
       final playsBefore = rig.harness.countCalls('play');
 
-      final gesture = await tester.startGesture(center, pointer: 1);
+      final gesture = await tester.startGesture(center);
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
       await rig.harness.emitStatus('paused');
       // An incoming call or the app switcher backgrounds the app mid-hold.
@@ -608,7 +588,7 @@ void main() {
       await rig.harness.emitStatus('playing');
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
 
-      final gesture = await tester.startGesture(center, pointer: 1);
+      final gesture = await tester.startGesture(center);
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
       await rig.harness.emitStatus('paused');
       // The chrome is still fading out here, so a play button would show.
@@ -640,7 +620,7 @@ void main() {
       expect(_pausedControls, findsOneWidget);
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
 
-      final gesture = await tester.startGesture(center, pointer: 1);
+      final gesture = await tester.startGesture(center);
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
       await gesture.up();
       await tester.pump();
