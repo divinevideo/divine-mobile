@@ -113,6 +113,32 @@ void main() {
       expect(find.text(_bobPubkey), findsNothing);
     });
 
+    testWidgets(
+      'warns and keeps every row when the text holds a private key',
+      (tester) async {
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.enterText(
+          find.byType(TextField),
+          'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+        );
+        await tester.pump(_pastDebounce);
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+        expect(find.text(_alicePubkey), findsOneWidget);
+        expect(find.text(_bobPubkey), findsOneWidget);
+        verifyNever(
+          () => followRepository.searchFollowList(
+            pubkey: any(named: 'pubkey'),
+            query: any(named: 'query'),
+            kind: any(named: 'kind'),
+          ),
+        );
+      },
+    );
+
     testWidgets('shows the no-results copy when nothing matches', (
       tester,
     ) async {

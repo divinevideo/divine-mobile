@@ -532,6 +532,25 @@ void main() {
         expect(find.text('Victory Lap'), findsNothing);
       });
 
+      testWidgets('warns when the search text holds a private key', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byType(TextField).first,
+          'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+        );
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+      });
+
       testWidgets('keeps a saved-sounds search off the relays', (tester) async {
         // Private labels are the words a user reaches for on this tab, and
         // only the Community tab shows relay results, so a query typed here

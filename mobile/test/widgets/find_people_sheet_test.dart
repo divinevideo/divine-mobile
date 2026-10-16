@@ -425,6 +425,42 @@ void main() {
         expect(find.text('Search failed. Please try again.'), findsOneWidget);
       });
 
+      testWidgets(
+        'warns instead of searching when the text holds a private key',
+        (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          when(
+            () => mockProfileRepo.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              cancellationToken: any(named: 'cancellationToken'),
+            ),
+          ).thenAnswer((_) => const Stream.empty());
+
+          await openSheet(tester);
+
+          await tester.enterText(
+            find.byType(TextField),
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+          );
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+          verifyNever(
+            () => mockProfileRepo.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              cancellationToken: any(named: 'cancellationToken'),
+            ),
+          );
+        },
+      );
+
       testWidgets('returns to contact list when search is cleared', (
         tester,
       ) async {

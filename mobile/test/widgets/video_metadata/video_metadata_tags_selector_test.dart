@@ -360,6 +360,31 @@ void main() {
         expect(find.text(tooLongCopy), findsOneWidget);
       });
 
+      testWidgets(
+        'warns instead of searching when the text holds a private key',
+        (tester) async {
+          await openPicker(tester);
+
+          // Short enough to stay in the field as a search rather than be
+          // committed and rejected as an over-long tag.
+          await tester.enterText(
+            find.byType(TextField).last,
+            'nsec1vl029mgpspedva04g90vltkh6f',
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+
+          expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+          verifyNever(
+            () => hashtagRepository.searchHashtags(
+              query: any(named: 'query', that: contains('nsec1')),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+            ),
+          );
+        },
+      );
+
       testWidgets('shows a character counter once a tag gets long', (
         tester,
       ) async {

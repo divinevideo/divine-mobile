@@ -7616,6 +7616,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchDiscoverSomethingInteresting => '发现点有意思的东西';
 
   @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
+
+  @override
   String get searchPeopleSectionHeader => '用户';
 
   @override

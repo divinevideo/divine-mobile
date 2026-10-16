@@ -273,6 +273,27 @@ void main() {
     // placeholder. The old gate keyed on the immutable route arg and
     // therefore stayed `false`, regressing the #3023 "infinite skeleton"
     // symptom in the post-mount edit path.
+    group('with a private key in the search field', () {
+      setUp(() {
+        when(() => mockVideoBloc.state).thenReturn(const VideoSearchState());
+        when(() => mockFilterCubit.state).thenReturn(SearchResultsFilter.all);
+      });
+
+      testWidgets('renders the private key warning instead of results', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        controller.text =
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+        expect(find.byType(PeopleSection, skipOffstage: false), findsNothing);
+        expect(find.byType(VideosSection, skipOffstage: false), findsNothing);
+        expect(find.byType(SearchSectionInitialState), findsNothing);
+      });
+    });
+
     group('field-edit transitions after mounting with a prefilled query', () {
       testWidgets(
         'shows idle placeholder when the cleared field meets a reset BLoC',

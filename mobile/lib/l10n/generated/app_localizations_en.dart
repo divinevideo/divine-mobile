@@ -8207,6 +8207,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Discover something interesting';
 
   @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
+
+  @override
   String get searchPeopleSectionHeader => 'People';
 
   @override

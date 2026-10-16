@@ -12,6 +12,7 @@ import 'package:openvine/blocs/tags_picker/tags_picker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
 
 /// Opens the tags picker as a full-screen modal bottom sheet.
@@ -278,6 +279,14 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
         ),
 
         _TagInputHint(controller: _searchController),
+
+        ValueListenableBuilder(
+          valueListenable: _searchController,
+          builder: (context, value, _) => PrivateKeySearchWarning(
+            query: value.text,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          ),
+        ),
 
         BlocSelector<TagsPickerBloc, TagsPickerState, Set<String>>(
           selector: (s) => s.selectedTags,
