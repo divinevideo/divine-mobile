@@ -562,7 +562,7 @@ final class UserDataCleanupServiceProvider
 }
 
 String _$userDataCleanupServiceHash() =>
-    r'5b99212150af2c51010322972fe4c2ed0ab75b42';
+    r'2ae19cb8981e8a273110e03d08e8adcb8f215e72';
 
 /// Hashtag service depends on Video event service
 

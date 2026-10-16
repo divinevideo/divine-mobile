@@ -278,7 +278,7 @@ void main() {
       'follower cache cleanup failure does not skip account history cleanup',
       () async {
         await db.seenVideosDao.markSeenBatch([
-          SeenVideoRow(
+          const SeenVideoRow(
             videoId: _reactionIdA,
             firstSeenAt: 100,
             lastSeenAt: 100,
@@ -292,6 +292,25 @@ void main() {
         addTearDown(subscription.close);
         await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
         expect(await db.seenVideosDao.getAll(), isEmpty);
+      },
+    );
+
+    test(
+      'destructive account deletion reports follower cache cleanup failure',
+      () async {
+        await db.customStatement('DROP TABLE my_followers');
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await expectLater(
+          subscription.read().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            deleteUserData: true,
+          ),
+          throwsA(isA<SqliteException>()),
+        );
       },
     );
 
@@ -332,6 +351,7 @@ void main() {
           full: null,
           incremental: null,
           attempt: null,
+          fullAttempt: null,
         ));
         expect(await db.myFollowersDao.followersOf(_pubkeyB), [
           (pubkey: _reactionIdB, followedAt: 150),
