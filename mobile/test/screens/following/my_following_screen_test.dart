@@ -505,20 +505,43 @@ void main() {
         when(() => second.isEligible(any())).thenReturn(true);
         when(() => first.load(any())).thenAnswer(
           (_) async => {
-            firstFollowed: const UserRankingSignals(pubkey: firstFollowed),
+            firstFollowed: const UserRankingSignals(
+              pubkey: firstFollowed,
+              youFollow: true,
+            ),
           },
         );
         when(() => second.load(any())).thenAnswer(
           (_) async => {
-            secondFollowed: const UserRankingSignals(pubkey: secondFollowed),
+            secondFollowed: const UserRankingSignals(
+              pubkey: secondFollowed,
+              youFollow: true,
+            ),
           },
         );
         await pumpScreen(tester, loader: first);
         await tester.pumpAndSettle();
-        expect(visibleOrder(tester), [firstFollowed]);
+        final old = tester
+            .element(find.byType(UserProfileTile).first)
+            .read<MyFollowingBloc>();
+        expect(
+          visibleOrder(tester),
+          containsAll([firstFollowed, secondFollowed, thirdFollowed]),
+        );
+        expect(old.state.rankingSignals[firstFollowed]?.youFollow, isTrue);
         await pumpScreen(tester, loader: second);
         await tester.pumpAndSettle();
-        expect(visibleOrder(tester), [secondFollowed]);
+        final next = tester
+            .element(find.byType(UserProfileTile).first)
+            .read<MyFollowingBloc>();
+        expect(next, isNot(same(old)));
+        expect(old.isClosed, isTrue);
+        expect(
+          visibleOrder(tester),
+          containsAll([firstFollowed, secondFollowed, thirdFollowed]),
+        );
+        expect(next.state.rankingSignals[secondFollowed]?.youFollow, isTrue);
+        expect(next.state.rankingSignals[firstFollowed]?.youFollow, isFalse);
       },
     );
 
@@ -537,7 +560,24 @@ void main() {
     testWidgets('picking oldest first restores contact-list order', (
       tester,
     ) async {
-      await pumpScreen(tester);
+      final loader = _MockRankingLoader();
+      when(() => loader.loadCachedDisplayNames(any()))
+          .thenAnswer((_) async => {});
+      when(() => loader.load(any())).thenAnswer(
+        (call) async => {
+          for (final key in call.positionalArguments.single as Iterable<String>)
+            key: UserRankingSignals(
+              pubkey: key,
+              youFollow: key == secondFollowed,
+            ),
+        },
+      );
+      await pumpScreen(tester, loader: loader);
+      expect(visibleOrder(tester), [
+        secondFollowed,
+        firstFollowed,
+        thirdFollowed,
+      ]);
 
       await tester.tap(find.bySemanticsLabel(l10n.followingSortSemanticLabel));
       await tester.pumpAndSettle();

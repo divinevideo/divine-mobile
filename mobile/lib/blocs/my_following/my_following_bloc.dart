@@ -361,6 +361,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
       final signals = await loadFollowListRankingSignals(
         pubkeys: pubkeys,
         loader: _rankingSignalsLoader!,
+        preserveMembership: true,
         logName: 'MyFollowingBloc',
         onError: addError,
       );
