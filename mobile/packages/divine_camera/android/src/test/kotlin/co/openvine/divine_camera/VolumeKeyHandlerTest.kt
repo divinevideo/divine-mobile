@@ -84,8 +84,9 @@ internal class VolumeKeyHandlerTest {
     fun onBecomeActive_afterDisable_leavesTheSessionReleased() {
         val handler = handler()
         handler.enable(appActive = true)
+        assertTrue(handler.isMediaSessionClaimed())
         handler.disable()
-        handler.onEnterBackground()
+        assertFalse(handler.isMediaSessionClaimed())
 
         handler.onBecomeActive()
 
