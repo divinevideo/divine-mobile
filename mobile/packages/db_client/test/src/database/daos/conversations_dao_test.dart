@@ -105,6 +105,34 @@ void main() {
         expect(row.lastMessageContent, 'Keep this message');
       });
 
+      test('a preview refresh after a deletion keeps dismissal', () async {
+        await seed('b' * 64);
+        await dao.setDismissed(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+          dismissed: true,
+        );
+        // The deletion path force-writes the newest remaining message, whose
+        // timestamp may be newer than the stored one after a duplicate merge.
+        await dao.upsertConversation(
+          id: 'a' * 64,
+          participantPubkeys: '["${'b' * 64}","${'c' * 64}"]',
+          isGroup: false,
+          createdAt: 50,
+          lastMessageTimestamp: 101,
+          lastMessageContent: 'Remaining message',
+          ownerPubkey: 'b' * 64,
+          isRead: false,
+          forceUpdateLastMessage: true,
+        );
+        final row = (await dao.getConversation(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+        ))!;
+        expect(row.lastMessageContent, 'Remaining message');
+        expect(row.isDismissed, isTrue);
+      });
+
       test('only a newer message resurfaces a dismissed request', () async {
         await seed('b' * 64);
         await dao.setDismissed(
