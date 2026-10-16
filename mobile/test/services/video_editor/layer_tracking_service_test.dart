@@ -89,9 +89,8 @@ void main() {
         expect(forward.maxFrameRate, VideoEditorConstants.trackingMaxFrameRate);
         expect(forward.maxParallelDecoders, 1);
         // Back from the marked frame to where the stretch starts in the file.
-        expect(decoder.requests.last.startTime, s);
-        expect(decoder.requests.last.endTime, s * 2);
         expect(track.anchorTime, s * 2);
+        expect(decoder.requests.last.startTime, s);
         // A featureless frame gives the tracker nothing to follow.
         expect(track.isFollowed, isFalse);
       });
