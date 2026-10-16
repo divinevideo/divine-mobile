@@ -105,7 +105,7 @@ void main() {
         );
         final db = AppDatabase(schema.newConnection());
         addTearDown(db.close);
-        await verifier.migrateAndValidate(db, 23);
+        await verifier.migrateAndValidate(db, 24);
         expect(
           await db.concordStoreDao.get(
             account: 'a' * 64,
@@ -536,10 +536,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v23', () async {
+    test('v8 schema migrates to v24', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -561,45 +561,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v23', () async {
+    test('v7 schema migrates to v24', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       await db.close();
     });
 
-    test('v6 schema migrates to v23', () async {
+    test('v6 schema migrates to v24', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       await db.close();
     });
 
-    test('v5 schema migrates to v23', () async {
+    test('v5 schema migrates to v24', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       await db.close();
     });
 
-    test('v3 schema migrates to v23', () async {
+    test('v3 schema migrates to v24', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       await db.close();
     });
 
-    test('v2 schema migrates to v23', () async {
+    test('v2 schema migrates to v24', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v23', () async {
+    test('legacy v1 schema migrates to v24', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 24);
       await db.close();
     });
 
@@ -730,7 +730,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 23);
+        await verifier.migrateAndValidate(db, 24);
 
         final retryable = await db.outgoingDmsDao.getRetryableForOwner(
           ownerPubkey: ownerPubkey,
