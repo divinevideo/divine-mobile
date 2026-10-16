@@ -239,8 +239,9 @@ void main() {
         expect(find.byType(SnackBar), findsNothing);
       });
 
-      // Before the native start and while a clip is finalized the row is
-      // still visible, but the recorder refuses a flip.
+      // Before the native start, and while an auto-stopped clip is finalized
+      // after the recorder already reads idle, the row is still visible but
+      // the recorder refuses a flip.
       for (final (phase, starting, stopping) in [
         ('starting', true, false),
         ('being finalized', false, true),

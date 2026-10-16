@@ -244,8 +244,9 @@ void main() {
         expect(switchButton(tester).onTap, isNotNull);
       });
 
-      // Before the native start and while a clip is finalized the rail is
-      // still visible, but the recorder refuses a flip.
+      // Before the native start, and while an auto-stopped clip is finalized
+      // after the recorder already reads idle, the rail is still visible but
+      // the recorder refuses a flip.
       testWidgets('is disabled while a take is starting', (tester) async {
         await tester.pumpWidget(buildWidget(isStartingRecording: true));
         await tester.pumpAndSettle();

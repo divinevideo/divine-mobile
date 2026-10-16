@@ -340,9 +340,10 @@ class VideoRecorderBlocState extends Equatable {
 
   /// Whether a take is starting, running or still being finalized.
   ///
-  /// Covers the record press, any countdown and the clip save. Only once the
-  /// native recording runs does a camera rebind end the take without a clip;
-  /// an earlier rebind can still be in flight when the native start lands.
+  /// Covers the record press, any countdown, and the native stop until it
+  /// returns the file. Only once the native recording runs does a camera
+  /// rebind end the take without a clip; an earlier rebind can still be in
+  /// flight when the native start lands.
   bool get hasRecordingInFlight =>
       isRecording || isStartingRecording || isStoppingRecording;
 
