@@ -96,11 +96,17 @@ final class VideoRecorderAspectRatioSet extends VideoRecorderEvent {
 }
 
 /// Switches between front and back camera.
+///
+/// Ignored while a take is starting, running or being finalized, because the
+/// rebind would end it.
 final class VideoRecorderCameraSwitched extends VideoRecorderEvent {
   const VideoRecorderCameraSwitched();
 }
 
 /// Sets the video stabilization mode.
+///
+/// Ignored while a take is starting, running or being finalized, because on
+/// Android the rebind would end it.
 final class VideoRecorderStabilizationModeSet extends VideoRecorderEvent {
   const VideoRecorderStabilizationModeSet(this.mode);
 
@@ -111,6 +117,9 @@ final class VideoRecorderStabilizationModeSet extends VideoRecorderEvent {
 }
 
 /// Switches to a specific camera lens.
+///
+/// Ignored while a take is starting, running or being finalized, because the
+/// rebind would end it.
 final class VideoRecorderLensSet extends VideoRecorderEvent {
   const VideoRecorderLensSet(this.lens);
 
