@@ -145,11 +145,15 @@ void main() {
       when(() => followRepository.followingPubkeys).thenReturn([_alicePubkey]);
       final cubit = createCubit();
       addTearDown(cubit.close);
+      // Captured rather than asserted in the stub: started() catches what the
+      // stub throws, so an expect there could never fail this test.
+      AddPeopleToListState? atRefresh;
       when(() => rankingLoader.refreshInBackground(any())).thenAnswer((_) {
-        expect(cubit.state.status, AddPeopleToListStatus.ready);
-        expect(cubit.state.candidates.map((c) => c.pubkey), [_alicePubkey]);
+        atRefresh = cubit.state;
       });
       await cubit.started();
+      expect(atRefresh?.status, AddPeopleToListStatus.ready);
+      expect(atRefresh?.candidates.map((c) => c.pubkey), [_alicePubkey]);
       verify(() => rankingLoader.refreshInBackground([_alicePubkey])).called(1);
     });
 
