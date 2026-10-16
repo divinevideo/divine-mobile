@@ -1,6 +1,7 @@
 // ABOUTME: Account-scoped dependency wiring for local user-ranking signals.
 // ABOUTME: Rebuilds the stateless loader when its repositories or identity change.
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -36,7 +37,17 @@ UserRankingSignalsLoader _rankingSignalsLoader(
   required bool Function(String pubkey) isBlocked,
 }) {
   final database = ref.watch(databaseProvider);
-  final session = ref.watch(nostrSessionProvider);
+  // Selected, not watched: readiness has no value equality, and a failed
+  // client init re-reports the same identity, which replaced every list.
+  final currentUserPubkey = ref.watch(
+    nostrSessionProvider.select(
+      (session) =>
+          session.phase == NostrSessionPhase.identityKnown ||
+              session.phase == NostrSessionPhase.nostrReady
+          ? session.pubkey ?? ''
+          : '',
+    ),
+  );
   return UserRankingSignalsLoader(
     dmRepository: ref.watch(dmRepositoryProvider),
     followRepository: ref.watch(followRepositoryProvider),
@@ -45,11 +56,7 @@ UserRankingSignalsLoader _rankingSignalsLoader(
     profileStatsDao: database.profileStatsDao,
     nostrEventsDao: database.nostrEventsDao,
     nip05VerificationsDao: database.nip05VerificationsDao,
-    currentUserPubkey:
-        session.phase == NostrSessionPhase.identityKnown ||
-            session.phase == NostrSessionPhase.nostrReady
-        ? session.pubkey ?? ''
-        : '',
+    currentUserPubkey: currentUserPubkey,
     isBlocked: isBlocked,
   );
 }
