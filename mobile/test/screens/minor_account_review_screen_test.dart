@@ -1067,6 +1067,44 @@ void main() {
         expect(find.byType(DivineCircularProgressIndicator), findsNothing);
       });
 
+      // Check Again can return a case that now needs action, and its Continue
+      // lands above the appeal. The appeal must keep its in-flight open across
+      // that shift, or a second tap starts a second one.
+      testWidgets(
+        'a teen appeal stays opening when a refresh adds Continue above it',
+        (tester) async {
+          final opening = Completer<bool>();
+          var openCalls = 0;
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.age13To15,
+            stateAfterRefresh:
+                MinorReviewCaseState.restrictedPendingUserResponse,
+            openSupportMessages: () {
+              openCalls++;
+              return opening.future;
+            },
+          );
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pump();
+          expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
+
+          await tester.tap(find.text(l10n.minorAccountReviewCheckAgain));
+          await tester.pump();
+          await tester.pump();
+          expect(find.text(l10n.minorAccountReviewContinue), findsOneWidget);
+
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pump();
+
+          expect(openCalls, equals(1));
+          expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+          opening.complete(true);
+          await tester.pumpAndSettle();
+        },
+      );
+
       testWidgets(
         'an under-13 appeal goes to parent support, never messaging',
         (
@@ -1422,11 +1460,13 @@ Future<void> _pumpRestrictedReview(
 
 /// Pumps a restricted case, by default one awaiting moderator review, which
 /// renders no primary action. [noCase] pumps a restriction with no case, in
-/// which [ageBand], [state] and [allowedResolution] are ignored.
+/// which [ageBand], [state] and [allowedResolution] are ignored. Every fetch
+/// after the first returns [stateAfterRefresh] when it is given.
 Future<void> _pumpAppeal(
   WidgetTester tester, {
   required SuspectedAgeBand ageBand,
   MinorReviewCaseState state = MinorReviewCaseState.submittedForReview,
+  MinorReviewCaseState? stateAfterRefresh,
   MinorReviewResolutionType? allowedResolution,
   bool noCase = false,
   MockGoRouter? goRouter,
@@ -1447,17 +1487,19 @@ Future<void> _pumpAppeal(
     ),
   );
 
+  var fetches = 0;
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+          final caseState = fetches++ == 0 ? state : stateAfterRefresh ?? state;
           return MinorAccountReviewStatus(
             restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
             currentCase: noCase
                 ? null
                 : MinorReviewCase(
                     id: 'case-appeal',
-                    state: state,
+                    state: caseState,
                     suspectedAgeBand: ageBand,
                     allowedResolution:
                         allowedResolution ??
