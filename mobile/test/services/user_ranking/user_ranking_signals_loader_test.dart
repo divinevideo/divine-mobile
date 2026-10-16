@@ -11,6 +11,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -523,6 +524,20 @@ void main() {
         expect(result.keys, [followed, mutual]);
         expect(result[mutual]!.lastInteractionAt, isNotNull);
         verify(() => dms.watchAcceptedConversations()).called(1);
+      },
+    );
+
+    test(
+      'DM expansion skips a retired moderation key the viewer replied to',
+      () async {
+        when(() => dms.watchAcceptedConversations()).thenAnswer(
+          (_) => Stream.value([
+            conversation(kLegacyModerationPubkeys.first),
+            conversation(mutual),
+          ]),
+        );
+        final result = await loader.load([], includeDmCounterparts: true);
+        expect(result.keys, [mutual]);
       },
     );
 
