@@ -650,6 +650,34 @@ void main() {
       },
     );
 
+    test(
+      'a future-dated video does not count as posted just now',
+      () async {
+        final posted = now.subtract(const Duration(days: 1));
+        final dates = [
+          posted.millisecondsSinceEpoch ~/ 1000,
+          now.add(const Duration(days: 1)).millisecondsSinceEpoch ~/ 1000,
+        ];
+        for (final (index, createdAt) in dates.indexed) {
+          await database.nostrEventsDao.upsertEvent(
+            Event(
+              stranger,
+              34236,
+              [
+                ['d', 'video-$index'],
+              ],
+              '',
+              createdAt: createdAt,
+            )..sig = '0' * 128,
+          );
+        }
+
+        final result = await loader.load([stranger]);
+
+        expect(result[stranger]?.lastPostedAt, posted);
+      },
+    );
+
     test('only verified and unexpired NIP-05 rows contribute', () async {
       for (final entry in {
         mutual: 'pending',

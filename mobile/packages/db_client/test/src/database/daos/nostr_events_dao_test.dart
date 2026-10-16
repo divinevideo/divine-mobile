@@ -137,6 +137,20 @@ void main() {
         },
       );
 
+      test('ignores events dated after notAfter', () async {
+        await dao.upsertEvent(createVideoEvent(createdAt: 100));
+        await dao.upsertEvent(createVideoEvent(createdAt: 200));
+
+        expect(
+          await dao.newestCreatedAtByAuthor(
+            authors: [testPubkey],
+            kinds: [34236],
+            notAfter: 150,
+          ),
+          {testPubkey: 100},
+        );
+      });
+
       test('returns empty when authors or kinds are empty', () async {
         await dao.upsertEvent(createVideoEvent(createdAt: 100));
         expect(
