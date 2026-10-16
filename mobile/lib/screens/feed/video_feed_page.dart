@@ -532,7 +532,8 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                 }
 
                 // Error state
-                if (state.status == VideoFeedStatus.failure && !keepHashtagVideos) {
+                if (state.status == VideoFeedStatus.failure &&
+                    !keepHashtagVideos) {
                   return Stack(
                     children: [
                       FeedErrorWidget(onRetry: () => _refreshFeed(context)),
