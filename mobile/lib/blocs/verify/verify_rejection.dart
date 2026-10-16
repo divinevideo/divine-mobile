@@ -3,6 +3,11 @@
 
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 
+/// The code the verifier sends when it could not check the proof right now
+/// (the platform did not answer, or a check limit was hit), as opposed to a
+/// verdict that the proof is wrong.
+const verifierUnavailableCode = 'temporarily_unavailable';
+
 /// Resolves the verifier's [code] to the error the connect flow should show.
 ///
 /// Mirrors the codes set in
@@ -23,7 +28,7 @@ import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 /// explainer, and the rest name a service-side condition the user cannot act
 /// on, so the generic rejection is the honest answer.
 VerifyConnectError verifyErrorForCode(String? code) => switch (code) {
-  'temporarily_unavailable' => VerifyConnectError.verifierUnreachable,
+  verifierUnavailableCode => VerifyConnectError.verifierUnreachable,
   'discord_npub_not_in_message' => VerifyConnectError.proofMissingNpub,
   'discord_dm_link' => VerifyConnectError.discordDmLink,
   'discord_channel_link' => VerifyConnectError.discordChannelLink,
