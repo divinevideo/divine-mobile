@@ -136,13 +136,11 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         // successful snapshot, including an empty one, is authoritative for
         // eligibility so excluded contacts cannot return through recents.
         addError(
-          error is StateError || error is TypeError
-              ? Reportable(
-                  error,
-                  context:
-                      ShareSheetBlocReportableSites.onContactsLoadRequested,
-                )
-              : error,
+          asReportableError(
+                error,
+                context: ShareSheetBlocReportableSites.onContactsLoadRequested,
+              ) ??
+              error,
           stackTrace,
         );
       }
