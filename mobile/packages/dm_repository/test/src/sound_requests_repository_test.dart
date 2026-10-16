@@ -31,9 +31,11 @@ class MemoryStore implements SoundRequestStore {
   final data = <String, SoundRequestSnapshot>{};
   bool fail = false;
   bool failRead = false;
+  Completer<void>? readGate;
   bool failAcknowledgement = false;
   @override
   Future<SoundRequestSnapshot> read(String owner) async {
+    await readGate?.future;
     if (failRead) throw const FormatException('unreadable');
     return data[owner] ?? const SoundRequestSnapshot();
   }
@@ -353,6 +355,48 @@ void main() {
   });
 
   group('restore', () {
+    for (final startPending in [false, true]) {
+      test(
+        'actions cannot overwrite unrestored state: pending=$startPending',
+        () async {
+          final stored = SoundRequestSnapshot(
+            requests: {
+              '1' * 64: SoundRequestEntry(
+                id: '1' * 64,
+                requester: viewer,
+                videoAddress: address,
+                status: SoundRequestStatus.dismissed,
+              ),
+            },
+          );
+          final gate = Completer<void>();
+          final store = MemoryStore()
+            ..data[viewer] = stored
+            ..readGate = gate;
+          final transport = Transport([]);
+          final repo = repository(viewer, transport, store, Publisher());
+          addTearDown(repo.close);
+          final started = startPending ? repo.start() : null;
+          await expectLater(
+            repo.request(address),
+            throwsA(isA<SoundRequestException>()),
+          );
+          expect(store.data[viewer], same(stored));
+          expect(transport.intents, isEmpty);
+          gate.complete();
+          await started;
+          if (!startPending) await repo.start();
+          expect(
+            repo.state.requests.values.single.status,
+            SoundRequestStatus.dismissed,
+          );
+          // Successful restoration allows the next explicit request normally.
+          await repo.request(address);
+          expect(transport.delivered, hasLength(1));
+        },
+      );
+    }
+
     test('a failed restore does not overwrite the stored records', () async {
       final transport = Transport([]);
       final store = MemoryStore();

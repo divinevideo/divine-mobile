@@ -47,7 +47,7 @@ class SoundRequestsRepository {
   SoundRequestSnapshot _state = const SoundRequestSnapshot();
   bool _closed = false;
   bool _started = false;
-  bool _restoreFailed = false;
+  bool _restored = false;
 
   /// Latest successfully persisted account state.
   SoundRequestSnapshot get state => _state;
@@ -83,8 +83,8 @@ class SoundRequestsRepository {
   Future<void> _save(SoundRequestSnapshot value) async {
     _checkOpen();
     // Each write replaces the stored snapshot, so one built without the
-    // records a failed restore could not read would erase them.
-    if (_restoreFailed) {
+    // records not yet read (or unreadable) would erase them.
+    if (!_restored) {
       throw const SoundRequestException('Sound request state unavailable');
     }
     await _store.write(ownerPubkey, value);
@@ -97,13 +97,9 @@ class SoundRequestsRepository {
   Future<void> start() async {
     if (_started) return;
     _started = true;
-    try {
-      _state = await _store.read(ownerPubkey);
-    } on Object {
-      _restoreFailed = true;
-      rethrow;
-    }
+    _state = await _store.read(ownerPubkey);
     _checkOpen();
+    _restored = true;
     _changes.add(_state);
     final first = Completer<void>();
     _subscription = _transport.watchMessages().listen(
