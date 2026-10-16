@@ -8,11 +8,11 @@ part of 'follow_relationship_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Populates the current user's follower cache once per session.
+/// Refreshes the current user's local follower cache within repository budgets.
 ///
 /// [FollowRepository.relationshipTo] reads that cache but never fills it, and
 /// a user row must not trigger its own fetch — one shared warm-up keeps the
-/// cost at one request per session instead of one per visible row.
+/// work shared across rows while preserving incremental and full-retry limits.
 ///
 /// Completes with no value on failure: an unreachable relay degrades the
 /// relationship to "unknown", which [FollowRelationship] already models, and
@@ -21,11 +21,11 @@ part of 'follow_relationship_provider.dart';
 @ProviderFor(myFollowersWarmup)
 final myFollowersWarmupProvider = MyFollowersWarmupProvider._();
 
-/// Populates the current user's follower cache once per session.
+/// Refreshes the current user's local follower cache within repository budgets.
 ///
 /// [FollowRepository.relationshipTo] reads that cache but never fills it, and
 /// a user row must not trigger its own fetch — one shared warm-up keeps the
-/// cost at one request per session instead of one per visible row.
+/// work shared across rows while preserving incremental and full-retry limits.
 ///
 /// Completes with no value on failure: an unreachable relay degrades the
 /// relationship to "unknown", which [FollowRelationship] already models, and
@@ -34,11 +34,11 @@ final myFollowersWarmupProvider = MyFollowersWarmupProvider._();
 final class MyFollowersWarmupProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  /// Populates the current user's follower cache once per session.
+  /// Refreshes the current user's local follower cache within repository budgets.
   ///
   /// [FollowRepository.relationshipTo] reads that cache but never fills it, and
   /// a user row must not trigger its own fetch — one shared warm-up keeps the
-  /// cost at one request per session instead of one per visible row.
+  /// work shared across rows while preserving incremental and full-retry limits.
   ///
   /// Completes with no value on failure: an unreachable relay degrades the
   /// relationship to "unknown", which [FollowRelationship] already models, and
@@ -68,7 +68,7 @@ final class MyFollowersWarmupProvider
   }
 }
 
-String _$myFollowersWarmupHash() => r'544631a238ec616cf74ef8ff475a97020eed7686';
+String _$myFollowersWarmupHash() => r'7d5f21069627babe2b9bad8ef95fe9fbb4f8048b';
 
 /// The current user's follow relationship with [pubkey], kept live.
 ///
