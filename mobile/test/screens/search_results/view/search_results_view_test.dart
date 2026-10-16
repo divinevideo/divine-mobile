@@ -266,13 +266,6 @@ void main() {
       );
     });
 
-    // Regression coverage for PR #4290 review feedback: after landing on
-    // /search-results/hello and the BLoCs returning to `initial` (which
-    // happens whenever the user clears the field or shortens it below
-    // [minSearchQueryLength]), the view must flip back to the idle
-    // placeholder. The old gate keyed on the immutable route arg and
-    // therefore stayed `false`, regressing the #3023 "infinite skeleton"
-    // symptom in the post-mount edit path.
     group('with a private key in the search field', () {
       setUp(() {
         when(() => mockVideoBloc.state).thenReturn(const VideoSearchState());
@@ -294,6 +287,13 @@ void main() {
       });
     });
 
+    // Regression coverage for PR #4290 review feedback: after landing on
+    // /search-results/hello and the BLoCs returning to `initial` (which
+    // happens whenever the user clears the field or shortens it below
+    // [minSearchQueryLength]), the view must flip back to the idle
+    // placeholder. The old gate keyed on the immutable route arg and
+    // therefore stayed `false`, regressing the #3023 "infinite skeleton"
+    // symptom in the post-mount edit path.
     group('field-edit transitions after mounting with a prefilled query', () {
       testWidgets(
         'shows idle placeholder when the cleared field meets a reset BLoC',
