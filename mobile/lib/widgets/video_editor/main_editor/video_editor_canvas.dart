@@ -395,6 +395,22 @@ class VideoEditorCanvas extends StatelessWidget {
     );
   }
 
+  /// Waits out the export, then says whether the Done numbered [done] still
+  /// owns the editor's return.
+  ///
+  /// A later Done started an export of its own and reopens the players on its
+  /// own return. An earlier Done whose wait outlives it must not reopen them
+  /// while that export runs, so [latestDone] is read after the wait.
+  @visibleForTesting
+  static Future<bool> isLatestDoneAfterRender({
+    required int done,
+    required int Function() latestDone,
+    required Future<void> Function() waitForRenderIdle,
+  }) async {
+    await waitForRenderIdle();
+    return done == latestDone();
+  }
+
   static Future<void> _settled(Future<void> release) {
     runDetached(
       release,
@@ -604,6 +620,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// so this is always created (in [_handleDone]) before it is awaited.
   Completer<void>? _decoderReleaseGate;
   bool _isMetadataRouteActive = false;
+
+  /// Bumped by every Done, so only the latest one reopens the players.
+  int _doneGeneration = 0;
 
   /// Closes the [InterruptedRenderMonitor] marker of the layer capture that
   /// pro_image_editor runs between [_handleDone] and [_handleEditorComplete].
@@ -2403,6 +2422,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
     );
+    final done = ++_doneGeneration;
     // A stop-motion composition has no native player — its playback is the
     // widget-driven ticker, whose playing state lives in the bloc. Read before
     // _stopMotionClock.pause() below clears it.
@@ -2463,10 +2483,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (_isStopMotionComposition && wasPlaying) {
       _stopMotionClock.play(from: resumePosition);
     }
-    await ref.read(videoEditorProvider.notifier).waitForRenderIdle();
-    // A second Done during the wait started another export, which needs the
-    // decoders now; its own return reopens the players.
-    if (!mounted || _isMetadataRouteActive) return;
+    final isLatestDone = await VideoEditorCanvas.isLatestDoneAfterRender(
+      done: done,
+      latestDone: () => _doneGeneration,
+      waitForRenderIdle: ref
+          .read(videoEditorProvider.notifier)
+          .waitForRenderIdle,
+    );
+    // A later Done started another export, which needs the decoders now; its
+    // own return reopens the players.
+    if (!mounted || !isLatestDone) return;
     // Opens the detached clips' players again, alongside the preview player.
     previewReleased?.value = false;
     if (_isStopMotionComposition || _clipPaths.isEmpty) return;

@@ -606,6 +606,35 @@ void main() {
     });
   });
 
+  group('VideoEditorCanvas.isLatestDoneAfterRender', () {
+    test('lets the Done that started the export reopen the players', () {
+      expect(
+        VideoEditorCanvas.isLatestDoneAfterRender(
+          done: 1,
+          latestDone: () => 1,
+          waitForRenderIdle: () async {},
+        ),
+        completion(isTrue),
+      );
+    });
+
+    test('hands the return to a Done that landed during the wait', () async {
+      var latestDone = 1;
+      final render = Completer<void>();
+      final isLatest = VideoEditorCanvas.isLatestDoneAfterRender(
+        done: 1,
+        latestDone: () => latestDone,
+        waitForRenderIdle: () => render.future,
+      );
+
+      // Back from the post screen and Done again while the first export runs.
+      latestDone = 2;
+      render.complete();
+
+      expect(await isLatest, isFalse);
+    });
+  });
+
   group('VideoEditorCanvas.shouldPublishClipLoad', () {
     test('publishes the active clip load generation', () {
       expect(
