@@ -2339,9 +2339,9 @@ class VideoRecorderBloc
   ///
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
   /// was entered from), overlay and grid toggles, the take in flight, the
-  /// stop-motion session, the chroma-key setup and, while the camera is
-  /// initialized, the screen flash carry over; flash resets to `off` and every
-  /// other field to its default.
+  /// navigation lock, the stop-motion session, the chroma-key setup and, while
+  /// the camera is initialized, the screen flash carry over; flash resets to
+  /// `off` and every other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
   /// not a flip to the other one: its still shows the wall behind the lens it
@@ -2388,6 +2388,9 @@ class VideoRecorderBloc
         isStartingRecording: state.isStartingRecording,
         isStoppingRecording: state.isStoppingRecording,
         pendingStopAfterStart: state.pendingStopAfterStart,
+        // Only the next initialize releases the lock. The camera's own dispose
+        // reports through here, right after the lock is set.
+        recordingLockedForNavigation: state.recordingLockedForNavigation,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
         // split into several one-frame recordings (and lose frames on

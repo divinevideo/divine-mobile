@@ -2231,6 +2231,21 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the navigation lock until the next initialize',
+        build: buildBlocCapturingUpdateState,
+        seed: () =>
+            const VideoRecorderBlocState(recordingLockedForNavigation: true),
+        act: (_) => updateStateCallback(),
+        expect: () => [
+          isA<VideoRecorderBlocState>().having(
+            (s) => s.recordingLockedForNavigation,
+            'recordingLockedForNavigation',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'keeps a take that is being finalized',
         build: buildBlocCapturingUpdateState,
         seed: () => const VideoRecorderBlocState(
@@ -2801,6 +2816,56 @@ void main() {
           verify(() => cameraService.stopRecording()).called(1);
           // Disposed by the pause handler (the bloc also disposes on close()).
           verify(() => cameraService.dispose());
+        },
+      );
+
+      // The real camera service reports its own dispose through
+      // onUpdateState. That re-sync must not clear the lock the pause just
+      // set, or the in-flight start below arms a take on a disposed camera.
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the lock through the re-sync the camera dispose triggers',
+        setUp: () {
+          startGate = Completer<bool>();
+          when(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).thenAnswer((_) => startGate.future);
+          when(
+            () => cameraService.stopRecording(),
+          ).thenAnswer((_) async => null);
+        },
+        build: () {
+          late void Function({bool? forceCameraRebuild}) reportUpdate;
+          when(() => cameraService.dispose()).thenAnswer((_) async {
+            reportUpdate();
+          });
+          return buildBloc(
+            cameraServiceFactory:
+                ({
+                  required onUpdateState,
+                  required onAutoStopped,
+                  onScreenFlashChanged,
+                }) {
+                  reportUpdate = onUpdateState;
+                  return cameraService;
+                },
+          );
+        },
+        act: (bloc) async {
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderCameraPausedForNavigation());
+          await pumpEventQueue();
+          expect(bloc.state.recordingLockedForNavigation, isTrue);
+          startGate.complete(true);
+          await pumpEventQueue();
+        },
+        verify: (bloc) {
+          expect(bloc.state.recordingLockedForNavigation, isTrue);
+          expect(bloc.state.recordingState, VideoRecorderState.idle);
+          verify(() => cameraService.stopRecording()).called(1);
+          verifyNever(() => clipManager.startRecording());
         },
       );
 
