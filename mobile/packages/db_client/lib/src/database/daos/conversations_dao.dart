@@ -114,14 +114,14 @@ END
             ))
             .getSingleOrNull();
     var keepDismissed = dismissal != null;
+    var restoredByIncoming = false;
     if (dismissal != null && !forceUpdateLastMessage) {
       final messages = attachedDatabase.directMessages;
-      final incoming =
+      final candidates =
           await (select(messages)..where(
                 (t) =>
                     t.conversationId.equals(id) &
                     t.ownerPubkey.equals(ownerPubkey ?? '') &
-                    t.senderPubkey.equals(ownerPubkey ?? '').not() &
                     t.createdAt.isBiggerOrEqualValue(
                       dismissal.boundaryTimestamp,
                     ),
@@ -130,12 +130,17 @@ END
       final knownIds = (jsonDecode(dismissal.knownMessageIds) as List)
           .cast<String>()
           .toSet();
-      if (incoming.any((message) => !knownIds.contains(message.id))) {
+      final newMessages = candidates
+          .where((message) => !knownIds.contains(message.id))
+          .toList();
+      if (newMessages.isNotEmpty) {
+        restoredByIncoming = newMessages.any(
+          (message) => message.senderPubkey != ownerPubkey,
+        );
         await _clearDismissal(id, ownerPubkey ?? '');
         keepDismissed = false;
       }
     }
-    final restoredByMessage = dismissal != null && !keepDismissed;
     final row = ConversationsCompanion.insert(
       id: id,
       participantPubkeys: participantPubkeys,
@@ -145,7 +150,7 @@ END
       lastMessageTimestamp: Value(lastMessageTimestamp),
       lastMessageSenderPubkey: Value(lastMessageSenderPubkey),
       subject: Value(subject),
-      isRead: Value(keepDismissed || (!restoredByMessage && isRead)),
+      isRead: Value(keepDismissed || (!restoredByIncoming && isRead)),
       isDismissed: Value(keepDismissed),
       lastReadTimestamp: keepDismissed
           ? Value(dismissal!.boundaryTimestamp)
@@ -193,7 +198,7 @@ END
           // read cursor, including after an account switch.
           isRead: keepDismissed
               ? const Constant(true)
-              : restoredByMessage
+              : restoredByIncoming
               ? const Constant(false)
               : (excl.isRead | coveredByReadCursor).iif(
                   advancesAttention,
@@ -389,11 +394,15 @@ END
     if (dismissed) {
       final row = (await getConversation(id, ownerPubkey: ownerPubkey))!;
       final boundary = row.lastMessageTimestamp ?? 0;
+      // The visible conversation may still be an unattributed legacy row.
+      // Capture its replay ids too, but never another known account's rows.
       final messages =
           await (select(attachedDatabase.directMessages)..where(
                 (t) =>
                     t.conversationId.equals(id) &
-                    t.ownerPubkey.equals(ownerPubkey) &
+                    (t.ownerPubkey.equals(ownerPubkey) |
+                        t.ownerPubkey.equals('') |
+                        t.ownerPubkey.isNull()) &
                     t.createdAt.isBiggerOrEqualValue(boundary),
               ))
               .get();

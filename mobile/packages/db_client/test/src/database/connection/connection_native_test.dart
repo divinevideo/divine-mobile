@@ -252,6 +252,28 @@ void main() {
     );
 
     test(
+      'keeps a destination whose only local data is saved dismissals',
+      () async {
+        _createSqliteDatabase(legacyPath, draftCount: 1);
+        _createSqliteDatabase(newPath);
+        final database = sqlite3.open(newPath);
+        try {
+          database
+            ..execute('CREATE TABLE conversation_dismissals (id TEXT);')
+            ..execute(
+              "INSERT INTO conversation_dismissals VALUES ('saved');",
+            );
+        } finally {
+          database.close();
+        }
+        await migrateLegacyDatabase(legacyPath: legacyPath, newPath: newPath);
+        expect(_tableCount(newPath, 'conversation_dismissals'), 1);
+        expect(_draftCount(newPath), 0);
+        expect(_draftCount(_legacyConflictBackupPath(newPath)), 1);
+      },
+    );
+
+    test(
       'restores legacy DB when destination has only replaceable cache rows',
       () async {
         _createSqliteDatabase(legacyPath, draftCount: 1);
@@ -1299,6 +1321,7 @@ void main() {
         'pending_profile_saves',
         'removed_conversations',
         'removed_message_ids',
+        'conversation_dismissals',
         'vanished_profiles',
         'personal_events',
         'concord_store_entries',
