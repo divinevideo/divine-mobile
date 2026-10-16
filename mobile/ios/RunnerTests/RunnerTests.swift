@@ -1052,12 +1052,32 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
   func testSeekFromTheEndPlaysOnWhilePlaybackIsRequested() throws {
     _ = try invoke("play")
     try waitForState("the clip plays to its end") { $0["status"] as? String == "completed" }
-
-    _ = try invoke("seekTo", ["positionMs": 0])
-
-    try waitForState("the seek starts the clip over") {
-      $0["status"] as? String == "playing" && ($0["positionMs"] as? Int ?? 0) > 100
+    let player = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId)?.getPlayer())
+    let reportsBeforeSeek = registrar.fakeMessenger.sentMessages.count
+    let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
+    let sought = expectation(description: "seek answered")
+    var rateWhenAnswered: Float = 0
+    let seekSent = Date()
+    handler(Self.codec.encode(FlutterMethodCall(
+      methodName: "seekTo", arguments: ["positionMs": 0]
+    ))) { _ in
+      // Answered from the seek's completion, right after it resumes.
+      rateWhenAnswered = player.rate
+      sought.fulfill()
     }
+    wait(for: [sought], timeout: 10)
+    XCTAssertGreaterThan(rateWhenAnswered, 0, "the seek must resume playback")
+
+    // A fresh end proves the clock ran; sampling a 1 s clip mid-play misses
+    // on a starved runner.
+    try waitForState("the clip plays to its end again", since: reportsBeforeSeek) {
+      $0["status"] as? String == "completed"
+    }
+    // Playing the whole second again takes at least that long however
+    // starved the runner is; an end reached from near the end would not.
+    XCTAssertGreaterThan(
+      Date().timeIntervalSince(seekSent), 0.8, "the seek must start the clip over"
+    )
   }
 
   func testSeekFromTheEndStaysPausedOnceItWasPaused() throws {
@@ -1101,21 +1121,38 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
   func testConsecutiveSeeksFromTheEndPreservePlaybackIntent() throws {
     _ = try invoke("play")
     try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    let player = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId)?.getPlayer())
+    let reportsBeforeSeeks = registrar.fakeMessenger.sentMessages.count
     let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
     let first = expectation(description: "first seek answered")
     let second = expectation(description: "second seek answered")
     var firstAnswered = false
+    var rateWhenSecondAnswered: Float = 0
+    let seeksSent = Date()
     handler(Self.codec.encode(FlutterMethodCall(
       methodName: "seekTo", arguments: ["positionMs": 0]
     ))) { _ in firstAnswered = true; first.fulfill() }
     XCTAssertFalse(firstAnswered, "the seeks must overlap")
     handler(Self.codec.encode(FlutterMethodCall(
       methodName: "seekTo", arguments: ["positionMs": 400]
-    ))) { _ in second.fulfill() }
-    wait(for: [first, second], timeout: 10)
-    try waitForState("the latest seek resumes playback") {
-      $0["status"] as? String == "playing" && ($0["positionMs"] as? Int ?? 0) > 450
+    ))) { _ in
+      rateWhenSecondAnswered = player.rate
+      second.fulfill()
     }
+    wait(for: [first, second], timeout: 10)
+    // Playback only moves on from where the winning seek put it, so a starved
+    // runner can push this later but never back below 400 ms.
+    XCTAssertGreaterThanOrEqual(player.currentTime().seconds, 0.39, "the latest seek must win")
+    XCTAssertGreaterThan(rateWhenSecondAnswered, 0, "the latest seek must resume playback")
+
+    try waitForState("the clip plays to its end again", since: reportsBeforeSeeks) {
+      $0["status"] as? String == "completed"
+    }
+    // The last 600 ms take at least that long to play however starved the
+    // runner is; a seek landing past its target would end sooner.
+    XCTAssertGreaterThan(
+      Date().timeIntervalSince(seeksSent), 0.45, "playback must resume from 400 ms"
+    )
   }
 
   func testStopDuringSeekFromTheEndKeepsMediaStopped() throws {
@@ -1287,14 +1324,30 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
       .first
   }
 
+  /// The states the player sent to Dart from message [index] on, oldest first.
+  private func states(since index: Int) -> [[String: Any]] {
+    let events = "\(Self.channel)/events"
+    return registrar.fakeMessenger.sentMessages[index...]
+      .filter { $0.channel == events }
+      .compactMap { $0.message.flatMap { Self.codec.decodeEnvelope($0) } as? [String: Any] }
+  }
+
+  /// Polls until the latest state matches. With [since], any state sent from
+  /// that message index on counts instead, so a state from before an action
+  /// cannot pass for its effect.
   private func waitForState(
     _ description: String,
+    since firstMessage: Int? = nil,
     timeout: TimeInterval = 10,
     _ matches: ([String: Any]) -> Bool
   ) throws {
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
-      if let state = latestState(), matches(state) { return }
+      if let firstMessage {
+        if states(since: firstMessage).contains(where: matches) { return }
+      } else if let state = latestState(), matches(state) {
+        return
+      }
       RunLoop.main.run(until: Date().addingTimeInterval(0.05))
     }
     throw StateTimeout(description: "timed out waiting until \(description); last state: \(latestState() ?? [:])")
