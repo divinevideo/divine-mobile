@@ -112,6 +112,15 @@ void main() {
       when(
         () => profileRepository.fetchFreshProfile(pubkey: any(named: 'pubkey')),
       ).thenAnswer((_) async => null);
+      when(
+        () =>
+            profileRepository.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+      ).thenAnswer(
+        (invocation) async => [
+          for (final key in invocation.namedArguments[#pubkeys] as List<String>)
+            ?await profileRepository.getCachedProfile(pubkey: key),
+        ],
+      );
     });
 
     tearDown(() async {
@@ -180,11 +189,122 @@ void main() {
       verify(() => rankingLoader.refreshInBackground(any())).called(1);
     });
 
-    test('waits for missing profiles before ranking each arriving batch by signals and names', () async {
-      final hydrated = Completer<UserProfile?>();
+    test(
+      'one pending fresh profile does not block cached named arrivals',
+      () async {
+        final hydrated = Completer<UserProfile?>();
+        when(() => followRepository.followingPubkeys)
+            .thenReturn([_alicePubkey]);
+        when(() => profileRepository.fetchFreshProfile(pubkey: _bobPubkey))
+            .thenAnswer((_) => hydrated.future);
+        when(() => profileRepository.getCachedProfile(pubkey: _carolPubkey))
+            .thenAnswer(
+              (_) async => _profile(pubkey: _carolPubkey, displayName: 'Aaron'),
+            );
+        when(() => rankingLoader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final key
+                in invocation.positionalArguments.single as Iterable<String>)
+              key: UserRankingSignals(
+                pubkey: key,
+                videoCount: key == _bobPubkey ? 100 : null,
+              ),
+          },
+        );
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+        await cubit.started();
+        cubit.candidateToggled(_alicePubkey);
+        followersController.add(
+          const FollowersSnapshot(
+            pubkeys: [_carolPubkey, _bobPubkey],
+            count: 2,
+          ),
+        );
+        await _flush();
+        expect(cubit.state.candidates.map((c) => c.pubkey), [
+          _alicePubkey,
+          _carolPubkey,
+        ]);
+        expect(cubit.state.candidatePositions.containsKey(_bobPubkey), isFalse);
+        expect(cubit.state.selectedPubkeys, {_alicePubkey});
+        hydrated.complete(_profile(pubkey: _bobPubkey, displayName: 'Zebra'));
+        await _flush();
+        expect(cubit.state.candidates.map((c) => c.pubkey), [
+          _alicePubkey,
+          _carolPubkey,
+          _bobPubkey,
+        ]);
+        expect(cubit.state.rankingSignals[_bobPubkey]!.videoCount, 100);
+        expect(cubit.state.selectedPubkeys, {_alicePubkey});
+      },
+    );
+
+    test(
+      'caps fresh hydration across stream batches and appends completed rows',
+      () async {
+        final keys = [
+          _bobPubkey,
+          _carolPubkey,
+          _davePubkey,
+          _evePubkey,
+          'f' * 64,
+          '1' * 64,
+        ];
+        final pending = {
+          for (final key in keys) key: Completer<UserProfile?>(),
+        };
+        final fetching = <String>[];
+        when(
+          () =>
+              profileRepository.fetchFreshProfile(pubkey: any(named: 'pubkey')),
+        ).thenAnswer((invocation) {
+          final key = invocation.namedArguments[#pubkey] as String;
+          fetching.add(key);
+          return pending[key]!.future;
+        });
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+        await cubit.started();
+        followersController.add(
+          FollowersSnapshot(pubkeys: keys.take(3).toList(), count: 3),
+        );
+        await _flush();
+        expect(fetching, hasLength(3));
+        followersController.add(
+          FollowersSnapshot(pubkeys: keys, count: keys.length),
+        );
+        await _flush();
+        expect(fetching, hasLength(4));
+        expect(cubit.state.candidatePositions, isEmpty);
+        pending[_carolPubkey]!.complete(
+          _profile(pubkey: _carolPubkey, displayName: 'Ready'),
+        );
+        await _flush();
+        expect(fetching, hasLength(5));
+        expect(cubit.state.candidates.map((c) => c.pubkey), [_carolPubkey]);
+        cubit.candidateToggled(_carolPubkey);
+        for (final entry in pending.entries) {
+          if (!entry.value.isCompleted) {
+            entry.value.complete(
+              _profile(pubkey: entry.key, displayName: 'Late'),
+            );
+          }
+        }
+        await _flush();
+        expect(fetching, hasLength(keys.length));
+        expect(cubit.state.candidates, hasLength(keys.length));
+        expect(cubit.state.candidates.first.pubkey, _carolPubkey);
+        expect(cubit.state.selectedPubkeys, {_carolPubkey});
+      },
+    );
+
+    test('ranks available cached arrivals by signals before names', () async {
       when(() => followRepository.followingPubkeys).thenReturn([_alicePubkey]);
-      when(() => profileRepository.fetchFreshProfile(pubkey: _bobPubkey))
-          .thenAnswer((_) => hydrated.future);
+      when(() => profileRepository.getCachedProfile(pubkey: _bobPubkey))
+          .thenAnswer(
+            (_) async => _profile(pubkey: _bobPubkey, displayName: 'Zebra'),
+          );
       when(() => profileRepository.getCachedProfile(pubkey: _carolPubkey))
           .thenAnswer(
             (_) async => _profile(pubkey: _carolPubkey, displayName: 'Aaron'),
@@ -202,23 +322,15 @@ void main() {
       final cubit = createCubit();
       addTearDown(cubit.close);
       await cubit.started();
-      cubit.candidateToggled(_alicePubkey);
       followersController.add(
         const FollowersSnapshot(pubkeys: [_carolPubkey, _bobPubkey], count: 2),
       );
-      await _flush();
-      expect(cubit.state.candidates.map((c) => c.pubkey), [_alicePubkey]);
-      expect(cubit.state.candidatePositions.containsKey(_bobPubkey), isFalse);
-      expect(cubit.state.selectedPubkeys, {_alicePubkey});
-      hydrated.complete(_profile(pubkey: _bobPubkey, displayName: 'Zebra'));
       await _flush();
       expect(cubit.state.candidates.map((c) => c.pubkey), [
         _alicePubkey,
         _bobPubkey,
         _carolPubkey,
       ]);
-      expect(cubit.state.rankingSignals[_bobPubkey]!.videoCount, 100);
-      expect(cubit.state.selectedPubkeys, {_alicePubkey});
     });
 
     test('initial state is initial status with empty candidates', () async {
