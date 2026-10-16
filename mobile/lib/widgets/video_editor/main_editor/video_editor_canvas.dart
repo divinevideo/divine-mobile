@@ -2438,6 +2438,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // playing under the metadata screen.
     if (_isStopMotionComposition) _stopMotionClock.pause();
     ref.read(videoEditorProvider.notifier).setProcessing(true);
+    // Seams and speed bodies only serve the preview; still encoding, they hold
+    // the export back on platforms that run one encode at a time (#10142).
+    _composition.suspendRenders();
     _trackLayerCapture();
 
     // Delegate the cover-transition wait to the screen: its context sits above
@@ -2495,6 +2498,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (!mounted || !isLatestDone) return;
     // Opens the detached clips' players again, alongside the preview player.
     previewReleased?.value = false;
+    // Like the players, the preview renders wait for the export to finish;
+    // [_initializePlayer] asks for them again.
+    _composition.resumeRenders();
     if (_isStopMotionComposition || _clipPaths.isEmpty) return;
     await _initializePlayer(_clipPaths, startPosition: resumePosition);
     if (mounted && wasPlaying) {

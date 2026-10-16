@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
+import 'package:unified_logger/unified_logger.dart';
 
 class _FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -97,6 +98,32 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
       rotation: 0,
       bitrate: 1_000_000,
     );
+  }
+}
+
+/// Fails a running render with [editor.RenderCanceledException] once it is
+/// cancelled, the way the native plugin does.
+class _CancellingFakeProVideoEditor extends _FakeProVideoEditor {
+  final _cancelSignals = <String, Completer<void>>{};
+
+  @override
+  Future<void> cancel(String taskId) async {
+    await super.cancel(taskId);
+    _cancelSignals[taskId]?.complete();
+  }
+
+  @override
+  Future<String> renderVideoToFile(
+    String filePath,
+    editor.VideoRenderData value, {
+    editor.NativeLogLevel? nativeLogLevel,
+  }) async {
+    final cancelled = _cancelSignals[value.id] = Completer<void>();
+    final renderIndex = renderCount++;
+    renderedTaskIds.add(value.id);
+    renderStartedAt(renderIndex).complete();
+    await cancelled.future;
+    throw const editor.RenderCanceledException();
   }
 }
 
@@ -414,6 +441,93 @@ void main() {
 
         service.clear();
         expect(service.cached(c), isNull);
+      });
+    });
+
+    group('cancelRenders', () {
+      test('cancels the running native renders, drops the queued one and '
+          'keeps the bodies already rendered', () async {
+        final native = _FakeProVideoEditor();
+        editor.ProVideoEditor.instance = native;
+        final kept = clip('kept', playbackSpeed: 2);
+        final service = ClipSpeedRenderService()..cacheForTest(kept, rendered);
+        final first = clip('a0', playbackSpeed: 2);
+
+        final pending = [
+          service.render(first),
+          for (var i = 1; i < 3; i++)
+            service.render(clip('a$i', playbackSpeed: 2)),
+        ];
+        await native.renderStartedAt(1).future;
+        await pumpEventQueue();
+
+        service.cancelRenders();
+        await pumpEventQueue();
+
+        expect(
+          native.cancelledTaskIds,
+          unorderedEquals(native.renderedTaskIds),
+        );
+        expect(service.isRendering(first), isFalse);
+
+        native
+          ..allowRenderToFinishAt(0).complete()
+          ..allowRenderToFinishAt(1).complete();
+        expect(await Future.wait(pending), [null, null, null]);
+        await pumpEventQueue();
+
+        expect(
+          native.renderCount,
+          2,
+          reason: 'the queued third clip must be abandoned, not encoded',
+        );
+        expect(service.cached(kept), same(rendered));
+        expect(service.cached(first), isNull);
+
+        // Asked for again, a cancelled clip reaches the encoder afresh.
+        final again = service.render(first);
+        await native.renderStartedAt(2).future;
+        expect(native.renderCount, 3);
+        native.allowRenderToFinishAt(2).complete();
+        expect(await again, isNotNull);
+      });
+
+      test('does not log a render the native side cancelled as a '
+          'failure', () async {
+        final native = _CancellingFakeProVideoEditor();
+        editor.ProVideoEditor.instance = native;
+        final service = ClipSpeedRenderService();
+        await LogCaptureService().clearAllLogs();
+
+        final pending = service.render(clip('a', playbackSpeed: 2));
+        await native.renderStartedAt(0).future;
+        service.cancelRenders();
+
+        expect(await pending, isNull);
+        expect(
+          LogCaptureService()
+              .getRecentLogs(minLevel: LogLevel.warning)
+              .where((entry) => entry.name == 'ClipSpeedRenderService'),
+          isEmpty,
+        );
+      });
+
+      test('leaves a render that already finished alone', () async {
+        final native = _FakeProVideoEditor();
+        editor.ProVideoEditor.instance = native;
+        final service = ClipSpeedRenderService();
+        final done = clip('a', playbackSpeed: 2);
+
+        final pending = service.render(done);
+        native.allowRenderToFinishAt(0).complete();
+        final body = await pending;
+        expect(body, isNotNull);
+
+        service.cancelRenders();
+        await pumpEventQueue();
+
+        expect(native.cancelledTaskIds, isEmpty);
+        expect(service.cached(done), same(body));
       });
     });
 

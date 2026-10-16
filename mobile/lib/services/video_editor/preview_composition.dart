@@ -82,6 +82,9 @@ class PreviewComposition {
   final _pendingSeamRenders = ValueNotifier<int>(0);
   bool _disposed = false;
 
+  /// Set by [suspendRenders] until [resumeRenders].
+  bool _suspended = false;
+
   /// Seam renders this composition started and that have not finished yet,
   /// keyed by [TransitionSeamRenderService.seamKey]. The value identifies the
   /// attempt, so a cancelled attempt finishing late cannot clear the entry of
@@ -135,7 +138,7 @@ class PreviewComposition {
   /// change since it started — are cancelled, so they neither hold a render
   /// slot nor reload the player when they would have landed.
   void ensureSeamsRendered(List<DivineVideoClip> clips) {
-    if (_disposed) return;
+    if (_disposed || _suspended) return;
     final needed = _neededSeams(clips);
     final neededKeys = needed.keys.toSet();
     _seamService.cancelRendersExcept(neededKeys);
@@ -185,6 +188,7 @@ class PreviewComposition {
     // spliced in, and reloading the player for it only hitches playback.
     final neededKeys = _neededSeams(_readClips()).keys.toSet();
     _updatePendingSeamRenders(neededKeys);
+    if (_suspended) return;
     if (seam != null && neededKeys.contains(key)) _onSeamRendered();
   }
 
@@ -194,6 +198,7 @@ class PreviewComposition {
   /// safe to call on every clip, trim or speed change. The preview keeps
   /// playing the instant live-retimed clip until the swap lands.
   void ensureSpeedClipsRendered(List<DivineVideoClip> clips) {
+    if (_suspended) return;
     final clamped = clampTransitions(clips);
     // The loop-restart wrap consumes the first clip's head and the last clip's
     // tail eagerly (see buildSeamAwarePlayerClips); those clips stay on live
@@ -228,9 +233,30 @@ class PreviewComposition {
 
   Future<void> _renderSpeedClipAndResync(DivineVideoClip clip) async {
     final rendered = await _speedRenderService.render(clip);
-    if (_disposed) return;
+    if (_disposed || _suspended) return;
     if (rendered != null) _onSpeedClipRendered();
   }
+
+  /// Stops the background seam and speed renders until [resumeRenders], and
+  /// keeps what they already rendered.
+  ///
+  /// The final export needs the encoder to itself. On iOS and macOS
+  /// `pro_video_editor` runs one encode at a time, so preview renders still
+  /// queued after Done interleave with the export's encodes and hold it back
+  /// (#10142). Renders that were running are cancelled, and a render that
+  /// lands anyway is not reported.
+  void suspendRenders() {
+    if (_disposed || _suspended) return;
+    _suspended = true;
+    _seamService.cancelRendersExcept(const {});
+    _speedRenderService.cancelRenders();
+    _seamRendersInFlight.clear();
+    _pendingSeamRenders.value = 0;
+  }
+
+  /// Lets [ensureSeamsRendered] and [ensureSpeedClipsRendered] start renders
+  /// again. The caller asks for the current clips' renders once more.
+  void resumeRenders() => _suspended = false;
 
   /// Memoized [SeamTimeline] for the current clips + seam-cache state, so the
   /// per-tick position mappings don't rebuild it on every player update.
