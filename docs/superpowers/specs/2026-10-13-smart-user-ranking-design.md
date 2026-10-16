@@ -47,8 +47,9 @@ trust root is a security decision, not a display one.
 The ranking has two parts, and neither is a long-lived singleton.
 
 - **`user_ranking` package** (pure Dart, new, under `mobile/packages/`). It
-  holds `UserRankingSignals` (the per-pubkey inputs), `RankedUser`, and
-  `rankUsers(...)`, which sorts candidates by score. There is no I/O and no
+  holds `UserRankingSignals` (the per-pubkey inputs), `UserRankingWeights`,
+  `scoreUser`, `isKnown`, `promoteKnown(...)` and `rankUsers(...)`, which
+  sorts candidates by score. There is no I/O and no
   Flutter in it. It gets its own CI workflow at the default 100% coverage
   floor, as `check_package_ci_floor.sh` requires.
 - **`UserRankingSignalsLoader`** (`mobile/lib/services/user_ranking/`). It is
@@ -57,13 +58,15 @@ The ranking has two parts, and neither is a long-lived singleton.
   keeps no cached snapshot between opens. It reaches BLoCs through a
   non-keepAlive Riverpod provider that `ref.watch`es those repositories, so a
   repository swap after an auth change yields a new loader. Bridged screens
-  include the loader in their `BlocProvider` `ValueKey`, as
-  `state_management.md` requires. It ships with a
+  key their blocs on the session owner and pass the loader to
+  `RetainedBlocProvider`, which rebuilds a bloc from the previous state when
+  the loader changes; the share sheet reads it once when it opens. It ships
+  with a
   same-named test, as the untested-services floor requires.
 
 Signals are loaded **once, when the list opens**, from data already on the
-device. Opening a list makes no network call. Repositories keep their own
-caches, so the loader does not add a second one.
+device, so ranking adds no network call before first paint. Repositories keep
+their own caches, so the loader does not add a second one.
 
 The loader reads these signals:
 
@@ -132,8 +135,8 @@ more than about 18.
   `fromFollowOrder` helpers cannot compute it. The chosen order lives in the
   BLoC state, as it does today. Owned lists keep their previous membership rules:
   hide accounts the viewer blocked, plus follow-severed accounts on Followers.
-  The stronger recipient policy used by pickers changes ranking signals only;
-  omitted owned rows get neutral signals and remain manageable. Other users'
+  They rank through their own loader, which applies only the viewer's blocks,
+  and a row it omits gets neutral signals and remains manageable. Other users'
   follow lists are unchanged.
 - **Collaborator / user picker** (`UserPickerSheet`) and **add-to-people-list**
   (`AddPeopleToListCubit`). The rendered-name sort is replaced by the ranked
@@ -176,11 +179,12 @@ sheet's horizontal avatar row stays as it is: it has no room for a text line.
 The goal: a ranked list appears as fast as an unranked one, keeps working
 offline, and adds next to no server load.
 
-**Opening a list makes no network call.** Every signal is read from durable
-local storage. The extra local work per open is a handful of batched Drift
+**Ranking adds no network call before first paint.** Every signal is read
+from durable local storage. The extra local work per open is a handful of batched Drift
 reads over the candidate set, plus a sort. Target: ranking adds less than
-50 ms to a list load on a mid-range phone with 5,000 follows. This is measured
-with a benchmark run on a seeded database, not asserted in CI. Nothing
+50 ms to a list load on a mid-range phone with 5,000 follows. The package
+benchmark covers scoring and sorting only; the local reads still need a device
+measurement, and nothing is asserted in CI. Nothing
 re-sorts after first paint (see §3). The loader runs inside the BLoC's
 existing load handler, after the cache-first read and before the first `ready`
 emit, so the list never draws in the old order and then jumps to the new one.
@@ -215,7 +219,7 @@ mutual.
 
 | Step | When | What it fetches |
 |---|---|---|
-| Seed | Once, when the table has no rows for this owner | The existing three-source follower fetch (API, relays, indexers), written in full |
+| Seed | When no complete full sync is recorded for this owner. The markers live in SharedPreferences and are cleared with the table, including on a database reset | The existing three-source follower fetch (API, relays, indexers). It replaces the table only when every source answered in full; otherwise it merges |
 | Incremental | On app foreground or when a ranked list opens, at most once every 15 minutes, and only while online | One relay query: `kinds: [3], #p: [me], since: <high-water mark minus a skew margin>`. It returns only the contact lists that changed since the last sync and still include you, which is usually none. New authors are added; known ones get `last_seen_at` bumped. |
 | Full reconcile | When the last full sync is more than 7 days old, or whenever the followers screen does a full fetch anyway. Incomplete background full reads retry at most daily, with merge-only incrementals in between | The existing fetch. The table is replaced with the result, which is the only way to see unfollows, because a contact list that drops you no longer matches `#p: [me]`. |
 
@@ -225,13 +229,16 @@ earlier sync is pending; persistence remains serialized in fetch-start order.
 A failed sync keeps the existing rows. Results apply
 on the next open, so visible rows never move (§3). Between full reconciles,
 someone who unfollowed you can still read as "follows you" for up to a week.
-That is the same staleness class the current union-of-sources code already
-has (`follow_repository.dart:492`), and it only costs a small ranking boost.
+An account whose full reads never complete (more than 5,000 followers, or a
+relay or indexer that caps the read) never gets that replace, so for it the
+staleness has no bound. That is the staleness class the union-of-sources code
+already has (see `FollowRepository.relationshipTo`), and it costs a ranking
+boost and a stale "Follows you" or "Mutual" label.
 
-The server cost goes down, not up. Today every followers-screen open past the
-30-second TTL triggers the full three-source fetch. With the local graph, a
-typical day costs a few incremental relay queries that return little or
-nothing, plus one full fetch a week.
+The followers screen still revalidates with the full three-source fetch, as
+it does today. The local graph adds a few incremental relay queries a day that
+return little or nothing, plus a background full fetch once a week, retried at
+most daily for accounts whose full reads cannot complete.
 
 **Other signals:**
 
@@ -275,7 +282,7 @@ network after 30 seconds.
     no fetch;
   - mutual follows the following set live: following someone who is in the
     follower set makes them a mutual with no sync;
-  - the seed runs only when the table is empty;
+  - the seed runs only when no complete full sync is recorded;
   - the incremental query uses the high-water mark and adds new authors;
   - the full reconcile replaces the set and so removes unfollowers;
   - the 15-minute and 7-day intervals are honored;
@@ -286,8 +293,9 @@ network after 30 seconds.
 - Video-count refresh: only stale rows among the top 100 candidates are
   requested, in batches. Fresh rows are not requested. Results never reorder
   a list that is already on screen.
-- Latency benchmark: ranking 5,000 seeded follows stays under the §5 budget.
-  This is a benchmark harness, not a CI assertion.
+- Scoring benchmark: scoring and sorting 5,000 synthetic candidates
+  (`rank_users_benchmark.dart`). It is a harness, not a CI assertion, and does
+  not cover the local reads.
 - The new `NostrEventsDao` newest-video-per-author query: one row per author,
   and only `NIP71VideoKinds` video kinds count.
 - BLoC tests for share sheet, DM picker, search, follow lists and the people-list

@@ -23,9 +23,12 @@ UserSearchBloc                              mobile/lib/blocs/user_search/
   • on Exception → Reportable wrap + `failure` state
   • per-yield: forward each newly-terminal source to
     FeedPerformanceTracker.trackSearchSource
-  • with a ranking loader: rows already shown keep their place, each new
-    page puts people you follow or have messaged first, and exact matches
-    lead both, even when a later source delivers them (#8578)
+  • with a ranking loader: rows already shown keep their relative order,
+    each new source or page puts people you follow or have messaged first,
+    and exact matches lead the first page, even when a later source delivers
+    them (#8578), as well as their own load-more page
+  • the loader drops accounts hidden from feeds (blocked or muted by you,
+    or blocking or muting you); the viewer stays listed on the Search page
         ↓
 ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
   Phase 1 (offset==0): UserProfilesDao.searchProfilesByIdentity
@@ -182,7 +185,6 @@ Existing `feed_first_batch_received`, `feed_load_complete`, and
 - Auto-navigate-while-typing behavior — see #3802.
 - Focus / keyboard continuity across Explore → Search — see #3803,
   #3020.
-- Blocklist filtering of search results — see #3805, #948.
 - `searchUsers` (the non-progressive sibling used by
   `NewMessageSearchBloc`) — different caller, different scope.
 
