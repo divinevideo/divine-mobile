@@ -10070,6 +10070,7 @@
   "@followedHashtagsEmpty": {
     "description": "Empty state explaining how to follow a hashtag."
   },
+<<<<<<< HEAD
   "soundRequestAction": "Request this sound",
   "soundRequestTitle": "Someone wants to use your sound",
   "soundRequestDescription": "Enable sound reuse on this video so anyone can remix with it.",
@@ -10110,6 +10111,9 @@
   "@soundRequestSaved": {
     "description": "Sound request DM flow: Saved"
   },
+=======
+  "userRowPosted": "Posted {time}",
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
     "placeholders": {
@@ -10117,6 +10121,5 @@
         "type": "String"
       }
     }
-  },
-  "userRowPosted": "Posted {time}"
+  }
 }

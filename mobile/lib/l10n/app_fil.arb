@@ -4106,6 +4106,7 @@
   "followedHashtagsTitle": "Mga sinusundang hashtag",
   "manageHashtags": "Pamahalaan ang mga hashtag",
   "followedHashtagsEmpty": "Sundan ang isang hashtag sa pahina nito para makita ito rito.",
+<<<<<<< HEAD
   "soundRequestAction": "Hilingin ang tunog na ito",
   "soundRequestTitle": "May gustong gumamit ng tunog mo",
   "soundRequestDescription": "Payagang gamitin muli ang tunog ng video na ito para makapag-remix ang kahit sino.",
@@ -4125,4 +4126,15 @@
         }
     },
     "userRowPosted": "Na-post {time}"
+=======
+  "userRowPosted": "Na-post {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

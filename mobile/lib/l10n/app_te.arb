@@ -8599,6 +8599,7 @@
   "followedHashtagsTitle": "అనుసరిస్తున్న హ్యాష్‌ట్యాగ్‌లు",
   "manageHashtags": "హ్యాష్‌ట్యాగ్‌లను నిర్వహించండి",
   "followedHashtagsEmpty": "హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.",
+<<<<<<< HEAD
   "soundRequestAction": "ఈ సౌండ్‌ను అడగండి",
   "soundRequestTitle": "ఎవరో మీ సౌండ్‌ను ఉపయోగించాలనుకుంటున్నారు",
   "soundRequestDescription": "ఎవరైనా రీమిక్స్ చేయగలిగేలా ఈ వీడియో సౌండ్‌ను మళ్లీ ఉపయోగించడానికి అనుమతించండి.",
@@ -8609,6 +8610,9 @@
   "soundReadyUse": "ఈ సౌండ్‌ను ఉపయోగించండి",
   "soundReadySave": "నా సౌండ్స్‌లో సేవ్ చేయండి",
   "soundRequestSaved": "సేవ్ చేయబడింది",
+=======
+  "userRowPosted": "{time} పోస్ట్ చేయబడింది",
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
     "placeholders": {
@@ -8616,6 +8620,5 @@
         "type": "String"
       }
     }
-  },
-  "userRowPosted": "{time} పోస్ట్ చేయబడింది"
+  }
 }

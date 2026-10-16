@@ -5100,6 +5100,7 @@
   "followedHashtagsTitle": "フォロー中のハッシュタグ",
   "manageHashtags": "ハッシュタグを管理",
   "followedHashtagsEmpty": "ハッシュタグのページでフォローすると、ここに表示されます。",
+<<<<<<< HEAD
   "soundRequestAction": "このサウンドをリクエスト",
   "soundRequestTitle": "あなたのサウンドを使いたい人がいます",
   "soundRequestDescription": "この動画のサウンドの再利用を許可すると、誰でもリミックスに使えます。",
@@ -5119,4 +5120,15 @@
         }
     },
     "userRowPosted": "{time}に投稿"
+=======
+  "userRowPosted": "{time}に投稿",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

@@ -5100,6 +5100,7 @@
   "followedHashtagsTitle": "الوسوم التي تتابعها",
   "manageHashtags": "إدارة الوسوم",
   "followedHashtagsEmpty": "تابع وسمًا من صفحته لتجده هنا.",
+<<<<<<< HEAD
   "soundRequestAction": "اطلب هذا الصوت",
   "soundRequestTitle": "يريد شخص ما استخدام صوتك",
   "soundRequestDescription": "اسمح بإعادة استخدام صوت هذا الفيديو ليتمكن الجميع من إنشاء ريمكس به.",
@@ -5119,4 +5120,15 @@
         }
     },
     "userRowPosted": "نُشر {time}"
+=======
+  "userRowPosted": "نُشر {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

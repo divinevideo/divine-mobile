@@ -5100,6 +5100,7 @@
   "followedHashtagsTitle": "Hashtags que sigues",
   "manageHashtags": "Gestionar hashtags",
   "followedHashtagsEmpty": "Sigue un hashtag desde su página para encontrarlo aquí.",
+<<<<<<< HEAD
   "soundRequestAction": "Solicitar este sonido",
   "soundRequestTitle": "Alguien quiere usar tu sonido",
   "soundRequestDescription": "Activa la reutilización del sonido de este video para que cualquiera pueda crear con él.",
@@ -5119,4 +5120,15 @@
         }
     },
     "userRowPosted": "Publicado {time}"
+=======
+  "userRowPosted": "Publicado {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

@@ -5100,6 +5100,7 @@
   "followedHashtagsTitle": "Hashtaggar du följer",
   "manageHashtags": "Hantera hashtaggar",
   "followedHashtagsEmpty": "Följ en hashtagg på dess sida för att hitta den här.",
+<<<<<<< HEAD
   "soundRequestAction": "Be om det här ljudet",
   "soundRequestTitle": "Någon vill använda ditt ljud",
   "soundRequestDescription": "Tillåt återanvändning av ljudet i den här videon så att alla kan remixa med det.",
@@ -5119,4 +5120,15 @@
         }
     },
     "userRowPosted": "Publicerat {time}"
+=======
+  "userRowPosted": "Publicerat {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

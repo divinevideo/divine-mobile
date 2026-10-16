@@ -5100,6 +5100,7 @@
   "followedHashtagsTitle": "Hashtaguri urmărite",
   "manageHashtags": "Gestionează hashtagurile",
   "followedHashtagsEmpty": "Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.",
+<<<<<<< HEAD
   "soundRequestAction": "Solicită acest sunet",
   "soundRequestTitle": "Cineva vrea să folosească sunetul tău",
   "soundRequestDescription": "Permite reutilizarea sunetului din acest videoclip, astfel încât oricine să poată crea remixuri cu el.",
@@ -5119,4 +5120,15 @@
         }
     },
     "userRowPosted": "Publicat {time}"
+=======
+  "userRowPosted": "Publicat {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

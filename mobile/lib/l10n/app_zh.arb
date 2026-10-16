@@ -6864,6 +6864,7 @@
   "followedHashtagsTitle": "已关注的话题标签",
   "manageHashtags": "管理话题标签",
   "followedHashtagsEmpty": "在话题标签页面关注后，即可在这里找到。",
+<<<<<<< HEAD
   "soundRequestAction": "请求使用此声音",
   "soundRequestTitle": "有人想使用你的声音",
   "soundRequestDescription": "允许重复使用此视频的声音，让任何人都能用它进行混剪。",
@@ -6874,6 +6875,9 @@
   "soundReadyUse": "使用此声音",
   "soundReadySave": "保存到我的声音",
   "soundRequestSaved": "已保存",
+=======
+  "userRowPosted": "发布于{time}",
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
     "placeholders": {
@@ -6881,6 +6885,5 @@
         "type": "String"
       }
     }
-  },
-  "userRowPosted": "发布于{time}"
+  }
 }

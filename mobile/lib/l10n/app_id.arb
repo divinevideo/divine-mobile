@@ -5100,6 +5100,7 @@
   "followedHashtagsTitle": "Tagar yang diikuti",
   "manageHashtags": "Kelola tagar",
   "followedHashtagsEmpty": "Ikuti tagar dari halamannya untuk menemukannya di sini.",
+<<<<<<< HEAD
   "soundRequestAction": "Minta suara ini",
   "soundRequestTitle": "Seseorang ingin memakai suaramu",
   "soundRequestDescription": "Izinkan penggunaan ulang suara video ini agar siapa pun bisa membuat remix dengannya.",
@@ -5119,4 +5120,15 @@
         }
     },
     "userRowPosted": "Diposting {time}"
+=======
+  "userRowPosted": "Diposting {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

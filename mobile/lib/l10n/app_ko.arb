@@ -4646,6 +4646,7 @@
   "followedHashtagsTitle": "팔로우 중인 해시태그",
   "manageHashtags": "해시태그 관리",
   "followedHashtagsEmpty": "해시태그 페이지에서 팔로우하면 여기에 표시됩니다.",
+<<<<<<< HEAD
   "soundRequestAction": "이 사운드 요청하기",
   "soundRequestTitle": "누군가 내 사운드를 사용하고 싶어 해요",
   "soundRequestDescription": "누구나 리믹스할 수 있도록 이 동영상의 사운드 재사용을 허용하세요.",
@@ -4665,4 +4666,15 @@
         }
     },
     "userRowPosted": "{time} 게시"
+=======
+  "userRowPosted": "{time} 게시",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

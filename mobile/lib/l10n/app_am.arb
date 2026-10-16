@@ -5200,6 +5200,7 @@
   "followedHashtagsTitle": "የተከተሏቸው ሃሽታጎች",
   "manageHashtags": "ሃሽታጎችን ያስተዳድሩ",
   "followedHashtagsEmpty": "እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።",
+<<<<<<< HEAD
   "soundRequestAction": "ይህን ድምፅ ጠይቅ",
   "soundRequestTitle": "አንድ ሰው ድምፅህን መጠቀም ይፈልጋል",
   "soundRequestDescription": "ማንም ሰው በዚህ ድምፅ ሪሚክስ እንዲሠራ የዚህን ቪዲዮ ድምፅ እንደገና መጠቀም ፍቀድ።",
@@ -5219,4 +5220,15 @@
         }
     },
     "userRowPosted": "የተለጠፈው {time}"
+=======
+  "userRowPosted": "የተለጠፈው {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+>>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }
