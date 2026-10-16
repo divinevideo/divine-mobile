@@ -78,8 +78,9 @@ String verifyIdentityHint(String platform) {
 
 /// Example of the proof a platform expects.
 ///
-/// Account names follow [verifyIdentityHint]. The verifier's form shows no
-/// example link for Bluesky or TikTok, so those two are built from it.
+/// Follows the example links in the verifier's form, which reuse the account
+/// from [verifyIdentityHint]. The form has none for Bluesky or TikTok, so
+/// those two are built from the reserved name `example`.
 String verifyProofHint(String platform) {
   return switch (platform.toLowerCase()) {
     'github' => 'https://gist.github.com/octocat/abc123…',
