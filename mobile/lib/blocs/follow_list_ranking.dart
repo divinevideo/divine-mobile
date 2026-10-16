@@ -16,9 +16,9 @@ Future<Map<String, UserRankingSignals>> loadFollowListRankingSignals({
   try {
     final signals = await loader.load(pubkeys);
     if (!preserveMembership) return signals;
-    // Owned lists remain an account-management surface. The loader applies a
-    // stronger recipient policy, so an omitted row gets neutral ordering signals
-    // instead of disappearing. Each bloc still applies its own block rules.
+    // Owned lists remain an account-management surface: a row the loader
+    // omits gets neutral ordering signals instead of disappearing, and each
+    // bloc still applies its own block rules.
     return {
       for (final pubkey in pubkeys)
         pubkey: signals[pubkey] ?? UserRankingSignals(pubkey: pubkey),

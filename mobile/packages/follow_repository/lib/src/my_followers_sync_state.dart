@@ -13,7 +13,7 @@ class MyFollowersSyncState {
     _fullAttemptPrefix,
   ];
 
-  /// Reads the last full and incremental sync times, in epoch seconds.
+  /// Reads the owner's completed-sync and attempt times, in epoch seconds.
   Future<({int? full, int? incremental, int? attempt, int? fullAttempt})> read(
     String owner,
   ) async {
@@ -32,7 +32,7 @@ class MyFollowersSyncState {
     await prefs.setInt('$_attemptPrefix$owner', seconds);
   }
 
-  /// Records a full attempt independently of incremental retry throttling.
+  /// Records a full attempt, which also restarts the shared attempt throttle.
   Future<void> stampFullAttempt(String owner, int seconds) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('$_fullAttemptPrefix$owner', seconds);

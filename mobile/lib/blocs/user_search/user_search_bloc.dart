@@ -104,8 +104,9 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
   final ProfileRepository? _profileRepository;
   final UserRankingSignalsLoader? _rankingSignalsLoader;
 
-  /// Optional follow graph used to boost followed users to the top of the
-  /// initial search page. Null for consumers that want raw server ranking.
+  /// Optional follow graph the repository uses to boost followed users on the
+  /// initial search page. Null skips only that boost: [_rankingSignalsLoader]
+  /// still promotes known accounts.
   final FollowRepository? _followRepository;
 
   final FeedPerformanceTracker? _feedTracker;
