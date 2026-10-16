@@ -51,6 +51,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     this.hasVideos = false,
     this.searchTimeout = userSearchOuterTimeout,
     this.excludedPubkey,
+    this.viewerPubkey,
     FeedPerformanceTracker? feedTracker,
     UserSearchRunner? searchRunner,
     UserSearchState? initialState,
@@ -59,7 +60,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
        _rankingSignalsLoader = rankingSignalsLoader,
        _feedTracker = feedTracker,
        _searchRunner = searchRunner,
-       super(_retained(initialState, rankingSignalsLoader, excludedPubkey)) {
+       super(
+         _retained(
+           initialState,
+           rankingSignalsLoader,
+           excludedPubkey,
+           viewerPubkey,
+         ),
+       ) {
     on<UserSearchQueryChanged>(
       _onQueryChanged,
       transformer: debounceRestartable(),
@@ -72,13 +80,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     UserSearchState? snapshot,
     UserRankingSignalsLoader? loader,
     String? excluded,
+    String? viewer,
   ) {
     if (snapshot == null) return const UserSearchState();
     final profiles = snapshot.results
         .where(
           (p) =>
               (excluded == null || !pubkeysEqual(p.pubkey, excluded)) &&
-              (loader?.isEligible(p.pubkey) ?? true),
+              _isListedBy(loader, viewer, p.pubkey),
         )
         .toList();
     final keys = profiles.map((p) => p.pubkey).toSet();
@@ -116,6 +125,22 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
   /// signed-in viewer.
   final String? excludedPubkey;
 
+  /// The signed-in account, which global search still lists although
+  /// ranking never scores it. Pickers drop it through [excludedPubkey].
+  final String? viewerPubkey;
+
+  bool _isListed(String pubkey) =>
+      _isListedBy(_rankingSignalsLoader, viewerPubkey, pubkey);
+
+  static bool _isListedBy(
+    UserRankingSignalsLoader? loader,
+    String? viewer,
+    String pubkey,
+  ) => (loader?.isEligible(pubkey) ?? true) || _isViewer(viewer, pubkey);
+
+  static bool _isViewer(String? viewer, String pubkey) =>
+      viewer != null && viewer.isNotEmpty && pubkeysEqual(pubkey, viewer);
+
   List<UserProfile> _visibleProfiles(Iterable<UserProfile> profiles) {
     final excluded = excludedPubkey;
     if (excluded == null) return profiles.toList();
@@ -150,14 +175,16 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
       // account. Eligibility is synchronous and does not read the network.
       return (
         profiles: profiles
-            .where((profile) => loader.isEligible(profile.pubkey))
+            .where((profile) => _isListed(profile.pubkey))
             .toList(),
         signals: const <String, UserRankingSignals>{},
       );
     }
     final byPubkey = {
       for (final profile in profiles)
-        if (signals.containsKey(profile.pubkey)) profile.pubkey: profile,
+        if (signals.containsKey(profile.pubkey) ||
+            _isViewer(viewerPubkey, profile.pubkey))
+          profile.pubkey: profile,
     };
     final ranked = promoteKnown(
       byPubkey.keys.toList(),
@@ -167,7 +194,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     );
     return (
       profiles: ranked.map((pubkey) => byPubkey[pubkey]!).toList(),
-      signals: {for (final pubkey in ranked) pubkey: signals[pubkey]!},
+      signals: {for (final pubkey in ranked) pubkey: ?signals[pubkey]},
     );
   }
 
@@ -333,11 +360,9 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
                 if ((updates.containsKey(profile.pubkey) ||
                         (!result.isComplete &&
                             inheritedPubkeys.contains(profile.pubkey))) &&
-                    _rankingSignalsLoader.isEligible(profile.pubkey))
+                    _isListed(profile.pubkey))
                   updates[profile.pubkey] ?? profile,
-              ...page.profiles.where(
-                (profile) => _rankingSignalsLoader.isEligible(profile.pubkey),
-              ),
+              ...page.profiles.where((profile) => _isListed(profile.pubkey)),
             ];
             publishedProfiles = _exactMatchesFirst(publishedProfiles, query);
             final signals = {...publishedSignals, ...page.signals};
@@ -516,13 +541,10 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           !identical(state.results, previousResults)) {
         return;
       }
-      final allResults =
-          [...previousResults, ..._exactMatchesFirst(page.profiles, query)]
-              .where(
-                (profile) =>
-                    _rankingSignalsLoader?.isEligible(profile.pubkey) ?? true,
-              )
-              .toList();
+      final allResults = [
+        ...previousResults,
+        ..._exactMatchesFirst(page.profiles, query),
+      ].where((profile) => _isListed(profile.pubkey)).toList();
       final signals = {...state.rankingSignals, ...page.signals};
 
       emitIfOpen(
