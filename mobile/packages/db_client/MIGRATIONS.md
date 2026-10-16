@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 23** (see `app_database.dart`).
+**Version: 24** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -190,6 +190,22 @@ Earlier chat previews also reported version 22, but had Concord storage without
 creating the Concord table idempotently, preserving both queues for either v22
 shape. Migration tests cover fresh v23 databases, the full legacy upgrade chain,
 main's v22, and the chat preview's v22 with queued data.
+
+Version 24 adds `conversations.is_dismissed`, the local marker for a
+conversation or message request the user put aside without deleting it.
+Dismissing also marks the thread read through the existing read cursor; the
+marker itself is never published. A message newer than the stored latest one
+clears it, as does a distinct message received in the same second, while relay
+replay, older history and the preview refresh after a deletion keep it. It lives
+on the conversation row, so sign-out and account switch clear it with the
+account's other conversation rows, and a conversation rebuilt from relay
+history afterwards comes back undismissed. The step adds the column through the
+idempotent `_addColumnIfMissing` and checks `to` as well as `from`, like the v20
+and v22 steps. The v12 rebuild uses the current table definition, so a
+migration test that stops below v24 drops the column again. The repair probe
+lists the column, so a database already stamped v24 without it, such as one
+opened by a build that used v24 for a different schema, is rebuilt on its next
+open.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
