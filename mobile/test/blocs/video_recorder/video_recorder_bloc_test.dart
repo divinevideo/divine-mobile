@@ -1906,9 +1906,9 @@ void main() {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
           // stopRecording() must still run so the periodic duration timer
-          // is cancelled (resetRecording() alone would leave it running).
+          // is cancelled; the in-progress segment is cleared too.
           verify(() => clipManager.stopRecording()).called(1);
-          verify(() => clipManager.resetRecording()).called(1);
+          verify(() => clipManager.clearActiveRecordingDuration()).called(1);
         },
       );
 
@@ -2181,6 +2181,9 @@ void main() {
 
             expect(addedTakes(), [limitTake]);
             expect(bloc.state.isRecording, isFalse);
+            // The clip manager measures the take with its recording clock, so
+            // the empty Stop result must not zero it before the take arrives.
+            verifyNever(() => clipManager.resetRecording());
           },
         );
       });
@@ -2225,7 +2228,7 @@ void main() {
             expect(bloc.state.isStoppingRecording, isFalse);
             // Stops the recording clock and drops the in-progress segment.
             verify(() => clipManager.stopRecording()).called(1);
-            verify(() => clipManager.resetRecording()).called(1);
+            verify(() => clipManager.clearActiveRecordingDuration()).called(1);
             verifyNever(
               () => clipManager.addClip(
                 video: any(named: 'video'),

@@ -1257,7 +1257,10 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
       addError(const RecordingProducedNoVideoException(), StackTrace.current);
-      clipManager.resetRecording();
+      // Keeps the frozen duration: when the recording limit stopped the take
+      // first, the camera refused this stop and still hands the take over,
+      // and that clip is measured with it.
+      clipManager.clearActiveRecordingDuration();
       return;
     }
 

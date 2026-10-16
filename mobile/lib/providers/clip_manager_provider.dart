@@ -204,6 +204,18 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     );
   }
 
+  /// Hides the in-progress segment of a recording whose stop produced no clip,
+  /// but keeps the duration the stopwatch froze at.
+  ///
+  /// When the recording limit stops a take just before a Stop tap does, the
+  /// camera refuses the tap and hands the take over a moment later through
+  /// the limit (#10194). [addClip] measures that take with the frozen
+  /// duration, which [resetRecording] would have zeroed. The next
+  /// [startRecording] resets it.
+  void clearActiveRecordingDuration() {
+    state = state.copyWith(activeRecordingDuration: .zero);
+  }
+
   /// Add a new recorded clip to the list.
   ///
   /// If the clip duration exceeds [remainingDuration], it will be automatically

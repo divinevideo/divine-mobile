@@ -149,6 +149,42 @@ void main() {
       );
     });
 
+    group('clearActiveRecordingDuration', () {
+      test(
+        'keeps the frozen duration for a take the recording limit hands '
+        'over after an empty stop (#10194)',
+        () {
+          fakeAsync((async) {
+            final notifier = container.read(clipManagerProvider.notifier)
+              ..startRecording();
+            async.elapse(const Duration(milliseconds: 50));
+            notifier.stopRecording();
+            final frozen = container
+                .read(clipManagerProvider)
+                .activeRecordingDuration;
+            expect(frozen, greaterThan(Duration.zero));
+
+            notifier.clearActiveRecordingDuration();
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              Duration.zero,
+            );
+
+            final clip = notifier.addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/path/to/take.mp4'),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            );
+
+            // resetRecording() would have zeroed the clock, and the take
+            // would be added as a 0:00 clip.
+            expect(clip.duration, greaterThanOrEqualTo(frozen));
+          });
+        },
+      );
+    });
+
     group('trim completion lifecycle', () {
       late void Function(bool success) completeTrim;
 
