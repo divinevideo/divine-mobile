@@ -26,8 +26,12 @@ internal class RecordingStopArbiter(private val handler: Handler) {
     private var maxDurationTimer: Runnable? = null
     private var pendingStop: RecordingStopCallback? = null
 
-    /** Whether finalization belongs to a requested stop rather than an interruption. */
-    val isStopping: Boolean get() = pendingStop != null
+    /**
+     * Whether a stop has begun and its recording has not finalized yet. A
+     * finalize without one ended on its own; read it before [finish].
+     */
+    val isStopPending: Boolean
+        get() = pendingStop != null
 
     /** Runs [onReached] after [delayMs], unless a stop begins first. */
     fun scheduleMaxDuration(delayMs: Long, onReached: () -> Unit) {

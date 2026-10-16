@@ -75,10 +75,7 @@ void main() {
 
       test('the max-duration auto-stop reports every outcome', () {
         final callback = declarationAt(
-          declarationAt(
-            controllerSource,
-            'private fun autoStopRecording()',
-          ),
+          declarationAt(controllerSource, 'private fun autoStopRecording()'),
           'stopArbiter.beginStop { result, error ->',
         );
 
@@ -110,7 +107,7 @@ void main() {
       });
 
       // A Stop, the max-duration auto-stop and a release each report through
-      // their own path, and the Finalize branch consumes those callbacks.
+      // their own path, and the Finalize branch consumes the pending stop.
       // Judging "unrequested" after that would report every Stop a second
       // time and save the take twice.
       test('an unrequested finalize is judged before the stop callbacks are '
@@ -140,7 +137,7 @@ void main() {
             finalize.indexOf('isRecording = false', requested),
           ),
           allOf(
-            contains('stopArbiter.isStopping'),
+            contains('stopArbiter.isStopPending'),
             contains('isReleased'),
           ),
         );

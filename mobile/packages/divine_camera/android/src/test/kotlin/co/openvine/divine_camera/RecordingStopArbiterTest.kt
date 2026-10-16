@@ -61,13 +61,23 @@ internal class RecordingStopArbiterTest {
         assertTrue(autoResults.isEmpty())
     }
 
+    // Finalize reads it to tell a requested stop from one CameraX made on its
+    // own; a requested stop seen as unsolicited would be reported twice.
+    @Test
+    fun isStopPending_holdsFromBeginStopUntilFinish() {
+        assertFalse(arbiter.isStopPending)
+
+        arbiter.beginStop { _, _ -> }
+        assertTrue(arbiter.isStopPending)
+
+        arbiter.finish(take, null)
+        assertFalse(arbiter.isStopPending)
+    }
+
     @Test
     fun finish_letsTheNextRecordingBeStopped() {
-        assertFalse(arbiter.isStopping)
         arbiter.beginStop { _, _ -> }
-        assertTrue(arbiter.isStopping)
         arbiter.finish(take, null)
-        assertFalse(arbiter.isStopping)
 
         var nextResult: Map<String, Any?>? = null
         assertTrue(arbiter.beginStop { result, _ -> nextResult = result })
@@ -79,10 +89,10 @@ internal class RecordingStopArbiterTest {
     @Test
     fun abandonStop_releasesTheRequestedStop() {
         arbiter.beginStop { _, _ -> }
-        assertTrue(arbiter.isStopping)
+        assertTrue(arbiter.isStopPending)
 
         arbiter.abandonStop()
 
-        assertFalse(arbiter.isStopping)
+        assertFalse(arbiter.isStopPending)
     }
 }

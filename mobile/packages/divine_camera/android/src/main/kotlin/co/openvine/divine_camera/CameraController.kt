@@ -2478,7 +2478,8 @@ class CameraController(
 
                         is VideoRecordEvent.Finalize -> {
                             val wasTrulyStarted = recordingTrulyStarted
-                            val stopRequested = stopArbiter.isStopping || isReleased
+                            val stopRequested = stopArbiter.isStopPending ||
+                                isReleased
                             isRecording = false
                             recordingTrulyStarted = false
                             stopArbiter.cancelMaxDuration()
