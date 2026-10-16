@@ -125,7 +125,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         name: 'VerifyConnectCubit',
       );
       unawaited(
-        _analytics.logEvent(
+        _logOutcome(
           name: 'verify_proof_unavailable',
           parameters: {'platform': claim.platform},
         ),
@@ -152,7 +152,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       // `reason` is a fixed vocabulary and `platform` is a platform key, so
       // neither carries the npub, the handle, the link or the message.
       unawaited(
-        _analytics.logEvent(
+        _logOutcome(
           name: 'verify_proof_rejected',
           parameters: {
             'platform': claim.platform,
@@ -500,6 +500,22 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     'The $platform link was not signed',
     name: 'VerifyConnectCubit',
   );
+
+  // Fire-and-forget, so a failed write is logged here rather than escaping as
+  // an uncaught error.
+  Future<void> _logOutcome({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    try {
+      await _analytics.logEvent(name: name, parameters: parameters);
+    } catch (error) {
+      Log.warning(
+        'Verify analytics event $name failed: $error',
+        name: 'VerifyConnectCubit',
+      );
+    }
+  }
 
   // Back to editing, so any sign-in waiting for approval goes too.
   void _fail(VerifyConnectError error) {

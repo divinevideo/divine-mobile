@@ -332,6 +332,58 @@ void main() {
         },
       );
 
+      group('when analytics cannot record the outcome', () {
+        setUp(() {
+          when(
+            () => analytics.logEvent(
+              name: any(named: 'name'),
+              parameters: any(named: 'parameters'),
+            ),
+          ).thenAnswer((_) async => throw StateError('analytics is down'));
+        });
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'still shows the rejection',
+          setUp: () {
+            when(() => repository.verifyClaim(any())).thenAnswer(
+              (_) async =>
+                  _result(verified: false, code: 'discord_bot_no_access'),
+            );
+          },
+          build: () => build(_discord),
+          act: (cubit) async {
+            cubit
+              ..identityChanged('alice')
+              ..proofChanged('https://discord.com/channels/1/2/3');
+            await cubit.submitProof();
+          },
+          verify: (cubit) {
+            expect(cubit.state.error, VerifyConnectError.discordBotNoAccess);
+          },
+        );
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'still asks the person to try again when the verifier could not '
+          'check',
+          setUp: () {
+            when(() => repository.verifyClaim(any())).thenAnswer(
+              (_) async =>
+                  _result(verified: false, code: 'temporarily_unavailable'),
+            );
+          },
+          build: () => build(_github),
+          act: (cubit) async {
+            cubit
+              ..identityChanged('octocat')
+              ..proofChanged('abc');
+            await cubit.submitProof();
+          },
+          verify: (cubit) {
+            expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+          },
+        );
+      });
+
       blocTest<VerifyConnectCubit, VerifyConnectState>(
         'publishes the claim once the verifier confirms it',
         build: () => build(_github),
