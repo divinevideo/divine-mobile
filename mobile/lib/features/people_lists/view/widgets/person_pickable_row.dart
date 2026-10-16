@@ -1,5 +1,5 @@
 // ABOUTME: Tappable row used inside the add-people-to-list picker.
-// ABOUTME: Shows avatar, display name, handle, and a selection checkbox.
+// ABOUTME: Shows avatar, display name, account facts, and a checkbox.
 
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -16,8 +16,9 @@ import 'package:openvine/widgets/user_indicator_line.dart';
 /// in a people list. Purely display-and-callback — it holds no bloc or
 /// provider references so it can be reused from any picker variant.
 ///
-/// The row renders the user avatar, their display name, a secondary handle
-/// line, and a trailing [DivineSpriteCheckbox] reflecting [isSelected]. When
+/// The row renders the user avatar, their display name, a secondary line of
+/// account facts (relationship, handle, video count, recent posting), and a
+/// trailing [DivineSpriteCheckbox] reflecting [isSelected]. When
 /// [enabled] is `false` the row becomes non-interactive and the checkbox
 /// renders in its disabled state — used to indicate a candidate that is
 /// already a member of the target list.
@@ -58,8 +59,8 @@ class PersonPickableRow extends StatelessWidget {
   String get displayName =>
       candidate.displayName ?? UserProfile.defaultDisplayNameFor(pubkey);
 
-  /// Effective handle line: either the resolved handle or the full pubkey
-  /// as a stable fallback.
+  /// Effective handle: either the resolved handle or the full pubkey as a
+  /// stable fallback.
   String get handle => candidate.handle ?? pubkey;
 
   /// Optional avatar URL for the candidate.

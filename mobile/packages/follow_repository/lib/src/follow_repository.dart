@@ -922,6 +922,15 @@ class FollowRepository {
   /// Durable relationship rows take precedence over an older CacheSync entry.
   /// They are explicitly stale; only the completed network snapshot is live.
   /// Authoritative counts are read separately from persisted profile stats.
+  ///
+  /// The network half uses [CacheSync.watchOne] rather than
+  /// [CacheSync.watchStream] so that [CacheSync] is the single owner of the
+  /// stale/live boundary. Wrapping [watchMyFollowers] with
+  /// [CacheSync.watchStream] created two cache layers: CacheSync emitted the
+  /// disk entry as [CacheResult.cached], but [watchMyFollowers]'s own
+  /// in-memory phase then emitted an additional snapshot that CacheSync
+  /// incorrectly tagged as [CacheResult.live] before the real network fetch
+  /// had completed, breaking [CacheResult.isLive] semantics.
   Stream<CacheResult<FollowersSnapshot>> watchMyFollowersCached() async* {
     final owner = _nostrClient.publicKey;
     var deliveredDurable = false;

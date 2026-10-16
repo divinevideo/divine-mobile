@@ -30,7 +30,8 @@ part 'share_sheet_state.dart';
 /// BLoC for the unified share bottom sheet.
 ///
 /// Manages:
-/// - Contact loading (recent + followed users)
+/// - Contact loading (recent recipients, then followed and previously
+///   messaged users in closeness order)
 /// - Recipient selection (select-then-send: tapping a contact only selects;
 ///   the DM goes out on an explicit [ShareSheetSendRequested])
 /// - One-shot actions (save, copy link, copy JSON, copy event ID, share via)
