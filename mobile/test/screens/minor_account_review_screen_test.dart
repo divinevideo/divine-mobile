@@ -1213,7 +1213,7 @@ void main() {
       // The server gives an account claiming 16+ a support-review resolution:
       // its next step is asking support to review, which is the appeal.
       // "Continue" used to reach that through the Support Center menu, the
-      // Report a Bug path this issue closes.
+      // Report a Bug path #9176 closes.
       testWidgets(
         'a 16+ support-review case offers no Continue, only private support',
         (

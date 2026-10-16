@@ -492,10 +492,8 @@ class _LoadedView extends ConsumerWidget {
       );
     }
 
-    // Only the parent-contact resolution has a next step of its own. For any
-    // other, including support review and an unrecognised value, the next step
-    // is asking support, which the appeal button below the reconsideration
-    // card already opens.
+    // Only parent contact has a next step of its own; for any other resolution
+    // the next step is asking support, which the appeal button does.
     if (!reviewCase.allowsParentVideoOrEmail) {
       return null;
     }
