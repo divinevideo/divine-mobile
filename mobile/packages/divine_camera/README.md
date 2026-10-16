@@ -72,12 +72,8 @@ per recording through CameraX. Three rules govern when the iOS mic is open:
 - **Released on pause** — `pausePreview(releaseAudio: true)` stops it and
   deactivates the shared `AVAudioSession`, so a locked phone shows no recording
   indicator (#5869). `resumePreview()` reattaches. A take whose file is still
-  being written keeps the mic until the writer finishes: deactivating the
-  session under a running `finishWriting` fails the file with "Operation
-  Interrupted" (#10195). Backgrounding pauses twice (`.hidden`, then
-  `.paused`), so the second pause routinely lands inside the first one's
-  salvage write; the writer's completion releases the mic instead, if the
-  preview is still paused.
+  being written keeps the mic until the writer finishes, which then releases
+  it if the preview is still paused (#10195).
 - **Closed for the countdown** — `suspendAudioCapture()` stops it before the
   countdown beeps play out of the speaker and `resumeAudioCapture()` reopens
   it after the last beep (#4539). With the mic open through the beeps, the
