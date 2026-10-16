@@ -32,11 +32,10 @@ class DivineCameraPlugin :
     private lateinit var textureRegistry: TextureRegistry
     private var activity: Activity? = null
     private var cameraController: CameraController? = null
-    private var volumeKeyHandler: VolumeKeyHandler? = null
 
     @VisibleForTesting
-    internal val remoteRecordControl: VolumeKeyHandler?
-        get() = volumeKeyHandler
+    internal var volumeKeyHandler: VolumeKeyHandler? = null
+        private set
 
     // Remote record control only holds its media session while the activity
     // is in the foreground (#10196). Stopping releases it, resuming claims it

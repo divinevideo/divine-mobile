@@ -522,7 +522,7 @@ internal class DivineCameraPluginRemoteRecordControlTest {
             MethodCall("setRemoteRecordControlEnabled", mapOf("enabled" to true)),
             Mockito.mock(MethodChannel.Result::class.java),
         )
-        return assertNotNull(plugin.remoteRecordControl)
+        return assertNotNull(plugin.volumeKeyHandler)
     }
 
     @Test
