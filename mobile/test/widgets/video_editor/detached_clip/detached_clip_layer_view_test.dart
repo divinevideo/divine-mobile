@@ -712,6 +712,28 @@ void main() {
       expect(shownPlayer(tester), isNull);
     });
 
+    testWidgets('stops drawing a player it gave back for unreadable meta', (
+      tester,
+    ) async {
+      final fake = _fakePlayer();
+      await pumpLayerOver(tester, fake);
+      expect(shownPlayer(tester)?.controller, same(fake.controller));
+
+      // A meta that no longer resolves to a clip gives the player back.
+      await _pumpEditorLayer(
+        tester,
+        meta: const <String, dynamic>{},
+        editor: editor,
+        previewReleased: previewReleased,
+      );
+      await tester.pump();
+      await detachedClipPlayers.disposeIdle();
+      await tester.pump();
+
+      expect(fake.disposed, isTrue);
+      expect(shownPlayer(tester), isNull, reason: 'its controller is gone');
+    });
+
     testWidgets('plays again once the editor has the decoders back', (
       tester,
     ) async {

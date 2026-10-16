@@ -328,6 +328,9 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     final clip = data?.clip;
     if (clip == null || key == null) {
       _releaseHeldPlayer();
+      // The pool tears the given-back player down, so stop drawing it.
+      _resumed = false;
+      if (_player != null) setState(() => _player = null);
       return;
     }
     setState(() {
