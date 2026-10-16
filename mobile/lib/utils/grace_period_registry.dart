@@ -102,7 +102,7 @@ class GracePeriodRegistry<T extends Object> {
   Future<void> disposeIdle() async {
     final idle = [
       for (final MapEntry(:key, :value) in _entries.entries)
-        if (value.refs == 0) key,
+        if (value.refs <= 0) key,
     ];
     for (final key in idle) {
       _entries[key]?.cancelReaper();

@@ -210,6 +210,24 @@ void main() {
         });
       });
 
+      test('tears down a value released more often than it was taken', () {
+        fakeAsync((async) {
+          unawaited(registry.acquire('a', build));
+          async.flushMicrotasks();
+          registry
+            ..release('a')
+            ..release('a');
+
+          // The grace reaper treats this as idle, so the export must too:
+          // otherwise its decoder outlives the export it was cleared for.
+          unawaited(registry.disposeIdle());
+          async.flushMicrotasks();
+
+          expect(disposed, ['a']);
+          expect(registry.entryCount, 0);
+        });
+      });
+
       test('waits for a teardown the grace window already started', () {
         fakeAsync((async) {
           final teardown = Completer<void>();
