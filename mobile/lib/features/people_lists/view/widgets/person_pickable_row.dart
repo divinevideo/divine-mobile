@@ -59,9 +59,9 @@ class PersonPickableRow extends StatelessWidget {
   String get displayName =>
       candidate.displayName ?? UserProfile.defaultDisplayNameFor(pubkey);
 
-  /// Effective handle: either the resolved handle or the full pubkey as a
-  /// stable fallback.
-  String get handle => candidate.handle ?? pubkey;
+  /// Optional resolved handle. The semantic identifier retains the full pubkey
+  /// without crowding activity out of the secondary line.
+  String? get handle => candidate.handle;
 
   /// Optional avatar URL for the candidate.
   String? get avatarUrl => candidate.avatarUrl;

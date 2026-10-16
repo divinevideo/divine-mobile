@@ -503,7 +503,7 @@ void main() {
       }
 
       test(
-        'hydration keeps first order and selection appends late rows',
+        'hydration keeps existing order and a picked contact stays first',
         () async {
           final hydration = Completer<Map<String, UserProfile>>();
           when(() => mockFollowRepository.followingPubkeys)
@@ -544,11 +544,11 @@ void main() {
             ),
           );
           await pumpEventQueue();
-          expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob, carol]);
+          expect(bloc.state.contacts.map((c) => c.pubkey), [carol, alice, bob]);
           hydration.complete({bob: profile(bob, 'Zebra')});
           await pumpEventQueue();
-          expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob, carol]);
-          expect(bloc.state.contacts[1].displayName, 'Zebra');
+          expect(bloc.state.contacts.map((c) => c.pubkey), [carol, alice, bob]);
+          expect(bloc.state.contacts[2].displayName, 'Zebra');
           expect(bloc.state.selectedRecipients.single.pubkey, carol);
           await bloc.close();
         },
@@ -909,26 +909,26 @@ void main() {
             'status',
             ShareSheetStatus.ready,
           ),
-          // The toggle appends the pick without moving the pending row.
+          // The toggle prepends the pick while retaining the pending row.
           isA<ShareSheetState>()
               .having(
-                (s) => s.contacts.last.displayName,
-                'picked appended',
+                (s) => s.contacts.first.displayName,
+                'picked prepended',
                 'Picked Stranger',
               )
               .having((s) => s.selectedRecipients.length, 'selected', 1),
           // Hydration re-emit must not drop them from the row or the selection.
           isA<ShareSheetState>()
               .having(
-                (s) => s.contacts.last.displayName,
-                'picked still last',
+                (s) => s.contacts.first.displayName,
+                'picked still first',
                 'Picked Stranger',
               )
               .having((s) => s.selectedRecipients.length, 'selected', 1)
               .having(
                 (s) => s.contacts.map((c) => c.displayName).toList(),
                 'row contents',
-                ['HydratedAlice', 'Picked Stranger'],
+                ['Picked Stranger', 'HydratedAlice'],
               ),
         ],
       );
@@ -983,14 +983,14 @@ void main() {
           ),
           isA<ShareSheetState>()
               .having(
-                (s) => s.contacts.last.displayName,
-                'picked appended',
+                (s) => s.contacts.first.displayName,
+                'picked prepended',
                 'Picked Stranger',
               )
               .having((s) => s.selectedRecipients.length, 'selected', 1),
           isA<ShareSheetState>()
               .having(
-                (s) => s.contacts.last.displayName,
+                (s) => s.contacts.first.displayName,
                 'picked remains visible',
                 'Picked Stranger',
               )
@@ -1000,7 +1000,7 @@ void main() {
               .having(
                 (s) => s.contacts.map((c) => c.displayName).toList(),
                 'row contents',
-                ['HydratedAlice', 'Picked Stranger'],
+                ['Picked Stranger', 'HydratedAlice'],
               ),
         ],
       );
@@ -1060,17 +1060,17 @@ void main() {
           isA<ShareSheetState>().having(
             (s) => s.contacts.map((c) => c.displayName).toList(),
             'row contents',
-            [null, 'Picked First'],
+            ['Picked First', null],
           ),
           isA<ShareSheetState>().having(
             (s) => s.contacts.map((c) => c.displayName).toList(),
             'row contents',
-            [null, 'Picked First', 'Picked Second'],
+            ['Picked Second', 'Picked First', null],
           ),
           isA<ShareSheetState>().having(
             (s) => s.contacts.map((c) => c.displayName).toList(),
             'row contents',
-            ['HydratedAlice', 'Picked First', 'Picked Second'],
+            ['Picked Second', 'Picked First', 'HydratedAlice'],
           ),
         ],
       );
@@ -1358,8 +1358,40 @@ void main() {
         ],
       );
 
+      final longContactRow = List.generate(
+        40,
+        (index) => ShareableUser(
+          pubkey: (index + 1).toRadixString(16).padLeft(64, '0'),
+          displayName: 'Contact $index',
+        ),
+      );
+
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'appends a Find People pick without moving visible contacts',
+        'new Find People pick appears first in a long contact row',
+        seed: () => ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: longContactRow,
+          selectedRecipients: [longContactRow[10]],
+        ),
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(const ShareSheetRecipientToggled(testRecipient)),
+        expect: () => [
+          isA<ShareSheetState>()
+              .having((s) => s.contacts.map((c) => c.pubkey), 'contacts', [
+                testRecipient.pubkey,
+                ...longContactRow.map((c) => c.pubkey),
+              ])
+              .having(
+                (s) => s.selectedRecipients.map((c) => c.pubkey),
+                'selection',
+                [longContactRow[10].pubkey, testRecipient.pubkey],
+              ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'prepends a Find People pick without reordering existing contacts',
         seed: () => const ShareSheetState(
           status: ShareSheetStatus.ready,
           contacts: [otherRecipient],
@@ -1375,8 +1407,8 @@ void main() {
                 [testRecipient.pubkey],
               )
               .having((s) => s.contacts.map((c) => c.pubkey), 'contacts', [
-                otherRecipient.pubkey,
                 testRecipient.pubkey,
+                otherRecipient.pubkey,
               ]),
         ],
       );
