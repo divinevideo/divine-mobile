@@ -3,18 +3,13 @@
 
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 
-/// The code the verifier sends when it could not check the proof right now
-/// (the platform did not answer, or a check limit was hit), as opposed to a
-/// verdict that the proof is wrong.
-const verifierUnavailableCode = 'temporarily_unavailable';
-
-/// Resolves the verifier's [code] to the error the connect flow should show.
+/// Resolves the verifier's rejection [code] to the error the connect flow
+/// should show.
 ///
 /// Mirrors the codes set in
-/// `divine-identify-verification-service/src/platforms/discord.ts`, plus
-/// `temporarily_unavailable`, which the service sets when the platform did not
-/// answer, the check itself failed, or its own rate limit was hit. That is no
-/// verdict on the proof, so the user is asked to try again.
+/// `divine-identify-verification-service/src/platforms/discord.ts`. An answer
+/// that is no verdict at all (`VerificationResult.isInconclusive`) is not a
+/// rejection and never reaches here: the cubit asks the user to try again.
 ///
 /// An unknown or absent code falls back to [VerifyConnectError.proofRejected].
 /// That is not defensive padding: the service owns this vocabulary and adds to
@@ -28,7 +23,6 @@ const verifierUnavailableCode = 'temporarily_unavailable';
 /// explainer, and the rest name a service-side condition the user cannot act
 /// on, so the generic rejection is the honest answer.
 VerifyConnectError verifyErrorForCode(String? code) => switch (code) {
-  verifierUnavailableCode => VerifyConnectError.verifierUnreachable,
   'discord_npub_not_in_message' => VerifyConnectError.proofMissingNpub,
   'discord_dm_link' => VerifyConnectError.discordDmLink,
   'discord_channel_link' => VerifyConnectError.discordChannelLink,

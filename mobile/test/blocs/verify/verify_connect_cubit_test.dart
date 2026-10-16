@@ -248,6 +248,28 @@ void main() {
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'asks the person to try again when the verifier could not check',
+        setUp: () {
+          // Not a rejection: the proof may be fine, so "try again" is the right
+          // next step, not "fix your post".
+          when(() => repository.verifyClaim(any())).thenAnswer(
+            (_) async =>
+                _result(verified: false, code: 'temporarily_unavailable'),
+          );
+        },
+        build: () => build(_github),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('octocat')
+            ..proofChanged('abc');
+          await cubit.submitProof();
+        },
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
         'counts "could not check right now" as its own outcome, not a rejection',
         setUp: () async {
           await LogCaptureService().clearAllLogs();

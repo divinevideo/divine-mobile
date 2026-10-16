@@ -116,13 +116,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     }
     if (isClosed) return;
 
-    if (!result.verified && result.code == verifierUnavailableCode) {
-      // The verifier could not check the proof right now: the platform did not
-      // answer, or a check limit was hit. That is no verdict on the proof, so
-      // it is logged and counted apart from a rejection: a dashboard that
-      // ignores `reason` would otherwise read an outage as a spike in rejected
-      // proofs. Analytics gets only the platform key, so nothing that
-      // identifies anyone, and the person is told to try again.
+    if (result.isInconclusive) {
+      // No verdict on the proof, so it is counted apart from a rejection: a
+      // dashboard that ignores `reason` would read an outage as rejections.
       Log.warning(
         'Verifier could not check ${claim.platform}:${claim.identity}: '
         '${result.error ?? 'no reason given'}',
@@ -134,7 +130,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
           parameters: {'platform': claim.platform},
         ),
       );
-      return _fail(verifyErrorForCode(result.code));
+      return _fail(VerifyConnectError.verifierUnreachable);
     }
 
     if (!result.verified) {
