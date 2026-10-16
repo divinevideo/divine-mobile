@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -580,6 +582,27 @@ void main() {
         completes,
       );
       expect(detachedReleased, isTrue);
+    });
+
+    test('stops waiting for a release that never settles', () {
+      fakeAsync((async) {
+        var released = false;
+        unawaited(
+          VideoEditorCanvas.releaseDecodersForExport([
+            () => Completer<void>().future,
+          ]).then((_) => released = true),
+        );
+
+        async.elapse(
+          VideoEditorConstants.decoderReleaseTimeout -
+              const Duration(milliseconds: 1),
+        );
+        expect(released, isFalse);
+
+        // The export would otherwise never start.
+        async.elapse(const Duration(milliseconds: 1));
+        expect(released, isTrue);
+      });
     });
   });
 

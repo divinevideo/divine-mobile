@@ -367,18 +367,32 @@ class VideoEditorCanvas extends StatelessWidget {
     required int currentGeneration,
   }) => generation == currentGeneration;
 
-  /// Runs [releases] together and completes once every one has settled.
+  /// Runs [releases] together and completes once every one has settled, or
+  /// after [VideoEditorConstants.decoderReleaseTimeout] at the latest.
   ///
   /// Never throws: a release that threw used to end the Done flow before it
   /// reopened the players, leaving every preview on its poster for the rest
-  /// of the session. [runDetached] still logs and reports each failure.
+  /// of the session. [runDetached] still logs and reports each failure. The
+  /// export waits on this, so one that never settles must not hold it back.
   @visibleForTesting
   static Future<void> releaseDecodersForExport(
     List<Future<void> Function()> releases,
   ) async {
+    const timeout = VideoEditorConstants.decoderReleaseTimeout;
     await Future.wait([
       for (final release in releases) _settled(Future.sync(release)),
-    ]);
+    ]).timeout(
+      timeout,
+      onTimeout: () {
+        Log.warning(
+          '🎬 Decoders still releasing after ${timeout.inSeconds}s; '
+          'starting the export anyway',
+          name: 'VideoEditorCanvas',
+          category: LogCategory.video,
+        );
+        return const [];
+      },
+    );
   }
 
   static Future<void> _settled(Future<void> release) {
