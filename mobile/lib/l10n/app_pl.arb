@@ -47,6 +47,7 @@
     "publishErrorPermissionDenied": "Divine nie ma uprawnień do przesyłania. Sprawdź uprawnienia aplikacji w ustawieniach i spróbuj ponownie.",
     "publishErrorOutOfMemory": "Za mało pamięci operacyjnej urządzenia. Zamknij kilka aplikacji i spróbuj ponownie.",
     "publishErrorOverlaysUnavailable": "Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i opublikuj ponownie.",
+    "publishErrorTooManyDetachedClips": "Twoje urządzenie nie może wyeksportować naraz tylu odłączonych klipów. Przywróć kilka na oś czasu i spróbuj ponownie.",
     "publishErrorUnknownServer": "Nieznany serwer",
     "dmReactionsSheetTitle": "Reakcje",
     "dmReactionsViewA11yLabel": "Zobacz, kto zareagował",

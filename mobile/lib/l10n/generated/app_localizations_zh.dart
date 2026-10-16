@@ -7208,6 +7208,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后重新发布。';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      '你的设备无法一次导出这么多已分离的片段。把其中几个放回时间线后再试。';
+
+  @override
   String get publishErrorUnknownServer => '未知服务器';
 
   @override

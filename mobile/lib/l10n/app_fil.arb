@@ -47,6 +47,7 @@
     "publishErrorPermissionDenied": "Walang permission ang Divine para mag-upload. Tingnan ang app permissions sa iyong settings at subukan ulit.",
     "publishErrorOutOfMemory": "Kulang ang memory sa device mo. Magsara ng ilang app at subukan ulit.",
     "publishErrorOverlaysUnavailable": "Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos i-post ulit.",
+    "publishErrorTooManyDetachedClips": "Hindi kaya ng device mo na i-export nang sabay-sabay ang ganito karaming na-detach na clip. Ibalik ang ilan sa timeline at subukan ulit.",
     "publishErrorUnknownServer": "Hindi kilalang server",
     "dmReactionsSheetTitle": "Mga reaksyon",
     "dmReactionsViewA11yLabel": "Tingnan kung sino ang nag-react",

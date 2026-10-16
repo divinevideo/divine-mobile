@@ -7907,6 +7907,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఈ డ్రాఫ్ట్‌లోని టెక్స్ట్ మరియు స్టిక్కర్‌లను సిద్ధం చేయడం సాధ్యపడలేదు. దాన్ని ఎడిటర్‌లో తెరిచి, ఆపై మళ్లీ పోస్ట్ చేయండి.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'మీ పరికరం ఇన్ని వేరు చేసిన క్లిప్‌లను ఒకేసారి ఎగుమతి చేయలేదు. కొన్నింటిని తిరిగి టైమ్‌లైన్‌లో ఉంచి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get publishErrorUnknownServer => 'తెలియని సర్వర్';
 
   @override

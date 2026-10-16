@@ -7856,6 +7856,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Textul și stickerele din această schiță nu au putut fi pregătite. Deschide-o în editor, apoi postează din nou.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Dispozitivul tău nu poate exporta atâtea clipuri desprinse deodată. Pune câteva înapoi pe cronologie și încearcă din nou.';
+
+  @override
   String get publishErrorUnknownServer => 'Server necunoscut';
 
   @override

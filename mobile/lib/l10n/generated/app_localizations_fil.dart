@@ -7727,6 +7727,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos i-post ulit.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Hindi kaya ng device mo na i-export nang sabay-sabay ang ganito karaming na-detach na clip. Ibalik ang ilan sa timeline at subukan ulit.';
+
+  @override
   String get publishErrorUnknownServer => 'Hindi kilalang server';
 
   @override

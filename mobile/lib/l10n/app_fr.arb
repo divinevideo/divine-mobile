@@ -47,6 +47,7 @@
     "publishErrorPermissionDenied": "Divine n'a pas l'autorisation d'envoyer. Vérifie les autorisations de l'application dans tes réglages et réessaie.",
     "publishErrorOutOfMemory": "Ton appareil manque de mémoire. Ferme quelques applications et réessaie.",
     "publishErrorOverlaysUnavailable": "Le texte et les stickers de ce brouillon n’ont pas pu être préparés. Ouvre-le dans l’éditeur, puis publie à nouveau.",
+    "publishErrorTooManyDetachedClips": "Ton appareil ne peut pas exporter autant de clips détachés à la fois. Remets-en quelques-uns dans la timeline et réessaie.",
     "publishErrorUnknownServer": "Serveur inconnu",
     "dmReactionsSheetTitle": "Réactions",
     "dmReactionsViewA11yLabel": "Voir qui a réagi",

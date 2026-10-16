@@ -12994,6 +12994,12 @@ abstract class AppLocalizations {
   /// **'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then post again.'**
   String get publishErrorOverlaysUnavailable;
 
+  /// Shown on the post screen when the export failed because the device could not decode every clip detached onto the editor canvas at the same time. Retrying fails the same way, so it tells the user to move some detached clips back onto the timeline (the action labelled videoEditorReattachLabel) and try again. Use the same noun for the clips as this locale's videoEditorDetachedClipLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your device can\'t export this many detached clips at once. Put a few back on the timeline and try again.'**
+  String get publishErrorTooManyDetachedClips;
+
   /// No description provided for @publishErrorUnknownServer.
   ///
   /// In en, this message translates to:

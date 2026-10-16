@@ -1,15 +1,18 @@
 // ABOUTME: Tests the export's second pass — when it runs, what it hands the
 // ABOUTME: base render, and the composition it builds over the finished track.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
+import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' as pie;
@@ -25,6 +28,9 @@ class _FakePathProvider extends Fake
 /// Records the render tasks the pass submits, without touching a codec.
 class _RecordingProVideoEditor extends ProVideoEditor {
   final tasks = <VideoRenderData>[];
+
+  /// Thrown by every render instead of finishing it, when set.
+  Object? renderError;
 
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
@@ -50,6 +56,8 @@ class _RecordingProVideoEditor extends ProVideoEditor {
     NativeLogLevel? nativeLogLevel,
   }) async {
     tasks.add(renderData);
+    final error = renderError;
+    if (error != null) throw error;
     return outputPath;
   }
 }
@@ -227,6 +235,62 @@ void main() {
         expect(editor.tasks, hasLength(2));
         expect(editor.tasks.first.videoSegments!.single.playbackSpeed, 2);
         expect(editor.tasks.last.composition, isNotNull);
+      });
+
+      group('when the device runs out of codecs', () {
+        /// Runs the pass to its end under fake time, so the encoder retries'
+        /// settle delays elapse instantly, and returns what it threw.
+        Object? failureOf(Object renderError) {
+          Object? failure;
+          fakeAsync((async) {
+            editor.renderError = renderError;
+            DetachedClipRenderPass? pass;
+            unawaited(prepare([_detachedLayer(_clip())]).then((p) => pass = p));
+            async.flushMicrotasks();
+            File(pass!.basePath).writeAsBytesSync(const [1]);
+            unawaited(
+              run(pass!).then<void>((_) {}, onError: (Object e) => failure = e),
+            );
+            async.elapse(const Duration(seconds: 10));
+          });
+          return failure;
+        }
+
+        test('blames the detached clips once every retry failed', () {
+          // How `pro_video_editor` reported the decoders a Galaxy S26 could
+          // not start for 12 detached clips (#10141).
+          final failure = failureOf(
+            const RenderEncoderException.transient(
+              'Underlying error: ERROR_CODE_DECODER_INIT_FAILED',
+            ),
+          );
+
+          expect(
+            failure,
+            isA<VideoRenderFailedException>()
+                .having(
+                  (e) => e.reason,
+                  'reason',
+                  VideoRenderFailureReason.tooManyDetachedClips,
+                )
+                .having(
+                  (e) => e.traceValue,
+                  'traceValue',
+                  'too_many_detached_clips:codec_exhausted',
+                ),
+          );
+          expect(
+            editor.tasks,
+            hasLength(3),
+            reason: 'the encoder retries run before the clips are blamed',
+          );
+        });
+
+        test('leaves an unsupported encoder unclassified', () {
+          const unsupported = RenderEncoderException('profile rejected');
+
+          expect(failureOf(unsupported), same(unsupported));
+        });
       });
 
       test('ships the base track when the body size is unknown', () async {

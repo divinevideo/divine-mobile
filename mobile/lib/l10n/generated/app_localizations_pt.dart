@@ -7736,6 +7736,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível preparar o texto e os stickers deste rascunho. Abra no editor e poste de novo.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Seu dispositivo não consegue exportar tantos clipes separados de uma vez. Devolva alguns à linha do tempo e tente novamente.';
+
+  @override
   String get publishErrorUnknownServer => 'Servidor desconhecido';
 
   @override

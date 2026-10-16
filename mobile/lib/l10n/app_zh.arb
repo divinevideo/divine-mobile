@@ -3825,6 +3825,7 @@
   "publishErrorPermissionDenied": "Divine 没有上传权限。请在设置中检查应用权限后重试。",
   "publishErrorOutOfMemory": "设备内存不足。关掉一些应用后再试。",
   "publishErrorOverlaysUnavailable": "这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后重新发布。",
+  "publishErrorTooManyDetachedClips": "你的设备无法一次导出这么多已分离的片段。把其中几个放回时间线后再试。",
   "publishErrorUnknownServer": "未知服务器",
   "searchFilterPillSemanticLabel": "筛选：{filter}",
   "@searchFilterPillSemanticLabel": {

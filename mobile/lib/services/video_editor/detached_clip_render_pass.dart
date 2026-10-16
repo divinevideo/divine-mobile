@@ -194,16 +194,36 @@ class DetachedClipRenderPass {
       ),
     );
 
-    await VideoEditorRenderService.renderWithEncoderFallback(
-      baseTask: task,
-      encode: (attemptTask) => VideoEditorRenderService.renderNativeVideoToFile(
-        finalOutputPath,
-        attemptTask,
-        reuseActiveCancellation: true,
-      ),
-      fallbackAspectRatio: aspectRatio,
-      ownerTaskId: taskId,
-    );
+    try {
+      await VideoEditorRenderService.renderWithEncoderFallback(
+        baseTask: task,
+        encode: (attemptTask) =>
+            VideoEditorRenderService.renderNativeVideoToFile(
+              finalOutputPath,
+              attemptTask,
+              reuseActiveCancellation: true,
+            ),
+        fallbackAspectRatio: aspectRatio,
+        ownerTaskId: taskId,
+      );
+    } on RenderEncoderException catch (error) {
+      // Codecs still out of reach after every retry. The base track was just
+      // encoded with the same encoder, so what this pass cannot get is a
+      // decoder for each detached clip: `pro_video_editor` reports a starved
+      // decoder as a transient encoder failure too, and on a Galaxy S26 that
+      // is how 12 detached clips failed (#10141). A retry hits the same limit.
+      if (!error.isTransient) rethrow;
+      Log.warning(
+        '⚠️ Could not get a decoder for each of '
+        '${partitioned.detached.length} detached clip(s): $error',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      throw VideoRenderFailedException(
+        VideoRenderFailureReason.tooManyDetachedClips,
+        cause: error,
+      );
+    }
 
     return finalOutputPath;
   }

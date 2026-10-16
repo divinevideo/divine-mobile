@@ -47,6 +47,7 @@
     "publishErrorPermissionDenied": "Divine ለመስቀል ፈቃድ የለውም። በቅንብሮችዎ ውስጥ የመተግበሪያ ፈቃዶችን ይፈትሹ እና እንደገና ይሞክሩ።",
     "publishErrorOutOfMemory": "የመሣሪያዎ ማህደረ ትውስታ እያለቀ ነው። አንዳንድ መተግበሪያዎችን ይዝጉ እና እንደገና ይሞክሩ።",
     "publishErrorOverlaysUnavailable": "የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይለጥፉ።",
+    "publishErrorTooManyDetachedClips": "መሣሪያዎ ይህን ያህል የተነጠሉ ቅንጥቦችን በአንድ ጊዜ ወደ ውጭ መላክ አይችልም። ጥቂቶቹን ወደ ጊዜ መስመሩ ይመልሱ እና እንደገና ይሞክሩ።",
     "publishErrorUnknownServer": "ያልታወቀ አገልጋይ",
     "dmReactionsSheetTitle": "ምላሾች",
     "dmReactionsViewA11yLabel": "ማን ምላሽ እንደሰጠ ይመልከቱ",

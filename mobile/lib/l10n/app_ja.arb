@@ -47,6 +47,7 @@
     "publishErrorPermissionDenied": "Divine にアップロードの権限がないよ。設定でアプリの権限を確認して、もう一回試してみて。",
     "publishErrorOutOfMemory": "端末のメモリが足りないよ。アプリをいくつか閉じて、もう一回試してみて。",
     "publishErrorOverlaysUnavailable": "この下書きのテキストとステッカーを準備できなかったよ。エディタで開いてから、もう一回投稿してみて。",
+    "publishErrorTooManyDetachedClips": "この端末では、切り離したクリップをこれほど多く同時に書き出せません。いくつかをタイムラインに戻してから、もう一度お試しください。",
     "publishErrorUnknownServer": "不明なサーバー",
     "dmReactionsSheetTitle": "リアクション",
     "dmReactionsViewA11yLabel": "リアクションした人を見る",

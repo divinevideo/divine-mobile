@@ -7665,6 +7665,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och posta igen.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Din enhet kan inte exportera så många lossade klipp på en gång. Lägg tillbaka några på tidslinjen och försök igen.';
+
+  @override
   String get publishErrorUnknownServer => 'Okänd server';
 
   @override

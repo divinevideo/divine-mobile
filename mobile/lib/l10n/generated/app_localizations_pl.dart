@@ -7854,6 +7854,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i opublikuj ponownie.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Twoje urządzenie nie może wyeksportować naraz tylu odłączonych klipów. Przywróć kilka na oś czasu i spróbuj ponownie.';
+
+  @override
   String get publishErrorUnknownServer => 'Nieznany serwer';
 
   @override

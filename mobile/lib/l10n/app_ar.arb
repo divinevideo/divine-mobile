@@ -47,6 +47,7 @@
     "publishErrorPermissionDenied": "ليست لدى Divine صلاحية الرفع. تحقّق من أذونات التطبيق في إعدادات جهازك وحاول مرّة أخرى.",
     "publishErrorOutOfMemory": "ذاكرة جهازك منخفضة. أغلق بعض التطبيقات وحاول مرّة أخرى.",
     "publishErrorOverlaysUnavailable": "تعذّر تجهيز النص والملصقات في هذه المسودة. افتحها في المحرّر ثم انشر مرّة أخرى.",
+    "publishErrorTooManyDetachedClips": "لا يستطيع جهازك تصدير هذا العدد من المقاطع المفصولة دفعة واحدة. يُرجى إرجاع بعضها إلى الجدول الزمني ثم المحاولة مرّة أخرى.",
     "publishErrorUnknownServer": "خادم غير معروف",
     "dmReactionsSheetTitle": "التفاعلات",
     "dmReactionsViewA11yLabel": "اعرف من تفاعل",

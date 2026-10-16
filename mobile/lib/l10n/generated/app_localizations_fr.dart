@@ -7782,6 +7782,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le texte et les stickers de ce brouillon n’ont pas pu être préparés. Ouvre-le dans l’éditeur, puis publie à nouveau.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Ton appareil ne peut pas exporter autant de clips détachés à la fois. Remets-en quelques-uns dans la timeline et réessaie.';
+
+  @override
   String get publishErrorUnknownServer => 'Serveur inconnu';
 
   @override

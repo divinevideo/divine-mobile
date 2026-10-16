@@ -7677,6 +7677,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ پوسٹ کریں۔';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'آپ کی ڈیوائس ایک ساتھ اتنے زیادہ الگ کیے گئے کلپس ایکسپورٹ نہیں کر سکتی۔ کچھ کلپس واپس ٹائم لائن پر رکھیں اور دوبارہ کوشش کریں۔';
+
+  @override
   String get publishErrorUnknownServer => 'نامعلوم سرور';
 
   @override
