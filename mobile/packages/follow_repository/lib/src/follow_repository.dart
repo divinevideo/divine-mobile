@@ -728,21 +728,25 @@ class FollowRepository {
     ).whenComplete(() => _myFollowersSyncFuture = null);
   }
 
+  /// Whether [interval] has passed since [stamp], in epoch seconds.
+  ///
+  /// A stamp later than [now] was written while the clock ran ahead; counting
+  /// it as recent would stop syncing until the corrected clock caught up.
+  static bool _elapsed(int? stamp, int now, Duration interval) =>
+      stamp == null || stamp > now || now - stamp > interval.inSeconds;
+
   Future<void> _syncMyFollowers(String owner) async {
     final dao = _myFollowersDao!;
     final state = await _myFollowersSyncState.read(owner);
     if (!_isCurrentFollowerOwner(owner)) return;
     final now = _nowSeconds();
-    if (state.attempt != null &&
-        now - state.attempt! <= myFollowersIncrementalInterval.inSeconds) {
-      return;
-    }
-    final fullDue =
-        state.full == null ||
-        now - state.full! > myFollowersReconcileInterval.inSeconds;
-    final fullRetryDue =
-        state.fullAttempt == null ||
-        now - state.fullAttempt! > myFollowersFullRetryInterval.inSeconds;
+    if (!_elapsed(state.attempt, now, myFollowersIncrementalInterval)) return;
+    final fullDue = _elapsed(state.full, now, myFollowersReconcileInterval);
+    final fullRetryDue = _elapsed(
+      state.fullAttempt,
+      now,
+      myFollowersFullRetryInterval,
+    );
     if (fullDue && fullRetryDue) {
       await _myFollowersSyncState.stampFullAttempt(owner, now);
       final result = await _fetchOrderedFollowers(owner);
@@ -751,8 +755,11 @@ class FollowRepository {
         result.refs,
         complete: !result.anySourceFailed,
       );
-    } else if (state.incremental == null ||
-        now - state.incremental! > myFollowersIncrementalInterval.inSeconds) {
+    } else if (_elapsed(
+      state.incremental,
+      now,
+      myFollowersIncrementalInterval,
+    )) {
       await _myFollowersSyncState.stampAttempt(owner, now);
       final highWater = min(await dao.newestFollowedAt(owner) ?? 0, now);
       if (!_isCurrentFollowerOwner(owner)) return;
