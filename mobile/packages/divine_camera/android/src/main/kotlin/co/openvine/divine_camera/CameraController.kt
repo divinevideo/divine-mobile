@@ -362,6 +362,25 @@ class CameraController(
         ): Boolean = trulyStarted && !stopRequested
 
         /**
+         * Whether the file a finalized recording left behind is a playable
+         * take. CameraX keeps the frames recorded before a lost video source
+         * or a reached limit, but documents the output of an unknown, encoder
+         * or recorder error as not properly constructed. CameraX also stops
+         * on its own for those, so an unrequested finalize must not hand that
+         * file to Flutter as the take: it would be saved to the draft and
+         * attested like a real recording.
+         */
+        internal fun isFinalizedOutputPlayable(finalizeError: Int): Boolean =
+            when (finalizeError) {
+                VideoRecordEvent.Finalize.ERROR_NONE,
+                VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE,
+                VideoRecordEvent.Finalize.ERROR_INSUFFICIENT_STORAGE,
+                VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED,
+                VideoRecordEvent.Finalize.ERROR_DURATION_LIMIT_REACHED -> true
+                else -> false
+            }
+
+        /**
          * Whether a recording that stopped before its first keyframe should be
          * retried at a lower quality. That is how a hardware encoder that
          * rejects the requested resolution shows up, but a video source that
@@ -2608,24 +2627,26 @@ class CameraController(
                                     stopRequested = stopRequested
                                 )
                             ) {
-                                if (result != null) {
+                                val take = result?.takeIf { isFinalizedOutputPlayable(event.error) }
+                                if (take != null) {
                                     DivineCameraLog.info(
                                         "Recording ended without a stop request " +
                                             "(error ${event.error}) — saving what was " +
-                                            "captured: $result",
+                                            "captured: $take",
                                         name = "DivineCamera.Recording"
                                     )
                                 } else {
                                     DivineCameraLog.error(
                                         "Recording ended without a stop request " +
-                                            "(error ${event.error}) with nothing to save",
+                                            "(error ${event.error}) with nothing to save" +
+                                            if (result != null) " (output not playable)" else "",
                                         name = "DivineCamera.Recording"
                                     )
                                 }
                                 // Sent even when nothing was saved: an empty
                                 // map has no filePath, which tells Dart the
                                 // recording is over (#9261).
-                                onAutoStopListener?.invoke(result ?: emptyMap())
+                                onAutoStopListener?.invoke(take ?: emptyMap())
                             }
 
                             currentRecordingFile = null

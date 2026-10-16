@@ -91,18 +91,36 @@ void main() {
       // The counterpart of the iOS interruption salvage: CameraX finalizes
       // on its own when the app goes to the background (#10199).
       test('an unrequested finalize reports every outcome', () {
+        const sendTake = 'onAutoStopListener?.invoke(take ?: emptyMap())';
         final report = declarationAt(
           controllerSource,
           'if (isUnsolicitedFinalize(',
         );
 
-        expect(report, contains(send));
+        expect(report, contains(sendTake));
         expect(report, isNot(contains('return@')));
         expect(
-          declarationAt(report, 'if (result != null) {'),
-          isNot(contains(send)),
+          declarationAt(report, 'if (take != null) {'),
+          isNot(contains(sendTake)),
         );
-        expect(declarationAt(report, '} else {'), isNot(contains(send)));
+        expect(declarationAt(report, '} else {'), isNot(contains(sendTake)));
+      });
+
+      // CameraX stops on its own for broken encoders too, and documents that
+      // output as not properly constructed: only a playable file is the take.
+      test('an unrequested finalize hands over only a playable file', () {
+        final report = declarationAt(
+          controllerSource,
+          'if (isUnsolicitedFinalize(',
+        );
+
+        expect(
+          report,
+          contains(
+            'val take = result?.takeIf '
+            '{ isFinalizedOutputPlayable(event.error) }',
+          ),
+        );
       });
     });
   });

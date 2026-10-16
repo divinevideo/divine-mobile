@@ -45,6 +45,41 @@ internal class RecordingFinalizeTest {
     }
 
     @Test
+    fun takeCutShortByTheSourceOrALimit_isHandedOver() {
+        // CameraX keeps the frames recorded up to these stops in a playable
+        // file, so an unrequested finalize can save them as the take.
+        listOf(
+            Finalize.ERROR_NONE,
+            Finalize.ERROR_SOURCE_INACTIVE,
+            Finalize.ERROR_INSUFFICIENT_STORAGE,
+            Finalize.ERROR_FILE_SIZE_LIMIT_REACHED,
+            Finalize.ERROR_DURATION_LIMIT_REACHED,
+        ).forEach { error ->
+            assertTrue(
+                CameraController.isFinalizedOutputPlayable(error),
+                "error $error",
+            )
+        }
+    }
+
+    @Test
+    fun takeFromAFailedEncoderOrRecorder_isNotHandedOver() {
+        // CameraX documents the output of these as not properly constructed;
+        // saving it would put an unplayable clip in the draft and attest it.
+        listOf(
+            Finalize.ERROR_UNKNOWN,
+            Finalize.ERROR_ENCODING_FAILED,
+            Finalize.ERROR_RECORDER_ERROR,
+            Finalize.ERROR_NO_VALID_DATA,
+        ).forEach { error ->
+            assertFalse(
+                CameraController.isFinalizedOutputPlayable(error),
+                "error $error",
+            )
+        }
+    }
+
+    @Test
     fun lostVideoSourceBeforeFirstFrame_isNotRetriedAsAnEncoderFailure() {
         assertFalse(
             CameraController.shouldRetryStartAtLowerQuality(
