@@ -302,6 +302,27 @@ void main() {
     );
 
     test(
+      'follower cache cleanup failure does not skip account history cleanup',
+      () async {
+        await db.seenVideosDao.markSeenBatch([
+          SeenVideoRow(
+            videoId: _reactionIdA,
+            firstSeenAt: 100,
+            lastSeenAt: 100,
+          ),
+        ]);
+        await db.customStatement('DROP TABLE my_followers');
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+        expect(await db.seenVideosDao.getAll(), isEmpty);
+      },
+    );
+
+    test(
       'deleting an inactive account clears its my_followers rows and keeps the active account',
       () async {
         final checkpoints = MyFollowersSyncState();

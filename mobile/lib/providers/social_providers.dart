@@ -895,7 +895,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
         // Owner-scoped, so it also runs when another account stays active and
         // only this one is being deleted from the device.
         if (userPubkey != null) {
-          await requiredCleanup(
+          await (deleteUserData ? requiredCleanup : safeCleanup)(
             'myFollowers',
             () async {
               await db.myFollowersDao.clearAllForUser(userPubkey);
