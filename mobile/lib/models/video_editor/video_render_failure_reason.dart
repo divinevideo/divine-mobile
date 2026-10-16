@@ -27,7 +27,7 @@ enum VideoRenderFailureReason {
   /// had failed — and it came after the post was already public.
   audioUnavailable('audio_unavailable'),
 
-  /// The device ran out of codecs compositing the detached clips (#10141).
+  /// The device ran out of decoders compositing the detached clips (#10141).
   ///
   /// The export decodes all detached clips at once, one decoder each, on top
   /// of the timeline track. Past what the device can open, a retry fails the

@@ -107,10 +107,9 @@ class DetachedClipRenderPass {
   /// Returns [basePath] unchanged when there is nothing to composite.
   ///
   /// Throws a [VideoRenderFailedException] with
-  /// [VideoRenderFailureReason.tooManyDetachedClips] when the encode still
-  /// fails transiently after every retry, which is how Android reports a
-  /// decoder it could not start (#10141). Any other [RenderEncoderException]
-  /// is rethrown as is.
+  /// [VideoRenderFailureReason.tooManyDetachedClips] when Android still cannot
+  /// start a decoder after every retry (#10141). Any other
+  /// [RenderEncoderException], a starved encoder included, is rethrown as is.
   Future<String> composite({
     required List<DivineVideoClip> clips,
     required Size? bodySize,
@@ -213,12 +212,11 @@ class DetachedClipRenderPass {
         ownerTaskId: taskId,
       );
     } on RenderEncoderException catch (error, stackTrace) {
-      // Codecs still out of reach after every retry. The base track was just
-      // encoded with the same encoder, so what this pass cannot get is a
-      // decoder for each detached clip: `pro_video_editor` reports a starved
-      // decoder as a transient encoder failure too, and on a Galaxy S26 that
-      // is how 12 detached clips failed (#10141). A retry hits the same limit.
-      if (!error.isTransient) rethrow;
+      // A decoder still out of reach after every retry: this pass decodes all
+      // detached clips at once, one decoder each, and on a Galaxy S26 that is
+      // how 12 of them failed (#10141). Fewer detached clips fix it; a starved
+      // encoder, or one the platform does not name, they would not.
+      if (error.codecKind != RenderCodecKind.decoder) rethrow;
       Log.warning(
         '⚠️ Could not get a decoder for each of '
         '${partitioned.detached.length} detached clip(s): $error',

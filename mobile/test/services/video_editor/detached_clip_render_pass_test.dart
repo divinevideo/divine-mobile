@@ -266,14 +266,23 @@ void main() {
         Object? failureOf(Object renderError) =>
             failureWithStackOf(renderError).$1;
 
+        /// A transient codec failure naming [codeName], the way Android
+        /// reports one.
+        RenderEncoderException starved(String codeName) =>
+            RenderEncoderException.transient(
+              'codec resources are exhausted',
+              NativeFailureDetails(
+                domain:
+                    'ch.waio.pro_video_editor.src.features.render.models.'
+                    'CodecResourceExhaustedException',
+                codeName: codeName,
+              ),
+            );
+
         test('blames the detached clips once every retry failed', () {
           // How `pro_video_editor` reported the decoders a Galaxy S26 could
           // not start for 12 detached clips (#10141).
-          final failure = failureOf(
-            const RenderEncoderException.transient(
-              'Underlying error: ERROR_CODE_DECODER_INIT_FAILED',
-            ),
-          );
+          final failure = failureOf(starved('ERROR_CODE_DECODER_INIT_FAILED'));
 
           expect(
             failure,
@@ -298,13 +307,26 @@ void main() {
 
         test("keeps the native failure's stack for the crash report", () {
           final (_, stackTrace) = failureWithStackOf(
-            const RenderEncoderException.transient('exhausted'),
+            starved('ERROR_CODE_DECODER_INIT_FAILED'),
           );
 
           // Where the native render threw, not where the pass reclassified it:
           // the export reports the failure with this stack, and it should match
           // what it reported before the failure had a reason of its own.
           expect(stackTrace.toString(), contains('renderVideoToFile'));
+        });
+
+        test('leaves a starved encoder unclassified', () {
+          // Fewer detached clips would not free the encoder.
+          final encoder = starved('ERROR_CODE_ENCODER_INIT_FAILED');
+
+          expect(failureOf(encoder), same(encoder));
+        });
+
+        test('leaves a shortage the platform does not name unclassified', () {
+          const unnamed = RenderEncoderException.transient('exhausted');
+
+          expect(failureOf(unnamed), same(unnamed));
         });
 
         test('leaves an unsupported encoder unclassified', () {
