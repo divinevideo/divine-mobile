@@ -998,10 +998,7 @@ void main() {
       testWidgets('a teen appeal opens support messages without navigating', (
         tester,
       ) async {
-        final goRouter = MockGoRouter();
-        when(
-          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async {});
+        final goRouter = _pushStubbedGoRouter();
         var openCalls = 0;
 
         await _pumpAppeal(
@@ -1117,10 +1114,7 @@ void main() {
         (
           tester,
         ) async {
-          final goRouter = MockGoRouter();
-          when(
-            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async {});
+          final goRouter = _pushStubbedGoRouter();
           var openCalls = 0;
 
           // A parent-video resolution, so only the band puts this case on the
@@ -1190,10 +1184,7 @@ void main() {
       testWidgets(
         'a support-email case with an unknown band still goes to parent support',
         (tester) async {
-          final goRouter = MockGoRouter();
-          when(
-            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async {});
+          final goRouter = _pushStubbedGoRouter();
           var openCalls = 0;
 
           await _pumpAppeal(
@@ -1228,10 +1219,7 @@ void main() {
         (
           tester,
         ) async {
-          final goRouter = MockGoRouter();
-          when(
-            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async {});
+          final goRouter = _pushStubbedGoRouter();
           var openCalls = 0;
           await _pumpAppeal(
             tester,
@@ -1264,10 +1252,7 @@ void main() {
         (
           tester,
         ) async {
-          final goRouter = MockGoRouter();
-          when(
-            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async {});
+          final goRouter = _pushStubbedGoRouter();
           var openCalls = 0;
           await _pumpAppeal(
             tester,
@@ -1333,10 +1318,7 @@ void main() {
       testWidgets('an appeal with no review case opens support messages', (
         tester,
       ) async {
-        final goRouter = MockGoRouter();
-        when(
-          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async {});
+        final goRouter = _pushStubbedGoRouter();
         var openCalls = 0;
 
         await _pumpAppeal(
@@ -1364,12 +1346,14 @@ void main() {
 MinorReviewCase _reviewCase({
   required SuspectedAgeBand ageBand,
   required MinorReviewResolutionType resolution,
+  MinorReviewCaseState state =
+      MinorReviewCaseState.restrictedPendingUserResponse,
   String? moderationConversationPubkey,
   String? moderationConversationId,
 }) {
   return MinorReviewCase(
     id: 'case-navigation',
-    state: MinorReviewCaseState.restrictedPendingUserResponse,
+    state: state,
     suspectedAgeBand: ageBand,
     allowedResolution: resolution,
     instructions: const MinorReviewInstructions(
@@ -1488,20 +1472,11 @@ Future<void> _pumpAppeal(
             restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
             currentCase: noCase
                 ? null
-                : MinorReviewCase(
-                    id: 'case-appeal',
+                : _reviewCase(
+                    ageBand: ageBand,
+                    resolution:
+                        allowedResolution ?? _serverResolutionFor(ageBand),
                     state: caseState,
-                    suspectedAgeBand: ageBand,
-                    allowedResolution:
-                        allowedResolution ??
-                        (ageBand == SuspectedAgeBand.under13
-                            ? MinorReviewResolutionType.supportEmailOnly
-                            : MinorReviewResolutionType.parentVideoOrEmail),
-                    instructions: const MinorReviewInstructions(
-                      title: 'Submission received',
-                      body: 'We are reviewing this case.',
-                    ),
-                    supportEmail: 'support@divine.video',
                   ),
           );
         }),
@@ -1512,4 +1487,24 @@ Future<void> _pumpAppeal(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// The resolution the server writes for each band, so a pumped case is one
+/// the app can actually receive.
+MinorReviewResolutionType _serverResolutionFor(SuspectedAgeBand band) =>
+    switch (band) {
+      SuspectedAgeBand.under13 => MinorReviewResolutionType.supportEmailOnly,
+      SuspectedAgeBand.age13To15 =>
+        MinorReviewResolutionType.parentVideoOrEmail,
+      SuspectedAgeBand.age16PlusClaimed =>
+        MinorReviewResolutionType.supportReviewOnly,
+      SuspectedAgeBand.unknown => MinorReviewResolutionType.unknown,
+    };
+
+MockGoRouter _pushStubbedGoRouter() {
+  final goRouter = MockGoRouter();
+  when(
+    () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+  ).thenAnswer((_) async {});
+  return goRouter;
 }
