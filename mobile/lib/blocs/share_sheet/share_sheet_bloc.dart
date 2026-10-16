@@ -265,10 +265,12 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       ]);
 
       if (remainingPubkeys.isEmpty) return;
+      // Sorted so the lookup carries which contacts are uncached, not how
+      // close each one is: the ranked order comes from message history.
       final cacheMisses = [
         for (final pubkey in remainingPubkeys)
           if (!cachedByPubkey.containsKey(pubkey)) pubkey,
-      ];
+      ]..sort();
       if (cacheMisses.isEmpty) return;
 
       // Hydrate the misses in the background and re-emit only when the row

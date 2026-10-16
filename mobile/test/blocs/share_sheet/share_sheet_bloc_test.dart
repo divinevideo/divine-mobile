@@ -291,6 +291,43 @@ void main() {
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
+        'looks up uncached contacts in key order, not closeness order',
+        setUp: () {
+          signals({
+            alice: UserRankingSignals(pubkey: alice, followsYou: true),
+            bob: UserRankingSignals(
+              pubkey: bob,
+              lastInteractionAt: DateTime.utc(2026, 1, 2),
+            ),
+            carol: UserRankingSignals(
+              pubkey: carol,
+              lastInteractionAt: DateTime.utc(2026, 1, 3),
+            ),
+            dave: UserRankingSignals(pubkey: dave, youFollow: true),
+          });
+          when(
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => <UserProfile>[]);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        verify: (bloc) {
+          verify(
+            () => mockRankingSignalsLoader.refreshInBackground(
+              [carol, bob, dave, alice],
+            ),
+          ).called(1);
+          verify(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: [alice, bob, carol, dave],
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
         'ties use cached names',
         setUp: () {
           signals({
