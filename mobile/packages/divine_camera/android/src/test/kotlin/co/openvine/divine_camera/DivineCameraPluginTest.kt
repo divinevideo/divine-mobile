@@ -504,25 +504,61 @@ internal class RejectionTolerantExecutorServiceTest {
  */
 @RunWith(RobolectricTestRunner::class)
 internal class DivineCameraPluginRemoteRecordControlTest {
+    private val engine = engineBinding(context = RuntimeEnvironment.getApplication())
+    private val plugins = mutableListOf<DivineCameraPlugin>()
+
     @After
-    fun resetSink() {
-        // onMethodCall claims the process-wide diagnostics sink.
+    fun tearDown() {
+        // Releases each enabled handler, its media session and the window
+        // callback wrapper.
+        plugins.forEach { it.onDetachedFromEngine(engine) }
+        // onAttachedToActivity claims the process-wide diagnostics sink.
         DivineCameraLog.sink = null
     }
 
-    private fun enabledRemoteRecordControl(activity: Activity): VolumeKeyHandler {
-        val engine = engineBinding(context = RuntimeEnvironment.getApplication())
+    private fun pluginWithRemoteRecordControl(activity: Activity): DivineCameraPlugin {
         val binding = Mockito.mock(ActivityPluginBinding::class.java)
         Mockito.`when`(binding.activity).thenReturn(activity)
 
         val plugin = DivineCameraPlugin()
+        plugins += plugin
         plugin.onAttachedToEngine(engine)
         plugin.onAttachedToActivity(binding)
         plugin.onMethodCall(
             MethodCall("setRemoteRecordControlEnabled", mapOf("enabled" to true)),
             Mockito.mock(MethodChannel.Result::class.java),
         )
-        return assertNotNull(plugin.volumeKeyHandler)
+        return plugin
+    }
+
+    private fun enabledRemoteRecordControl(activity: Activity): VolumeKeyHandler =
+        assertNotNull(pluginWithRemoteRecordControl(activity).volumeKeyHandler)
+
+    @Test
+    fun detachingFromTheActivity_releasesTheSessionAndStopsFollowingIt() {
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val plugin = pluginWithRemoteRecordControl(activity.get())
+        val control = assertNotNull(plugin.volumeKeyHandler)
+        assertTrue(control.isMediaSessionClaimed())
+
+        plugin.onDetachedFromActivity()
+        assertFalse(control.isMediaSessionClaimed())
+
+        // The detached activity coming back must not claim the session again.
+        activity.pause().stop().start().resume()
+        assertFalse(control.isMediaSessionClaimed())
+    }
+
+    @Test
+    fun detachingForAConfigChange_releasesTheSession() {
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val plugin = pluginWithRemoteRecordControl(activity.get())
+        val control = assertNotNull(plugin.volumeKeyHandler)
+        assertTrue(control.isMediaSessionClaimed())
+
+        plugin.onDetachedFromActivityForConfigChanges()
+
+        assertFalse(control.isMediaSessionClaimed())
     }
 
     @Test
