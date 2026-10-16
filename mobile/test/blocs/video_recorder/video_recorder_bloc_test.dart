@@ -2074,6 +2074,117 @@ void main() {
         },
       );
 
+      group('racing a Stop tap at the recording limit', () {
+        late void Function(EditorVideo? video) autoStopCallback;
+
+        VideoRecorderBloc buildRecordingBloc() =>
+            buildBloc(
+              cameraServiceFactory:
+                  ({
+                    required onUpdateState,
+                    required onAutoStopped,
+                    onScreenFlashChanged,
+                  }) {
+                    autoStopCallback = onAutoStopped;
+                    return cameraService;
+                  },
+            )..emit(
+              const VideoRecorderBlocState(
+                recordingState: VideoRecorderState.recording,
+              ),
+            );
+
+        /// A take as the camera service reports it. Each report is its own
+        /// [EditorVideo], as in production; only the file is shared.
+        EditorVideo reportedTake() {
+          final video = _MockEditorVideo();
+          when(
+            () => video.file,
+          ).thenReturn(EditorVideo.file('/takes/VID_1.mp4').file);
+          // Parks the detached enrichment, which this group does not cover.
+          when(video.safeFilePath)
+              .thenAnswer((_) => Completer<String>().future);
+          return video;
+        }
+
+        void stubAddClip() {
+          when(
+            () => clipManager.addClip(
+              video: any(named: 'video'),
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+              captureChromaKey: any(named: 'captureChromaKey'),
+            ),
+          ).thenAnswer(
+            (invocation) => DivineVideoClip(
+              id: 'take',
+              video: invocation.namedArguments[#video] as EditorVideo,
+              duration: const Duration(milliseconds: 6300),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(
+            () => clipManager.saveClipToLibrary(any()),
+          ).thenAnswer((_) async => true);
+        }
+
+        List<EditorVideo> addedTakes() => verify(
+          () => clipManager.addClip(
+            video: captureAny(named: 'video'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            lensMetadata: any(named: 'lensMetadata'),
+            limitClipDuration: any(named: 'limitClipDuration'),
+            captureChromaKey: any(named: 'captureChromaKey'),
+          ),
+        ).captured.cast<EditorVideo>();
+
+        test(
+          'adds the take once when the limit reports it again (#10194)',
+          () async {
+            stubAddClip();
+            final stoppedTake = reportedTake();
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => stoppedTake);
+            final bloc = buildRecordingBloc();
+            addTearDown(bloc.close);
+
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            autoStopCallback(reportedTake());
+            await pumpEventQueue();
+
+            expect(addedTakes(), [stoppedTake]);
+            expect(bloc.state.isRecording, isFalse);
+          },
+        );
+
+        test(
+          'keeps the take the limit reports when the Stop tap got nothing',
+          () async {
+            stubAddClip();
+            // The limit began stopping first, so the camera refused the tap.
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => null);
+            final bloc = buildRecordingBloc();
+            addTearDown(bloc.close);
+
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            final limitTake = reportedTake();
+            autoStopCallback(limitTake);
+            await pumpEventQueue();
+
+            expect(addedTakes(), [limitTake]);
+            expect(bloc.state.isRecording, isFalse);
+          },
+        );
+      });
+
       group('when nothing was captured', () {
         setUp(stubRecorderDefaults);
         late void Function(EditorVideo? video) autoStopCallback;
