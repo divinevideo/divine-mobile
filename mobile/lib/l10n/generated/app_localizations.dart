@@ -16781,6 +16781,48 @@ abstract class AppLocalizations {
   /// **'Could not reverse clip. Please try again.'**
   String get videoEditorReverseFailed;
 
+  /// Label of the clip toolbar action that steadies shaky footage. Turns it off again when the clip is already stabilized.
+  ///
+  /// In en, this message translates to:
+  /// **'Stabilize'**
+  String get videoEditorStabilizeLabel;
+
+  /// Screen reader label for the stabilize action in the clip toolbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle stabilization for selected clip'**
+  String get videoEditorStabilizeSemanticLabel;
+
+  /// Shown while a clip is being stabilized.
+  ///
+  /// In en, this message translates to:
+  /// **'One moment, we\'re steadying your clip'**
+  String get videoEditorStabilizeProgressLabel;
+
+  /// Shown under the progress message while a clip is stabilized: steadying zooms the picture in a little to hide the moving edges.
+  ///
+  /// In en, this message translates to:
+  /// **'Zooms in slightly to steady the shot.'**
+  String get videoEditorStabilizeZoomHint;
+
+  /// Shown while a stabilized clip gets its original, unstabilized footage back.
+  ///
+  /// In en, this message translates to:
+  /// **'One moment, we\'re bringing back the original'**
+  String get videoEditorUnstabilizeProgressLabel;
+
+  /// Snackbar message shown when stabilization is requested for a clip that has no locally available file.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot stabilize: clip is not locally available.'**
+  String get videoEditorStabilizeNoLocalFile;
+
+  /// Snackbar message shown when stabilizing a clip, or turning stabilization off, fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not stabilize clip. Please try again.'**
+  String get videoEditorStabilizeFailed;
+
   /// Title of the bottom sheet for adjusting clip playback speed.
   ///
   /// In en, this message translates to:

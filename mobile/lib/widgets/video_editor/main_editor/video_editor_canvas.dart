@@ -104,6 +104,17 @@ class VideoEditorCanvas extends StatelessWidget {
     proVideoController.setPlayTime(startPosition);
   }
 
+  /// Whether [current] completed a reverse or a stabilization, either of
+  /// which swaps a clip's file for a new render.
+  static bool _clipFileReplaced(
+    ClipEditorState previous,
+    ClipEditorState current,
+  ) =>
+      (!identical(previous.lastReverseResult, current.lastReverseResult) &&
+          current.lastReverseResult is ClipReverseSuccess) ||
+      (!identical(previous.lastStabilizeResult, current.lastStabilizeResult) &&
+          current.lastStabilizeResult is ClipStabilizeSuccess);
+
   @visibleForTesting
   static bool shouldSyncPlayerForClipStateChange({
     required ClipEditorState previous,
@@ -2792,14 +2803,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             scope.requireEditor.setTimelineMarkers(state.timelineMarkers);
           },
         ),
+        // A reverse or a stabilization swaps the clip's file for a new one
+        // with new trims, so the player loads the clips again.
         BlocListener<ClipEditorBloc, ClipEditorState>(
-          listenWhen: (previous, current) {
-            return !identical(
-                  previous.lastReverseResult,
-                  current.lastReverseResult,
-                ) &&
-                current.lastReverseResult is ClipReverseSuccess;
-          },
+          listenWhen: VideoEditorCanvas._clipFileReplaced,
           listener: (context, state) async {
             if (state.clips.isEmpty || !_isPlayerInitialized) return;
 
@@ -2842,12 +2849,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         // Reverse completion is handled by the dedicated listener above.
         BlocListener<ClipEditorBloc, ClipEditorState>(
           listenWhen: (previous, current) {
-            // Reverse completion is handled by the dedicated listener above.
-            if (!identical(
-                  previous.lastReverseResult,
-                  current.lastReverseResult,
-                ) &&
-                current.lastReverseResult is ClipReverseSuccess) {
+            // Reverse and stabilize completion are handled by the dedicated
+            // listener above.
+            if (VideoEditorCanvas._clipFileReplaced(previous, current)) {
               return false;
             }
             final shouldSync =

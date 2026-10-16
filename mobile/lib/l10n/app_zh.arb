@@ -5066,6 +5066,13 @@
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },
+  "videoEditorStabilizeLabel": "防抖",
+  "videoEditorStabilizeSemanticLabel": "切换选中片段的防抖",
+  "videoEditorStabilizeProgressLabel": "稍等，正在为你的片段防抖",
+  "videoEditorStabilizeZoomHint": "会稍微放大画面，让镜头更稳。",
+  "videoEditorUnstabilizeProgressLabel": "稍等，正在恢复原片",
+  "videoEditorStabilizeNoLocalFile": "无法防抖：片段不在本地。",
+  "videoEditorStabilizeFailed": "无法为片段防抖，请重试。",
   "videoEditorSpeedSheetTitle": "片段速度",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

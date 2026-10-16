@@ -10099,6 +10099,33 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu s-a putut inversa clipul. Vă rugăm să încercați din nou.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Stabilizează';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Activează sau dezactivează stabilizarea pentru clipul selectat';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'O clipă, stabilizăm clipul tău';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Mărește puțin imaginea ca să stabilizeze cadrul.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'O clipă, aducem înapoi originalul';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Nu se poate stabiliza: clipul nu este disponibil local.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Nu s-a putut stabiliza clipul. Încearcă din nou.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Viteza clipului';
 
   @override

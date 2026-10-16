@@ -9652,6 +9652,32 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorReverseFailed => 'ቅንጥቡን ወደ ኋላ መቀየር አልተቻለም። እንደገና ሞክር።';
 
   @override
+  String get videoEditorStabilizeLabel => 'ማረጋጋት';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'ለተመረጠው ክሊፕ ማረጋጊያን ያብሩ ወይም ያጥፉ';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'አንድ ትንሽ ይቆዩ፣ ክሊፕዎን እያረጋጋን ነው';
+
+  @override
+  String get videoEditorStabilizeZoomHint => 'ቀረጻውን ለማረጋጋት ምስሉን በትንሹ ያቀርባል።';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'አንድ ትንሽ ይቆዩ፣ የመጀመሪያውን እየመለስን ነው';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'ማረጋጋት አልተቻለም፤ ክሊፑ በመሣሪያው ላይ አይገኝም።';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'ክሊፑን ማረጋጋት አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'የክሊፕ ፍጥነት';
 
   @override

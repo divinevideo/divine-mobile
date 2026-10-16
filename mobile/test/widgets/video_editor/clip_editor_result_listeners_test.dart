@@ -60,7 +60,7 @@ void main() {
       when(() => stateManager.activeMeta).thenReturn({});
     });
 
-    Widget build() => MaterialApp(
+    Widget build({Widget child = const SizedBox.shrink()}) => MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: MultiBlocProvider(
@@ -86,10 +86,43 @@ void main() {
           onOpenCaptions: () {},
           onOpenEffects: () {},
           editorOverride: editor,
-          child: const ClipEditorResultListeners(child: SizedBox.shrink()),
+          child: ClipEditorResultListeners(child: child),
         ),
       ),
     );
+
+    group('stabilize', () {
+      Future<void> pumpResult(
+        WidgetTester tester,
+        ClipStabilizeResult result,
+      ) async {
+        whenListen(
+          clipBloc,
+          Stream.value(
+            ClipEditorState(clips: [_clip('a')], lastStabilizeResult: result),
+          ),
+          initialState: const ClipEditorState(),
+        );
+        // A Scaffold below the listeners shows what they send to the messenger.
+        await tester.pumpWidget(
+          build(child: const Scaffold(body: SizedBox.shrink())),
+        );
+        await tester.pump();
+      }
+
+      testWidgets('tells the user when stabilizing fails', (tester) async {
+        await pumpResult(tester, ClipStabilizeFailure());
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEditorStabilizeFailed), findsOneWidget);
+      });
+
+      testWidgets('stays quiet when stabilizing succeeds', (tester) async {
+        await pumpResult(tester, ClipStabilizeSuccess(stabilized: true));
+
+        expect(find.byType(SnackBar), findsNothing);
+      });
+    });
 
     testWidgets('a detach records the placeholder that took the slot', (
       tester,

@@ -9881,6 +9881,33 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte vända klippet baklänges. Försök igen.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Stabilisera';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Aktivera eller inaktivera stabilisering för valt klipp';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Ett ögonblick, vi stabiliserar ditt klipp';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Zoomar in lite så att bilden hålls stadig.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Ett ögonblick, vi tar tillbaka originalet';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Kan inte stabilisera: klippet är inte tillgängligt lokalt.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Kunde inte stabilisera klippet. Försök igen.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Klipphastighet';
 
   @override

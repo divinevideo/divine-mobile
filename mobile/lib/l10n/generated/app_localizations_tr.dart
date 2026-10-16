@@ -9799,6 +9799,32 @@ class AppLocalizationsTr extends AppLocalizations {
       'Klip tersine çevrilemedi. Lütfen tekrar deneyin.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Sabitle';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Seçili klip için sabitlemeyi aç veya kapat';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Bir saniye, klibini sabitliyoruz';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Görüntüyü sabitlemek için hafifçe yakınlaştırır.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Bir saniye, orijinali geri getiriyoruz';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Sabitlenemiyor: klip yerel olarak kullanılamıyor.';
+
+  @override
+  String get videoEditorStabilizeFailed => 'Klip sabitlenemedi. Tekrar dene.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Klip Hızı';
 
   @override

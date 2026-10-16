@@ -10159,6 +10159,33 @@ class AppLocalizationsTe extends AppLocalizations {
       'క్లిప్‌ను రివర్స్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoEditorStabilizeLabel => 'స్థిరీకరించు';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'ఎంచుకున్న క్లిప్ కోసం స్థిరీకరణను టోగుల్ చేయండి';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'ఒక్క క్షణం, మేము మీ క్లిప్‌ను స్థిరీకరిస్తున్నాము';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'షాట్‌ను స్థిరంగా ఉంచడానికి కొంచెం జూమ్ చేస్తుంది.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'ఒక్క క్షణం, మేము అసలును తిరిగి తెస్తున్నాము';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'స్థిరీకరించలేరు: క్లిప్ స్థానికంగా అందుబాటులో లేదు.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'క్లిప్‌ను స్థిరీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'క్లిప్ స్పీడ్';
 
   @override

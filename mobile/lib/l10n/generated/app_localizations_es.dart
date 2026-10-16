@@ -9980,6 +9980,33 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo invertir el clip. Por favor, inténtalo de nuevo.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Estabilizar';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Activar o desactivar la estabilización del clip seleccionado';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Un momento, estamos estabilizando tu clip';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Hace un leve zoom para estabilizar la toma.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Un momento, estamos recuperando el original';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'No se puede estabilizar: el clip no está disponible localmente.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'No se pudo estabilizar el clip. Intentá de nuevo.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Velocidad del clip';
 
   @override

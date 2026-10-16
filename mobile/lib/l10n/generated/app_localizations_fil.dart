@@ -9961,6 +9961,33 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi na-reverse ang clip. Pakisubukang muli.';
 
   @override
+  String get videoEditorStabilizeLabel => 'I-stabilize';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'I-toggle ang stabilization para sa napiling clip';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Sandali lang, ini-stabilize namin ang clip mo';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Bahagyang nagzo-zoom in para maging steady ang kuha.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Sandali lang, ibinabalik namin ang original';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Hindi ma-stabilize: hindi available ang clip nang lokal.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Hindi na-stabilize ang clip. Pakisubukang muli.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Bilis ng Clip';
 
   @override

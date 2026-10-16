@@ -1,6 +1,6 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
-// ABOUTME: (reverse, transform, detach, backdrop, freeze frame, merge, library
-// ABOUTME: import, recorded chroma key) that block the editor.
+// ABOUTME: (reverse, stabilize, transform, detach, backdrop, freeze frame,
+// ABOUTME: merge, library import, recorded chroma key) that block the editor.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,6 +27,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
       clipBehavior: .none,
       children: [
         _ReverseProgressOverlay(),
+        _StabilizeProgressOverlay(),
         _TransformProgressOverlay(),
         _DetachProgressOverlay(),
         _BackdropProgressOverlay(),
@@ -94,6 +95,41 @@ class _ReverseProgressOverlay extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while a clip is stabilized, or while a
+/// stabilized clip with a green screen gets its original footage back.
+class _StabilizeProgressOverlay extends StatelessWidget {
+  const _StabilizeProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final (:renderId, :restoring, :progress) = context.select((
+      ClipEditorBloc b,
+    ) {
+      final state = b.state;
+      final id = state.isStabilizing ? state.stabilizingClipId : null;
+      return (
+        renderId: id == null ? null : state.stabilizeRenderId,
+        // Still carries its record while it is being restored.
+        restoring:
+            id != null &&
+            state.clips.any((c) => c.id == id && c.stabilization != null),
+        progress: state.stabilizeProgress,
+      );
+    });
+    if (renderId == null) return const SizedBox.shrink();
+
+    final l10n = context.l10n;
+    return _RenderProgressContent(
+      renderId: renderId,
+      label: restoring
+          ? l10n.videoEditorUnstabilizeProgressLabel
+          : l10n.videoEditorStabilizeProgressLabel,
+      hint: restoring ? null : l10n.videoEditorStabilizeZoomHint,
+      progress: progress,
     );
   }
 }
@@ -228,6 +264,7 @@ class _RenderProgressContent extends StatelessWidget {
   const _RenderProgressContent({
     required this.renderId,
     required this.label,
+    this.hint,
     this.progress,
   });
 
@@ -235,6 +272,10 @@ class _RenderProgressContent extends StatelessWidget {
 
   /// What the user is waiting for, already localized.
   final String label;
+
+  /// A line under [label] on what the result will look like, already
+  /// localized.
+  final String? hint;
 
   /// Progress the owner already knows, for an operation that does not report
   /// under [renderId] on the plugin's progress stream. `null` reads the
@@ -266,12 +307,26 @@ class _RenderProgressContent extends StatelessWidget {
                   ),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 240),
-                  child: Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 8,
+                    children: [
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.primaryText,
+                        ),
+                      ),
+                      if (hint case final hint?)
+                        Text(
+                          hint,
+                          textAlign: TextAlign.center,
+                          style: VineTheme.bodySmallFont(
+                            color: context.vineColors.secondaryText,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],

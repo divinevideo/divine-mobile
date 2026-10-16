@@ -5066,6 +5066,13 @@
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },
+  "videoEditorStabilizeLabel": "Stabilkan",
+  "videoEditorStabilizeSemanticLabel": "Togol penstabilan untuk klip dipilih",
+  "videoEditorStabilizeProgressLabel": "Sebentar, kami sedang menstabilkan klip anda",
+  "videoEditorStabilizeZoomHint": "Zum masuk sedikit untuk menstabilkan rakaman.",
+  "videoEditorUnstabilizeProgressLabel": "Sebentar, kami sedang mengembalikan versi asal",
+  "videoEditorStabilizeNoLocalFile": "Tidak dapat menstabilkan: klip tidak tersedia secara setempat.",
+  "videoEditorStabilizeFailed": "Tidak dapat menstabilkan klip. Sila cuba lagi.",
   "videoEditorSpeedSheetTitle": "Kelajuan Klip",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

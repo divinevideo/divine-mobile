@@ -6781,6 +6781,34 @@
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },
+  "videoEditorStabilizeLabel": "Stabilize",
+  "@videoEditorStabilizeLabel": {
+    "description": "Label of the clip toolbar action that steadies shaky footage. Turns it off again when the clip is already stabilized."
+  },
+  "videoEditorStabilizeSemanticLabel": "Toggle stabilization for selected clip",
+  "@videoEditorStabilizeSemanticLabel": {
+    "description": "Screen reader label for the stabilize action in the clip toolbar."
+  },
+  "videoEditorStabilizeProgressLabel": "One moment, we're steadying your clip",
+  "@videoEditorStabilizeProgressLabel": {
+    "description": "Shown while a clip is being stabilized."
+  },
+  "videoEditorStabilizeZoomHint": "Zooms in slightly to steady the shot.",
+  "@videoEditorStabilizeZoomHint": {
+    "description": "Shown under the progress message while a clip is stabilized: steadying zooms the picture in a little to hide the moving edges."
+  },
+  "videoEditorUnstabilizeProgressLabel": "One moment, we're bringing back the original",
+  "@videoEditorUnstabilizeProgressLabel": {
+    "description": "Shown while a stabilized clip gets its original, unstabilized footage back."
+  },
+  "videoEditorStabilizeNoLocalFile": "Cannot stabilize: clip is not locally available.",
+  "@videoEditorStabilizeNoLocalFile": {
+    "description": "Snackbar message shown when stabilization is requested for a clip that has no locally available file."
+  },
+  "videoEditorStabilizeFailed": "Could not stabilize clip. Please try again.",
+  "@videoEditorStabilizeFailed": {
+    "description": "Snackbar message shown when stabilizing a clip, or turning stabilization off, fails."
+  },
   "videoEditorSpeedSheetTitle": "Clip Speed",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

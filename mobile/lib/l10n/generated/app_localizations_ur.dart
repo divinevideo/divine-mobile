@@ -9882,6 +9882,33 @@ class AppLocalizationsUr extends AppLocalizations {
       'کلپ الٹی نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
+  String get videoEditorStabilizeLabel => 'مستحکم کریں';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'منتخب کلپ کا استحکام ٹوگل کریں';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'ایک لمحہ، ہم آپ کی کلپ کو مستحکم کر رہے ہیں';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'شاٹ کو مستحکم رکھنے کے لیے تصویر کو تھوڑا قریب کرتا ہے۔';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'ایک لمحہ، ہم اصل واپس لا رہے ہیں';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'مستحکم نہیں ہو سکتا: کلپ مقامی طور پر دستیاب نہیں ہے۔';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'کلپ مستحکم نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'کلپ رفتار';
 
   @override

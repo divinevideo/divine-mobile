@@ -8,11 +8,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
+import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/detached_clip_reattach.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
@@ -21,6 +23,7 @@ import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
 import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
+import 'package:openvine/services/video_editor/clip_stabilization_service.dart';
 import 'package:openvine/services/video_editor/freeze_frame_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_sample_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_transform_service.dart';
@@ -211,6 +214,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     AudioExtractionService? audioExtractionService,
     SplitClipFn? splitClip,
     ReverseClipFn? reverseClip,
+    StabilizeClipFn? stabilizeClip,
     TransformClipFn? transformClip,
     MeasureAspectRatioFn? measureAspectRatio,
     WriteStopMotionFrameFn? writeStopMotionFrame,
@@ -231,6 +235,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
            audioExtractionService ?? AudioExtractionService(),
        _splitClip = splitClip ?? VideoEditorSplitService.splitClip,
        _reverseClip = reverseClip ?? VideoEditorReverseService.reverseClip,
+       _stabilizeClip = stabilizeClip ?? ClipStabilizationService.stabilizeClip,
        _transformClip =
            transformClip ?? VideoEditorTransformService.transformClip,
        _measureAspectRatio =
@@ -315,6 +320,12 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     // Reverse
     on<ClipEditorClipReverseRequested>(
       _onClipReverseRequested,
+      transformer: droppable(),
+    );
+
+    // Stabilize
+    on<ClipEditorClipStabilizeRequested>(
+      _onClipStabilizeRequested,
       transformer: droppable(),
     );
 
@@ -407,6 +418,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final AudioExtractionService _audioExtractionService;
   final SplitClipFn _splitClip;
   final ReverseClipFn _reverseClip;
+  final StabilizeClipFn _stabilizeClip;
   final TransformClipFn _transformClip;
   final MeasureAspectRatioFn _measureAspectRatio;
   final WriteStopMotionFrameFn _writeStopMotionFrame;
@@ -1772,6 +1784,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // source no longer describes it. The key stays baked in; only
         // re-tuning it is lost.
         clearChromaKey: true,
+        // The steadied footage stays, but the record no longer describes how
+        // to undo it.
+        clearStabilization: true,
       );
       final newClips = List<DivineVideoClip>.of(state.clips)
         ..[index] = restoredClip;
@@ -1794,6 +1809,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         reversed: true,
         // See the forward branch above.
         clearChromaKey: true,
+        // The steadied footage stays, but the record no longer describes how
+        // to undo it.
+        clearStabilization: true,
       );
       final newClips = List<DivineVideoClip>.of(state.clips)
         ..[index] = restoredClip;
@@ -1890,6 +1908,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // The reversed render is a new file; re-keying from the un-reversed
         // chroma source would undo the reverse.
         clearChromaKey: true,
+        // The steadied footage stays, but the record no longer describes how
+        // to undo it.
+        clearStabilization: true,
         // The render carries no manifest; an edit of it is signed against
         // the media it was reversed from.
         derivedFrom: clip.signingSources,
@@ -1930,6 +1951,261 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       );
     }
   }
+
+  // === STABILIZE ===
+
+  Future<void> _onClipStabilizeRequested(
+    ClipEditorClipStabilizeRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final index = state.clips.indexWhere((c) => c.id == event.clipId);
+    if (index == -1) return;
+    final clip = state.clips[index];
+
+    if (clip.video?.file?.path == null) {
+      Log.warning(
+        '⚠️ Stabilize skipped: clip ${clip.id} has no local file',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      emit(state.copyWith(lastStabilizeResult: ClipStabilizeNoLocalFile()));
+      return;
+    }
+
+    final record = clip.stabilization;
+    emit(
+      state.copyWith(
+        isStabilizing: true,
+        stabilizingClipId: clip.id,
+        // Turning it off renders only the green screen again, if anything.
+        stabilizeRenderId: record == null
+            ? ClipStabilizationService.renderIdFor(clip.id)
+            : ChromaKeyBakeService.renderIdFor(clip.id),
+        clearStabilizeProgress: true,
+      ),
+    );
+
+    final rendered = <String?>[];
+    try {
+      final updated = record == null
+          ? await _stabilize(clip, emit, rendered)
+          : await _unstabilize(clip, record, rendered);
+
+      // Screen dispose closes this bloc while a long render can still be
+      // finishing. The new files are on disk either way.
+      if (isClosed) {
+        _deferOrphanedPaths(rendered);
+        return;
+      }
+
+      final currentClips = state.clips;
+      final currentIndex = currentClips.indexWhere((c) => c.id == clip.id);
+      if (currentIndex == -1) {
+        Log.warning(
+          '⚠️ Stabilize result discarded: clip ${clip.id} no longer exists',
+          name: 'ClipEditorBloc',
+          category: LogCategory.video,
+        );
+        _deferOrphanedPaths(rendered);
+        emit(
+          state.copyWith(
+            isStabilizing: false,
+            clearStabilizingClipId: true,
+            clearStabilizeProgress: true,
+            lastStabilizeResult: ClipStabilizeDiscarded(),
+          ),
+        );
+        return;
+      }
+
+      // [updated] is built from the clip as it was when the toggle started.
+      // A split's poster decode can land on it during the render, so keep
+      // the thumbnail the clip has now rather than the one it had then.
+      final newClips = List<DivineVideoClip>.of(currentClips)
+        ..[currentIndex] = updated.copyWith(
+          thumbnailPath: currentClips[currentIndex].thumbnailPath,
+        );
+      emit(
+        state.copyWith(
+          clips: List.unmodifiable(newClips),
+          isStabilizing: false,
+          clearStabilizingClipId: true,
+          clearStabilizeProgress: true,
+          lastStabilizeResult: ClipStabilizeSuccess(stabilized: record == null),
+        ),
+      );
+      onFinalClipInvalidated.call();
+      _deferSupersededFiles(currentClips[currentIndex]);
+    } catch (e, stackTrace) {
+      if (isClosed) {
+        _deferOrphanedPaths(rendered);
+        return;
+      }
+      final error = switch (e) {
+        StateError() ||
+        TypeError() ||
+        RangeError() => Reportable(e, context: '_onClipStabilizeRequested'),
+        _ => e,
+      };
+      addError(error, stackTrace);
+      Log.error(
+        '❌ Failed to toggle stabilization of clip ${clip.id}: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      _deferOrphanedPaths(rendered);
+      emit(
+        state.copyWith(
+          isStabilizing: false,
+          clearStabilizingClipId: true,
+          clearStabilizeProgress: true,
+          lastStabilizeResult: ClipStabilizeFailure(),
+        ),
+      );
+    }
+  }
+
+  /// Renders [clip] steadied and returns the clip that shows it.
+  ///
+  /// Stabilization works on raw footage, so a green screen baked into [clip]
+  /// is applied again on top of the steadied render. The render covers a
+  /// window of the footage; the trims are re-anchored to it.
+  Future<DivineVideoClip> _stabilize(
+    DivineVideoClip clip,
+    Emitter<ClipEditorState> emit,
+    List<String?> rendered,
+  ) async {
+    final render = await _stabilizeClip(
+      sourceClip: clip,
+      renderId: ClipStabilizationService.renderIdFor(clip.id),
+      onProgress: (progress) {
+        if (!emit.isDone) emit(state.copyWith(stabilizeProgress: progress));
+      },
+    );
+    final steadyPath = render.video.file?.path;
+    rendered.add(steadyPath);
+    final window = render.window;
+
+    // What the raw footage is made from, so turning stabilization off can
+    // name it again: the footage under the key, or the clip's own sources.
+    final rawSources = clip.chromaKey == null
+        ? clip.derivedFrom
+        : clip.unkeyedSources;
+    final steadySources = [
+      ...rawSources ??
+          [
+            C2paEditSource(
+              path: render.rawSourcePath,
+              recordingSha256: clip.recordingSha256,
+            ),
+          ],
+      ...?clip.chromaKey?.backdropSources,
+    ];
+
+    final steadied = clip.copyWith(
+      video: render.video,
+      duration: window.end - window.start,
+      trimStart: _atLeastZero(clip.trimStart - window.start),
+      trimEnd: _atLeastZero(clip.trimEnd - (clip.duration - window.end)),
+      minTrimStart: Duration.zero,
+      sourceStartOffset: clip.sourceStartOffset + window.start,
+      stabilization: ClipStabilization(
+        rawSourcePath: render.rawSourcePath,
+        windowStart: window.start,
+        sourceDuration: clip.duration,
+        sourceMinTrimStart: clip.minTrimStart,
+        sourceStartOffset: clip.sourceStartOffset,
+        sourceDerivedFrom: rawSources,
+      ),
+      // The reverse caches hold unsteadied footage.
+      clearForwardVideoPath: true,
+      clearReversedVideoPath: true,
+      // The render carries no manifest; an edit of it is signed against the
+      // footage it was steadied from.
+      derivedFrom: steadySources,
+    );
+    // The key bake reports progress under its own render id. Without the
+    // switch the spinner holds the steadying render's last value, full, for
+    // the whole bake.
+    if (clip.chromaKey != null && !emit.isDone) {
+      emit(
+        state.copyWith(
+          stabilizeRenderId: ChromaKeyBakeService.renderIdFor(clip.id),
+          clearStabilizeProgress: true,
+        ),
+      );
+    }
+    return _rekey(steadied, steadyPath!, rendered);
+  }
+
+  /// Restores [clip]'s unstabilized footage from [record].
+  ///
+  /// A green screen baked into [clip] is applied again on top of the raw
+  /// footage, which costs a render; without one this is a file swap.
+  Future<DivineVideoClip> _unstabilize(
+    DivineVideoClip clip,
+    ClipStabilization record,
+    List<String?> rendered,
+  ) async {
+    final raw = record.rawSourcePath;
+    if (!File(raw).existsSync()) {
+      throw StateError('Unstabilized footage $raw is gone');
+    }
+    final restored = clip.copyWith(
+      video: EditorVideo.file(raw),
+      duration: record.sourceDuration,
+      trimStart: record.windowStart + clip.trimStart,
+      trimEnd:
+          _atLeastZero(
+            record.sourceDuration - record.windowStart - clip.duration,
+          ) +
+          clip.trimEnd,
+      minTrimStart: record.sourceMinTrimStart,
+      sourceStartOffset: record.sourceStartOffset,
+      clearStabilization: true,
+      clearForwardVideoPath: true,
+      clearReversedVideoPath: true,
+      derivedFrom: clip.chromaKey == null
+          ? record.sourceDerivedFrom
+          : [
+              ...record.sourceDerivedFrom ??
+                  [
+                    C2paEditSource(
+                      path: raw,
+                      recordingSha256: clip.recordingSha256,
+                    ),
+                  ],
+              ...clip.chromaKey!.backdropSources,
+            ],
+      clearDerivedFrom:
+          clip.chromaKey == null && record.sourceDerivedFrom == null,
+    );
+    return _rekey(restored, raw, rendered);
+  }
+
+  /// [clip] with its green screen baked again onto [footagePath], or [clip]
+  /// unchanged when it has none.
+  Future<DivineVideoClip> _rekey(
+    DivineVideoClip clip,
+    String footagePath,
+    List<String?> rendered,
+  ) async {
+    final key = clip.chromaKey;
+    if (key == null) return clip;
+    final keyed = await _bakeChromaKey(
+      sourceClip: clip.copyWith(
+        video: EditorVideo.file(footagePath),
+        chromaKeySourcePath: footagePath,
+      ),
+      chromaKey: key,
+      renderId: ChromaKeyBakeService.renderIdFor(clip.id),
+    );
+    rendered.add(keyed.video.file?.path);
+    return clip.copyWith(video: keyed.video, chromaKeySourcePath: keyed.source);
+  }
+
+  static Duration _atLeastZero(Duration value) =>
+      value.isNegative ? Duration.zero : value;
 
   // === TRANSFORM ===
 
@@ -3023,6 +3299,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // would silently drop the crop. The key stays baked into the video;
         // only the ability to re-tune it is lost.
         clearChromaKey: true,
+        // The steadied footage stays, but the record no longer describes how
+        // to undo it.
+        clearStabilization: true,
         derivedFrom: clip.signingSources,
       );
       final newClips = List<DivineVideoClip>.of(currentClips)
@@ -3135,6 +3414,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
               clearForwardVideoPath: true,
               clearReversedVideoPath: true,
               clearChromaKey: true,
+              // The steadied footage stays, but the record no longer describes how
+              // to undo it.
+              clearStabilization: true,
               derivedFrom: clip.signingSources,
             ),
           ),

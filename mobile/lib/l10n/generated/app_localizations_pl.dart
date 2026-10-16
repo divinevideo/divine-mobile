@@ -10086,6 +10086,33 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się odwrócić klipu. Spróbuj ponownie.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Stabilizuj';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Włącz lub wyłącz stabilizację dla wybranego klipu';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Chwileczkę, stabilizujemy Twój klip';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Lekko przybliża obraz, żeby ustabilizować ujęcie.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Chwileczkę, przywracamy oryginał';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Nie można ustabilizować: klip nie jest dostępny lokalnie.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Nie udało się ustabilizować klipu. Spróbuj ponownie.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Prędkość klipu';
 
   @override

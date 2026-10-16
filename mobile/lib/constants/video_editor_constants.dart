@@ -122,6 +122,17 @@ class VideoEditorConstants {
   /// Maximum recording duration for videos.
   static const maxDuration = Duration(seconds: 6, milliseconds: 300);
 
+  /// The most a stabilized clip zooms in to hide the borders that steadying
+  /// exposes (#9847). Design asked for 10–15 %; where a clip would need more,
+  /// it keeps some shake rather than being cropped deeper.
+  static const double stabilizationMaxZoom = 1.15;
+
+  /// How far past its visible part on both sides a stabilization renders a
+  /// clip, so the trim handles can still be moved afterwards. As long as
+  /// [maxDuration], so a clip recorded in the app is rendered whole and only a
+  /// long imported one is cut.
+  static const Duration stabilizationMargin = maxDuration;
+
   /// How far the playhead may be from a layer keyframe for the editor to
   /// treat it as on that keyframe: one frame at 30 fps.
   ///

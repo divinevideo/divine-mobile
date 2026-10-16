@@ -9891,6 +9891,33 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat menyongsangkan klip. Sila cuba lagi.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Stabilkan';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Togol penstabilan untuk klip dipilih';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Sebentar, kami sedang menstabilkan klip anda';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Zum masuk sedikit untuk menstabilkan rakaman.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel =>
+      'Sebentar, kami sedang mengembalikan versi asal';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Tidak dapat menstabilkan: klip tidak tersedia secara setempat.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Tidak dapat menstabilkan klip. Sila cuba lagi.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Kelajuan Klip';
 
   @override

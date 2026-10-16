@@ -337,6 +337,19 @@ class ClipEditorClipReverseRequested extends ClipEditorEvent {
   List<Object?> get props => [clipId];
 }
 
+// === STABILIZE ===
+
+/// Toggle stabilization for the clip with [clipId]: steady its shake when it
+/// is not stabilized, restore its unstabilized footage when it is.
+class ClipEditorClipStabilizeRequested extends ClipEditorEvent {
+  const ClipEditorClipStabilizeRequested({required this.clipId});
+
+  final String clipId;
+
+  @override
+  List<Object?> get props => [clipId];
+}
+
 // === TRANSFORM ===
 
 /// Request that the clip with [clipId] be re-rendered with [transform]

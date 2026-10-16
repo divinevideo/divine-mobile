@@ -9972,6 +9972,32 @@ class AppLocalizationsBg extends AppLocalizations {
       'Клипът не можа да се обърне. Моля, опитайте отново.';
 
   @override
+  String get videoEditorStabilizeLabel => 'Стабилизиране';
+
+  @override
+  String get videoEditorStabilizeSemanticLabel =>
+      'Включване или изключване на стабилизацията за избрания клип';
+
+  @override
+  String get videoEditorStabilizeProgressLabel =>
+      'Момент, стабилизираме клипа ти';
+
+  @override
+  String get videoEditorStabilizeZoomHint =>
+      'Леко приближава, за да стабилизира кадъра.';
+
+  @override
+  String get videoEditorUnstabilizeProgressLabel => 'Момент, връщаме оригинала';
+
+  @override
+  String get videoEditorStabilizeNoLocalFile =>
+      'Не може да се стабилизира: клипът не е наличен локално.';
+
+  @override
+  String get videoEditorStabilizeFailed =>
+      'Клипът не можа да се стабилизира. Опитай отново.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Скорост на клипа';
 
   @override

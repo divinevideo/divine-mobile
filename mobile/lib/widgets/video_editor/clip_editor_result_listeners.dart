@@ -42,19 +42,21 @@ class ClipEditorResultListeners extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SplitFailureListener(
       child: _ClipReverseResultListener(
-        child: _ClipTransformResultListener(
-          child: _ClipMergeResultListener(
-            child: _ClipDetachResultListener(
-              child: _ClipPlaceholderFillResultListener(
-                child: _ClipFreezeFrameResultListener(
-                  child: _DetachedClipTransformResultListener(
-                    child: _DetachedClipReattachResultListener(
-                      child: _ClipsRemovedResultListener(
-                        child: _AudioExtractionResultListener(
-                          child: _ClipLibrarySaveResultListener(
-                            child: _ClipLibraryImportResultListener(
-                              child: _CapturedChromaKeyBakeResultListener(
-                                child: child,
+        child: _ClipStabilizeResultListener(
+          child: _ClipTransformResultListener(
+            child: _ClipMergeResultListener(
+              child: _ClipDetachResultListener(
+                child: _ClipPlaceholderFillResultListener(
+                  child: _ClipFreezeFrameResultListener(
+                    child: _DetachedClipTransformResultListener(
+                      child: _DetachedClipReattachResultListener(
+                        child: _ClipsRemovedResultListener(
+                          child: _AudioExtractionResultListener(
+                            child: _ClipLibrarySaveResultListener(
+                              child: _ClipLibraryImportResultListener(
+                                child: _CapturedChromaKeyBakeResultListener(
+                                  child: child,
+                                ),
                               ),
                             ),
                           ),
@@ -147,6 +149,43 @@ class _ClipReverseResultListener extends StatelessWidget {
         // Player sync is handled by the canvas listener; nothing to do here.
         break;
     }
+  }
+}
+
+/// Listens to [ClipEditorState.lastStabilizeResult] and surfaces a snackbar
+/// when stabilizing a clip, or restoring it, fails. Success is handled by the
+/// canvas player-sync listener.
+///
+/// Kept at the scaffold level (always mounted) so the snackbar fires even if
+/// the timeline controls are hidden while the render is in flight.
+class _ClipStabilizeResultListener extends StatelessWidget {
+  const _ClipStabilizeResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(prev.lastStabilizeResult, curr.lastStabilizeResult) &&
+          curr.lastStabilizeResult != null,
+      listener: _onStabilizeResult,
+      child: child,
+    );
+  }
+
+  void _onStabilizeResult(BuildContext context, ClipEditorState state) {
+    final message = switch (state.lastStabilizeResult) {
+      ClipStabilizeNoLocalFile() =>
+        context.l10n.videoEditorStabilizeNoLocalFile,
+      ClipStabilizeFailure() => context.l10n.videoEditorStabilizeFailed,
+      // A removed clip has nothing to report; a success shows in the player.
+      ClipStabilizeDiscarded() || ClipStabilizeSuccess() || null => null,
+    };
+    if (message == null) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(DivineSnackbarContainer.snackBar(message));
   }
 }
 

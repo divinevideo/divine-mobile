@@ -76,6 +76,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       isChangingBackdropCurrentClip,
       isFreezeFrameClip,
       isFreezingCurrentClip,
+      isStabilized,
+      isStabilizingCurrentClip,
+      hasPendingCaptureChromaKey,
     ) = context.select((ClipEditorBloc b) {
       final state = b.state;
       final index = state.currentClipIndex;
@@ -119,6 +122,11 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         state.isFreezingFrame &&
             currentClipId != null &&
             state.freezingFrameClipId == currentClipId,
+        hasClip && state.clips[index].stabilization != null,
+        state.isStabilizing &&
+            currentClipId != null &&
+            state.stabilizingClipId == currentClipId,
+        hasClip && state.clips[index].hasPendingCaptureChromaKey,
       );
     });
     final isLastClip = clipCount <= 1;
@@ -194,6 +202,13 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       hasShapeMask: hasShapeMask,
       onExtractAudio: () => _requestExtractAudio(context),
       onReversed: () => _reverseClip(context),
+      // A recorded green screen still waiting to bake would land on the raw
+      // take and undo the stabilization, so the action waits for it.
+      onStabilize: hasPendingCaptureChromaKey
+          ? null
+          : () => _stabilizeClip(context),
+      isStabilized: isStabilized,
+      isStabilizing: isStabilizingCurrentClip,
       onSaveToLibrary: () => _saveClipToLibrary(context),
       isSavingToLibrary: isSavingCurrentClipToLibrary,
       isSaveToLibraryDisabled: isSavingAnyClipToLibrary,
@@ -450,6 +465,17 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     }
     final clip = state.clips[state.currentClipIndex];
     bloc.add(ClipEditorClipReverseRequested(clipId: clip.id));
+  }
+
+  void _stabilizeClip(BuildContext context) {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (state.currentClipIndex < 0 ||
+        state.currentClipIndex >= state.clips.length) {
+      return;
+    }
+    final clip = state.clips[state.currentClipIndex];
+    bloc.add(ClipEditorClipStabilizeRequested(clipId: clip.id));
   }
 
   Future<void> _setPlaybackSpeed(BuildContext context) async {
