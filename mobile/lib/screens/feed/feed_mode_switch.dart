@@ -134,7 +134,10 @@ List<VideoFeedSource> _selectableSources(VideoFeedBlocState state) => [
       listOwnerPubkey: followed.ownerPubkey,
     ),
   for (final tag in state.followedHashtags)
-    VideoFeedSource.subscribedHashtag(hashtag: tag.canonicalTag, displayTag: tag.displayTag),
+    VideoFeedSource.subscribedHashtag(
+      hashtag: tag.canonicalTag,
+      displayTag: tag.displayTag,
+    ),
 ];
 
 String _labelForSource(VideoFeedBlocState state, AppLocalizations l10n) =>
