@@ -179,77 +179,85 @@ class _CreatorActions extends StatelessWidget {
   final SoundRequestMessage message;
   final bool isSent;
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<SoundRequestsCubit, SoundRequestsState>(
-        builder: (context, state) {
-          if (isSent) return Text(context.l10n.soundRequestSent);
-          if (message.creatorPubkey != state.ownerPubkey) {
-            return const SizedBox.shrink();
-          }
-          final entry =
-              state.snapshot.requests[message.messageId] ??
-              state.snapshot.requests.values
-                  .where(
-                    (r) =>
-                        r.requester == message.senderPubkey &&
-                        r.videoAddress == message.videoAddress,
-                  )
-                  .firstOrNull;
-          if (entry?.status == SoundRequestStatus.ready) {
-            return Text(context.l10n.soundReadyTitle);
-          }
-          if (entry?.status == SoundRequestStatus.dismissed) {
-            return Text(context.l10n.inboxCollabInviteIgnoredStatus);
-          }
-          final working =
-              (state.target == entry?.id &&
-                  state.operation == SoundRequestOperation.working) ||
-              entry == null;
-          final retry =
-              entry?.status == SoundRequestStatus.failed ||
-              entry?.status == SoundRequestStatus.awaitingPolicy;
-          final failed =
-              state.target == entry?.id &&
-              state.operation == SoundRequestOperation.failed;
-          final cubit = context.read<SoundRequestsCubit>();
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 8,
-            children: [
-              if (failed) Text(context.l10n.soundReuseUnavailable),
-              DivineButton(
-                label: retry
-                    ? context.l10n.commonRetry
-                    : context.l10n.soundRequestEnable,
-                isLoading: working,
-                size: DivineButtonSize.small,
-                onPressed: working
-                    ? null
-                    : () => runDetached(
-                        retry ? cubit.retry(entry.id) : cubit.approve(entry.id),
-                        'approve sound request',
-                        logName: 'SoundRequestCard',
-                        category: LogCategory.ui,
-                      ),
-              ),
-              DivineButton(
-                label: context.l10n.saveOriginalDismiss,
-                type: DivineButtonType.secondary,
-                size: DivineButtonSize.small,
-                onPressed: working
-                    ? null
-                    : () => runDetached(
-                        cubit.dismiss(entry.id),
-                        'dismiss sound request',
-                        logName: 'SoundRequestCard',
-                        category: LogCategory.ui,
-                      ),
-              ),
-            ],
-          );
-        },
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<SoundRequestsCubit, SoundRequestsState>(
+    builder: (context, state) {
+      if (isSent) return Text(context.l10n.soundRequestSent);
+      if (message.creatorPubkey != state.ownerPubkey) {
+        return const SizedBox.shrink();
+      }
+      final entry =
+          state.snapshot.requests[message.messageId] ??
+          state.snapshot.requests.values
+              .where(
+                (r) =>
+                    r.requester == message.senderPubkey &&
+                    r.videoAddress == message.videoAddress,
+              )
+              .firstOrNull;
+      if (entry?.status == SoundRequestStatus.ready) {
+        return Text(context.l10n.soundReadyTitle);
+      }
+      if (entry?.status == SoundRequestStatus.dismissed) {
+        return Text(context.l10n.inboxCollabInviteIgnoredStatus);
+      }
+      if (entry == null && state.operation == SoundRequestOperation.failed) {
+        return Text(context.l10n.soundReuseUnavailable);
+      }
+      final working =
+          (state.target == entry?.id &&
+              state.operation == SoundRequestOperation.working) ||
+          entry == null;
+      final retry =
+          entry?.status == SoundRequestStatus.failed ||
+          entry?.status == SoundRequestStatus.awaitingPolicy;
+      final failed =
+          state.target == entry?.id &&
+          state.operation == SoundRequestOperation.failed;
+      final cubit = context.read<SoundRequestsCubit>();
+      final enableLabel =
+          '${context.l10n.soundRequestEnable}. '
+          '${context.l10n.soundRequestDescription}';
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 8,
+        children: [
+          if (failed) Text(context.l10n.soundReuseUnavailable),
+          DivineButton(
+            label: retry
+                ? context.l10n.commonRetry
+                : context.l10n.soundRequestEnable,
+            semanticLabel: retry ? context.l10n.commonRetry : enableLabel,
+            isLoading: working,
+            size: DivineButtonSize.small,
+            onPressed: working
+                ? null
+                : () => runDetached(
+                    retry ? cubit.retry(entry.id) : cubit.approve(entry.id),
+                    'approve sound request',
+                    logName: 'SoundRequestCard',
+                    category: LogCategory.ui,
+                  ),
+          ),
+          DivineButton(
+            label: context.l10n.saveOriginalDismiss,
+            type: DivineButtonType.secondary,
+            size: DivineButtonSize.small,
+            onPressed: working
+                ? null
+                : () => runDetached(
+                    cubit.dismiss(entry.id),
+                    'dismiss sound request',
+                    logName: 'SoundRequestCard',
+                    category: LogCategory.ui,
+                  ),
+          ),
+        ],
       );
+    },
+  );
 }
 
 class _ReadyActions extends StatelessWidget {

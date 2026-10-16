@@ -19,9 +19,50 @@ const address = '34236:$creator:clip';
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
   group('interactions', () {
+    testWidgets('failed workflow restore does not leave approval loading', (
+      tester,
+    ) async {
+      final repo = _Repository();
+      when(() => repo.ownerPubkey).thenReturn(creator);
+      when(repo.watchState).thenAnswer((_) => const Stream.empty());
+      when(repo.start)
+          .thenThrow(const FormatException('invalid workflow state'));
+      when(() => repo.sourceVideo(address))
+          .thenThrow(StateError('unavailable'));
+      final cubit = SoundRequestsCubit();
+      addTearDown(cubit.close);
+      await cubit.connect(repo);
+      const message = SoundRequestMessage(
+        kind: SoundRequestMessageKind.request,
+        messageId: id,
+        senderPubkey: requester,
+        recipientPubkey: creator,
+        videoAddress: address,
+        creatorPubkey: creator,
+      );
+      await tester.pumpWidget(
+        BlocProvider.value(
+          value: cubit,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: SoundRequestCard(message: message, isSent: false),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byType(SoundRequestCard));
+      expect(find.text(context.l10n.soundReuseUnavailable), findsOneWidget);
+      expect(find.text(context.l10n.soundRequestEnable), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets(
       'incoming request explains public reuse and exposes creator actions',
       (tester) async {
+        final semantics = tester.ensureSemantics();
         final repo = _Repository();
         when(() => repo.ownerPubkey).thenReturn(creator);
         when(repo.watchState).thenAnswer(
@@ -73,10 +114,17 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text(l10n.soundRequestEnable), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            '${l10n.soundRequestEnable}. ${l10n.soundRequestDescription}',
+          ),
+          findsOneWidget,
+        );
         expect(find.text(l10n.soundRequestDescription), findsOneWidget);
         expect(find.text(l10n.saveOriginalDismiss), findsOneWidget);
         expect(find.text('My clip'), findsOneWidget);
         verifyNever(() => repo.approve(id));
+        semantics.dispose();
       },
     );
   });
