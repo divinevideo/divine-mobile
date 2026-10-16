@@ -695,16 +695,7 @@ class VideoRecorderBloc
     VideoRecorderCameraSwitched event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    // A rebind mid-take ends it without a clip on Android, and leaves iOS
-    // writing a recording the recorder can no longer stop.
-    if (state.hasRecordingInFlight) {
-      Log.debug(
-        '🔄 Camera switch ignored - recording in progress',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
-      return;
-    }
+    if (_refusesRebindMidTake('Camera switch')) return;
 
     // Flag the switch up front so the preview blurs its frozen last frame
     // while the native camera rebinds. `_emitCameraSync` rebuilds the state
@@ -746,9 +737,12 @@ class VideoRecorderBloc
     VideoRecorderStabilizationModeSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    // On Android a stabilization change rebinds the camera, the same hazard
-    // as a front/back switch.
-    if (state.hasRecordingInFlight) return;
+    // On Android a stabilization change rebinds the camera too.
+    if (_refusesRebindMidTake(
+      'Stabilization change to ${event.mode.name}',
+    )) {
+      return;
+    }
     if (event.mode == state.videoStabilizationMode) return;
     // Already on a mode that hides the control: keep the pick, but do not
     // start a rebind. Upload's camera is paused, and a rebind would restart it.
@@ -792,14 +786,7 @@ class VideoRecorderBloc
     VideoRecorderLensSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    // Same rebind hazard as a front/back switch.
-    if (state.hasRecordingInFlight) {
-      Log.debug(
-        '🔄 Lens change to ${event.lens.displayName} ignored - '
-        'recording in progress',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
+    if (_refusesRebindMidTake('Lens change to ${event.lens.displayName}')) {
       return;
     }
 
@@ -2454,6 +2441,19 @@ class VideoRecorderBloc
   }
 
   // === Private helpers ===
+
+  /// Whether [change] must be refused because it rebinds the camera while a
+  /// take is in flight. A rebind mid-take ends it without a clip on Android,
+  /// and leaves iOS writing a recording the recorder can no longer stop.
+  bool _refusesRebindMidTake(String change) {
+    if (!state.hasRecordingInFlight) return false;
+    Log.debug(
+      '🔄 $change ignored - recording in progress',
+      name: 'VideoRecorderBloc',
+      category: LogCategory.video,
+    );
+    return true;
+  }
 
   Future<void> _setupRemoteRecordControl() async {
     _cameraService.setOnRemoteRecordTrigger(() {
