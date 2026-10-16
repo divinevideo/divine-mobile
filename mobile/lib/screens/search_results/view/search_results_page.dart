@@ -185,6 +185,7 @@ class _SearchResultsScope extends ConsumerWidget {
                   profileRepository: profileRepository,
                   followRepository: followRepository,
                   rankingSignalsLoader: rankingSignalsLoader,
+                  viewerPubkey: owner,
                   initialState: snapshot,
                 );
                 final query = controller.text.trim();

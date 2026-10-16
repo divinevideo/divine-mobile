@@ -435,6 +435,24 @@ void main() {
         ]);
       });
 
+      test('a retained snapshot keeps the viewer on global search', () {
+        final viewer = createTestProfile('f' * 64, 'Me');
+        when(() => loader.isEligible(viewer.pubkey)).thenReturn(false);
+        final bloc = UserSearchBloc(
+          profileRepository: mockProfileRepository,
+          searchRunner: mockSearchRunner,
+          rankingSignalsLoader: loader,
+          viewerPubkey: viewer.pubkey,
+          initialState: UserSearchState(
+            status: UserSearchStatus.success,
+            query: 'me',
+            results: [viewer, profiles[0]],
+          ),
+        );
+        addTearDown(bloc.close);
+        expect(bloc.state.results, [viewer, profiles[0]]);
+      });
+
       test('an exact match leads its page ahead of known accounts', () async {
         final exact = createTestProfile('e' * 64, 'Alice');
         when(

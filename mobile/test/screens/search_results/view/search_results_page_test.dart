@@ -18,6 +18,7 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
@@ -49,6 +50,14 @@ final _profileReadinessSelection = StateProvider<int>((ref) => 0);
 
 class _MockRankingSignalsLoader extends Mock
     implements UserRankingSignalsLoader {}
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this.owner);
+  final String owner;
+  @override
+  NostrSessionReadiness build() =>
+      NostrSessionReadiness.identityKnown(pubkey: owner);
+}
 
 void main() {
   late _MockRankingSignalsLoader rankingLoader;
@@ -673,6 +682,63 @@ void main() {
           cancellationToken: any(named: 'cancellationToken'),
         ),
       ).called(1);
+    });
+
+    testWidgets('lists the signed-in account in people search', (
+      tester,
+    ) async {
+      final viewer = 'f' * 64;
+      final ownProfile = UserProfile(
+        pubkey: viewer,
+        displayName: 'Sam',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        eventId: 'event-$viewer',
+        rawData: const {},
+      );
+      // Ranking never scores the viewer, as the real loader does.
+      when(() => rankingLoader.isEligible(viewer)).thenReturn(false);
+      when(() => rankingLoader.load(any())).thenAnswer(
+        (invocation) async => {
+          for (final key
+              in invocation.positionalArguments.single as Iterable<String>)
+            if (key != viewer) key: UserRankingSignals(pubkey: key),
+        },
+      );
+      when(
+        () => mockProfileRepository.searchUsersProgressive(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+          boostPubkeys: any(named: 'boostPubkeys'),
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).thenAnswer(
+        (_) => Stream.value(
+          ProgressiveSearchResult(
+            profiles: [ownProfile],
+            sources: const {},
+            isComplete: true,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(
+          flagOverrides: [
+            nostrSessionProvider.overrideWith(() => _TestNostrSession(viewer)),
+          ],
+        ),
+      );
+      final bloc = BlocProvider.of<UserSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
+      bloc.add(const UserSearchQueryChanged('sam'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      expect(bloc.state.results, [ownProfile]);
     });
 
     testWidgets('shows a waiting state while the profile repository is null', (
