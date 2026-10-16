@@ -121,10 +121,7 @@ void main() {
 
         // Two fingers on the shape, spread far past both sides of the item.
         final first = await tester.startGesture(const Offset(150, 300));
-        final second = await tester.startGesture(
-          const Offset(170, 300),
-          pointer: 2,
-        );
+        final second = await tester.startGesture(const Offset(170, 300));
         await tester.pump();
         for (var step = 1; step <= 10; step++) {
           await first.moveTo(Offset(150 - step * 30, 300));
