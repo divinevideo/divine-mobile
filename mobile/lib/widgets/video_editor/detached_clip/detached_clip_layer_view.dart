@@ -231,12 +231,17 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // soon as it lands.
     _loadGeneration++;
     _player?.detach();
-    final key = _heldKey;
-    if (key != null) detachedClipPlayers.release(key);
-    _heldKey = null;
+    _releaseHeldPlayer();
     // The next player is a new one, so it fades in over the poster again.
     _resumed = false;
     if (_player != null) setState(() => _player = null);
+  }
+
+  /// Gives the pooled player this layer holds back to [detachedClipPlayers].
+  void _releaseHeldPlayer() {
+    final key = _heldKey;
+    if (key != null) detachedClipPlayers.release(key);
+    _heldKey = null;
   }
 
   /// Points the player at the playhead and the layer's current time window.
@@ -302,10 +307,8 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // Detached, not torn down: the registry holds the player briefly so the
     // remount that follows a drag picks the same one back up, mid-playback.
     _player?.detach();
-    final key = _heldKey;
-    if (key != null) detachedClipPlayers.release(key);
+    _releaseHeldPlayer();
     _player = null;
-    _heldKey = null;
     super.dispose();
   }
 
@@ -321,12 +324,10 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // must be able to return even a player that has not finished opening.
     if (superseded()) return;
 
-    final previousKey = _heldKey;
     final data = DetachedClipLayerData.fromMeta(widget.meta, documentsPath);
     final clip = data?.clip;
     if (clip == null || key == null) {
-      if (previousKey != null) detachedClipPlayers.release(previousKey);
-      _heldKey = null;
+      _releaseHeldPlayer();
       return;
     }
     setState(() {
@@ -337,11 +338,11 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // An export holds the decoders: show the poster for now, and load again
     // when the editor gets them back.
     if (_isPreviewReleased) {
-      if (previousKey != null) detachedClipPlayers.release(previousKey);
-      _heldKey = null;
+      _releaseHeldPlayer();
       return;
     }
 
+    final previousKey = _heldKey;
     final opening = detachedClipPlayers.acquire(
       key,
       () => DetachedClipPlayer.open(clip),
