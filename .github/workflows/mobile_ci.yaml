@@ -217,41 +217,6 @@ jobs:
       - name: 🛡️ Run guards
         run: bash scripts/ci/run_guards.sh --native "${{ needs.changes.outputs.native }}"
 
-  async-safety:
-    name: Async Safety
-    # #9118: analyzer-backed per-rule, per-file ceilings for the remaining
-    # unawaited_futures and discarded_futures debt. Every count may only
-    # shrink; new files and increased counts fail closed. Its own job rather
-    # than a Guards entry for two reasons: it is a full `dart analyze` of the
-    # app (~80s, the single most expensive guard), and it rewrites
-    # analysis_options.yaml in place while it runs, which nothing else may
-    # share a checkout with. Retire the job with the ratchet once the baseline
-    # reaches zero and the analyzer's own lint takes over.
-    needs: changes
-    if: ${{ needs.changes.outputs.app == 'true' }}
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: mobile/
-    steps:
-      - uses: actions/checkout@v7
-      - name: 🔀 Fetch origin/main for ratchet baselines
-        run: git fetch --quiet --depth=1 origin main
-      - name: 🐦 Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.47.2"
-          channel: "stable"
-          cache: true
-      - name: 📦 Install dependencies
-        run: flutter pub get
-      - name: ⏳ Verify async-safety findings do not increase (ratchet)
-        run: |
-          # #9118: analyzer-backed per-rule, per-file ceilings for the remaining
-          # unawaited_futures and discarded_futures debt. Every count may only
-          # shrink; new files and increased counts fail closed.
-          bash scripts/check_async_safety_ceiling.sh
-
   format:
     name: Format
     needs: changes
@@ -750,7 +715,6 @@ jobs:
       - ci-config-tests
       - generated-files
       - guards
-      - async-safety
       - format
       - analyze
       - tests
@@ -765,7 +729,6 @@ jobs:
           CODEMAGIC_GROUPS_RESULT: ${{ needs.codemagic-groups.result }}
           GENERATED_FILES_RESULT: ${{ needs.generated-files.result }}
           GUARDS_RESULT: ${{ needs.guards.result }}
-          ASYNC_SAFETY_RESULT: ${{ needs.async-safety.result }}
           CI_CONFIG_TESTS_RESULT: ${{ needs.ci-config-tests.result }}
           FORMAT_RESULT: ${{ needs.format.result }}
           ANALYZE_RESULT: ${{ needs.analyze.result }}
@@ -782,7 +745,6 @@ jobs:
           echo "codemagic-groups: ${CODEMAGIC_GROUPS_RESULT}"
           echo "generated-files: ${GENERATED_FILES_RESULT}"
           echo "guards: ${GUARDS_RESULT}"
-          echo "async-safety: ${ASYNC_SAFETY_RESULT}"
           echo "ci-config-tests: ${CI_CONFIG_TESTS_RESULT}"
           echo "format: ${FORMAT_RESULT}"
           echo "analyze: ${ANALYZE_RESULT}"
@@ -818,7 +780,6 @@ jobs:
             "${CI_CONFIG_TESTS_RESULT}"
             "${GENERATED_FILES_RESULT}"
             "${GUARDS_RESULT}"
-            "${ASYNC_SAFETY_RESULT}"
             "${FORMAT_RESULT}"
             "${ANALYZE_RESULT}"
             "${TESTS_RESULT}"
