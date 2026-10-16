@@ -105,6 +105,12 @@ class DetachedClipRenderPass {
   /// [VideoEditorRenderService.buildImageLayers].
   ///
   /// Returns [basePath] unchanged when there is nothing to composite.
+  ///
+  /// Throws a [VideoRenderFailedException] with
+  /// [VideoRenderFailureReason.tooManyDetachedClips] when the encode still
+  /// fails transiently after every retry, which is how Android reports a
+  /// decoder it could not start (#10141). Any other [RenderEncoderException]
+  /// is rethrown as is.
   Future<String> composite({
     required List<DivineVideoClip> clips,
     required Size? bodySize,
