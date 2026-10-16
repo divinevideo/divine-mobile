@@ -31,6 +31,7 @@ void main() {
       testWidgets('without the key itself', (tester) async {
         await tester.pumpWidget(_app(_privateKey));
 
+        expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
         expect(find.textContaining('nsec1'), findsNothing);
       });
 
