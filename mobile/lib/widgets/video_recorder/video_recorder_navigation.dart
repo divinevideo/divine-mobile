@@ -231,19 +231,41 @@ Future<void> offerAutosavedSession(
     category: LogCategory.video,
   );
 
+  // A button's work can outlast the sheet: the user can dismiss it while a
+  // restore or discard runs, and a pop after that would close the recorder.
+  var offerOpen = true;
+  var actionStarted = false;
+  void closeOffer() {
+    if (offerOpen && context.mounted) context.pop();
+  }
+
+  void runOnce(Future<void> Function() action, String description) {
+    if (actionStarted) return;
+    actionStarted = true;
+    runDetached(
+      action(),
+      description,
+      logName: 'VideoRecorderNavigation',
+      category: LogCategory.video,
+    );
+  }
+
   await VineBottomSheetPrompt.show(
     context: context,
     sticker: .videoClapBoard,
     title: context.l10n.videoRecorderAutosaveFoundTitle,
     subtitle: context.l10n.videoRecorderAutosaveFoundSubtitle,
     primaryButtonText: context.l10n.videoRecorderAutosaveContinueButton,
-    onPrimaryPressed: () async {
+    onPrimaryPressed: () => runOnce(() async {
       final restoreSuccessful = await ref
           .read(videoEditorProvider.notifier)
           .restoreDraft();
 
       if (!context.mounted) return;
-      context.pop();
+      // Dismissing the offer while it restored leaves the user on the recorder
+      // with the restored clips, rather than carrying them into the editor.
+      final continueToEditor = openEditorOnRestore && offerOpen;
+      closeOffer();
 
       if (!restoreSuccessful) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -265,21 +287,16 @@ Future<void> offerAutosavedSession(
         );
       }
 
-      if (!openEditorOnRestore) return;
+      if (!continueToEditor) return;
       await openVideoEditorFromRecorder(context, ref);
-    },
+    }, 'restore autosaved recorder draft'),
     secondaryButtonText: context.l10n.videoRecorderAutosaveDiscardButton,
-    onSecondaryPressed: () => runDetached(
-      () async {
-        await ref.read(videoEditorProvider.notifier).removeAutosavedDraft();
-        if (!context.mounted) return;
-        context.pop();
-      }(),
-      'discard autosaved recorder draft',
-      logName: 'VideoRecorderNavigation',
-      category: LogCategory.video,
-    ),
+    onSecondaryPressed: () => runOnce(() async {
+      await ref.read(videoEditorProvider.notifier).removeAutosavedDraft();
+      closeOffer();
+    }, 'discard autosaved recorder draft'),
   );
+  offerOpen = false;
 }
 
 /// The autosaved draft [offerAutosavedSession] would offer back, or `null`

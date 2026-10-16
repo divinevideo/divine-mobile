@@ -8,23 +8,35 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.view.KeyEvent
 import android.view.Window
+import androidx.annotation.VisibleForTesting
 
 private const val TAG = "VolumeKeyHandler"
 
 /**
  * Handles volume button presses and Bluetooth media button events
  * for remote recording control.
- * 
+ *
  * Uses Window.Callback wrapper to intercept volume key events BEFORE
  * the system processes them, preventing volume UI from appearing.
+ *
+ * Android keeps sending headset and Bluetooth play/pause presses to the
+ * media session that claimed them, even after its app is backgrounded. A
+ * press meant for another app then started a recording nobody could see
+ * (#10196), so the session is held only while the activity is in the
+ * foreground: [onEnterBackground] releases it and [onBecomeActive] claims
+ * it again. iOS scopes its Now Playing session the same way (#6090).
  */
 class VolumeKeyHandler(
     private val context: Context,
     private val activity: Activity?,
+    // Monotonic, so a wall-clock correction cannot cut the cooldown short or
+    // stretch it out.
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
     private val onTrigger: (String) -> Unit
 ) {
     private var isEnabled = false
@@ -32,10 +44,13 @@ class VolumeKeyHandler(
     private var mediaSession: MediaSessionCompat? = null
     private var originalCallback: Window.Callback? = null
     private var callbackWrapper: KeyInterceptingCallback? = null
-    
-    // Cooldown to ignore spurious Bluetooth events after activation
-    private var enabledTimestamp: Long = 0
-    private val activationCooldownMs: Long = 800
+
+    // Cooldown to ignore spurious Bluetooth events after the session is
+    // claimed. A connected headset sends PAUSE when a new playing session
+    // appears, which now happens on every return to the foreground; on a
+    // Galaxy S26 it arrived 225-640 ms after the claim. 3 s matches iOS.
+    private var sessionClaimedTimestamp: Long = 0
+    private val activationCooldownMs: Long = 3000
 
     // Temporary suppression during camera switch / audio route changes
     @Volatile
@@ -49,21 +64,21 @@ class VolumeKeyHandler(
 
     /**
      * Enables volume button listening.
-     * Sets up Window.Callback wrapper for physical buttons and MediaSession for Bluetooth.
+     * Sets up Window.Callback wrapper for physical buttons and, while the
+     * activity is in the foreground ([appActive]), MediaSession for Bluetooth.
      */
-    fun enable(): Boolean {
+    fun enable(appActive: Boolean): Boolean {
         if (isEnabled) {
             DivineCameraLog.d(TAG, "Volume key handler already enabled")
             return true
         }
-        
+
         try {
             DivineCameraLog.d(TAG, "Enabling volume key handler...")
             setupWindowCallback()
-            setupMediaSession()
+            if (appActive) claimMediaSession()
             isEnabled = true
             volumeKeysEnabled = true
-            enabledTimestamp = System.currentTimeMillis()
             DivineCameraLog.i(TAG, "Volume key handler enabled successfully")
             return true
         } catch (e: Exception) {
@@ -88,9 +103,8 @@ class VolumeKeyHandler(
             }
             originalCallback = null
             callbackWrapper = null
-            
-            mediaSession?.release()
-            mediaSession = null
+
+            releaseMediaSession()
             isEnabled = false
             volumeKeysEnabled = true
             DivineCameraLog.d(TAG, "Volume key handler disabled")
@@ -108,7 +122,36 @@ class VolumeKeyHandler(
         volumeKeysEnabled = enabled
         DivineCameraLog.d(TAG, "Volume keys interception ${if (enabled) "enabled" else "disabled"}")
     }
-    
+
+    /**
+     * The activity left the foreground. Releases the media session so a
+     * headset press reaches the app in front instead of recording (#10196).
+     */
+    fun onEnterBackground() {
+        if (mediaSession == null) return
+        releaseMediaSession()
+        DivineCameraLog.d(TAG, "MediaSession released - app in background")
+    }
+
+    /**
+     * The activity is in the foreground again. Claims the media session back
+     * while enabled, with a fresh activation cooldown.
+     */
+    fun onBecomeActive() {
+        if (!isEnabled || mediaSession != null) return
+        try {
+            claimMediaSession()
+        } catch (e: Exception) {
+            DivineCameraLog.e(TAG, "Failed to claim MediaSession: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Whether the media session receives Bluetooth and headset buttons.
+     */
+    @VisibleForTesting
+    internal fun isMediaSessionClaimed(): Boolean = mediaSession != null
+
     /**
      * Sets up Window.Callback wrapper to intercept key events before system.
      */
@@ -182,8 +225,11 @@ class VolumeKeyHandler(
      * Handles cooldown and repeat filtering.
      * Only intercepts play/pause type buttons - volume buttons pass through.
      */
-    private fun handleMediaButtonEvent(event: KeyEvent): Boolean {
-        if (!isEnabled) return false
+    @VisibleForTesting
+    internal fun handleMediaButtonEvent(event: KeyEvent): Boolean {
+        // Disabled, or released in the background with this press still
+        // queued.
+        if (mediaSession == null) return false
         
         // Only handle key down events
         if (event.action != KeyEvent.ACTION_DOWN) return false
@@ -215,15 +261,15 @@ class VolumeKeyHandler(
             return true
         }
 
-        // Check cooldown after activation
-        val timeSinceEnabled = System.currentTimeMillis() - enabledTimestamp
-        if (timeSinceEnabled < activationCooldownMs) {
-            DivineCameraLog.d(TAG, "Media button ignored - within ${activationCooldownMs}ms cooldown (${timeSinceEnabled}ms since enabled)")
+        // Check cooldown after the session was claimed
+        val now = clock()
+        val timeSinceClaimed = now - sessionClaimedTimestamp
+        if (timeSinceClaimed < activationCooldownMs) {
+            DivineCameraLog.d(TAG, "Media button ignored - within ${activationCooldownMs}ms cooldown (${timeSinceClaimed}ms since claimed)")
             return true
         }
 
         // Check debounce between triggers
-        val now = System.currentTimeMillis()
         val timeSinceLastTrigger = now - lastBluetoothTriggerTimestamp
         if (timeSinceLastTrigger < bluetoothDebounceMs) {
             DivineCameraLog.d(TAG, "Media button ignored - debounce (${timeSinceLastTrigger}ms since last)")
@@ -262,10 +308,10 @@ class VolumeKeyHandler(
     fun isEnabled(): Boolean = isEnabled
 
     /**
-     * Sets up MediaSession to receive Bluetooth remote and headphone button events.
+     * Claims a MediaSession to receive Bluetooth remote and headphone button events.
      */
     @Suppress("DEPRECATION")
-    private fun setupMediaSession() {
+    private fun claimMediaSession() {
         mediaSession = MediaSessionCompat(context, "DivineCameraRemoteControl").apply {
             // Set flags to handle media buttons and transport controls
             setFlags(
@@ -333,8 +379,14 @@ class VolumeKeyHandler(
             
             isActive = true
         }
+        sessionClaimedTimestamp = clock()
         
         DivineCameraLog.i(TAG, "MediaSession created and active for Bluetooth remote control")
+    }
+
+    private fun releaseMediaSession() {
+        mediaSession?.release()
+        mediaSession = null
     }
     
     /**
@@ -342,16 +394,19 @@ class VolumeKeyHandler(
      * for direct MediaSession callbacks.
      */
     private fun triggerWithCooldownCheck() {
+        if (mediaSession == null) {
+            DivineCameraLog.d(TAG, "MediaSession callback ignored - session released")
+            return
+        }
         if (isSuppressed) {
             DivineCameraLog.d(TAG, "MediaSession callback ignored - suppressed")
             return
         }
-        val timeSinceEnabled = System.currentTimeMillis() - enabledTimestamp
-        if (timeSinceEnabled < activationCooldownMs) {
+        val now = clock()
+        if (now - sessionClaimedTimestamp < activationCooldownMs) {
             DivineCameraLog.d(TAG, "MediaSession callback ignored - within cooldown")
             return
         }
-        val now = System.currentTimeMillis()
         val timeSinceLastTrigger = now - lastBluetoothTriggerTimestamp
         if (timeSinceLastTrigger < bluetoothDebounceMs) {
             DivineCameraLog.d(TAG, "MediaSession callback ignored - debounce")
