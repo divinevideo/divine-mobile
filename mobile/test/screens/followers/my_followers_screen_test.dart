@@ -170,22 +170,23 @@ void main() {
         final loaders = <_MockRankingLoader>[];
         await pumpScreen(
           tester,
-          rankingOverride: userRankingSignalsLoaderProvider.overrideWith((ref) {
-            ref.watch(version);
-            final loader = _MockRankingLoader();
-            loaders.add(loader);
-            when(() => loader.isEligible(any())).thenReturn(true);
-            when(() => loader.loadCachedDisplayNames(any()))
-                .thenAnswer((_) async => {});
-            when(() => loader.load(any())).thenAnswer(
-              (call) async => {
-                for (final key
-                    in call.positionalArguments.single as Iterable<String>)
-                  key: UserRankingSignals(pubkey: key),
-              },
-            );
-            return loader;
-          }),
+          rankingOverride: ownFollowListRankingSignalsLoaderProvider
+              .overrideWith((ref) {
+                ref.watch(version);
+                final loader = _MockRankingLoader();
+                loaders.add(loader);
+                when(() => loader.isEligible(any())).thenReturn(true);
+                when(() => loader.loadCachedDisplayNames(any()))
+                    .thenAnswer((_) async => {});
+                when(() => loader.load(any())).thenAnswer(
+                  (call) async => {
+                    for (final key
+                        in call.positionalArguments.single as Iterable<String>)
+                      key: UserRankingSignals(pubkey: key),
+                  },
+                );
+                return loader;
+              }),
         );
         final old = tester
             .element(find.byType(UserProfileTile).first)
@@ -215,21 +216,22 @@ void main() {
         final version = StateProvider<int>((ref) => 0);
         await pumpScreen(
           tester,
-          rankingOverride: userRankingSignalsLoaderProvider.overrideWith((ref) {
-            ref.watch(version);
-            final loader = _MockRankingLoader();
-            when(() => loader.isEligible(any())).thenReturn(true);
-            when(() => loader.loadCachedDisplayNames(any()))
-                .thenAnswer((_) async => {});
-            when(() => loader.load(any())).thenAnswer(
-              (call) async => {
-                for (final key
-                    in call.positionalArguments.single as Iterable<String>)
-                  key: UserRankingSignals(pubkey: key),
-              },
-            );
-            return loader;
-          }),
+          rankingOverride: ownFollowListRankingSignalsLoaderProvider
+              .overrideWith((ref) {
+                ref.watch(version);
+                final loader = _MockRankingLoader();
+                when(() => loader.isEligible(any())).thenReturn(true);
+                when(() => loader.loadCachedDisplayNames(any()))
+                    .thenAnswer((_) async => {});
+                when(() => loader.load(any())).thenAnswer(
+                  (call) async => {
+                    for (final key
+                        in call.positionalArguments.single as Iterable<String>)
+                      key: UserRankingSignals(pubkey: key),
+                  },
+                );
+                return loader;
+              }),
         );
         final old = tester
             .element(find.byType(UserProfileTile).first)
@@ -284,21 +286,22 @@ void main() {
         ).thenAnswer((_) async => {});
         await pumpScreen(
           tester,
-          rankingOverride: userRankingSignalsLoaderProvider.overrideWith((ref) {
-            ref.watch(version);
-            final loader = _MockRankingLoader();
-            when(() => loader.isEligible(any())).thenReturn(true);
-            when(() => loader.loadCachedDisplayNames(any()))
-                .thenAnswer((_) async => {});
-            when(() => loader.load(any())).thenAnswer(
-              (call) async => {
-                for (final key
-                    in call.positionalArguments.single as Iterable<String>)
-                  key: UserRankingSignals(pubkey: key),
-              },
-            );
-            return loader;
-          }),
+          rankingOverride: ownFollowListRankingSignalsLoaderProvider
+              .overrideWith((ref) {
+                ref.watch(version);
+                final loader = _MockRankingLoader();
+                when(() => loader.isEligible(any())).thenReturn(true);
+                when(() => loader.loadCachedDisplayNames(any()))
+                    .thenAnswer((_) async => {});
+                when(() => loader.load(any())).thenAnswer(
+                  (call) async => {
+                    for (final key
+                        in call.positionalArguments.single as Iterable<String>)
+                      key: UserRankingSignals(pubkey: key),
+                  },
+                );
+                return loader;
+              }),
           additionalOverrides: [
             nostrSessionProvider.overrideWith(
               () => _TestNostrSession(currentUserPubkey),

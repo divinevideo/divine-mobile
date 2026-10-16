@@ -14,10 +14,33 @@ part 'user_ranking_providers.g.dart';
 /// Local ranking dependencies, scoped to the current account's repositories.
 @riverpod
 UserRankingSignalsLoader userRankingSignalsLoader(Ref ref) {
-  final database = ref.watch(databaseProvider);
-  final session = ref.watch(nostrSessionProvider);
   final blocklist = ref.watch(contentBlocklistRepositoryProvider);
   final policy = ref.watch(contentPolicyEngineProvider);
+  return _rankingSignalsLoader(
+    ref,
+    isBlocked: (pubkey) =>
+        policy.evaluate(PolicyInput(pubkey: pubkey), blocklist.currentState)
+            is Block,
+  );
+}
+
+/// Ranking for the signed-in user's own Following and Followers lists.
+///
+/// These lists hide only accounts the viewer blocked, as they did before
+/// ranking. An account that mutes or blocks the viewer stays listed, so the
+/// viewer can still open it to unfollow or report it.
+@riverpod
+UserRankingSignalsLoader ownFollowListRankingSignalsLoader(Ref ref) {
+  final blocklist = ref.watch(contentBlocklistRepositoryProvider);
+  return _rankingSignalsLoader(ref, isBlocked: blocklist.isBlocked);
+}
+
+UserRankingSignalsLoader _rankingSignalsLoader(
+  Ref ref, {
+  required bool Function(String pubkey) isBlocked,
+}) {
+  final database = ref.watch(databaseProvider);
+  final session = ref.watch(nostrSessionProvider);
   return UserRankingSignalsLoader(
     dmRepository: ref.watch(dmRepositoryProvider),
     followRepository: ref.watch(followRepositoryProvider),
@@ -31,8 +54,6 @@ UserRankingSignalsLoader userRankingSignalsLoader(Ref ref) {
             session.phase == NostrSessionPhase.nostrReady
         ? session.pubkey ?? ''
         : '',
-    isBlocked: (pubkey) =>
-        policy.evaluate(PolicyInput(pubkey: pubkey), blocklist.currentState)
-            is Block,
+    isBlocked: isBlocked,
   );
 }

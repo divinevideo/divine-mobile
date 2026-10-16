@@ -76,6 +76,34 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets(
+      'explicit own follow-list ranking override replaces the standard fixture',
+      (tester) async {
+        final loader = _FakeRankingLoader();
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              ownFollowListRankingSignalsLoaderProvider.overrideWithValue(
+                loader,
+              ),
+            ],
+            child: Builder(
+              builder: (context) {
+                expect(
+                  ProviderScope.containerOf(
+                    context,
+                  ).read(ownFollowListRankingSignalsLoaderProvider),
+                  same(loader),
+                );
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     test('standard overrides isolate supporter network and store clients', () {
       final container = ProviderContainer(
         overrides: getStandardTestOverrides(),
