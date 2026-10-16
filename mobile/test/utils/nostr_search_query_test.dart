@@ -2,8 +2,10 @@
 
 import 'dart:async';
 
+import 'package:bech32/bech32.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
+import 'package:nostr_sdk/nip19/tlv_util.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
@@ -101,6 +103,28 @@ void main() {
     test('rejects ordinary text and first-party stable ids', () {
       expect(resolveNostrSearchTarget('cats'), isNull);
       expect(resolveNostrSearchTarget('notebook-clip-42'), isNull);
+    });
+
+    test('rejects an nprofile whose relay entry is not valid text', () {
+      // Valid checksum, pubkey entry intact, relay entry with bytes that are
+      // not UTF-8. The SDK decodes relay entries without a try/catch, so this
+      // must come back as "not an identifier" rather than an exception.
+      final tlv = <int>[
+        TLVType.defaultType,
+        32,
+        ...List<int>.generate(32, (i) => i),
+        TLVType.relay,
+        2,
+        0xff,
+        0xfe,
+      ];
+      final malformed = Bech32Encoder().convert(
+        Bech32('nprofile', Nip19.convertBits(tlv, 8, 5, true)),
+        1000,
+      );
+
+      expect(() => resolveNostrSearchTarget(malformed), returnsNormally);
+      expect(resolveNostrSearchTarget(malformed), isNull);
     });
   });
 
