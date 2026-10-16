@@ -521,13 +521,14 @@ class SoundRequestsRepository {
     );
   }
 
-  Future<void> _drain() async {
+  Future<void> _drain({String? retryRequestId}) async {
     Object? failure;
     StackTrace? failureStack;
     for (final original in _state.jobs.values.toList()) {
       try {
         _checkOpen();
         var intent = original;
+        final newlyEnqueued = intent.rumorId == null;
         final id = intent.rumorId ?? await _transport.enqueue(intent);
         _checkOpen();
         if (intent.rumorId == null) {
@@ -548,7 +549,16 @@ class SoundRequestsRepository {
             ),
           );
         }
-        await _transport.retry(id);
+        final explicitRetry =
+            retryRequestId != null &&
+            (intent.requestId == retryRequestId || id == retryRequestId);
+        if (newlyEnqueued || explicitRetry) {
+          await _transport.retry(id, resetRetryBudget: explicitRetry);
+        } else if (!await _transport.isDelivered(id)) {
+          // The shared DM outbox owns background retry budgets and backoff.
+          // History writes may observe completion, not force another send.
+          continue;
+        }
         _checkOpen();
         final jobs = Map<String, SoundRequestSendIntent>.of(_state.jobs)
           ..remove(intent.key);
@@ -607,11 +617,11 @@ class SoundRequestsRepository {
     final request = _state.requests[requestId];
     if (request == null) throw StateError('Unknown sound request');
     if (request.requester == ownerPubkey) {
-      await _drain();
+      await _drain(retryRequestId: requestId);
       return;
     }
     if (request.status == SoundRequestStatus.ready) {
-      await _drain();
+      await _drain(retryRequestId: requestId);
       return;
     }
     if (_state.approvedVideos.contains(request.videoAddress)) {

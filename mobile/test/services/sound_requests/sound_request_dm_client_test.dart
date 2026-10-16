@@ -161,5 +161,29 @@ void main() {
         throwsA(isA<SoundRequestException>()),
       );
     });
+
+    test('a background delivery probe does not resend', () async {
+      expect(await client.isDelivered(rumor), isFalse);
+      verifyNever(() => repository.recoverFullSend(rumorId: rumor));
+    });
+
+    test('explicit retry refreshes the shared outbox budget', () async {
+      when(
+        () => repository.recoverFullSend(
+          rumorId: rumor,
+          resetRetryBudget: true,
+        ),
+      ).thenAnswer((_) async => const NIP17SendResult.failure('offline'));
+      await expectLater(
+        client.retry(rumor, resetRetryBudget: true),
+        throwsA(isA<SoundRequestException>()),
+      );
+      verify(
+        () => repository.recoverFullSend(
+          rumorId: rumor,
+          resetRetryBudget: true,
+        ),
+      ).called(1);
+    });
   });
 }

@@ -58,6 +58,7 @@ class Transport implements SoundRequestTransport {
   bool refuseEnqueue = false;
   int enqueueAttempts = 0;
   int attempts = 0;
+  final retryBudgetResets = <bool>[];
   final delivered = <String>{};
   StreamController<List<DmMessage>>? live;
   @override
@@ -72,8 +73,12 @@ class Transport implements SoundRequestTransport {
   }
 
   @override
-  Future<void> retry(String id) async {
+  Future<bool> isDelivered(String id) async => delivered.contains(id);
+
+  @override
+  Future<void> retry(String id, {bool resetRetryBudget = false}) async {
     attempts++;
+    retryBudgetResets.add(resetRetryBudget);
     if (failDelivery) throw StateError('offline');
     delivered.add(id);
   }
@@ -156,6 +161,44 @@ void main() {
       transport = Transport([])..live = live;
     });
     tearDown(() => live.close());
+
+    for (final incoming in [false, true]) {
+      test(
+        'history does not resend an undelivered job: incoming=$incoming',
+        () async {
+          final request = requestMessage(viewer, '1' * 64);
+          final history = incoming ? [request] : <DmMessage>[];
+          final publisher = Publisher();
+          final repo = repository(
+            incoming ? creator : viewer,
+            transport..failDelivery = true,
+            MemoryStore(),
+            publisher,
+          );
+          addTearDown(repo.close);
+          live.add(history);
+          await repo.start();
+          await expectLater(
+            incoming ? repo.approve(request.id) : repo.request(address),
+            throwsStateError,
+          );
+          expect(transport.attempts, 1);
+          final job = repo.state.jobs.values.single;
+          expect(job.rumorId, isNotNull);
+          for (var i = 0; i < 3; i++) {
+            live.add(history);
+          }
+          await pumpEventQueue();
+          expect(transport.attempts, 1);
+          expect(repo.state.jobs, hasLength(1));
+          transport.failDelivery = false;
+          await repo.retry(incoming ? request.id : job.rumorId!);
+          expect(transport.attempts, 2);
+          expect(transport.retryBudgetResets, [false, true]);
+          expect(repo.state.jobs, isEmpty);
+        },
+      );
+    }
 
     test('automatic fulfillment rechecks pending sound availability', () async {
       final request = requestMessage(viewer, '1' * 64);
@@ -730,7 +773,7 @@ void main() {
   });
   group('interactions', () {
     test(
-      'restart after failed reply retries delivery without republishing',
+      'restart observes outbox delivery without resending or republishing',
       () async {
         final a = requestMessage(viewer, '1' * 64);
         final store = MemoryStore();
@@ -746,8 +789,19 @@ void main() {
         addTearDown(resumed.close);
         await resumed.start();
         expect(publisher.audioPublishes, 1);
+        expect(transport.attempts, 1);
+        expect(transport.delivered, isEmpty);
+        expect(resumed.state.jobs, hasLength(1));
+        // The shared outbox service delivers independently of this lifecycle.
+        transport.delivered.add(resumed.state.jobs.values.single.rumorId!);
+        await resumed.close();
+        final delivered = repository(creator, transport, store, publisher);
+        addTearDown(delivered.close);
+        await delivered.start();
         expect(transport.delivered, hasLength(1));
-        expect(resumed.state.jobs, isEmpty);
+        expect(delivered.state.jobs, isEmpty);
+        expect(transport.attempts, 1);
+        expect(publisher.audioPublishes, 1);
       },
     );
   });
@@ -787,7 +841,7 @@ void main() {
         await repo.start();
         await expectLater(repo.request(address), throwsStateError);
         final first = store.data[viewer]!.jobs.values.single;
-        await expectLater(repo.request(address), throwsStateError);
+        expect(await repo.request(address), first.rumorId);
         await repo.close();
         final resumed = repository(viewer, transport, store, publisher);
         addTearDown(resumed.close);

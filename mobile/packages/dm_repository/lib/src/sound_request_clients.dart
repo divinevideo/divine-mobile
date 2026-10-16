@@ -51,8 +51,11 @@ abstract interface class SoundRequestTransport {
   /// Enqueues a stable rumor and returns its full event ID.
   Future<String> enqueue(SoundRequestSendIntent intent);
 
-  /// Retries delivery of an existing outbox rumor.
-  Future<void> retry(String rumorId);
+  /// Reads delivery state without driving or resetting outbox retries.
+  Future<bool> isDelivered(String rumorId);
+
+  /// Drives delivery, optionally refreshing the budget for an explicit retry.
+  Future<void> retry(String rumorId, {bool resetRetryBudget = false});
 }
 
 /// A send policy rejected the intent before any durable DM was queued.

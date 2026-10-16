@@ -50,14 +50,20 @@ class SoundRequestDmClient implements SoundRequestTransport {
   }
 
   @override
-  Future<void> retry(String rumorId) async {
+  Future<bool> isDelivered(String rumorId) async {
     _checkAccount();
     final history = await _repository.watchSoundRequestMessages().first;
     _checkAccount();
-    if (history.any((m) => m.id == rumorId && m.senderPubkey == ownerPubkey)) {
-      return;
-    }
-    final result = await _repository.recoverFullSend(rumorId: rumorId);
+    return history.any((m) => m.id == rumorId && m.senderPubkey == ownerPubkey);
+  }
+
+  @override
+  Future<void> retry(String rumorId, {bool resetRetryBudget = false}) async {
+    if (await isDelivered(rumorId)) return;
+    final result = await _repository.recoverFullSend(
+      rumorId: rumorId,
+      resetRetryBudget: resetRetryBudget,
+    );
     _checkAccount();
     if (!result.success) {
       throw const SoundRequestException('Sound request delivery pending');
