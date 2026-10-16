@@ -7597,6 +7597,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Perangkatmu tidak bisa mengekspor klip terlepas sebanyak ini sekaligus. Kembalikan beberapa ke timeline lalu coba lagi.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Perangkatmu tidak bisa mengekspor klip terlepas sebanyak ini sekaligus. Buka draf di editor, kembalikan beberapa ke timeline, lalu posting lagi.';
+
+  @override
   String get publishErrorUnknownServer => 'Server tidak dikenal';
 
   @override

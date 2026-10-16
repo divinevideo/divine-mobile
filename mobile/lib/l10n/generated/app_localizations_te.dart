@@ -7911,6 +7911,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ పరికరం ఇన్ని వేరు చేసిన క్లిప్‌లను ఒకేసారి ఎగుమతి చేయలేదు. కొన్నింటిని తిరిగి టైమ్‌లైన్‌లో ఉంచి, మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'మీ పరికరం ఇన్ని వేరు చేసిన క్లిప్‌లను ఒకేసారి ఎగుమతి చేయలేదు. డ్రాఫ్ట్‌ని ఎడిటర్‌లో తెరిచి, కొన్నింటిని తిరిగి టైమ్‌లైన్‌లో ఉంచి, ఆపై మళ్లీ పోస్ట్ చేయండి.';
+
+  @override
   String get publishErrorUnknownServer => 'తెలియని సర్వర్';
 
   @override

@@ -7858,6 +7858,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Twoje urządzenie nie może wyeksportować naraz tylu odłączonych klipów. Przywróć kilka na oś czasu i spróbuj ponownie.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Twoje urządzenie nie może wyeksportować naraz tylu odłączonych klipów. Otwórz wersję roboczą w edytorze, przywróć kilka na oś czasu i opublikuj ponownie.';
+
+  @override
   String get publishErrorUnknownServer => 'Nieznany serwer';
 
   @override

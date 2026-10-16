@@ -7684,6 +7684,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Kembalikan beberapa ke garis masa dan cuba lagi.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Buka draf dalam penyunting, kembalikan beberapa ke garis masa, kemudian siarkan semula.';
+
+  @override
   String get publishErrorUnknownServer => 'Pelayan tidak diketahui';
 
   @override

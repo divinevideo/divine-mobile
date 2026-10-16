@@ -13000,6 +13000,12 @@ abstract class AppLocalizations {
   /// **'Your device can\'t export this many detached clips at once. Put a few back on the timeline and try again.'**
   String get publishErrorTooManyDetachedClips;
 
+  /// Shown when posting a draft straight from the Library fails because the device could not decode every clip detached onto the editor canvas at the same time. The Library has no timeline, so it sends the user to the editor (like publishErrorOverlaysUnavailable) to move some detached clips back onto the timeline (videoEditorReattachLabel). Use the same nouns as this locale's publishErrorTooManyDetachedClips and publishErrorOverlaysUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Your device can\'t export this many detached clips at once. Open the draft in the editor, put a few back on the timeline, then post again.'**
+  String get publishErrorDraftTooManyDetachedClips;
+
   /// No description provided for @publishErrorUnknownServer.
   ///
   /// In en, this message translates to:

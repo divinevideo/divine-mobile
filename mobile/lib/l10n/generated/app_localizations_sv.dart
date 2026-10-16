@@ -7669,6 +7669,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Din enhet kan inte exportera så många lossade klipp på en gång. Lägg tillbaka några på tidslinjen och försök igen.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Din enhet kan inte exportera så många lossade klipp på en gång. Öppna utkastet i redigeraren, lägg tillbaka några på tidslinjen och posta igen.';
+
+  @override
   String get publishErrorUnknownServer => 'Okänd server';
 
   @override

@@ -48,6 +48,7 @@
     "publishErrorOutOfMemory": "Dispozitivul are puțină memorie disponibilă. Închide câteva aplicații și încearcă din nou.",
     "publishErrorOverlaysUnavailable": "Textul și stickerele din această schiță nu au putut fi pregătite. Deschide-o în editor, apoi postează din nou.",
     "publishErrorTooManyDetachedClips": "Dispozitivul tău nu poate exporta atâtea clipuri desprinse deodată. Pune câteva înapoi pe cronologie și încearcă din nou.",
+    "publishErrorDraftTooManyDetachedClips": "Dispozitivul tău nu poate exporta atâtea clipuri desprinse deodată. Deschide schița în editor, pune câteva înapoi pe cronologie, apoi postează din nou.",
     "publishErrorUnknownServer": "Server necunoscut",
     "dmReactionsSheetTitle": "Reacții",
     "dmReactionsViewA11yLabel": "Vezi cine a reacționat",

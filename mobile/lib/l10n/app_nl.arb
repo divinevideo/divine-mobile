@@ -48,6 +48,7 @@
     "publishErrorOutOfMemory": "Je apparaat heeft weinig werkgeheugen. Sluit een paar apps en probeer het opnieuw.",
     "publishErrorOverlaysUnavailable": "De tekst en stickers van dit concept konden niet worden voorbereid. Open het in de editor en post opnieuw.",
     "publishErrorTooManyDetachedClips": "Je apparaat kan niet zoveel losgemaakte clips tegelijk exporteren. Zet er een paar terug op de tijdlijn en probeer het opnieuw.",
+    "publishErrorDraftTooManyDetachedClips": "Je apparaat kan niet zoveel losgemaakte clips tegelijk exporteren. Open het concept in de editor, zet er een paar terug op de tijdlijn en post opnieuw.",
     "publishErrorUnknownServer": "Onbekende server",
     "dmReactionsSheetTitle": "Reacties",
     "dmReactionsViewA11yLabel": "Bekijk wie heeft gereageerd",

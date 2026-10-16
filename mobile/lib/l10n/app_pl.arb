@@ -48,6 +48,7 @@
     "publishErrorOutOfMemory": "Za mało pamięci operacyjnej urządzenia. Zamknij kilka aplikacji i spróbuj ponownie.",
     "publishErrorOverlaysUnavailable": "Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i opublikuj ponownie.",
     "publishErrorTooManyDetachedClips": "Twoje urządzenie nie może wyeksportować naraz tylu odłączonych klipów. Przywróć kilka na oś czasu i spróbuj ponownie.",
+    "publishErrorDraftTooManyDetachedClips": "Twoje urządzenie nie może wyeksportować naraz tylu odłączonych klipów. Otwórz wersję roboczą w edytorze, przywróć kilka na oś czasu i opublikuj ponownie.",
     "publishErrorUnknownServer": "Nieznany serwer",
     "dmReactionsSheetTitle": "Reakcje",
     "dmReactionsViewA11yLabel": "Zobacz, kto zareagował",

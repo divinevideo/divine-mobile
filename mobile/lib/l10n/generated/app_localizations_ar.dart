@@ -7657,6 +7657,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا يستطيع جهازك تصدير هذا العدد من المقاطع المفصولة دفعة واحدة. يُرجى إرجاع بعضها إلى الجدول الزمني ثم المحاولة مرّة أخرى.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'لا يستطيع جهازك تصدير هذا العدد من المقاطع المفصولة دفعة واحدة. يُرجى فتح المسودة في المحرّر وإرجاع بعض المقاطع إلى الجدول الزمني ثم النشر مرّة أخرى.';
+
+  @override
   String get publishErrorUnknownServer => 'خادم غير معروف';
 
   @override

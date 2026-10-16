@@ -535,7 +535,8 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           // device out of storage gets the same message an upload would
           // (#7125), a sound that could not be fetched gets the
           // server-unreachable one, and more detached clips than the device
-          // can decode get the one that says to put some back (#10141).
+          // can decode send the user to the editor to put some back: there is
+          // no timeline here (#10141).
           final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));
           final (message, analyticsReason) = switch (error.reason) {
             VideoRenderFailureReason.stopMotionAssembly => (
@@ -552,7 +553,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
               'render_audio_unavailable',
             ),
             VideoRenderFailureReason.tooManyDetachedClips => (
-              l10n.publishErrorTooManyDetachedClips,
+              l10n.publishErrorDraftTooManyDetachedClips,
               'render_too_many_detached_clips',
             ),
             _ => (

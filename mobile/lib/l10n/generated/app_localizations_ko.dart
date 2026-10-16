@@ -7302,6 +7302,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '이 기기에서는 분리한 클립을 한 번에 이만큼 내보낼 수 없어요. 몇 개를 타임라인으로 되돌린 뒤 다시 시도해 주세요.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      '이 기기에서는 분리한 클립을 한 번에 이만큼 내보낼 수 없어요. 편집기에서 초안을 열고 몇 개를 타임라인으로 되돌린 뒤 다시 게시해 주세요.';
+
+  @override
   String get publishErrorUnknownServer => '알 수 없는 서버';
 
   @override

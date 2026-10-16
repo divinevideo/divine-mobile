@@ -48,6 +48,7 @@
     "publishErrorOutOfMemory": "Enheten har ont om minne. Stäng några appar och försök igen.",
     "publishErrorOverlaysUnavailable": "Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och posta igen.",
     "publishErrorTooManyDetachedClips": "Din enhet kan inte exportera så många lossade klipp på en gång. Lägg tillbaka några på tidslinjen och försök igen.",
+    "publishErrorDraftTooManyDetachedClips": "Din enhet kan inte exportera så många lossade klipp på en gång. Öppna utkastet i redigeraren, lägg tillbaka några på tidslinjen och posta igen.",
     "publishErrorUnknownServer": "Okänd server",
     "dmReactionsSheetTitle": "Reaktioner",
     "dmReactionsViewA11yLabel": "Se vilka som reagerat",

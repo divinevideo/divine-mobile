@@ -7283,6 +7283,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'この端末では、切り離したクリップをこれほど多く同時に書き出せません。いくつかをタイムラインに戻してから、もう一度お試しください。';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'この端末では、切り離したクリップをこれほど多く同時に書き出せません。下書きをエディタで開き、いくつかをタイムラインに戻してから、もう一度投稿してください。';
+
+  @override
   String get publishErrorUnknownServer => '不明なサーバー';
 
   @override

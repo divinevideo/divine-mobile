@@ -7777,6 +7777,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dein Gerät kann so viele abgelöste Clips nicht auf einmal exportieren. Leg ein paar zurück auf die Timeline und versuch es erneut.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Dein Gerät kann so viele abgelöste Clips nicht auf einmal exportieren. Öffne den Entwurf im Editor, leg ein paar zurück auf die Timeline und poste dann erneut.';
+
+  @override
   String get publishErrorUnknownServer => 'Unbekannter Server';
 
   @override

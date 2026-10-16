@@ -7681,6 +7681,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کی ڈیوائس ایک ساتھ اتنے زیادہ الگ کیے گئے کلپس ایکسپورٹ نہیں کر سکتی۔ کچھ کلپس واپس ٹائم لائن پر رکھیں اور دوبارہ کوشش کریں۔';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'آپ کی ڈیوائس ایک ساتھ اتنے زیادہ الگ کیے گئے کلپس ایکسپورٹ نہیں کر سکتی۔ مسودے کو ایڈیٹر میں کھولیں، کچھ کلپس واپس ٹائم لائن پر رکھیں، پھر دوبارہ پوسٹ کریں۔';
+
+  @override
   String get publishErrorUnknownServer => 'نامعلوم سرور';
 
   @override

@@ -7762,6 +7762,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Rimettine alcune nella timeline e riprova.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Apri la bozza nell’editor, rimettine alcune nella timeline e ripubblica.';
+
+  @override
   String get publishErrorUnknownServer => 'Server sconosciuto';
 
   @override

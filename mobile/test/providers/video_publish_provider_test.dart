@@ -944,7 +944,7 @@ void main() {
             SnackBar,
             lookupAppLocalizations(
               const Locale('en'),
-            ).publishErrorTooManyDetachedClips,
+            ).publishErrorDraftTooManyDetachedClips,
           ),
           findsOneWidget,
         );

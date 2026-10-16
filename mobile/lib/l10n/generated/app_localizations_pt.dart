@@ -7740,6 +7740,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Seu dispositivo não consegue exportar tantos clipes separados de uma vez. Devolva alguns à linha do tempo e tente novamente.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Seu dispositivo não consegue exportar tantos clipes separados de uma vez. Abra o rascunho no editor, devolva alguns à linha do tempo e poste de novo.';
+
+  @override
   String get publishErrorUnknownServer => 'Servidor desconhecido';
 
   @override

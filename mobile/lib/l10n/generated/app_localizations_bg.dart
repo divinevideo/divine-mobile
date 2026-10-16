@@ -7751,6 +7751,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Устройството ти не може да експортира толкова много откачени клипове наведнъж. Върни няколко на времевата линия и опитай пак.';
 
   @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Устройството ти не може да експортира толкова много откачени клипове наведнъж. Отвори черновата в редактора, върни няколко на времевата линия и публикувай пак.';
+
+  @override
   String get publishErrorUnknownServer => 'Неизвестен сървър';
 
   @override
