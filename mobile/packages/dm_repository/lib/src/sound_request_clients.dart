@@ -58,9 +58,9 @@ abstract interface class SoundRequestTransport {
 /// A send policy rejected the intent before any durable DM was queued.
 ///
 /// Unlike a transport failure, this must not be retried in the background.
-class SoundRequestSendRefused implements Exception {
+class SoundRequestSendRefused extends SoundRequestException {
   /// Creates a terminal refusal without carrying message or account data.
-  const SoundRequestSendRefused();
+  const SoundRequestSendRefused() : super('Sound request delivery refused');
 }
 
 /// Persistence boundary for account-specific request checkpoints.

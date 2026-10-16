@@ -187,13 +187,17 @@ class SoundRequestsRepository {
     for (final MapEntry(key: address, value: ids) in pendingByAddress.entries) {
       final approved = _state.approvedVideos.contains(address);
       // History re-emits on every DM write. An unapproved request is checked
-      // against current reuse once per session; only the creator's own
-      // approvals keep polling while policy indexing catches up.
+      // against current reuse once per session. Explicit approvals and
+      // automatic fulfillment awaiting sound/policy indexing keep rechecking.
       final unchecked = ids.where((id) => !_reconciledRequests.contains(id));
+      final awaitingPolicy = ids.any(
+        (id) =>
+            _state.requests[id]?.status == SoundRequestStatus.awaitingPolicy,
+      );
       try {
         if (approved && !_attemptedVideos.contains(address)) {
           await _publishFor(address);
-        } else if (approved || unchecked.isNotEmpty) {
+        } else if (approved || awaitingPolicy || unchecked.isNotEmpty) {
           final source = await _publisher.resolve(address);
           _checkOpen();
           _reconciledRequests.addAll(ids);

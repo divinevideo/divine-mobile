@@ -150,6 +150,29 @@ void main() {
     });
     tearDown(() => live.close());
 
+    test('automatic fulfillment rechecks pending sound availability', () async {
+      final request = requestMessage(viewer, '1' * 64);
+      final publisher = Publisher()
+        ..enabled = true
+        ..policyVerified = false;
+      final repo = repository(creator, transport, MemoryStore(), publisher);
+      addTearDown(repo.close);
+      live.add([request]);
+      await repo.start();
+      expect(
+        repo.state.requests[request.id]?.status,
+        SoundRequestStatus.awaitingPolicy,
+      );
+      expect(transport.delivered, isEmpty);
+      publisher.policyVerified = true;
+      live.add([request]);
+      await pumpEventQueue();
+      expect(repo.state.requests[request.id]?.status, SoundRequestStatus.ready);
+      expect(transport.delivered, hasLength(1));
+      expect(publisher.audioPublishes, 0);
+      expect(publisher.metadataPublishes, 0);
+    });
+
     test('unchanged history does not look up pending requests again', () async {
       final a = requestMessage(viewer, '1' * 64);
       final publisher = Publisher();
