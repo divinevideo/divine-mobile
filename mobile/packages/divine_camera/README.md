@@ -71,7 +71,9 @@ per recording through CameraX. Three rules govern when the iOS mic is open:
   AudioToolbox load, `startRunning`) is paid off the record tap.
 - **Released on pause** — `pausePreview(releaseAudio: true)` stops it and
   deactivates the shared `AVAudioSession`, so a locked phone shows no recording
-  indicator (#5869). `resumePreview()` reattaches.
+  indicator (#5869). `resumePreview()` reattaches. A take whose file is still
+  being written keeps the mic until the writer finishes, which then releases
+  it if the preview is still paused (#10195).
 - **Closed for the countdown** — `suspendAudioCapture()` stops it before the
   countdown beeps play out of the speaker and `resumeAudioCapture()` reopens
   it after the last beep (#4539). With the mic open through the beeps, the
@@ -82,7 +84,8 @@ per recording through CameraX. Three rules govern when the iOS mic is open:
   countdown never records without audio.
 
 `attachAudioToSessionIfNeeded()` is the single reopen path for all three, and
-`ios_countdown_mic_release_contract_test.dart` pins the countdown rules.
+`ios_countdown_mic_release_contract_test.dart` pins the countdown rules and
+`ios_pause_mic_release_contract_test.dart` the hold while a take is written.
 
 macOS runs the same dedicated audio session without an `AVAudioSession` to
 configure, and keeps the mic open through the countdown: the input-level

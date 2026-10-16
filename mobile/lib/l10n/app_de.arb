@@ -47,6 +47,8 @@
     "publishErrorPermissionDenied": "Divine hat keine Berechtigung zum Hochladen. Prüfe die App-Berechtigungen in den Einstellungen und versuch es erneut.",
     "publishErrorOutOfMemory": "Dein Gerät hat wenig Arbeitsspeicher. Schließe ein paar Apps und versuch es erneut.",
     "publishErrorOverlaysUnavailable": "Text und Sticker dieses Entwurfs konnten nicht vorbereitet werden. Öffne ihn im Editor und poste dann erneut.",
+    "publishErrorTooManyDetachedClips": "Dein Gerät kann so viele abgelöste Clips nicht auf einmal exportieren. Leg ein paar zurück auf die Timeline und versuch es erneut.",
+    "publishErrorDraftTooManyDetachedClips": "Dein Gerät kann so viele abgelöste Clips nicht auf einmal exportieren. Öffne den Entwurf im Editor, leg ein paar zurück auf die Timeline und poste dann erneut.",
     "publishErrorUnknownServer": "Unbekannter Server",
     "dmReactionsSheetTitle": "Reaktionen",
     "dmReactionsViewA11yLabel": "Sehen, wer reagiert hat",

@@ -124,6 +124,12 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   /// the still over live video — once per remount.
   bool _resumed = false;
 
+  /// The editor's word that an export holds the decoders, or `null` outside
+  /// the editor.
+  ValueNotifier<bool>? _previewReleased;
+
+  bool get _isPreviewReleased => _previewReleased?.value ?? false;
+
   @override
   void initState() {
     super.initState();
@@ -197,7 +203,47 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _listenForPreviewRelease(
+      VideoEditorScope.maybeOf(context)?.previewReleasedNotifier,
+    );
     _follow();
+  }
+
+  void _listenForPreviewRelease(ValueNotifier<bool>? released) {
+    if (identical(released, _previewReleased)) return;
+    final wasReleased = _isPreviewReleased;
+    _previewReleased?.removeListener(_onPreviewReleasedChanged);
+    _previewReleased = released?..addListener(_onPreviewReleasedChanged);
+    // initState may have resumed a pooled player before the scope was known,
+    // and a layer the old notifier held back needs its player again.
+    if (_isPreviewReleased != wasReleased) _onPreviewReleasedChanged();
+  }
+
+  /// Gives the player back while an export holds the decoders, and opens a
+  /// new one once the editor has them again.
+  ///
+  /// Lets go synchronously, so the canvas finds every player idle right after
+  /// it flips the notifier and can tear them all down before the export.
+  void _onPreviewReleasedChanged() {
+    if (!_isPreviewReleased) {
+      unawaited(_load());
+      return;
+    }
+    // Also supersedes a load still in flight, which lets go of its player as
+    // soon as it lands.
+    _loadGeneration++;
+    _player?.detach();
+    _releaseHeldPlayer();
+    // The next player is a new one, so it fades in over the poster again.
+    _resumed = false;
+    if (_player != null) setState(() => _player = null);
+  }
+
+  /// Gives the pooled player this layer holds back to [detachedClipPlayers].
+  void _releaseHeldPlayer() {
+    final key = _heldKey;
+    if (key != null) detachedClipPlayers.release(key);
+    _heldKey = null;
   }
 
   /// Points the player at the playhead and the layer's current time window.
@@ -257,14 +303,14 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
 
   @override
   void dispose() {
+    _previewReleased?.removeListener(_onPreviewReleasedChanged);
+    _previewReleased = null;
     _loadGeneration++;
     // Detached, not torn down: the registry holds the player briefly so the
     // remount that follows a drag picks the same one back up, mid-playback.
     _player?.detach();
-    final key = _heldKey;
-    if (key != null) detachedClipPlayers.release(key);
+    _releaseHeldPlayer();
     _player = null;
-    _heldKey = null;
     super.dispose();
   }
 
@@ -272,18 +318,21 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     final generation = ++_loadGeneration;
     bool superseded() => !mounted || generation != _loadGeneration;
 
-    final previousKey = _heldKey;
     _player?.detach();
-    _heldKey = null;
 
     final key = detachedClipPlayerKey(widget.meta);
     final documentsPath = await getDocumentsPath();
+    // Keep ownership visible across every await: a release signal or dispose
+    // must be able to return even a player that has not finished opening.
     if (superseded()) return;
 
     final data = DetachedClipLayerData.fromMeta(widget.meta, documentsPath);
     final clip = data?.clip;
     if (clip == null || key == null) {
-      if (previousKey != null) detachedClipPlayers.release(previousKey);
+      _releaseHeldPlayer();
+      // The pool tears the given-back player down, so stop drawing it.
+      _resumed = false;
+      if (_player != null) setState(() => _player = null);
       return;
     }
     setState(() {
@@ -291,20 +340,27 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
       _chromaKey = data?.chromaKey;
     });
 
-    final player = await detachedClipPlayers.acquire(
+    // An export holds the decoders: show the poster for now, and load again
+    // when the editor gets them back.
+    if (_isPreviewReleased) {
+      _releaseHeldPlayer();
+      return;
+    }
+
+    final previousKey = _heldKey;
+    final opening = detachedClipPlayers.acquire(
       key,
       () => DetachedClipPlayer.open(clip),
     );
     // Released only after the acquire, so reloading onto the same source keeps
     // the entry alive instead of dropping it to zero refs in between.
     if (previousKey != null) detachedClipPlayers.release(previousKey);
-
-    if (superseded()) {
-      detachedClipPlayers.release(key);
-      return;
-    }
-
     _heldKey = key;
+    final player = await opening;
+
+    // The superseding load, release signal or dispose owns the reference now.
+    if (superseded()) return;
+
     setState(() => _player = player);
     // `superseded()` above already proved this state is still mounted, but the
     // lint cannot see through the closure.

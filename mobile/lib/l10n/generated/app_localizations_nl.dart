@@ -7707,6 +7707,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'De tekst en stickers van dit concept konden niet worden voorbereid. Open het in de editor en post opnieuw.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Je apparaat kan niet zoveel losgemaakte clips tegelijk exporteren. Zet er een paar terug op de tijdlijn en probeer het opnieuw.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Je apparaat kan niet zoveel losgemaakte clips tegelijk exporteren. Open het concept in de editor, zet er een paar terug op de tijdlijn en post opnieuw.';
+
+  @override
   String get publishErrorUnknownServer => 'Onbekende server';
 
   @override

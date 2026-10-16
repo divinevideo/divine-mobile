@@ -7767,6 +7767,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then post again.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Your device can\'t export this many detached clips at once. Put a few back on the timeline and try again.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Your device can\'t export this many detached clips at once. Open the draft in the editor, put a few back on the timeline, then post again.';
+
+  @override
   String get publishErrorUnknownServer => 'Unknown server';
 
   @override

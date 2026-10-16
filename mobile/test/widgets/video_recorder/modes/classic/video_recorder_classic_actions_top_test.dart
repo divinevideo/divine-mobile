@@ -30,6 +30,8 @@ void main() {
       when(() => recorderBloc.state).thenReturn(const VideoRecorderBlocState());
     });
 
+    late _TestClipManagerNotifier clipManager;
+
     Widget buildWidget({
       VideoRecorderState recordingState = VideoRecorderState.idle,
       List<DivineVideoClip>? clips,
@@ -44,7 +46,7 @@ void main() {
       return ProviderScope(
         overrides: [
           clipManagerProvider.overrideWith(
-            () => _TestClipManagerNotifier(clips: clips ?? []),
+            () => clipManager = _TestClipManagerNotifier(clips: clips ?? []),
           ),
         ],
         child: BlocProvider<VideoRecorderBloc>.value(
@@ -185,6 +187,63 @@ void main() {
         expect(opacity.opacity, equals(0));
       });
     });
+
+    group('interactions', () {
+      DivineVideoClip clip() => DivineVideoClip(
+        id: 'clip1',
+        video: EditorVideo.file('/test/clip1.mp4'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime.now(),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      testWidgets('deletes the last clip when the button is tapped', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(clips: [clip()]));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DivineIconButton));
+        await tester.pump();
+
+        expect(clipManager.deleteLastClipCalls, equals(1));
+        expect(find.byType(SnackBar), findsOneWidget);
+      });
+
+      // The row only fades out while recording, and a fully transparent
+      // button still takes taps. A tap mid-take deletes the last clip.
+      testWidgets('ignores taps on the hidden button while recording', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recordingState: VideoRecorderState.recording,
+            clips: [clip()],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DivineIconButton), warnIfMissed: false);
+        await tester.pump();
+
+        expect(clipManager.deleteLastClipCalls, isZero);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
+      testWidgets('ignores taps on the hidden button with no clips', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DivineIconButton), warnIfMissed: false);
+        await tester.pump();
+
+        expect(clipManager.deleteLastClipCalls, isZero);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+    });
   });
 }
 
@@ -194,8 +253,13 @@ class _TestClipManagerNotifier extends ClipManagerNotifier {
   @override
   final List<DivineVideoClip> clips;
 
+  int deleteLastClipCalls = 0;
+
   @override
   ClipManagerState build() {
     return ClipManagerState(clips: clips);
   }
+
+  @override
+  Future<void> scheduleDeleteLastClip() async => deleteLastClipCalls++;
 }

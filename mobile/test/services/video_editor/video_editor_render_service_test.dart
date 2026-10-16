@@ -1689,6 +1689,34 @@ void main() {
       expect(reported, [same(failure)]);
     });
 
+    test(
+      'the export still reports a device out of decoders (#10141)',
+      () async {
+        const cause = RenderEncoderException.transient('codec exhausted');
+        failRenderWith(
+          const VideoRenderFailedException(
+            VideoRenderFailureReason.tooManyDetachedClips,
+            cause: cause,
+          ),
+        );
+
+        await expectLater(
+          VideoEditorRenderService.renderVideoToClip(
+            clips: [clip('a', const Duration(seconds: 1))],
+            editorStateHistory: const {},
+          ),
+          throwsA(
+            isA<VideoRenderFailedException>().having(
+              (e) => e.reason,
+              'reason',
+              VideoRenderFailureReason.tooManyDetachedClips,
+            ),
+          ),
+        );
+        expect(reported, [same(cause)]);
+      },
+    );
+
     test('a recoverable caller does not report a native failure', () async {
       failRenderWith(PlatformException(code: 'RENDER_ERROR'));
 

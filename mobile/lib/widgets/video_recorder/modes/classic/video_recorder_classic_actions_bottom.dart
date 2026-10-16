@@ -21,66 +21,76 @@ class VideoRecorderClassicActionsBottom extends StatelessWidget {
     final state = context.select(
       (VideoRecorderBloc b) => (
         isRecording: b.state.isRecording,
+        hasRecordingInFlight: b.state.hasRecordingInFlight,
         isFrontCamera: b.state.isFrontCamera,
         showGridLines: b.state.showGridLines,
         showLastClipOverlay: b.state.showLastClipOverlay,
       ),
     );
 
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 220),
-      opacity: state.isRecording ? 0 : 1,
-      child: Row(
-        spacing: 24,
-        mainAxisAlignment: .center,
-        children: [
-          DivineIconButton(
-            icon: .arrowsCounterClockwise,
-            semanticLabel: l10n.videoRecorderSwitchCameraLabel,
-            semanticIdentifier: SemanticIds.cameraSwitchCameraButton,
-            semanticValue: DivineCameraLens.allCamerasFaceUser
-                ? null
-                : state.isFrontCamera
-                ? l10n.videoRecorderCameraValueFront
-                : l10n.videoRecorderCameraValueBack,
-            size: .small,
-            type: .ghostSecondary,
-            onPressed: () => context.read<VideoRecorderBloc>().add(
-              const VideoRecorderCameraSwitched(),
+    // Faded out is not gone: without this the hidden flip button still takes
+    // taps mid-take, and a flip ends the take.
+    return IgnorePointer(
+      ignoring: state.isRecording,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 220),
+        opacity: state.isRecording ? 0 : 1,
+        child: Row(
+          spacing: 24,
+          mainAxisAlignment: .center,
+          children: [
+            DivineIconButton(
+              icon: .arrowsCounterClockwise,
+              semanticLabel: l10n.videoRecorderSwitchCameraLabel,
+              semanticIdentifier: SemanticIds.cameraSwitchCameraButton,
+              semanticValue: DivineCameraLens.allCamerasFaceUser
+                  ? null
+                  : state.isFrontCamera
+                  ? l10n.videoRecorderCameraValueFront
+                  : l10n.videoRecorderCameraValueBack,
+              size: .small,
+              type: .ghostSecondary,
+              // The recorder refuses a flip while a take starts or finishes,
+              // so show it disabled instead of dropping the tap.
+              onPressed: state.hasRecordingInFlight
+                  ? null
+                  : () => context.read<VideoRecorderBloc>().add(
+                      const VideoRecorderCameraSwitched(),
+                    ),
             ),
-          ),
-          DivineIconButton(
-            icon: .gridNine,
-            semanticLabel: l10n.videoRecorderToggleGridLabel,
-            semanticIdentifier: SemanticIds.cameraGridButton,
-            semanticToggled: state.showGridLines,
-            size: .small,
-            type: .ghostSecondary,
-            onPressed: () => context.read<VideoRecorderBloc>().add(
-              const VideoRecorderGridLinesToggled(),
+            DivineIconButton(
+              icon: .gridNine,
+              semanticLabel: l10n.videoRecorderToggleGridLabel,
+              semanticIdentifier: SemanticIds.cameraGridButton,
+              semanticToggled: state.showGridLines,
+              size: .small,
+              type: .ghostSecondary,
+              onPressed: () => context.read<VideoRecorderBloc>().add(
+                const VideoRecorderGridLinesToggled(),
+              ),
             ),
-          ),
-          DivineIconButton(
-            icon: .ghost,
-            semanticLabel: l10n.videoRecorderToggleGhostFrameLabel,
-            semanticIdentifier: SemanticIds.cameraGhostFrameButton,
-            semanticToggled: state.showLastClipOverlay,
-            size: .small,
-            type: .ghostSecondary,
-            onPressed: () {
-              final enabled = !state.showLastClipOverlay;
-              context.read<VideoRecorderBloc>().add(
-                const VideoRecorderShowLastClipOverlayToggled(),
-              );
-              _showSnackBar(
-                context,
-                enabled
-                    ? l10n.videoRecorderGhostFrameEnabled
-                    : l10n.videoRecorderGhostFrameDisabled,
-              );
-            },
-          ),
-        ],
+            DivineIconButton(
+              icon: .ghost,
+              semanticLabel: l10n.videoRecorderToggleGhostFrameLabel,
+              semanticIdentifier: SemanticIds.cameraGhostFrameButton,
+              semanticToggled: state.showLastClipOverlay,
+              size: .small,
+              type: .ghostSecondary,
+              onPressed: () {
+                final enabled = !state.showLastClipOverlay;
+                context.read<VideoRecorderBloc>().add(
+                  const VideoRecorderShowLastClipOverlayToggled(),
+                );
+                _showSnackBar(
+                  context,
+                  enabled
+                      ? l10n.videoRecorderGhostFrameEnabled
+                      : l10n.videoRecorderGhostFrameDisabled,
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

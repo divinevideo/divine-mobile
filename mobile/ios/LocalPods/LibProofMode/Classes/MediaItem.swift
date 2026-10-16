@@ -103,11 +103,18 @@ open class MediaItem: NSObject {
         super.init()
     }
     
+    /// Divine-local (#10197): a file is hashed and signed by streaming it, so
+    /// it is never read into `data`. A whole recording there can be more
+    /// memory than iOS allows the app.
+    var streamsFromFile: Bool {
+        asset == nil && mediaUrl != nil
+    }
+
     func createProof(options: ProofGenerationOptions, done:@escaping (Bool)->Void) {
         self.isGeneratingProof = true
-        withData { data in
+        withData(onlyMeta: streamsFromFile) { data in
             self.data = data
-            if self.data != nil {
+            if self.data != nil || self.streamsFromFile {
                 self.mediaItemHash = Proof.shared.getProof(for: self, force: self.forceGenerateProof, options: options)
                 self.isGeneratingProof = false
                 done(true)
@@ -119,7 +126,7 @@ open class MediaItem: NSObject {
     }
 
     public func getProofData(done: @escaping ([String: String]?) -> Void) {
-        withData { data in
+        withData(onlyMeta: streamsFromFile) { data in
             self.data = data
             done(Proof.shared.getProofData(mediaItem: self))
         }

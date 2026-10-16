@@ -7773,6 +7773,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Text und Sticker dieses Entwurfs konnten nicht vorbereitet werden. Öffne ihn im Editor und poste dann erneut.';
 
   @override
+  String get publishErrorTooManyDetachedClips =>
+      'Dein Gerät kann so viele abgelöste Clips nicht auf einmal exportieren. Leg ein paar zurück auf die Timeline und versuch es erneut.';
+
+  @override
+  String get publishErrorDraftTooManyDetachedClips =>
+      'Dein Gerät kann so viele abgelöste Clips nicht auf einmal exportieren. Öffne den Entwurf im Editor, leg ein paar zurück auf die Timeline und poste dann erneut.';
+
+  @override
   String get publishErrorUnknownServer => 'Unbekannter Server';
 
   @override

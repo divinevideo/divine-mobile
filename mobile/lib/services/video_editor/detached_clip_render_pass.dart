@@ -105,6 +105,11 @@ class DetachedClipRenderPass {
   /// [VideoEditorRenderService.buildImageLayers].
   ///
   /// Returns [basePath] unchanged when there is nothing to composite.
+  ///
+  /// Throws a [VideoRenderFailedException] with
+  /// [VideoRenderFailureReason.tooManyDetachedClips] when Android still cannot
+  /// start a decoder after every retry (#10141). Any other
+  /// [RenderEncoderException], a starved encoder included, is rethrown as is.
   Future<String> composite({
     required List<DivineVideoClip> clips,
     required Size? bodySize,
@@ -194,16 +199,41 @@ class DetachedClipRenderPass {
       ),
     );
 
-    await VideoEditorRenderService.renderWithEncoderFallback(
-      baseTask: task,
-      encode: (attemptTask) => VideoEditorRenderService.renderNativeVideoToFile(
-        finalOutputPath,
-        attemptTask,
-        reuseActiveCancellation: true,
-      ),
-      fallbackAspectRatio: aspectRatio,
-      ownerTaskId: taskId,
-    );
+    try {
+      await VideoEditorRenderService.renderWithEncoderFallback(
+        baseTask: task,
+        encode: (attemptTask) =>
+            VideoEditorRenderService.renderNativeVideoToFile(
+              finalOutputPath,
+              attemptTask,
+              reuseActiveCancellation: true,
+            ),
+        fallbackAspectRatio: aspectRatio,
+        ownerTaskId: taskId,
+      );
+    } on RenderEncoderException catch (error, stackTrace) {
+      // A decoder still out of reach after every retry: this pass decodes all
+      // detached clips at once, one decoder each, and on a Galaxy S26 that is
+      // how 12 of them failed (#10141). Fewer detached clips fix it; a starved
+      // encoder, or one the platform does not name, they would not.
+      if (error.codecKind != RenderCodecKind.decoder) rethrow;
+      Log.warning(
+        '⚠️ Could not get a decoder for each of '
+        '${partitioned.detached.length} detached clip(s): $error',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      // Thrown with the native failure's own stack, so the crash report the
+      // export sends for it matches the one it sent before this had a reason
+      // of its own.
+      Error.throwWithStackTrace(
+        VideoRenderFailedException(
+          VideoRenderFailureReason.tooManyDetachedClips,
+          cause: error,
+        ),
+        stackTrace,
+      );
+    }
 
     return finalOutputPath;
   }

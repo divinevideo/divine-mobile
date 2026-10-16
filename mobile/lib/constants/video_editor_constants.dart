@@ -279,6 +279,11 @@ class VideoEditorConstants {
   /// at the latest after this.
   static const coverTransitionTimeout = Duration(milliseconds: 1500);
 
+  /// Maximum time the export waits for the preview and detached-clip players
+  /// to release their decoders. A release normally takes well under a second;
+  /// a native call that never returns must not keep the export from starting.
+  static const decoderReleaseTimeout = Duration(seconds: 10);
+
   /// Primary accent color used in the video editor UI.
   static const primaryColor = Color(0xFFFFF140);
 

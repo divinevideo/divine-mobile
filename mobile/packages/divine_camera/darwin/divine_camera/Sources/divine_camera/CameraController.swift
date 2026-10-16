@@ -237,6 +237,11 @@ class CameraController: NSObject {
     private var currentFlashMode: AVCaptureDevice.FlashMode = .off
     private var currentTorchMode: AVCaptureDevice.TorchMode = .off
     private var isRecording: Bool = false
+    /// True from the moment a stop ends the recording until its asset
+    /// writer has finished. The writer still needs the audio session then:
+    /// deactivating it under a running `finishWriting` fails the file with
+    /// "Operation Interrupted" (#10195). Main queue only.
+    private var isFinalizingRecording = false
     private var isPaused: Bool = false
     /// Set by `suspendAudioCapture()` and cleared by everything that reopens
     /// the mic on purpose — `resumeAudioCapture()`, the record tap and
@@ -3046,6 +3051,7 @@ class CameraController: NSObject {
         _recordingWindow?.stop = stopPTS
         recordingWindowLock.unlock()
         isRecording = false
+        isFinalizingRecording = true
 
         videoOutputQueue.async { [weak self] in
             guard let self = self else { return }
@@ -3228,12 +3234,12 @@ class CameraController: NSObject {
                 self.recordingStartTime = nil
                 self.isWriterSessionStarted = false
                 self.lastVideoFrameEndPTS = nil
+                self.isFinalizingRecording = false
 
-                // pausePreview() keeps the mic attached while a
-                // recording is draining. If the preview is still
-                // paused now (app locked mid-recording), release the
-                // mic so the lock screen stops showing the recording
-                // indicator.
+                // pausePreview() keeps the mic attached until the file
+                // is written. If the preview is still paused now (app
+                // locked mid-recording), release the mic so the lock
+                // screen stops showing the recording indicator.
                 if self.isPaused {
                     self.sessionQueue.async { [weak self] in
                         guard let self = self,
@@ -3321,17 +3327,21 @@ class CameraController: NSObject {
         // `.inactive` pausePreview() that precedes this call has usually
         // already stopped it — so this is the path that runs when no
         // interruption notification ever arrives.
-        let salvaging = releaseAudio && isRecording
-        if salvaging {
+        if releaseAudio && isRecording {
             salvageInterruptedRecording(reason: "app backgrounded")
         }
+        // Read here on main, where a stop sets it. Backgrounding pauses
+        // twice (`.hidden`, then `.paused`), and the second pause lands
+        // while the first one's salvage is still being written (#10195).
+        let finalizing = isFinalizingRecording
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
             self.captureSession?.stopRunning()
-            // Keep the mic while a recording drains — including the one
-            // just finalized above; stopRecording() releases it if the
-            // preview is still paused once the file is finalized.
-            if releaseAudio, !salvaging, !self.isRecording {
+            // Keep the mic while a recording is open or its file is still
+            // being written — including the one just salvaged above;
+            // finalizeRecording() releases it if the preview is still
+            // paused once the file is written.
+            if releaseAudio, !finalizing, !self.isRecording {
                 self.releaseAudioForPause()
             }
         }

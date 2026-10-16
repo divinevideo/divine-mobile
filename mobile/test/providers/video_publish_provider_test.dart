@@ -920,6 +920,36 @@ void main() {
         );
       });
 
+      testWidgets('tells the user to put detached clips back when the device '
+          'ran out of decoders (#10141)', (tester) async {
+        final container = await pumpHarness(tester);
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async => throw const VideoRenderFailedException(
+              VideoRenderFailureReason.tooManyDetachedClips,
+            );
+
+        final context = tester.element(find.byType(SizedBox));
+        await container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(context, draft());
+        await tester.pump();
+
+        expect(
+          find.widgetWithText(
+            SnackBar,
+            lookupAppLocalizations(
+              const Locale('en'),
+            ).publishErrorDraftTooManyDetachedClips,
+          ),
+          findsOneWidget,
+        );
+      });
+
       testWidgets('reports a failed stop-motion assembly in its own words', (
         tester,
       ) async {
