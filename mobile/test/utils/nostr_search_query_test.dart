@@ -1,5 +1,7 @@
 // ABOUTME: Tests the Nostr-identifier classifier and resolver behind search.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -159,6 +161,26 @@ void main() {
         equals(NostrKeyUtils.encodePubKey(hexId)),
       );
     });
+
+    test(
+      'opens a found video without waiting for the profile lookup',
+      () async {
+        // A pasted event id is the common case, and the profile lookup for it
+        // can only miss after REST, relays and indexers have all answered.
+        final profileLookup = Completer<bool>();
+        var resolved = false;
+        final pending = resolver(
+          profileExists: (_) => profileLookup.future,
+          videoExists: (routeId) async => routeId == hexId,
+        ).resolve(hexId).whenComplete(() => resolved = true);
+
+        await pumpEventQueue();
+        expect(resolved, isTrue);
+
+        profileLookup.complete(false);
+        expect(await pending, isA<OpenVideoAction>());
+      },
+    );
 
     test('prefers the video when a bare hex somehow names both', () async {
       final action = await resolver(

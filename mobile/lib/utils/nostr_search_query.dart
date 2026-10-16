@@ -139,12 +139,13 @@ class NostrIdSearchResolver {
       case NostrVideoTarget(:final routeId):
         return OpenVideoAction(routeId);
       case NostrAmbiguousTarget(:final hex):
-        final hits = await Future.wait([
-          _orFalse(() => videoExists(hex)),
-          _orFalse(() => profileExists(hex)),
-        ]);
-        if (hits[0]) return OpenVideoAction(hex);
-        if (hits[1]) {
+        // Both lookups start together, but a found video does not wait for
+        // the profile lookup, which for an event id can only miss after
+        // every profile source has answered.
+        final videoHit = _orFalse(() => videoExists(hex));
+        final profileHit = _orFalse(() => profileExists(hex));
+        if (await videoHit) return OpenVideoAction(hex);
+        if (await profileHit) {
           final npub = normalizeToNpub(hex);
           if (npub != null) return OpenProfileAction(npub);
         }
