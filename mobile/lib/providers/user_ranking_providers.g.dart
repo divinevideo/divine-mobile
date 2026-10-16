@@ -59,4 +59,71 @@ final class UserRankingSignalsLoaderProvider
 }
 
 String _$userRankingSignalsLoaderHash() =>
-    r'e13bd33f21b2cc49bc9d25a05534f153926aa5da';
+    r'3f503fabc0a263865f691a4972d23cb3a080d286';
+
+/// Ranking for the signed-in user's own Following and Followers lists.
+///
+/// These lists hide only accounts the viewer blocked, as they did before
+/// ranking. An account that mutes or blocks the viewer stays listed, so the
+/// viewer can still open it to unfollow or report it.
+
+@ProviderFor(ownFollowListRankingSignalsLoader)
+final ownFollowListRankingSignalsLoaderProvider =
+    OwnFollowListRankingSignalsLoaderProvider._();
+
+/// Ranking for the signed-in user's own Following and Followers lists.
+///
+/// These lists hide only accounts the viewer blocked, as they did before
+/// ranking. An account that mutes or blocks the viewer stays listed, so the
+/// viewer can still open it to unfollow or report it.
+
+final class OwnFollowListRankingSignalsLoaderProvider
+    extends
+        $FunctionalProvider<
+          UserRankingSignalsLoader,
+          UserRankingSignalsLoader,
+          UserRankingSignalsLoader
+        >
+    with $Provider<UserRankingSignalsLoader> {
+  /// Ranking for the signed-in user's own Following and Followers lists.
+  ///
+  /// These lists hide only accounts the viewer blocked, as they did before
+  /// ranking. An account that mutes or blocks the viewer stays listed, so the
+  /// viewer can still open it to unfollow or report it.
+  OwnFollowListRankingSignalsLoaderProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'ownFollowListRankingSignalsLoaderProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() =>
+      _$ownFollowListRankingSignalsLoaderHash();
+
+  @$internal
+  @override
+  $ProviderElement<UserRankingSignalsLoader> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  UserRankingSignalsLoader create(Ref ref) {
+    return ownFollowListRankingSignalsLoader(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(UserRankingSignalsLoader value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<UserRankingSignalsLoader>(value),
+    );
+  }
+}
+
+String _$ownFollowListRankingSignalsLoaderHash() =>
+    r'f7a9e36a1f553f6396a1c58ce327c50d66bee136';

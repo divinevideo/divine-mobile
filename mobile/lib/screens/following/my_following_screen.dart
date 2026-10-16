@@ -32,7 +32,9 @@ class MyFollowingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rankingSignalsLoader = ref.watch(userRankingSignalsLoaderProvider);
+    final rankingSignalsLoader = ref.watch(
+      ownFollowListRankingSignalsLoaderProvider,
+    );
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);

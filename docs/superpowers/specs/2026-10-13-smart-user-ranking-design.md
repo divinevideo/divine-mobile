@@ -76,9 +76,13 @@ The loader reads these signals:
 | Video count | `ProfileStatsDao` `videoCount`, falling back to `UserProfile.restVideoCount` | Absent when neither is cached. Kept fresh by the background refresh in §5. |
 | Last posted | A new batched `NostrEventsDao` query: newest cached video event per author, using the kinds in `NIP71VideoKinds.getAllVideoKinds()` | Best-effort, because the event cache is pruned. |
 
-The loader drops the viewer's own pubkey and blocked accounts (through
-`ProfileRepository`'s block filter). It also keeps each list's existing rule
-for deleted accounts and accounts with no visible identity, such as
+The loader drops the viewer's own pubkey and every account the content policy
+hides: accounts the viewer blocked or muted, and accounts that block or mute
+the viewer. The viewer's own Following and Followers lists use a loader that
+drops only the accounts the viewer blocked, as those lists did before, so an
+account that hides the viewer can still be reached there to unfollow or
+report. The loader also keeps each list's existing rule for deleted accounts
+and accounts with no visible identity, such as
 `ShareableUser.hasVisibleIdentity`.
 
 ### 2. Score: closeness first, one weighted value

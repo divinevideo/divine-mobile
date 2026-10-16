@@ -446,6 +446,9 @@ List<Override> getStandardTestOverrides({
     userRankingSignalsLoaderProvider.overrideWithValue(
       rankingSignalsLoader ?? testUserRankingLoader(),
     ),
+    ownFollowListRankingSignalsLoaderProvider.overrideWithValue(
+      rankingSignalsLoader ?? testUserRankingLoader(),
+    ),
     // Mirror DeviceScope's required bootstrap overrides for test containers.
     appVersionProvider.overrideWithValue('test'),
     documentsPathProvider.overrideWithValue('/documents'),
@@ -566,12 +569,11 @@ Widget testProviderScope({
         mockFollowRepository: mockFollowRepository,
         rankingSignalsLoader: rankingSignalsLoader,
       ).where(
-        (override) =>
-            !_overridesProvider(
-              additionalOverrides,
-              userRankingSignalsLoaderProvider,
-            ) ||
-            !_overridesProvider([override], userRankingSignalsLoaderProvider),
+        (override) => !_rankingLoaderProviders.any(
+          (provider) =>
+              _overridesProvider(additionalOverrides, provider) &&
+              _overridesProvider([override], provider),
+        ),
       ),
       if (!_overridesProvider(additionalOverrides, videoEventServiceProvider))
         videoEventServiceProvider.overrideWithValue(
@@ -582,6 +584,12 @@ Widget testProviderScope({
     child: child,
   );
 }
+
+/// Standard fixtures a caller's own override replaces instead of duplicating.
+final List<Object> _rankingLoaderProviders = [
+  userRankingSignalsLoaderProvider,
+  ownFollowListRankingSignalsLoaderProvider,
+];
 
 bool _overridesProvider(List<Override>? overrides, Object provider) {
   final providerPrefix = '$provider.';

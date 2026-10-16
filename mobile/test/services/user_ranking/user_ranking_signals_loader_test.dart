@@ -384,6 +384,55 @@ void main() {
     );
 
     test(
+      'own follow-list loader hides only accounts the viewer blocked',
+      () async {
+        final muter = _key(6);
+        final blocker = _key(7);
+        final blocklist = _MockContentBlocklistRepository();
+        when(() => blocklist.currentState).thenReturn(
+          ContentPolicyState(
+            currentUserPubkey: viewer,
+            mutedPubkeys: const {},
+            blockedPubkeys: {blocked},
+            pubkeysBlockingUs: {blocker},
+            pubkeysMutingUs: {muter},
+          ),
+        );
+        when(
+          () => blocklist.isBlocked(any()),
+        ).thenAnswer((call) => call.positionalArguments.single == blocked);
+        final container = ProviderContainer(
+          overrides: [
+            databaseProvider.overrideWithValue(database),
+            dmRepositoryProvider.overrideWithValue(dms),
+            followRepositoryProvider.overrideWithValue(follows),
+            profileRepositoryProvider.overrideWithValue(null),
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            nostrSessionProvider.overrideWith(
+              () => _TestNostrSession(
+                NostrSessionReadiness.identityKnown(pubkey: viewer),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final candidates = [muter, blocker, blocked, followed];
+
+        final picker = container.read(userRankingSignalsLoaderProvider);
+        expect((await picker.load(candidates)).keys, [followed]);
+
+        final ownList = container.read(
+          ownFollowListRankingSignalsLoaderProvider,
+        );
+        expect((await ownList.load(candidates)).keys, [
+          muter,
+          blocker,
+          followed,
+        ]);
+      },
+    );
+
+    test(
       'fresh loads observe local changes without retaining a snapshot',
       () async {
         final first = await loader.load([stranger]);
