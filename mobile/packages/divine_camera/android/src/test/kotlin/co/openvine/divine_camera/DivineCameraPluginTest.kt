@@ -168,17 +168,6 @@ internal class DivineCameraLogSinkOwnershipTest {
         DivineCameraLog.sink = null
     }
 
-    private fun engineBinding(): FlutterPlugin.FlutterPluginBinding {
-        val binding = Mockito.mock(FlutterPlugin.FlutterPluginBinding::class.java)
-        Mockito.`when`(binding.binaryMessenger)
-            .thenReturn(Mockito.mock(BinaryMessenger::class.java))
-        Mockito.`when`(binding.applicationContext)
-            .thenReturn(Mockito.mock(Context::class.java))
-        Mockito.`when`(binding.textureRegistry)
-            .thenReturn(Mockito.mock(TextureRegistry::class.java))
-        return binding
-    }
-
     private fun activityBinding(): ActivityPluginBinding {
         val binding = Mockito.mock(ActivityPluginBinding::class.java)
         Mockito.`when`(binding.activity).thenReturn(Mockito.mock(Activity::class.java))
@@ -517,13 +506,7 @@ internal class DivineCameraPluginRemoteRecordControlTest {
     }
 
     private fun enabledRemoteRecordControl(activity: Activity): VolumeKeyHandler {
-        val engine = Mockito.mock(FlutterPlugin.FlutterPluginBinding::class.java)
-        Mockito.`when`(engine.binaryMessenger)
-            .thenReturn(Mockito.mock(BinaryMessenger::class.java))
-        Mockito.`when`(engine.applicationContext)
-            .thenReturn(RuntimeEnvironment.getApplication())
-        Mockito.`when`(engine.textureRegistry)
-            .thenReturn(Mockito.mock(TextureRegistry::class.java))
+        val engine = engineBinding(context = RuntimeEnvironment.getApplication())
         val binding = Mockito.mock(ActivityPluginBinding::class.java)
         Mockito.`when`(binding.activity).thenReturn(activity)
 
@@ -576,4 +559,16 @@ internal class DivineCameraPluginRemoteRecordControlTest {
 
         assertTrue(control.isMediaSessionClaimed())
     }
+}
+
+private fun engineBinding(
+    context: Context = Mockito.mock(Context::class.java),
+): FlutterPlugin.FlutterPluginBinding {
+    val binding = Mockito.mock(FlutterPlugin.FlutterPluginBinding::class.java)
+    Mockito.`when`(binding.binaryMessenger)
+        .thenReturn(Mockito.mock(BinaryMessenger::class.java))
+    Mockito.`when`(binding.applicationContext).thenReturn(context)
+    Mockito.`when`(binding.textureRegistry)
+        .thenReturn(Mockito.mock(TextureRegistry::class.java))
+    return binding
 }
