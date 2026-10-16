@@ -128,26 +128,13 @@ class _TriageActions extends StatelessWidget {
     BuildContext context,
     ConversationActionsCubit cubit,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await VineBottomSheet.show<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.inboxRemoveConfirmTitle),
-        content: Text(
-          participantPubkeys.length > 1
-              ? context.l10n.inboxRemoveConfirmBodyGroup
-              : context.l10n.inboxRemoveConfirmBodyVanishedAccount,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.l10n.inboxRemoveConfirmConfirm),
-          ),
-        ],
-      ),
+      scrollable: false,
+      expanded: false,
+      isScrollControlled: true,
+      title: Text(context.l10n.inboxRemoveConfirmTitle),
+      body: _RemoveConfirmation(participantPubkeys: participantPubkeys),
     );
     if (confirmed != true || !context.mounted || cubit.isClosed) return;
     final result = await cubit.removeConversation(conversationId);
@@ -174,4 +161,39 @@ class _TriageActions extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RemoveConfirmation extends StatelessWidget {
+  const _RemoveConfirmation({required this.participantPubkeys});
+
+  final List<String> participantPubkeys;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          participantPubkeys.length > 1
+              ? context.l10n.inboxRemoveConfirmBodyGroup
+              : context.l10n.inboxRemoveConfirmBodyVanishedAccount,
+          style: VineTheme.bodyLargeFont(color: context.vineColors.onSurface),
+        ),
+        const SizedBox(height: 16),
+        DivineButton(
+          label: context.l10n.inboxRemoveConfirmConfirm,
+          type: DivineButtonType.error,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+        const SizedBox(height: 8),
+        DivineButton(
+          label: context.l10n.commonCancel,
+          type: DivineButtonType.secondary,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+      ],
+    ),
+  );
 }
