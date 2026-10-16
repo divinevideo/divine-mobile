@@ -13,6 +13,47 @@ const recipient =
 const rumor =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 void main() {
+  group('enqueue', () {
+    for (final result in [
+      const EnqueueSendResult.blocked('blocked'),
+      const EnqueueSendResult.tooLong('too long'),
+      const EnqueueSendResult.refused('refused'),
+    ]) {
+      test('classifies ${result.error} as a terminal policy refusal', () async {
+        final repository = _Repository();
+        when(() => repository.userPubkey).thenReturn(owner);
+        when(repository.watchSoundRequestMessages)
+            .thenAnswer((_) => Stream.value([]));
+        final tags = soundRequestTags(videoAddress: '34236:$recipient:clip');
+        when(
+          () => repository.enqueueSend(
+            recipientPubkey: recipient,
+            content: 'Please enable',
+            idempotencyKey: 'stable',
+            createdAt: 1,
+            additionalTags: tags,
+          ),
+        ).thenAnswer((_) async => result);
+        final client = SoundRequestDmClient(
+          repository: repository,
+          ownerPubkey: owner,
+        );
+        await expectLater(
+          client.enqueue(
+            SoundRequestSendIntent(
+              key: 'stable',
+              recipient: recipient,
+              content: 'Please enable',
+              tags: tags,
+              createdAt: 1,
+              videoAddress: '34236:$recipient:clip',
+            ),
+          ),
+          throwsA(isA<SoundRequestSendRefused>()),
+        );
+      });
+    }
+  });
   group('interactions', () {
     test(
       'replays stable inputs and joins already delivered application messages',

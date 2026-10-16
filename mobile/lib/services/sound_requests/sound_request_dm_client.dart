@@ -45,9 +45,7 @@ class SoundRequestDmClient implements SoundRequestTransport {
       additionalTags: intent.tags,
     );
     _checkAccount();
-    if (!result.accepted) {
-      throw const SoundRequestException('Sound request delivery refused');
-    }
+    if (!result.accepted) throw const SoundRequestSendRefused();
     return result.queuedRumorId!;
   }
 

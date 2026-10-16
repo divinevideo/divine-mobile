@@ -51,6 +51,8 @@ class Transport implements SoundRequestTransport {
   final List<DmMessage> messages;
   final intents = <String, SoundRequestSendIntent>{};
   bool failDelivery = false;
+  bool refuseEnqueue = false;
+  int enqueueAttempts = 0;
   int attempts = 0;
   final delivered = <String>{};
   StreamController<List<DmMessage>>? live;
@@ -59,6 +61,8 @@ class Transport implements SoundRequestTransport {
       live?.stream ?? Stream.value(messages);
   @override
   Future<String> enqueue(SoundRequestSendIntent intent) async {
+    enqueueAttempts++;
+    if (refuseEnqueue) throw const SoundRequestSendRefused();
     intents[intent.key] = intent;
     return sha256.convert(utf8.encode(intent.key)).toString();
   }
@@ -247,6 +251,53 @@ void main() {
     );
   });
 
+  group('request send refusal', () {
+    test('does not auto-send a refused request after restart', () async {
+      final transport = Transport([])..refuseEnqueue = true;
+      final store = MemoryStore();
+      final publisher = Publisher();
+      final repo = repository(viewer, transport, store, publisher);
+      await repo.start();
+      await expectLater(
+        repo.request(address),
+        throwsA(isA<SoundRequestSendRefused>()),
+      );
+      expect(repo.state.jobs, isEmpty);
+      expect(repo.state.requests, isEmpty);
+      await repo.close();
+      transport.refuseEnqueue = false;
+      final resumed = repository(viewer, transport, store, publisher);
+      addTearDown(resumed.close);
+      await resumed.start();
+      expect(transport.enqueueAttempts, 1);
+      // Only a new explicit request may try again after the policy changes.
+      await resumed.request(address);
+      expect(transport.enqueueAttempts, 2);
+      expect(transport.delivered, hasLength(1));
+    });
+
+    test('does not auto-send a refused ready reply after restart', () async {
+      final request = requestMessage(viewer, '1' * 64);
+      final transport = Transport([request])..refuseEnqueue = true;
+      final store = MemoryStore();
+      final publisher = Publisher();
+      final repo = repository(creator, transport, store, publisher);
+      await repo.start();
+      await expectLater(
+        repo.approve(request.id),
+        throwsA(isA<SoundRequestSendRefused>()),
+      );
+      expect(repo.state.jobs, isEmpty);
+      await repo.close();
+      transport.refuseEnqueue = false;
+      final resumed = repository(creator, transport, store, publisher);
+      addTearDown(resumed.close);
+      await resumed.start();
+      expect(transport.enqueueAttempts, 1);
+      expect(transport.delivered, isEmpty);
+      expect(publisher.audioPublishes, 1);
+    });
+  });
   group('dismiss', () {
     test(
       'dismissing the last failed approval does not approve later requests',

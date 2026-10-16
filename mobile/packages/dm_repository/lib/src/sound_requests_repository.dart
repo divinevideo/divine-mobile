@@ -508,6 +508,17 @@ class SoundRequestsRepository {
           );
         }
         await _save(_state.copyWith(jobs: jobs, requests: requests));
+      } on SoundRequestSendRefused catch (e, s) {
+        // A policy refusal is not queued delivery. Keeping this intent would
+        // send it without another user action if the policy later changed.
+        await _save(
+          _state.copyWith(
+            jobs: Map<String, SoundRequestSendIntent>.of(_state.jobs)
+              ..remove(original.key),
+          ),
+        );
+        failure = e;
+        failureStack = s;
       } on Object catch (e, s) {
         failure = e;
         failureStack = s;
