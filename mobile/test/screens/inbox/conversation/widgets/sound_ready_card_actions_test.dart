@@ -30,6 +30,7 @@ const soundId =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const address = '34236:$creator:clip';
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   group('interactions', () {
     testWidgets(
       'ready reply saves explicitly, reflects removal, and hands sound to creation',
@@ -132,16 +133,16 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(saves, 0);
-        await tester.tap(find.text('Save to My Sounds'));
+        await tester.tap(find.text(l10n.soundReadySave));
         await tester.pumpAndSettle();
         expect(saves, 1);
-        expect(find.text('Saved'), findsOneWidget);
+        expect(find.text(l10n.soundRequestSaved), findsOneWidget);
         expect(selection, isNull);
         libraryState = const SavedSoundsState();
         updates.add(libraryState);
         await tester.pumpAndSettle();
-        expect(find.text('Save to My Sounds'), findsOneWidget);
-        await tester.tap(find.text('Use this sound'));
+        expect(find.text(l10n.soundReadySave), findsOneWidget);
+        await tester.tap(find.text(l10n.soundReadyUse));
         await tester.pumpAndSettle();
         expect(find.text('Creation'), findsOneWidget);
         expect(selection?.sound.id, soundId);

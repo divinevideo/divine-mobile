@@ -59,6 +59,15 @@ void main() {
           ]),
         );
         expect(await client.enqueue(intent), rumor);
+        verify(
+          () => repository.enqueueSend(
+            recipientPubkey: recipient,
+            content: 'Please enable',
+            idempotencyKey: 'stable',
+            createdAt: 1,
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).called(1);
         await client.retry(rumor);
         verifyNever(() => repository.recoverFullSend(rumorId: rumor));
       },

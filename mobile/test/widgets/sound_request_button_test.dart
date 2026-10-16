@@ -14,6 +14,7 @@ const owner =
 const address =
     '34236:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:clip';
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   group('interactions', () {
     testWidgets(
       'a fulfilled request does not label a new request as already sent',
@@ -50,8 +51,8 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Request this sound'), findsOneWidget);
-        expect(find.text('Sound requested'), findsNothing);
+        expect(find.text(l10n.soundRequestAction), findsOneWidget);
+        expect(find.text(l10n.soundRequestSent), findsNothing);
       },
     );
   });
@@ -84,7 +85,7 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(
-            find.text('Request this sound'),
+            find.text(l10n.soundRequestAction),
             available ? findsOneWidget : findsNothing,
           );
         },

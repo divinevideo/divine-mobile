@@ -179,7 +179,12 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
-          expect(find.text('Request this sound'), findsOneWidget);
+          expect(
+            find.text(
+              lookupAppLocalizations(const Locale('en')).soundRequestAction,
+            ),
+            findsOneWidget,
+          );
         },
       );
 

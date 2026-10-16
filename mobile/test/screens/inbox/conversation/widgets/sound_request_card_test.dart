@@ -17,6 +17,7 @@ const requester =
 const id = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 const address = '34236:$creator:clip';
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   group('interactions', () {
     testWidgets(
       'incoming request explains public reuse and exposes creator actions',
@@ -71,14 +72,9 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Enable sound reuse'), findsOneWidget);
-        expect(
-          find.text(
-            'Enable sound reuse on this video so anyone can remix with it.',
-          ),
-          findsOneWidget,
-        );
-        expect(find.text('Dismiss'), findsOneWidget);
+        expect(find.text(l10n.soundRequestEnable), findsOneWidget);
+        expect(find.text(l10n.soundRequestDescription), findsOneWidget);
+        expect(find.text(l10n.saveOriginalDismiss), findsOneWidget);
         expect(find.text('My clip'), findsOneWidget);
         verifyNever(() => repo.approve(id));
       },

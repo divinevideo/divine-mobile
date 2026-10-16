@@ -117,12 +117,14 @@ void main() {
             signed!.tags,
             containsAll([
               ['d', 'clip:one'],
+              ['imeta', 'url https://example.com/video.mp4', 'm video/mp4'],
               ['text-track', 'captions'],
               ['t', 'fun'],
               ['allow_audio_reuse', 'true'],
               ['e', audio, 'wss://relay.divine.video', 'audio'],
             ]),
           );
+          expect(signed!.tags, hasLength(6));
           expect(signed!.tags, isNot(contains(['allow_audio_reuse', 'false'])));
         },
       );
