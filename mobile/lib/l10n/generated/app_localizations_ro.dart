@@ -13052,7 +13052,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'Postează-ți npub-ul de pe acel cont și lipește linkul. Numele contului are nevoie de instanță — mastodon.social/@alice, nu doar alice.';
+      'Postează-ți npub-ul de pe acel cont și lipește linkul. Numele contului are nevoie de instanță — mastodon.social/@example, nu doar example.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -13098,7 +13098,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'Profilul tău Divine spune: „Sunt @alice pe Twitter”.';
+      'Profilul tău Divine spune: „Sunt @example pe Twitter”.';
 
   @override
   String get verifyHowItWorksOtherSide =>

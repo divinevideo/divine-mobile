@@ -12169,7 +12169,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      '그 계정에서 npub을 올리고 링크를 붙여넣어. 계정 이름에는 인스턴스가 있어야 해 — alice가 아니라 mastodon.social/@alice.';
+      '그 계정에서 npub을 올리고 링크를 붙여넣어. 계정 이름에는 인스턴스가 있어야 해 — example이 아니라 mastodon.social/@example.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12213,7 +12213,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyHowItWorksIntro => '두 계정이 악수한다고 생각하면 돼:';
 
   @override
-  String get verifyHowItWorksYourSide => '네 Divine 프로필이 말해: “트위터의 @alice가 나야.”';
+  String get verifyHowItWorksYourSide =>
+      '네 Divine 프로필이 말해: “트위터의 @example이 나야.”';
 
   @override
   String get verifyHowItWorksOtherSide =>

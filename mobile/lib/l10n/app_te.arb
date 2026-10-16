@@ -7856,7 +7856,7 @@
   "@verifyConnectProofExplainerTwitter": {
     "description": "Twitter/X proof instructions. The verifier reads the tweet and looks for the npub in its text."
   },
-  "verifyConnectProofExplainerMastodon": "ఆ ఖాతా నుండి మీ npubని పోస్ట్ చేసి, ఆపై లింక్‌ను అతికించండి. ఖాతా పేరుకు దాని ఉదాహరణ అవసరం - mastodon.social/@alice, కేవలం ఆలిస్ కాదు.",
+  "verifyConnectProofExplainerMastodon": "ఆ ఖాతా నుండి మీ npubని పోస్ట్ చేసి, ఆపై లింక్‌ను అతికించండి. ఖాతా పేరుకు దాని ఉదాహరణ అవసరం - mastodon.social/@example, కేవలం example కాదు.",
   "@verifyConnectProofExplainerMastodon": {
     "description": "Mastodon proof instructions. Also warns that the account name must carry the instance, because the verifier needs it to find the server."
   },
@@ -7910,7 +7910,7 @@
   "@verifyHowItWorksIntro": {
     "description": "Opening line of the explainer, introducing the handshake metaphor used on verify.divine.video."
   },
-  "verifyHowItWorksYourSide": "మీ Divine ప్రొఫైల్ ఇలా చెబుతోంది: “Twitterలో నేను @alice.”",
+  "verifyHowItWorksYourSide": "మీ Divine ప్రొఫైల్ ఇలా చెబుతోంది: “Twitterలో నేను @example.”",
   "@verifyHowItWorksYourSide": {
     "description": "First half of the handshake: what the user's Divine profile claims. The quoted example uses a placeholder handle, not a real one."
   },

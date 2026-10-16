@@ -12762,7 +12762,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'انشر npub الخاص بك من ذلك الحساب، ثم الصق الرابط. اسم الحساب يحتاج إلى الخادم — mastodon.social/@alice وليس alice فقط.';
+      'انشر npub الخاص بك من ذلك الحساب، ثم الصق الرابط. اسم الحساب يحتاج إلى الخادم — mastodon.social/@example وليس example فقط.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12807,7 +12807,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'ملفك في Divine يقول: «أنا @alice على تويتر».';
+      'ملفك في Divine يقول: «أنا @example على تويتر».';
 
   @override
   String get verifyHowItWorksOtherSide =>

@@ -12692,7 +12692,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'Posting npub-mu dari akun itu, lalu tempel tautannya. Nama akun harus menyertakan instance — mastodon.social/@alice, bukan cuma alice.';
+      'Posting npub-mu dari akun itu, lalu tempel tautannya. Nama akun harus menyertakan instance — mastodon.social/@example, bukan cuma example.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12738,7 +12738,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'Profil Divine-mu bilang: “Aku @alice di Twitter.”';
+      'Profil Divine-mu bilang: “Aku @example di Twitter.”';
 
   @override
   String get verifyHowItWorksOtherSide =>

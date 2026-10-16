@@ -12149,7 +12149,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'そのアカウントから npub を投稿して、リンクを貼ってね。アカウント名にはインスタンスが必要だよ — alice ではなく mastodon.social/@alice。';
+      'そのアカウントから npub を投稿して、リンクを貼ってね。アカウント名にはインスタンスが必要だよ — example ではなく mastodon.social/@example。';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12194,7 +12194,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'きみの Divine プロフィールが「Twitter の @alice は私です」と言う。';
+      'きみの Divine プロフィールが「Twitter の @example は私です」と言う。';
 
   @override
   String get verifyHowItWorksOtherSide =>

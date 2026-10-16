@@ -12926,7 +12926,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'Publicá tu npub desde esa cuenta y pegá el enlace. El nombre de la cuenta necesita la instancia — mastodon.social/@alice, no solo alice.';
+      'Publicá tu npub desde esa cuenta y pegá el enlace. El nombre de la cuenta necesita la instancia — mastodon.social/@example, no solo example.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12973,7 +12973,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'Tu perfil de Divine dice: «Soy @alice en Twitter».';
+      'Tu perfil de Divine dice: «Soy @example en Twitter».';
 
   @override
   String get verifyHowItWorksOtherSide =>

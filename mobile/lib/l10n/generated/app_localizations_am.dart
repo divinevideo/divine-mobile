@@ -12465,7 +12465,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'npub ህን ከዚያ መለያ ለጥፍ፣ ከዚያ አገናኙን ለጥፍ። የመለያው ስም ኢንስታንሱን ይፈልጋል — alice ብቻ ሳይሆን mastodon.social/@alice።';
+      'npub ህን ከዚያ መለያ ለጥፍ፣ ከዚያ አገናኙን ለጥፍ። የመለያው ስም ኢንስታንሱን ይፈልጋል — example ብቻ ሳይሆን mastodon.social/@example።';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -12510,7 +12510,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'የDivine መገለጫህ „በTwitter ላይ @alice እኔ ነኝ“ ይላል።';
+      'የDivine መገለጫህ „በTwitter ላይ @example እኔ ነኝ“ ይላል።';
 
   @override
   String get verifyHowItWorksOtherSide =>

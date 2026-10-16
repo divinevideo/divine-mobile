@@ -13126,7 +13126,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get verifyConnectProofExplainerMastodon =>
-      'ఆ ఖాతా నుండి మీ npubని పోస్ట్ చేసి, ఆపై లింక్‌ను అతికించండి. ఖాతా పేరుకు దాని ఉదాహరణ అవసరం - mastodon.social/@alice, కేవలం ఆలిస్ కాదు.';
+      'ఆ ఖాతా నుండి మీ npubని పోస్ట్ చేసి, ఆపై లింక్‌ను అతికించండి. ఖాతా పేరుకు దాని ఉదాహరణ అవసరం - mastodon.social/@example, కేవలం example కాదు.';
 
   @override
   String get verifyConnectProofExplainerTelegram =>
@@ -13173,7 +13173,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get verifyHowItWorksYourSide =>
-      'మీ Divine ప్రొఫైల్ ఇలా చెబుతోంది: “Twitterలో నేను @alice.”';
+      'మీ Divine ప్రొఫైల్ ఇలా చెబుతోంది: “Twitterలో నేను @example.”';
 
   @override
   String get verifyHowItWorksOtherSide =>
