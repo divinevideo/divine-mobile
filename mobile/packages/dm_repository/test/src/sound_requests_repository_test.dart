@@ -458,6 +458,58 @@ void main() {
       );
     }
 
+    test('rechecks an automatic reply awaiting policy', () async {
+      final request = requestMessage(viewer, '1' * 64);
+      final transport = Transport([request]);
+      final publisher = Publisher()
+        ..enabled = true
+        ..policyVerified = false;
+      final repo = repository(creator, transport, MemoryStore(), publisher);
+      addTearDown(repo.close);
+      await repo.start();
+      expect(
+        repo.state.requests[request.id]?.status,
+        SoundRequestStatus.awaitingPolicy,
+      );
+      expect(repo.state.approvedVideos, isEmpty);
+      publisher.policyVerified = true;
+      await repo.retry(request.id);
+      expect(repo.state.requests[request.id]?.status, SoundRequestStatus.ready);
+      expect(transport.delivered, hasLength(1));
+      expect(publisher.audioPublishes, 0);
+      expect(publisher.metadataPublishes, 0);
+    });
+
+    test(
+      'an automatic reply awaiting policy returns to pending once reuse is off',
+      () async {
+        final request = requestMessage(viewer, '1' * 64);
+        final transport = Transport([request]);
+        final publisher = Publisher()
+          ..enabled = true
+          ..policyVerified = false;
+        final repo = repository(creator, transport, MemoryStore(), publisher);
+        addTearDown(repo.close);
+        await repo.start();
+        expect(
+          repo.state.requests[request.id]?.status,
+          SoundRequestStatus.awaitingPolicy,
+        );
+        publisher.enabled = false;
+        await repo.retry(request.id);
+        expect(
+          repo.state.requests[request.id]?.status,
+          SoundRequestStatus.pending,
+        );
+        expect(transport.intents, isEmpty);
+        // The creator can now approve it explicitly.
+        publisher.policyVerified = true;
+        await repo.approve(request.id);
+        expect(publisher.metadataPublishes, 1);
+        expect(transport.delivered, hasLength(1));
+      },
+    );
+
     test(
       'retries approval when original audio reference predates approval',
       () async {

@@ -206,12 +206,7 @@ class SoundRequestsRepository {
         if (approved && !_attemptedVideos.contains(address)) {
           await _publishFor(address);
         } else {
-          final source = await _publisher.resolve(address);
-          _checkOpen();
-          if (source.allowReuse && source.audioEventId != null) {
-            await _fulfill(address, source.audioEventId!);
-            await _drain();
-          }
+          await _fulfillFromCurrentReuse(address);
         }
         settled = !ids.any(
           (id) =>
@@ -223,6 +218,33 @@ class SoundRequestsRepository {
       if (!approved && !settled) {
         _recheckAt[address] = _now().add(backgroundRecheckInterval);
       }
+    }
+  }
+
+  /// Fulfills from reuse that is already enabled, without publishing.
+  ///
+  /// Without an approval, a reply awaiting policy returns to pending once
+  /// reuse is off, so the creator can approve or dismiss it again.
+  Future<void> _fulfillFromCurrentReuse(String address) async {
+    final source = await _publisher.resolve(address);
+    _checkOpen();
+    if (source.allowReuse && source.audioEventId != null) {
+      await _fulfill(address, source.audioEventId!);
+      await _drain();
+      return;
+    }
+    if (_state.approvedVideos.contains(address)) return;
+    final requests = {
+      for (final e in _state.requests.entries)
+        e.key:
+            e.value.videoAddress == address &&
+                e.value.requester != ownerPubkey &&
+                e.value.status == SoundRequestStatus.awaitingPolicy
+            ? e.value.copyWith(status: SoundRequestStatus.pending)
+            : e.value,
+    };
+    if (!_sameRequests(requests)) {
+      await _save(_state.copyWith(requests: requests));
     }
   }
 
@@ -568,7 +590,8 @@ class SoundRequestsRepository {
     await _save(_state.copyWith(requests: requests, approvedVideos: approvals));
   });
 
-  /// Resumes the relevant publication or previously enqueued outgoing job.
+  /// Resumes the relevant publication, a reply awaiting policy, or a
+  /// previously enqueued outgoing job.
   Future<void> retry(String requestId) => _run(() async {
     final request = _state.requests[requestId];
     if (request == null) throw StateError('Unknown sound request');
@@ -580,10 +603,14 @@ class SoundRequestsRepository {
       await _drain();
       return;
     }
-    if (!_state.approvedVideos.contains(request.videoAddress)) {
+    if (_state.approvedVideos.contains(request.videoAddress)) {
+      await _publishFor(request.videoAddress);
+    } else if (request.status == SoundRequestStatus.awaitingPolicy) {
+      // An automatic reply found reuse already enabled; check it again.
+      await _fulfillFromCurrentReuse(request.videoAddress);
+    } else {
       throw StateError('Request has not been approved');
     }
-    await _publishFor(request.videoAddress);
   });
 
   /// Resolves a fulfilled sound only when source and current permission agree.
