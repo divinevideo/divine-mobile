@@ -10894,6 +10894,14 @@ class DmRepository {
     return pubkeys.toList()..sort();
   }
 
+  /// [participants] in lower case, de-duplicated and sorted.
+  ///
+  /// Hex is case-insensitive. Keyed on the spelling a client chose, the same
+  /// people written in another letter case would open a second conversation.
+  static List<String> _inLowerCase(List<String> participants) => {
+    for (final pubkey in participants) pubkey.toLowerCase(),
+  }.toList()..sort();
+
   /// Resolves the participant list for conversation routing.
   ///
   /// NIP-17 defines a room as the set of `pubkey` + `p` tags, so a rumor
@@ -10928,7 +10936,9 @@ class DmRepository {
   }) async {
     // Checked first: the 1:1 fallbacks below pair the user with the sender,
     // which for our own rumor is [self, self] and gets discarded.
-    if (_userPubkey == senderPubkey) return extractedParticipants;
+    if (_userPubkey == senderPubkey) {
+      return _inLowerCase(extractedParticipants);
+    }
 
     final canonical1to1 = [_userPubkey, senderPubkey]..sort();
 
@@ -10950,11 +10960,7 @@ class DmRepository {
       return canonical1to1;
     }
 
-    // Hex is case-insensitive. Keyed on the spelling a client chose, the same
-    // people written in another letter case would open a second room.
-    final room = {
-      for (final pubkey in extractedParticipants) pubkey.toLowerCase(),
-    }.toList()..sort();
+    final room = _inLowerCase(extractedParticipants);
 
     final namesCurrentUser = room.any(
       (pubkey) => pubkeysEqual(pubkey, _userPubkey),

@@ -711,6 +711,40 @@ void main() {
 
         await expectOnlyTheRoomHolding([own.id, fromAlice.id]);
       });
+
+      // NIP-01 asks for lower-case keys, but another client on the user's key
+      // can still write one in upper case.
+      test(
+        'both land in the room when the user wrote a key in upper case',
+        () async {
+          final own = message(
+            author: _owner,
+            pTags: [_alice.toUpperCase(), _bob],
+            content: 'written by another client',
+          );
+          final fromBob = message(author: _bob, pTags: [_owner, _alice]);
+
+          await deliver(own, authorSecret: _ownerSecret);
+          await deliver(fromBob, authorSecret: _bobSecret);
+
+          await expectOnlyTheRoomHolding([own.id, fromBob.id]);
+        },
+      );
+
+      test('both land in the one-to-one when the user wrote its key in upper '
+          'case', () async {
+        final own = message(
+          author: _owner,
+          pTags: [_alice.toUpperCase()],
+          content: 'written by another client',
+        );
+        final fromAlice = message(author: _alice, pTags: [_owner]);
+
+        await deliver(own, authorSecret: _ownerSecret);
+        await deliver(fromAlice, authorSecret: _aliceSecret);
+
+        await expectOnlyTheOneToOneHolding(_alice, [own.id, fromAlice.id]);
+      });
     });
 
     group('that names a room the user removed', () {
