@@ -154,6 +154,9 @@ class FollowRepository {
   /// Minimum interval between incremental follower queries.
   static const myFollowersIncrementalInterval = Duration(minutes: 15);
 
+  /// Minimum interval between full attempts that have not completed.
+  static const myFollowersFullRetryInterval = Duration(days: 1);
+
   /// Interval between complete follower reconciliations.
   static const myFollowersReconcileInterval = Duration(days: 7);
 
@@ -602,7 +605,7 @@ class FollowRepository {
       if (!_isCurrentFollowerOwner(pubkey)) {
         return (pubkeys: <String>[], datedCount: 0);
       }
-      await _myFollowersSyncState.stampAttempt(pubkey, _nowSeconds());
+      await _myFollowersSyncState.stampFullAttempt(pubkey, _nowSeconds());
       final result = await _fetchOrderedFollowers(pubkey);
       await _completeFullFollowers(
         pubkey,
@@ -698,9 +701,14 @@ class FollowRepository {
         now - state.attempt! <= myFollowersIncrementalInterval.inSeconds) {
       return;
     }
-    if (state.full == null ||
-        now - state.full! > myFollowersReconcileInterval.inSeconds) {
-      await _myFollowersSyncState.stampAttempt(owner, now);
+    final fullDue =
+        state.full == null ||
+        now - state.full! > myFollowersReconcileInterval.inSeconds;
+    final fullRetryDue =
+        state.fullAttempt == null ||
+        now - state.fullAttempt! > myFollowersFullRetryInterval.inSeconds;
+    if (fullDue && fullRetryDue) {
+      await _myFollowersSyncState.stampFullAttempt(owner, now);
       final result = await _fetchOrderedFollowers(owner);
       await _completeFullFollowers(
         owner,
@@ -1988,18 +1996,23 @@ class FollowRepository {
   Stream<List<String>> streamMyFollowers() async* {
     final owner = _nostrClient.publicKey;
     final lease = _reserveFollowerWrite();
-    if (lease.ready != null) await lease.ready;
     try {
       if (owner.isNotEmpty && _isCurrentFollowerOwner(owner)) {
-        await _myFollowersSyncState.stampAttempt(owner, _nowSeconds());
+        await _myFollowersSyncState.stampFullAttempt(owner, _nowSeconds());
       }
-      yield* _streamFollowers(owner);
+      yield* _streamFollowers(owner, beforePersist: lease.ready);
     } finally {
+      // A canceled or failed fetch must not let later writes overtake a
+      // predecessor that is still fetching.
+      if (lease.ready != null) await lease.ready;
       lease.release();
     }
   }
 
-  Stream<List<String>> _streamFollowers(String pubkey) async* {
+  Stream<List<String>> _streamFollowers(
+    String pubkey, {
+    Future<void>? beforePersist,
+  }) async* {
     if (pubkey.isEmpty) {
       yield const [];
       return;
@@ -2047,6 +2060,7 @@ class FollowRepository {
       Error.throwWithStackTrace(lastError, lastStackTrace ?? StackTrace.empty);
     }
 
+    if (beforePersist != null) await beforePersist;
     if (pubkey == _nostrClient.publicKey) {
       await _completeFullFollowers(pubkey, merged, complete: !anySourceFailed);
     }
