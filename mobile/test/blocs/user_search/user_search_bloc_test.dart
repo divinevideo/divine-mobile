@@ -395,6 +395,102 @@ void main() {
         },
       );
 
+      test('load more keeps an exact match ahead of known accounts', () async {
+        final exact = createTestProfile('e' * 64, 'Alice');
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer(
+          (invocation) => progressive(
+            invocation.namedArguments[#offset] == 0
+                ? profiles.take(2).toList()
+                : [profiles[2], exact, profiles[3]],
+            restHasMore: invocation.namedArguments[#offset] == 0,
+          ),
+        );
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        await search(bloc);
+        when(() => loader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final key
+                in invocation.positionalArguments.single as Iterable<String>)
+              key: UserRankingSignals(
+                pubkey: key,
+                youFollow: key == profiles[3].pubkey,
+              ),
+          },
+        );
+        await loadMore(bloc);
+        expect(bloc.state.results, [
+          profiles[1],
+          profiles[0],
+          exact,
+          profiles[3],
+          profiles[2],
+        ]);
+      });
+
+      test('an exact match leads its page ahead of known accounts', () async {
+        final exact = createTestProfile('e' * 64, 'Alice');
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) => progressive([exact, profiles[0], profiles[1]]));
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        await search(bloc);
+        expect(bloc.state.results, [exact, profiles[1], profiles[0]]);
+      });
+
+      test(
+        'an exact match from a later source moves ahead of shown rows',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final exact = createTestProfile('e' * 64, 'Alice');
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final first = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: profiles.take(2).toList(),
+              sources: const {},
+              isComplete: false,
+            ),
+          );
+          await first;
+          expect(bloc.state.results, [profiles[1], profiles[0]]);
+          final second = bloc.stream.firstWhere((s) => s.results.length == 3);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [exact, ...profiles.take(2)],
+              sources: const {},
+              isComplete: true,
+            ),
+          );
+          await second;
+          expect(bloc.state.results, [exact, profiles[1], profiles[0]]);
+        },
+      );
+
       test(
         'resuming the same query retains the inherited progressive prefix',
         () async {

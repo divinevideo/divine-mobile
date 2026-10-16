@@ -2604,6 +2604,21 @@ class ProfileRepository implements ProfileReader {
     return _boostBehindExactMatches(query, filtered, boostPubkeys);
   }
 
+  /// Whether [profile] exactly matches the people-search [query]: its full
+  /// pubkey or npub, name, display name, NIP-05, or NIP-05 name.
+  ///
+  /// Search keeps exact matches ahead of every boost, so a caller that
+  /// reorders results applies the same rule.
+  static bool isExactSearchMatch(UserProfile profile, String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    return _searchRelevance(
+          profile,
+          normalizedQuery,
+          _npubQueryToHex(normalizedQuery),
+        ) ==
+        _exactMatchRelevance;
+  }
+
   /// Applies the follow-graph boost without letting it bury an exact account
   /// match. Exact matches stay first, followed ones ahead of unfollowed, and
   /// the boost then orders everything else; otherwise three followed partial

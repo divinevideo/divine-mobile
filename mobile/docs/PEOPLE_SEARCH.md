@@ -23,6 +23,9 @@ UserSearchBloc                              mobile/lib/blocs/user_search/
   • on Exception → Reportable wrap + `failure` state
   • per-yield: forward each newly-terminal source to
     FeedPerformanceTracker.trackSearchSource
+  • with a ranking loader: rows already shown keep their place, each new
+    page puts people you follow or have messaged first, and exact matches
+    lead both, even when a later source delivers them (#8578)
         ↓
 ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
   Phase 1 (offset==0): UserProfilesDao.searchProfilesByIdentity

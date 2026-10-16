@@ -170,6 +170,27 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     );
   }
 
+  /// Keeps exact matches ahead of known and earlier-shown rows, as the
+  /// repository keeps them ahead of followed ones (#8578). A promoted
+  /// partial match, or one shown by an earlier source, must not bury them.
+  static List<UserProfile> _exactMatchesFirst(
+    List<UserProfile> profiles,
+    String query,
+  ) {
+    final exact = {
+      for (final profile in profiles)
+        if (ProfileRepository.isExactSearchMatch(profile, query))
+          profile.pubkey,
+    };
+    if (exact.isEmpty) return profiles;
+    return [
+      for (final profile in profiles)
+        if (exact.contains(profile.pubkey)) profile,
+      for (final profile in profiles)
+        if (!exact.contains(profile.pubkey)) profile,
+    ];
+  }
+
   void _refreshPage(List<UserProfile> profiles) {
     if (profiles.isNotEmpty) {
       _rankingSignalsLoader?.refreshInBackground(
@@ -315,6 +336,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
                 (profile) => _rankingSignalsLoader.isEligible(profile.pubkey),
               ),
             ];
+            publishedProfiles = _exactMatchesFirst(publishedProfiles, query);
             final signals = {...publishedSignals, ...page.signals};
             publishedSignals = {
               for (final profile in publishedProfiles)
@@ -491,12 +513,13 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           !identical(state.results, previousResults)) {
         return;
       }
-      final allResults = [...previousResults, ...page.profiles]
-          .where(
-            (profile) =>
-                _rankingSignalsLoader?.isEligible(profile.pubkey) ?? true,
-          )
-          .toList();
+      final allResults =
+          [...previousResults, ..._exactMatchesFirst(page.profiles, query)]
+              .where(
+                (profile) =>
+                    _rankingSignalsLoader?.isEligible(profile.pubkey) ?? true,
+              )
+              .toList();
       final signals = {...state.rankingSignals, ...page.signals};
 
       emitIfOpen(

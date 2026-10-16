@@ -5004,6 +5004,40 @@ void main() {
       });
     });
 
+    group('isExactSearchMatch', () {
+      final pubkey = 'c' * 64;
+      final profile = UserProfile(
+        pubkey: pubkey,
+        name: 'alice',
+        nip05: 'ally@example.com',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        eventId: 'event-$pubkey',
+        rawData: const {},
+      );
+
+      test('matches a name regardless of case and surrounding space', () {
+        expect(
+          ProfileRepository.isExactSearchMatch(profile, '  Alice '),
+          isTrue,
+        );
+      });
+
+      test('matches the NIP-05 name and a pasted npub', () {
+        expect(ProfileRepository.isExactSearchMatch(profile, 'ally'), isTrue);
+        expect(
+          ProfileRepository.isExactSearchMatch(
+            profile,
+            Nip19.encodePubKey(pubkey),
+          ),
+          isTrue,
+        );
+      });
+
+      test('does not match a prefix', () {
+        expect(ProfileRepository.isExactSearchMatch(profile, 'ali'), isFalse);
+      });
+    });
+
     group('searchUsersProgressive', () {
       test('logs privacy-safe terminal source diagnostics', () async {
         await LogCaptureService().clearAllLogs();
