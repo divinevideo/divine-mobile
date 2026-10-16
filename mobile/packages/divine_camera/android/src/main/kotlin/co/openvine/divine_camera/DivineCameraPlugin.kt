@@ -526,7 +526,7 @@ class DivineCameraPlugin :
                 if (volumeKeyHandler == null) {
                     volumeKeyHandler = VolumeKeyHandler(context, activity) { triggerType ->
                         // Send trigger event to Flutter on main thread
-                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        mainHandler.post {
                             channel.invokeMethod("onRemoteRecordTrigger", triggerType)
                         }
                     }
