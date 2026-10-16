@@ -374,6 +374,34 @@ void main() {
         verify(() => client.queryEvents(any())).called(2);
       },
     );
+    test(
+      'a database reset clears every owner and reseeds the emptied table',
+      () async {
+        final checkpoints = MyFollowersSyncState();
+        await repository.syncMyFollowers();
+        await checkpoints.stampFull(otherOwner, 123);
+        await checkpoints.stampFullAttempt(otherOwner, 456);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('unrelated_setting', 7);
+        dao.rows.clear();
+        await checkpoints.clearAll();
+        for (final account in [owner, otherOwner]) {
+          expect(await checkpoints.read(account), (
+            full: null,
+            incremental: null,
+            attempt: null,
+            fullAttempt: null,
+          ));
+        }
+        expect(prefs.getInt('unrelated_setting'), 7);
+        when(
+          () => client.queryEvents(any()),
+        ).thenAnswer((_) async => [contact(first, 100)]);
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner], {first: 100});
+        expect(dao.replacements, 2);
+      },
+    );
 
     test(
       'queued full fetch rejects an owner that changed while waiting',
