@@ -126,7 +126,7 @@ void main() {
       ).resolve(npub);
 
       expect(action, isA<OpenProfileAction>());
-      expect((action! as OpenProfileAction).npub, equals(npub));
+      expect((action! as OpenProfileAction).hexPubkey, equals(authorHex));
     });
 
     test('opens a video for note1 without any lookup', () async {
@@ -156,10 +156,7 @@ void main() {
       ).resolve(hexId);
 
       expect(action, isA<OpenProfileAction>());
-      expect(
-        (action! as OpenProfileAction).npub,
-        equals(NostrKeyUtils.encodePubKey(hexId)),
-      );
+      expect((action! as OpenProfileAction).hexPubkey, equals(hexId));
     });
 
     test(

@@ -14,7 +14,7 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/search_results_app_bar.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
@@ -296,10 +296,15 @@ class _NostrIdAutoOpenScopeState extends ConsumerState<_NostrIdAutoOpenScope> {
     if (widget.controller.text.trim() != query) return;
 
     switch (action) {
-      case OpenProfileAction(:final npub):
-        unawaited(context.push<void>(OtherProfileScreen.pathForNpub(npub)));
+      case OpenProfileAction(:final hexPubkey):
+        context.pushOtherProfile(hexPubkey);
       case OpenVideoAction(:final routeId):
-        unawaited(context.push<void>(VideoDetailScreen.pathForId(routeId)));
+        runDetached(
+          context.push<void>(VideoDetailScreen.pathForId(routeId)),
+          'open video from search',
+          logName: 'SearchResultsPage',
+          category: LogCategory.ui,
+        );
       case null:
         break;
     }

@@ -47,11 +47,11 @@ sealed class NostrIdOpenAction {
   const NostrIdOpenAction();
 }
 
-/// Open the profile for [npub].
+/// Open the profile of [hexPubkey].
 final class OpenProfileAction extends NostrIdOpenAction {
-  const OpenProfileAction(this.npub);
+  const OpenProfileAction(this.hexPubkey);
 
-  final String npub;
+  final String hexPubkey;
 }
 
 /// Open the video addressed by [routeId] (`/video/<routeId>`).
@@ -134,8 +134,7 @@ class NostrIdSearchResolver {
       case null:
         return null;
       case NostrProfileTarget(:final hexPubkey):
-        final npub = normalizeToNpub(hexPubkey);
-        return npub == null ? null : OpenProfileAction(npub);
+        return OpenProfileAction(hexPubkey);
       case NostrVideoTarget(:final routeId):
         return OpenVideoAction(routeId);
       case NostrAmbiguousTarget(:final hex):
@@ -145,10 +144,7 @@ class NostrIdSearchResolver {
         final videoHit = _orFalse(() => videoExists(hex));
         final profileHit = _orFalse(() => profileExists(hex));
         if (await videoHit) return OpenVideoAction(hex);
-        if (await profileHit) {
-          final npub = normalizeToNpub(hex);
-          if (npub != null) return OpenProfileAction(npub);
-        }
+        if (await profileHit) return OpenProfileAction(hex);
         return null;
     }
   }
