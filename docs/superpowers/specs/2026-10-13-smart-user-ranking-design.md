@@ -130,7 +130,11 @@ more than about 18.
   listed first. `smart` is an app-level order, because the
   `follow_repository` package cannot see DMs and its `fromNewestFirst` /
   `fromFollowOrder` helpers cannot compute it. The chosen order lives in the
-  BLoC state, as it does today. Other users' follow lists are unchanged.
+  BLoC state, as it does today. Owned lists keep their previous membership rules:
+  hide accounts the viewer blocked, plus follow-severed accounts on Followers.
+  The stronger recipient policy used by pickers changes ranking signals only;
+  omitted owned rows get neutral signals and remain manageable. Other users'
+  follow lists are unchanged.
 - **Collaborator / user picker** (`UserPickerSheet`) and **add-to-people-list**
   (`AddPeopleToListCubit`). The rendered-name sort is replaced by the ranked
   order. The picker's mutual-only *filter* stays as it is.
@@ -213,10 +217,12 @@ mutual.
 |---|---|---|
 | Seed | Once, when the table has no rows for this owner | The existing three-source follower fetch (API, relays, indexers), written in full |
 | Incremental | On app foreground or when a ranked list opens, at most once every 15 minutes, and only while online | One relay query: `kinds: [3], #p: [me], since: <high-water mark minus a skew margin>`. It returns only the contact lists that changed since the last sync and still include you, which is usually none. New authors are added; known ones get `last_seen_at` bumped. |
-| Full reconcile | When the last full sync is more than 7 days old, or whenever the followers screen does a full fetch anyway | The existing fetch. The table is replaced with the result, which is the only way to see unfollows, because a contact list that drops you no longer matches `#p: [me]`. |
+| Full reconcile | When the last full sync is more than 7 days old, or whenever the followers screen does a full fetch anyway. Incomplete background full reads retry at most daily, with merge-only incrementals in between | The existing fetch. The table is replaced with the result, which is the only way to see unfollows, because a contact list that drops you no longer matches `#p: [me]`. |
 
 Everything runs in the background after first paint and never blocks a list.
-One sync runs at a time. A failed sync keeps the existing rows. Results apply
+Background syncs run one at a time. A picker may fetch and render while an
+earlier sync is pending; persistence remains serialized in fetch-start order.
+A failed sync keeps the existing rows. Results apply
 on the next open, so visible rows never move (§3). Between full reconciles,
 someone who unfollowed you can still read as "follows you" for up to a week.
 That is the same staleness class the current union-of-sources code already

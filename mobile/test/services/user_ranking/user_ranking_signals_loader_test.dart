@@ -65,7 +65,7 @@ void main() {
       bool hasSent = true,
     }) => DmConversation(
       id: peer,
-      participantPubkeys: [viewer, peer, if (isGroup) stranger],
+      participantPubkeys: [viewer, peer],
       isGroup: isGroup,
       createdAt: 1,
       lastMessageTimestamp: timestamp,
@@ -516,8 +516,8 @@ void main() {
     test('uses newest interaction across one-to-one protocols', () async {
       when(() => dms.watchAcceptedConversations()).thenAnswer(
         (_) => Stream.value([
-          conversation(mutual, timestamp: 200),
           conversation(mutual),
+          conversation(mutual, timestamp: 200),
         ]),
       );
       expect(

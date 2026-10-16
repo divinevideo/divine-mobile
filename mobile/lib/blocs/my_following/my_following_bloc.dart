@@ -56,7 +56,6 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
                )
              : _retained(
                  initialState,
-                 rankingSignalsLoader,
                  contentBlocklistRepository,
                ),
        ) {
@@ -81,11 +80,9 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
 
   static MyFollowingState _retained(
     MyFollowingState snapshot,
-    UserRankingSignalsLoader? loader,
     ContentBlocklistRepository blocklist,
   ) {
-    bool eligible(String key) =>
-        (loader?.isEligible(key) ?? true) && !blocklist.isBlocked(key);
+    bool eligible(String key) => !blocklist.isBlocked(key);
     return snapshot.copyWith(
       rawFollowingPubkeys: List.unmodifiable(snapshot.rawFollowingPubkeys),
       followingPubkeys: List.unmodifiable(
@@ -124,13 +121,6 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
                   rawPubkeys,
                 ) ??
             state.smartOrder.where(rawPubkeys.toSet().contains).toList())
-        .where(
-          (pubkey) =>
-              !_rankForList ||
-              !state.isSmartOrderReady ||
-              state.rankingSignals.containsKey(pubkey),
-        )
-        .where((key) => !_rankForList || _rankingSignalsLoader!.isEligible(key))
         .toList(),
   );
 
@@ -390,7 +380,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
         pubkeys: pubkeys,
         signals: signals,
         names: names,
-        isEligible: _rankingSignalsLoader.isEligible,
+        isEligible: (key) => !_blocklistRepository.isBlocked(key),
         isSmartOrderReady: state.isSmartOrderReady,
         previousSmartOrder: state.smartOrder,
         now: DateTime.now(),

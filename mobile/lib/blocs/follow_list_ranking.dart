@@ -5,7 +5,7 @@ import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart'
 import 'package:unified_logger/unified_logger.dart';
 import 'package:user_ranking/user_ranking.dart';
 
-/// Loads authoritative eligible signals, with an eligibility-safe error fallback.
+/// Loads ordering signals without allowing picker policy to remove owned rows.
 Future<Map<String, UserRankingSignals>> loadFollowListRankingSignals({
   required List<String> pubkeys,
   required UserRankingSignalsLoader loader,
@@ -13,7 +13,14 @@ Future<Map<String, UserRankingSignals>> loadFollowListRankingSignals({
   required void Function(Object, StackTrace) onError,
 }) async {
   try {
-    return await loader.load(pubkeys);
+    final signals = await loader.load(pubkeys);
+    // Owned lists remain an account-management surface. The loader applies a
+    // stronger recipient policy, so an omitted row gets neutral ordering signals
+    // instead of disappearing. Each bloc still applies its own block rules.
+    return {
+      for (final pubkey in pubkeys)
+        pubkey: signals[pubkey] ?? UserRankingSignals(pubkey: pubkey),
+    };
   } catch (error, stackTrace) {
     Log.error(
       'Failed to load follow ranking: $error',
@@ -22,8 +29,7 @@ Future<Map<String, UserRankingSignals>> loadFollowListRankingSignals({
     );
     onError(error, stackTrace);
     return {
-      for (final pubkey in pubkeys.where(loader.isEligible))
-        pubkey: UserRankingSignals(pubkey: pubkey),
+      for (final pubkey in pubkeys) pubkey: UserRankingSignals(pubkey: pubkey),
     };
   }
 }
@@ -51,7 +57,7 @@ Future<Map<String, String>> loadFollowListRankingNames({
 /// Ranks a first snapshot or appends new eligible rows to an existing order.
 ///
 /// Call only after checking the owning bloc's current lifecycle and revisions.
-/// Successful loader omissions remain authoritative; a name never adds a row.
+/// Membership comes from the owned list and its viewer-controlled block rules.
 ({Set<String> eligible, List<String> smartOrder}) rankFollowListSnapshot({
   required List<String> pubkeys,
   required Map<String, UserRankingSignals> signals,
@@ -61,7 +67,7 @@ Future<Map<String, String>> loadFollowListRankingNames({
   required List<String> previousSmartOrder,
   required DateTime now,
 }) {
-  final eligible = pubkeys.where(signals.containsKey).where(isEligible).toSet();
+  final eligible = pubkeys.where(isEligible).toSet();
   final previousOrder = previousSmartOrder.toSet();
   final smartOrder = isSmartOrderReady
       ? <String>[
