@@ -578,7 +578,15 @@ class DivineCameraPlugin :
     }
 
     private fun observeActivityLifecycle(binding: ActivityPluginBinding) {
+        activityLifecycle?.removeObserver(activityLifecycleObserver)
         activityLifecycle = (binding.activity as? LifecycleOwner)?.lifecycle
+        if (activityLifecycle == null) {
+            DivineCameraLog.warning(
+                "Host activity is not a LifecycleOwner; Bluetooth and headset " +
+                    "remote record stay off",
+                name = "DivineCamera.Lifecycle"
+            )
+        }
         activityLifecycle?.addObserver(activityLifecycleObserver)
     }
 
@@ -590,10 +598,10 @@ class DivineCameraPlugin :
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
-        observeActivityLifecycle(binding)
         // The UI engine is the one that attaches to an Activity, so this is
         // where diagnostics-sink ownership belongs.
         claimLogSink()
+        observeActivityLifecycle(binding)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -606,8 +614,8 @@ class DivineCameraPlugin :
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
-        observeActivityLifecycle(binding)
         claimLogSink()
+        observeActivityLifecycle(binding)
     }
 
     override fun onDetachedFromActivity() {
