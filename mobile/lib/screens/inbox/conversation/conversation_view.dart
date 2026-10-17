@@ -2333,25 +2333,32 @@ class _HiddenMessageGateState extends State<_HiddenMessageGate> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Align(
         alignment: AlignmentDirectional.centerStart,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 8,
-          children: [
-            Flexible(
-              child: Text(
-                l10n.dmHiddenMessageLabel,
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.onSurfaceVariant,
+        // One button reading "Hidden message, Show": a thread can hold several
+        // of these, and a bare "Show" would not say what it reveals.
+        child: MergeSemantics(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              Flexible(
+                child: Text(
+                  l10n.dmHiddenMessageLabel,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-            DivineButton(
-              type: DivineButtonType.link,
-              size: DivineButtonSize.small,
-              label: l10n.dmHiddenMessageShowAction,
-              onPressed: () => setState(() => _isRevealed = true),
-            ),
-          ],
+              // `semanticLabel` makes it announce as a button; see
+              // [_ClosedThreadNotice].
+              DivineButton(
+                type: DivineButtonType.link,
+                size: DivineButtonSize.small,
+                label: l10n.dmHiddenMessageShowAction,
+                semanticLabel: l10n.dmHiddenMessageShowAction,
+                onPressed: () => setState(() => _isRevealed = true),
+              ),
+            ],
+          ),
         ),
       ),
     );

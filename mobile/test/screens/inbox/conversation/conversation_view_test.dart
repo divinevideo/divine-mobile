@@ -2200,6 +2200,28 @@ void main() {
         expect(find.text(visibleText), findsOneWidget);
       });
 
+      // Several collapsed rows each carry a Show, so each must say what it
+      // reveals and announce as a button.
+      testWidgets('reads the collapsed row as one button naming what it '
+          'reveals', (tester) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(groupThread());
+          await tester.pumpAndSettle();
+
+          final data = tester
+              .getSemantics(find.text(l10n.dmHiddenMessageLabel))
+              .getSemanticsData();
+          expect(data.label, contains(l10n.dmHiddenMessageLabel));
+          expect(data.label, contains(l10n.dmHiddenMessageShowAction));
+          expect(data.flagsCollection.isButton, isTrue);
+          expect(data.hasAction(SemanticsAction.tap), isTrue);
+        } finally {
+          semantics.dispose();
+        }
+      });
+
       testWidgets('reveals the message when Show is tapped', (tester) async {
         when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
 
