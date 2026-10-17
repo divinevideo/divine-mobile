@@ -3,7 +3,8 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:openvine/models/divine_video_clip.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show EditorVideo, VideoSpeedRamp;
 
 /// The clip under a layer that an object is tracked in, and the stretch of
 /// the editor timeline the layer follows it for (#9848).
@@ -27,6 +28,8 @@ class LayerTrackTarget {
     required this.anchor,
     required this.videoAspectRatio,
     required this.targetAspectRatio,
+    this.speedRamp,
+    this.rampLength = Duration.zero,
   });
 
   /// The id of the clip the object is tracked in.
@@ -43,6 +46,14 @@ class LayerTrackTarget {
 
   /// How much faster than the file the clip plays.
   final double speed;
+
+  /// A speed that changes while the clip plays, instead of [speed]; it runs
+  /// along [rampLength] of the file from [trimStart].
+  final VideoSpeedRamp? speedRamp;
+
+  /// How much of the file, from [trimStart], [speedRamp] runs along: the
+  /// clip's trimmed length.
+  final Duration rampLength;
 
   /// The first moment the layer follows the object.
   final Duration start;
@@ -61,19 +72,39 @@ class LayerTrackTarget {
   final double targetAspectRatio;
 
   /// The position in the clip's file shown at [editorTime].
-  Duration sourceTimeAt(Duration editorTime) =>
-      trimStart +
-      Duration(
-        microseconds: ((editorTime - clipStart).inMicroseconds * speed).round(),
-      );
+  Duration sourceTimeAt(Duration editorTime) {
+    final ramp = speedRamp;
+    if (ramp != null) {
+      return trimStart +
+          ramp.outputToSource(
+            editorTime - clipStart,
+            sourceDuration: rampLength,
+          );
+    }
+    return trimStart +
+        Duration(
+          microseconds: ((editorTime - clipStart).inMicroseconds * speed)
+              .round(),
+        );
+  }
 
   /// When the frame at [sourceTime] in the clip's file shows on the editor
   /// timeline.
-  Duration editorTimeAt(Duration sourceTime) =>
-      clipStart +
-      Duration(
-        microseconds: ((sourceTime - trimStart).inMicroseconds / speed).round(),
-      );
+  Duration editorTimeAt(Duration sourceTime) {
+    final ramp = speedRamp;
+    if (ramp != null) {
+      return clipStart +
+          ramp.sourceToOutput(
+            sourceTime - trimStart,
+            sourceDuration: rampLength,
+          );
+    }
+    return clipStart +
+        Duration(
+          microseconds: ((sourceTime - trimStart).inMicroseconds / speed)
+              .round(),
+        );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -84,6 +115,8 @@ class LayerTrackTarget {
           other.clipStart == clipStart &&
           other.trimStart == trimStart &&
           other.speed == speed &&
+          other.speedRamp == speedRamp &&
+          other.rampLength == rampLength &&
           other.start == start &&
           other.end == end &&
           other.anchor == anchor &&
@@ -97,6 +130,8 @@ class LayerTrackTarget {
     clipStart,
     trimStart,
     speed,
+    speedRamp,
+    rampLength,
     start,
     end,
     anchor,
@@ -148,6 +183,8 @@ LayerTrackTarget? layerTrackTargetFor({
         anchor: anchor < start ? start : (anchor > end ? end : anchor),
         videoAspectRatio: clip.videoAspectRatio,
         targetAspectRatio: clip.targetAspectRatio.value,
+        speedRamp: clip.speedRamp,
+        rampLength: clip.trimmedDuration,
       );
     }
     cursor = clipEnd;

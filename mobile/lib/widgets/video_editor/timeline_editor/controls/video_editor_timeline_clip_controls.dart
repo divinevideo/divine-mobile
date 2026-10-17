@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
+import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/loop_point_search.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
@@ -508,12 +509,16 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     final editor = _editorOrNull(context);
     if (editor == null) return;
 
-    final result = await VineBottomSheet.show<double>(
+    final result = await VineBottomSheet.show<ClipSpeedChoice>(
       context: context,
       expanded: false,
       scrollable: false,
       isScrollControlled: true,
-      body: VideoEditorClipSpeedSheet(initialSpeed: clip.playbackSpeed ?? 1.0),
+      body: VideoEditorClipSpeedSheet(
+        initialSpeed: clip.playbackSpeed ?? 1.0,
+        initialRamp: clip.speedRamp,
+        sourceDuration: clip.trimmedDuration,
+      ),
     );
 
     if (result == null || !mounted) return;
@@ -527,7 +532,17 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     final index = currentClips.indexWhere((c) => c.id == clip.id);
     if (index == -1) return;
 
-    final updated = currentClips[index].copyWith(playbackSpeed: result);
+    // A constant speed and a speed ramp replace each other.
+    final updated = switch (result) {
+      ConstantClipSpeed(:final speed) => currentClips[index].copyWith(
+        playbackSpeed: speed,
+        clearSpeedRamp: true,
+      ),
+      RampClipSpeed(:final ramp) => currentClips[index].copyWith(
+        speedRamp: ramp,
+        clearPlaybackSpeed: true,
+      ),
+    };
     final newClips = List.of(currentClips)..[index] = updated;
     // A speed change rescales the clip's playbackDuration, shifting every
     // later clip — rebase markers by source position so they follow.

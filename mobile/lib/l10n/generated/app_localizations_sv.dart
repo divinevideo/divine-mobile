@@ -9951,6 +9951,44 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Konstant';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Kurva';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Egen';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Hjälte';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Snabb start';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Snabbt slut';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Dra en punkt uppåt för snabbare, nedåt för långsammare';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Hastighetspunkt $index av $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Spelar i $seconds s';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Toning';
 
   @override

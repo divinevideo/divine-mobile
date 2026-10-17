@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -238,6 +239,95 @@ void main() {
       expect(
         equalized.copyWith(trimStart: const Duration(seconds: 1)).equalizer,
         const model.EqualizerSettings([0, 0, 0, 2, 0, 0, 0, 0, 0, 0]),
+      );
+    });
+  });
+
+  group('DivineVideoClip.speedRamp', () {
+    // Fast for the first 40 %, slow motion for the rest.
+    const ramp = editor.VideoSpeedRamp([
+      editor.VideoSpeedRampPoint(position: 0, speed: 2),
+      editor.VideoSpeedRampPoint(position: 0.4, speed: 2),
+      editor.VideoSpeedRampPoint(position: 0.6, speed: 0.5),
+      editor.VideoSpeedRampPoint(position: 1, speed: 0.5),
+    ]);
+    // 5 s source trimmed to 1 s – 4 s.
+    final ramped = clip('/videos/clip.mp4').copyWith(
+      trimStart: const Duration(seconds: 1),
+      trimEnd: const Duration(seconds: 1),
+      speedRamp: ramp,
+    );
+
+    test('round-trips through stored JSON and is absent without one', () {
+      final stored = jsonDecode(jsonEncode(ramped.toJson()));
+
+      expect(
+        DivineVideoClip.fromJson(
+          stored as Map<String, dynamic>,
+          '/videos',
+        ).speedRamp,
+        ramp,
+      );
+      expect(clip('/videos/clip.mp4').toJson(), isNot(contains('speedRamp')));
+    });
+
+    test('plays for the time the ramp gives its trimmed source', () {
+      expect(
+        ramped.playbackDuration,
+        ramp.outputDuration(const Duration(seconds: 3)),
+      );
+      expect(ramped.averagePlaybackSpeed, ramp.averageSpeed);
+      expect(ramped.changesSpeed, isTrue);
+    });
+
+    test('maps a position through the ramp and back', () {
+      final playback = ramped.sourceOffsetToPlaybackOffset(
+        const Duration(seconds: 2),
+      );
+
+      expect(
+        playback,
+        ramp.sourceToOutput(
+          const Duration(seconds: 2),
+          sourceDuration: const Duration(seconds: 3),
+        ),
+      );
+      expect(
+        (ramped.playbackOffsetToSourceOffset(playback) -
+                const Duration(seconds: 2))
+            .inMicroseconds
+            .abs(),
+        lessThanOrEqualTo(2),
+      );
+    });
+
+    test('measures a head and a tail where they sit', () {
+      const span = Duration(milliseconds: 300);
+
+      // The fast head shows 0.6 s of source in 0.3 s, the slow tail 0.15 s.
+      expect(
+        ramped.headSourceSpan(span).inMilliseconds,
+        closeTo(600, 1),
+      );
+      expect(
+        ramped.tailSourceSpan(span).inMilliseconds,
+        closeTo(150, 1),
+      );
+    });
+
+    test('cuts the ramp with the clip so the parts keep their speeds', () {
+      const split = Duration(milliseconds: 1500);
+      final head = ramped.speedRampBetween(Duration.zero, split)!;
+      final tail = ramped.speedRampBetween(split, ramped.trimmedDuration)!;
+
+      expect(head.points.first.speed, 2);
+      expect(tail.points.last.speed, 0.5);
+      final parts =
+          head.outputDuration(split) +
+          tail.outputDuration(ramped.trimmedDuration - split);
+      expect(
+        (parts - ramped.playbackDuration).inMilliseconds.abs(),
+        lessThan(ramped.playbackDuration.inMilliseconds * 0.05),
       );
     });
   });

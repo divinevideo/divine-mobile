@@ -10169,6 +10169,44 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Constantă';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Curbă';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Personalizată';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montaj';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Erou';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Intrare rapidă';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Ieșire rapidă';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Trage un punct în sus ca să accelerezi, în jos ca să încetinești';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Punct de viteză $index din $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Durează $seconds s';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Estompare';
 
   @override

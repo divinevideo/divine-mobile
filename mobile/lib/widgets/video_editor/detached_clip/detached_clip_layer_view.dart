@@ -45,7 +45,8 @@ String? detachedClipSourceKey(Map<String, dynamic>? meta) {
   final raw = meta[detachedClipLayerClipKey];
   if (raw is! Map) return null;
   return '${raw['id']}|${raw['filePath']}|${raw['trimStartMs']}'
-      '|${raw['trimEndMs']}|${raw['playbackSpeed']}|${raw['volume']}';
+      '|${raw['trimEndMs']}|${raw['playbackSpeed']}|${raw['volume']}'
+      '${raw['speedRamp'] == null ? '' : '|${raw['speedRamp']}'}';
 }
 
 /// Identifies the player a detached-clip [meta] needs.

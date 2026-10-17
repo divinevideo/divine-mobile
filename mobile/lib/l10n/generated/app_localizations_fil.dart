@@ -10031,6 +10031,44 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Constant';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Curve';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Custom';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Hero';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Flash in';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Flash out';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'I-drag pataas ang point para bumilis, pababa para bumagal';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Speed point $index ng $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Tatagal nang ${seconds}s';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Fade';
 
   @override

@@ -329,6 +329,57 @@ void main() {
       expect(result[0].playbackSpeed, equals(2.0));
       expect(result[1].uri, equals('/tmp/seam.mp4'));
     });
+
+    test('plays the stretch of a speed ramp body the seam leaves', () {
+      // Fast head, slow tail: the seam takes 500ms of playback from the end.
+      const ramp = editor.VideoSpeedRamp([
+        editor.VideoSpeedRampPoint(position: 0, speed: 2),
+        editor.VideoSpeedRampPoint(position: 1, speed: 0.5),
+      ]);
+      final clipA = clip('a', transition: dissolve).copyWith(speedRamp: ramp);
+      final clipB = clip('b');
+      final tail = clipA.tailSourceSpan(const Duration(milliseconds: 500));
+      final seams = TransitionSeamRenderService()
+        ..cacheSeamForTest(
+          clipA,
+          clipB,
+          dissolve,
+          TransitionSeam(
+            path: '/tmp/seam.mp4',
+            duration: const Duration(milliseconds: 500),
+            tailConsumed: tail,
+            headConsumed: const Duration(milliseconds: 500),
+          ),
+        );
+      final speeds = ClipSpeedRenderService()
+        ..cacheForTest(
+          clipA,
+          RenderedSpeedClip(
+            path: '/tmp/a_speed.mp4',
+            duration: clipA.playbackDuration,
+          ),
+        );
+
+      final result = buildSeamAwarePlayerClips(
+        [clipA, clipB],
+        seams,
+        speedRenders: speeds,
+      );
+
+      // A ramp cannot be live-retimed, so the body is the ramp's render,
+      // cut where the seam takes over.
+      expect(result[0].uri, equals('/tmp/a_speed.mp4'));
+      expect(result[0].playbackSpeed, equals(1.0));
+      expect(result[0].start, Duration.zero);
+      expect(
+        (result[0].end! -
+                (clipA.playbackDuration - const Duration(milliseconds: 500)))
+            .inMilliseconds
+            .abs(),
+        lessThanOrEqualTo(1),
+      );
+      expect(result[1].uri, equals('/tmp/seam.mp4'));
+    });
   });
 
   group('computeSeamSpans', () {

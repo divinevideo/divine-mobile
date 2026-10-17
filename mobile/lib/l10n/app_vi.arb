@@ -5124,6 +5124,17 @@
   },
   "videoEditorSoundSpeedSheetTitle": "Tốc độ âm thanh",
   "videoEditorSpeedPresetSemanticLabel": "Tốc độ {speed}×",
+  "videoEditorSpeedModeConstant": "Cố định",
+  "videoEditorSpeedModeCurve": "Đường cong",
+  "videoEditorSpeedCurveCustom": "Tùy chỉnh",
+  "videoEditorSpeedCurveMontage": "Montage",
+  "videoEditorSpeedCurveHero": "Anh hùng",
+  "videoEditorSpeedCurveBullet": "Bullet time",
+  "videoEditorSpeedCurveFlashIn": "Vào nhanh",
+  "videoEditorSpeedCurveFlashOut": "Ra nhanh",
+  "videoEditorSpeedCurveHint": "Kéo một điểm lên để tăng tốc, xuống để chậm lại",
+  "videoEditorSpeedCurvePointSemanticLabel": "Điểm tốc độ {index}/{total}",
+  "videoEditorSpeedResultingLength": "Phát trong {seconds} giây",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {

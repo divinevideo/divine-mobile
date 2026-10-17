@@ -10229,6 +10229,44 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'స్థిరం';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'వక్రం';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'అనుకూలం';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'మాంటేజ్';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'హీరో';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'బుల్లెట్ టైమ్';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'ఫ్లాష్ ఇన్';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'ఫ్లాష్ అవుట్';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'వేగం పెంచడానికి పాయింట్‌ను పైకి, తగ్గించడానికి కిందికి లాగండి';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'వేగ పాయింట్ $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '$seconds సెకన్లు ప్లే అవుతుంది';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'ఫేడ్';
 
   @override

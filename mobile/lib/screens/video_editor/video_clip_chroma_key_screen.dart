@@ -201,7 +201,8 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
           // Muted: the clip loops for minutes while the key is tuned, and this
           // screen is a purely visual judgement.
           volume: 0,
-          playbackSpeed: widget.clip.playbackSpeed ?? 1.0,
+          // The player retimes at one speed, so a ramp previews at its average.
+          playbackSpeed: widget.clip.averagePlaybackSpeed,
         ),
       );
       if (!mounted) return await player.dispose();
@@ -233,7 +234,7 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
       _player!.stateStream.map((state) => state.position),
     ).asBroadcastStream(),
     sourceOffset: widget.clip.trimStart,
-    playbackSpeed: widget.clip.playbackSpeed ?? 1,
+    playbackSpeed: widget.clip.averagePlaybackSpeed,
   );
   Stream<void>? _restarts;
 

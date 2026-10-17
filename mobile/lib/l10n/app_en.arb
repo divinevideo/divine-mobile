@@ -6936,6 +6936,63 @@
       }
     }
   },
+  "videoEditorSpeedModeConstant": "Constant",
+  "@videoEditorSpeedModeConstant": {
+    "description": "Option in the clip speed sheet: the clip plays at one speed throughout."
+  },
+  "videoEditorSpeedModeCurve": "Curve",
+  "@videoEditorSpeedModeCurve": {
+    "description": "Option in the clip speed sheet: the clip's speed changes along a curve while it plays (speed ramp)."
+  },
+  "videoEditorSpeedCurveCustom": "Custom",
+  "@videoEditorSpeedCurveCustom": {
+    "description": "Speed curve preset chip for a curve the user shapes by dragging points."
+  },
+  "videoEditorSpeedCurveMontage": "Montage",
+  "@videoEditorSpeedCurveMontage": {
+    "description": "Speed curve preset: speeds up, slows right down and speeds up again."
+  },
+  "videoEditorSpeedCurveHero": "Hero",
+  "@videoEditorSpeedCurveHero": {
+    "description": "Speed curve preset: fast, a short deep slow-motion on the peak, fast again."
+  },
+  "videoEditorSpeedCurveBullet": "Bullet",
+  "@videoEditorSpeedCurveBullet": {
+    "description": "Speed curve preset named after 'bullet time': a long slow-motion between two fast ends."
+  },
+  "videoEditorSpeedCurveFlashIn": "Flash in",
+  "@videoEditorSpeedCurveFlashIn": {
+    "description": "Speed curve preset: starts fast and settles into normal speed."
+  },
+  "videoEditorSpeedCurveFlashOut": "Flash out",
+  "@videoEditorSpeedCurveFlashOut": {
+    "description": "Speed curve preset: plays at normal speed and rushes out at the end."
+  },
+  "videoEditorSpeedCurveHint": "Drag a point up to speed up, down to slow down",
+  "@videoEditorSpeedCurveHint": {
+    "description": "Hint under the speed curve editor: dragging a point up makes that moment faster, down slower."
+  },
+  "videoEditorSpeedCurvePointSemanticLabel": "Speed point {index} of {total}",
+  "@videoEditorSpeedCurvePointSemanticLabel": {
+    "description": "Accessibility label for a draggable point on the speed curve, a position like \"Clip 2 of 5\" rather than a quantity. {index} is the point's number from the left, {total} how many points there are.",
+    "placeholders": {
+      "index": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorSpeedResultingLength": "Plays for {seconds}s",
+  "@videoEditorSpeedResultingLength": {
+    "description": "How long the clip plays with the chosen speed or speed curve. {seconds} is a number with one decimal, like 6.4.",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
   "videoEditorFadeLabel": "Fade",
   "@videoEditorFadeLabel": {
     "description": "Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet."

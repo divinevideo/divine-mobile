@@ -9961,6 +9961,44 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Malar';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Lengkung';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Tersuai';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montaj';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Wira';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Masuk pantas';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Keluar pantas';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Seret titik ke atas untuk mempercepat, ke bawah untuk memperlahan';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Titik kelajuan $index daripada $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Dimainkan selama $seconds saat';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Pudar';
 
   @override

@@ -13,7 +13,8 @@ import 'package:openvine/models/divine_video_clip.dart';
 ///
 /// [sourceOffset] and [window] are playback time, like the layer carrying
 /// them, while trim is source time, so both go through the clip's speed. A
-/// `null` [window] means the layer runs to the clip's end.
+/// `null` [window] means the layer runs to the clip's end. A speed ramp is cut
+/// down to the stretch that comes back.
 DivineVideoClip detachedClipTrimmedToLayer({
   required DivineVideoClip clip,
   Duration sourceOffset = Duration.zero,
@@ -31,15 +32,16 @@ DivineVideoClip detachedClipTrimmedToLayer({
   final runsToEnd = shown == remaining;
   if (offset == Duration.zero && runsToEnd) return clip;
 
-  final trimStart =
-      clip.trimStart + clip.playbackDurationToSourceDuration(offset);
+  final startOffset = clip.playbackOffsetToSourceOffset(offset);
+  final endOffset = runsToEnd
+      ? clip.trimmedDuration
+      : clip.playbackOffsetToSourceOffset(offset + shown);
+  final trimStart = clip.trimStart + startOffset;
   // Running to the end keeps the clip's own trim exactly, rather than a value
   // recomputed through the speed conversion and off by a rounding step.
   final trimEnd = runsToEnd
       ? clip.trimEnd
-      : clip.duration -
-            trimStart -
-            clip.playbackDurationToSourceDuration(shown);
+      : clip.duration - clip.trimStart - endOffset;
   // A clip is stored in whole milliseconds, so it has to hold its trims that
   // way or it differs from its own history entry and the editor reloads it.
   // Cut back rather than rounded, so the clip keeps all the layer showed.
@@ -47,6 +49,7 @@ DivineVideoClip detachedClipTrimmedToLayer({
   return clip.copyWith(
     trimStart: _wholeMilliseconds(trimStart),
     trimEnd: wholeTrimEnd < clip.trimEnd ? clip.trimEnd : wholeTrimEnd,
+    speedRamp: clip.speedRampBetween(startOffset, endOffset),
   );
 }
 

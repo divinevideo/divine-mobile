@@ -9721,6 +9721,43 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'ቋሚ';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'ኩርባ';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'ብጁ';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'ሞንታዥ';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'ጀግና';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'ቡሌት ታይም';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'ፈጣን መግቢያ';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'ፈጣን መውጫ';
+
+  @override
+  String get videoEditorSpeedCurveHint => 'ለማፍጠን ነጥብን ወደ ላይ፣ ለማዘግየት ወደ ታች ይጎትቱ';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'የፍጥነት ነጥብ $index ከ$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'ለ$seconds ሰከንድ ይጫወታል';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'ፌድ';
 
   @override

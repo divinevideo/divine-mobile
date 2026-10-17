@@ -9479,6 +9479,43 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => '일정';
+
+  @override
+  String get videoEditorSpeedModeCurve => '곡선';
+
+  @override
+  String get videoEditorSpeedCurveCustom => '사용자 지정';
+
+  @override
+  String get videoEditorSpeedCurveMontage => '몽타주';
+
+  @override
+  String get videoEditorSpeedCurveHero => '히어로';
+
+  @override
+  String get videoEditorSpeedCurveBullet => '불릿 타임';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => '플래시 인';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => '플래시 아웃';
+
+  @override
+  String get videoEditorSpeedCurveHint => '점을 위로 끌면 빨라지고 아래로 끌면 느려져요';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return '속도 지점 $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '$seconds초 동안 재생돼요';
+  }
+
+  @override
   String get videoEditorFadeLabel => '페이드';
 
   @override

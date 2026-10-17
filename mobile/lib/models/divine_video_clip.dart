@@ -44,6 +44,7 @@ class DivineVideoClip {
     this.volume = 1,
     this.equalizer = model.EqualizerSettings.none,
     this.playbackSpeed,
+    this.speedRamp,
     this.reversed = false,
     this.isPlaceholder = false,
     this.placeholderFill,
@@ -156,6 +157,23 @@ class DivineVideoClip {
   /// Playback speed multiplier for this clip (e.g. 0.5 = half speed, 2.0 = double speed).
   /// Null means normal speed (1.0).
   final double? playbackSpeed;
+
+  /// A speed that changes while this clip plays, e.g. fast into a jump and
+  /// slow on its peak. Set instead of [playbackSpeed], never with it.
+  ///
+  /// Its points run along the trimmed clip, from [trimStart] to the end of
+  /// [trimmedDuration], so a trim keeps the shape and stretches it over what
+  /// is left.
+  final VideoSpeedRamp? speedRamp;
+
+  /// Whether this clip plays at anything other than its own speed.
+  bool get changesSpeed =>
+      speedRamp != null || (playbackSpeed != null && playbackSpeed != 1.0);
+
+  /// The constant speed that plays this clip in the time it takes:
+  /// [playbackSpeed], or the average speed of [speedRamp].
+  double get averagePlaybackSpeed =>
+      speedRamp?.averageSpeed ?? playbackSpeed ?? 1.0;
 
   /// Whether this clip plays in reverse.
   final bool reversed;
@@ -436,16 +454,96 @@ class DivineVideoClip {
       trimmedDuration.inMilliseconds / 1000.0;
 
   /// Wall-clock duration this clip occupies in the final composition,
-  /// i.e. [trimmedDuration] divided by [playbackSpeed].
+  /// i.e. [trimmedDuration] played at [playbackSpeed] or along [speedRamp].
   ///
   /// A 10 s clip at 2× speed occupies 5 s of playback time.
   Duration get playbackDuration =>
-      sourceDurationToPlaybackDuration(trimmedDuration);
+      sourceOffsetToPlaybackOffset(trimmedDuration);
+
+  /// Where the frame [sourceOffset] after [trimStart] plays, measured on the
+  /// timeline from the clip's start.
+  ///
+  /// Under a [speedRamp] how long a stretch of source plays depends on where
+  /// it sits, so this is the conversion to use for a position inside the clip.
+  /// An offset outside the trimmed clip plays at the speed of the ramp's
+  /// nearest end.
+  Duration sourceOffsetToPlaybackOffset(Duration sourceOffset) {
+    final ramp = speedRamp;
+    if (ramp == null) return sourceDurationToPlaybackDuration(sourceOffset);
+    final trimmed = trimmedDuration;
+    if (sourceOffset.isNegative) {
+      return _atSpeed(sourceOffset, 1 / ramp.points.first.speed);
+    }
+    if (sourceOffset > trimmed) {
+      return playbackDuration +
+          _atSpeed(sourceOffset - trimmed, 1 / ramp.points.last.speed);
+    }
+    return ramp.sourceToOutput(sourceOffset, sourceDuration: trimmed);
+  }
+
+  /// Which frame, counted from [trimStart], plays [playbackOffset] after the
+  /// clip's start on the timeline; the inverse of
+  /// [sourceOffsetToPlaybackOffset].
+  Duration playbackOffsetToSourceOffset(Duration playbackOffset) {
+    final ramp = speedRamp;
+    if (ramp == null) return playbackDurationToSourceDuration(playbackOffset);
+    final trimmed = trimmedDuration;
+    final played = playbackDuration;
+    if (playbackOffset.isNegative) {
+      return _atSpeed(playbackOffset, ramp.points.first.speed);
+    }
+    if (playbackOffset > played) {
+      return trimmed +
+          _atSpeed(playbackOffset - played, ramp.points.last.speed);
+    }
+    return ramp.outputToSource(playbackOffset, sourceDuration: trimmed);
+  }
+
+  /// The source time the first [playbackSpan] of the clip shows, e.g. the
+  /// head a transition into this clip takes.
+  Duration headSourceSpan(Duration playbackSpan) =>
+      playbackOffsetToSourceOffset(playbackSpan);
+
+  /// The source time the last [playbackSpan] of the clip shows, e.g. the tail
+  /// a transition out of this clip takes.
+  Duration tailSourceSpan(Duration playbackSpan) =>
+      trimmedDuration -
+      playbackOffsetToSourceOffset(playbackDuration - playbackSpan);
+
+  /// How long the first [sourceSpan] of the trimmed clip plays.
+  Duration headPlaybackSpan(Duration sourceSpan) =>
+      sourceOffsetToPlaybackOffset(sourceSpan);
+
+  /// How long the last [sourceSpan] of the trimmed clip plays.
+  Duration tailPlaybackSpan(Duration sourceSpan) =>
+      playbackDuration -
+      sourceOffsetToPlaybackOffset(trimmedDuration - sourceSpan);
+
+  /// The [speedRamp] of the part of the trimmed clip from [startOffset] to
+  /// [endOffset] of source, both counted from [trimStart]: the ramp a clip cut
+  /// down to that part keeps, so each frame plays at about its old speed.
+  /// Null without a speed ramp.
+  VideoSpeedRamp? speedRampBetween(Duration startOffset, Duration endOffset) {
+    final ramp = speedRamp;
+    final trimmed = trimmedDuration.inMicroseconds;
+    if (ramp == null || trimmed <= 0) return ramp;
+    final start = (startOffset.inMicroseconds / trimmed).clamp(0.0, 1.0);
+    final end = (endOffset.inMicroseconds / trimmed).clamp(0.0, 1.0);
+    if (end <= start) return ramp;
+    return ramp.cropped(start, end);
+  }
+
+  static Duration _atSpeed(Duration duration, double factor) =>
+      Duration(microseconds: (duration.inMicroseconds * factor).round());
 
   /// Converts a duration measured in this clip's source media time into the
   /// wall-clock duration it occupies after [playbackSpeed] is applied.
+  ///
+  /// A constant-speed conversion: under a [speedRamp] it uses the ramp's
+  /// average speed, which is right for the whole clip only. Convert a position
+  /// inside the clip with [sourceOffsetToPlaybackOffset] instead.
   Duration sourceDurationToPlaybackDuration(Duration sourceDuration) {
-    final speed = playbackSpeed ?? 1.0;
+    final speed = speedRamp?.averageSpeed ?? playbackSpeed ?? 1.0;
     if (speed <= 0 || speed == 1.0) return sourceDuration;
     return Duration(
       microseconds: (sourceDuration.inMicroseconds / speed).round(),
@@ -456,9 +554,10 @@ class DivineVideoClip {
   /// (playback) duration into the span of this clip's source media it covers
   /// once [playbackSpeed] is applied.
   ///
-  /// A 1 s wall-clock span on a 2× clip maps to 2 s of source media.
+  /// A 1 s wall-clock span on a 2× clip maps to 2 s of source media. Like its
+  /// inverse, a constant-speed conversion; see [playbackOffsetToSourceOffset].
   Duration playbackDurationToSourceDuration(Duration playbackDuration) {
-    final speed = playbackSpeed ?? 1.0;
+    final speed = speedRamp?.averageSpeed ?? playbackSpeed ?? 1.0;
     if (speed <= 0 || speed == 1.0) return playbackDuration;
     return Duration(
       microseconds: (playbackDuration.inMicroseconds * speed).round(),
@@ -606,6 +705,8 @@ class DivineVideoClip {
     model.EqualizerSettings? equalizer,
     double? playbackSpeed,
     bool clearPlaybackSpeed = false,
+    VideoSpeedRamp? speedRamp,
+    bool clearSpeedRamp = false,
     bool? reversed,
     bool? isPlaceholder,
     ClipPlaceholderFill? placeholderFill,
@@ -676,6 +777,7 @@ class DivineVideoClip {
       playbackSpeed: clearPlaybackSpeed
           ? null
           : (playbackSpeed ?? this.playbackSpeed),
+      speedRamp: clearSpeedRamp ? null : (speedRamp ?? this.speedRamp),
       reversed: reversed ?? this.reversed,
       isPlaceholder: isPlaceholder ?? this.isPlaceholder,
       placeholderFill: placeholderFill ?? this.placeholderFill,
@@ -762,6 +864,7 @@ class DivineVideoClip {
       'volume': volume,
       if (!equalizer.isNone) 'equalizer': equalizer.toJson(),
       if (playbackSpeed != null) 'playbackSpeed': playbackSpeed,
+      if (speedRamp case final ramp?) 'speedRamp': ramp.toMap(),
       if (reversed) 'reversed': true,
       if (isPlaceholder) 'isPlaceholder': true,
       if (placeholderFill case final fill?) 'placeholderFill': fill.toJson(),
@@ -901,6 +1004,12 @@ class DivineVideoClip {
         _ => model.EqualizerSettings.none,
       },
       playbackSpeed: (json['playbackSpeed'] as num?)?.toDouble(),
+      speedRamp: switch (json['speedRamp']) {
+        final Map<dynamic, dynamic> ramp => VideoSpeedRamp.fromMap(
+          Map<String, dynamic>.from(ramp),
+        ),
+        _ => null,
+      },
       reversed: (json['reversed'] as bool?) ?? false,
       isPlaceholder: (json['isPlaceholder'] as bool?) ?? false,
       placeholderFill: _placeholderFillFromJson(

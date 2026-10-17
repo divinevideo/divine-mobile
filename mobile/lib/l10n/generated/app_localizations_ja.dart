@@ -9459,6 +9459,43 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => '一定';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'カーブ';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'カスタム';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'モンタージュ';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'ヒーロー';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'バレットタイム';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'フラッシュイン';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'フラッシュアウト';
+
+  @override
+  String get videoEditorSpeedCurveHint => '点を上にドラッグすると速く、下にドラッグすると遅くなります';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return '速度ポイント $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '再生時間 $seconds 秒';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'フェード';
 
   @override
