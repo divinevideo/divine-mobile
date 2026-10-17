@@ -637,7 +637,7 @@ void main() {
       });
 
       test('counts a flash transition toward three flashes a second', () {
-        // A 200 ms flash between the two 3 s clips peaks at 2.9 s.
+        // A 200 ms flash between the two 3 s clips starts at 2.87 s.
         final map = TransitionTimelineMap.fromClips([
           clip(
             'a',
@@ -649,7 +649,7 @@ void main() {
           clip('b'),
         ]);
         final beats = [ms(2400), ms(2750), ms(3100), ms(3450)];
-        expect(map.flashes, [ms(2900)]);
+        expect(map.flashes, [const Duration(microseconds: 2870711)]);
 
         final alone = videoEffectsOnOutput(
           [onBeat(.strobe)],
@@ -675,6 +675,32 @@ void main() {
             reason: 'from $start in $flashes',
           );
         }
+      });
+
+      test('counts a flash transition from where it starts, like a beat', () {
+        // A 2 s flash from 3 s starts at 3.71 s, where it reaches a quarter
+        // of white, and peaks at 4 s. The first beat's second holds the
+        // start but not the peak.
+        final map = TransitionTimelineMap.fromClips([
+          clip(
+            'a',
+            duration: const Duration(seconds: 5),
+            transition: const ClipTransition(
+              type: ClipTransitionType.flash,
+              duration: Duration(seconds: 2),
+            ),
+          ),
+          clip('b', duration: const Duration(seconds: 5)),
+        ]);
+        final beats = [ms(2807), ms(3157), ms(3507)];
+
+        final onOutput = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          map,
+          beats: beats,
+        );
+
+        expect(onOutput.single.triggers, [ms(2807), ms(3157)]);
       });
 
       test('flashes on every other beat of a song too fast for every one', () {

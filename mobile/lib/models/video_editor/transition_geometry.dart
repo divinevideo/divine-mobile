@@ -159,16 +159,16 @@ Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) {
 }
 
 /// One flash transition on the exported video: the clip it follows and where
-/// in its blend the flash peaks.
+/// in its blend the flash starts.
 typedef _FlashMoment = ({String clipId, Duration at});
 
 /// Where the flash transitions in [transitions] (keyed like
 /// [clampTransitions]) flash on the exported video, in order.
 ///
-/// An internal blend ends at its boundary on the output, and the flash peaks
-/// [_flashAt] into it. A loop-restart wrap moves the head of the first clip into the
-/// blend that ends the video, so everything before that blend starts the
-/// wrap's length earlier than on the editor timeline.
+/// An internal blend ends at its boundary on the output, and the flash starts
+/// [_flashAt] into it. A loop-restart wrap moves the head of the first clip
+/// into the blend that ends the video, so everything before that blend starts
+/// the wrap's length earlier than on the editor timeline.
 List<_FlashMoment> _flashMoments(
   List<DivineVideoClip> clips,
   Map<String, ClipTransition?> transitions,
@@ -203,16 +203,24 @@ List<_FlashMoment> _flashMoments(
   return moments;
 }
 
-/// How far into its blend [transition]'s flash peaks: where its curve eases
-/// the progress to one half, which is the midpoint only on a curve symmetric
-/// about it.
-Duration _flashAt(ClipTransition transition) =>
-    transition.duration * _flashPeakShares[transition.curve]!;
+/// How strongly a frame has turned white where a flash starts, for a flashing
+/// video effect and a flash transition alike, so the flashes of both are
+/// counted from the same moment.
+const flashOnsetStrength = 0.25;
 
-/// Where each curve's flash peaks, as a share of the blend.
-final Map<AnimationCurve, double> _flashPeakShares = {
+/// How far into its blend [transition]'s flash starts: where its curve has
+/// eased the progress far enough for the flash to reach [flashOnsetStrength].
+///
+/// The renderers brighten a flash by `(1 - |2p - 1|)^4` of eased progress
+/// `p`, so it peaks where the curve reaches one half, the midpoint only on a
+/// curve symmetric about it, and starts a little before that.
+Duration _flashAt(ClipTransition transition) =>
+    transition.duration * _flashOnsetShares[transition.curve]!;
+
+/// Where each curve's flash starts, as a share of the blend.
+final Map<AnimationCurve, double> _flashOnsetShares = {
   for (final curve in AnimationCurve.values)
-    curve: _firstShareReaching(curve, 0.5),
+    curve: _firstShareReaching(curve, math.pow(flashOnsetStrength, 1 / 4) / 2),
 };
 
 /// The first share of a transition at which [curve] has eased its progress to
@@ -623,10 +631,10 @@ class TransitionTimelineMap {
   /// lasts.
   final Duration outputDuration;
 
-  /// Where flash transitions flash on the exported video, in order, after
-  /// [clampTransitions] has spaced them; one past the loop point never shows
-  /// and is left out. Flashing video effects count these too, so the video
-  /// stays within three flashes a second.
+  /// Where flash transitions start to flash on the exported video, in order,
+  /// after [clampTransitions] has spaced them; one past the loop point never
+  /// shows and is left out. Flashing video effects count these too, so the
+  /// video stays within three flashes a second.
   final List<Duration> flashes;
 
   final List<_Blend> _blends;

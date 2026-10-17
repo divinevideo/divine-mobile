@@ -504,7 +504,7 @@ Iterable<Duration> _crowdedFlashSeconds(
   var before = last > Duration.zero ? sample(last) : (flash: 0.0, invert: 0.0);
   for (var at = Duration.zero; at < loopPoint; at += step) {
     final now = sample(at);
-    if ((now.flash >= 0.25 && now.flash >= before.flash + 0.1) ||
+    if ((now.flash >= flashOnsetStrength && now.flash >= before.flash + 0.1) ||
         (now.invert >= 0.5 && before.invert < 0.5)) {
       onsets.add(at);
     }

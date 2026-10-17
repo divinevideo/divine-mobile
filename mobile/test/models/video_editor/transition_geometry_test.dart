@@ -815,6 +815,7 @@ void main() {
       duration: Duration(milliseconds: 200),
     );
     Duration ms(int milliseconds) => Duration(milliseconds: milliseconds);
+    Duration us(int microseconds) => Duration(microseconds: microseconds);
 
     DivineVideoClip clip(
       String id,
@@ -832,7 +833,8 @@ void main() {
 
     test('plays a flash within a second of the one before as a dissolve of '
         'the same length', () {
-      // Flashes peak at 1.1 s and 1.9 s of the exported video.
+      // Flashes start 70.7 ms into their blends, at 1.07 s and 1.87 s of the
+      // exported video, where they reach a quarter of white.
       final clips = [
         clip('a', ms(1200), transition: flash),
         clip('b', ms(1000), transition: flash),
@@ -846,12 +848,12 @@ void main() {
         clamped['b'],
         flash.copyWith(type: ClipTransitionType.dissolve),
       );
-      expect(TransitionTimelineMap.fromClips(clips).flashes, [ms(1100)]);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [us(1070711)]);
       expect(renderedOutputDuration(clips), ms(3000));
     });
 
     test('keeps flashes a second or more apart', () {
-      // Flashes peak at 1.1 s and 2.9 s of the 4 s video.
+      // Flashes start at 1.07 s and 2.87 s of the 4 s video.
       final clips = [
         clip('a', ms(1200), transition: flash),
         clip('b', ms(2000), transition: flash),
@@ -863,14 +865,15 @@ void main() {
       expect(clamped['a'], flash);
       expect(clamped['b'], flash);
       expect(TransitionTimelineMap.fromClips(clips).flashes, [
-        ms(1100),
-        ms(2900),
+        us(1070711),
+        us(2870711),
       ]);
     });
 
-    test('times a flash where its curve peaks, not at its midpoint', () {
-      // The renderers ease the progress and peak the flash where it is one
-      // half: an ease-in 200 ms blend from 1.0 s peaks √½ of the way in.
+    test('times a flash by its curve', () {
+      // The renderers ease the progress and brighten by (1 - |2p - 1|)^4 of
+      // it: an ease-in 200 ms blend from 1.0 s reaches a quarter of white
+      // 0.59 of the way in, where a linear one would be 0.35 in.
       final clips = [
         clip(
           'a',
@@ -881,12 +884,12 @@ void main() {
       ];
 
       expect(TransitionTimelineMap.fromClips(clips).flashes, [
-        const Duration(microseconds: 1141421),
+        us(1118921),
       ]);
     });
 
     test('spaces flashes by where their curves peak', () {
-      // Their midpoints are 1 s apart, but the ease-in one peaks late and
+      // Their midpoints are 1 s apart, but the ease-in one flashes late and
       // the ease-out one early, 0.92 s apart.
       final clips = [
         clip(
@@ -910,8 +913,8 @@ void main() {
 
     test('plays the loop-restart flash as a dissolve when the first flash of '
         'the next pass follows within a second', () {
-      // The wrap moves 200 ms of a's head to the end: a's flash peaks at
-      // 0.7 s, the wrap's at 1.5 s of the 1.6 s video, 0.8 s before the
+      // The wrap moves 200 ms of a's head to the end: a's flash starts at
+      // 0.67 s, the wrap's at 1.47 s of the 1.6 s video, 0.8 s before the
       // next pass's first flash.
       final clips = [
         clip('a', ms(1000), transition: flash),
@@ -925,7 +928,7 @@ void main() {
         clamped['b'],
         flash.copyWith(type: ClipTransitionType.dissolve),
       );
-      expect(TransitionTimelineMap.fromClips(clips).flashes, [ms(700)]);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [us(670711)]);
     });
 
     test('keeps a lone flash on a video that loops every second or slower, '
@@ -940,13 +943,13 @@ void main() {
       ];
 
       expect(clampTransitions(long)['a']?.type, ClipTransitionType.flash);
-      expect(TransitionTimelineMap.fromClips(long).flashes, [ms(1300)]);
+      expect(TransitionTimelineMap.fromClips(long).flashes, [us(1270711)]);
       expect(clampTransitions(short)['a']?.type, ClipTransitionType.dissolve);
       expect(TransitionTimelineMap.fromClips(short).flashes, isEmpty);
     });
 
     test('leaves a flash past the end of the export alone', () {
-      // The export stops at 6.3 s; this flash would peak at 6.9 s.
+      // The export stops at 6.3 s; this flash would start at 6.87 s.
       final clips = [
         clip('a', ms(7000), transition: flash),
         clip('b', ms(1200)),
