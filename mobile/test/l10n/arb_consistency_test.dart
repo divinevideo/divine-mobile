@@ -581,6 +581,10 @@ const _knownUntranslatedDebt = <String>{
   'dmHiddenMessageLabel',
   'dmHiddenMessageShowAction',
 
+  // The banner over a group's composer when some members are blocked (#10150).
+  'dmBlockedGroupMembersBannerBody',
+  'dmStartChatWithoutBlockedAction',
+
   // One report form with an optional note for every reason (#10003).
   'reportDetailsOptional',
   'reportWhyReportingComment',

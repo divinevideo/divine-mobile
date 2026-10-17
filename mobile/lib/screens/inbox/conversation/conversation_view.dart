@@ -288,15 +288,17 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     // A thread reached from the Blocked chip is readable but not writable:
     // the block stays in force, so the composer and the reaction affordance
     // both go. Reading and screenshotting is the point (#7025); replying
-    // would undo the block the viewer deliberately set. Rebuilds off the
-    // `blocklistVersionProvider` watch above, so unblocking from the kebab
-    // (a one-to-one) or a member's profile (a group) brings the composer
-    // straight back.
+    // would undo the block the viewer deliberately set. A group stays
+    // writable until every member is blocked (#10150). Rebuilds off the
+    // `blocklistVersionProvider` watch above, so unblocking from the kebab (a
+    // one-to-one) or a member's profile (a group) brings the composer back,
+    // and in a group drops the banner and expands the member's messages.
     final threadWritability = resolveDmThreadWritability(
       participantPubkeys: widget.participantPubkeys,
       isBlockedByUs: blocklistRepository.isBlocked,
     );
-    // Whom the viewer blocked in a group, for its read-only notice.
+    // Whom the viewer blocked in a group: named in the banner above the
+    // composer, or in the read-only notice once that is every member.
     final blockedMembers = isGroup
         ? dmThreadBlockedParticipants(
             participantPubkeys: widget.participantPubkeys,
@@ -619,6 +621,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   sendRecoveryEnabled:
                                       threadWritability ==
                                       DmThreadWritability.writable,
+                                  everyMemberBlocked:
+                                      threadWritability ==
+                                      DmThreadWritability.blockedByUs,
                                   imageUrl: isDeleted ? null : profile?.picture,
                                   nip05: claimedNip05,
                                   onViewProfile: otherPubkey.isNotEmpty
@@ -657,8 +662,21 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                         : _BlockedGroupNotice(blockedPubkeys: blockedMembers),
                   DmThreadWritability.unresolved =>
                     const _UnresolvedThreadNotice(),
-                  DmThreadWritability.writable => _SendBar(
-                    participantPubkeys: widget.participantPubkeys,
+                  // One Column whether or not the banner shows, so the
+                  // composer keeps its draft when a member is unblocked.
+                  DmThreadWritability.writable => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (blockedMembers.isNotEmpty)
+                        _BlockedMembersBanner(
+                          blockedPubkeys: blockedMembers,
+                          onStartChatWithout: currentPubkey.isEmpty
+                              ? null
+                              : () => _openChatWithoutBlocked(currentPubkey),
+                        ),
+                      _SendBar(participantPubkeys: widget.participantPubkeys),
+                    ],
                   ),
                 },
               ],
@@ -666,6 +684,29 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Opens a chat with the group's members the viewer has not blocked: a new
+  /// group, or a one-to-one when one is left (#10150).
+  ///
+  /// The id is derived from the people, as the inbox derives it, so an
+  /// existing thread with them opens rather than a second one.
+  void _openChatWithoutBlocked(String currentPubkey) {
+    final remaining = dmPeersWithoutBlocked(
+      participantPubkeys: widget.participantPubkeys,
+      isBlockedByUs: ref.read(contentBlocklistRepositoryProvider).isBlocked,
+    );
+    runDetached(
+      context.push(
+        ConversationPage.pathForId(
+          DmRepository.computeConversationId([currentPubkey, ...remaining]),
+        ),
+        extra: remaining,
+      ),
+      'open DM conversation without blocked members',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
     );
   }
 
@@ -1289,8 +1330,8 @@ class _BlockedThreadNotice extends StatelessWidget {
 
 /// [_BlockedThreadNotice] for a group with every member blocked (#10150).
 ///
-/// A group's sheet has no Unblock, so this notice says who was blocked: the
-/// member when there is one, otherwise how many.
+/// A group's sheet has no Unblock, so this notice says how many members were
+/// blocked, and that each is unblocked from their own profile.
 class _BlockedGroupNotice extends ConsumerWidget {
   const _BlockedGroupNotice({required this.blockedPubkeys});
 
@@ -1298,35 +1339,92 @@ class _BlockedGroupNotice extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
-    final title = switch (blockedPubkeys) {
-      [final pubkey] => _memberTitle(context, ref, pubkey),
-      _ => l10n.dmBlockedGroupMembersTitle(blockedPubkeys.length),
-    };
     return _ReadOnlyThreadNotice(
-      title: title,
-      body: l10n.dmBlockedGroupThreadBody,
+      title: _blockedMembersTitle(context, ref, blockedPubkeys),
+      body: context.l10n.dmBlockedGroupThreadBody,
     );
   }
+}
 
-  /// Falls back to the count while the name is loading, so a generated
-  /// placeholder never stands in for the person who was blocked, and for a
-  /// deleted account, which has no name to give.
-  String _memberTitle(BuildContext context, WidgetRef ref, String pubkey) {
-    final isVanished = ref.watch(profileVanishedProvider(pubkey));
-    if (isVanished) return context.l10n.dmBlockedGroupMembersTitle(1);
+/// Sits above the composer in a group where the viewer blocked some members
+/// but not all (#10150).
+///
+/// The group stays writable, and every message is encrypted to every member,
+/// so the blocked people still receive what the viewer sends. The banner says
+/// so, and offers a chat with everyone else instead.
+class _BlockedMembersBanner extends ConsumerWidget {
+  const _BlockedMembersBanner({
+    required this.blockedPubkeys,
+    required this.onStartChatWithout,
+  });
+
+  final List<String> blockedPubkeys;
+  final VoidCallback? onStartChatWithout;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    // No bottom safe-area inset: the composer sits below and carries it.
+    return Container(
+      color: context.vineColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          Text(
+            _blockedMembersTitle(context, ref, blockedPubkeys),
+            style: VineTheme.titleSmallFont(
+              color: context.vineColors.primaryText,
+            ),
+          ),
+          Text(
+            l10n.dmBlockedGroupMembersBannerBody,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.onSurfaceVariant,
+            ),
+          ),
+          // `semanticLabel` makes it announce as a button; see
+          // [_ClosedThreadNotice].
+          DivineButton(
+            label: l10n.dmStartChatWithoutBlockedAction,
+            semanticLabel: l10n.dmStartChatWithoutBlockedAction,
+            type: DivineButtonType.secondary,
+            size: DivineButtonSize.small,
+            onPressed: onStartChatWithout,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Says whom the viewer blocked in a group: the member when there is one,
+/// otherwise how many.
+///
+/// Falls back to the count while the one name is loading, so a generated
+/// placeholder never stands in for the person who was blocked, and for a
+/// deleted account, which has no name to give.
+String _blockedMembersTitle(
+  BuildContext context,
+  WidgetRef ref,
+  List<String> blockedPubkeys,
+) {
+  final l10n = context.l10n;
+  final count = l10n.dmBlockedGroupMembersTitle(blockedPubkeys.length);
+  if (blockedPubkeys case [final pubkey]) {
+    if (ref.watch(profileVanishedProvider(pubkey))) return count;
     final name = dmPeerDisplayName(
       context,
       pubkeyHex: pubkey,
-      isVanished: isVanished,
+      isVanished: false,
       moderation: ref.watch(moderationPresentationProvider(pubkey)),
       profile: ref.watch(fetchUserProfileProvider(pubkey)).asData?.value,
       isResolving: ref.watch(profileIdentityResolvingProvider(pubkey)),
     );
-    return name.isEmpty
-        ? context.l10n.dmBlockedGroupMembersTitle(1)
-        : context.l10n.dmBlockedGroupMemberTitle(name);
+    return name.isEmpty ? count : l10n.dmBlockedGroupMemberTitle(name);
   }
+  return count;
 }
 
 /// Takes the composer's place in a thread whose participants could not be
@@ -1362,7 +1460,8 @@ class _UnresolvedThreadNotice extends StatelessWidget {
 /// [_BlockedGroupNotice] and [_UnresolvedThreadNotice].
 ///
 /// Matches the composer's slot geometry so replacing [MessageInputBar] with
-/// either notice does not shift the layout.
+/// any of them does not shift the layout. A group with only some members
+/// blocked keeps the composer, with [_BlockedMembersBanner] above it instead.
 class _ReadOnlyThreadNotice extends StatelessWidget {
   const _ReadOnlyThreadNotice({required this.title, required this.body});
 
@@ -1415,6 +1514,7 @@ class _ConversationContent extends StatelessWidget {
     required this.reactionsEnabled,
     required this.retractionsEnabled,
     required this.sendRecoveryEnabled,
+    required this.everyMemberBlocked,
     this.imageUrl,
     this.nip05,
     this.onViewProfile,
@@ -1451,6 +1551,10 @@ class _ConversationContent extends StatelessWidget {
 
   /// Whether tapping a failed own bubble may offer to resend it.
   final bool sendRecoveryEnabled;
+
+  /// Whether the viewer blocked every member, which shows a group's messages
+  /// in full like a blocked one-to-one (#10150).
+  final bool everyMemberBlocked;
   final String? imageUrl;
   final String? nip05;
   final VoidCallback? onViewProfile;
@@ -1508,6 +1612,7 @@ class _ConversationContent extends StatelessWidget {
                     reactionsEnabled: reactionsEnabled,
                     retractionsEnabled: retractionsEnabled,
                     sendRecoveryEnabled: sendRecoveryEnabled,
+                    everyMemberBlocked: everyMemberBlocked,
                   ),
         };
       },
@@ -1555,6 +1660,7 @@ class _MessageList extends StatelessWidget {
     required this.reactionsEnabled,
     required this.retractionsEnabled,
     required this.sendRecoveryEnabled,
+    required this.everyMemberBlocked,
   });
 
   final List<DmMessage> messages;
@@ -1562,7 +1668,8 @@ class _MessageList extends StatelessWidget {
   final List<String> participantPubkeys;
 
   /// Effective block/mute set; reactions from these pubkeys are hidden, and
-  /// in a group their messages collapse behind Show (#10150).
+  /// in a group their messages collapse behind Show unless
+  /// [everyMemberBlocked] (#10150).
   final Set<String> blockedPubkeys;
   final String senderDisplayName;
   final bool reactionsEnabled;
@@ -1611,6 +1718,10 @@ class _MessageList extends StatelessWidget {
   /// a failed row that is under `maxRetries`
   /// (`OutgoingDmsDao.getRetryableForOwner`).
   final bool sendRecoveryEnabled;
+
+  /// Whether the viewer blocked every member. The thread is then read-only
+  /// like a blocked one-to-one, so nothing collapses (#10150, #7025).
+  final bool everyMemberBlocked;
 
   Future<void> _onMessageLongPress(
     BuildContext context,
@@ -1924,6 +2035,7 @@ class _MessageList extends StatelessWidget {
         // [messagesById], so a reply quoting it still resolves its video.
         final isCollapsed = dmMessageHiddenByDefault(
           isGroup: isGroup,
+          everyMemberBlocked: everyMemberBlocked,
           senderPubkey: message.senderPubkey,
           currentUserPubkey: currentPubkey,
           isHidden: blockedPubkeys.contains,

@@ -5684,6 +5684,13 @@ class AppLocalizationsAm extends AppLocalizations {
       'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ ከመገለጫቸው እገዳውን ያንሱ።';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

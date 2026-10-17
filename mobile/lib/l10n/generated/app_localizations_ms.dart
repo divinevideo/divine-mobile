@@ -5818,6 +5818,13 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat melalui profil mereka untuk membalas.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

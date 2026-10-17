@@ -5753,6 +5753,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kişinin profilinden kaldır.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

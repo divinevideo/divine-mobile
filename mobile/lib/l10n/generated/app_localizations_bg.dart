@@ -5872,6 +5872,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Съобщенията остават тук, за да можеш да ги прочетеш или да направиш екранна снимка. Отблокирай от профила им, за да отговориш.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override
