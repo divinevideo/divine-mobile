@@ -141,18 +141,15 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
   }
 
   Future<void> _emailSupport(BuildContext context, WidgetRef ref) async {
-    String? caseId;
-    if (composeEmail == null) {
-      final status = ref.read(currentMinorAccountReviewStatusProvider).value;
-      final reviewCase = status?.currentCase;
-      caseId = reviewCase?.id;
-      if (status?.isRestricted == true &&
-          reviewCase?.allowsParentVideoOrEmail == true &&
-          reviewCase?.state ==
-              MinorReviewCaseState.restrictedPendingUserResponse) {
-        await context.push<void>(MinorAccountReviewParentContactScreen.path);
-        return;
-      }
+    final status = ref.read(currentMinorAccountReviewStatusProvider).value;
+    final reviewCase = status?.currentCase;
+    final caseId = reviewCase?.id;
+    if (status?.isRestricted == true &&
+        reviewCase?.allowsParentVideoOrEmail == true &&
+        reviewCase?.state ==
+            MinorReviewCaseState.restrictedPendingUserResponse) {
+      await context.push<void>(MinorAccountReviewParentContactScreen.path);
+      return;
     }
     final MinorAccountReviewComposeEmail composer =
         composeEmail ??
