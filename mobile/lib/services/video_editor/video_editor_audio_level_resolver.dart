@@ -188,6 +188,9 @@ AudioLevelPart? _detachedClipPart(
       to: trimStart + span,
       at: start ?? Duration.zero,
       speed: clip.playbackSpeed ?? 1,
+      speedRamp: clip.speedRamp,
+      rampStart: clip.trimStart,
+      rampLength: clip.trimmedDuration,
     ),
     volume: clip.volume,
     equalizer: clip.equalizer,
@@ -229,6 +232,9 @@ Future<List<AudioLevelPart>> withLocalNetworkSounds(
           to: part.source.to,
           at: part.source.at,
           speed: part.source.speed,
+          speedRamp: part.source.speedRamp,
+          rampStart: part.source.rampStart,
+          rampLength: part.source.rampLength,
         ),
       ),
     );
@@ -427,8 +433,7 @@ class VideoEditorAudioLevelResolver {
   ) {
     final source = part.source;
     final start = source.at.inMicroseconds / 1e6;
-    final length =
-        (source.to - source.from).inMicroseconds / 1e6 / source.speed;
+    final length = source.playedLength.inMicroseconds / 1e6;
     final end = start + length;
     final firstRow = math.max(0, (start * audioBandFrameRate).ceil());
     final lastRow = math.min(rows, (end * audioBandFrameRate).ceil());
@@ -443,7 +448,12 @@ class VideoEditorAudioLevelResolver {
       // Where this moment of the video plays in the file, as a row of what
       // was read of it.
       final fileSeconds =
-          source.from.inMicroseconds / 1e6 + (time - start) * source.speed;
+          source
+              .positionAfter(
+                Duration(microseconds: ((time - start) * 1e6).round()),
+              )
+              .inMicroseconds /
+          1e6;
       final position =
           (fileSeconds - energies.start.inMicroseconds / 1e6) *
           audioBandFrameRate;

@@ -1,7 +1,9 @@
 part of 'video_editor_timeline_clip_strip.dart';
 
 /// Scale factor that maps source-time pixel widths to playback-time pixel
-/// widths. `1 / playbackSpeed`, clamped for non-positive speeds.
+/// widths. `1 / playbackSpeed`, clamped for non-positive speeds; a speed ramp
+/// uses its average speed, so the strip fills the clip's slot while the
+/// thumbnails under a fast or slow stretch sit slightly off their frames.
 ///
 /// `_ClipTile.fullWidth` / `trimStartOffset` must be scaled by this so the
 /// underlying source-time strip lines up with the visible slot width (which
@@ -10,7 +12,7 @@ part of 'video_editor_timeline_clip_strip.dart';
 /// underlying strip, leaving the trailing region empty/black.
 extension _DivineVideoClipTimelineScale on DivineVideoClip {
   double get _playbackScale {
-    final speed = playbackSpeed ?? 1.0;
+    final speed = averagePlaybackSpeed;
     return speed > 0 ? 1.0 / speed : 1.0;
   }
 }

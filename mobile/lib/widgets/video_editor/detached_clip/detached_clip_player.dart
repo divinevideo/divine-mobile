@@ -69,7 +69,9 @@ class DetachedClipPlayer {
           end: clip.trimStart + clip.trimmedDuration,
           volume: clip.volume,
           equalizer: clip.equalizer.toPlayerEqualizer(),
-          playbackSpeed: clip.playbackSpeed ?? 1.0,
+          // A speed ramp plays at its average speed: the player retimes at
+          // one speed, and the clip keeps the length it has on the canvas.
+          playbackSpeed: clip.averagePlaybackSpeed,
         ),
       );
       return DetachedClipPlayer._(controller, clip);

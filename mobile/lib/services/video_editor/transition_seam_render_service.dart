@@ -193,9 +193,11 @@ class TransitionSeamRenderService {
 
       // `consumed` is wall-clock (playback) time; convert it into each clip's
       // own source media time for trimming, honouring per-clip playbackSpeed
-      // (clip A and clip B may run at different speeds).
-      final tailConsumed = clipA.playbackDurationToSourceDuration(consumed);
-      final headConsumed = clipB.playbackDurationToSourceDuration(consumed);
+      // (clip A and clip B may run at different speeds). Under a speed ramp
+      // that depends on the edge, so A's tail and B's head are each measured
+      // where they sit.
+      final tailConsumed = clipA.tailSourceSpan(consumed);
+      final headConsumed = clipB.headSourceSpan(consumed);
 
       // Persisted seam from a previous session — reuse it without re-rendering.
       // A file truncated by a kill mid-write (see the temp-then-rename publish
@@ -420,6 +422,10 @@ class TransitionSeamRenderService {
     final visibleEnd = clip.duration - clip.trimEnd;
     return clip.copyWith(
       trimStart: visibleEnd - tailLen,
+      speedRamp: clip.speedRampBetween(
+        clip.trimmedDuration - tailLen,
+        clip.trimmedDuration,
+      ),
       transition: transition,
       // The canvas draws timeline masks over playback, including seams.
       // Baking a cover here applies it twice and persists a mask that the
@@ -432,6 +438,7 @@ class TransitionSeamRenderService {
   DivineVideoClip _headClip(DivineVideoClip clip, Duration headLen) {
     return clip.copyWith(
       trimEnd: clip.duration - (clip.trimStart + headLen),
+      speedRamp: clip.speedRampBetween(Duration.zero, headLen),
       clearTransition: true,
       clearMask: true,
     );
@@ -478,7 +485,10 @@ class TransitionSeamRenderService {
         '${c.id}:${c.requireVideo.file?.path}:${c.duration.inMicroseconds}:'
         '${c.trimStart.inMicroseconds}:${c.trimEnd.inMicroseconds}:'
         '${c.playbackSpeed ?? 1.0}:${c.volume}:'
-        '${c.equalizer.gains.join(',')}:${c.targetAspectRatio.name}';
+        '${c.equalizer.gains.join(',')}:${c.targetAspectRatio.name}'
+        // Only a ramped clip adds its points, so every other seam keeps the
+        // key it was persisted under.
+        '${c.speedRamp == null ? '' : ':${c.speedRamp!.toMap()}'}';
     final t =
         '${transition.type.name}:${transition.duration.inMicroseconds}:'
         '${transition.curve.name}:${transition.direction.name}';
@@ -623,12 +633,12 @@ class SeamTimeline {
     final wrapHeadPb = !wrapDisplay.isActive
         ? Duration.zero
         : wrapSeam != null
-        ? clips[0].sourceDurationToPlaybackDuration(wrapSeam.headConsumed)
+        ? clips[0].headPlaybackSpan(wrapSeam.headConsumed)
         : wrapDisplay.consumedPerSide;
     final wrapTailPb = !wrapDisplay.isActive
         ? Duration.zero
         : wrapSeam != null
-        ? clips[n - 1].sourceDurationToPlaybackDuration(wrapSeam.tailConsumed)
+        ? clips[n - 1].tailPlaybackSpan(wrapSeam.tailConsumed)
         : wrapDisplay.consumedPerSide;
 
     var composite = Duration.zero;
@@ -651,7 +661,7 @@ class SeamTimeline {
       if (prevTransition != null) {
         final seam = seams.cached(clips[i - 1], clip, prevTransition);
         if (seam != null) {
-          headPb = clip.sourceDurationToPlaybackDuration(seam.headConsumed);
+          headPb = clip.headPlaybackSpan(seam.headConsumed);
         }
       }
 
@@ -661,7 +671,7 @@ class SeamTimeline {
       if (i + 1 < n && transition != null) {
         outgoing = seams.cached(clip, clips[i + 1], transition);
         if (outgoing != null) {
-          tailPb = clip.sourceDurationToPlaybackDuration(outgoing.tailConsumed);
+          tailPb = clip.tailPlaybackSpan(outgoing.tailConsumed);
         }
       }
 
@@ -695,7 +705,7 @@ class SeamTimeline {
 
       if (outgoing != null) {
         final boundary = editor + clipDuration;
-        final nextHeadPb = clips[i + 1].sourceDurationToPlaybackDuration(
+        final nextHeadPb = clips[i + 1].headPlaybackSpan(
           outgoing.headConsumed,
         );
         final editorStart = _maxDur(boundary - tailPb, editorCursor);
@@ -852,7 +862,7 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
     if (i == 0 && wrapDisplay.isActive) {
       headConsumed +=
           wrapSeam?.headConsumed ??
-          clip.playbackDurationToSourceDuration(wrapDisplay.consumedPerSide);
+          clip.headSourceSpan(wrapDisplay.consumedPerSide);
     }
 
     TransitionSeam? outgoingSeam;
@@ -865,7 +875,7 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
     if (i == n - 1 && wrapDisplay.isActive) {
       tailConsumed +=
           wrapSeam?.tailConsumed ??
-          clip.playbackDurationToSourceDuration(wrapDisplay.consumedPerSide);
+          clip.tailSourceSpan(wrapDisplay.consumedPerSide);
     }
 
     final bodyStart = clip.trimStart + headConsumed;
@@ -874,14 +884,23 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
       // A pre-rendered normal-rate body is only used when no seam consumes part
       // of this clip — the rendered file spans the full trimmed body, so a
       // partial seam trim can't be expressed against it. Seam-consumed clips
-      // therefore stay on live retiming.
-      final rendered =
-          headConsumed == Duration.zero && tailConsumed == Duration.zero
+      // therefore stay on live retiming. The exception is a speed ramp, which
+      // live retiming can only approximate: it plays the stretch of its body
+      // the seams leave, measured in the body's own (playback) time.
+      final unconsumed =
+          headConsumed == Duration.zero && tailConsumed == Duration.zero;
+      final rendered = unconsumed || clip.speedRamp != null
           ? speedRenders?.cached(clip)
           : null;
       final body = rendered != null
           ? player.VideoClip.file(
               rendered.path,
+              start: unconsumed
+                  ? Duration.zero
+                  : clip.headPlaybackSpan(headConsumed),
+              end: unconsumed
+                  ? null
+                  : clip.playbackDuration - clip.tailPlaybackSpan(tailConsumed),
               volume: clip.volume,
               equalizer: clip.equalizer.toPlayerEqualizer(),
             )

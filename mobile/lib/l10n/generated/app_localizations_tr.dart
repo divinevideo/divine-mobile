@@ -9841,6 +9841,44 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Sabit';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Eğri';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Özel';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montaj';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Kahraman';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Hızlı giriş';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Hızlı çıkış';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Hızlandırmak için bir noktayı yukarı, yavaşlatmak için aşağı sürükle';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Hız noktası $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '$seconds sn sürer';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Solma';
 
   @override

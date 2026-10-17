@@ -1779,6 +1779,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         video: EditorVideo.file(clip.forwardVideoPath),
         trimStart: clip.trimEnd,
         trimEnd: clip.trimStart,
+        // Mirrored with the footage, so the slow motion stays on its moment.
+        speedRamp: clip.speedRamp?.reversed,
         reversed: false,
         // A different file is now the clip's video, so a recorded chroma-key
         // source no longer describes it. The key stays baked in; only
@@ -1806,6 +1808,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         video: EditorVideo.file(clip.reversedVideoPath),
         trimStart: clip.trimEnd,
         trimEnd: clip.trimStart,
+        speedRamp: clip.speedRamp?.reversed,
         reversed: true,
         // See the forward branch above.
         clearChromaKey: true,
@@ -1900,6 +1903,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         duration: reversedDuration,
         minTrimStart: Duration.zero,
         sourceStartOffset: Duration.zero,
+        speedRamp: currentClip.speedRamp?.reversed,
         reversed: !clip.reversed,
         forwardVideoPath: forwardVideoPath,
         reversedVideoPath: reversedVideoPath,
@@ -3484,6 +3488,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
     final videoPath = clip.requireVideo.file?.path;
     final extractionSpeed = _effectiveAudioExtractionSpeed(clip);
+    final extractionRamp = clip.speedRamp;
 
     if (videoPath == null) {
       Log.warning(
@@ -3505,10 +3510,20 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       // Draft-owned rather than temporary: this track is written into the
       // editor history the draft persists, so it has to outlive both the
       // session and the next app update.
-      final result = await _audioExtractionService.extractAudioForDraft(
-        videoPath: videoPath,
-        speed: extractionSpeed,
-      );
+      // A speed ramp moves the clip's sound unevenly, so its track is taken
+      // from the clip rendered with the ramp rather than from the whole file
+      // at one speed.
+      final result = extractionRamp != null
+          ? await _audioExtractionService.extractRampedAudioForDraft(
+              videoPath: videoPath,
+              start: clip.trimStart,
+              end: clip.trimStart + clip.trimmedDuration,
+              speedRamp: extractionRamp,
+            )
+          : await _audioExtractionService.extractAudioForDraft(
+              videoPath: videoPath,
+              speed: extractionSpeed,
+            );
 
       // Reconcile against current state after the async gap.
       // Other event handlers (remove, split, insert) may have mutated
@@ -3542,7 +3557,12 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         currentClip,
       );
       if (currentVideoPath != videoPath ||
-          currentExtractionSpeed != extractionSpeed) {
+          currentExtractionSpeed != extractionSpeed ||
+          currentClip.speedRamp != extractionRamp ||
+          // A ramped track covers the trimmed window only.
+          (extractionRamp != null &&
+              (currentClip.trimStart != clip.trimStart ||
+                  currentClip.trimEnd != clip.trimEnd))) {
         Log.warning(
           '⚠️ Audio extraction result discarded: clip ${clip.id} source '
           'changed while extraction was running',
@@ -3579,14 +3599,18 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         fileSize: result.fileSize,
         duration: result.duration,
         title: event.clipTitle,
-        startOffset: currentClip.sourceDurationToPlaybackDuration(
-          currentClip.trimStart,
-        ),
+        startOffset: extractionRamp != null
+            ? Duration.zero
+            : currentClip.sourceDurationToPlaybackDuration(
+                currentClip.trimStart,
+              ),
         startTime: clipStart,
         endTime: clipStart + currentClip.playbackDuration,
         // Anchor the extracted audio to its source clip so it follows the
-        // clip's trims (J-Cut) until the user manually moves it.
-        anchorClipId: currentClip.id,
+        // clip's trims (J-Cut) until the user manually moves it. A ramped
+        // track holds only the trimmed window, rendered with the ramp, so
+        // there is no footage outside it for a trim to reveal.
+        anchorClipId: extractionRamp != null ? null : currentClip.id,
         // The extracted sound keeps the tone the clip played with.
         equalizer: currentClip.equalizer,
       );

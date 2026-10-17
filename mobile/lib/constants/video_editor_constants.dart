@@ -820,6 +820,10 @@ class VideoEditorConstants {
   /// [clipSpeedStep] grid, so the slider can land on it exactly.
   static const List<double> clipSpeedPresets = [0.25, 0.5, 1, 1.5, 2, 3];
 
+  /// How many points a clip's speed curve has, spread evenly over the clip;
+  /// each can be dragged between [clipSpeedMin] and [clipSpeedMax].
+  static const int clipSpeedRampPointCount = 5;
+
   /// Step size between discrete values on the sound fade sliders.
   static const Duration audioFadeStep = Duration(milliseconds: 100);
 

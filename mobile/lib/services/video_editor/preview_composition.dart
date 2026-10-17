@@ -213,6 +213,8 @@ class PreviewComposition {
       // whole-body speed render would never be spliced in — matching the gate
       // in [buildSeamAwarePlayerClips]. Avoids a native encode the player can't
       // use. Until the seam lands the clip isn't consumed, so it still renders.
+      // A speed ramp is the exception: live retiming cannot play it, so the
+      // player plays the part of its render the seams leave.
       final incoming = i > 0 ? clamped[clips[i - 1].id] : null;
       final consumedByIncoming =
           incoming != null &&
@@ -223,7 +225,10 @@ class PreviewComposition {
           outgoing != null &&
           _seamService.cached(clip, clips[i + 1], outgoing) != null;
       final consumedByWrap = wrapActive && (i == 0 || i == clips.length - 1);
-      if (consumedByIncoming || consumedByOutgoing || consumedByWrap) continue;
+      if (clip.speedRamp == null &&
+          (consumedByIncoming || consumedByOutgoing || consumedByWrap)) {
+        continue;
+      }
 
       if (_speedRenderService.cached(clip) != null) continue;
       if (_speedRenderService.isRendering(clip)) continue;

@@ -9899,6 +9899,44 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'ثابتة';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'منحنى';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'مخصص';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'مونتاج';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'بطل';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'زمن الرصاصة';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'دخول سريع';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'خروج سريع';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'سحب نقطة للأعلى يسرّع الفيديو، وللأسفل يبطّئه';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'نقطة السرعة $index من $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'المدة $seconds ث';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'تلاشٍ';
 
   @override

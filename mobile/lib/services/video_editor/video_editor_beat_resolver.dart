@@ -23,6 +23,9 @@ class BeatSourcePart extends Equatable {
     required this.at,
     this.fileLength,
     this.speed = 1,
+    this.speedRamp,
+    this.rampStart = Duration.zero,
+    this.rampLength = Duration.zero,
   });
 
   /// The file the sound comes from.
@@ -43,6 +46,49 @@ class BeatSourcePart extends Equatable {
   /// How much faster than recorded the part plays.
   final double speed;
 
+  /// A speed that changes while the part plays, instead of [speed]; it runs
+  /// along [rampLength] of [media] from [rampStart], the clip's trimmed
+  /// window, which the part may be only a stretch of.
+  final VideoSpeedRamp? speedRamp;
+
+  /// Where in [media] [speedRamp] starts.
+  final Duration rampStart;
+
+  /// How much of [media] [speedRamp] runs along.
+  final Duration rampLength;
+
+  /// How long after [from] the moment [position] of [media] plays.
+  Duration playedAfterFrom(Duration position) {
+    final ramp = speedRamp;
+    if (ramp == null) {
+      return Duration(
+        microseconds: ((position - from).inMicroseconds / speed).round(),
+      );
+    }
+    return _rampOutput(ramp, position) - _rampOutput(ramp, from);
+  }
+
+  /// Which moment of [media] plays [played] after [from]: the inverse of
+  /// [playedAfterFrom].
+  Duration positionAfter(Duration played) {
+    final ramp = speedRamp;
+    if (ramp == null) {
+      return from +
+          Duration(microseconds: (played.inMicroseconds * speed).round());
+    }
+    return rampStart +
+        ramp.outputToSource(
+          _rampOutput(ramp, from) + played,
+          sourceDuration: rampLength,
+        );
+  }
+
+  /// How long the part plays.
+  Duration get playedLength => playedAfterFrom(to);
+
+  Duration _rampOutput(VideoSpeedRamp ramp, Duration position) =>
+      ramp.sourceToOutput(position - rampStart, sourceDuration: rampLength);
+
   @override
   List<Object?> get props => [
     media,
@@ -51,6 +97,9 @@ class BeatSourcePart extends Equatable {
     to,
     at,
     speed,
+    speedRamp,
+    rampStart,
+    rampLength,
   ];
 }
 
@@ -169,6 +218,9 @@ List<ClipSoundPart> clipSoundParts(List<DivineVideoClip> clips) {
           to: to,
           at: at,
           speed: speed,
+          speedRamp: clip.speedRamp,
+          rampStart: clip.trimStart,
+          rampLength: clip.trimmedDuration,
           // Reverse is baked into clip.video; its samples are already in
           // playback order, including the rewritten trims.
         ),
@@ -180,9 +232,7 @@ List<ClipSoundPart> clipSoundParts(List<DivineVideoClip> clips) {
       var at = clipStart;
       if (i == 0 && wrap != null) {
         // The first head is the incoming side of the loop-restart blend.
-        final head = Duration(
-          microseconds: (wrapLength.inMicroseconds * speed).round(),
-        );
+        final head = clip.headSourceSpan(wrapLength);
         parts.add(
           part(
             from: from,
@@ -286,12 +336,7 @@ class VideoEditorBeatResolver {
     for (final part in parts) {
       for (final beat in _beatsByPart[part] ?? const <Duration>[]) {
         if (beat < part.from || beat >= part.to) continue;
-        final played = beat - part.from;
-        final at =
-            part.at +
-            Duration(
-              microseconds: (played.inMicroseconds / part.speed).round(),
-            );
+        final at = part.at + part.playedAfterFrom(beat);
         if (at >= Duration.zero && at < videoEnd) beats.add(at);
       }
     }

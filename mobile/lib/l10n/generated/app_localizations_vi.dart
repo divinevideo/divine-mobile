@@ -9885,6 +9885,44 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Cố định';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Đường cong';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Tùy chỉnh';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Anh hùng';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Vào nhanh';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Ra nhanh';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Kéo một điểm lên để tăng tốc, xuống để chậm lại';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Điểm tốc độ $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Phát trong $seconds giây';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Tăng giảm dần';
 
   @override

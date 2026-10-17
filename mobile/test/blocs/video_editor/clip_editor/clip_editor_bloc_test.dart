@@ -80,6 +80,13 @@ DivineVideoClip _createClip({
   );
 }
 
+/// A long slow motion between two fast ends.
+const _bulletRamp = VideoSpeedRamp([
+  VideoSpeedRampPoint(position: 0, speed: 2),
+  VideoSpeedRampPoint(position: 0.5, speed: 0.3),
+  VideoSpeedRampPoint(position: 1, speed: 2),
+]);
+
 DivineVideoClip _createClipWithFile({
   String id = 'clip-local',
   Duration duration = const Duration(seconds: 5),
@@ -3505,6 +3512,11 @@ void main() {
     group('ClipEditorAudioExtractionRequested', () {
       late _MockAudioExtractionService mockService;
 
+      setUpAll(() {
+        registerFallbackValue(_bulletRamp);
+        registerFallbackValue(Duration.zero);
+      });
+
       setUp(() {
         mockService = _MockAudioExtractionService();
         when(
@@ -3590,6 +3602,68 @@ void main() {
               speed: any(named: 'speed'),
             ),
           ).called(1);
+        },
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        "takes a speed-ramped clip's sound from the ramp render, unanchored",
+        build: () {
+          when(
+            () => mockService.extractRampedAudioForDraft(
+              videoPath: any(named: 'videoPath'),
+              start: any(named: 'start'),
+              end: any(named: 'end'),
+              speedRamp: any(named: 'speedRamp'),
+            ),
+          ).thenAnswer(
+            (_) async => const AudioExtractionResult(
+              audioFilePath: '/tmp/ramped.wav',
+              duration: 4,
+              fileSize: 12345,
+              sha256Hash: 'abc123',
+              mimeType: 'audio/wav',
+            ),
+          );
+          return buildBloc(audioExtractionService: mockService);
+        },
+        seed: () => ClipEditorState(
+          clips: [_createClipWithFile().copyWith(speedRamp: _bulletRamp)],
+        ),
+        act: (bloc) => bloc.add(
+          const ClipEditorAudioExtractionRequested(clipTitle: 'Test'),
+        ),
+        skip: 1,
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.lastAudioExtraction,
+            'lastAudioExtraction',
+            isA<ClipAudioExtractionSuccess>(),
+          ),
+        ],
+        verify: (bloc) {
+          final clip = _createClipWithFile().copyWith(speedRamp: _bulletRamp);
+          final event =
+              (bloc.state.lastAudioExtraction! as ClipAudioExtractionSuccess)
+                  .audioEvent;
+          // The rendered track holds the trimmed window only, from its start,
+          // and has no footage outside it to follow a trim into.
+          expect(event.startOffset, Duration.zero);
+          expect(event.anchorClipId, isNull);
+          expect(event.endTime, clip.playbackDuration);
+          verify(
+            () => mockService.extractRampedAudioForDraft(
+              videoPath: '/path/clip-local.mp4',
+              start: clip.trimStart,
+              end: clip.trimStart + clip.trimmedDuration,
+              speedRamp: _bulletRamp,
+            ),
+          ).called(1);
+          verifyNever(
+            () => mockService.extractAudioForDraft(
+              videoPath: any(named: 'videoPath'),
+              speed: any(named: 'speed'),
+            ),
+          );
         },
       );
 

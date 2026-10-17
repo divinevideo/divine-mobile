@@ -16847,6 +16847,72 @@ abstract class AppLocalizations {
   /// **'Speed {speed}×'**
   String videoEditorSpeedPresetSemanticLabel(String speed);
 
+  /// Option in the clip speed sheet: the clip plays at one speed throughout.
+  ///
+  /// In en, this message translates to:
+  /// **'Constant'**
+  String get videoEditorSpeedModeConstant;
+
+  /// Option in the clip speed sheet: the clip's speed changes along a curve while it plays (speed ramp).
+  ///
+  /// In en, this message translates to:
+  /// **'Curve'**
+  String get videoEditorSpeedModeCurve;
+
+  /// Speed curve preset chip for a curve the user shapes by dragging points.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get videoEditorSpeedCurveCustom;
+
+  /// Speed curve preset: speeds up, slows right down and speeds up again.
+  ///
+  /// In en, this message translates to:
+  /// **'Montage'**
+  String get videoEditorSpeedCurveMontage;
+
+  /// Speed curve preset: fast, a short deep slow-motion on the peak, fast again.
+  ///
+  /// In en, this message translates to:
+  /// **'Hero'**
+  String get videoEditorSpeedCurveHero;
+
+  /// Speed curve preset named after 'bullet time': a long slow-motion between two fast ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Bullet'**
+  String get videoEditorSpeedCurveBullet;
+
+  /// Speed curve preset: starts fast and settles into normal speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash in'**
+  String get videoEditorSpeedCurveFlashIn;
+
+  /// Speed curve preset: plays at normal speed and rushes out at the end.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash out'**
+  String get videoEditorSpeedCurveFlashOut;
+
+  /// Hint under the speed curve editor: dragging a point up makes that moment faster, down slower.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a point up to speed up, down to slow down'**
+  String get videoEditorSpeedCurveHint;
+
+  /// Accessibility label for a draggable point on the speed curve, a position like "Clip 2 of 5" rather than a quantity. {index} is the point's number from the left, {total} how many points there are.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed point {index} of {total}'**
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total);
+
+  /// How long the clip plays with the chosen speed or speed curve. {seconds} is a number with one decimal, like 6.4.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays for {seconds}s'**
+  String videoEditorSpeedResultingLength(String seconds);
+
   /// Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet.
   ///
   /// In en, this message translates to:
