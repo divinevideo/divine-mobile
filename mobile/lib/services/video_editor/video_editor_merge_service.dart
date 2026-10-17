@@ -5,7 +5,8 @@ import 'package:models/models.dart' as model show ClipSourceCredit;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ClipTransitionType, EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service for flattening several timeline clips into a single new clip.
@@ -20,6 +21,10 @@ class VideoEditorMergeService {
   /// uncapped (`maxOutputDuration: null`) because the merged clip is an
   /// intermediate editor clip the user can still trim, not the final export
   /// (which applies the duration cap on its own).
+  ///
+  /// Flash transitions become dissolves of the same duration. The merged
+  /// pixels carry no editable flash timing, so later spacing and beat
+  /// limiting cannot account for a flash baked into this intermediate.
   ///
   /// Returns `null` when fewer than two clips are supplied, or when the render
   /// is cancelled / fails (both already surface as a `null` output path from
@@ -36,8 +41,26 @@ class VideoEditorMergeService {
       category: LogCategory.video,
     );
 
+    // Match library-save's rule for flashing effects: never bake a flash
+    // whose timing the next edit cannot see. This also prevents subset-only
+    // clamping from restoring a flash suppressed by the surrounding timeline.
+    final renderClips =
+        clips.any((clip) => clip.transition?.type.flashes ?? false)
+        ? [
+            for (final clip in clips)
+              if (clip.transition case final transition?
+                  when transition.type.flashes)
+                clip.copyWith(
+                  transition: transition.copyWith(
+                    type: ClipTransitionType.dissolve,
+                  ),
+                )
+              else
+                clip,
+          ]
+        : clips;
     final outputPath = await VideoEditorRenderService.renderVideo(
-      clips: clips,
+      clips: renderClips,
       usePersistentStorage: true,
       taskId: renderId,
       maxOutputDuration: null,
