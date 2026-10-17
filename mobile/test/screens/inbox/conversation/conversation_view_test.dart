@@ -1620,11 +1620,14 @@ void main() {
         expect(find.text(l10n.dmBlockedThreadTitle), findsNothing);
       });
 
-      // Blocking one member keeps a group writable; only a group with every
-      // member blocked is read-only, and its notice counts them (#10150).
-      group('in a group', () {
+      // Blocking some members keeps a group writable, with a banner above the
+      // composer saying whom and that they still get what the viewer sends.
+      // Only a group with every member blocked is read-only (#10150).
+      group('a group with a blocked member (#10150)', () {
         const bob =
             '3333333333333333333333333333333333333333333333333333333333333333';
+        const carol =
+            '5555555555555555555555555555555555555555555555555555555555555555';
 
         List<Override> memberOverrides(
           String pubkey, {
@@ -1647,9 +1650,8 @@ void main() {
           profileIdentityResolvingProvider(pubkey).overrideWithValue(resolving),
         ];
 
-        testWidgets('keeps the composer when the viewer blocked one member', (
-          tester,
-        ) async {
+        testWidgets('keeps the composer and names the blocked member in a '
+            'banner', (tester) async {
           when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
 
           await tester.pumpWidget(
@@ -1661,12 +1663,89 @@ void main() {
           await tester.pump();
 
           expect(find.byType(MessageInputBar), findsOneWidget);
+          expect(
+            find.text(l10n.dmBlockedGroupMemberTitle('Bob')),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody),
+            findsOneWidget,
+          );
           expect(find.text(l10n.dmBlockedGroupThreadBody), findsNothing);
-          expect(find.text(l10n.dmBlockedThreadTitle), findsNothing);
         });
 
-        testWidgets('is read-only and counts the members when the viewer '
-            'blocked every member', (tester) async {
+        testWidgets('counts the members when several are blocked', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+          when(() => mockBlocklist.isBlocked(carol)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(counterparties: const [otherPubkey, bob, carol]),
+          );
+          await tester.pump();
+
+          expect(find.byType(MessageInputBar), findsOneWidget);
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(2)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('does not name a member whose account is deleted', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob', vanished: true),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(1)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              l10n.dmBlockedGroupMemberTitle(l10n.profileDeletedAccountName),
+            ),
+            findsNothing,
+          );
+          expect(
+            find.text(l10n.dmBlockedGroupMemberTitle('Bob')),
+            findsNothing,
+          );
+        });
+
+        testWidgets('does not name a member whose profile is still loading', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, resolving: true),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(1)),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('is read-only with the group notice when every member is '
+            'blocked', (tester) async {
           when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
           when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
 
@@ -1684,38 +1763,168 @@ void main() {
             findsOneWidget,
           );
           expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
+          expect(find.text(l10n.dmBlockedGroupMembersBannerBody), findsNothing);
+          expect(find.text(l10n.dmStartChatWithoutBlockedAction), findsNothing);
         });
 
-        testWidgets('keeps the composer when the blocked member has a deleted '
-            'account', (tester) async {
+        // A group with every member blocked reads like a blocked one-to-one:
+        // the thread is read-only, so nothing collapses (#7025).
+        testWidgets('shows messages in full when every member is blocked', (
+          tester,
+        ) async {
+          const otherText = 'a message from the first blocked member';
+          const bobText = 'a message from the second blocked member';
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+          when(
+            () => mockBlocklist.dmHiddenPubkeys,
+          ).thenReturn(const {otherPubkey, bob});
+
+          DmMessage messageFrom(String sender, String content, int second) =>
+              DmMessage(
+                id: second.toRadixString(16).padLeft(64, '0'),
+                conversationId: 'c' * 64,
+                senderPubkey: sender,
+                content: content,
+                createdAt: now.millisecondsSinceEpoch ~/ 1000 + second,
+                giftWrapId: 'a' * 64,
+              );
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [
+                  messageFrom(bob, bobText, 2),
+                  messageFrom(otherPubkey, otherText, 1),
+                ],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(otherText), findsOneWidget);
+          expect(find.text(bobText), findsOneWidget);
+          expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+          expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
+        });
+
+        // A three-person room with one member blocked leaves a one-to-one.
+        testWidgets('opens a chat with the remaining members', (tester) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<Object?>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async => null);
           when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
 
           await tester.pumpWidget(
             buildSubject(
               counterparties: const [otherPubkey, bob],
-              extraOverrides: memberOverrides(bob, name: 'Bob', vanished: true),
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+              goRouter: goRouter,
             ),
           );
           await tester.pump();
+          await tester.tap(find.text(l10n.dmStartChatWithoutBlockedAction));
+          await tester.pump();
 
-          expect(find.byType(MessageInputBar), findsOneWidget);
-          expect(find.text(l10n.dmBlockedGroupThreadBody), findsNothing);
+          verify(
+            () => goRouter.push<Object?>(
+              ConversationPage.pathForId(
+                DmRepository.computeConversationId([
+                  currentPubkey,
+                  otherPubkey,
+                ]),
+              ),
+              extra: [otherPubkey],
+            ),
+          ).called(1);
         });
 
-        testWidgets('keeps the composer while the blocked member is still '
-            'loading', (tester) async {
-          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+        testWidgets('drops the banner and expands messages once the member is '
+            'unblocked', (tester) async {
+          const hiddenText = 'a message from the blocked member';
+          var hidden = {bob};
+          var bobBlocked = true;
+          when(() => mockBlocklist.dmHiddenPubkeys).thenAnswer((_) => hidden);
+          when(
+            () => mockBlocklist.isBlocked(bob),
+          ).thenAnswer((_) => bobBlocked);
 
           await tester.pumpWidget(
             buildSubject(
               counterparties: const [otherPubkey, bob],
-              extraOverrides: memberOverrides(bob, resolving: true),
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [
+                  DmMessage(
+                    id: '1'.padLeft(64, '0'),
+                    conversationId: 'c' * 64,
+                    senderPubkey: bob,
+                    content: hiddenText,
+                    createdAt: now.millisecondsSinceEpoch ~/ 1000,
+                    giftWrapId: 'a' * 64,
+                  ),
+                ],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody),
+            findsOneWidget,
+          );
+          expect(find.text(hiddenText), findsNothing);
+
+          hidden = {};
+          bobBlocked = false;
+          ProviderScope.containerOf(
+            tester.element(find.byType(ConversationView)),
+          ).read(blocklistVersionProvider.notifier).increment();
+          await tester.pump();
+
+          expect(find.text(l10n.dmBlockedGroupMembersBannerBody), findsNothing);
+          expect(find.text(hiddenText), findsOneWidget);
+        });
+
+        // The composer stays mounted while the banner comes and goes, so a
+        // draft survives unblocking from the member's profile.
+        testWidgets('keeps a typed draft when the banner goes', (
+          tester,
+        ) async {
+          const draft = 'half a thought';
+          var bobBlocked = true;
+          when(
+            () => mockBlocklist.isBlocked(bob),
+          ).thenAnswer((_) => bobBlocked);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
             ),
           );
           await tester.pump();
+          await tester.enterText(
+            find.descendant(
+              of: find.byType(MessageInputBar),
+              matching: find.byType(TextField),
+            ),
+            draft,
+          );
+          await tester.pump();
 
-          expect(find.byType(MessageInputBar), findsOneWidget);
-          expect(find.text(l10n.dmBlockedGroupThreadBody), findsNothing);
+          bobBlocked = false;
+          ProviderScope.containerOf(
+            tester.element(find.byType(ConversationView)),
+          ).read(blocklistVersionProvider.notifier).increment();
+          await tester.pump();
+
+          expect(find.text(l10n.dmBlockedGroupMembersBannerBody), findsNothing);
+          expect(find.text(draft), findsOneWidget);
         });
       });
 

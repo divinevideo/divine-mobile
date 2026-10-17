@@ -5861,6 +5861,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

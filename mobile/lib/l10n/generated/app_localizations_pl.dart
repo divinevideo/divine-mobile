@@ -5923,6 +5923,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wiadomości zostają tutaj, więc możesz je przeczytać lub zrobić zrzut ekranu. Aby odpowiedzieć, odblokuj w profilu.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

@@ -3626,7 +3626,7 @@
   },
   "dmBlockedGroupMemberTitle": "You blocked {name}",
   "@dmBlockedGroupMemberTitle": {
-    "description": "Title of the notice that replaces the message composer in a group conversation where the viewer blocked exactly one member. {name} is that member's display name.",
+    "description": "Title of the banner above the message composer in a group conversation where the viewer blocked exactly one member. {name} is that member's display name.",
     "placeholders": {
       "name": {
         "type": "String"
@@ -3635,7 +3635,7 @@
   },
   "dmBlockedGroupMembersTitle": "{count, plural, =1{You blocked 1 person here} other{You blocked {count} people here}}",
   "@dmBlockedGroupMembersTitle": {
-    "description": "Title of the notice that replaces the message composer in a group conversation where the viewer blocked one or more members. Shown with the number of blocked members, and with 1 while the one blocked member's name is still loading.",
+    "description": "Title of the banner above the message composer in a group conversation where the viewer blocked some members, and of the notice that replaces the composer once every member is blocked. Shown with the number of blocked members, and with 1 while the one blocked member's name is still loading or when their account was deleted.",
     "placeholders": {
       "count": {
         "type": "int"
@@ -3644,7 +3644,15 @@
   },
   "dmBlockedGroupThreadBody": "Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.",
   "@dmBlockedGroupThreadBody": {
-    "description": "Body of the notice replacing the composer in a group conversation where the viewer blocked one or more members. Explains that history is preserved and that replying again means unblocking those members, which is done on each member's profile because the group itself has no unblock action."
+    "description": "Body of the notice replacing the composer in a group conversation where the viewer blocked every member. Explains that history is preserved and that replying again means unblocking those members, which is done on each member's profile because the group itself has no unblock action."
+  },
+  "dmBlockedGroupMembersBannerBody": "Their messages are hidden here. They can still see what you send.",
+  "@dmBlockedGroupMembersBannerBody": {
+    "description": "Body of the banner above the composer in a group conversation where the viewer blocked some members but not all. Group messages are encrypted to every member, so the blocked people still receive what the viewer writes."
+  },
+  "dmStartChatWithoutBlockedAction": "Start a new chat without them",
+  "@dmStartChatWithoutBlockedAction": {
+    "description": "Button in that banner. Opens a conversation with the group's other members only: a new group, or a one-to-one when one member is left. History does not carry over."
   },
   "dmHiddenMessageLabel": "Hidden message",
   "@dmHiddenMessageLabel": {

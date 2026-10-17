@@ -5959,6 +5959,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి వారి ప్రొఫైల్ నుండి అన్‌బ్లాక్ చేయండి.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

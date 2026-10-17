@@ -5849,6 +5849,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Nachrichten bleiben hier, damit du sie lesen oder einen Screenshot machen kannst. Hebe die Blockierung im jeweiligen Profil auf, um zu antworten.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

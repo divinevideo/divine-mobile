@@ -9859,23 +9859,35 @@ abstract class AppLocalizations {
   /// **'Messages stay here so you can read or screenshot them. Unblock to reply.'**
   String get dmBlockedThreadBody;
 
-  /// Title of the notice that replaces the message composer in a group conversation where the viewer blocked exactly one member. {name} is that member's display name.
+  /// Title of the banner above the message composer in a group conversation where the viewer blocked exactly one member. {name} is that member's display name.
   ///
   /// In en, this message translates to:
   /// **'You blocked {name}'**
   String dmBlockedGroupMemberTitle(String name);
 
-  /// Title of the notice that replaces the message composer in a group conversation where the viewer blocked one or more members. Shown with the number of blocked members, and with 1 while the one blocked member's name is still loading.
+  /// Title of the banner above the message composer in a group conversation where the viewer blocked some members, and of the notice that replaces the composer once every member is blocked. Shown with the number of blocked members, and with 1 while the one blocked member's name is still loading or when their account was deleted.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{You blocked 1 person here} other{You blocked {count} people here}}'**
   String dmBlockedGroupMembersTitle(int count);
 
-  /// Body of the notice replacing the composer in a group conversation where the viewer blocked one or more members. Explains that history is preserved and that replying again means unblocking those members, which is done on each member's profile because the group itself has no unblock action.
+  /// Body of the notice replacing the composer in a group conversation where the viewer blocked every member. Explains that history is preserved and that replying again means unblocking those members, which is done on each member's profile because the group itself has no unblock action.
   ///
   /// In en, this message translates to:
   /// **'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.'**
   String get dmBlockedGroupThreadBody;
+
+  /// Body of the banner above the composer in a group conversation where the viewer blocked some members but not all. Group messages are encrypted to every member, so the blocked people still receive what the viewer writes.
+  ///
+  /// In en, this message translates to:
+  /// **'Their messages are hidden here. They can still see what you send.'**
+  String get dmBlockedGroupMembersBannerBody;
+
+  /// Button in that banner. Opens a conversation with the group's other members only: a new group, or a one-to-one when one member is left. History does not carry over.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new chat without them'**
+  String get dmStartChatWithoutBlockedAction;
 
   /// Shown in place of a message from someone the viewer blocked or muted, in a group conversation and as that group's inbox preview. The message is still on the device; tapping Show reveals it.
   ///

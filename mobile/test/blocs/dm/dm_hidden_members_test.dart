@@ -1,5 +1,5 @@
-// ABOUTME: Tests which group messages the conversation collapses by default
-// ABOUTME: because their sender is on the viewer's own block or mute list.
+// ABOUTME: Tests which group members the viewer's own lists hide: whose
+// ABOUTME: messages collapse, and who is left for a chat without them.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/dm/dm_hidden_members.dart';
@@ -15,9 +15,11 @@ void main() {
   bool hiddenByDefault({
     required String senderPubkey,
     bool isGroup = true,
+    bool everyMemberBlocked = false,
     Set<String> hidden = const {hiddenMember},
   }) => dmMessageHiddenByDefault(
     isGroup: isGroup,
+    everyMemberBlocked: everyMemberBlocked,
     senderPubkey: senderPubkey,
     currentUserPubkey: viewer,
     isHidden: hidden.contains,
@@ -31,6 +33,13 @@ void main() {
     test('never hides a message in a one-to-one', () {
       expect(
         hiddenByDefault(senderPubkey: hiddenMember, isGroup: false),
+        isFalse,
+      );
+    });
+
+    test('never hides a message once every member is blocked', () {
+      expect(
+        hiddenByDefault(senderPubkey: hiddenMember, everyMemberBlocked: true),
         isFalse,
       );
     });
@@ -60,6 +69,38 @@ void main() {
       expect(
         hiddenByDefault(senderPubkey: '', hidden: const {''}),
         isFalse,
+      );
+    });
+  });
+
+  group('dmPeersWithoutBlocked', () {
+    const firstMember =
+        '1111111111111111111111111111111111111111111111111111111111111111';
+    const lastMember =
+        '5555555555555555555555555555555555555555555555555555555555555555';
+
+    test('drops blocked members and sorts the rest', () {
+      expect(
+        dmPeersWithoutBlocked(
+          participantPubkeys: const [
+            lastMember,
+            hiddenMember,
+            visibleMember,
+            firstMember,
+          ],
+          isBlockedByUs: const {hiddenMember}.contains,
+        ),
+        equals(const [firstMember, visibleMember, lastMember]),
+      );
+    });
+
+    test('returns one member when one is left', () {
+      expect(
+        dmPeersWithoutBlocked(
+          participantPubkeys: const [visibleMember, hiddenMember],
+          isBlockedByUs: const {hiddenMember}.contains,
+        ),
+        equals(const [visibleMember]),
       );
     });
   });

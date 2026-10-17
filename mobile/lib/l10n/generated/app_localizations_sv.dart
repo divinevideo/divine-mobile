@@ -5765,6 +5765,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen via deras profil för att svara.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override

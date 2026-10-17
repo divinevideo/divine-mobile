@@ -5472,6 +5472,13 @@ class AppLocalizationsKo extends AppLocalizations {
       '메시지는 여기에 남아 있어서 읽거나 스크린샷을 찍을 수 있어요. 답장하려면 프로필에서 차단을 해제하세요.';
 
   @override
+  String get dmBlockedGroupMembersBannerBody =>
+      'Their messages are hidden here. They can still see what you send.';
+
+  @override
+  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+
+  @override
   String get dmHiddenMessageLabel => 'Hidden message';
 
   @override
