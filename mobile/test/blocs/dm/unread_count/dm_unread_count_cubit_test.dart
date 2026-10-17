@@ -486,18 +486,21 @@ void main() {
     });
 
     group('a group with a blocked member (#10150)', () {
-      // A real blocklist, not a stub: the rule for which member counts is
-      // the thing under test. Participants sort as _me < _alice < _bob, so
-      // _alice is the group's first member and _bob its second.
+      // A real blocklist, not a stub: the rule for which members count is
+      // the thing under test. The others sort _alice < _bob < _carol.
       DmConversation room() => _groupConvo(
         'room',
-        peers: [_alice, _bob],
+        peers: [_alice, _bob, _carol],
         isRead: false,
         currentUserHasSent: true,
       );
 
-      for (final (label, member) in [('first', _alice), ('second', _bob)]) {
-        test('drops the group from the badge when its $label member is '
+      for (final (label, member) in [
+        ('first', _alice),
+        ('middle', _bob),
+        ('last', _carol),
+      ]) {
+        test('still counts an accepted group whose $label member is '
             'blocked', () async {
           final blocklist = ContentBlocklistRepository();
           addTearDown(blocklist.dispose);
@@ -509,11 +512,28 @@ void main() {
             potentialController.add(const []);
             _settle(fake);
 
-            expect(cubit.state, equals(0));
+            expect(cubit.state, equals(1));
             _close(fake, cubit);
           });
         });
       }
+
+      test('drops an accepted group from the badge when every other member '
+          'is blocked', () async {
+        final blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+        await blocklist.blockUsers([_alice, _bob, _carol], ourPubkey: _me);
+
+        fakeAsync((fake) {
+          final cubit = buildCubit(contentBlocklistRepository: blocklist);
+          acceptedController.add([room()]);
+          potentialController.add(const []);
+          _settle(fake);
+
+          expect(cubit.state, equals(0));
+          _close(fake, cubit);
+        });
+      });
 
       _testWithFakeAsync('counts the group when nobody in it is blocked', (
         fake,
