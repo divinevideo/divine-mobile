@@ -1047,6 +1047,12 @@ class DmMessageReactions extends Table {
 ///
 /// Each row represents a unique chat room defined by the set of participant
 /// pubkeys. Updated whenever a new message arrives in the conversation.
+///
+/// Retention: one row per room per account, kept while the account is known
+/// on this device. A switch or plain sign-out keeps the departing account's
+/// rows, which carry its read state, and deletes its messages; removing the
+/// account from the device or deleting it deletes them (the `DM tables` step
+/// of `userDataCleanupService` in the app, #10276).
 @DataClassName('ConversationRow')
 class Conversations extends Table {
   @override

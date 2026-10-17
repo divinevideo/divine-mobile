@@ -1656,7 +1656,9 @@ void main() {
         await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
 
         expect(await dmCountFor(_pubkeyA), 0);
-        expect(await conversationCountFor(_pubkeyA), 0);
+        // The conversation row stays: it carries A's read state, which a
+        // re-download cannot restore on its own (#10276).
+        expect(await conversationCountFor(_pubkeyA), 1);
         expect(await dmCountFor(_pubkeyB), 1);
         expect(await conversationCountFor(_pubkeyB), 1);
         expect(await db.pendingGiftWrapsDao.countForOwner(_pubkeyA), 0);
@@ -1781,6 +1783,177 @@ void main() {
         );
         expect(syncState.historyDrainComplete(_pubkeyB), isTrue);
       });
+    });
+
+    group('#10276 conversations kept across an account boundary', () {
+      Future<void> seedConversation({
+        required String id,
+        required String? ownerPubkey,
+        required int lastMessageAt,
+        required bool isRead,
+      }) => db.conversationsDao.upsertConversation(
+        id: id,
+        participantPubkeys: '["$_pubkeyA","$_pubkeyB"]',
+        isGroup: false,
+        createdAt: 1700000000,
+        lastMessageContent: 'hello',
+        lastMessageTimestamp: lastMessageAt,
+        lastMessageSenderPubkey: _pubkeyB,
+        isRead: isRead,
+        ownerPubkey: ownerPubkey,
+      );
+
+      Future<ConversationRow> conversationOf(String id, String owner) async =>
+          (await db.conversationsDao.getAllConversations(
+            ownerPubkey: owner,
+          )).singleWhere((row) => row.id == id && row.ownerPubkey == owner);
+
+      Future<int> conversationCountFor(String owner) async =>
+          (await db.conversationsDao.getAllConversations(
+            ownerPubkey: owner,
+          )).where((row) => row.ownerPubkey == owner).length;
+
+      UserDataCleanupService readService() {
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        return subscription.read();
+      }
+
+      /// Three read states for the leaving account A, one row for B, and one
+      /// unattributed legacy row.
+      Future<void> seedBoundary() async {
+        await seedConversation(
+          id: 'conv_marked_read',
+          ownerPubkey: _pubkeyA,
+          lastMessageAt: 1700000300,
+          isRead: false,
+        );
+        await db.conversationsDao.markAsRead(
+          'conv_marked_read',
+          ownerPubkey: _pubkeyA,
+        );
+        // Read only because A sent the last message: no cursor yet.
+        await seedConversation(
+          id: 'conv_replied_last',
+          ownerPubkey: _pubkeyA,
+          lastMessageAt: 1700000400,
+          isRead: true,
+        );
+        await seedConversation(
+          id: 'conv_unread',
+          ownerPubkey: _pubkeyA,
+          lastMessageAt: 1700000500,
+          isRead: false,
+        );
+        await db.conversationsDao.applyReadCursor(
+          'conv_unread',
+          1700000100,
+          ownerPubkey: _pubkeyA,
+        );
+        await db.directMessagesDao.insertMessage(
+          id: _dmTargetMessageId,
+          conversationId: 'conv_marked_read',
+          senderPubkey: _pubkeyB,
+          content: 'hello',
+          createdAt: 1700000300,
+          giftWrapId: 'gw-$_dmTargetMessageId',
+          ownerPubkey: _pubkeyA,
+        );
+        await seedConversation(
+          id: 'conv_b',
+          ownerPubkey: _pubkeyB,
+          lastMessageAt: 1700000300,
+          isRead: true,
+        );
+        await seedConversation(
+          id: _legacyNullConversationId,
+          ownerPubkey: '',
+          lastMessageAt: 1700000300,
+          isRead: true,
+        );
+      }
+
+      test(
+        "a plain switch keeps the leaving account's conversations and "
+        'records their read state in the cursor',
+        () async {
+          await seedBoundary();
+
+          await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+          expect(await conversationCountFor(_pubkeyA), 3);
+          final repliedLast = await conversationOf(
+            'conv_replied_last',
+            _pubkeyA,
+          );
+          expect(repliedLast.isRead, isTrue);
+          expect(repliedLast.lastReadTimestamp, 1700000400);
+          final markedRead = await conversationOf(
+            'conv_marked_read',
+            _pubkeyA,
+          );
+          expect(markedRead.lastReadTimestamp, 1700000300);
+          final unread = await conversationOf('conv_unread', _pubkeyA);
+          expect(unread.isRead, isFalse);
+          expect(unread.lastReadTimestamp, 1700000100);
+          expect(
+            await db.directMessagesDao.getMessagesForConversation(
+              'conv_marked_read',
+              ownerPubkey: _pubkeyA,
+            ),
+            isEmpty,
+            reason: 'messages still re-download; only conversations stay',
+          );
+          expect(await conversationCountFor(_pubkeyB), 1);
+          expect(await conversationCountFor(''), 0);
+        },
+      );
+
+      test(
+        'removing the account from the device deletes its conversations',
+        () async {
+          await seedBoundary();
+
+          await readService().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            forgetAccount: true,
+          );
+
+          expect(await conversationCountFor(_pubkeyA), 0);
+          expect(await conversationCountFor(_pubkeyB), 1);
+        },
+      );
+
+      test('deleting the account deletes its conversations', () async {
+        await seedBoundary();
+
+        await readService().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(await conversationCountFor(_pubkeyA), 0);
+        expect(await conversationCountFor(_pubkeyB), 1);
+      });
+
+      test(
+        'a sign-out that removes the keys passes that on to the database '
+        'cleanup',
+        () async {
+          await seedBoundary();
+
+          await readService().clearUserSpecificData(
+            reason: 'explicit_logout',
+            userPubkey: _pubkeyA,
+            forgetAccount: true,
+          );
+
+          expect(await conversationCountFor(_pubkeyA), 0);
+        },
+      );
     });
   });
 }

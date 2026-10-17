@@ -716,6 +716,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 receivedPubkey = userPubkey;
                 receivedDeleteUserData = deleteUserData;
@@ -741,6 +742,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 receivedDeleteUserData = deleteUserData;
               };
@@ -759,6 +761,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 throw StateError('cleanup failed');
               };
@@ -773,6 +776,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               throw StateError('cleanup failed');
             };
@@ -789,6 +793,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               throw StateError('cleanup failed');
             };
@@ -1016,6 +1021,7 @@ void main() {
               userPubkey,
               deleteUserData = false,
               preserveActiveSession = false,
+              forgetAccount = false,
             }) async {
               preservedActiveSession = preserveActiveSession;
               throw StateError('database unavailable');

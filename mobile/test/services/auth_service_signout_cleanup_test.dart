@@ -119,6 +119,7 @@ void main() {
           reason: any(named: 'reason'),
           userPubkey: any(named: 'userPubkey'),
           deleteUserData: any(named: 'deleteUserData'),
+          forgetAccount: any(named: 'forgetAccount'),
         ),
       ).thenAnswer((_) async => 0);
       when(() => mockCleanupService.claimLegacyRows(any()))
@@ -201,6 +202,9 @@ void main() {
           // Explicit false is the sign-out cleanup behavior under verification.
           // ignore: avoid_redundant_argument_values
           deleteUserData: false,
+          // A plain sign-out keeps the account, so its kept DM data stays.
+          // ignore: avoid_redundant_argument_values
+          forgetAccount: false,
         ),
       ).called(1);
     });
@@ -225,7 +229,8 @@ void main() {
       verify(() => mockKeyStorage.deleteKeys()).called(1);
 
       // Assert: owner-scoped rows are preserved. Removing local login material
-      // should not destroy device-local drafts/clips.
+      // should not destroy device-local drafts/clips, but it does forget the
+      // DM conversations kept for a returning account (#10276).
       verify(
         () => mockCleanupService.clearUserSpecificData(
           reason: 'explicit_logout',
@@ -233,6 +238,7 @@ void main() {
           // Explicit false is the sign-out cleanup behavior under verification.
           // ignore: avoid_redundant_argument_values
           deleteUserData: false,
+          forgetAccount: true,
         ),
       ).called(1);
 
@@ -283,6 +289,7 @@ void main() {
           reason: 'explicit_logout',
           userPubkey: any(named: 'userPubkey'),
           deleteUserData: true,
+          forgetAccount: true,
         ),
       ).called(1);
     });
@@ -613,6 +620,7 @@ void main() {
               reason: 'explicit_logout',
               userPubkey: keyContainer.publicKeyHex,
               deleteUserData: true,
+              forgetAccount: true,
             ),
           ).thenThrow(StateError('database cleanup failed'));
           when(() => mockKeyStorage.deleteKeys()).thenAnswer((_) async {});
@@ -661,6 +669,7 @@ void main() {
             reason: any(named: 'reason'),
             userPubkey: any(named: 'userPubkey'),
             deleteUserData: any(named: 'deleteUserData'),
+            forgetAccount: any(named: 'forgetAccount'),
           ),
         );
       });

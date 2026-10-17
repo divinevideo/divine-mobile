@@ -159,6 +159,7 @@ void main() {
         isIdentityChange: any(named: 'isIdentityChange'),
         userPubkey: any(named: 'userPubkey'),
         deleteUserData: any(named: 'deleteUserData'),
+        forgetAccount: any(named: 'forgetAccount'),
       ),
     ).thenAnswer((_) async => 0);
     when(
@@ -2110,6 +2111,7 @@ void main() {
             isIdentityChange: any(named: 'isIdentityChange'),
             userPubkey: any(named: 'userPubkey'),
             deleteUserData: any(named: 'deleteUserData'),
+            forgetAccount: any(named: 'forgetAccount'),
           ),
         ).thenThrow(StateError('cleanup failed'));
 
@@ -2286,6 +2288,7 @@ void main() {
             // Explicit false is the account-preservation behavior asserted here.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false,
+            forgetAccount: true,
           ),
         ).called(1);
       },

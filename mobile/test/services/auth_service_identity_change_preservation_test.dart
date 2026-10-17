@@ -132,6 +132,7 @@ void main() {
           isIdentityChange: any(named: 'isIdentityChange'),
           userPubkey: any(named: 'userPubkey'),
           deleteUserData: any(named: 'deleteUserData'),
+          forgetAccount: any(named: 'forgetAccount'),
         ),
       ).thenAnswer((_) async => 0);
       when(
@@ -224,6 +225,7 @@ void main() {
             reason: any(named: 'reason'),
             userPubkey: any(named: 'userPubkey'),
             deleteUserData: any(named: 'deleteUserData'),
+            forgetAccount: any(named: 'forgetAccount'),
           ),
         ).thenAnswer((_) async => 0);
 
@@ -237,6 +239,7 @@ void main() {
             // Explicit false distinguishes explicit logout from deletion.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false,
+            forgetAccount: true,
           ),
         ).called(1);
       },
@@ -256,6 +259,7 @@ void main() {
           reason: any(named: 'reason'),
           userPubkey: any(named: 'userPubkey'),
           deleteUserData: any(named: 'deleteUserData'),
+          forgetAccount: any(named: 'forgetAccount'),
         ),
       ).thenAnswer((_) async => 0);
 
@@ -266,6 +270,7 @@ void main() {
           reason: 'explicit_logout',
           userPubkey: any(named: 'userPubkey'),
           deleteUserData: true,
+          forgetAccount: true,
         ),
       ).called(1);
     });
@@ -284,6 +289,7 @@ void main() {
             reason: any(named: 'reason'),
             userPubkey: any(named: 'userPubkey'),
             deleteUserData: any(named: 'deleteUserData'),
+            forgetAccount: any(named: 'forgetAccount'),
           ),
         ).thenAnswer((_) async => 0);
         when(() => mockKeyStorage.clearCache()).thenReturn(null);

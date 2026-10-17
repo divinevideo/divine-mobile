@@ -732,6 +732,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
         String? userPubkey,
         bool deleteUserData = false,
         bool preserveActiveSession = false,
+        bool forgetAccount = false,
       }) async {
         Future<void> safeCleanup(
           String name,
@@ -794,7 +795,17 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
                 await db.conversationsDao.deleteAllForOwner(userPubkey);
               } else {
                 await db.directMessagesDao.clearForAccountSwitch(userPubkey);
-                await db.conversationsDao.clearForAccountSwitch(userPubkey);
+                if (deleteUserData || forgetAccount) {
+                  await db.conversationsDao.clearForAccountSwitch(userPubkey);
+                } else {
+                  // An account that can come back keeps its conversations:
+                  // they hold its read state, which re-downloaded messages
+                  // cannot restore before the history drain (#10276).
+                  await db.conversationsDao.pinReadCursorsToLatestMessage(
+                    userPubkey,
+                  );
+                  await db.conversationsDao.clearUnowned();
+                }
               }
               // Raw failed-decrypt wraps and their terminal dedup ledger must
               // never outlive the decrypted DM data they accompany.

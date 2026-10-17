@@ -52,10 +52,13 @@ class UserDataCleanupService {
   ///   False on non-destructive sign-out (account switch) to preserve data.
   /// - [preserveActiveSession]: skips device-wide teardown while deleting a
   ///   different account from the device.
+  /// - [forgetAccount]: the account's keys are being removed from this device,
+  ///   so data kept for a returning account goes too.
   Future<void> Function({
     String? userPubkey,
     bool deleteUserData,
     bool preserveActiveSession,
+    bool forgetAccount,
   })?
   onDatabaseCleanup;
 
@@ -278,12 +281,14 @@ class UserDataCleanupService {
     bool isIdentityChange = false,
     String? userPubkey,
     bool deleteUserData = false,
+    bool forgetAccount = false,
   }) async {
     final cleanupReason = reason ?? 'unspecified';
     Log.info(
       'Starting user data cleanup (reason: $cleanupReason, '
       'identityChange: $isIdentityChange, '
       'deleteUserData: $deleteUserData, '
+      'forgetAccount: $forgetAccount, '
       'userPubkey: ${pubkeyForLogs(userPubkey, whenNull: "null")}, '
       'checking ${userSpecificKeys.length} keys)',
       name: 'UserDataCleanupService',
@@ -378,6 +383,7 @@ class UserDataCleanupService {
           userPubkey: userPubkey,
           deleteUserData: deleteUserData,
           preserveActiveSession: false,
+          forgetAccount: forgetAccount,
         );
         Log.info(
           'Database cleanup complete',
