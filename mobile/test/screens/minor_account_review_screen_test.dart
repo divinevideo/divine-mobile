@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
@@ -11,7 +13,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
-import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
@@ -193,10 +194,23 @@ void main() {
 
     testWidgets('shows the public parent-consent screen copy', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: ProviderScope(child: MinorAccountReviewParentConsentScreen()),
+          home: ProviderScope(
+            overrides: [
+              // The public screen is read signed out, where the copy does not
+              // depend on the recording flag; overriding it keeps the flag
+              // provider from reaching SharedPreferences here.
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.unauthenticated,
+              ),
+              isFeatureEnabledProvider(
+                FeatureFlag.minorConsentInAppRecording,
+              ).overrideWithValue(false),
+            ],
+            child: const MinorAccountReviewParentConsentScreen(),
+          ),
         ),
       );
 
@@ -753,7 +767,7 @@ void main() {
           ageBand: SuspectedAgeBand.age13To15,
           resolution: MinorReviewResolutionType.parentVideoOrEmail,
           parentSupportLabel: false,
-          expectedPath: MinorAccountReviewParentContactScreen.path,
+          expectedPath: MinorAccountReviewParentConsentScreen.path,
         ),
         (
           description: 'a 13-15 case that only allows a support review',

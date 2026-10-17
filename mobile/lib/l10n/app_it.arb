@@ -5108,5 +5108,8 @@
   "soundReadyDescription": "Usalo nel tuo prossimo video o salvalo nella tua raccolta di suoni.",
   "soundReadyUse": "Usa questo suono",
   "soundReadySave": "Salva in I miei suoni",
-  "soundRequestSaved": "Salvato"
+  "soundRequestSaved": "Salvato",
+  "minorAccountReviewVideoSubmittedBody": "Il tuo video è stato inviato per la revisione.",
+  "minorAccountReviewVideoSubmittedTitle": "Video inviato",
+  "minorAccountReviewRecordConsentPrivacyBody": "Il tuo video viene inviato privatamente ai team di assistenza e di fiducia e sicurezza di Divine per la revisione. Non viene pubblicato né condiviso con altri utenti."
 }

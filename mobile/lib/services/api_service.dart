@@ -4,6 +4,8 @@ import 'dart:convert';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:openvine/platform_io.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -41,6 +43,11 @@ class ApiService {
   /// traffic to the production worker.
   final String _relayManagerBaseUrl;
   static const Duration _defaultTimeout = Duration(seconds: 30);
+
+  /// Longer timeout for multipart uploads. A consent video over a slow link
+  /// can legitimately exceed the shared [_defaultTimeout]; this applies only to
+  /// the parent-consent upload so no other request is slowed down.
+  static const Duration _uploadTimeout = Duration(seconds: 120);
 
   final http.Client _client;
   final Nip98AuthService? _authService;
@@ -80,6 +87,32 @@ class ApiService {
       if (e is ApiException) rethrow;
       throw ApiException('Network error during moderation status request: $e');
     }
+  }
+
+  /// Starts or resumes the existing private Greenlight review for this account.
+  Future<Map<String, dynamic>> startGreenlight() async {
+    final uri = Uri.parse(
+      '$_relayManagerBaseUrl/v1/minor-review-cases/greenlight',
+    );
+    const body = '{}';
+    final response = await _request(
+      () async => _client.post(
+        uri,
+        headers: await _getHeaders(
+          url: uri.toString(),
+          method: HttpMethod.post,
+          payload: body,
+        ),
+        body: body,
+      ),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw ApiException(
+        'Could not start Greenlight review',
+        statusCode: response.statusCode,
+      );
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   /// Submit parent contact email for an open minor-account review case.
@@ -129,8 +162,98 @@ class ApiService {
     }
   }
 
-  Future<http.Response> _request(Future<http.Response> Function() request) =>
-      request().timeout(_requestTimeout);
+  /// Submit a recorded parental consent video plus parent email for an open
+  /// minor-account review case. The video is uploaded as multipart/form-data.
+  ///
+  /// The signed NIP-98 event authenticates the account, URL and method, not
+  /// the multipart email or video bytes. The shared auth helper adds the hash
+  /// of an empty string when no payload is supplied. That tag stays for
+  /// compatibility with the current helper; this route checks case ownership
+  /// without validating that tag against the streamed multipart body. Enabling
+  /// payload verification on the server requires a coordinated client change
+  /// to hash the exact multipart bytes before sending them.
+  Future<void> submitMinorAccountReviewParentConsent({
+    required String caseId,
+    required String email,
+    required String videoPath,
+  }) async {
+    Log.debug(
+      'Submitting parent consent video for case $caseId',
+      name: 'ApiService',
+      category: LogCategory.api,
+    );
+
+    try {
+      final uri = Uri.parse(
+        '$_relayManagerBaseUrl/v1/minor-review-cases/$caseId/parent-consent',
+      );
+
+      // Fail fast with an accurate message rather than letting the multipart
+      // stream error surface later as an ambiguous network failure.
+      final file = File(videoPath);
+      if (!file.existsSync()) {
+        throw ApiException(
+          'Parent consent video not found or unreadable at $videoPath',
+        );
+      }
+
+      // relay-manager rejects a video part that is not labelled video/* with
+      // a 415, and http defaults file parts to application/octet-stream. The
+      // camera writes MP4 on both platforms.
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['email'] = email
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'video',
+            videoPath,
+            contentType: MediaType('video', 'mp4'),
+          ),
+        );
+
+      final token = await _authService?.createAuthToken(
+        url: uri.toString(),
+        method: HttpMethod.post,
+      );
+      request.headers.addAll({
+        'Accept': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+        if (token != null) 'Authorization': token.authorizationHeader,
+      });
+
+      final response = await _request(
+        () async => _client.send(request).then(http.Response.fromStream),
+        timeout: _uploadTimeout,
+      );
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        return;
+      }
+
+      throw ApiException(
+        'Failed to submit parent consent video',
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        'Request timeout for parent consent video submission',
+      );
+    } on FileSystemException catch (e) {
+      throw ApiException('Failed to read parent consent video: $e');
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(
+        'Failed to submit parent consent video: $e',
+      );
+    }
+  }
+
+  Future<http.Response> _request(
+    Future<http.Response> Function() request, {
+    Duration? timeout,
+  }) => request().timeout(timeout ?? _requestTimeout);
 
   /// Get standard headers for API requests
   Future<Map<String, String>> _getHeaders({

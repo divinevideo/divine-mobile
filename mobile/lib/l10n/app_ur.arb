@@ -6872,5 +6872,8 @@
   "soundReadyDescription": "اسے اپنی اگلی ویڈیو میں استعمال کریں یا اپنی آوازوں کی لائبریری میں محفوظ کریں۔",
   "soundReadyUse": "یہ آواز استعمال کریں",
   "soundReadySave": "میری آوازوں میں محفوظ کریں",
-  "soundRequestSaved": "محفوظ ہو گیا"
+  "soundRequestSaved": "محفوظ ہو گیا",
+  "minorAccountReviewVideoSubmittedBody": "آپ کی ویڈیو جائزے کے لیے جمع ہو گئی ہے۔",
+  "minorAccountReviewVideoSubmittedTitle": "ویڈیو جمع ہو گئی",
+  "minorAccountReviewRecordConsentPrivacyBody": "آپ کی ویڈیو جائزے کے لیے نجی طور پر Divine کی سپورٹ اور اعتماد و حفاظت کی ٹیموں کو بھیجی جاتی ہے۔ اسے شائع نہیں کیا جاتا اور نہ ہی دوسرے صارفین کے ساتھ شیئر کیا جاتا ہے۔"
 }

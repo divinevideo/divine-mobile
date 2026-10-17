@@ -11358,12 +11358,80 @@ class AppLocalizationsVi extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'Email hỗ trợ Divine';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Trợ giúp xem xét Divine Greenlight (13-15 tuổi)';
 
   @override
   String get minorAccountReviewParentConsentEmailBody =>
       'Chào đội hỗ trợ Divine,\n\nTôi liên hệ Divine về Divine Greenlight cho một bạn teen 13-15 tuổi.\n\nTôi đã đính kèm một video riêng tư ngắn thể hiện:\n- bạn teen\n- cha mẹ hoặc người giám hộ nói trên camera\n- rằng bạn teen được phép dùng Divine\n- rằng cha mẹ hoặc người giám hộ biết về tài khoản này và sẽ giám sát việc sử dụng\n\nQuốc gia cư trú:\n\nBối cảnh hữu ích:\n\nCảm ơn.';
+
+  @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions =>
@@ -13667,4 +13735,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Đã lưu';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Video của bạn đã được gửi để xem xét.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Đã gửi video';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Video của bạn được gửi riêng tư đến các nhóm Hỗ trợ và Tin cậy và An toàn của Divine để xem xét. Video không được đăng công khai hoặc chia sẻ với người dùng khác.';
 }

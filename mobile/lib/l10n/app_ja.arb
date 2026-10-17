@@ -5108,5 +5108,8 @@
   "soundReadyDescription": "次の動画で使うか、サウンドライブラリに保存しましょう。",
   "soundReadyUse": "このサウンドを使う",
   "soundReadySave": "マイサウンドに保存",
-  "soundRequestSaved": "保存済み"
+  "soundRequestSaved": "保存済み",
+  "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
+  "minorAccountReviewVideoSubmittedTitle": "動画を送信しました",
+  "minorAccountReviewRecordConsentPrivacyBody": "動画は確認のため、Divineのサポートおよびトラスト＆セーフティのチームに非公開で送信されます。公開されたり、他のユーザーと共有されたりすることはありません。"
 }

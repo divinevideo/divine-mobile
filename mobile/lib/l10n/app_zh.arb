@@ -6872,5 +6872,8 @@
   "soundReadyDescription": "在下一个视频中使用它，或保存到你的声音库。",
   "soundReadyUse": "使用此声音",
   "soundReadySave": "保存到我的声音",
-  "soundRequestSaved": "已保存"
+  "soundRequestSaved": "已保存",
+  "minorAccountReviewVideoSubmittedBody": "你的视频已提交审核。",
+  "minorAccountReviewVideoSubmittedTitle": "视频已提交",
+  "minorAccountReviewRecordConsentPrivacyBody": "你的视频将私下发送给 Divine 支持及信任与安全团队审核，不会公开发布或与其他用户分享。"
 }

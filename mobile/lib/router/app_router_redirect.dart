@@ -465,6 +465,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
       location == MinorAccountReviewParentConsentScreen.path;
   final isParentContactRoute =
       location == MinorAccountReviewParentContactScreen.path;
+  final isRecordConsentRoute =
+      location == RoutePaths.minorAccountReviewConsentRecord;
   final isPublicUnder13Route = location == MinorAccountReviewUnder13Screen.path;
   final isUnder13SupportRoute =
       location == MinorAccountReviewUnder13SupportScreen.path;
@@ -541,10 +543,26 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
     return VideoFeedPage.pathForIndex(0);
   }
 
+  // Consent is available for a voluntary Greenlight application as well as
+  // an existing restriction. The repository creates an owned case on submit.
+  if (authState == AuthState.authenticated && isRecordConsentRoute) {
+    final reviewCase = reviewStatus?.currentCase;
+    if (reviewCase != null && !reviewCase.allowsParentVideoOrEmail) {
+      return reviewCase.isUnder13Path
+          ? MinorAccountReviewUnder13SupportScreen.path
+          : SupportCenterScreen.path;
+    }
+    if (!ref.read(
+      isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),
+    )) {
+      return MinorAccountReviewParentConsentScreen.path;
+    }
+  }
+
   if (authState == AuthState.authenticated &&
       reviewStatus?.isRestricted == true) {
     final reviewCase = reviewStatus?.currentCase;
-    if (isParentContactRoute) {
+    if (isParentContactRoute || isRecordConsentRoute) {
       if (reviewCase == null) {
         return MinorAccountReviewScreen.path;
       }
@@ -555,6 +573,7 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
 
     if (!isReviewRoute &&
         !isParentContactRoute &&
+        !isRecordConsentRoute &&
         !isUnder13SupportRoute &&
         !isSupportRoute &&
         !isModerationConversationRoute &&

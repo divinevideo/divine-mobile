@@ -5108,5 +5108,8 @@
   "soundReadyDescription": "Utilise-le dans ta prochaine vidéo ou enregistre-le dans ta bibliothèque de sons.",
   "soundReadyUse": "Utiliser ce son",
   "soundReadySave": "Enregistrer dans Mes sons",
-  "soundRequestSaved": "Enregistré"
+  "soundRequestSaved": "Enregistré",
+  "minorAccountReviewVideoSubmittedBody": "Ta vidéo a été envoyée pour examen.",
+  "minorAccountReviewVideoSubmittedTitle": "Vidéo envoyée",
+  "minorAccountReviewRecordConsentPrivacyBody": "Votre vidéo est envoyée en privé aux équipes d’assistance et de confiance et sécurité de Divine pour examen. Elle n’est ni publiée ni partagée avec d’autres utilisateurs."
 }
