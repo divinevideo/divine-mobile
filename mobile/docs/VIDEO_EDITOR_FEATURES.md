@@ -46,7 +46,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Duplicate** (the copy lands right after the original) and **delete**. At least one clip always remains.
 - **Merge** two or more clips into one, through multi-select.
 - **Reverse**, as a toggle.
-- **Stabilize**, as a toggle: one tap measures the camera shake and bakes the steadied footage into the clip; tapping again restores the original. It hides the borders only by zooming in, at most 1.15× (`VideoEditorConstants.stabilizationMaxZoom`), so where a clip would need more, some shake stays. A clip with a color mask is steadied from the footage under the key and keyed again.
+- **Stabilize**, as a toggle: one tap measures the camera shake and bakes the steadied footage into the clip; tapping again restores the original. If the original footage is no longer on the device, the clip stays stabilized and the editor says so rather than offering a retry. It hides the borders only by zooming in, at most 1.15× (`VideoEditorConstants.stabilizationMaxZoom`), so where a clip would need more, some shake stays. A clip with a color mask is steadied from the footage under the key and keyed again.
 - **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider, with one-tap presets for 0.25×, 0.5×, 1×, 1.5×, 2× and 3×.
 - **Transform:** crop (locked to the video's aspect ratio), rotate by 90°, flip.
 - **Shape mask:** show the clip only inside a shape (see [Shape mask](#shape-mask)). Freeze frames take one too.
