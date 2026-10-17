@@ -1196,22 +1196,37 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
   func testSeekCompletingWhileInactiveDefersPlaybackUntilForeground() throws {
     _ = try invoke("play")
     try waitForState("the clip ends") { $0["status"] as? String == "completed" }
+    let player = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId)?.getPlayer())
     let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[Self.channel])
     let sought = expectation(description: "background seek answered")
+    var seekAnswered = false
     handler(Self.codec.encode(FlutterMethodCall(
       methodName: "seekTo", arguments: ["positionMs": 0]
-    ))) { _ in sought.fulfill() }
+    ))) { _ in
+      seekAnswered = true
+      sought.fulfill()
+    }
+    XCTAssertFalse(seekAnswered, "the seek must complete after the app resigns active")
     NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
     defer {
       NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
     }
     wait(for: [sought], timeout: 10)
     RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    // Dart hears nothing while inactive, so ask the player itself.
+    XCTAssertEqual(player.rate, 0, "the seek must not play while inactive")
+    XCTAssertLessThan(player.currentTime().seconds, 0.1, "the seek must land and stay at the start")
+
+    // Becoming active resumes inside the post and reports at once. That
+    // report's position is read after play() and may already be a few ms in.
     NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
-    let state = try XCTUnwrap(latestState())
-    XCTAssertEqual(state["positionMs"] as? Int, 0, "the seek must not play while inactive")
-    try waitForState("the deferred seek resumes in foreground") {
-      $0["status"] as? String == "playing" && ($0["positionMs"] as? Int ?? 0) > 100
+    XCTAssertEqual(
+      latestState()?["status"] as? String, "playing", "the deferred seek must resume in foreground"
+    )
+    // A fresh end proves the clock ran; sampling a 1 s clip mid-play misses
+    // on a starved runner.
+    try waitForState("the resumed clip plays to its end") {
+      $0["status"] as? String == "completed"
     }
   }
 
