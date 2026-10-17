@@ -5855,16 +5855,17 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction =>
+      'Magsimula ng bagong chat nang wala sila';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => 'Nakatagong mensahe';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => 'Ipakita';
 
   @override
   String get dmUnresolvedThreadTitle => 'Hindi na-load ang usapang ito';

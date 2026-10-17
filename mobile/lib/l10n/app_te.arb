@@ -3257,6 +3257,10 @@
   "dmBlockedGroupMemberTitle": "మీరు {name}ని బ్లాక్ చేసారు",
   "dmBlockedGroupMembersTitle": "{count, plural, one{మీరు ఇక్కడ {count} వ్యక్తిని బ్లాక్ చేసారు} other{మీరు ఇక్కడ {count} మందిని బ్లాక్ చేసారు}}",
   "dmBlockedGroupThreadBody": "సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి వారి ప్రొఫైల్ నుండి అన్‌బ్లాక్ చేయండి.",
+  "dmBlockedGroupMembersBannerBody": "వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.",
+  "dmStartChatWithoutBlockedAction": "వారు లేకుండా కొత్త చాట్ ప్రారంభించండి",
+  "dmHiddenMessageLabel": "దాచబడిన సందేశం",
+  "dmHiddenMessageShowAction": "చూపించండి",
   "@dmBlockedThreadBody": {
     "description": "Body of the notice replacing the composer in a blocked conversation. Explains that history is preserved and names unblocking as the way to reply again."
   },

@@ -5743,16 +5743,16 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      'Pesan mereka disembunyikan di sini. Mereka tetap bisa melihat apa yang kamu kirim.';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction => 'Mulai chat baru tanpa mereka';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => 'Pesan tersembunyi';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => 'Tampilkan';
 
   @override
   String get dmUnresolvedThreadTitle => 'Percakapan ini tidak dapat dimuat';

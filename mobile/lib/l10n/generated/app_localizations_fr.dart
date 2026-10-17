@@ -5899,16 +5899,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      'Leurs messages sont masqués ici. Ces personnes voient toujours ce que tu envoies.';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction =>
+      'Démarrer une nouvelle conversation sans ces personnes';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => 'Message masqué';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => 'Afficher';
 
   @override
   String get dmUnresolvedThreadTitle =>

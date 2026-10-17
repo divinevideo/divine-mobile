@@ -5517,16 +5517,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      '차단한 사람의 메시지는 여기서 숨겨져요. 상대방은 내가 보내는 메시지를 계속 볼 수 있어요.';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction => '차단한 사람을 제외하고 새 대화 시작';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => '숨겨진 메시지';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => '보기';
 
   @override
   String get dmUnresolvedThreadTitle => '이 대화를 불러오지 못했어요';
