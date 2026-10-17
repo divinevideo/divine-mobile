@@ -2273,6 +2273,8 @@
     "videoEditorUnstabilizeProgressLabel": "잠시만요. 원본으로 되돌리고 있어요",
     "videoEditorStabilizeNoLocalFile": "흔들림을 보정할 수 없어요: 클립을 이 기기에서 사용할 수 없어요.",
     "videoEditorStabilizeFailed": "클립의 흔들림을 보정하지 못했어요. 다시 시도해 주세요.",
+    "videoEditorUnstabilizeOriginalMissing": "원본 영상이 없어서 이 클립은 흔들림 보정 상태로 유지돼요.",
+    "videoEditorUnstabilizeFailed": "흔들림 보정을 끄지 못했어요. 다시 시도해 주세요.",
     "videoEditorSpeedSheetTitle": "클립 속도",
     "videoEditorSpeedPresetSemanticLabel": "속도 {speed}×",
     "videoEditorFadeLabel": "페이드",

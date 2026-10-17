@@ -2784,6 +2784,8 @@
     "videoEditorUnstabilizeProgressLabel": "Een moment, we halen het origineel terug",
     "videoEditorStabilizeNoLocalFile": "Kan niet stabiliseren: clip is niet lokaal beschikbaar.",
     "videoEditorStabilizeFailed": "Kon clip niet stabiliseren. Probeer het opnieuw.",
+    "videoEditorUnstabilizeOriginalMissing": "Het originele beeldmateriaal is er niet meer, dus deze clip blijft gestabiliseerd.",
+    "videoEditorUnstabilizeFailed": "Kon stabilisatie niet uitzetten. Probeer het opnieuw.",
     "videoEditorSpeedSheetTitle": "Clipsnelheid",
     "videoEditorSpeedPresetSemanticLabel": "Snelheid {speed}×",
     "videoEditorFadeLabel": "Faden",

@@ -3035,6 +3035,8 @@
     "videoEditorUnstabilizeProgressLabel": "Момент, връщаме оригинала",
     "videoEditorStabilizeNoLocalFile": "Не може да се стабилизира: клипът не е наличен локално.",
     "videoEditorStabilizeFailed": "Клипът не можа да се стабилизира. Опитай отново.",
+    "videoEditorUnstabilizeOriginalMissing": "Оригиналният запис вече го няма, затова клипът остава стабилизиран.",
+    "videoEditorUnstabilizeFailed": "Стабилизацията не можа да се изключи. Опитай отново.",
     "videoEditorSpeedSheetTitle": "Скорост на клипа",
     "videoEditorSpeedPresetSemanticLabel": "Скорост {speed}×",
     "videoEditorFadeLabel": "Избледняване",

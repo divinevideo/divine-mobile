@@ -16829,11 +16829,23 @@ abstract class AppLocalizations {
   /// **'Cannot stabilize: clip is not locally available.'**
   String get videoEditorStabilizeNoLocalFile;
 
-  /// Snackbar message shown when stabilizing a clip, or turning stabilization off, fails.
+  /// Snackbar message shown when stabilizing a clip fails.
   ///
   /// In en, this message translates to:
   /// **'Could not stabilize clip. Please try again.'**
   String get videoEditorStabilizeFailed;
+
+  /// Snackbar message shown when the user turns stabilization off but the unstabilized original footage is no longer on the device. The clip keeps its stabilized video. Retrying cannot bring the file back, so the message must not suggest trying again.
+  ///
+  /// In en, this message translates to:
+  /// **'The original footage is gone, so this clip stays stabilized.'**
+  String get videoEditorUnstabilizeOriginalMissing;
+
+  /// Snackbar message shown when turning stabilization off fails for a reason a retry may fix. The clip stays stabilized.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not turn off stabilization. Please try again.'**
+  String get videoEditorUnstabilizeFailed;
 
   /// Title of the bottom sheet for adjusting clip playback speed.
   ///

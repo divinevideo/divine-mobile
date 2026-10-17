@@ -10045,6 +10045,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Clip konnte nicht stabilisiert werden. Bitte erneut versuchen.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Das Originalmaterial ist nicht mehr da, deshalb bleibt dieser Clip stabilisiert.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Stabilisierung konnte nicht ausgeschaltet werden. Bitte erneut versuchen.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Clip-Geschwindigkeit';
 
   @override

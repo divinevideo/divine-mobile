@@ -9686,6 +9686,14 @@ class AppLocalizationsAm extends AppLocalizations {
       'ክሊፑን ማረጋጋት አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'የመጀመሪያው ቀረጻ ስለጠፋ ይህ ክሊፕ እንደተረጋጋ ይቆያል።';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'ማረጋጋትን ማጥፋት አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'የክሊፕ ፍጥነት';
 
   @override

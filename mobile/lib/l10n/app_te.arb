@@ -5911,6 +5911,8 @@
   "videoEditorUnstabilizeProgressLabel": "ఒక్క క్షణం, మేము అసలును తిరిగి తెస్తున్నాము",
   "videoEditorStabilizeNoLocalFile": "స్థిరీకరించలేరు: క్లిప్ స్థానికంగా అందుబాటులో లేదు.",
   "videoEditorStabilizeFailed": "క్లిప్‌ను స్థిరీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "videoEditorUnstabilizeOriginalMissing": "అసలు ఫుటేజ్ ఇక లేదు, కాబట్టి ఈ క్లిప్ స్థిరీకరించబడినదిగానే ఉంటుంది.",
+  "videoEditorUnstabilizeFailed": "స్థిరీకరణను ఆఫ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "videoEditorSpeedSheetTitle": "క్లిప్ స్పీడ్",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

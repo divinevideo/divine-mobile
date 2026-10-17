@@ -2734,6 +2734,8 @@
     "videoEditorUnstabilizeProgressLabel": "Tunggu sebentar, kami sedang mengembalikan versi aslinya",
     "videoEditorStabilizeNoLocalFile": "Tidak dapat menstabilkan: klip tidak tersedia secara lokal.",
     "videoEditorStabilizeFailed": "Tidak dapat menstabilkan klip. Coba lagi.",
+    "videoEditorUnstabilizeOriginalMissing": "Rekaman aslinya sudah tidak ada, jadi klip ini tetap distabilkan.",
+    "videoEditorUnstabilizeFailed": "Tidak dapat mematikan stabilisasi. Coba lagi.",
     "videoEditorSpeedSheetTitle": "Kecepatan Klip",
     "videoEditorSpeedPresetSemanticLabel": "Kecepatan {speed}×",
     "videoEditorFadeLabel": "Pudar",

@@ -9877,6 +9877,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không chống rung được clip. Vui lòng thử lại.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Đoạn phim gốc không còn nữa, nên clip này vẫn giữ chế độ chống rung.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Không tắt được chống rung. Vui lòng thử lại.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Tốc độ clip';
 
   @override

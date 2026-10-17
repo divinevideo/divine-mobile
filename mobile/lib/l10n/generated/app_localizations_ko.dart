@@ -9446,6 +9446,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorStabilizeFailed => '클립의 흔들림을 보정하지 못했어요. 다시 시도해 주세요.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      '원본 영상이 없어서 이 클립은 흔들림 보정 상태로 유지돼요.';
+
+  @override
+  String get videoEditorUnstabilizeFailed => '흔들림 보정을 끄지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get videoEditorSpeedSheetTitle => '클립 속도';
 
   @override

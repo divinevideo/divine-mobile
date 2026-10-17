@@ -9330,6 +9330,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorStabilizeFailed => '无法为片段防抖，请重试。';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing => '原始素材已不存在，因此该片段会保持防抖。';
+
+  @override
+  String get videoEditorUnstabilizeFailed => '无法关闭防抖，请重试。';
+
+  @override
   String get videoEditorSpeedSheetTitle => '片段速度';
 
   @override

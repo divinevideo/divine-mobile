@@ -10015,6 +10015,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo estabilizar el clip. Intentá de nuevo.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'El video original ya no está, así que este clip sigue estabilizado.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'No se pudo desactivar la estabilización. Intentá de nuevo.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Velocidad del clip';
 
   @override

@@ -2063,6 +2063,8 @@
     "videoEditorUnstabilizeProgressLabel": "Sandali lang, ibinabalik namin ang original",
     "videoEditorStabilizeNoLocalFile": "Hindi ma-stabilize: hindi available ang clip nang lokal.",
     "videoEditorStabilizeFailed": "Hindi na-stabilize ang clip. Pakisubukang muli.",
+    "videoEditorUnstabilizeOriginalMissing": "Wala na ang original na footage, kaya mananatiling naka-stabilize ang clip na ito.",
+    "videoEditorUnstabilizeFailed": "Hindi ma-off ang stabilization. Pakisubukang muli.",
     "videoEditorSpeedSheetTitle": "Bilis ng Clip",
     "videoEditorSpeedPresetSemanticLabel": "Bilis {speed}×",
     "videoEditorFadeLabel": "Fade",

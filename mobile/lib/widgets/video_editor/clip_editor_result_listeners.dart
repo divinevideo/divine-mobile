@@ -153,8 +153,8 @@ class _ClipReverseResultListener extends StatelessWidget {
 }
 
 /// Listens to [ClipEditorState.lastStabilizeResult] and surfaces a snackbar
-/// when stabilizing a clip, or restoring it, fails. Success is handled by the
-/// canvas player-sync listener.
+/// when stabilizing a clip, or restoring it, fails, and when the footage to
+/// restore is gone. Success is handled by the canvas player-sync listener.
 ///
 /// Kept at the scaffold level (always mounted) so the snackbar fires even if
 /// the timeline controls are hidden while the render is in flight.
@@ -178,7 +178,11 @@ class _ClipStabilizeResultListener extends StatelessWidget {
     final message = switch (state.lastStabilizeResult) {
       ClipStabilizeNoLocalFile() =>
         context.l10n.videoEditorStabilizeNoLocalFile,
-      ClipStabilizeFailure() => context.l10n.videoEditorStabilizeFailed,
+      ClipStabilizeOriginalMissing() =>
+        context.l10n.videoEditorUnstabilizeOriginalMissing,
+      ClipStabilizeFailure(stabilizing: true) =>
+        context.l10n.videoEditorStabilizeFailed,
+      ClipStabilizeFailure() => context.l10n.videoEditorUnstabilizeFailed,
       // A removed clip has nothing to report; a success shows in the player.
       ClipStabilizeDiscarded() || ClipStabilizeSuccess() || null => null,
     };

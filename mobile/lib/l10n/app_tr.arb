@@ -2734,6 +2734,8 @@
     "videoEditorUnstabilizeProgressLabel": "Bir saniye, orijinali geri getiriyoruz",
     "videoEditorStabilizeNoLocalFile": "Sabitlenemiyor: klip yerel olarak kullanılamıyor.",
     "videoEditorStabilizeFailed": "Klip sabitlenemedi. Tekrar dene.",
+    "videoEditorUnstabilizeOriginalMissing": "Orijinal görüntü artık yok, bu yüzden bu klip sabitlenmiş olarak kalacak.",
+    "videoEditorUnstabilizeFailed": "Sabitleme kapatılamadı. Tekrar dene.",
     "videoEditorSpeedSheetTitle": "Klip Hızı",
     "videoEditorSpeedPresetSemanticLabel": "Hız {speed}×",
     "videoEditorFadeLabel": "Solma",

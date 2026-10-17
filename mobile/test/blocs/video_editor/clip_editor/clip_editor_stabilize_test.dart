@@ -296,20 +296,79 @@ void main() {
 
       final state = await toggle(bloc);
 
-      expect(state.lastStabilizeResult, isA<ClipStabilizeFailure>());
+      expect(
+        state.lastStabilizeResult,
+        isA<ClipStabilizeFailure>().having(
+          (r) => r.stabilizing,
+          'stabilizing',
+          isTrue,
+        ),
+      );
       expect(state.isStabilizing, isFalse);
       expect(state.clips.single.video!.file!.path, '/documents/clip.mp4');
       expect(state.clips.single.stabilization, isNull);
     });
 
-    test('fails to turn off when the unstabilized footage is gone', () async {
-      final bloc = seeded([_longClip(videoPath: '${temp.path}/missing.mp4')]);
-      await toggle(bloc);
+    test(
+      'keeps the steadied clip when the unstabilized footage is gone',
+      () async {
+        final bloc = seeded([
+          _longClip(videoPath: '${temp.path}/missing.mp4'),
+        ]);
+        final steadied = (await toggle(bloc)).clips.single;
+        expect(steadied.stabilization, isNotNull);
+        final states = <ClipEditorState>[];
+        final subscription = bloc.stream.listen(states.add);
+        addTearDown(subscription.cancel);
+
+        final state = await toggle(bloc);
+
+        expect(state.lastStabilizeResult, isA<ClipStabilizeOriginalMissing>());
+        expect(state.clips.single, same(steadied));
+        // Nothing was attempted, so no render spinner flashed up.
+        expect(states.where((s) => s.isStabilizing), isEmpty);
+      },
+    );
+
+    test('reports a failed restore apart from missing footage', () async {
+      final raw = File('${temp.path}/clip.mp4')..writeAsBytesSync([0]);
+      var bakes = 0;
+      final bloc = seeded(
+        [
+          _longClip().copyWith(
+            video: EditorVideo.file('/documents/clip_keyed.mp4'),
+            chromaKey: _key,
+            chromaKeySourcePath: raw.path,
+          ),
+        ],
+        // The key bakes onto the steadied render, then fails on the way back.
+        bakeChromaKey:
+            ({
+              required sourceClip,
+              required chromaKey,
+              required renderId,
+            }) async {
+              if (bakes++ > 0) throw Exception('encoder failed');
+              return (
+                video: EditorVideo.file('/documents/clip_rekeyed.mp4'),
+                source: sourceClip.chromaKeySourcePath!,
+              );
+            },
+      );
+      final steadied = (await toggle(bloc)).clips.single;
+      expect(steadied.stabilization, isNotNull);
 
       final state = await toggle(bloc);
 
-      expect(state.lastStabilizeResult, isA<ClipStabilizeFailure>());
-      expect(state.clips.single.stabilization, isNotNull);
+      expect(
+        state.lastStabilizeResult,
+        isA<ClipStabilizeFailure>().having(
+          (r) => r.stabilizing,
+          'stabilizing',
+          isFalse,
+        ),
+      );
+      expect(state.clips.single, same(steadied));
     });
 
     test('keeps a poster that lands while the render runs', () async {

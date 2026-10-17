@@ -2727,6 +2727,8 @@
     "videoEditorUnstabilizeProgressLabel": "لحظة من فضلك، جارٍ استعادة الأصل",
     "videoEditorStabilizeNoLocalFile": "لا يمكن التثبيت: المقطع غير متاح محليًا.",
     "videoEditorStabilizeFailed": "تعذّر تثبيت المقطع. يرجى المحاولة مجددًا.",
+    "videoEditorUnstabilizeOriginalMissing": "لم تعد اللقطات الأصلية موجودة، لذا سيبقى هذا المقطع مُثبّتًا.",
+    "videoEditorUnstabilizeFailed": "تعذّر إيقاف التثبيت. يرجى المحاولة مجددًا.",
     "videoEditorSpeedSheetTitle": "سرعة المقطع",
     "videoEditorSpeedPresetSemanticLabel": "السرعة {speed}×",
     "videoEditorFadeLabel": "تلاشٍ",

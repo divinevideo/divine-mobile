@@ -9891,6 +9891,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تثبيت المقطع. يرجى المحاولة مجددًا.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'لم تعد اللقطات الأصلية موجودة، لذا سيبقى هذا المقطع مُثبّتًا.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'تعذّر إيقاف التثبيت. يرجى المحاولة مجددًا.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'سرعة المقطع';
 
   @override

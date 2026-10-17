@@ -10134,6 +10134,14 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu s-a putut stabiliza clipul. Încearcă din nou.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Filmarea originală nu mai există, așa că acest clip rămâne stabilizat.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Nu s-a putut dezactiva stabilizarea. Încearcă din nou.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Viteza clipului';
 
   @override

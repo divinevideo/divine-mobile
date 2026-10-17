@@ -9964,6 +9964,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon clip niet stabiliseren. Probeer het opnieuw.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Het originele beeldmateriaal is er niet meer, dus deze clip blijft gestabiliseerd.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Kon stabilisatie niet uitzetten. Probeer het opnieuw.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Clipsnelheid';
 
   @override

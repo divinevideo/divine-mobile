@@ -111,11 +111,31 @@ void main() {
       }
 
       testWidgets('tells the user when stabilizing fails', (tester) async {
-        await pumpResult(tester, ClipStabilizeFailure());
+        await pumpResult(tester, ClipStabilizeFailure(stabilizing: true));
 
         final l10n = lookupAppLocalizations(const Locale('en'));
         expect(find.text(l10n.videoEditorStabilizeFailed), findsOneWidget);
       });
+
+      testWidgets('tells the user when turning it off fails', (tester) async {
+        await pumpResult(tester, ClipStabilizeFailure(stabilizing: false));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEditorUnstabilizeFailed), findsOneWidget);
+      });
+
+      testWidgets(
+        'explains that missing original footage cannot be restored',
+        (tester) async {
+          await pumpResult(tester, ClipStabilizeOriginalMissing());
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            find.text(l10n.videoEditorUnstabilizeOriginalMissing),
+            findsOneWidget,
+          );
+        },
+      );
 
       testWidgets('stays quiet when stabilizing succeeds', (tester) async {
         await pumpResult(tester, ClipStabilizeSuccess(stabilized: true));

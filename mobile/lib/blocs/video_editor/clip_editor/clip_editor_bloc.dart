@@ -1973,6 +1973,17 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     }
 
     final record = clip.stabilization;
+    if (record != null && !File(record.rawSourcePath).existsSync()) {
+      Log.warning(
+        '⚠️ Unstabilize skipped: footage ${record.rawSourcePath} of clip '
+        '${clip.id} is gone',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      emit(state.copyWith(lastStabilizeResult: ClipStabilizeOriginalMissing()));
+      return;
+    }
+
     emit(
       state.copyWith(
         isStabilizing: true,
@@ -2059,7 +2070,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           isStabilizing: false,
           clearStabilizingClipId: true,
           clearStabilizeProgress: true,
-          lastStabilizeResult: ClipStabilizeFailure(),
+          lastStabilizeResult: ClipStabilizeFailure(
+            stabilizing: record == null,
+          ),
         ),
       );
     }
@@ -2138,7 +2151,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     return _rekey(steadied, steadyPath!, rendered);
   }
 
-  /// Restores [clip]'s unstabilized footage from [record].
+  /// Restores [clip]'s unstabilized footage from [record], which the caller
+  /// has found still on disk.
   ///
   /// A green screen baked into [clip] is applied again on top of the raw
   /// footage, which costs a render; without one this is a file swap.
@@ -2148,9 +2162,6 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     List<String?> rendered,
   ) async {
     final raw = record.rawSourcePath;
-    if (!File(raw).existsSync()) {
-      throw StateError('Unstabilized footage $raw is gone');
-    }
     final restored = clip.copyWith(
       video: EditorVideo.file(raw),
       duration: record.sourceDuration,
