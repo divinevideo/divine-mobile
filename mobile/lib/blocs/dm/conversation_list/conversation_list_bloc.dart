@@ -633,13 +633,6 @@ class ConversationListBloc
         moderationPresentation: _moderationPresentation,
       ).pubkey;
 
-  static String _otherParticipant(DmConversation conversation, String self) {
-    return dmConversationFirstPeer(
-      participantPubkeys: conversation.participantPubkeys,
-      currentUserPubkey: self,
-    );
-  }
-
   /// A synthetic pin carries no timestamp, so it needs a `createdAt` that is
   /// stable across recomputes — a clock read would make every debounce tick
   /// produce an unequal state and re-emit forever. The value is never shown:
