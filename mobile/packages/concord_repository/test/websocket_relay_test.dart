@@ -55,16 +55,27 @@ void main() {
         relay.url,
         publishTimeout: const Duration(milliseconds: 100),
       );
-      await expectLater(
-        gateway.publish(_event),
-        throwsA(isA<TimeoutException>()),
-      );
-      final frame = relay.nextFrame('EVENT');
-      final retry = gateway.publish(_event);
-      await frame;
-      expect(relay.sockets, hasLength(2));
-      relay.send(['OK', _eventId, true, '']);
-      await retry;
+      final deadlines = _ControlledDeadlines(const Duration(milliseconds: 100));
+      await deadlines.run(() async {
+        final firstFrame = relay.nextFrame('EVENT');
+        final timedOut = expectLater(
+          gateway.publish(_event),
+          throwsA(isA<TimeoutException>()),
+        );
+        await firstFrame;
+        expect(deadlines.timers, hasLength(1));
+        deadlines.timers.single.fire();
+        await timedOut;
+
+        final frame = relay.nextFrame('EVENT');
+        final retry = expectLater(gateway.publish(_event), completes);
+        await frame;
+        expect(relay.sockets, hasLength(2));
+        expect(deadlines.timers, hasLength(2));
+        relay.send(['OK', _eventId, true, '']);
+        await retry;
+        expect(deadlines.timers.last.isActive, isFalse);
+      });
     });
     test(
       'concurrent connects and duplicate publishes share one connection',
@@ -270,11 +281,21 @@ void main() {
         relay.url,
         connectionTimeout: const Duration(milliseconds: 50),
       );
-      final connecting = expectLater(gateway.connect(), throwsStateError);
-      await relay.requestReceived.future;
-      await gateway.close();
-      await connecting;
-      expect(relay.sockets, isEmpty);
+      // Control the handshake deadline, while allowing close's separate
+      // socket-cleanup timeout to use the real event loop.
+      final deadlines = _ControlledDeadlines(
+        const Duration(milliseconds: 50),
+        limit: 1,
+      );
+      await deadlines.run(() async {
+        final connecting = expectLater(gateway.connect(), throwsStateError);
+        await relay.requestReceived.future;
+        expect(deadlines.timers, hasLength(1));
+        await gateway.close();
+        await connecting;
+        expect(relay.sockets, isEmpty);
+        expect(deadlines.timers.single.isActive, isFalse);
+      });
     });
   });
 
@@ -358,4 +379,52 @@ class _LocalRelay {
     await frames.close();
     await server.close(force: true);
   }
+}
+
+/// Controls only the operation deadline under test; real socket IO and all
+/// unrelated timers continue through the parent zone.
+class _ControlledDeadlines {
+  _ControlledDeadlines(this.duration, {this.limit});
+
+  final Duration duration;
+  final int? limit;
+  final timers = <_ManualTimer>[];
+
+  Future<void> run(Future<void> Function() body) => runZoned(
+    body,
+    zoneSpecification: ZoneSpecification(
+      createTimer: (self, parent, zone, delay, callback) {
+        if (delay == duration && (limit == null || timers.length < limit!)) {
+          final timer = _ManualTimer(callback);
+          timers.add(timer);
+          return timer;
+        }
+        return parent.createTimer(zone, delay, callback);
+      },
+    ),
+  );
+}
+
+class _ManualTimer implements Timer {
+  _ManualTimer(this.callback);
+
+  final void Function() callback;
+  bool _active = true;
+  int _tick = 0;
+
+  void fire() {
+    if (!_active) return;
+    _active = false;
+    _tick++;
+    callback();
+  }
+
+  @override
+  bool get isActive => _active;
+
+  @override
+  int get tick => _tick;
+
+  @override
+  void cancel() => _active = false;
 }
