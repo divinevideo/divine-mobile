@@ -443,6 +443,73 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
+      testWidgets('changes the glitch pattern as often as the renderers', (
+        tester,
+      ) async {
+        // The renderers change it 15 times a second, 30 times in this 2 s
+        // transition; a change shows when an on-screen slice turns the other
+        // way, and the tile used to change only 8 times per transition.
+        Map<double, bool> shifts() {
+          final tile = find
+              .ancestor(
+                of: find.text(l10n.videoEditorTransitionGlitch),
+                matching: find.byType(Column),
+              )
+              .first;
+          return {
+            for (final slice
+                in find
+                    .descendant(
+                      of: tile,
+                      matching: find.byWidgetPredicate(
+                        (w) => w is ClipRect && w.clipper != null,
+                      ),
+                    )
+                    .evaluate())
+              (slice.widget as ClipRect).clipper!
+                      .getClip(const Size(64, 84))
+                      .top:
+                  tester
+                      .widget<Transform>(
+                        find.descendant(
+                          of: find.byWidget(slice.widget),
+                          matching: find.byType(Transform),
+                        ),
+                      )
+                      .transform
+                      .getTranslation()
+                      .x >
+                  0,
+          };
+        }
+
+        await widen(tester);
+        await openPicker(
+          tester,
+          initial: const editor.ClipTransition(
+            type: editor.ClipTransitionType.glitch,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        var changes = 0;
+        var before = shifts();
+        for (var frame = 0; frame < 175; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          final now = shifts();
+          if (now.entries.any(
+            (slice) =>
+                before.containsKey(slice.key) &&
+                before[slice.key] != slice.value,
+          )) {
+            changes++;
+          }
+          before = now;
+        }
+
+        expect(changes, greaterThan(10));
+      });
+
       testWidgets('offers directions for whip pan and stretch only', (
         tester,
       ) async {
