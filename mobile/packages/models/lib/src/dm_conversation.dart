@@ -18,6 +18,7 @@ class DmConversation extends Equatable {
     this.lastMessageSenderPubkey,
     this.subject,
     this.isRead = true,
+    this.isDismissed = false,
     this.currentUserHasSent = false,
     this.dmProtocol,
   }) : participantPubkeys = List.unmodifiable(participantPubkeys);
@@ -49,6 +50,9 @@ class DmConversation extends Equatable {
   /// Whether the conversation has been read.
   final bool isRead;
 
+  /// Whether this request has been put aside locally without deleting it.
+  final bool isDismissed;
+
   /// Whether the current user has sent a message in this conversation.
   final bool currentUserHasSent;
 
@@ -78,6 +82,7 @@ class DmConversation extends Equatable {
     String? subject,
     bool clearSubject = false,
     bool? isRead,
+    bool? isDismissed,
     bool? currentUserHasSent,
     String? dmProtocol,
     bool clearDmProtocol = false,
@@ -98,6 +103,7 @@ class DmConversation extends Equatable {
           : lastMessageSenderPubkey ?? this.lastMessageSenderPubkey,
       subject: clearSubject ? null : subject ?? this.subject,
       isRead: isRead ?? this.isRead,
+      isDismissed: isDismissed ?? this.isDismissed,
       currentUserHasSent: currentUserHasSent ?? this.currentUserHasSent,
       dmProtocol: clearDmProtocol ? null : dmProtocol ?? this.dmProtocol,
     );
@@ -114,6 +120,7 @@ class DmConversation extends Equatable {
     lastMessageSenderPubkey,
     subject,
     isRead,
+    isDismissed,
     currentUserHasSent,
     dmProtocol,
   ];

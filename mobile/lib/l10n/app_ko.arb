@@ -4654,5 +4654,12 @@
   "soundReadyDescription": "다음 동영상에서 사용하거나 사운드 라이브러리에 저장하세요.",
   "soundReadyUse": "이 사운드 사용",
   "soundReadySave": "내 사운드에 저장",
-  "soundRequestSaved": "저장됨"
+  "soundRequestSaved": "저장됨",
+    "inboxRequestsMarkAllReadShort": "모두 읽음으로 표시",
+    "inboxRequestsDismissed": "보류됨",
+    "inboxRequestsDismissedEmpty": "보류한 대화가 없어요",
+    "inboxRequestDismiss": "보류",
+    "inboxRequestRestore": "복원",
+    "inboxThreadMarkRead": "읽음으로 표시",
+    "inboxThreadMarkedRead": "읽음으로 표시했어요"
 }

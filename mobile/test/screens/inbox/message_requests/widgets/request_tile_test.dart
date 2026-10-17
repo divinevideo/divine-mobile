@@ -201,7 +201,11 @@ void main() {
     group('moderation identity', () {
       final l10n = lookupAppLocalizations(const Locale('en'));
 
-      Future<void> pumpTileFor(WidgetTester tester, String counterparty) async {
+      Future<void> pumpTileFor(
+        WidgetTester tester,
+        String counterparty, {
+        VoidCallback? onDismiss,
+      }) async {
         await tester.pumpWidget(
           testMaterialApp(
             additionalOverrides: [
@@ -221,6 +225,7 @@ void main() {
                 ),
                 currentUserPubkey: currentPubkey,
                 onTap: () {},
+                onDismiss: onDismiss,
               ),
             ),
           ),
@@ -377,6 +382,25 @@ void main() {
 
         expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
         expect(wordmarkFinder(), findsOneWidget);
+      });
+
+      // Like removal, dismissal is withheld from a moderation notice.
+      testWidgets('a retired moderation request offers no Dismiss', (
+        tester,
+      ) async {
+        await pumpTileFor(
+          tester,
+          kLegacyModerationPubkeys.first,
+          onDismiss: () {},
+        );
+
+        expect(find.text(l10n.inboxRequestDismiss), findsNothing);
+      });
+
+      testWidgets('an ordinary request offers Dismiss', (tester) async {
+        await pumpTileFor(tester, otherPubkey, onDismiss: () {});
+
+        expect(find.text(l10n.inboxRequestDismiss), findsOneWidget);
       });
 
       testWidgets('an ordinary request is untouched', (tester) async {

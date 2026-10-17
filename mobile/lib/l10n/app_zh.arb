@@ -6872,5 +6872,12 @@
   "soundReadyDescription": "在下一个视频中使用它，或保存到你的声音库。",
   "soundReadyUse": "使用此声音",
   "soundReadySave": "保存到我的声音",
-  "soundRequestSaved": "已保存"
+  "soundRequestSaved": "已保存",
+  "inboxRequestsMarkAllReadShort": "全部标为已读",
+  "inboxRequestsDismissed": "已搁置",
+  "inboxRequestsDismissedEmpty": "没有已搁置的对话",
+  "inboxRequestDismiss": "搁置",
+  "inboxRequestRestore": "恢复",
+  "inboxThreadMarkRead": "标为已读",
+  "inboxThreadMarkedRead": "已标为已读"
 }

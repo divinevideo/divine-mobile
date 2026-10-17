@@ -1602,6 +1602,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             id: DmRepository.computeConversationId(
               [_validPubkeyA, _validPubkeyB]..sort(),
             ),
@@ -1802,6 +1803,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id:
                   'dddddddddddddddddddddddddddddddddddddddddddddddddddddddd'
                   'dddddddd',
@@ -3709,6 +3711,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: groupConversationId,
               participantPubkeys: jsonEncode([
                 _validPubkeyA,
@@ -13002,6 +13005,7 @@ void main() {
         ).thenAnswer(
           (_) => Stream.value([
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: convId,
               participantPubkeys: jsonEncode(participants),
@@ -13063,6 +13067,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             ownerPubkey: '',
             id: convId,
             participantPubkeys: jsonEncode(participants),
@@ -13320,6 +13325,7 @@ void main() {
       ]);
 
       ConversationRow readConversation({int? cursor}) => ConversationRow(
+        isDismissed: false,
         id: conversationId,
         participantPubkeys: jsonEncode([_validPubkeyA, _validPubkeyB]),
         isGroup: false,
@@ -13585,6 +13591,7 @@ void main() {
           ).thenAnswer(
             (_) async => [
               ConversationRow(
+                isDismissed: false,
                 id: conversationId,
                 participantPubkeys: 'not-json',
                 isGroup: false,
@@ -13963,6 +13970,7 @@ void main() {
           ),
         ).thenAnswer(
           (invocation) async => ConversationRow(
+            isDismissed: false,
             id: invocation.positionalArguments.first as String,
             participantPubkeys: jsonEncode(
               [_validPubkeyA, _validPubkeyB]..sort(),
@@ -14103,6 +14111,7 @@ void main() {
           ),
         ).thenAnswer(
           (invocation) async => ConversationRow(
+            isDismissed: false,
             id: invocation.positionalArguments.first as String,
             participantPubkeys: jsonEncode(
               [_validPubkeyA, _validPubkeyB]..sort(),
@@ -14422,6 +14431,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: convId,
               participantPubkeys: jsonEncode(participants),
@@ -17329,6 +17339,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             ownerPubkey: '',
             id: convId,
             participantPubkeys: jsonEncode(participants),
@@ -17467,6 +17478,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: DmRepository.computeConversationId(
                 [_validPubkeyA, _validPubkeyB]..sort(),
               ),
@@ -17637,6 +17649,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: DmRepository.computeConversationId(
                 [_validPubkeyA, _validPubkeyB]..sort(),
               ),
@@ -17725,6 +17738,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             id: DmRepository.computeConversationId(
               [_validPubkeyA, _validPubkeyB]..sort(),
             ),
@@ -18086,6 +18100,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: conversationId,
               participantPubkeys: '["$_validPubkeyA","$_validPubkeyB"]',
@@ -18232,6 +18247,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: conversationId,
               participantPubkeys: '["$_validPubkeyA","$_validPubkeyB"]',
@@ -18441,6 +18457,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             ownerPubkey: '',
             id: conversationId,
             participantPubkeys: jsonEncode(participants),
@@ -18598,6 +18615,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             ownerPubkey: '',
             id: conversationId,
             participantPubkeys: '["$_validPubkeyA","$_validPubkeyB"]',
@@ -18869,6 +18887,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             ownerPubkey: '',
             id: conversationId,
             participantPubkeys: '["$_validPubkeyA","$_validPubkeyB"]',
@@ -19129,6 +19148,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: conversationId,
               participantPubkeys:
@@ -19421,6 +19441,7 @@ void main() {
               ),
             ).thenAnswer(
               (_) async => ConversationRow(
+                isDismissed: false,
                 ownerPubkey: '',
                 id: conversationId,
                 participantPubkeys:
@@ -19657,6 +19678,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: canonicalId,
               participantPubkeys: jsonEncode(canonical1to1),
@@ -20005,6 +20027,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: groupId,
               participantPubkeys: jsonEncode(groupParticipants),
@@ -20889,6 +20912,7 @@ void main() {
         ).thenAnswer(
           (_) async => [
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: convId,
               participantPubkeys: jsonEncode(participants),
@@ -20994,6 +21018,7 @@ void main() {
           ).thenAnswer(
             (_) => Stream.value([
               ConversationRow(
+                isDismissed: false,
                 ownerPubkey: '',
                 id: convId,
                 participantPubkeys: jsonEncode(participants),
@@ -21075,6 +21100,7 @@ void main() {
           ).thenAnswer(
             (_) => Stream.value([
               ConversationRow(
+                isDismissed: false,
                 ownerPubkey: '',
                 id: convId,
                 participantPubkeys: jsonEncode(participants),
@@ -21133,6 +21159,7 @@ void main() {
         ).thenAnswer(
           (_) => Stream.value([
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: convId,
               participantPubkeys: jsonEncode(participants),
@@ -21175,6 +21202,7 @@ void main() {
         ).thenAnswer(
           (_) => Stream.value([
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: selfId,
               participantPubkeys: jsonEncode([_validPubkeyA, _validPubkeyA]),
@@ -21184,6 +21212,7 @@ void main() {
               createdAt: 1700000000,
             ),
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: peerId,
               participantPubkeys: jsonEncode(peerParticipants),
@@ -21218,6 +21247,7 @@ void main() {
         ).thenAnswer(
           (_) => Stream.value([
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: 'empty-participants',
               participantPubkeys: jsonEncode(const <String>[]),
@@ -21249,6 +21279,7 @@ void main() {
         ).thenAnswer(
           (_) => Stream.value([
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: selfId,
               participantPubkeys: jsonEncode([_validPubkeyA.toUpperCase()]),
@@ -21282,6 +21313,7 @@ void main() {
           ).thenAnswer(
             (_) => Stream.value([
               ConversationRow(
+                isDismissed: false,
                 ownerPubkey: '',
                 id: convId,
                 participantPubkeys: jsonEncode(participants),
@@ -21344,6 +21376,7 @@ void main() {
           ).thenAnswer(
             (_) => Stream.value([
               ConversationRow(
+                isDismissed: false,
                 ownerPubkey: '',
                 id: convA,
                 participantPubkeys: jsonEncode(participantsA),
@@ -21355,6 +21388,7 @@ void main() {
                 lastMessageTimestamp: 1700000900,
               ),
               ConversationRow(
+                isDismissed: false,
                 ownerPubkey: '',
                 id: convB,
                 participantPubkeys: jsonEncode(participantsB),
@@ -21393,6 +21427,7 @@ void main() {
         ).thenAnswer(
           (_) => Stream.value([
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: convId,
               participantPubkeys: jsonEncode(participants),
@@ -21531,6 +21566,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => ConversationRow(
+            isDismissed: false,
             ownerPubkey: '',
             id: convId,
             participantPubkeys: jsonEncode(participants),
@@ -23322,6 +23358,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: convId,
               participantPubkeys: jsonEncode(participants),
@@ -23447,6 +23484,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: convId,
               participantPubkeys: jsonEncode(participants),
@@ -23608,6 +23646,7 @@ void main() {
         ).thenAnswer(
           (_) async => [
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: DmRepository.computeConversationId(oneToOne),
               participantPubkeys: jsonEncode(oneToOne),
@@ -23620,6 +23659,7 @@ void main() {
               lastMessageSenderPubkey: _validPubkeyB,
             ),
             ConversationRow(
+              isDismissed: false,
               ownerPubkey: '',
               id: groupId,
               participantPubkeys: jsonEncode(groupParticipants),
@@ -23702,6 +23742,7 @@ void main() {
                 ? [
                     for (var i = 0; i < participantLists.length; i++)
                       ConversationRow(
+                        isDismissed: false,
                         ownerPubkey: '',
                         id: selfConversationIds[i],
                         participantPubkeys: jsonEncode(participantLists[i]),
@@ -23711,6 +23752,7 @@ void main() {
                         createdAt: 1700000000,
                       ),
                     ConversationRow(
+                      isDismissed: false,
                       ownerPubkey: '',
                       id: peerConversationId,
                       participantPubkeys: jsonEncode(peerParticipants),
@@ -24659,6 +24701,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: DmRepository.computeConversationId(
                 [_validPubkeyA, _validPubkeyB]..sort(),
               ),
@@ -24811,6 +24854,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: DmRepository.computeConversationId(
                 [_validPubkeyA, _validPubkeyB]..sort(),
               ),
@@ -24951,6 +24995,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: conversationId,
               participantPubkeys: jsonEncode(participants),
               isGroup: false,
@@ -29506,6 +29551,7 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => ConversationRow(
+              isDismissed: false,
               id: 'conv',
               participantPubkeys: groupParticipants,
               isGroup: true,

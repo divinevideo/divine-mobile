@@ -101,6 +101,26 @@ void main() {
       );
     }
 
+    testWidgets('offers mark all read without opening a menu', (tester) async {
+      final request = DmConversation(
+        id: 'd' * 64,
+        participantPubkeys: const [currentPubkey, otherPubkey],
+        isGroup: false,
+        createdAt: nowUnix,
+        isRead: false,
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          state: ConversationListState(
+            status: ConversationListStatus.loaded,
+            requestConversations: [request],
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Mark all read'), findsOneWidget);
+    });
+
     group('renders', () {
       testWidgets('renders app bar with "Message requests" title', (
         tester,
@@ -276,10 +296,22 @@ void main() {
       // tap to explain why. A real router pops the modal route with its result,
       // which is what the app does. `/requests` is nested under `/` so the pop
       // after the sweep has somewhere to land.
-      Widget buildRoutedSubject() {
+      final dismissedRequest = DmConversation(
+        id: 'e' * 64,
+        participantPubkeys: const [currentPubkey, otherPubkey],
+        isGroup: false,
+        createdAt: nowUnix,
+        isDismissed: true,
+      );
+
+      Widget buildRoutedSubject({bool showDismissed = false}) {
+        when(() => mockActionsCubit.state).thenReturn(
+          MessageRequestActionsState(showDismissed: showDismissed),
+        );
         final loaded = ConversationListState(
           status: ConversationListStatus.loaded,
           requestConversations: [moderationRequest],
+          dismissedRequestConversations: [dismissedRequest],
         );
         whenListen(
           mockBloc,
@@ -324,8 +356,13 @@ void main() {
         );
       }
 
-      Future<void> sweep(WidgetTester tester) async {
-        await tester.pumpWidget(buildRoutedSubject());
+      Future<void> sweep(
+        WidgetTester tester, {
+        bool showDismissed = false,
+      }) async {
+        await tester.pumpWidget(
+          buildRoutedSubject(showDismissed: showDismissed),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(
@@ -335,6 +372,22 @@ void main() {
         await tester.tap(find.text(l10n.inboxRequestsRemoveAll));
         await tester.pumpAndSettle();
       }
+
+      testWidgets(
+        'bulk removal in Dismissed targets only the visible requests',
+        (tester) async {
+          when(() => mockActionsCubit.removeAllRequests(any())).thenAnswer(
+            (_) async => (withheld: false, failed: false),
+          );
+          await sweep(tester, showDismissed: true);
+          final removed =
+              verify(() => mockActionsCubit.removeAllRequests(captureAny()))
+                      .captured
+                      .single
+                  as List<DmConversation>;
+          expect(removed.map((c) => c.id), [dismissedRequest.id]);
+        },
+      );
 
       testWidgets('explains the notice the sweep kept', (tester) async {
         when(

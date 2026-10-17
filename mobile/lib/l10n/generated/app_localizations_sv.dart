@@ -13731,4 +13731,25 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Sparat';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Markera alla som lästa';
+
+  @override
+  String get inboxRequestsDismissed => 'Undanlagda';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Inget undanlagt';
+
+  @override
+  String get inboxRequestDismiss => 'Lägg åt sidan';
+
+  @override
+  String get inboxRequestRestore => 'Återställ';
+
+  @override
+  String get inboxThreadMarkRead => 'Markera som läst';
+
+  @override
+  String get inboxThreadMarkedRead => 'Markerat som läst';
 }

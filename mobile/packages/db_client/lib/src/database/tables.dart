@@ -1082,6 +1082,11 @@ class Conversations extends Table {
   BoolColumn get isRead =>
       boolean().withDefault(const Constant(true)).named('is_read')();
 
+  /// Cached dismissal projection. [ConversationDismissals] retains the state
+  /// when sign-out or account switching clears these conversation rows.
+  BoolColumn get isDismissed =>
+      boolean().withDefault(const Constant(false)).named('is_dismissed')();
+
   /// Per-conversation read cursor (unix seconds) for cross-device read-state
   /// sync (#4977). Monotonic high-water mark of the newest message the user
   /// has read; published encrypted-to-self over Nostr and restored on
@@ -1773,6 +1778,25 @@ class ProcessedGiftWraps extends Table {
 
   @override
   Set<Column> get primaryKey => {giftWrapId};
+}
+
+/// Account-lifetime dismissal state independent of cached conversation rows.
+/// Retained until Restore, a new message, or explicit account-data deletion;
+/// Ordinary sign-out and switching accounts leave the owner-scoped rows intact.
+class ConversationDismissals extends Table {
+  TextColumn get conversationId => text()();
+  TextColumn get ownerPubkey => text()();
+
+  /// Latest message time when dismissed, not wall-clock time. Older relay
+  /// history cannot undo dismissal, even when the conversation is rebuilt.
+  IntColumn get boundaryTimestamp => integer()();
+
+  /// IDs already stored at or after the boundary, including soft-deleted rows.
+  /// This distinguishes replay from a distinct message in the same second.
+  TextColumn get knownMessageIds => text().withDefault(const Constant('[]'))();
+
+  @override
+  Set<Column> get primaryKey => {conversationId, ownerPubkey};
 }
 
 /// Owner-scoped record of a conversation the user removed locally.

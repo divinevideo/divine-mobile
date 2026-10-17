@@ -22910,6 +22910,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saved'**
   String get soundRequestSaved;
+
+  /// Visible button above message requests that clears unread status without accepting or removing requests.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all read'**
+  String get inboxRequestsMarkAllReadShort;
+
+  /// Filter or button to open conversations or message requests put aside without deleting their messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissed'**
+  String get inboxRequestsDismissed;
+
+  /// Empty state in the dismissed message requests list.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing dismissed'**
+  String get inboxRequestsDismissedEmpty;
+
+  /// Put a conversation or request aside, preserving messages. New messages resurface it.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get inboxRequestDismiss;
+
+  /// Restore a dismissed conversation or request to its active list without accepting it.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get inboxRequestRestore;
+
+  /// Mark only this conversation or message request as read, without replying or accepting it.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as read'**
+  String get inboxThreadMarkRead;
+
+  /// Confirmation after marking a single conversation or request as read.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as read'**
+  String get inboxThreadMarkedRead;
 }
 
 class _AppLocalizationsDelegate

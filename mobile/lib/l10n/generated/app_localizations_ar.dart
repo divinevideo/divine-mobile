@@ -13713,4 +13713,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'تم الحفظ';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'تحديد الكل كمقروء';
+
+  @override
+  String get inboxRequestsDismissed => 'المؤجلة';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'لا توجد محادثات مؤجلة';
+
+  @override
+  String get inboxRequestDismiss => 'تأجيل';
+
+  @override
+  String get inboxRequestRestore => 'استعادة';
+
+  @override
+  String get inboxThreadMarkRead => 'تحديد كمقروء';
+
+  @override
+  String get inboxThreadMarkedRead => 'تم التحديد كمقروء';
 }

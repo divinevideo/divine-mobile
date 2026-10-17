@@ -6872,5 +6872,12 @@
   "soundReadyDescription": "اسے اپنی اگلی ویڈیو میں استعمال کریں یا اپنی آوازوں کی لائبریری میں محفوظ کریں۔",
   "soundReadyUse": "یہ آواز استعمال کریں",
   "soundReadySave": "میری آوازوں میں محفوظ کریں",
-  "soundRequestSaved": "محفوظ ہو گیا"
+  "soundRequestSaved": "محفوظ ہو گیا",
+  "inboxRequestsMarkAllReadShort": "سب کو پڑھا ہوا نشان زد کریں",
+  "inboxRequestsDismissed": "ایک طرف رکھی گئیں",
+  "inboxRequestsDismissedEmpty": "ابھی کچھ ایک طرف نہیں رکھا گیا",
+  "inboxRequestDismiss": "ایک طرف رکھیں",
+  "inboxRequestRestore": "واپس لائیں",
+  "inboxThreadMarkRead": "پڑھا ہوا نشان زد کریں",
+  "inboxThreadMarkedRead": "پڑھا ہوا نشان زد کر دیا گیا"
 }

@@ -35,6 +35,7 @@ const legacyV1NormalizationRepairTables = <String>[
   'identity_verifications',
   'vanished_profiles',
   'seen_videos',
+  'conversation_dismissals',
 ];
 
 /// Indexes created by legacy-v1 normalization that the v2 recovery probe
@@ -79,6 +80,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     DirectMessages,
     DmMessageReactions,
     Conversations,
+    ConversationDismissals,
     OutgoingDms,
     PendingViewEvents,
     PendingReports,
@@ -144,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -280,6 +282,27 @@ class AppDatabase extends _$AppDatabase {
       if (from < 24 && to >= 24) {
         await m.createTable(soundRequestStates);
       }
+      if (from < 25 && to >= 25) {
+        // Dismissal previews also reported v24 before main reserved it for
+        // sound requests. Preserve their rows and add the missing audio store.
+        if (!await _tableExists('sound_request_states')) {
+          await m.createTable(soundRequestStates);
+        }
+        await _addColumnIfMissing(
+          'conversations',
+          'is_dismissed',
+          'INTEGER NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1))',
+        );
+        await _repairConversationDismissals();
+      }
+      // Earlier table rebuilds use the current definition. Honor intermediate
+      // targets by withholding a column that belongs to v25.
+      if (to < 25 &&
+          (await _columnNames('conversations')).contains('is_dismissed')) {
+        await customStatement(
+          'ALTER TABLE conversations DROP COLUMN is_dismissed',
+        );
+      }
     },
     beforeOpen: (details) async {
       // v1 databases are normalized by onUpgrade. This guarded path remains
@@ -298,12 +321,35 @@ class AppDatabase extends _$AppDatabase {
         await _migrateToV12OwnerScopedDmKeys();
         await _repairSchemaV14();
         await _repairSchemaV20();
+        await _repairConversationDismissals();
       }
 
       // Run cleanup of expired data on every app startup
       await runStartupCleanup();
     },
   );
+
+  /// Creates or repairs the independent v25 dismissal store.
+  Future<void> _repairConversationDismissals() async {
+    if (!await _tableExists('conversation_dismissals')) {
+      await createMigrator().createTable(conversationDismissals);
+    }
+    // Preserve dismissals made by the earlier v24 build. This also repairs a
+    // current-version database whose independent marker table is missing.
+    // Match runtime dismissal capture: include visible unowned legacy message
+    // rows, but never rows assigned to a different account.
+    await customStatement('''
+      INSERT OR IGNORE INTO conversation_dismissals
+        (conversation_id, owner_pubkey, boundary_timestamp, known_message_ids)
+      SELECT c.id, c.owner_pubkey, COALESCE(c.last_message_timestamp, 0),
+        COALESCE((SELECT json_group_array(d.id) FROM direct_messages d
+          WHERE d.conversation_id = c.id
+            AND (d.owner_pubkey = c.owner_pubkey OR d.owner_pubkey = ''
+              OR d.owner_pubkey IS NULL)
+            AND d.created_at >= COALESCE(c.last_message_timestamp, 0)), '[]')
+      FROM conversations c WHERE c.is_dismissed = 1
+    ''');
+  }
 
   /// Owner-scopes the DM message and conversation keys (#6645).
   ///
@@ -344,7 +390,15 @@ class AppDatabase extends _$AppDatabase {
     );
 
     await m.alterTable(TableMigration(directMessages));
-    await m.alterTable(TableMigration(conversations));
+    await m.alterTable(
+      TableMigration(
+        conversations,
+        newColumns: [
+          if (!(await _columnNames('conversations')).contains('is_dismissed'))
+            conversations.isDismissed,
+        ],
+      ),
+    );
 
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_dm_conversation_id '
@@ -1631,6 +1685,7 @@ class AppDatabase extends _$AppDatabase {
         'owner_pubkey',
         'dm_protocol',
         'last_read_timestamp',
+        'is_dismissed',
       ],
       'pending_product_events': ['owner_pubkey'],
       'dm_message_reactions': ['recipient_pubkeys'],

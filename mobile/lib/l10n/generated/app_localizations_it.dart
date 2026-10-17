@@ -13895,4 +13895,25 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Salvato';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Segna tutto come letto';
+
+  @override
+  String get inboxRequestsDismissed => 'Accantonate';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Nessuna conversazione accantonata';
+
+  @override
+  String get inboxRequestDismiss => 'Accantona';
+
+  @override
+  String get inboxRequestRestore => 'Ripristina';
+
+  @override
+  String get inboxThreadMarkRead => 'Segna come letto';
+
+  @override
+  String get inboxThreadMarkedRead => 'Segnato come letto';
 }

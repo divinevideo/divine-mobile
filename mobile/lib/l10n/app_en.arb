@@ -10105,5 +10105,33 @@
   },
   "@soundRequestSaved": {
     "description": "Sound request DM flow: Saved"
+  },
+  "inboxRequestsMarkAllReadShort": "Mark all read",
+  "@inboxRequestsMarkAllReadShort": {
+    "description": "Visible button above message requests that clears unread status without accepting or removing requests."
+  },
+  "inboxRequestsDismissed": "Dismissed",
+  "@inboxRequestsDismissed": {
+    "description": "Filter or button to open conversations or message requests put aside without deleting their messages."
+  },
+  "inboxRequestsDismissedEmpty": "Nothing dismissed",
+  "@inboxRequestsDismissedEmpty": {
+    "description": "Empty state in the dismissed message requests list."
+  },
+  "inboxRequestDismiss": "Dismiss",
+  "@inboxRequestDismiss": {
+    "description": "Put a conversation or request aside, preserving messages. New messages resurface it."
+  },
+  "inboxRequestRestore": "Restore",
+  "@inboxRequestRestore": {
+    "description": "Restore a dismissed conversation or request to its active list without accepting it."
+  },
+  "inboxThreadMarkRead": "Mark as read",
+  "@inboxThreadMarkRead": {
+    "description": "Mark only this conversation or message request as read, without replying or accepting it."
+  },
+  "inboxThreadMarkedRead": "Marked as read",
+  "@inboxThreadMarkedRead": {
+    "description": "Confirmation after marking a single conversation or request as read."
   }
 }

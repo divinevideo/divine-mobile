@@ -13052,4 +13052,25 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '保存済み';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'すべて既読にする';
+
+  @override
+  String get inboxRequestsDismissed => '保留中';
+
+  @override
+  String get inboxRequestsDismissedEmpty => '保留中の会話はありません';
+
+  @override
+  String get inboxRequestDismiss => '保留にする';
+
+  @override
+  String get inboxRequestRestore => '元に戻す';
+
+  @override
+  String get inboxThreadMarkRead => '既読にする';
+
+  @override
+  String get inboxThreadMarkedRead => '既読にしました';
 }

@@ -5108,5 +5108,12 @@
   "soundReadyDescription": "Gebruik het in je volgende video of sla het op in je geluidsbibliotheek.",
   "soundReadyUse": "Dit geluid gebruiken",
   "soundReadySave": "Opslaan in Mijn geluiden",
-  "soundRequestSaved": "Opgeslagen"
+  "soundRequestSaved": "Opgeslagen",
+    "inboxRequestsMarkAllReadShort": "Alles als gelezen markeren",
+    "inboxRequestsDismissed": "Weggelegd",
+    "inboxRequestsDismissedEmpty": "Geen weggelegde gesprekken",
+    "inboxRequestDismiss": "Wegleggen",
+    "inboxRequestRestore": "Terugzetten",
+    "inboxThreadMarkRead": "Als gelezen markeren",
+    "inboxThreadMarkedRead": "Als gelezen gemarkeerd"
 }

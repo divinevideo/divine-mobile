@@ -5232,5 +5232,12 @@
   "soundReadyDescription": "Използвай го в следващия си видеоклип или го запази в библиотеката си със звуци.",
   "soundReadyUse": "Използвай този звук",
   "soundReadySave": "Запази в Моите звуци",
-  "soundRequestSaved": "Запазено"
+  "soundRequestSaved": "Запазено",
+    "inboxRequestsMarkAllReadShort": "Отбележи всички като прочетени",
+    "inboxRequestsDismissed": "Прибрани",
+    "inboxRequestsDismissedEmpty": "Няма прибрани разговори",
+    "inboxRequestDismiss": "Прибери",
+    "inboxRequestRestore": "Възстанови",
+    "inboxThreadMarkRead": "Отбележи като прочетено",
+    "inboxThreadMarkedRead": "Отбелязано като прочетено"
 }

@@ -5108,5 +5108,12 @@
   "soundReadyDescription": "Använd det i din nästa video eller spara det i ditt ljudbibliotek.",
   "soundReadyUse": "Använd det här ljudet",
   "soundReadySave": "Spara i Mina ljud",
-  "soundRequestSaved": "Sparat"
+  "soundRequestSaved": "Sparat",
+    "inboxRequestsMarkAllReadShort": "Markera alla som lästa",
+    "inboxRequestsDismissed": "Undanlagda",
+    "inboxRequestsDismissedEmpty": "Inget undanlagt",
+    "inboxRequestDismiss": "Lägg åt sidan",
+    "inboxRequestRestore": "Återställ",
+    "inboxThreadMarkRead": "Markera som läst",
+    "inboxThreadMarkedRead": "Markerat som läst"
 }

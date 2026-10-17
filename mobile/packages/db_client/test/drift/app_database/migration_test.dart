@@ -28,8 +28,8 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 24', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 24);
+    test('current schema version is 25', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 25);
     });
 
     test('v23 gains account-scoped sound request workflow state', () async {
@@ -42,6 +42,177 @@ void main() {
       });
       expect(await db.soundRequestStateDao.readAccount('a' * 64), hasLength(1));
     });
+
+    test(
+      'v24 sound requests and conversations survive the v25 upgrade',
+      () async {
+        final schema = await verifier.schemaAt(24);
+        final owner = 'a' * 64;
+        final conversationId = 'c' * 64;
+        schema.rawDatabase.execute(
+          'INSERT INTO sound_request_states '
+          '(owner_pubkey, section, record_key, value) VALUES (?, ?, ?, ?)',
+          [owner, 'jobs', 'pending', '{"status":"pending"}'],
+        );
+        schema.rawDatabase.execute(
+          'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+          'last_message_content, owner_pubkey, is_read) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            conversationId,
+            '["$owner","${'b' * 64}"]',
+            100,
+            'Keep me',
+            owner,
+            0,
+          ],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 25);
+
+        final sound = (await db.soundRequestStateDao.readAccount(owner)).single;
+        expect(sound.section, 'jobs');
+        expect(sound.recordKey, 'pending');
+        expect(sound.value, '{"status":"pending"}');
+        final row = (await db.conversationsDao.getConversation(
+          conversationId,
+          ownerPubkey: owner,
+        ))!;
+        expect(row.isDismissed, isFalse);
+        expect(row.isRead, isFalse);
+        expect(row.lastMessageContent, 'Keep me');
+        await db.conversationsDao.setDismissed(
+          conversationId,
+          ownerPubkey: owner,
+          dismissed: true,
+        );
+        expect(
+          (await db.conversationsDao.getConversation(
+            conversationId,
+            ownerPubkey: owner,
+          ))!.isDismissed,
+          isTrue,
+        );
+      },
+    );
+
+    for (final hasIndependentMarkers in [false, true]) {
+      test(
+        'dismissal preview v24 keeps saved state with independent markers '
+        '$hasIndependentMarkers and gains sound requests',
+        () async {
+          final schema = await verifier.schemaAt(24);
+          final owner = 'a' * 64;
+          final conversationId = 'c' * 64;
+          // The unpublished dismissal preview used v24 before sound requests
+          // reserved that version on main. Exercise that competing shape.
+          schema.rawDatabase.execute('DROP TABLE sound_request_states');
+          schema.rawDatabase.execute(
+            'ALTER TABLE conversations ADD COLUMN is_dismissed INTEGER '
+            'NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1))',
+          );
+          schema.rawDatabase.execute(
+            'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+            'last_message_timestamp, owner_pubkey, is_read, is_dismissed) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [conversationId, '["$owner"]', 100, 100, owner, 1, 1],
+          );
+          if (hasIndependentMarkers) {
+            schema.rawDatabase.execute(
+              'CREATE TABLE conversation_dismissals ('
+              'conversation_id TEXT NOT NULL, owner_pubkey TEXT NOT NULL, '
+              'boundary_timestamp INTEGER NOT NULL, '
+              "known_message_ids TEXT NOT NULL DEFAULT '[]', "
+              'PRIMARY KEY (conversation_id, owner_pubkey))',
+            );
+            schema.rawDatabase.execute(
+              'INSERT INTO conversation_dismissals '
+              '(conversation_id, owner_pubkey, boundary_timestamp, '
+              'known_message_ids) VALUES (?, ?, ?, ?)',
+              [conversationId, owner, 100, '["${'d' * 64}"]'],
+            );
+          } else {
+            // A visible legacy message can still be unowned even after its
+            // conversation has an owner. Its replay id must survive upgrade.
+            for (final entry in {'d': '', 'e': 'b' * 64}.entries) {
+              schema.rawDatabase.execute(
+                'INSERT INTO direct_messages (id, conversation_id, '
+                'sender_pubkey, content, created_at, gift_wrap_id, owner_pubkey) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [
+                  entry.key * 64,
+                  conversationId,
+                  'b' * 64,
+                  'Legacy',
+                  100,
+                  entry.key * 64,
+                  entry.value,
+                ],
+              );
+            }
+          }
+          final db = AppDatabase(schema.newConnection());
+          addTearDown(db.close);
+
+          await verifier.migrateAndValidate(db, 25);
+
+          final marker = await db
+              .customSelect(
+                'SELECT * FROM conversation_dismissals',
+              )
+              .getSingle();
+          expect(marker.read<String>('conversation_id'), conversationId);
+          expect(marker.read<int>('boundary_timestamp'), 100);
+          expect(
+            marker.read<String>('known_message_ids'),
+            '["${'d' * 64}"]',
+          );
+          expect(
+            (await db.conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: owner,
+            ))!.isDismissed,
+            isTrue,
+          );
+          if (!hasIndependentMarkers) {
+            await db.directMessagesDao.clearForAccountSwitch(owner);
+            await db.conversationsDao.clearForAccountSwitch(owner);
+            await db.directMessagesDao.insertMessage(
+              id: 'd' * 64,
+              conversationId: conversationId,
+              senderPubkey: 'b' * 64,
+              content: 'Legacy',
+              createdAt: 100,
+              giftWrapId: 'f' * 64,
+              ownerPubkey: owner,
+            );
+            await db.conversationsDao.upsertConversation(
+              id: conversationId,
+              participantPubkeys: '["$owner"]',
+              isGroup: false,
+              createdAt: 100,
+              lastMessageTimestamp: 100,
+              ownerPubkey: owner,
+            );
+            expect(
+              (await db.conversationsDao.getConversation(
+                conversationId,
+                ownerPubkey: owner,
+              ))!.isDismissed,
+              isTrue,
+            );
+          }
+          await db.soundRequestStateDao.writeAccount(owner, {
+            'jobs': {'pending': '{}'},
+          });
+          expect(
+            await db.soundRequestStateDao.readAccount(owner),
+            hasLength(1),
+          );
+        },
+      );
+    }
 
     test(
       'v22 migrates to v23 with writable account-scoped chat storage',
@@ -105,7 +276,7 @@ void main() {
         );
         final db = AppDatabase(schema.newConnection());
         addTearDown(db.close);
-        await verifier.migrateAndValidate(db, 23);
+        await verifier.migrateAndValidate(db, 25);
         expect(
           await db.concordStoreDao.get(
             account: 'a' * 64,
@@ -124,10 +295,39 @@ void main() {
       },
     );
 
-    test('v23 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(23);
+    test(
+      'v23 requests remain active with messages intact after upgrade',
+      () async {
+        final schema = await verifier.schemaAt(23);
+        schema.rawDatabase.execute(
+          'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+          'last_message_content, owner_pubkey, is_read) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            'a' * 64,
+            '["${'b' * 64}","${'c' * 64}"]',
+            100,
+            'Keep me',
+            'b' * 64,
+            0,
+          ],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+        await verifier.migrateAndValidate(db, 25);
+        final row = (await db.conversationsDao.getConversation(
+          'a' * 64,
+          ownerPubkey: 'b' * 64,
+        ))!;
+        expect(row.isDismissed, isFalse);
+        expect(row.isRead, isFalse);
+        expect(row.lastMessageContent, 'Keep me');
+      },
+    );
+
+    test('v25 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(25);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
@@ -507,10 +707,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v23', () async {
+    test('v8 schema migrates to v25', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -532,45 +732,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v23', () async {
+    test('v7 schema migrates to v25', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-    test('v6 schema migrates to v23', () async {
+    test('v6 schema migrates to v25', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-    test('v5 schema migrates to v23', () async {
+    test('v5 schema migrates to v25', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-    test('v3 schema migrates to v23', () async {
+    test('v3 schema migrates to v25', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-    test('v2 schema migrates to v23', () async {
+    test('v2 schema migrates to v25', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v23', () async {
+    test('legacy v1 schema migrates to v25', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 23);
+      await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
@@ -701,7 +901,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 23);
+        await verifier.migrateAndValidate(db, 25);
 
         final retryable = await db.outgoingDmsDao.getRetryableForOwner(
           ownerPubkey: ownerPubkey,

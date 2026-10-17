@@ -14072,4 +14072,26 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'సేవ్ చేయబడింది';
+
+  @override
+  String get inboxRequestsMarkAllReadShort =>
+      'అన్నింటినీ చదివినట్లు గుర్తించండి';
+
+  @override
+  String get inboxRequestsDismissed => 'పక్కన పెట్టినవి';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'పక్కన పెట్టిన సంభాషణలు లేవు';
+
+  @override
+  String get inboxRequestDismiss => 'పక్కన పెట్టండి';
+
+  @override
+  String get inboxRequestRestore => 'తిరిగి తీసుకురండి';
+
+  @override
+  String get inboxThreadMarkRead => 'చదివినట్లు గుర్తించండి';
+
+  @override
+  String get inboxThreadMarkedRead => 'చదివినట్లు గుర్తించబడింది';
 }

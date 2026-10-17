@@ -8607,5 +8607,12 @@
   "soundReadyDescription": "దీన్ని మీ తదుపరి వీడియోలో ఉపయోగించండి లేదా మీ సౌండ్ లైబ్రరీలో సేవ్ చేయండి.",
   "soundReadyUse": "ఈ సౌండ్‌ను ఉపయోగించండి",
   "soundReadySave": "నా సౌండ్స్‌లో సేవ్ చేయండి",
-  "soundRequestSaved": "సేవ్ చేయబడింది"
+  "soundRequestSaved": "సేవ్ చేయబడింది",
+  "inboxRequestsMarkAllReadShort": "అన్నింటినీ చదివినట్లు గుర్తించండి",
+  "inboxRequestsDismissed": "పక్కన పెట్టినవి",
+  "inboxRequestsDismissedEmpty": "పక్కన పెట్టిన సంభాషణలు లేవు",
+  "inboxRequestDismiss": "పక్కన పెట్టండి",
+  "inboxRequestRestore": "తిరిగి తీసుకురండి",
+  "inboxThreadMarkRead": "చదివినట్లు గుర్తించండి",
+  "inboxThreadMarkedRead": "చదివినట్లు గుర్తించబడింది"
 }

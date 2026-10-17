@@ -5108,5 +5108,12 @@
   "soundReadyDescription": "次の動画で使うか、サウンドライブラリに保存しましょう。",
   "soundReadyUse": "このサウンドを使う",
   "soundReadySave": "マイサウンドに保存",
-  "soundRequestSaved": "保存済み"
+  "soundRequestSaved": "保存済み",
+    "inboxRequestsMarkAllReadShort": "すべて既読にする",
+    "inboxRequestsDismissed": "保留中",
+    "inboxRequestsDismissedEmpty": "保留中の会話はありません",
+    "inboxRequestDismiss": "保留にする",
+    "inboxRequestRestore": "元に戻す",
+    "inboxThreadMarkRead": "既読にする",
+    "inboxThreadMarkedRead": "既読にしました"
 }

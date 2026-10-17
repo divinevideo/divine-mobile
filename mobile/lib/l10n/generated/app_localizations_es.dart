@@ -13878,4 +13878,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Guardado';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Marcar todo como leído';
+
+  @override
+  String get inboxRequestsDismissed => 'Apartados';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'No hay nada apartado';
+
+  @override
+  String get inboxRequestDismiss => 'Apartar';
+
+  @override
+  String get inboxRequestRestore => 'Restaurar';
+
+  @override
+  String get inboxThreadMarkRead => 'Marcar como leído';
+
+  @override
+  String get inboxThreadMarkedRead => 'Marcado como leído';
 }

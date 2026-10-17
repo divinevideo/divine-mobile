@@ -5108,5 +5108,12 @@
   "soundReadyDescription": "Folosește-l în următorul videoclip sau salvează-l în biblioteca ta de sunete.",
   "soundReadyUse": "Folosește acest sunet",
   "soundReadySave": "Salvează în Sunetele mele",
-  "soundRequestSaved": "Salvat"
+  "soundRequestSaved": "Salvat",
+    "inboxRequestsMarkAllReadShort": "Marchează tot ca citit",
+    "inboxRequestsDismissed": "Puse deoparte",
+    "inboxRequestsDismissedEmpty": "Nicio conversație pusă deoparte",
+    "inboxRequestDismiss": "Pune deoparte",
+    "inboxRequestRestore": "Restabilește",
+    "inboxThreadMarkRead": "Marchează ca citit",
+    "inboxThreadMarkedRead": "Marcat ca citit"
 }
