@@ -31,6 +31,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         showGridLines: b.state.showGridLines,
         supportsTimer: b.state.recorderMode.supportsCountdownTimer,
         capturesStills: b.state.recorderMode.capturesStills,
+        supportsGhostFrame: b.state.recorderMode.supportsGhostFrame,
         supportsStabilization: b.state.recorderMode.supportsVideoStabilization,
       ),
     );
@@ -77,7 +78,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                       const VideoRecorderTimerCycled(),
                     ),
                   ),
-                if (state.capturesStills) const _GhostFrameButton(),
+                if (state.supportsGhostFrame) const _GhostFrameButton(),
                 if (state.capturesStills)
                   _IconButton(
                     icon: .gridNine,
@@ -128,7 +129,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
   }
 }
 
-/// Toggles the ghost-frame (onion-skin) overlay in stop-motion mode, mirroring
+/// Toggles the ghost-frame (onion-skin) overlay on the capture rail, mirroring
 /// the classic-mode ghost toggle.
 class _GhostFrameButton extends StatelessWidget {
   const _GhostFrameButton();

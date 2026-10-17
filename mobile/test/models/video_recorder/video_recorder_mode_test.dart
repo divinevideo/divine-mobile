@@ -170,6 +170,19 @@ void main() {
       });
     });
 
+    group('supportsGhostFrame', () {
+      test('is false only for chroma key and upload', () {
+        for (final mode in VideoRecorderMode.values) {
+          expect(
+            mode.supportsGhostFrame,
+            mode != VideoRecorderMode.chromaKey &&
+                mode != VideoRecorderMode.upload,
+            reason: mode.name,
+          );
+        }
+      });
+    });
+
     group('needsLiveChromaKey', () {
       test('is true only for chroma key', () {
         for (final mode in VideoRecorderMode.values) {

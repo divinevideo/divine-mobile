@@ -9,10 +9,10 @@ tags:
 #
 # Three of the five controls here — aspect ratio, lens and flash — are the
 # unconditional ones every rail renders, so they are the same per-control utils
-# driveCaptureRail sequences, in the same order. The pair capture mode does not
-# render — the ghost-frame and grid toggles — are the two classic also renders,
-# so they are per-control utils too. What is local to this file is only the
-# order they run in.
+# driveCaptureRail sequences, in the same order. The other two — the
+# ghost-frame toggle, which capture also renders, and the grid toggle, which it
+# does not — are the two classic also renders, so they are per-control utils
+# too. What is local to this file is only the order they run in.
 #
 # Those two carry a Semantics `toggled` flag rather than a `value`, which
 # Flutter maps to the accessibility node's checked state, so they are driven

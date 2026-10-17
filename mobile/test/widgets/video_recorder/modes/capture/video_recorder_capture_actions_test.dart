@@ -109,19 +109,19 @@ void main() {
         expect(find.byType(VideoRecorderCaptureActions), findsOneWidget);
       });
 
-      testWidgets('renders five action buttons', (tester) async {
+      testWidgets('renders six action buttons', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        // Flash, timer, aspect ratio, switch camera, stabilization
-        expect(find.byType(InkWell), findsNWidgets(5));
+        // Flash, timer, ghost frame, aspect ratio, switch camera, stabilization
+        expect(find.byType(InkWell), findsNWidgets(6));
       });
 
       testWidgets('renders Tooltip for each button', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        expect(find.byType(Tooltip), findsNWidgets(5));
+        expect(find.byType(Tooltip), findsNWidgets(6));
       });
 
       testWidgets('renders a baked icon for each button', (tester) async {
@@ -130,7 +130,7 @@ void main() {
 
         // Baked once instead of a colour-filtered SVG re-rasterized with
         // every camera frame.
-        expect(find.byType(ShadowedDivineIcon), findsNWidgets(5));
+        expect(find.byType(ShadowedDivineIcon), findsNWidgets(6));
       });
     });
 
@@ -430,6 +430,58 @@ void main() {
       });
     });
 
+    group('ghost frame button', () {
+      testWidgets('is shown in lip-sync mode', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(recorderMode: VideoRecorderMode.lipSync),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          findByTooltip(l10n.videoRecorderToggleGhostFrameLabel),
+          findsOneWidget,
+        );
+      });
+
+      // The ghost is the raw take, so over the keyed viewfinder it would show
+      // the bare backdrop.
+      testWidgets('is hidden in chroma-key mode', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(recorderMode: VideoRecorderMode.chromaKey),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          findByTooltip(l10n.videoRecorderToggleGhostFrameLabel),
+          findsNothing,
+        );
+      });
+
+      testWidgets(
+        'tap dispatches $VideoRecorderShowLastClipOverlayToggled and '
+        'confirms it',
+        (tester) async {
+          await tester.pumpWidget(buildWidget());
+          await tester.pumpAndSettle();
+
+          await tester.tap(
+            findByTooltip(l10n.videoRecorderToggleGhostFrameLabel),
+          );
+          await tester.pump();
+
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderShowLastClipOverlayToggled(),
+            ),
+          ).called(1);
+          expect(
+            find.text(l10n.videoRecorderGhostFrameEnabled),
+            findsOneWidget,
+          );
+        },
+      );
+    });
+
     group('semantics', () {
       testWidgets('announces the active flash mode', (tester) async {
         final handle = tester.ensureSemantics();
@@ -527,6 +579,7 @@ void main() {
         for (final identifier in const [
           SemanticIds.cameraFlashButton,
           SemanticIds.cameraTimerButton,
+          SemanticIds.cameraGhostFrameButton,
           SemanticIds.cameraAspectRatioButton,
           SemanticIds.cameraSwitchCameraButton,
           SemanticIds.cameraStabilizationButton,
@@ -541,9 +594,9 @@ void main() {
         handle.dispose();
       });
 
-      // Same contract for the two controls only stop-motion renders, driven by
+      // Same contract for the stop-motion rail, driven by
       // e2e/maestro/tests/stopMotionModeControls.yaml. Asserted separately
-      // because the capture-mode rail above renders neither.
+      // because the capture-mode rail above has no grid.
       testWidgets('exposes an E2E identifier on the stop-motion controls', (
         tester,
       ) async {
@@ -571,7 +624,7 @@ void main() {
       // controls absent, so a control that starts rendering in the wrong mode
       // fails an E2E run rather than passing quietly. Nothing else here would
       // catch it — every other test in this file asserts presence.
-      testWidgets('keeps the stop-motion controls out of capture mode', (
+      testWidgets('keeps the stop-motion grid out of capture mode', (
         tester,
       ) async {
         final handle = tester.ensureSemantics();
@@ -580,16 +633,10 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        for (final identifier in const [
-          SemanticIds.cameraGhostFrameButton,
-          SemanticIds.cameraGridButton,
-        ]) {
-          expect(
-            find.bySemanticsIdentifier(identifier),
-            findsNothing,
-            reason: '$identifier must not render in capture mode',
-          );
-        }
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.cameraGridButton),
+          findsNothing,
+        );
 
         handle.dispose();
       });
@@ -661,12 +708,7 @@ void main() {
         tester,
       ) async {
         final handle = tester.ensureSemantics();
-        await tester.pumpWidget(
-          buildWidget(
-            recorderMode: VideoRecorderMode.stopMotion,
-            showLastClipOverlay: true,
-          ),
-        );
+        await tester.pumpWidget(buildWidget(showLastClipOverlay: true));
         await tester.pumpAndSettle();
 
         final node = tester.getSemantics(

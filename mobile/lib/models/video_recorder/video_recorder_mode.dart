@@ -75,6 +75,19 @@ enum VideoRecorderMode {
     .classic => true,
   };
 
+  /// Whether the user can lay the previous take's last frame over the live
+  /// preview to line up the next one.
+  bool get supportsGhostFrame => switch (this) {
+    .upload => false,
+    .capture => true,
+    .stopMotion => true,
+    .lipSync => true,
+    // The ghost comes from the raw take, so it would lay the bare backdrop
+    // over the keyed viewfinder.
+    .chromaKey => false,
+    .classic => true,
+  };
+
   bool get supportsCountdownTimer => switch (this) {
     .upload => false,
     .capture => true,

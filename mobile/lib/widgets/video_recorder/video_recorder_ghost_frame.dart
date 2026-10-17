@@ -19,12 +19,14 @@ class VideoRecorderGhostFrame extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final (
       showOverlay,
+      supportsGhostFrame,
       capturesStills,
       stopMotionLastFrame,
       isFrontCamera,
     ) = context.select(
       (VideoRecorderBloc b) => (
         b.state.showLastClipOverlay,
+        b.state.recorderMode.supportsGhostFrame,
         b.state.recorderMode.capturesStills,
         b.state.stopMotionLastFrame,
         b.state.isFrontCamera,
@@ -59,7 +61,9 @@ class VideoRecorderGhostFrame extends ConsumerWidget {
               : null)
         : clipGhost;
 
-    final showGhost = showOverlay && ghostData != null;
+    // The toggle outlives a mode switch, so a mode without one must not show a
+    // ghost the user cannot turn off there.
+    final showGhost = showOverlay && supportsGhostFrame && ghostData != null;
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
