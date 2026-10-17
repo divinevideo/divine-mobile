@@ -5080,6 +5080,17 @@
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
   "videoEditorSpeedPresetSemanticLabel": "速度 {speed}×",
+  "videoEditorSpeedModeConstant": "恒定",
+  "videoEditorSpeedModeCurve": "曲线",
+  "videoEditorSpeedCurveCustom": "自定义",
+  "videoEditorSpeedCurveMontage": "蒙太奇",
+  "videoEditorSpeedCurveHero": "英雄",
+  "videoEditorSpeedCurveBullet": "子弹时间",
+  "videoEditorSpeedCurveFlashIn": "快速进入",
+  "videoEditorSpeedCurveFlashOut": "快速退出",
+  "videoEditorSpeedCurveHint": "向上拖动点加速，向下拖动减速",
+  "videoEditorSpeedCurvePointSemanticLabel": "速度点 {index}/{total}",
+  "videoEditorSpeedResultingLength": "时长 {seconds} 秒",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {

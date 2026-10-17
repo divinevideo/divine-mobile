@@ -73,6 +73,7 @@ abstract final class ClipNormalizationRender {
                 volume: c.volume,
                 equalizer: c.equalizer.toRenderEqualizer(),
                 playbackSpeed: c.playbackSpeed,
+                speedRamp: c.speedRamp,
                 transition: clampedTransitions[c.id],
               ),
             )
@@ -117,6 +118,7 @@ abstract final class ClipNormalizationRender {
             volume: entry.clip.volume,
             equalizer: entry.clip.equalizer.toRenderEqualizer(),
             playbackSpeed: entry.clip.playbackSpeed,
+            speedRamp: entry.clip.speedRamp,
             transition: clampedTransitions[entry.clip.id],
           ),
         );
@@ -191,6 +193,7 @@ abstract final class ClipNormalizationRender {
           volume: clip.volume,
           equalizer: clip.equalizer.toRenderEqualizer(),
           playbackSpeed: clip.playbackSpeed,
+          speedRamp: clip.speedRamp,
         ),
       ],
       shouldOptimizeForNetworkUse: true,

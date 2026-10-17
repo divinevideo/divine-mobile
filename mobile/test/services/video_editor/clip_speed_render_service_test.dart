@@ -214,6 +214,24 @@ void main() {
         expect(service.cached(faster), isNull);
       });
 
+      test('renders a speed ramp and misses the cache when it is reshaped', () {
+        const ramp = editor.VideoSpeedRamp([
+          editor.VideoSpeedRampPoint(position: 0, speed: 2),
+          editor.VideoSpeedRampPoint(position: 1, speed: 0.5),
+        ]);
+        const reshaped = editor.VideoSpeedRamp([
+          editor.VideoSpeedRampPoint(position: 0, speed: 2),
+          editor.VideoSpeedRampPoint(position: 1, speed: 0.25),
+        ]);
+        final ramped = clip('a').copyWith(speedRamp: ramp);
+        final service = ClipSpeedRenderService()
+          ..cacheForTest(ramped, rendered);
+
+        // A ramp needs its body rendered even though playbackSpeed is 1×.
+        expect(service.cached(ramped), same(rendered));
+        expect(service.cached(clip('a').copyWith(speedRamp: reshaped)), isNull);
+      });
+
       test('misses the cache when the trim changes', () {
         final untrimmed = clip('a', playbackSpeed: 2);
         final trimmed = clip(

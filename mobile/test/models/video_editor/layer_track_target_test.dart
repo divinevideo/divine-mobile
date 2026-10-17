@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/layer_track_target.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show EditorVideo, VideoSpeedRamp, VideoSpeedRampPoint;
 
 void main() {
   DivineVideoClip clip(
@@ -36,6 +37,33 @@ void main() {
   const ms = Duration(milliseconds: 1);
 
   group('layerTrackTargetFor', () {
+    test('maps editor and file time through a speed ramp', () {
+      // 4 s of footage: the first half at 2× (1 s), the rest at 0.5× (4 s).
+      const ramp = VideoSpeedRamp([
+        VideoSpeedRampPoint(position: 0, speed: 2),
+        VideoSpeedRampPoint(position: 0.5, speed: 2),
+        VideoSpeedRampPoint(position: 0.5000001, speed: 0.5),
+        VideoSpeedRampPoint(position: 1, speed: 0.5),
+      ]);
+      final target = layerTrackTargetFor(
+        clips: [clip('a', duration: s * 4).copyWith(speedRamp: ramp)],
+        anchor: s,
+        layerStart: Duration.zero,
+        layerEnd: s * 5,
+      )!;
+
+      // One second in, the fast half has played all 2 s of its footage.
+      expect(
+        (target.sourceTimeAt(s) - s * 2).inMilliseconds.abs(),
+        lessThanOrEqualTo(5),
+      );
+      // The slow half takes 2 s of editor time per second of footage.
+      expect(
+        (target.editorTimeAt(s * 3) - s * 3).inMilliseconds.abs(),
+        lessThanOrEqualTo(5),
+      );
+    });
+
     test('tracks the clip under the anchor, where it and the layer show', () {
       final target = layerTrackTargetFor(
         clips: [clip('a'), clip('b'), clip('c')],

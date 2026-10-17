@@ -346,6 +346,39 @@ void main() {
         expect(end!.transition, equals(dissolve));
       });
 
+      test('cuts a speed ramp so each half keeps its speeds', () async {
+        // Slow at the start, fast at the end.
+        const ramp = VideoSpeedRamp([
+          VideoSpeedRampPoint(position: 0, speed: 0.5),
+          VideoSpeedRampPoint(position: 1, speed: 2),
+        ]);
+        final clip = _clip(
+          duration: const Duration(seconds: 4),
+        ).copyWith(speedRamp: ramp);
+        DivineVideoClip? start;
+        DivineVideoClip? end;
+        await VideoEditorSplitService.splitClip(
+          sourceClip: clip,
+          splitPosition: const Duration(seconds: 2),
+          onClipsCreated: (s, e) {
+            start = s;
+            end = e;
+          },
+          onThumbnailExtracted: null,
+        );
+
+        expect(start!.speedRamp!.points.first.speed, 0.5);
+        expect(start!.speedRamp!.points.last.speed, closeTo(1, 1e-9));
+        expect(end!.speedRamp!.points.first.speed, closeTo(1, 1e-9));
+        expect(end!.speedRamp!.points.last.speed, 2);
+        // Together the halves play about as long as the clip did.
+        final halves = start!.playbackDuration + end!.playbackDuration;
+        expect(
+          (halves - clip.playbackDuration).inMilliseconds.abs(),
+          lessThan(clip.playbackDuration.inMilliseconds * 0.05),
+        );
+      });
+
       test('re-splitting the end half floors it at the new split', () async {
         // First split at 2s of a 5s clip → end half [2s, 5s], floor 2s.
         final clip = _clip(duration: const Duration(seconds: 5));

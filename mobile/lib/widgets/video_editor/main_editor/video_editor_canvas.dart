@@ -73,6 +73,7 @@ import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     hide AudioTrack, VideoClip;
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 import 'package:sound_service/sound_service.dart' show AudioSourceConfig;
 import 'package:unified_logger/unified_logger.dart';
 
@@ -236,6 +237,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.volume != b.volume ||
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
+          a.speedRamp != b.speedRamp ||
           a.reversed != b.reversed ||
           a.sourceStartOffset != b.sourceStartOffset ||
           a.transition != b.transition) {
@@ -266,7 +268,8 @@ class VideoEditorCanvas extends StatelessWidget {
     var speedChanged = false;
     for (var i = 0; i < previous.length; i++) {
       if (previous[i].id != current[i].id) return position;
-      if (previous[i].playbackSpeed != current[i].playbackSpeed) {
+      if (previous[i].playbackSpeed != current[i].playbackSpeed ||
+          previous[i].speedRamp != current[i].speedRamp) {
         speedChanged = true;
       }
     }
@@ -530,6 +533,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.volume != b.volume ||
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
+          a.speedRamp != b.speedRamp ||
           a.transition != b.transition ||
           a.mask != b.mask ||
           // Frame edits (hold changes, delete, reorder) are the whole edit
@@ -2631,10 +2635,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       },
     );
 
-    // Update native player speeds when any clip's playback speed changes.
-    ref.listen<List<double?>>(
+    // Update native player speeds when any clip's playback speed or speed
+    // ramp changes. VideoSpeedRamp overrides `==`, so the record comparison
+    // detects a reshaped curve.
+    ref.listen<List<(double?, VideoSpeedRamp?)>>(
       clipManagerProvider.select(
-        (s) => s.clips.map((c) => c.playbackSpeed).toList(),
+        (s) => s.clips.map((c) => (c.playbackSpeed, c.speedRamp)).toList(),
       ),
       (previous, current) {
         if (listEquals(previous, current)) return;
@@ -2780,7 +2786,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   end: clip.duration,
                   volume: clip.volume,
                   equalizer: clip.equalizer.toPlayerEqualizer(),
-                  playbackSpeed: clip.playbackSpeed ?? 1.0,
+                  playbackSpeed: clip.averagePlaybackSpeed,
                 ),
               ]),
               'show clip trim preview',

@@ -9972,6 +9972,44 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Constant';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Curve';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Eigen';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Held';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Snel erin';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Snel eruit';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Sleep een punt omhoog om te versnellen, omlaag om te vertragen';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Snelheidspunt $index van $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Duurt $seconds s';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Faden';
 
   @override

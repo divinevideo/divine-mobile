@@ -241,8 +241,8 @@ class DetachedClipRenderPass {
   /// The media a detached [clip] contributes to the composition.
   ///
   /// Returns the clip's own file unchanged when it plays at normal speed. A
-  /// clip carrying a speed is re-rendered with the speed baked in, because
-  /// [VideoLayer] asserts against `playbackSpeed` — the second element of the
+  /// clip carrying a speed or a speed ramp is re-rendered with it baked in,
+  /// because [VideoLayer] asserts against both — the second element of the
   /// record says which of the two came back, since a flattened file starts at
   /// zero instead of at the clip's trim point.
   Future<(EditorVideo, bool)> _resolveVideo(
@@ -250,8 +250,7 @@ class DetachedClipRenderPass {
     required List<String> tempFilePaths,
     required String ownerTaskId,
   }) async {
-    final speed = clip.playbackSpeed;
-    if (speed == null || speed == 1.0) return (clip.requireVideo, false);
+    if (!clip.changesSpeed) return (clip.requireVideo, false);
 
     final flattenedPath = path.join(
       cacheDir.path,
@@ -268,7 +267,8 @@ class DetachedClipRenderPass {
             video: clip.requireVideo,
             startTime: clip.trimStart == Duration.zero ? null : clip.trimStart,
             endTime: clip.trimStart + clip.trimmedDuration,
-            playbackSpeed: speed,
+            playbackSpeed: clip.speedRamp == null ? clip.playbackSpeed : null,
+            speedRamp: clip.speedRamp,
           ),
         ],
       ),

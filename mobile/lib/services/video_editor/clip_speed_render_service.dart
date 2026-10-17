@@ -1,5 +1,5 @@
-// ABOUTME: Pre-renders a clip's trimmed body at its playbackSpeed into a plain
-// ABOUTME: normal-rate file so the preview plays it at 1× instead of retiming live.
+// ABOUTME: Pre-renders a clip's trimmed body at its speed or speed ramp into a
+// ABOUTME: plain normal-rate file so the preview plays it at 1× instead of retiming live.
 
 import 'dart:async';
 import 'dart:convert';
@@ -19,12 +19,15 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         ProVideoEditor,
         RenderCanceledException,
         VideoRenderData,
-        VideoSegment;
+        VideoSegment,
+        VideoSpeedRamp;
 import 'package:unified_logger/unified_logger.dart';
 
 /// A clip body rendered to a plain, normal-rate file with its
-/// [DivineVideoClip.playbackSpeed] baked in, so the preview plays it at 1×
-/// (no live retiming — smoother on both Android and iOS).
+/// [DivineVideoClip.playbackSpeed] or [DivineVideoClip.speedRamp] baked in, so
+/// the preview plays it at 1× (no live retiming — smoother on both Android and
+/// iOS). A speed ramp can only reach the preview this way: the player retimes
+/// a clip at one speed only.
 class RenderedSpeedClip {
   const RenderedSpeedClip({required this.path, required this.duration});
 
@@ -121,7 +124,8 @@ class ClipSpeedRenderService {
 
   bool _needsRender(DivineVideoClip clip) {
     final speed = clip.playbackSpeed ?? 1.0;
-    return speed > 0 && speed != 1.0 && clip.video?.file != null;
+    return (clip.speedRamp != null || (speed > 0 && speed != 1.0)) &&
+        clip.video?.file != null;
   }
 
   Future<RenderedSpeedClip?> _render(DivineVideoClip clip, String key) async {
@@ -192,6 +196,7 @@ class ClipSpeedRenderService {
                       : clip.trimStart,
                   endTime: clip.trimStart + clip.trimmedDuration,
                   playbackSpeed: clip.playbackSpeed,
+                  speedRamp: clip.speedRamp,
                 ),
               ],
               shouldOptimizeForNetworkUse: true,
@@ -234,7 +239,8 @@ class ClipSpeedRenderService {
       }
       _store(key, rendered);
       Log.info(
-        '🎬 Speed body rendered: ${clip.id} @${clip.playbackSpeed}× '
+        '🎬 Speed body rendered: ${clip.id} '
+        '@${clip.speedRamp ?? '${clip.playbackSpeed}×'} '
         '→ ${rendered.duration.inMilliseconds}ms',
         name: 'ClipSpeedRenderService',
         category: LogCategory.video,
@@ -380,7 +386,7 @@ class ClipSpeedRenderService {
   static const _cacheVersion = 3;
 
   /// Keyed by what the render actually bakes in — source file, trims and speed
-  /// — and deliberately **not** by [DivineVideoClip.id]. Duplicating a clip,
+  /// or speed ramp — and deliberately **not** by [DivineVideoClip.id]. Duplicating a clip,
   /// splitting one and undoing the split, or reopening a draft all mint fresh
   /// ids for byte-identical bodies; keying on the id re-encoded every one of
   /// them. Two clips that agree on all of these produce the same file, so they
@@ -388,7 +394,14 @@ class ClipSpeedRenderService {
   String _key(DivineVideoClip clip) =>
       'v$_cacheVersion|${clip.video?.file?.path}:'
       '${clip.duration.inMicroseconds}:${clip.trimStart.inMicroseconds}:'
-      '${clip.trimEnd.inMicroseconds}:${clip.playbackSpeed ?? 1.0}';
+      '${clip.trimEnd.inMicroseconds}:${clip.playbackSpeed ?? 1.0}'
+      '${_rampKey(clip.speedRamp)}';
+
+  /// The ramp's points, empty without one, so every key of a clip at a
+  /// constant speed stays as it was.
+  static String _rampKey(VideoSpeedRamp? ramp) => ramp == null
+      ? ''
+      : ':${ramp.points.map((p) => '${p.position}@${p.speed}').join(',')}';
 
   /// The native task id for one render attempt of the body hashed as [hash].
   ///
