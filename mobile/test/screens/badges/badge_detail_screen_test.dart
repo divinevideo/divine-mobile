@@ -3,6 +3,7 @@
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -12,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
@@ -556,7 +558,7 @@ void main() {
       );
     });
 
-    testWidgets('shows a retry message when the inline video page fails', (
+    testWidgets('shows inline retry feedback only for new page failures', (
       tester,
     ) async {
       final videos = _MockVideosRepository();
@@ -569,7 +571,7 @@ void main() {
       when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
       var pages = 0;
       when(pager.loadMore).thenAnswer((_) async {
-        if (pages++ == 0) return [_video()];
+        if ((pages++).isEven) return [_video()];
         throw Exception('controlled page failure');
       });
       when(() => pager.hasMore).thenReturn(true);
@@ -583,6 +585,22 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.profileShowMore));
       await tester.pumpAndSettle();
+      expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
+      final gridContext = tester.element(find.byType(VideoThumbnailWidget));
+      final cubit = gridContext.read<BadgeVideosCubit>();
+      expect(cubit.state.loadMoreFailures, 1);
+      ScaffoldMessenger.of(gridContext).clearSnackBars();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.feedFailedToLoadVideos), findsNothing);
+
+      await cubit.loadForHolders({_pubkey(3), _pubkey(4)});
+      await tester.pumpAndSettle();
+      expect(cubit.state.loadMoreFailures, 0);
+      expect(find.text(l10n.feedFailedToLoadVideos), findsNothing);
+
+      await tester.tap(find.text(l10n.profileShowMore));
+      await tester.pumpAndSettle();
+      expect(cubit.state.loadMoreFailures, 1);
       expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
       expect(
         find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
