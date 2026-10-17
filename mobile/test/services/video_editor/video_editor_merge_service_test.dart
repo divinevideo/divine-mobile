@@ -7,6 +7,7 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -186,6 +187,107 @@ void main() {
       expect(result, isNull);
       expect(called, isFalse, reason: 'render should not run for one clip');
     });
+
+    test(
+      'does not restore a flash suppressed by the surrounding timeline',
+      () async {
+        const flash = ClipTransition(
+          type: ClipTransitionType.flash,
+          duration: Duration(milliseconds: 100),
+        );
+        final before = _createClip(id: 'before').copyWith(transition: flash);
+        final a = _createClip(
+          id: 'a',
+          duration: const Duration(milliseconds: 600),
+        ).copyWith(transition: flash);
+        final b = _createClip(id: 'b');
+        expect(
+          clampTransitions([before, a, b])['a']?.type,
+          ClipTransitionType.dissolve,
+        );
+        expect(clampTransitions([a, b])['a']?.type, ClipTransitionType.flash);
+
+        List<DivineVideoClip>? rendered;
+        VideoEditorRenderService.renderVideoOverride =
+            ({
+              required clips,
+              required usePersistentStorage,
+              aspectRatio,
+              parameters,
+              taskId,
+              maxOutputDuration,
+            }) async {
+              rendered = clips;
+              return null;
+            };
+
+        await VideoEditorMergeService.mergeClips(
+          clips: [a, b],
+          renderId: 'merge-flash',
+        );
+
+        expect(rendered, hasLength(2));
+        expect(
+          rendered!.first.transition,
+          flash.copyWith(type: ClipTransitionType.dissolve),
+        );
+        expect(
+          a.transition,
+          flash,
+          reason: 'merging must not mutate the source clip',
+        );
+      },
+    );
+
+    test(
+      'replaces all baked flashes but preserves other transition settings',
+      () async {
+        const flash = ClipTransition(
+          type: ClipTransitionType.flash,
+          duration: Duration(milliseconds: 300),
+          curve: AnimationCurve.easeOut,
+          direction: ClipTransitionDirection.up,
+        );
+        const slide = ClipTransition(
+          type: ClipTransitionType.slide,
+          duration: Duration(milliseconds: 200),
+          direction: ClipTransitionDirection.right,
+        );
+        List<DivineVideoClip>? rendered;
+        VideoEditorRenderService.renderVideoOverride =
+            ({
+              required clips,
+              required usePersistentStorage,
+              aspectRatio,
+              parameters,
+              taskId,
+              maxOutputDuration,
+            }) async {
+              rendered = clips;
+              return null;
+            };
+
+        await VideoEditorMergeService.mergeClips(
+          clips: [
+            _createClip(id: 'a').copyWith(transition: flash),
+            _createClip(id: 'b').copyWith(transition: slide),
+            _createClip(id: 'c').copyWith(transition: flash),
+          ],
+          renderId: 'merge-settings',
+        );
+
+        expect(rendered, hasLength(3));
+        expect(
+          rendered![0].transition,
+          flash.copyWith(type: ClipTransitionType.dissolve),
+        );
+        expect(rendered![1].transition, slide);
+        expect(
+          rendered![2].transition,
+          flash.copyWith(type: ClipTransitionType.dissolve),
+        );
+      },
+    );
 
     test(
       'forwards clips + taskId and returns merged clip on success',

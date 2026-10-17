@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ClipTransition, ClipTransitionType, EditorVideo;
+    show AnimationCurve, ClipTransition, ClipTransitionType, EditorVideo;
 
 void main() {
   const dissolve = ClipTransition(type: ClipTransitionType.dissolve);
@@ -491,6 +493,21 @@ void main() {
         expect(map.outputDuration, equals(const Duration(milliseconds: 1500)));
       });
 
+      test('loops where the output ends, or where the export stops', () {
+        final short = TransitionTimelineMap.fromClips([
+          clip('a', const Duration(seconds: 1), transition: overlap500),
+          clip('b', const Duration(seconds: 1)),
+        ]);
+        final long = TransitionTimelineMap.fromClips([
+          clip('a', const Duration(seconds: 5), transition: overlap500),
+          clip('b', const Duration(seconds: 5)),
+        ]);
+
+        expect(short.loopPoint, const Duration(milliseconds: 1500));
+        expect(long.outputDuration, const Duration(milliseconds: 9500));
+        expect(long.loopPoint, VideoEditorConstants.maxDuration);
+      });
+
       test('is equal for clips that place time alike', () {
         final map = TransitionTimelineMap.fromClips([
           clip('a', const Duration(seconds: 1), transition: overlap500),
@@ -806,6 +823,218 @@ void main() {
           equals(const Duration(seconds: 1)),
         );
       });
+    });
+  });
+
+  group('flash transitions', () {
+    const flash = ClipTransition(
+      type: ClipTransitionType.flash,
+      duration: Duration(milliseconds: 200),
+    );
+    Duration ms(int milliseconds) => Duration(milliseconds: milliseconds);
+    Duration us(int microseconds) => Duration(microseconds: microseconds);
+
+    DivineVideoClip clip(
+      String id,
+      Duration duration, {
+      ClipTransition? transition,
+    }) => DivineVideoClip(
+      id: id,
+      video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
+      duration: duration,
+      recordedAt: DateTime(2026),
+      targetAspectRatio: model.AspectRatio.vertical,
+      originalAspectRatio: 9 / 16,
+      transition: transition,
+    );
+
+    test('plays a flash within a second of the one before as a dissolve of '
+        'the same length', () {
+      // Flashes start 70.7 ms into their blends, at 1.07 s and 1.87 s of the
+      // exported video, where they reach a quarter of white.
+      final clips = [
+        clip('a', ms(1200), transition: flash),
+        clip('b', ms(1000), transition: flash),
+        clip('c', ms(1200)),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a'], flash);
+      expect(
+        clamped['b'],
+        flash.copyWith(type: ClipTransitionType.dissolve),
+      );
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [us(1070711)]);
+      expect(renderedOutputDuration(clips), ms(3000));
+    });
+
+    test('keeps flashes a second or more apart', () {
+      // Flashes start at 1.07 s and 2.87 s of the 4 s video.
+      final clips = [
+        clip('a', ms(1200), transition: flash),
+        clip('b', ms(2000), transition: flash),
+        clip('c', ms(1200)),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a'], flash);
+      expect(clamped['b'], flash);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [
+        us(1070711),
+        us(2870711),
+      ]);
+    });
+
+    test('times a flash by its curve', () {
+      // The renderers ease the progress and brighten by (1 - |2p - 1|)^4 of
+      // it: an ease-in 200 ms blend from 1.0 s reaches a quarter of white
+      // 0.59 of the way in, where a linear one would be 0.35 in.
+      final clips = [
+        clip(
+          'a',
+          ms(1200),
+          transition: flash.copyWith(curve: AnimationCurve.easeIn),
+        ),
+        clip('b', ms(1200)),
+      ];
+
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [
+        us(1118921),
+      ]);
+    });
+
+    test('spaces flashes by where their curves first reach quarter white', () {
+      // Their midpoints are 1 s apart, but the ease-in one flashes late and
+      // the ease-out one early, 0.92 s apart.
+      final clips = [
+        clip(
+          'a',
+          ms(1200),
+          transition: flash.copyWith(curve: AnimationCurve.easeIn),
+        ),
+        clip(
+          'b',
+          ms(1200),
+          transition: flash.copyWith(curve: AnimationCurve.easeOut),
+        ),
+        clip('c', ms(1200)),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a']?.type, ClipTransitionType.flash);
+      expect(clamped['b']?.type, ClipTransitionType.dissolve);
+    });
+
+    test('locates the first flash onset on every native easing curve', () {
+      for (final curve in AnimationCurve.values) {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', ms(3000), transition: flash.copyWith(curve: curve)),
+          clip('b', ms(3000)),
+        ]);
+        final offset = map.flashes.single - ms(2800);
+        final share = offset.inMicroseconds / flash.duration.inMicroseconds;
+        final progress = curve.ease(share);
+        final rise = 2 * progress;
+
+        expect(
+          rise * rise * rise * rise,
+          closeTo(flashOnsetStrength, 0.0001),
+          reason: curve.name,
+        );
+        // Bounce/elastic easing can turn back elsewhere. No earlier sample
+        // may already have reached the onset we claim is the first one.
+        for (var step = 0; step < 1000; step++) {
+          final earlier = share * step / 1000;
+          expect(curve.ease(earlier), lessThan(progress), reason: curve.name);
+        }
+      }
+    });
+
+    test('times an eased wrap flash from the start of its final blend', () {
+      final map = TransitionTimelineMap.fromClips([
+        clip('a', ms(1600), transition: flash.copyWith(curve: .easeOut)),
+      ]);
+      final offset = map.flashes.single - ms(1200);
+
+      expect(map.outputDuration, ms(1400));
+      // easeOut(t) = t(2-t), with the onset at p = fourthRoot(0.25) / 2.
+      expect(offset.inMicroseconds, closeTo(39196, 1));
+    });
+
+    test('counts an onset before the export cap even if its peak is later', () {
+      final clips = [
+        clip('a', ms(6800), transition: flash.copyWith(duration: ms(1000))),
+        clip('b', ms(3000)),
+      ];
+
+      expect(clampTransitions(clips)['a']?.type, ClipTransitionType.flash);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [us(6153553)]);
+      expect(TransitionTimelineMap.fromClips(clips).loopPoint, ms(6300));
+    });
+
+    test('plays the loop-restart flash as a dissolve when the first flash of '
+        'the next pass follows within a second', () {
+      // The wrap moves 200 ms of a's head to the end: a's flash starts at
+      // 0.67 s, the wrap's at 1.47 s of the 1.6 s video, 0.8 s before the
+      // next pass's first flash.
+      final clips = [
+        clip('a', ms(1000), transition: flash),
+        clip('b', ms(1000), transition: flash),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a'], flash);
+      expect(
+        clamped['b'],
+        flash.copyWith(type: ClipTransitionType.dissolve),
+      );
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [us(670711)]);
+    });
+
+    test('keeps a lone flash on a video that loops every second or slower, '
+        'but not on a shorter one', () {
+      final long = [clip('a', ms(1600), transition: flash)];
+      final short = [
+        clip(
+          'a',
+          ms(900),
+          transition: flash.copyWith(duration: ms(100)),
+        ),
+      ];
+
+      expect(clampTransitions(long)['a']?.type, ClipTransitionType.flash);
+      expect(TransitionTimelineMap.fromClips(long).flashes, [us(1270711)]);
+      expect(clampTransitions(short)['a']?.type, ClipTransitionType.dissolve);
+      expect(TransitionTimelineMap.fromClips(short).flashes, isEmpty);
+    });
+
+    test('leaves a flash past the end of the export alone', () {
+      // The export stops at 6.3 s; this flash would start at 6.87 s.
+      final clips = [
+        clip('a', ms(7000), transition: flash),
+        clip('b', ms(1200)),
+      ];
+
+      expect(clampTransitions(clips)['a'], flash);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, isEmpty);
+    });
+
+    test('tells maps apart by their flashes alone', () {
+      final dissolving = TransitionTimelineMap.fromClips([
+        clip('a', ms(1200), transition: dissolve.copyWith(duration: ms(200))),
+        clip('b', ms(1200)),
+      ]);
+      final flashing = TransitionTimelineMap.fromClips([
+        clip('a', ms(1200), transition: flash),
+        clip('b', ms(1200)),
+      ]);
+
+      expect(flashing.outputDuration, dissolving.outputDuration);
+      expect(flashing, isNot(dissolving));
     });
   });
 }

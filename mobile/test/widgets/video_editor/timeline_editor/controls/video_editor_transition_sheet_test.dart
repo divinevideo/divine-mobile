@@ -29,6 +29,7 @@ void main() {
       int overlapMaxMs = 2000,
       int dipMaxMs = 2000,
       bool limitedByNeighbor = false,
+      bool Function(editor.ClipTransition transition)? flashSuppressed,
       bool disableAnimations = false,
       ThemeData? theme,
     }) async {
@@ -60,6 +61,7 @@ void main() {
                                 overlapMaxMs: overlapMaxMs,
                                 dipMaxMs: dipMaxMs,
                                 limitedByNeighbor: limitedByNeighbor,
+                                flashSuppressed: flashSuppressed,
                               ),
                             ),
                           ),
@@ -397,6 +399,157 @@ void main() {
         result?.transition?.direction,
         editor.ClipTransitionDirection.up,
       );
+    });
+
+    group('moving, blurring and flashing transitions', () {
+      // Wide enough that every tile is built without scrolling the row.
+      Future<void> widen(WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(1600, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+      }
+
+      Future<void> pick(WidgetTester tester, String label) async {
+        await tester.tap(find.text(label));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+
+      final labels = [
+        l10n.videoEditorTransitionZoomIn,
+        l10n.videoEditorTransitionZoomOut,
+        l10n.videoEditorTransitionSpin,
+        l10n.videoEditorTransitionWhipPan,
+        l10n.videoEditorTransitionBlur,
+        l10n.videoEditorTransitionGlitch,
+        l10n.videoEditorTransitionFlash,
+        l10n.videoEditorTransitionIris,
+        l10n.videoEditorTransitionStretch,
+      ];
+
+      testWidgets('eases the flash tile with the native quadratic curve', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(
+          tester,
+          disableAnimations: true,
+          initial: const editor.ClipTransition(
+            type: editor.ClipTransitionType.flash,
+            curve: editor.AnimationCurve.easeIn,
+          ),
+        );
+
+        // Reduced motion freezes raw progress at one half. Native ease-in
+        // is t², so progress is 0.25 and flash alpha is (2 * 0.25)^4 * 0.85.
+        // Flutter's similarly named Bézier produces a different brightness.
+        final tile = find
+            .ancestor(
+              of: find.text(l10n.videoEditorTransitionFlash),
+              matching: find.byType(Column),
+            )
+            .first;
+        final overlay = tester.widget<ColoredBox>(
+          find.descendant(of: tile, matching: find.byType(ColoredBox)),
+        );
+
+        expect(overlay.color.a, closeTo(0.053125, 0.000001));
+      });
+
+      testWidgets('offers each one and plays its preview through a loop', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester);
+
+        for (final label in labels) {
+          expect(find.text(label), findsOneWidget, reason: label);
+        }
+        // Every preview runs through its whole transition, so a tile that
+        // cannot draw some progress throws here.
+        for (var step = 0; step < 30; step++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('offers directions for whip pan and stretch only', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester);
+
+        await pick(tester, l10n.videoEditorTransitionZoomIn);
+        expect(find.text(l10n.videoEditorTransitionDirection), findsNothing);
+
+        await pick(tester, l10n.videoEditorTransitionWhipPan);
+        expect(find.text(l10n.videoEditorTransitionDirection), findsOneWidget);
+
+        await pick(tester, l10n.videoEditorTransitionStretch);
+        expect(find.text(l10n.videoEditorTransitionDirection), findsOneWidget);
+      });
+
+      testWidgets('returns a picked stretch with its direction', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester);
+
+        await pick(tester, l10n.videoEditorTransitionStretch);
+        await tester.tap(
+          find.byWidgetPredicate(
+            (w) => w is DivineIcon && w.icon == DivineIconName.arrowUp,
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(result?.transition?.type, editor.ClipTransitionType.stretch);
+        expect(
+          result?.transition?.direction,
+          editor.ClipTransitionDirection.up,
+        );
+      });
+
+      testWidgets('explains a flash that plays as a dissolve', (tester) async {
+        await widen(tester);
+        final asked = <editor.ClipTransition>[];
+        await openPicker(
+          tester,
+          flashSuppressed: (transition) {
+            asked.add(transition);
+            return transition.type.flashes;
+          },
+        );
+
+        await pick(tester, l10n.videoEditorTransitionFlash);
+        expect(
+          find.text(l10n.videoEditorTransitionFlashTooClose),
+          findsOneWidget,
+        );
+        expect(asked.last.type, editor.ClipTransitionType.flash);
+
+        await pick(tester, l10n.videoEditorTransitionGlitch);
+        expect(
+          find.text(l10n.videoEditorTransitionFlashTooClose),
+          findsNothing,
+        );
+      });
+
+      testWidgets('keeps quiet about a flash with room around it', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester, flashSuppressed: (_) => false);
+
+        await pick(tester, l10n.videoEditorTransitionFlash);
+
+        expect(
+          find.text(l10n.videoEditorTransitionFlashTooClose),
+          findsNothing,
+        );
+      });
     });
 
     testWidgets('a transition tile announces its label once, not twice', (

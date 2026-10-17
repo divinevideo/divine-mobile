@@ -5151,6 +5151,16 @@
     "description": "Transition option where the next clip pushes the current one out of frame."
   },
   "videoEditorTransitionWipe": "وائپ",
+  "videoEditorTransitionZoomIn": "زوم اِن",
+  "videoEditorTransitionZoomOut": "زوم آؤٹ",
+  "videoEditorTransitionSpin": "گھماؤ",
+  "videoEditorTransitionWhipPan": "تیز پین",
+  "videoEditorTransitionBlur": "دھندلا",
+  "videoEditorTransitionGlitch": "گلچ",
+  "videoEditorTransitionFlash": "فلیش",
+  "videoEditorTransitionIris": "آئرس",
+  "videoEditorTransitionStretch": "کھنچاؤ",
+  "videoEditorTransitionFlashTooClose": "دوسرے فلیش سے ایک سیکنڈ سے کم فاصلے پر ہے، اس لیے یہاں ڈیزالو کے طور پر چلے گا۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
   },

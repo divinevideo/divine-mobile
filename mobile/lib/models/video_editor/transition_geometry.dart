@@ -3,23 +3,35 @@
 // ABOUTME: timeline. Shared by the render pipeline, seam preview, picker and the
 // ABOUTME: timeline header so all of them agree on the same budget.
 
+import 'dart:math' as math;
+
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ClipTransition, ClipTransitionType;
+    show AnimationCurve, ClipTransition, ClipTransitionType;
 import 'package:unified_logger/unified_logger.dart';
 
 const _logName = 'TransitionGeometry';
 
-bool _isDip(ClipTransitionType type) =>
-    type == ClipTransitionType.fadeToBlack ||
-    type == ClipTransitionType.fadeToWhite;
+bool _isDip(ClipTransitionType type) => type.isDip;
 
-/// Whether a transition shortens the timeline. Overlaps
-/// (dissolve/slide/push/wipe) blend both clips at once, so the blend duration
+/// Whether a transition shortens the timeline. Overlaps (every type but the
+/// fades to black and white) blend both clips at once, so the blend duration
 /// is removed from the total. Dips (fadeToBlack/White) fade out then in
 /// without overlapping, so the duration is unchanged.
-bool _shortensTimeline(ClipTransitionType type) => !_isDip(type);
+bool _shortensTimeline(ClipTransitionType type) => type.isOverlap;
+
+/// The shortest time between two flash transitions on the exported video, as
+/// it loops.
+///
+/// Three flashes in one second is the most WCAG 2.3.1 allows. A flashing video
+/// effect flashes up to twice a second on its own clock, so flash transitions
+/// keep to one a second and leave it the other two; on the beat,
+/// `videoEffectsOnOutput` drops the beats that would still crowd a second.
+const minimumFlashTransitionGap = Duration(seconds: 1);
 
 /// Whether a transition of [type] plays both clips at once, which is what
 /// shortens the timeline (see [TransitionTimelineMap]).
@@ -29,7 +41,7 @@ bool transitionOverlapsClips(ClipTransitionType type) =>
 /// Per-side playback duration a [transition] consumes at the boundary between
 /// clips of playback durations [a] and [b].
 ///
-/// An overlap (dissolve/slide/push/wipe) blends both clips at once and consumes
+/// An overlap blends both clips at once and consumes
 /// 2× its duration per side; a dip (fadeToBlack/White) fades out then in,
 /// consuming half its duration per side. Clamped to the shorter clip so a
 /// transition can never overrun a clip.
@@ -79,12 +91,27 @@ Duration transitionDurationForConsumed(
 /// transitions — and, on a single clip that is both first and last, so its head
 /// and tail together leave a middle body.
 ///
+/// A flash transition within [minimumFlashTransitionGap] of an earlier one on
+/// the exported video, or of the first one as the video loops, becomes a
+/// dissolve of the same length, so the timeline stays as it is.
+///
 /// Returns `null` for any boundary (internal or wrap) with no room. Keyed by
 /// clip id rather than index so it stays correct even if the render pipeline
 /// reorders clips.
-Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) {
+Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) =>
+    _clampAndSpace(clips).transitions;
+
+/// Transitions keyed like [clampTransitions], and where the flash transitions
+/// among them start to flash on the exported video before its loop point.
+typedef _Clamped = ({
+  Map<String, ClipTransition?> transitions,
+  List<Duration> flashes,
+});
+
+/// [clampTransitions], with the flashes it keeps.
+_Clamped _clampAndSpace(List<DivineVideoClip> clips) {
   final n = clips.length;
-  if (n == 0) return const {};
+  if (n == 0) return (transitions: const {}, flashes: const []);
 
   // Per-boundary requested per-side consumption. demand[i] is the internal
   // boundary between clip i and clip i+1 (clip i's outgoing transition); the
@@ -140,7 +167,147 @@ Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) {
     demand: loopDemand,
     scale: scale[n - 1] < scale[0] ? scale[n - 1] : scale[0],
   );
-  return clamped;
+  return _withSpacedFlashes(clips, clamped);
+}
+
+/// One flash transition on the exported video: the clip it follows and where
+/// in its blend the flash starts.
+typedef _FlashMoment = ({String clipId, Duration at});
+
+/// Where the flash transitions in [transitions] (keyed like
+/// [clampTransitions]) flash on the exported video, in order, and how long
+/// that video is: its playback minus every overlap blend, the loop-restart
+/// wrap's included.
+///
+/// An internal blend ends at its boundary on the output, and the flash starts
+/// [_flashAt] into it. A loop-restart wrap moves the head of the first clip
+/// into the blend that ends the video, so everything before that blend starts
+/// the wrap's length earlier than on the editor timeline.
+({List<_FlashMoment> moments, Duration outputDuration}) _flashMoments(
+  List<DivineVideoClip> clips,
+  Map<String, ClipTransition?> transitions,
+) {
+  if (clips.isEmpty) return (moments: const [], outputDuration: Duration.zero);
+  final wrap = transitions[clips.last.id];
+  final wrapBlend = wrap != null && _shortensTimeline(wrap.type)
+      ? wrap.duration
+      : Duration.zero;
+  final moments = <_FlashMoment>[];
+  var boundary = Duration.zero;
+  var removed = wrapBlend;
+  for (var i = 0; i < clips.length - 1; i++) {
+    boundary += clips[i].playbackDuration;
+    final transition = transitions[clips[i].id];
+    if (transition == null || !_shortensTimeline(transition.type)) continue;
+    if (transition.type.flashes) {
+      moments.add((
+        clipId: clips[i].id,
+        at: boundary - removed - transition.duration + _flashAt(transition),
+      ));
+    }
+    removed += transition.duration;
+  }
+  final outputDuration = boundary + clips.last.playbackDuration - removed;
+  if (wrap != null && wrap.type.flashes) {
+    moments.add((
+      clipId: clips.last.id,
+      at: outputDuration - wrap.duration + _flashAt(wrap),
+    ));
+  }
+  return (moments: moments, outputDuration: outputDuration);
+}
+
+/// How strongly a frame has turned white where a flash starts, for a flashing
+/// video effect and a flash transition alike, so the flashes of both are
+/// counted from the same moment.
+const flashOnsetStrength = 0.25;
+
+/// How far into its blend [transition]'s flash starts: where its curve has
+/// eased the progress far enough for the flash to reach [flashOnsetStrength].
+///
+/// The renderers brighten a flash by `(1 - |2p - 1|)^4` of eased progress
+/// `p`, so it peaks where the curve reaches one half, the midpoint only on a
+/// curve symmetric about it, and starts a little before that.
+Duration _flashAt(ClipTransition transition) =>
+    transition.duration * _flashOnsetShares[transition.curve]!;
+
+/// Where each curve's flash starts, as a share of the blend.
+final Map<AnimationCurve, double> _flashOnsetShares = {
+  for (final curve in AnimationCurve.values)
+    curve: _firstShareReaching(curve, math.pow(flashOnsetStrength, 1 / 4) / 2),
+};
+
+/// The first share of a transition at which [curve] has eased its progress to
+/// [target]. A bounce or elastic curve can get there more than once.
+double _firstShareReaching(AnimationCurve curve, double target) {
+  const steps = 1024;
+  var below = 0.0;
+  for (var step = 1; step <= steps; step++) {
+    var above = step / steps;
+    if (curve.ease(above) < target) {
+      below = above;
+      continue;
+    }
+    for (var i = 0; i < 40; i++) {
+      final middle = (below + above) / 2;
+      if (curve.ease(middle) < target) {
+        below = middle;
+      } else {
+        above = middle;
+      }
+    }
+    return above;
+  }
+  return 1;
+}
+
+/// Where an exported video [outputDuration] long ends and starts over: capped
+/// at [VideoEditorConstants.maxDuration].
+Duration _loopPoint(Duration outputDuration) =>
+    outputDuration < VideoEditorConstants.maxDuration
+    ? outputDuration
+    : VideoEditorConstants.maxDuration;
+
+/// [transitions] with every flash transition that the looping export would
+/// show within [minimumFlashTransitionGap] of another turned into a dissolve,
+/// keeping the earliest, and where the kept ones start to flash. One that
+/// falls past the loop point never shows and stays as it is.
+_Clamped _withSpacedFlashes(
+  List<DivineVideoClip> clips,
+  Map<String, ClipTransition?> transitions,
+) {
+  final (:moments, :outputDuration) = _flashMoments(clips, transitions);
+  if (moments.isEmpty) return (transitions: transitions, flashes: const []);
+  final loopPoint = _loopPoint(outputDuration);
+  final kept = <Duration>[];
+  final dissolved = <String>{};
+  for (final moment in moments) {
+    if (moment.at >= loopPoint) continue;
+    // A flash also repeats a loop later, so it must clear the first kept
+    // flash of the next pass, and itself on a video under the gap.
+    final clearsPrevious =
+        kept.isEmpty || moment.at - kept.last >= minimumFlashTransitionGap;
+    final clearsNextPass =
+        (kept.isEmpty ? moment.at : kept.first) + loopPoint - moment.at >=
+        minimumFlashTransitionGap;
+    if (clearsPrevious && clearsNextPass) {
+      kept.add(moment.at);
+    } else {
+      dissolved.add(moment.clipId);
+    }
+  }
+  // No log here: this runs from build methods and selectors many times a
+  // frame, and each seam render logs the type it draws.
+  if (dissolved.isEmpty) return (transitions: transitions, flashes: kept);
+  return (
+    transitions: {
+      for (final entry in transitions.entries)
+        entry.key: dissolved.contains(entry.key)
+            ? entry.value?.copyWith(type: ClipTransitionType.dissolve)
+            : entry.value,
+    },
+    flashes: kept,
+  );
 }
 
 /// Clamps [transition]'s duration to the room its boundary keeps after [scale]
@@ -350,8 +517,9 @@ class _Blend {
 /// clamp guarantees adjacent blend regions never touch, so the mapping is
 /// strictly monotonic and invertible.
 ///
-/// Two maps built from clips that place time alike are equal, so a consumer
-/// can tell a clip edit that moved nothing on the output from one that did.
+/// Two maps built from clips that place time and flash transitions alike are
+/// equal, so a consumer can tell a clip edit that changed nothing on the
+/// output from one that did.
 ///
 /// The loop-restart wrap (the last clip's transition) adds **no blend region**
 /// to the position mapping: its blend sits at the loop point, past the last
@@ -364,10 +532,11 @@ class TransitionTimelineMap {
     this._blends, {
     required this.editorDuration,
     required this.outputDuration,
+    required this.flashes,
   });
 
   factory TransitionTimelineMap.fromClips(List<DivineVideoClip> clips) {
-    final clamped = clampTransitions(clips);
+    final (transitions: clamped, :flashes) = _clampAndSpace(clips);
     var editorTotal = Duration.zero;
     for (final clip in clips) {
       editorTotal += clip.playbackDuration;
@@ -399,6 +568,7 @@ class TransitionTimelineMap {
       blends,
       editorDuration: editorTotal,
       outputDuration: editorTotal - removed,
+      flashes: List.unmodifiable(flashes),
     );
   }
 
@@ -410,6 +580,16 @@ class TransitionTimelineMap {
   /// lasts.
   final Duration outputDuration;
 
+  /// Where the posted video ends and starts over: [outputDuration], capped
+  /// where the export stops at [VideoEditorConstants.maxDuration].
+  Duration get loopPoint => _loopPoint(outputDuration);
+
+  /// Where flash transitions start to flash on the exported video, in order,
+  /// after [clampTransitions] has spaced them; one past the loop point never
+  /// shows and is left out. Flashing video effects count these too, so the
+  /// video stays within three flashes a second.
+  final List<Duration> flashes;
+
   final List<_Blend> _blends;
 
   @override
@@ -417,7 +597,8 @@ class TransitionTimelineMap {
     if (other is! TransitionTimelineMap ||
         other.editorDuration != editorDuration ||
         other.outputDuration != outputDuration ||
-        other._blends.length != _blends.length) {
+        other._blends.length != _blends.length ||
+        !const ListEquality<Duration>().equals(other.flashes, flashes)) {
       return false;
     }
     for (var i = 0; i < _blends.length; i++) {
@@ -427,8 +608,12 @@ class TransitionTimelineMap {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(editorDuration, outputDuration, Object.hashAll(_blends));
+  int get hashCode => Object.hash(
+    editorDuration,
+    outputDuration,
+    Object.hashAll(_blends),
+    Object.hashAll(flashes),
+  );
 
   /// Editor times at which the editor-to-output clock changes speed.
   ///

@@ -10169,6 +10169,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Wipe';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Zoom in';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Zoom out';
+
+  @override
+  String get videoEditorTransitionSpin => 'Spin';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Whip pan';
+
+  @override
+  String get videoEditorTransitionBlur => 'Blur';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Flash';
+
+  @override
+  String get videoEditorTransitionIris => 'Iris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Stretch';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Within a second of another flash, so it plays as a dissolve here. Too much flashing can hurt people who are sensitive to it.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Edit transition';
 
   @override

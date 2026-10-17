@@ -10191,6 +10191,37 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Tendina';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Zoom avanti';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Zoom indietro';
+
+  @override
+  String get videoEditorTransitionSpin => 'Rotazione';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Panoramica a schiaffo';
+
+  @override
+  String get videoEditorTransitionBlur => 'Sfocatura';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Lampo';
+
+  @override
+  String get videoEditorTransitionIris => 'Iride';
+
+  @override
+  String get videoEditorTransitionStretch => 'Allungamento';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'A meno di un secondo da un altro lampo, quindi qui diventa una dissolvenza incrociata. Troppi lampeggiamenti possono fare male alle persone sensibili.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Modifica transizione';
 
   @override

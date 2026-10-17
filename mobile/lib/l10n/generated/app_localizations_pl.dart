@@ -10276,6 +10276,37 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Wycieranie';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Przybliżanie';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Oddalanie';
+
+  @override
+  String get videoEditorTransitionSpin => 'Obracanie';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Szybka panorama';
+
+  @override
+  String get videoEditorTransitionBlur => 'Rozmycie';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Błysk';
+
+  @override
+  String get videoEditorTransitionIris => 'Irys';
+
+  @override
+  String get videoEditorTransitionStretch => 'Rozciąganie';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Mniej niż sekundę od innego błysku, więc tutaj będzie przenikaniem. Zbyt dużo migania może szkodzić osobom wrażliwym.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Edytuj przejście';
 
   @override

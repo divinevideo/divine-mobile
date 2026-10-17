@@ -10170,6 +10170,37 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Barrido';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Acercar';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Alejar';
+
+  @override
+  String get videoEditorTransitionSpin => 'Girar';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Paneo rápido';
+
+  @override
+  String get videoEditorTransitionBlur => 'Desenfocar';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Destello';
+
+  @override
+  String get videoEditorTransitionIris => 'Iris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Estirar';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Está a menos de un segundo de otro destello, así que acá se ve como disolvencia. Demasiado parpadeo puede hacer daño a las personas sensibles.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Editar transición';
 
   @override

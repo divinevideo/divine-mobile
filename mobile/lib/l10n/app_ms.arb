@@ -5151,6 +5151,16 @@
     "description": "Transition option where the next clip pushes the current one out of frame."
   },
   "videoEditorTransitionWipe": "Sapu",
+  "videoEditorTransitionZoomIn": "Zum masuk",
+  "videoEditorTransitionZoomOut": "Zum keluar",
+  "videoEditorTransitionSpin": "Putar",
+  "videoEditorTransitionWhipPan": "Pan pantas",
+  "videoEditorTransitionBlur": "Kaburkan",
+  "videoEditorTransitionGlitch": "Glitch",
+  "videoEditorTransitionFlash": "Kilat",
+  "videoEditorTransitionIris": "Bulatan",
+  "videoEditorTransitionStretch": "Regangkan",
+  "videoEditorTransitionFlashTooClose": "Kurang daripada sesaat dari kilat lain, jadi di sini ia dimainkan sebagai larut. Kelipan berlebihan boleh memudaratkan orang yang sensitif.",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
   },

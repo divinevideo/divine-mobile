@@ -10070,6 +10070,37 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Svep';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Zooma in';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Zooma ut';
+
+  @override
+  String get videoEditorTransitionSpin => 'Snurra';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Snabbpanorering';
+
+  @override
+  String get videoEditorTransitionBlur => 'Sudda';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Blixt';
+
+  @override
+  String get videoEditorTransitionIris => 'Iris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Sträcka';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Mindre än en sekund från en annan blixt, så här blir det en övertoning. För mycket blinkande kan skada känsliga personer.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Redigera övergång';
 
   @override

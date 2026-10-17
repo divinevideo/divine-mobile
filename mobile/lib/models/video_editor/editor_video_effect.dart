@@ -3,7 +3,6 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -285,7 +284,8 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
 /// A flashing one skips beats closer than [minimumFlashGap] to the one before,
 /// so it flashes on every other beat of a song too fast for every one, and
 /// drops the beats that would still put more than three flashes in one second
-/// of the looping video, across its loop point too.
+/// of the looping video, across its loop point too. The flash transitions on
+/// [timelineMap] count toward those three.
 ///
 /// The export and the live preview both time effects this way, so the preview
 /// shows what the file will.
@@ -335,14 +335,11 @@ List<VideoEffect> videoEffectsOnOutput(
       ),
     );
   }
-  // The posted video ends, and starts over, where the export is capped.
-  final outputDuration = timelineMap.outputDuration;
-  final loopPoint = outputDuration < VideoEditorConstants.maxDuration
-      ? outputDuration
-      : VideoEditorConstants.maxDuration;
+  final loopPoint = timelineMap.loopPoint;
   return _withinFlashLimit(
     _endFlashingBeforeLoopPoint(result, loopPoint: loopPoint),
     loopPoint: loopPoint,
+    transitionFlashes: timelineMap.flashes,
   );
 }
 
@@ -408,13 +405,17 @@ List<Duration> _spacedForFlashing(List<Duration> beats) {
 /// three flashes within one second of the video as it loops at [loopPoint].
 ///
 /// Each flashing effect keeps its own beats [minimumFlashGap] apart, but a
-/// neighbouring flashing effect, or the start of the next pass, can still
-/// flash right next to them. This looks at the flashes the renderers will
-/// show, so it holds whatever the effects' own timing: in each second that
-/// has a fourth flash, the latest beat in it goes, until none has.
+/// neighbouring flashing effect, a flash transition at one of
+/// [transitionFlashes], or the start of the next pass, can still flash right
+/// next to them. This looks at the flashes the renderers will show, so it
+/// holds whatever the effects' own timing: in each second that has a fourth
+/// flash, the latest beat in it goes, until none has. Flash transitions stay:
+/// `clampTransitions` keeps them a second apart, which leaves room for the
+/// two flashes a second a flashing effect makes on its own clock.
 List<VideoEffect> _withinFlashLimit(
   List<VideoEffect> effects, {
   required Duration loopPoint,
+  List<Duration> transitionFlashes = const [],
 }) {
   if (!effects.any(
     (e) => isFlashingVideoEffect(e.type) && e.triggers.isNotEmpty,
@@ -425,7 +426,11 @@ List<VideoEffect> _withinFlashLimit(
   while (true) {
     // The latest beat of a flashing effect within a crowded second.
     ({int effect, Duration beat})? latest;
-    for (final crowded in _crowdedFlashSeconds(current, loopPoint)) {
+    for (final crowded in _crowdedFlashSeconds(
+      current,
+      loopPoint,
+      transitionFlashes,
+    )) {
       Duration? latestAt;
       for (var i = 0; i < current.length; i++) {
         final effect = current[i];
@@ -468,10 +473,12 @@ List<VideoEffect> _withinFlashLimit(
 /// flashes, in order.
 ///
 /// A flash starts where a frame turns clearly whiter or turns negative,
-/// sampled at the rate the renderers place beats at.
+/// sampled at the rate the renderers place beats at, and at each of
+/// [transitionFlashes].
 Iterable<Duration> _crowdedFlashSeconds(
   List<VideoEffect> effects,
   Duration loopPoint,
+  List<Duration> transitionFlashes,
 ) sync* {
   final flashing = [
     for (final effect in effects)
@@ -492,12 +499,15 @@ Iterable<Duration> _crowdedFlashSeconds(
   var before = last > Duration.zero ? sample(last) : (flash: 0.0, invert: 0.0);
   for (var at = Duration.zero; at < loopPoint; at += step) {
     final now = sample(at);
-    if ((now.flash >= 0.25 && now.flash >= before.flash + 0.1) ||
+    if ((now.flash >= flashOnsetStrength && now.flash >= before.flash + 0.1) ||
         (now.invert >= 0.5 && before.invert < 0.5)) {
       onsets.add(at);
     }
     before = now;
   }
+  onsets
+    ..addAll(transitionFlashes)
+    ..sort();
   for (final onset in onsets) {
     var inSecond = 0;
     for (final other in onsets) {

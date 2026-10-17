@@ -10031,6 +10031,37 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Quét';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Phóng to';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Thu nhỏ';
+
+  @override
+  String get videoEditorTransitionSpin => 'Xoay';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Lia nhanh';
+
+  @override
+  String get videoEditorTransitionBlur => 'Làm mờ';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Lóe sáng';
+
+  @override
+  String get videoEditorTransitionIris => 'Vòng tròn';
+
+  @override
+  String get videoEditorTransitionStretch => 'Kéo giãn';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Cách một lần lóe sáng khác chưa đến một giây, nên ở đây sẽ phát dạng hòa tan. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Sửa chuyển cảnh';
 
   @override

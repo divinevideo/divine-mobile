@@ -10072,6 +10072,37 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTransitionWipe => 'وائپ';
 
   @override
+  String get videoEditorTransitionZoomIn => 'زوم اِن';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'زوم آؤٹ';
+
+  @override
+  String get videoEditorTransitionSpin => 'گھماؤ';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'تیز پین';
+
+  @override
+  String get videoEditorTransitionBlur => 'دھندلا';
+
+  @override
+  String get videoEditorTransitionGlitch => 'گلچ';
+
+  @override
+  String get videoEditorTransitionFlash => 'فلیش';
+
+  @override
+  String get videoEditorTransitionIris => 'آئرس';
+
+  @override
+  String get videoEditorTransitionStretch => 'کھنچاؤ';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'دوسرے فلیش سے ایک سیکنڈ سے کم فاصلے پر ہے، اس لیے یہاں ڈیزالو کے طور پر چلے گا۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel =>
       'ٹرانزیشن میں ترمیم کریں';
 

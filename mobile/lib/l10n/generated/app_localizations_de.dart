@@ -10201,6 +10201,37 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Wischen';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Reinzoomen';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Rauszoomen';
+
+  @override
+  String get videoEditorTransitionSpin => 'Drehen';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Reißschwenk';
+
+  @override
+  String get videoEditorTransitionBlur => 'Verwischen';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Blitz';
+
+  @override
+  String get videoEditorTransitionIris => 'Kreisblende';
+
+  @override
+  String get videoEditorTransitionStretch => 'Strecken';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Keine Sekunde von einem anderen Blitz entfernt, darum wird hier überblendet. Zu viel Blinken kann empfindlichen Menschen schaden.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Übergang bearbeiten';
 
   @override

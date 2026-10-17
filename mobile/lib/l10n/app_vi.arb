@@ -5151,6 +5151,16 @@
     "description": "Transition option where the next clip pushes the current one out of frame."
   },
   "videoEditorTransitionWipe": "Quét",
+  "videoEditorTransitionZoomIn": "Phóng to",
+  "videoEditorTransitionZoomOut": "Thu nhỏ",
+  "videoEditorTransitionSpin": "Xoay",
+  "videoEditorTransitionWhipPan": "Lia nhanh",
+  "videoEditorTransitionBlur": "Làm mờ",
+  "videoEditorTransitionGlitch": "Glitch",
+  "videoEditorTransitionFlash": "Lóe sáng",
+  "videoEditorTransitionIris": "Vòng tròn",
+  "videoEditorTransitionStretch": "Kéo giãn",
+  "videoEditorTransitionFlashTooClose": "Cách một lần lóe sáng khác chưa đến một giây, nên ở đây sẽ phát dạng hòa tan. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
   },

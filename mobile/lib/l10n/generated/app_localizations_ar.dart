@@ -10045,6 +10045,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTransitionWipe => 'مسح';
 
   @override
+  String get videoEditorTransitionZoomIn => 'تكبير';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'تصغير';
+
+  @override
+  String get videoEditorTransitionSpin => 'دوران';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'تحريك سريع';
+
+  @override
+  String get videoEditorTransitionBlur => 'تمويه';
+
+  @override
+  String get videoEditorTransitionGlitch => 'تشويش';
+
+  @override
+  String get videoEditorTransitionFlash => 'وميض';
+
+  @override
+  String get videoEditorTransitionIris => 'كشف دائري';
+
+  @override
+  String get videoEditorTransitionStretch => 'تمدد';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'يقع على بُعد أقل من ثانية من وميض آخر، لذا يُعرض هنا كإذابة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'تعديل الانتقال';
 
   @override

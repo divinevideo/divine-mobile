@@ -10161,6 +10161,37 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Избърсване';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Приближаване';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Отдалечаване';
+
+  @override
+  String get videoEditorTransitionSpin => 'Завъртане';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Рязко панорамиране';
+
+  @override
+  String get videoEditorTransitionBlur => 'Замъгляване';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Глич';
+
+  @override
+  String get videoEditorTransitionFlash => 'Светкавица';
+
+  @override
+  String get videoEditorTransitionIris => 'Кръгово разкриване';
+
+  @override
+  String get videoEditorTransitionStretch => 'Разтягане';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'На по-малко от секунда от друга светкавица, затова тук се показва като преливане. Прекаленото мигане може да навреди на чувствителни хора.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel =>
       'Редактиране на преход';
 

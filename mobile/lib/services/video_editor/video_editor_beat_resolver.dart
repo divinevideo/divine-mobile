@@ -135,11 +135,7 @@ List<ClipSoundPart> clipSoundParts(List<DivineVideoClip> clips) {
   final transitions = clampTransitions(clips);
   ClipTransition? overlapAfter(DivineVideoClip clip) {
     final transition = transitions[clip.id];
-    return transition == null ||
-            transition.type == ClipTransitionType.fadeToBlack ||
-            transition.type == ClipTransitionType.fadeToWhite
-        ? null
-        : transition;
+    return transition == null || transition.type.isDip ? null : transition;
   }
 
   final wrap = overlapAfter(clips.last);

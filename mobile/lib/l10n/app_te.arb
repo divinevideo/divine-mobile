@@ -5987,6 +5987,16 @@
     "description": "Transition option where the next clip pushes the current one out of frame."
   },
   "videoEditorTransitionWipe": "తుడవడం",
+  "videoEditorTransitionZoomIn": "జూమ్ ఇన్",
+  "videoEditorTransitionZoomOut": "జూమ్ అవుట్",
+  "videoEditorTransitionSpin": "తిప్పు",
+  "videoEditorTransitionWhipPan": "వేగవంతమైన ప్యాన్",
+  "videoEditorTransitionBlur": "బ్లర్",
+  "videoEditorTransitionGlitch": "గ్లిచ్",
+  "videoEditorTransitionFlash": "ఫ్లాష్",
+  "videoEditorTransitionIris": "ఐరిస్",
+  "videoEditorTransitionStretch": "సాగదీయు",
+  "videoEditorTransitionFlashTooClose": "మరో ఫ్లాష్‌కు ఒక సెకను లోపే ఉంది, కాబట్టి ఇక్కడ ఇది రద్దుగా ప్లే అవుతుంది. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
   },

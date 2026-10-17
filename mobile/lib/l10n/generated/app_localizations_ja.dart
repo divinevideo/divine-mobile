@@ -9574,6 +9574,37 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTransitionWipe => 'ワイプ';
 
   @override
+  String get videoEditorTransitionZoomIn => 'ズームイン';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'ズームアウト';
+
+  @override
+  String get videoEditorTransitionSpin => 'スピン';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'ホイップパン';
+
+  @override
+  String get videoEditorTransitionBlur => 'ぼかし';
+
+  @override
+  String get videoEditorTransitionGlitch => 'グリッチ';
+
+  @override
+  String get videoEditorTransitionFlash => 'フラッシュ';
+
+  @override
+  String get videoEditorTransitionIris => 'アイリス';
+
+  @override
+  String get videoEditorTransitionStretch => 'ストレッチ';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      '別のフラッシュから1秒以内なので、ここではディゾルブになります。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'トランジションを編集';
 
   @override

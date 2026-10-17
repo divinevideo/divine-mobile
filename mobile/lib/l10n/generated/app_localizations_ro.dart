@@ -10289,6 +10289,37 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Ștergere';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Apropiere';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Depărtare';
+
+  @override
+  String get videoEditorTransitionSpin => 'Rotire';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Panoramare rapidă';
+
+  @override
+  String get videoEditorTransitionBlur => 'Estompare';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Bliț';
+
+  @override
+  String get videoEditorTransitionIris => 'Iris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Întindere';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'La mai puțin de o secundă de alt bliț, așa că aici apare ca disolvare. Prea multe clipiri pot face rău persoanelor sensibile.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Editează tranziția';
 
   @override
