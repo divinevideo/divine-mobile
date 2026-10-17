@@ -106,7 +106,11 @@ class ConversationListState extends Equatable {
   /// list identity across unrelated state emits.
   final List<DmConversation> visibleConversations;
 
-  /// Conversations with accounts the viewer has blocked, newest first.
+  /// Conversations the viewer's blocks hide, newest first.
+  ///
+  /// A one-to-one is listed when its peer is blocked. A group the viewer has
+  /// joined is listed only when every other member is blocked; a message
+  /// request is listed when any member is (#10150).
   ///
   /// Held rather than dropped so [InboxFilter.blocked] has something to render.
   /// Blocking removes a thread from the inbox but must never remove the

@@ -583,10 +583,12 @@ class ConversationListBloc
   /// Rows without history carry no `lastMessage*` and are rendered
   /// non-tappable by the inbox.
   ///
-  /// Lists exactly the threads the blocks hide, under the same two rules as the
-  /// lists themselves (#10150): an [inboxCandidates] thread, which the viewer
-  /// has joined, is hidden once **every** other member is blocked; a
-  /// [requestCandidates] thread, which they have not, once **any** is.
+  /// Lists the threads the blocks hide, under the same two rules as the lists
+  /// themselves (#10150): an [inboxCandidates] thread, which the viewer has
+  /// joined, is listed once **every** other member is blocked; a
+  /// [requestCandidates] thread, which they have not, once **any** is. Only
+  /// blocks count, so a group whose other members are partly blocked and
+  /// partly muted is hidden but not listed, like a muted one-to-one.
   List<DmConversation> _computeBlockedConversations({
     required String userPubkey,
     required List<DmConversation> inboxCandidates,

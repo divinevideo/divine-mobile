@@ -285,11 +285,13 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     // room for another member when that one is a moderation key (#10151).
     // (`_onOptions` documents why its sheet still may.)
     final isGroup = widget.participantPubkeys.length > 1;
-    // A thread reached from the Blocked chip is readable but not writable:
-    // the block stays in force, so the composer and the reaction affordance
-    // both go. Reading and screenshotting is the point (#7025); replying
-    // would undo the block the viewer deliberately set. A group stays
-    // writable until every member is blocked (#10150). Rebuilds off the
+    // A one-to-one with a blocked account, and a group with every member
+    // blocked, is readable but not writable: the block stays in force, so the
+    // composer and the reaction affordance both go. Reading and
+    // screenshotting is the point (#7025); replying would undo the block the
+    // viewer deliberately set. A group with only some members blocked stays
+    // writable under a banner, even a request the Blocked chip lists because
+    // one member is blocked (#10150). Rebuilds off the
     // `blocklistVersionProvider` watch above, so unblocking from the kebab (a
     // one-to-one) or a member's profile (a group) brings the composer back,
     // and in a group drops the banner and expands the member's messages.
