@@ -431,7 +431,7 @@ class _AcceptedHolders extends ConsumerWidget {
         listeners: [
           BlocListener<BadgeVideosCubit, BadgeVideosState>(
             listenWhen: (previous, current) =>
-                previous.loadMoreFailures != current.loadMoreFailures,
+                current.loadMoreFailures > previous.loadMoreFailures,
             listener: (context, _) =>
                 ScaffoldMessenger.of(context).showSnackBar(
                   DivineSnackbarContainer.snackBar(
