@@ -14,6 +14,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
+import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/blocs/dm/dm_peer_account_predicate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/constants/search_constants.dart';
@@ -809,6 +810,8 @@ class ConversationListBloc
     if (unreadOnly) result = result.where((c) => !c.isRead).toList();
     if (query.isEmpty) return result;
     final normalized = query.toLowerCase();
+    final isHidden = _blocklistRepository?.shouldFilterFromDms ?? (_) => false;
+    final isBlockedByUs = _blocklistRepository?.isBlocked ?? (_) => false;
     return result.where((c) {
       // Named as the row names it, so a room is never matched by the name of
       // the moderation account in it (#10151).
@@ -855,14 +858,25 @@ class ConversationListBloc
                 )
                 .map((entry) => entry.name!.toLowerCase())
           : [peerName.toLowerCase()];
-      // Any member, as the row decides it: a room that includes a retired key
-      // is closed wherever that member sorts (#10151).
-      final isClosed = dmConversationPeerPubkeys(
+      final peers = dmConversationPeerPubkeys(
         participantPubkeys: c.participantPubkeys,
         currentUserPubkey: userPubkey,
-      ).any(_retiredModerationAccount);
+      );
+      // Any member, as the row decides it: a room that includes a retired key
+      // is closed wherever that member sorts (#10151).
+      final isClosed = peers.any(_retiredModerationAccount);
+      // A preview the row hides is not searchable either, or the search would
+      // surface a hidden member's words (#10150).
+      final previewHidden = dmPreviewHidden(
+        conversation: c,
+        currentUserPubkey: userPubkey,
+        everyMemberBlocked: peers.isNotEmpty && peers.every(isBlockedByUs),
+        isHidden: isHidden,
+      );
       final preview = peerLabels != null && isClosed
           ? peerLabels.retiredConversationClosed.toLowerCase()
+          : previewHidden
+          ? ''
           : c.lastMessageContent?.toLowerCase() ?? '';
       return name.contains(normalized) ||
           knownMemberNames.any(

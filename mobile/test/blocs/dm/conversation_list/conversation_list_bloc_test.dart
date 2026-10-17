@@ -518,6 +518,133 @@ void main() {
           },
         );
 
+        group('search', () {
+          const lastMessage = 'meet at noon';
+
+          // The room's last message was written by its middle member.
+          DmConversation roomWrittenByMiddleMember() => room().copyWith(
+            subject: 'Book club',
+            lastMessageContent: lastMessage,
+            lastMessageSenderPubkey: _testPubkey3,
+          );
+
+          Future<ConversationListState> search(
+            ConversationListBloc bloc,
+            String query,
+          ) {
+            bloc.add(ConversationListSearchQueryChanged(query));
+            return bloc.stream.firstWhere((s) => s.searchQuery == query);
+          }
+
+          test('matches a last message when nobody is blocked', () async {
+            final blocklist = ContentBlocklistRepository();
+            addTearDown(blocklist.dispose);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+
+            final state = await search(bloc, 'noon');
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+          });
+
+          test(
+            "does not match search on a blocked member's last message",
+            () async {
+              final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+              _stubStreams(
+                mockDmRepository,
+                accepted: [roomWrittenByMiddleMember()],
+              );
+              final bloc = createBlocWith(blocklist);
+              addTearDown(bloc.close);
+              final loaded = await load(bloc);
+              expect(
+                loaded.visibleConversations.map((c) => c.id),
+                equals([_testConversationId2]),
+                reason: 'the room stays in the inbox; only its preview hides',
+              );
+
+              final state = await search(bloc, 'noon');
+
+              expect(state.visibleConversations, isEmpty);
+            },
+          );
+
+          test("does not match search on an own-muted member's last "
+              'message', () async {
+            final blocklist = await blocklistMutingMember(_testPubkey3);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            final loaded = await load(bloc);
+            expect(
+              loaded.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+
+            final state = await search(bloc, 'noon');
+
+            expect(state.visibleConversations, isEmpty);
+          });
+
+          test('still finds the room by its name when its last message is '
+              'hidden', () async {
+            final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+
+            final state = await search(bloc, 'book');
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+          });
+
+          test('matches the last message of a group where every member is '
+              'blocked, like a blocked one-to-one', () async {
+            final blocklist = await blocklistBlockingMembers([
+              _testPubkey2,
+              _testPubkey3,
+              _testPubkey4,
+            ]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+            bloc.add(const ConversationListFilterChanged(InboxFilter.blocked));
+            await bloc.stream.firstWhere(
+              (s) => s.filter == InboxFilter.blocked,
+            );
+
+            final state = await search(bloc, 'noon');
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+          });
+        });
+
         group('as a message request', () {
           setUp(() {
             when(

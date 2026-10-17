@@ -1,6 +1,8 @@
 // ABOUTME: Which group members the viewer's own lists hide: whose messages
-// ABOUTME: collapse, and who is left for a chat without them (#10150).
+// ABOUTME: and inbox previews collapse, and who is left for a chat without
+// ABOUTME: them (#10150).
 
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 
 /// Whether a message renders collapsed until the viewer asks to see it.
@@ -23,6 +25,25 @@ bool dmMessageHiddenByDefault({
     senderPubkey.isNotEmpty &&
     !pubkeysEqual(senderPubkey, currentUserPubkey) &&
     isHidden(senderPubkey);
+
+/// Whether an inbox row hides its last message, so neither the preview nor
+/// search shows a hidden member's words.
+///
+/// The same rule as [dmMessageHiddenByDefault], applied to the message the row
+/// previews: only a group hides it, never the viewer's own, and not once
+/// [everyMemberBlocked], which lists the row under Blocked to be read in full.
+bool dmPreviewHidden({
+  required DmConversation conversation,
+  required String currentUserPubkey,
+  required bool everyMemberBlocked,
+  required bool Function(String pubkey) isHidden,
+}) => dmMessageHiddenByDefault(
+  isGroup: conversation.isGroup,
+  everyMemberBlocked: everyMemberBlocked,
+  senderPubkey: conversation.lastMessageSenderPubkey ?? '',
+  currentUserPubkey: currentUserPubkey,
+  isHidden: isHidden,
+);
 
 /// The counterparties the viewer has not blocked, sorted.
 ///
