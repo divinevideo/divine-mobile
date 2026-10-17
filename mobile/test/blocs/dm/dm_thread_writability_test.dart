@@ -58,6 +58,17 @@ void main() {
         );
       });
 
+      // Not a majority rule: one member left unblocked keeps it writable.
+      test('stays writable when two of its three members are blocked', () {
+        expect(
+          resolveDmThreadWritability(
+            participantPubkeys: const [blockedPeer, otherPeer, ordinaryPeer],
+            isBlockedByUs: const {blockedPeer, otherPeer}.contains,
+          ),
+          DmThreadWritability.writable,
+        );
+      });
+
       test('is read-only when every member is blocked', () {
         expect(
           resolveDmThreadWritability(

@@ -2231,6 +2231,55 @@ void main() {
         expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
       });
 
+      // A newer message shifts every row's index; the revealed one must keep
+      // its State rather than collapse again.
+      testWidgets('keeps a revealed message open when a newer one arrives', (
+        tester,
+      ) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+        final states = StreamController<ConversationState>();
+        addTearDown(states.close);
+        final hiddenMessage = messageFrom(bob, hiddenText, 1);
+        final visibleMessage = messageFrom(otherPubkey, visibleText, 2);
+
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: const [otherPubkey, bob],
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [visibleMessage, hiddenMessage],
+            ),
+            stateStream: states.stream,
+            extraOverrides: [
+              fetchUserProfileProvider(bob).overrideWith((ref) async => null),
+              profileVanishedProvider(bob).overrideWith((ref) => false),
+              profileIdentityResolvingProvider(bob).overrideWithValue(false),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.dmHiddenMessageShowAction));
+        await tester.pumpAndSettle();
+        expect(find.text(hiddenText), findsOneWidget);
+
+        const newerText = 'a newer message from everyone else';
+        states.add(
+          ConversationState(
+            status: ConversationStatus.loaded,
+            messages: [
+              messageFrom(otherPubkey, newerText, 3),
+              visibleMessage,
+              hiddenMessage,
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(newerText), findsOneWidget);
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
       testWidgets("shows a blocked peer's messages in full in a one-to-one", (
         tester,
       ) async {

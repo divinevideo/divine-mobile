@@ -221,7 +221,8 @@ void main() {
     group('blocked chats (#7025)', () {
       /// Behaves like the real repository: the inbox drops a conversation only
       /// when every other participant is blocked, requests drop it when any
-      /// is, and the blocked pubkeys are reported.
+      /// is, both drop a conversation with no participant but the viewer, and
+      /// the blocked pubkeys are reported.
       _MockContentBlocklistRepository blocklistBlocking(Set<String> blocked) {
         final blocklist = _MockContentBlocklistRepository();
         when(() => blocklist.runtimeBlockedUsers).thenReturn(blocked);
@@ -237,7 +238,7 @@ void main() {
           final input = inv.positionalArguments.first as List<DmConversation>;
           return input.where((c) {
             final others = peers(inv, c);
-            return others.isEmpty || !others.every(blocked.contains);
+            return others.isNotEmpty && !others.every(blocked.contains);
           }).toList();
         });
         when(
@@ -247,9 +248,10 @@ void main() {
           ),
         ).thenAnswer((inv) {
           final input = inv.positionalArguments.first as List<DmConversation>;
-          return input
-              .where((c) => !peers(inv, c).any(blocked.contains))
-              .toList();
+          return input.where((c) {
+            final others = peers(inv, c);
+            return others.isNotEmpty && !others.any(blocked.contains);
+          }).toList();
         });
         return blocklist;
       }
@@ -329,6 +331,42 @@ void main() {
           reason: 'the inbox renders this row inert, with no thread to open',
         );
       });
+
+      // "Every other member is blocked" is vacuously true for a row with no
+      // other member, so without its guard a self-only row would land here.
+      test(
+        'never lists a conversation with no member but the viewer',
+        () async {
+          final selfOnly = _createConversation(
+            id: _testConversationId1,
+            participantPubkeys: const [_testPubkey1],
+          );
+          final selfInAnotherCase = _createConversation(
+            id: _testConversationId2,
+            participantPubkeys: [_testPubkey1, _testPubkey1.toUpperCase()],
+          );
+          _stubStreams(
+            mockDmRepository,
+            accepted: [selfOnly, selfInAnotherCase],
+          );
+          // Blocking someone else keeps the Blocked list from short-circuiting.
+          final bloc = createBlocWith(blocklistBlocking({_testPubkey3}));
+          addTearDown(bloc.close);
+
+          // Unguarded, the recompute throws on the self-only one-to-one and
+          // never reaches a loaded state; fail fast rather than at the
+          // default ten-minute timeout.
+          final state = await load(bloc).timeout(const Duration(seconds: 5));
+
+          expect(
+            state.blockedConversations.map((c) => c.participantPubkeys),
+            equals([
+              [_testPubkey1, _testPubkey3],
+            ]),
+            reason: 'only the placeholder row for the blocked account',
+          );
+        },
+      );
 
       test(
         'keeps a blocked 1:1 that a request group would otherwise displace',
