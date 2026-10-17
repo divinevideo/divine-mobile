@@ -22850,6 +22850,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Follow a hashtag from its page to find it here.'**
   String get followedHashtagsEmpty;
+
+  /// Sound request DM flow: Request this sound
+  ///
+  /// In en, this message translates to:
+  /// **'Request this sound'**
+  String get soundRequestAction;
+
+  /// Sound request DM flow: Someone wants to use your sound
+  ///
+  /// In en, this message translates to:
+  /// **'Someone wants to use your sound'**
+  String get soundRequestTitle;
+
+  /// Sound request DM flow: Enable sound reuse on this video so anyone can remix with it.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable sound reuse on this video so anyone can remix with it.'**
+  String get soundRequestDescription;
+
+  /// Sound request DM flow: Enable sound reuse
+  ///
+  /// In en, this message translates to:
+  /// **'Enable sound reuse'**
+  String get soundRequestEnable;
+
+  /// Sound request DM flow: Sound requested
+  ///
+  /// In en, this message translates to:
+  /// **'Sound requested'**
+  String get soundRequestSent;
+
+  /// Sound request DM flow: Your requested sound is ready
+  ///
+  /// In en, this message translates to:
+  /// **'Your requested sound is ready'**
+  String get soundReadyTitle;
+
+  /// Sound request DM flow: Use it in your next video or save it to your sound library.
+  ///
+  /// In en, this message translates to:
+  /// **'Use it in your next video or save it to your sound library.'**
+  String get soundReadyDescription;
+
+  /// Sound request DM flow: Use this sound
+  ///
+  /// In en, this message translates to:
+  /// **'Use this sound'**
+  String get soundReadyUse;
+
+  /// Sound request DM flow: Save to My Sounds
+  ///
+  /// In en, this message translates to:
+  /// **'Save to My Sounds'**
+  String get soundReadySave;
+
+  /// Sound request DM flow: Saved
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get soundRequestSaved;
 }
 
 class _AppLocalizationsDelegate

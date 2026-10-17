@@ -13350,4 +13350,36 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => 'እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።';
+
+  @override
+  String get soundRequestAction => 'ይህን ድምፅ ጠይቅ';
+
+  @override
+  String get soundRequestTitle => 'አንድ ሰው ድምፅህን መጠቀም ይፈልጋል';
+
+  @override
+  String get soundRequestDescription =>
+      'ማንም ሰው በዚህ ድምፅ ሪሚክስ እንዲሠራ የዚህን ቪዲዮ ድምፅ እንደገና መጠቀም ፍቀድ።';
+
+  @override
+  String get soundRequestEnable => 'ድምፁን እንደገና መጠቀም ፍቀድ';
+
+  @override
+  String get soundRequestSent => 'ድምፁ ተጠይቋል';
+
+  @override
+  String get soundReadyTitle => 'የጠየቅከው ድምፅ ዝግጁ ነው';
+
+  @override
+  String get soundReadyDescription =>
+      'በሚቀጥለው ቪዲዮህ ተጠቀምበት ወይም በድምፅ ቤተ መጻሕፍትህ ውስጥ አስቀምጠው።';
+
+  @override
+  String get soundReadyUse => 'ይህን ድምፅ ተጠቀም';
+
+  @override
+  String get soundReadySave => 'በእኔ ድምፆች ውስጥ አስቀምጥ';
+
+  @override
+  String get soundRequestSaved => 'ተቀምጧል';
 }

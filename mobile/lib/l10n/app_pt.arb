@@ -5098,5 +5098,15 @@
   "messagesNoRooms": "Ainda não há salas",
   "followedHashtagsTitle": "Hashtags que você segue",
   "manageHashtags": "Gerenciar hashtags",
-  "followedHashtagsEmpty": "Siga uma hashtag na página dela para encontrá-la aqui."
+  "followedHashtagsEmpty": "Siga uma hashtag na página dela para encontrá-la aqui.",
+  "soundRequestAction": "Solicitar este som",
+  "soundRequestTitle": "Alguém quer usar seu som",
+  "soundRequestDescription": "Permita a reutilização do som deste vídeo para que qualquer pessoa possa criar com ele.",
+  "soundRequestEnable": "Permitir reutilização do som",
+  "soundRequestSent": "Som solicitado",
+  "soundReadyTitle": "O som que você pediu está pronto",
+  "soundReadyDescription": "Use no seu próximo vídeo ou salve na sua biblioteca de sons.",
+  "soundReadyUse": "Usar este som",
+  "soundReadySave": "Salvar em Meus sons",
+  "soundRequestSaved": "Salvo"
 }

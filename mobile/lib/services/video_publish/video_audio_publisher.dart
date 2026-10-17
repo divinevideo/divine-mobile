@@ -551,6 +551,31 @@ class VideoAudioPublisher {
     return event.id;
   }
 
+  /// Publishes an explicitly approved owner's original video sound.
+  Future<String?> publishOriginalSound({
+    required String videoPath,
+    required String videoDTag,
+    required String videoTitle,
+    required String ownerPubkey,
+    int videoKind = 34236,
+    bool Function()? isOperationCurrent,
+  }) async {
+    if (isOperationCurrent?.call() == false ||
+        _authService?.currentPublicKeyHex != ownerPubkey) {
+      return null;
+    }
+    return _publishExtractedAudioEvent(
+      videoPath: videoPath,
+      videoDTag: videoDTag,
+      videoTitle: videoTitle,
+      pubkey: ownerPubkey,
+      relayHint: _relayHint(),
+      sourceVideoKind: videoKind,
+      enforceOwner: true,
+      isOperationCurrent: isOperationCurrent,
+    );
+  }
+
   /// Extracts the audio of the video at [videoPath], uploads it to Blossom,
   /// and publishes it as the creator's Kind 1063 original sound.
   ///
@@ -565,6 +590,9 @@ class VideoAudioPublisher {
     required String relayHint,
     String? videoTitle,
     AudioShareAttribution? attribution,
+    int? sourceVideoKind,
+    bool enforceOwner = false,
+    bool Function()? isOperationCurrent,
   }) async {
     Log.info(
       'Starting audio extraction and publishing flow',
@@ -617,6 +645,11 @@ class VideoAudioPublisher {
       );
 
       final audioFile = File(extractionResult.audioFilePath);
+      if (enforceOwner &&
+          (isOperationCurrent?.call() == false ||
+              _authService?.currentPublicKeyHex != pubkey)) {
+        return null;
+      }
       final uploadResult = await blossomService.uploadAudio(
         audioFile: audioFile,
         mimeType: extractionResult.mimeType,
@@ -690,7 +723,9 @@ class VideoAudioPublisher {
         duration: extractionResult.duration,
         title: audioTitle,
         source: attribution?.sourceUrl,
-        sourceVideoReference: _sourceVideoReference(pubkey, videoDTag),
+        sourceVideoReference: sourceVideoKind == null
+            ? _sourceVideoReference(pubkey, videoDTag)
+            : '$sourceVideoKind:$pubkey:$videoDTag',
         sourceVideoRelay: relayHint,
         creatorName: creditedCreator,
         creatorPubkey: attribution?.creatorPubkey ?? pubkey,
@@ -710,6 +745,11 @@ class VideoAudioPublisher {
         return null;
       }
 
+      if (enforceOwner &&
+          (isOperationCurrent?.call() == false ||
+              authService.currentPublicKeyHex != pubkey)) {
+        return null;
+      }
       final signedAudioEvent = await authService.createAndSignEvent(
         kind: audioEventKind,
         content: audioEventCreditContent(
@@ -721,7 +761,11 @@ class VideoAudioPublisher {
         tags: audioEvent.toTags(),
       );
 
-      if (signedAudioEvent == null) {
+      if (signedAudioEvent == null ||
+          (enforceOwner &&
+              (isOperationCurrent?.call() == false ||
+                  signedAudioEvent.pubkey != pubkey ||
+                  authService.currentPublicKeyHex != pubkey))) {
         Log.error(
           'Failed to create and sign audio event',
           name: _logName,
@@ -761,6 +805,9 @@ class VideoAudioPublisher {
         category: LogCategory.video,
       );
 
+      if (enforceOwner && isOperationCurrent?.call() == false) {
+        return signedAudioEvent.id;
+      }
       final savedSoundsService = _savedSoundsService;
       if (savedSoundsService != null) {
         final publishedAudioEvent = AudioEvent.fromNostrEvent(signedAudioEvent);

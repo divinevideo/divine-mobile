@@ -16,6 +16,7 @@ import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dar
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
+import 'package:openvine/blocs/sound_requests/sound_requests_scope.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/features/appearance/providers/appearance_providers.dart';
 import 'package:openvine/features/people_lists/curated_lists_gate.dart';
@@ -219,7 +220,9 @@ class AppCompositionRoot extends ConsumerWidget {
             child: UpdateDialogListener(
               child: UploadFailureListener(
                 child: GeoBlockingGate(
-                  child: AppLifecycleHandler(child: child),
+                  child: AppLifecycleHandler(
+                    child: SoundRequestsScope(child: child),
+                  ),
                 ),
               ),
             ),

@@ -7,7 +7,12 @@ import 'package:meta/meta.dart';
 /// The server's fresh reuse decision for one selected video.
 class AudioReusePolicy {
   /// Creates an audio reuse policy response.
-  const AudioReusePolicy({required this.allowAudioReuse});
+  const AudioReusePolicy({
+    required this.allowAudioReuse,
+    this.videoFound = true,
+    this.audioReuseSuppressed = false,
+    this.verifiedArchive = false,
+  });
 
   /// Parses the Funnelcake response, rejecting missing or non-boolean fields.
   factory AudioReusePolicy.fromRefreshJson(
@@ -43,8 +48,22 @@ class AudioReusePolicy {
     if (validFor <= Duration.zero) {
       throw const FormatException('Expired audio reuse policy response');
     }
-    return AudioReusePolicy(allowAudioReuse: allowAudioReuse);
+    return AudioReusePolicy(
+      allowAudioReuse: allowAudioReuse,
+      videoFound: videoFound,
+      audioReuseSuppressed: audioReuseSuppressed,
+      verifiedArchive: verifiedArchive,
+    );
   }
+
+  /// Whether the selected logical video exists on the policy server.
+  final bool videoFound;
+
+  /// Whether an active takedown suppresses reuse even with creator consent.
+  final bool audioReuseSuppressed;
+
+  /// Whether this source follows the separate classic-audio policy.
+  final bool verifiedArchive;
 
   /// Final server-authoritative permission for non-owner reuse.
   final bool allowAudioReuse;

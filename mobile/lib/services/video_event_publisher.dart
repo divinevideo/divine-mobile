@@ -819,6 +819,97 @@ class VideoEventPublisher {
     );
   }
 
+  /// Publishes the owner's original sound without uploading another video.
+  Future<String?> publishOriginalSound({
+    required String videoPath,
+    required String videoDTag,
+    required String videoTitle,
+    required String ownerPubkey,
+    int videoKind = 34236,
+    bool Function()? isOperationCurrent,
+  }) => _audioPublisher.publishOriginalSound(
+    videoPath: videoPath,
+    videoDTag: videoDTag,
+    videoTitle: videoTitle,
+    ownerPubkey: ownerPubkey,
+    videoKind: videoKind,
+    isOperationCurrent: isOperationCurrent,
+  );
+
+  /// Replaces only audio-sharing tags on a signed, addressable owner video.
+  /// Throws [SoundReusePublicationException] if signing or publication fails.
+  Future<VideoEvent> republishWithAudioReuse({
+    required VideoEvent existingEvent,
+    required String audioEventId,
+    required String audioRelayHint,
+    bool Function()? isOperationCurrent,
+  }) async {
+    final auth = _authService;
+    final owner = existingEvent.pubkey;
+    final kind = existingEvent.eventKind;
+    if (isOperationCurrent?.call() == false ||
+        auth == null ||
+        auth.currentPublicKeyHex != owner ||
+        !NostrHexUtils.isValidEventId(audioEventId) ||
+        (kind != 34236 && kind != 34235)) {
+      throw const SoundReusePublicationException(
+        'Invalid sound-sharing account or event',
+      );
+    }
+    final originalTags = sourceOriginalVideoTags(
+      video: existingEvent,
+      personalEventCache: _personalEventCache,
+    );
+    final dTags = originalTags
+        .where((t) => t.isNotEmpty && t[0] == 'd')
+        .toList();
+    if (dTags.length != 1 ||
+        dTags.single.length != 2 ||
+        dTags.single[1].isEmpty) {
+      throw const SoundReusePublicationException(
+        'Invalid source video coordinate',
+      );
+    }
+    final tags =
+        originalTags
+            .where(
+              (t) =>
+                  t.isEmpty ||
+                  (t[0] != 'allow_audio_reuse' &&
+                      !(t[0] == 'e' && t.length >= 4 && t[3] == 'audio')),
+            )
+            .map(List<String>.from)
+            .toList()
+          ..add(['allow_audio_reuse', 'true'])
+          ..add(['e', audioEventId, audioRelayHint, 'audio']);
+    final event = await auth.createAndSignEvent(
+      kind: kind!,
+      content: existingEvent.content,
+      tags: tags,
+      createdAt: nextReplacementCreatedAt(existingEvent),
+    );
+    if (isOperationCurrent?.call() == false ||
+        event == null ||
+        event.pubkey != owner ||
+        auth.currentPublicKeyHex != owner) {
+      throw const SoundReusePublicationException(
+        'Sound-sharing signature unavailable or account changed',
+      );
+    }
+    if (await _relayPublisher.publishViaWebSocket(event) !=
+        EventPublishOutcome.published) {
+      throw const SoundReusePublicationException(
+        'Sound-sharing replacement rejected by relays',
+      );
+    }
+    final updated = VideoEvent.fromNostrEvent(event, permissive: true);
+    if (auth.currentPublicKeyHex == owner) {
+      _personalEventCache?.cacheUserEvent(event);
+      _videoEventService?.updateVideoEvent(updated);
+    }
+    return updated;
+  }
+
   /// Republish a video event with added text-track tags for subtitles.
   ///
   /// Strips any existing text-track tags from the original event, then emits

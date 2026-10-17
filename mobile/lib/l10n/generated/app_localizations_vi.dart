@@ -13635,4 +13635,36 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Theo dõi hashtag từ trang của nó để tìm thấy ở đây.';
+
+  @override
+  String get soundRequestAction => 'Yêu cầu âm thanh này';
+
+  @override
+  String get soundRequestTitle => 'Có người muốn dùng âm thanh của bạn';
+
+  @override
+  String get soundRequestDescription =>
+      'Cho phép sử dụng lại âm thanh của video này để mọi người có thể tạo bản phối lại.';
+
+  @override
+  String get soundRequestEnable => 'Cho phép sử dụng lại âm thanh';
+
+  @override
+  String get soundRequestSent => 'Đã yêu cầu âm thanh';
+
+  @override
+  String get soundReadyTitle => 'Âm thanh bạn yêu cầu đã sẵn sàng';
+
+  @override
+  String get soundReadyDescription =>
+      'Dùng trong video tiếp theo hoặc lưu vào thư viện âm thanh của bạn.';
+
+  @override
+  String get soundReadyUse => 'Dùng âm thanh này';
+
+  @override
+  String get soundReadySave => 'Lưu vào Âm thanh của tôi';
+
+  @override
+  String get soundRequestSaved => 'Đã lưu';
 }

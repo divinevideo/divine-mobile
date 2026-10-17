@@ -13693,4 +13693,36 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Ikuti hashtag dari halamannya untuk menemuinya di sini.';
+
+  @override
+  String get soundRequestAction => 'Minta bunyi ini';
+
+  @override
+  String get soundRequestTitle => 'Seseorang mahu menggunakan bunyi anda';
+
+  @override
+  String get soundRequestDescription =>
+      'Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.';
+
+  @override
+  String get soundRequestEnable => 'Benarkan penggunaan semula bunyi';
+
+  @override
+  String get soundRequestSent => 'Bunyi diminta';
+
+  @override
+  String get soundReadyTitle => 'Bunyi yang anda minta sudah sedia';
+
+  @override
+  String get soundReadyDescription =>
+      'Gunakannya dalam video seterusnya atau simpan ke pustaka bunyi anda.';
+
+  @override
+  String get soundReadyUse => 'Gunakan bunyi ini';
+
+  @override
+  String get soundReadySave => 'Simpan ke Bunyi Saya';
+
+  @override
+  String get soundRequestSaved => 'Disimpan';
 }

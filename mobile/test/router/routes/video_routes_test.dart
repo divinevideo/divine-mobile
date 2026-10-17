@@ -5,9 +5,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -37,7 +39,10 @@ class _EngagementState extends Fake implements GoRouterState {
 }
 
 class _FakeGoRouterState extends Fake implements GoRouterState {
-  _FakeGoRouterState(this.uri);
+  _FakeGoRouterState(this.uri, {this.extra});
+
+  @override
+  final Object? extra;
 
   @override
   final Uri uri;
@@ -63,19 +68,41 @@ class _FakeGoRouterState extends Fake implements GoRouterState {
 
 /// Runs the recorder route's page builder for [location] and returns the
 /// widget it mounts, without building it.
-VideoRecorderRoute _recorderRouteFor(String location) {
+VideoRecorderRoute _recorderRouteFor(String location, {Object? extra}) {
   final route = videoRoutes().whereType<GoRoute>().firstWhere(
     (route) => route.path == VideoRecorderScreen.path,
   );
   final page = route.pageBuilder!(
     _FakeBuildContext(),
-    _FakeGoRouterState(Uri.parse(location)),
+    _FakeGoRouterState(Uri.parse(location), extra: extra),
   );
   return (page as CustomTransitionPage<void>).child as VideoRecorderRoute;
 }
 
 void main() {
   group('videoRoutes recorder route', () {
+    test('passes a typed sound selection to the recorder', () {
+      final selection = RecorderSoundSelection(
+        sound: AudioEvent(id: 'a' * 64, pubkey: 'b' * 64, createdAt: 1),
+        ownerPubkey: 'c' * 64,
+      );
+      final recorder = _recorderRouteFor(
+        VideoRecorderScreen.path,
+        extra: selection,
+      );
+      expect(recorder.initialSound, same(selection));
+    });
+
+    test('ignores unsupported extras without changing recorder defaults', () {
+      final recorder = _recorderRouteFor(
+        VideoRecorderScreen.path,
+        extra: {'sound': 'unsupported'},
+      );
+      expect(recorder.initialSound, isNull);
+      expect(recorder.entryPoint, CreationEntryPoint.direct);
+      expect(recorder.autoRecord, isFalse);
+    });
+
     test('a bare location opens directly, without auto-record', () {
       final recorder = _recorderRouteFor(VideoRecorderScreen.path);
 

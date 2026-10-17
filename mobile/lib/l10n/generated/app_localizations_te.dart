@@ -14040,4 +14040,36 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.';
+
+  @override
+  String get soundRequestAction => 'ఈ సౌండ్‌ను అడగండి';
+
+  @override
+  String get soundRequestTitle => 'ఎవరో మీ సౌండ్‌ను ఉపయోగించాలనుకుంటున్నారు';
+
+  @override
+  String get soundRequestDescription =>
+      'ఎవరైనా రీమిక్స్ చేయగలిగేలా ఈ వీడియో సౌండ్‌ను మళ్లీ ఉపయోగించడానికి అనుమతించండి.';
+
+  @override
+  String get soundRequestEnable => 'సౌండ్‌ను మళ్లీ ఉపయోగించడానికి అనుమతించండి';
+
+  @override
+  String get soundRequestSent => 'సౌండ్ కోసం అభ్యర్థన పంపబడింది';
+
+  @override
+  String get soundReadyTitle => 'మీరు అడిగిన సౌండ్ సిద్ధంగా ఉంది';
+
+  @override
+  String get soundReadyDescription =>
+      'దీన్ని మీ తదుపరి వీడియోలో ఉపయోగించండి లేదా మీ సౌండ్ లైబ్రరీలో సేవ్ చేయండి.';
+
+  @override
+  String get soundReadyUse => 'ఈ సౌండ్‌ను ఉపయోగించండి';
+
+  @override
+  String get soundReadySave => 'నా సౌండ్స్‌లో సేవ్ చేయండి';
+
+  @override
+  String get soundRequestSaved => 'సేవ్ చేయబడింది';
 }

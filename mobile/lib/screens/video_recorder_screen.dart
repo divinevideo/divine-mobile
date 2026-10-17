@@ -19,11 +19,13 @@ import 'package:openvine/mixins/codec_heavy_surface_guard.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
@@ -74,22 +76,38 @@ class VideoRecorderRoute extends ConsumerWidget {
     super.key,
     this.entryPoint = CreationEntryPoint.direct,
     this.autoRecord = false,
+    this.initialSound,
   });
 
   final String entryPoint;
+
+  final RecorderSoundSelection? initialSound;
 
   /// See [VideoRecorderView.autoRecord].
   final bool autoRecord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _VideoRecorderBlocScope(
+    final recorder = _VideoRecorderBlocScope(
       child: CameraPermissionGate(
         child: VideoRecorderView(
           entryPoint: entryPoint,
           autoRecord: autoRecord,
         ),
       ),
+    );
+    final selection = initialSound;
+    if (selection == null) return recorder;
+    return RecorderSoundSelectionGate(
+      selection: selection,
+      apply: (value) {
+        if (ref.read(authServiceProvider).currentPublicKeyHex !=
+            value.ownerPubkey) {
+          throw StateError('Recorder sound account changed');
+        }
+        ref.read(videoEditorProvider.notifier).selectSound(value.sound);
+      },
+      child: recorder,
     );
   }
 }

@@ -96,6 +96,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SavedTitleStyles,
     ScheduledPosts,
     ConcordStoreEntries,
+    SoundRequestStates,
   ],
   daos: [
     UserProfilesDao,
@@ -132,6 +133,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SavedTitleStylesDao,
     ScheduledPostsDao,
     ConcordStoreDao,
+    SoundRequestStateDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -142,7 +144,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -274,6 +276,9 @@ class AppDatabase extends _$AppDatabase {
         // Upgrades skip beforeOpen repair, so normalize both v22 shapes here.
         await _addColumnIfMissing('outgoing_dms', 'environment', 'TEXT NULL');
         await m.createTable(concordStoreEntries);
+      }
+      if (from < 24 && to >= 24) {
+        await m.createTable(soundRequestStates);
       }
     },
     beforeOpen: (details) async {

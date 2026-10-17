@@ -5098,5 +5098,15 @@
   "messagesNoRooms": "Belum ada ruang",
   "followedHashtagsTitle": "Tagar yang diikuti",
   "manageHashtags": "Kelola tagar",
-  "followedHashtagsEmpty": "Ikuti tagar dari halamannya untuk menemukannya di sini."
+  "followedHashtagsEmpty": "Ikuti tagar dari halamannya untuk menemukannya di sini.",
+  "soundRequestAction": "Minta suara ini",
+  "soundRequestTitle": "Seseorang ingin memakai suaramu",
+  "soundRequestDescription": "Izinkan penggunaan ulang suara video ini agar siapa pun bisa membuat remix dengannya.",
+  "soundRequestEnable": "Izinkan penggunaan ulang suara",
+  "soundRequestSent": "Suara diminta",
+  "soundReadyTitle": "Suara yang kamu minta sudah siap",
+  "soundReadyDescription": "Pakai di video berikutnya atau simpan ke koleksi suaramu.",
+  "soundReadyUse": "Pakai suara ini",
+  "soundReadySave": "Simpan ke Suara Saya",
+  "soundRequestSaved": "Tersimpan"
 }

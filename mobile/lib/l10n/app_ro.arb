@@ -5098,5 +5098,15 @@
   "messagesNoRooms": "Încă nu există camere",
   "followedHashtagsTitle": "Hashtaguri urmărite",
   "manageHashtags": "Gestionează hashtagurile",
-  "followedHashtagsEmpty": "Urmărește un hashtag de pe pagina sa pentru a-l găsi aici."
+  "followedHashtagsEmpty": "Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.",
+  "soundRequestAction": "Solicită acest sunet",
+  "soundRequestTitle": "Cineva vrea să folosească sunetul tău",
+  "soundRequestDescription": "Permite reutilizarea sunetului din acest videoclip, astfel încât oricine să poată crea remixuri cu el.",
+  "soundRequestEnable": "Permite reutilizarea sunetului",
+  "soundRequestSent": "Sunet solicitat",
+  "soundReadyTitle": "Sunetul solicitat este gata",
+  "soundReadyDescription": "Folosește-l în următorul videoclip sau salvează-l în biblioteca ta de sunete.",
+  "soundReadyUse": "Folosește acest sunet",
+  "soundReadySave": "Salvează în Sunetele mele",
+  "soundRequestSaved": "Salvat"
 }

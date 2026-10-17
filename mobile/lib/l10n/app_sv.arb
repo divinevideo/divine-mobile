@@ -5098,5 +5098,15 @@
   "messagesNoRooms": "Inga rum ännu",
   "followedHashtagsTitle": "Hashtaggar du följer",
   "manageHashtags": "Hantera hashtaggar",
-  "followedHashtagsEmpty": "Följ en hashtagg på dess sida för att hitta den här."
+  "followedHashtagsEmpty": "Följ en hashtagg på dess sida för att hitta den här.",
+  "soundRequestAction": "Be om det här ljudet",
+  "soundRequestTitle": "Någon vill använda ditt ljud",
+  "soundRequestDescription": "Tillåt återanvändning av ljudet i den här videon så att alla kan remixa med det.",
+  "soundRequestEnable": "Tillåt återanvändning av ljud",
+  "soundRequestSent": "Ljud efterfrågat",
+  "soundReadyTitle": "Ljudet du bad om är klart",
+  "soundReadyDescription": "Använd det i din nästa video eller spara det i ditt ljudbibliotek.",
+  "soundReadyUse": "Använd det här ljudet",
+  "soundReadySave": "Spara i Mina ljud",
+  "soundRequestSaved": "Sparat"
 }

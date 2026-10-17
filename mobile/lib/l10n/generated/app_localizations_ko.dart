@@ -13039,4 +13039,34 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => '해시태그 페이지에서 팔로우하면 여기에 표시됩니다.';
+
+  @override
+  String get soundRequestAction => '이 사운드 요청하기';
+
+  @override
+  String get soundRequestTitle => '누군가 내 사운드를 사용하고 싶어 해요';
+
+  @override
+  String get soundRequestDescription => '누구나 리믹스할 수 있도록 이 동영상의 사운드 재사용을 허용하세요.';
+
+  @override
+  String get soundRequestEnable => '사운드 재사용 허용';
+
+  @override
+  String get soundRequestSent => '사운드 요청됨';
+
+  @override
+  String get soundReadyTitle => '요청한 사운드가 준비됐어요';
+
+  @override
+  String get soundReadyDescription => '다음 동영상에서 사용하거나 사운드 라이브러리에 저장하세요.';
+
+  @override
+  String get soundReadyUse => '이 사운드 사용';
+
+  @override
+  String get soundReadySave => '내 사운드에 저장';
+
+  @override
+  String get soundRequestSaved => '저장됨';
 }

@@ -309,6 +309,35 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     return query.watch();
   }
 
+  /// One-to-one application history; callers validate complete metadata tags.
+  Stream<List<DirectMessageRow>> watchApplicationMessages({
+    required String ownerPubkey,
+    required String marker,
+  }) {
+    if (ownerPubkey.isEmpty) return Stream.value(const []);
+    final rooms = attachedDatabase.conversations;
+    return (select(directMessages)
+          ..where(
+            (t) =>
+                _visibleToOwner(t, ownerPubkey) &
+                t.isDeleted.equals(false) &
+                t.tagsJson.contains('"$marker"') &
+                existsQuery(
+                  selectOnly(rooms)
+                    ..addColumns([rooms.id])
+                    ..where(
+                      rooms.id.equalsExp(t.conversationId) &
+                          rooms.isGroup.equals(true) &
+                          (rooms.ownerPubkey.equals(ownerPubkey) |
+                              rooms.ownerPubkey.equals('') |
+                              rooms.ownerPubkey.isNull()),
+                    ),
+                ).not(),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .watch();
+  }
+
   /// Soft-delete a message by rumor event ID (NIP-09 kind 5).
   ///
   /// Sets `is_deleted = true` instead of removing the row so the

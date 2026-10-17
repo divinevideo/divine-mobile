@@ -5098,5 +5098,15 @@
   "messagesNoRooms": "Henüz oda yok",
   "followedHashtagsTitle": "Takip edilen etiketler",
   "manageHashtags": "Etiketleri yönet",
-  "followedHashtagsEmpty": "Bir etiketi burada bulmak için kendi sayfasından takip et."
+  "followedHashtagsEmpty": "Bir etiketi burada bulmak için kendi sayfasından takip et.",
+  "soundRequestAction": "Bu sesi iste",
+  "soundRequestTitle": "Birisi sesini kullanmak istiyor",
+  "soundRequestDescription": "Herkesin remiks yapabilmesi için bu videonun sesinin yeniden kullanılmasına izin ver.",
+  "soundRequestEnable": "Sesin yeniden kullanımına izin ver",
+  "soundRequestSent": "Ses istendi",
+  "soundReadyTitle": "İstediğin ses hazır",
+  "soundReadyDescription": "Bir sonraki videonda kullan veya ses kitaplığına kaydet.",
+  "soundReadyUse": "Bu sesi kullan",
+  "soundReadySave": "Seslerim’e kaydet",
+  "soundRequestSaved": "Kaydedildi"
 }

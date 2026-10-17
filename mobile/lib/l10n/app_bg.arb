@@ -5222,5 +5222,15 @@
   "messagesNoRooms": "Все още няма стаи",
   "followedHashtagsTitle": "Следвани хаштагове",
   "manageHashtags": "Управление на хаштагове",
-  "followedHashtagsEmpty": "Последвайте хаштаг от страницата му, за да го намерите тук."
+  "followedHashtagsEmpty": "Последвайте хаштаг от страницата му, за да го намерите тук.",
+  "soundRequestAction": "Поискай този звук",
+  "soundRequestTitle": "Някой иска да използва звука ти",
+  "soundRequestDescription": "Разреши повторното използване на звука от този видеоклип, за да може всеки да прави ремикси с него.",
+  "soundRequestEnable": "Разреши използването на звука",
+  "soundRequestSent": "Звукът е поискан",
+  "soundReadyTitle": "Поисканият звук е готов",
+  "soundReadyDescription": "Използвай го в следващия си видеоклип или го запази в библиотеката си със звуци.",
+  "soundReadyUse": "Използвай този звук",
+  "soundReadySave": "Запази в Моите звуци",
+  "soundRequestSaved": "Запазено"
 }

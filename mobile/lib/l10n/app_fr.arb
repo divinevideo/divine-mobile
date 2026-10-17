@@ -5098,5 +5098,15 @@
   "messagesNoRooms": "Aucun salon pour le moment",
   "followedHashtagsTitle": "Hashtags suivis",
   "manageHashtags": "Gérer les hashtags",
-  "followedHashtagsEmpty": "Suivez un hashtag depuis sa page pour le retrouver ici."
+  "followedHashtagsEmpty": "Suivez un hashtag depuis sa page pour le retrouver ici.",
+  "soundRequestAction": "Demander ce son",
+  "soundRequestTitle": "Quelqu’un veut utiliser ton son",
+  "soundRequestDescription": "Autorise la réutilisation du son de cette vidéo pour que tout le monde puisse créer avec.",
+  "soundRequestEnable": "Autoriser la réutilisation du son",
+  "soundRequestSent": "Son demandé",
+  "soundReadyTitle": "Le son que tu as demandé est prêt",
+  "soundReadyDescription": "Utilise-le dans ta prochaine vidéo ou enregistre-le dans ta bibliothèque de sons.",
+  "soundReadyUse": "Utiliser ce son",
+  "soundReadySave": "Enregistrer dans Mes sons",
+  "soundRequestSaved": "Enregistré"
 }

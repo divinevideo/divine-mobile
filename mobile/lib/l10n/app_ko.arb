@@ -4644,5 +4644,15 @@
   "messagesNoRooms": "아직 채팅방이 없어요",
   "followedHashtagsTitle": "팔로우 중인 해시태그",
   "manageHashtags": "해시태그 관리",
-  "followedHashtagsEmpty": "해시태그 페이지에서 팔로우하면 여기에 표시됩니다."
+  "followedHashtagsEmpty": "해시태그 페이지에서 팔로우하면 여기에 표시됩니다.",
+  "soundRequestAction": "이 사운드 요청하기",
+  "soundRequestTitle": "누군가 내 사운드를 사용하고 싶어 해요",
+  "soundRequestDescription": "누구나 리믹스할 수 있도록 이 동영상의 사운드 재사용을 허용하세요.",
+  "soundRequestEnable": "사운드 재사용 허용",
+  "soundRequestSent": "사운드 요청됨",
+  "soundReadyTitle": "요청한 사운드가 준비됐어요",
+  "soundReadyDescription": "다음 동영상에서 사용하거나 사운드 라이브러리에 저장하세요.",
+  "soundReadyUse": "이 사운드 사용",
+  "soundReadySave": "내 사운드에 저장",
+  "soundRequestSaved": "저장됨"
 }

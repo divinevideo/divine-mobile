@@ -10244,6 +10244,15 @@ class DmRepository {
         .map((rows) => rows.map(_messageFromRow).toList());
   }
 
+  /// Owner-scoped application history, independent of opened conversations.
+  Stream<List<DmMessage>> watchSoundRequestMessages() {
+    final owner = _ownerPubkey;
+    if (owner == null) return Stream.value(const []);
+    return _directMessagesDao
+        .watchApplicationMessages(ownerPubkey: owner, marker: 'divine')
+        .map((rows) => rows.map(_messageFromRow).toList());
+  }
+
   /// Watch the durable `outgoing_dms` queue rows for [conversationId],
   /// scoped to the active owner. Empty stream when no row is queued or
   /// when no [OutgoingDmsDao] is wired (legacy test fixtures).

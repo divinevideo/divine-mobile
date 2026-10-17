@@ -8144,6 +8144,38 @@ void main() {
     });
 
     group('getVideosByAddressableIds', () {
+      for (final sameTimestamp in [true, false]) {
+        for (final newestFirst in [true, false]) {
+          test(
+            'selects newest signed revision: newestFirst=$newestFirst '
+            'tied=$sameTimestamp',
+            () async {
+              final older = _createVideoEventWithDTag(
+                id: 'a' * 64,
+                pubkey: 'b' * 64,
+                dTag: 'clip',
+                videoUrl: 'https://example.com/older.mp4',
+                createdAt: 1704067200,
+              );
+              final newer = _createVideoEventWithDTag(
+                id: 'c' * 64,
+                pubkey: 'b' * 64,
+                dTag: 'clip',
+                videoUrl: 'https://example.com/newer.mp4',
+                createdAt: sameTimestamp ? 1704067200 : 1704067201,
+              );
+              when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+                (_) async => newestFirst ? [newer, older] : [older, newer],
+              );
+              final result = await repository.getVideosByAddressableIds([
+                '${EventKind.videoVertical}:${'b' * 64}:clip',
+              ]);
+              expect(result.single.id, sameTimestamp ? older.id : newer.id);
+            },
+          );
+        }
+      }
+
       test('returns empty list when addressableIds is empty', () async {
         final result = await repository.getVideosByAddressableIds([]);
 

@@ -5198,5 +5198,15 @@
   "messagesNoRooms": "ገና ምንም ክፍሎች የሉም",
   "followedHashtagsTitle": "የተከተሏቸው ሃሽታጎች",
   "manageHashtags": "ሃሽታጎችን ያስተዳድሩ",
-  "followedHashtagsEmpty": "እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።"
+  "followedHashtagsEmpty": "እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።",
+  "soundRequestAction": "ይህን ድምፅ ጠይቅ",
+  "soundRequestTitle": "አንድ ሰው ድምፅህን መጠቀም ይፈልጋል",
+  "soundRequestDescription": "ማንም ሰው በዚህ ድምፅ ሪሚክስ እንዲሠራ የዚህን ቪዲዮ ድምፅ እንደገና መጠቀም ፍቀድ።",
+  "soundRequestEnable": "ድምፁን እንደገና መጠቀም ፍቀድ",
+  "soundRequestSent": "ድምፁ ተጠይቋል",
+  "soundReadyTitle": "የጠየቅከው ድምፅ ዝግጁ ነው",
+  "soundReadyDescription": "በሚቀጥለው ቪዲዮህ ተጠቀምበት ወይም በድምፅ ቤተ መጻሕፍትህ ውስጥ አስቀምጠው።",
+  "soundReadyUse": "ይህን ድምፅ ተጠቀም",
+  "soundReadySave": "በእኔ ድምፆች ውስጥ አስቀምጥ",
+  "soundRequestSaved": "ተቀምጧል"
 }

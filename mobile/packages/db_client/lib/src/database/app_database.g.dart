@@ -21561,6 +21561,331 @@ class ConcordStoreEntriesCompanion extends UpdateCompanion<ConcordStoreRow> {
   }
 }
 
+class $SoundRequestStatesTable extends SoundRequestStates
+    with TableInfo<$SoundRequestStatesTable, SoundRequestStateRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SoundRequestStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sectionMeta = const VerificationMeta(
+    'section',
+  );
+  @override
+  late final GeneratedColumn<String> section = GeneratedColumn<String>(
+    'section',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordKeyMeta = const VerificationMeta(
+    'recordKey',
+  );
+  @override
+  late final GeneratedColumn<String> recordKey = GeneratedColumn<String>(
+    'record_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerPubkey,
+    section,
+    recordKey,
+    value,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sound_request_states';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SoundRequestStateRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('section')) {
+      context.handle(
+        _sectionMeta,
+        section.isAcceptableOrUnknown(data['section']!, _sectionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sectionMeta);
+    }
+    if (data.containsKey('record_key')) {
+      context.handle(
+        _recordKeyMeta,
+        recordKey.isAcceptableOrUnknown(data['record_key']!, _recordKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordKeyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerPubkey, section, recordKey};
+  @override
+  SoundRequestStateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SoundRequestStateRow(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      section: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}section'],
+      )!,
+      recordKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_key'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+    );
+  }
+
+  @override
+  $SoundRequestStatesTable createAlias(String alias) {
+    return $SoundRequestStatesTable(attachedDatabase, alias);
+  }
+}
+
+class SoundRequestStateRow extends DataClass
+    implements Insertable<SoundRequestStateRow> {
+  final String ownerPubkey;
+  final String section;
+  final String recordKey;
+  final String value;
+  const SoundRequestStateRow({
+    required this.ownerPubkey,
+    required this.section,
+    required this.recordKey,
+    required this.value,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['section'] = Variable<String>(section);
+    map['record_key'] = Variable<String>(recordKey);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  SoundRequestStatesCompanion toCompanion(bool nullToAbsent) {
+    return SoundRequestStatesCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      section: Value(section),
+      recordKey: Value(recordKey),
+      value: Value(value),
+    );
+  }
+
+  factory SoundRequestStateRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SoundRequestStateRow(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      section: serializer.fromJson<String>(json['section']),
+      recordKey: serializer.fromJson<String>(json['recordKey']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'section': serializer.toJson<String>(section),
+      'recordKey': serializer.toJson<String>(recordKey),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  SoundRequestStateRow copyWith({
+    String? ownerPubkey,
+    String? section,
+    String? recordKey,
+    String? value,
+  }) => SoundRequestStateRow(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    section: section ?? this.section,
+    recordKey: recordKey ?? this.recordKey,
+    value: value ?? this.value,
+  );
+  SoundRequestStateRow copyWithCompanion(SoundRequestStatesCompanion data) {
+    return SoundRequestStateRow(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      section: data.section.present ? data.section.value : this.section,
+      recordKey: data.recordKey.present ? data.recordKey.value : this.recordKey,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SoundRequestStateRow(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('section: $section, ')
+          ..write('recordKey: $recordKey, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(ownerPubkey, section, recordKey, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SoundRequestStateRow &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.section == this.section &&
+          other.recordKey == this.recordKey &&
+          other.value == this.value);
+}
+
+class SoundRequestStatesCompanion
+    extends UpdateCompanion<SoundRequestStateRow> {
+  final Value<String> ownerPubkey;
+  final Value<String> section;
+  final Value<String> recordKey;
+  final Value<String> value;
+  final Value<int> rowid;
+  const SoundRequestStatesCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.section = const Value.absent(),
+    this.recordKey = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SoundRequestStatesCompanion.insert({
+    required String ownerPubkey,
+    required String section,
+    required String recordKey,
+    required String value,
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       section = Value(section),
+       recordKey = Value(recordKey),
+       value = Value(value);
+  static Insertable<SoundRequestStateRow> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? section,
+    Expression<String>? recordKey,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (section != null) 'section': section,
+      if (recordKey != null) 'record_key': recordKey,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SoundRequestStatesCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? section,
+    Value<String>? recordKey,
+    Value<String>? value,
+    Value<int>? rowid,
+  }) {
+    return SoundRequestStatesCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      section: section ?? this.section,
+      recordKey: recordKey ?? this.recordKey,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (section.present) {
+      map['section'] = Variable<String>(section.value);
+    }
+    if (recordKey.present) {
+      map['record_key'] = Variable<String>(recordKey.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SoundRequestStatesCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('section: $section, ')
+          ..write('recordKey: $recordKey, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -21618,6 +21943,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ScheduledPostsTable scheduledPosts = $ScheduledPostsTable(this);
   late final $ConcordStoreEntriesTable concordStoreEntries =
       $ConcordStoreEntriesTable(this);
+  late final $SoundRequestStatesTable soundRequestStates =
+      $SoundRequestStatesTable(this);
   late final Index idxMetricsLoopCount = Index(
     'idx_metrics_loop_count',
     'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
@@ -21783,6 +22110,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ConcordStoreDao concordStoreDao = ConcordStoreDao(
     this as AppDatabase,
   );
+  late final SoundRequestStateDao soundRequestStateDao = SoundRequestStateDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -21822,6 +22152,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     savedTitleStyles,
     scheduledPosts,
     concordStoreEntries,
+    soundRequestStates,
     idxMetricsLoopCount,
     idxMetricsLikes,
     idxMetricsViews,
@@ -32159,6 +32490,202 @@ typedef $$ConcordStoreEntriesTableProcessedTableManager =
       ConcordStoreRow,
       PrefetchHooks Function()
     >;
+typedef $$SoundRequestStatesTableCreateCompanionBuilder =
+    SoundRequestStatesCompanion Function({
+      required String ownerPubkey,
+      required String section,
+      required String recordKey,
+      required String value,
+      Value<int> rowid,
+    });
+typedef $$SoundRequestStatesTableUpdateCompanionBuilder =
+    SoundRequestStatesCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> section,
+      Value<String> recordKey,
+      Value<String> value,
+      Value<int> rowid,
+    });
+
+class $$SoundRequestStatesTableFilterComposer
+    extends Composer<_$AppDatabase, $SoundRequestStatesTable> {
+  $$SoundRequestStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get section => $composableBuilder(
+    column: $table.section,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordKey => $composableBuilder(
+    column: $table.recordKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SoundRequestStatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SoundRequestStatesTable> {
+  $$SoundRequestStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get section => $composableBuilder(
+    column: $table.section,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordKey => $composableBuilder(
+    column: $table.recordKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SoundRequestStatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SoundRequestStatesTable> {
+  $$SoundRequestStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get section =>
+      $composableBuilder(column: $table.section, builder: (column) => column);
+
+  GeneratedColumn<String> get recordKey =>
+      $composableBuilder(column: $table.recordKey, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$SoundRequestStatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SoundRequestStatesTable,
+          SoundRequestStateRow,
+          $$SoundRequestStatesTableFilterComposer,
+          $$SoundRequestStatesTableOrderingComposer,
+          $$SoundRequestStatesTableAnnotationComposer,
+          $$SoundRequestStatesTableCreateCompanionBuilder,
+          $$SoundRequestStatesTableUpdateCompanionBuilder,
+          (
+            SoundRequestStateRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SoundRequestStatesTable,
+              SoundRequestStateRow
+            >,
+          ),
+          SoundRequestStateRow,
+          PrefetchHooks Function()
+        > {
+  $$SoundRequestStatesTableTableManager(
+    _$AppDatabase db,
+    $SoundRequestStatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SoundRequestStatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SoundRequestStatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SoundRequestStatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> section = const Value.absent(),
+                Value<String> recordKey = const Value.absent(),
+                Value<String> value = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SoundRequestStatesCompanion(
+                ownerPubkey: ownerPubkey,
+                section: section,
+                recordKey: recordKey,
+                value: value,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String section,
+                required String recordKey,
+                required String value,
+                Value<int> rowid = const Value.absent(),
+              }) => SoundRequestStatesCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                section: section,
+                recordKey: recordKey,
+                value: value,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SoundRequestStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SoundRequestStatesTable,
+      SoundRequestStateRow,
+      $$SoundRequestStatesTableFilterComposer,
+      $$SoundRequestStatesTableOrderingComposer,
+      $$SoundRequestStatesTableAnnotationComposer,
+      $$SoundRequestStatesTableCreateCompanionBuilder,
+      $$SoundRequestStatesTableUpdateCompanionBuilder,
+      (
+        SoundRequestStateRow,
+        BaseReferences<
+          _$AppDatabase,
+          $SoundRequestStatesTable,
+          SoundRequestStateRow
+        >,
+      ),
+      SoundRequestStateRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -32231,4 +32758,6 @@ class $AppDatabaseManager {
       $$ScheduledPostsTableTableManager(_db, _db.scheduledPosts);
   $$ConcordStoreEntriesTableTableManager get concordStoreEntries =>
       $$ConcordStoreEntriesTableTableManager(_db, _db.concordStoreEntries);
+  $$SoundRequestStatesTableTableManager get soundRequestStates =>
+      $$SoundRequestStatesTableTableManager(_db, _db.soundRequestStates);
 }

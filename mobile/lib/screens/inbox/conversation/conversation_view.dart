@@ -5,7 +5,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:dm_repository/dm_repository.dart' show DmRepository;
+import 'package:dm_repository/dm_repository.dart'
+    show DmRepository, SoundRequestMessageKind, parseSoundRequestMessage;
 import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/blocs/dm/shared_video_save/shared_video_save_cubit.dart';
 import 'package:openvine/blocs/dm/video_dm_send/video_dm_send_cubit.dart';
+import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
@@ -41,6 +43,7 @@ import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
@@ -1836,6 +1839,32 @@ class _MessageList extends StatelessWidget {
         final message = messages[index];
         final messageKey = ValueKey(message.id);
         final isSent = message.senderPubkey == currentPubkey;
+        final soundRequest = parseSoundRequestMessage(
+          message,
+          ownerPubkey: currentPubkey,
+          isGroup: isGroup,
+        );
+        if (soundRequest != null &&
+            context.read<SoundRequestsCubit?>() != null) {
+          if (soundRequest.kind == SoundRequestMessageKind.ready &&
+              messages.take(index).any((newer) {
+                final parsed = parseSoundRequestMessage(
+                  newer,
+                  ownerPubkey: currentPubkey,
+                  isGroup: isGroup,
+                );
+                return parsed?.kind == SoundRequestMessageKind.ready &&
+                    parsed?.requestId == soundRequest.requestId &&
+                    parsed?.senderPubkey == soundRequest.senderPubkey;
+              })) {
+            return SizedBox.shrink(key: messageKey);
+          }
+          return SoundRequestCard(
+            key: messageKey,
+            message: soundRequest,
+            isSent: isSent,
+          );
+        }
         final invite = CollaboratorInviteParser.parse(message);
         if (invite != null) {
           return KeyedSubtree(

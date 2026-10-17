@@ -29,6 +29,7 @@ export 'saved_caption_styles_dao.dart';
 export 'saved_title_styles_dao.dart';
 export 'scheduled_posts_dao.dart';
 export 'seen_videos_dao.dart';
+export 'sound_request_state_dao.dart';
 export 'user_profiles_dao.dart';
 export 'vanished_profiles_dao.dart';
 export 'video_metrics_dao.dart';

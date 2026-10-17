@@ -6862,5 +6862,15 @@
   "messagesNoRooms": "Belum ada bilik",
   "followedHashtagsTitle": "Hashtag yang diikuti",
   "manageHashtags": "Urus hashtag",
-  "followedHashtagsEmpty": "Ikuti hashtag dari halamannya untuk menemuinya di sini."
+  "followedHashtagsEmpty": "Ikuti hashtag dari halamannya untuk menemuinya di sini.",
+  "soundRequestAction": "Minta bunyi ini",
+  "soundRequestTitle": "Seseorang mahu menggunakan bunyi anda",
+  "soundRequestDescription": "Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.",
+  "soundRequestEnable": "Benarkan penggunaan semula bunyi",
+  "soundRequestSent": "Bunyi diminta",
+  "soundReadyTitle": "Bunyi yang anda minta sudah sedia",
+  "soundReadyDescription": "Gunakannya dalam video seterusnya atau simpan ke pustaka bunyi anda.",
+  "soundReadyUse": "Gunakan bunyi ini",
+  "soundReadySave": "Simpan ke Bunyi Saya",
+  "soundRequestSaved": "Disimpan"
 }

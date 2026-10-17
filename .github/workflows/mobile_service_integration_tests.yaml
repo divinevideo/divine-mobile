@@ -9,8 +9,8 @@ on:
   pull_request:
     branches: [main]
 
-# The 14 Linux-runnable suites have two dependency shapes. Eleven have a
-# focused closure across ten packages and five app files. Three widget-level
+# The 15 Linux-runnable suites have two dependency shapes. Twelve have a
+# focused closure across eleven packages and six app files. Three widget-level
 # suites import the provider/router graph, which reaches nearly all mobile/lib
 # and mobile/packages production code. A 60-PR sample found those scopes on
 # 37% and 77% of changes respectively; running every suite costs about 14
@@ -156,6 +156,7 @@ jobs:
             integration_test/e2e/dm_group_send_joined_recovery_retry_test.dart
             integration_test/e2e/dm_oneway_latch_unlatch_test.dart
             integration_test/e2e/dm_history_drain_idle_pool_test.dart
+            integration_test/e2e/sound_request_reply_test.dart
           )
           app_suites=(
             integration_test/e2e/reel_reply_retry_double_send_test.dart

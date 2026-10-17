@@ -13824,4 +13824,36 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Последвайте хаштаг от страницата му, за да го намерите тук.';
+
+  @override
+  String get soundRequestAction => 'Поискай този звук';
+
+  @override
+  String get soundRequestTitle => 'Някой иска да използва звука ти';
+
+  @override
+  String get soundRequestDescription =>
+      'Разреши повторното използване на звука от този видеоклип, за да може всеки да прави ремикси с него.';
+
+  @override
+  String get soundRequestEnable => 'Разреши използването на звука';
+
+  @override
+  String get soundRequestSent => 'Звукът е поискан';
+
+  @override
+  String get soundReadyTitle => 'Поисканият звук е готов';
+
+  @override
+  String get soundReadyDescription =>
+      'Използвай го в следващия си видеоклип или го запази в библиотеката си със звуци.';
+
+  @override
+  String get soundReadyUse => 'Използвай този звук';
+
+  @override
+  String get soundReadySave => 'Запази в Моите звуци';
+
+  @override
+  String get soundRequestSaved => 'Запазено';
 }

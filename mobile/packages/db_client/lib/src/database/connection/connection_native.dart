@@ -235,6 +235,7 @@ const salvageableLocalOnlyTables = <String>[
   'pending_profile_saves',
   'outgoing_dms',
   'concord_store_entries',
+  'sound_request_states',
   'dm_message_reactions',
   'removed_conversations',
   'removed_message_ids',

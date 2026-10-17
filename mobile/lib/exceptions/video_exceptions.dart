@@ -90,3 +90,11 @@ class AccountRestrictedPublishException implements Exception {
 
 /// First-party source that established an account-level publish restriction.
 enum AccountRestrictionSource { rest, webSocket }
+
+/// A sound-sharing replacement could not be signed or accepted by a relay.
+class SoundReusePublicationException implements Exception {
+  const SoundReusePublicationException(this.message);
+  final String message;
+  @override
+  String toString() => 'SoundReusePublicationException: $message';
+}

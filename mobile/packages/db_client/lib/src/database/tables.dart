@@ -2178,3 +2178,21 @@ class ConcordStoreEntries extends Table {
   @override
   Set<Column> get primaryKey => {account, scope, key};
 }
+
+/// Account-owned sound request records, reply jobs and publication checkpoints.
+///
+/// Retain terminal records while DM history is replayable: dropping a dismissal
+/// or fulfillment would replay it as a new pending request. Pending jobs and
+/// checkpoints must survive restart and corruption salvage. Account removal
+/// calls SoundRequestStateDao.clearAccount via user-data cleanup; ordinary
+/// account switches preserve these owner-scoped rows, like the DM outbox.
+@DataClassName('SoundRequestStateRow')
+class SoundRequestStates extends Table {
+  TextColumn get ownerPubkey => text()();
+  TextColumn get section => text()();
+  TextColumn get recordKey => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, section, recordKey};
+}

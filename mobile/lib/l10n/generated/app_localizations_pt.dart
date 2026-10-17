@@ -13812,4 +13812,36 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Siga uma hashtag na página dela para encontrá-la aqui.';
+
+  @override
+  String get soundRequestAction => 'Solicitar este som';
+
+  @override
+  String get soundRequestTitle => 'Alguém quer usar seu som';
+
+  @override
+  String get soundRequestDescription =>
+      'Permita a reutilização do som deste vídeo para que qualquer pessoa possa criar com ele.';
+
+  @override
+  String get soundRequestEnable => 'Permitir reutilização do som';
+
+  @override
+  String get soundRequestSent => 'Som solicitado';
+
+  @override
+  String get soundReadyTitle => 'O som que você pediu está pronto';
+
+  @override
+  String get soundReadyDescription =>
+      'Use no seu próximo vídeo ou salve na sua biblioteca de sons.';
+
+  @override
+  String get soundReadyUse => 'Usar este som';
+
+  @override
+  String get soundReadySave => 'Salvar em Meus sons';
+
+  @override
+  String get soundRequestSaved => 'Salvo';
 }

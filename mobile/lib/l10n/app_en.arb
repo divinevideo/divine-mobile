@@ -10065,5 +10065,45 @@
   "followedHashtagsEmpty": "Follow a hashtag from its page to find it here.",
   "@followedHashtagsEmpty": {
     "description": "Empty state explaining how to follow a hashtag."
+  },
+  "soundRequestAction": "Request this sound",
+  "soundRequestTitle": "Someone wants to use your sound",
+  "soundRequestDescription": "Enable sound reuse on this video so anyone can remix with it.",
+  "soundRequestEnable": "Enable sound reuse",
+  "soundRequestSent": "Sound requested",
+  "soundReadyTitle": "Your requested sound is ready",
+  "soundReadyDescription": "Use it in your next video or save it to your sound library.",
+  "soundReadyUse": "Use this sound",
+  "soundReadySave": "Save to My Sounds",
+  "soundRequestSaved": "Saved",
+  "@soundRequestAction": {
+    "description": "Sound request DM flow: Request this sound"
+  },
+  "@soundRequestTitle": {
+    "description": "Sound request DM flow: Someone wants to use your sound"
+  },
+  "@soundRequestDescription": {
+    "description": "Sound request DM flow: Enable sound reuse on this video so anyone can remix with it."
+  },
+  "@soundRequestEnable": {
+    "description": "Sound request DM flow: Enable sound reuse"
+  },
+  "@soundRequestSent": {
+    "description": "Sound request DM flow: Sound requested"
+  },
+  "@soundReadyTitle": {
+    "description": "Sound request DM flow: Your requested sound is ready"
+  },
+  "@soundReadyDescription": {
+    "description": "Sound request DM flow: Use it in your next video or save it to your sound library."
+  },
+  "@soundReadyUse": {
+    "description": "Sound request DM flow: Use this sound"
+  },
+  "@soundReadySave": {
+    "description": "Sound request DM flow: Save to My Sounds"
+  },
+  "@soundRequestSaved": {
+    "description": "Sound request DM flow: Saved"
   }
 }
