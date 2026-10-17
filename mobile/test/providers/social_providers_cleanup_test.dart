@@ -1,6 +1,7 @@
 // ABOUTME: Regression tests for account cleanup provider wiring.
 // ABOUTME: Ensures destructive cleanup reaches the live Hive upload store.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -14,7 +15,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -46,6 +51,8 @@ class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
+class _MockNostrClient extends Mock implements NostrClient {}
+
 const _pubkeyA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _pubkeyB =
@@ -67,6 +74,8 @@ const _pendingDeletionId =
     '3333333333333333333333333333333333333333333333333333333333333333';
 const _legacyNullConversationId =
     '4444444444444444444444444444444444444444444444444444444444444444';
+const _pubkeyQ =
+    '6666666666666666666666666666666666666666666666666666666666666666';
 
 Event _personalEvent(String pubkey, int createdAt) => Event(
   pubkey,
@@ -1954,6 +1963,225 @@ void main() {
           expect(await conversationCountFor(_pubkeyA), 0);
         },
       );
+
+      group('returning to the account', () {
+        late Map<String, Event> rumorByWrapId;
+
+        setUpAll(() {
+          registerFallbackValue(Duration.zero);
+        });
+
+        setUp(() {
+          rumorByWrapId = <String, Event>{};
+        });
+
+        /// A real [DmRepository] session for A over the suite's database. The
+        /// returned controller stands in for the relay.
+        Future<(DmRepository, StreamController<Event>)>
+        startSessionForA() async {
+          final nostrClient = _MockNostrClient();
+          final relay = StreamController<Event>();
+          addTearDown(relay.close);
+          when(() => nostrClient.connectedRelayCount).thenReturn(1);
+          when(() => nostrClient.configuredRelayCount).thenReturn(1);
+          when(
+            () => nostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => const QueryResult(
+              events: [],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 1,
+            ),
+          );
+          when(
+            () => nostrClient.queryEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+            ),
+          ).thenAnswer((_) async => const <Event>[]);
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                (events: const <Event>[], timedOut: false, noRelays: false),
+          );
+          when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
+          when(
+            () => nostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((_) => relay.stream);
+
+          final repository = DmRepository(
+            nostrClient: nostrClient,
+            directMessagesDao: db.directMessagesDao,
+            conversationsDao: db.conversationsDao,
+            processedGiftWrapsDao: db.processedGiftWrapsDao,
+            userPubkey: _pubkeyA,
+            syncState: DmSyncState(prefs),
+            signer: LocalNostrSigner('7' * 64),
+            rumorDecryptor: (_, giftWrap) async => rumorByWrapId[giftWrap.id],
+            nip04Decryptor: (_, ciphertext) async => ciphertext,
+          );
+          await repository.startListening();
+          addTearDown(repository.stopListening);
+          return (repository, relay);
+        }
+
+        /// Delivers a kind-14 rumor from [sender] to [recipient] in a gift
+        /// wrap addressed to A, and waits until its message row exists.
+        Future<void> deliver(
+          StreamController<Event> relay, {
+          required String wrapId,
+          required String rumorId,
+          required String sender,
+          required String recipient,
+          required int at,
+        }) async {
+          rumorByWrapId[wrapId] = Event.fromJson({
+            'id': rumorId,
+            'pubkey': sender,
+            'created_at': at,
+            'kind': EventKind.privateDirectMessage,
+            'tags': [
+              ['p', recipient],
+            ],
+            'content': 'hello at $at',
+            'sig': '',
+          });
+          relay.add(
+            Event.fromJson({
+              'id': wrapId,
+              'pubkey': sender,
+              'created_at': at,
+              'kind': EventKind.giftWrap,
+              'tags': [
+                ['p', _pubkeyA],
+              ],
+              'content': 'wrapped-$wrapId',
+              'sig': '',
+            }),
+          );
+          for (var i = 0; i < 50; i++) {
+            if (await db.directMessagesDao.hasGiftWrap(wrapId)) return;
+            await pumpEventQueue();
+          }
+          fail('wrap $wrapId was never stored');
+        }
+
+        test(
+          're-downloaded chats keep the read state they had when A left, '
+          'without the history drain',
+          () async {
+            final withB = DmRepository.computeConversationId([
+              _pubkeyA,
+              _pubkeyB,
+            ]);
+            final withQ = DmRepository.computeConversationId([
+              _pubkeyA,
+              _pubkeyQ,
+            ]);
+
+            final (firstSession, firstRelay) = await startSessionForA();
+            await deliver(
+              firstRelay,
+              wrapId: 'b' * 64,
+              rumorId: 'ab' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000300,
+            );
+            await firstSession.markConversationAsRead(withB);
+            // Q's chat is read only because A answered last.
+            await deliver(
+              firstRelay,
+              wrapId: 'c' * 64,
+              rumorId: 'ac' * 32,
+              sender: _pubkeyQ,
+              recipient: _pubkeyA,
+              at: 1700000350,
+            );
+            await deliver(
+              firstRelay,
+              wrapId: 'd' * 64,
+              rumorId: 'ad' * 32,
+              sender: _pubkeyA,
+              recipient: _pubkeyQ,
+              at: 1700000400,
+            );
+            expect(
+              (await conversationOf(withQ, _pubkeyA)).isRead,
+              isTrue,
+              reason: 'A replied last, so the chat starts out read',
+            );
+            await firstSession.stopListening();
+
+            await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+            final (secondSession, secondRelay) = await startSessionForA();
+            // Startup maintenance rebuilds previews from messages, and A's
+            // messages are gone: the kept rows lose their last-message stamp.
+            await secondSession.getConversations();
+            expect(
+              (await conversationOf(withB, _pubkeyA)).lastMessageTimestamp,
+              isNull,
+            );
+            // The re-download holds no read marker and misses A's reply.
+            await deliver(
+              secondRelay,
+              wrapId: 'b' * 64,
+              rumorId: 'ab' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000300,
+            );
+            await deliver(
+              secondRelay,
+              wrapId: 'c' * 64,
+              rumorId: 'ac' * 32,
+              sender: _pubkeyQ,
+              recipient: _pubkeyA,
+              at: 1700000350,
+            );
+
+            expect((await conversationOf(withB, _pubkeyA)).isRead, isTrue);
+            expect((await conversationOf(withQ, _pubkeyA)).isRead, isTrue);
+            expect(await secondSession.watchUnreadCount().first, 0);
+
+            // A message B sent while A was away is still new.
+            await deliver(
+              secondRelay,
+              wrapId: 'e' * 64,
+              rumorId: 'ae' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000600,
+            );
+            expect((await conversationOf(withB, _pubkeyA)).isRead, isFalse);
+          },
+        );
+      });
     });
   });
 }
