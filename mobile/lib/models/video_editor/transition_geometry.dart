@@ -97,9 +97,20 @@ Duration transitionDurationForConsumed(
 /// Returns `null` for any boundary (internal or wrap) with no room. Keyed by
 /// clip id rather than index so it stays correct even if the render pipeline
 /// reorders clips.
-Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) {
+Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) =>
+    _clampAndSpace(clips).transitions;
+
+/// Transitions keyed like [clampTransitions], and where the flash transitions
+/// among them start to flash on the exported video before its loop point.
+typedef _Clamped = ({
+  Map<String, ClipTransition?> transitions,
+  List<Duration> flashes,
+});
+
+/// [clampTransitions], with the flashes it keeps.
+_Clamped _clampAndSpace(List<DivineVideoClip> clips) {
   final n = clips.length;
-  if (n == 0) return const {};
+  if (n == 0) return (transitions: const {}, flashes: const []);
 
   // Per-boundary requested per-side consumption. demand[i] is the internal
   // boundary between clip i and clip i+1 (clip i's outgoing transition); the
@@ -163,17 +174,19 @@ Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) {
 typedef _FlashMoment = ({String clipId, Duration at});
 
 /// Where the flash transitions in [transitions] (keyed like
-/// [clampTransitions]) flash on the exported video, in order.
+/// [clampTransitions]) flash on the exported video, in order, and how long
+/// that video is: its playback minus every overlap blend, the loop-restart
+/// wrap's included.
 ///
 /// An internal blend ends at its boundary on the output, and the flash starts
 /// [_flashAt] into it. A loop-restart wrap moves the head of the first clip
 /// into the blend that ends the video, so everything before that blend starts
 /// the wrap's length earlier than on the editor timeline.
-List<_FlashMoment> _flashMoments(
+({List<_FlashMoment> moments, Duration outputDuration}) _flashMoments(
   List<DivineVideoClip> clips,
   Map<String, ClipTransition?> transitions,
 ) {
-  if (clips.isEmpty) return const [];
+  if (clips.isEmpty) return (moments: const [], outputDuration: Duration.zero);
   final wrap = transitions[clips.last.id];
   final wrapBlend = wrap != null && _shortensTimeline(wrap.type)
       ? wrap.duration
@@ -193,14 +206,14 @@ List<_FlashMoment> _flashMoments(
     }
     removed += transition.duration;
   }
+  final outputDuration = boundary + clips.last.playbackDuration - removed;
   if (wrap != null && wrap.type.flashes) {
-    final outputDuration = boundary + clips.last.playbackDuration - removed;
     moments.add((
       clipId: clips.last.id,
       at: outputDuration - wrap.duration + _flashAt(wrap),
     ));
   }
-  return moments;
+  return (moments: moments, outputDuration: outputDuration);
 }
 
 /// How strongly a frame has turned white where a flash starts, for a flashing
@@ -297,15 +310,15 @@ Duration _loopPoint(Duration outputDuration) =>
 
 /// [transitions] with every flash transition that the looping export would
 /// show within [minimumFlashTransitionGap] of another turned into a dissolve,
-/// keeping the earliest. One that falls past the loop point never shows and
-/// stays as it is.
-Map<String, ClipTransition?> _withSpacedFlashes(
+/// keeping the earliest, and where the kept ones start to flash. One that
+/// falls past the loop point never shows and stays as it is.
+_Clamped _withSpacedFlashes(
   List<DivineVideoClip> clips,
   Map<String, ClipTransition?> transitions,
 ) {
-  final moments = _flashMoments(clips, transitions);
-  if (moments.isEmpty) return transitions;
-  final loopPoint = _loopPoint(_outputDuration(clips, transitions));
+  final (:moments, :outputDuration) = _flashMoments(clips, transitions);
+  if (moments.isEmpty) return (transitions: transitions, flashes: const []);
+  final loopPoint = _loopPoint(outputDuration);
   final kept = <Duration>[];
   final dissolved = <String>{};
   for (final moment in moments) {
@@ -323,7 +336,7 @@ Map<String, ClipTransition?> _withSpacedFlashes(
       dissolved.add(moment.clipId);
     }
   }
-  if (dissolved.isEmpty) return transitions;
+  if (dissolved.isEmpty) return (transitions: transitions, flashes: kept);
   Log.debug(
     '⚡ ${dissolved.length} flash transition(s) within '
     '${minimumFlashTransitionGap.inMilliseconds}ms of another play as a '
@@ -331,29 +344,15 @@ Map<String, ClipTransition?> _withSpacedFlashes(
     name: _logName,
     category: .video,
   );
-  return {
-    for (final entry in transitions.entries)
-      entry.key: dissolved.contains(entry.key)
-          ? entry.value?.copyWith(type: ClipTransitionType.dissolve)
-          : entry.value,
-  };
-}
-
-/// The exported length of [clips] with [transitions]: their playback minus
-/// every overlap blend, the loop-restart wrap's included.
-Duration _outputDuration(
-  List<DivineVideoClip> clips,
-  Map<String, ClipTransition?> transitions,
-) {
-  var total = Duration.zero;
-  for (final clip in clips) {
-    total += clip.playbackDuration;
-    final transition = transitions[clip.id];
-    if (transition != null && _shortensTimeline(transition.type)) {
-      total -= transition.duration;
-    }
-  }
-  return total;
+  return (
+    transitions: {
+      for (final entry in transitions.entries)
+        entry.key: dissolved.contains(entry.key)
+            ? entry.value?.copyWith(type: ClipTransitionType.dissolve)
+            : entry.value,
+    },
+    flashes: kept,
+  );
 }
 
 /// Clamps [transition]'s duration to the room its boundary keeps after [scale]
@@ -582,7 +581,7 @@ class TransitionTimelineMap {
   });
 
   factory TransitionTimelineMap.fromClips(List<DivineVideoClip> clips) {
-    final clamped = clampTransitions(clips);
+    final (transitions: clamped, :flashes) = _clampAndSpace(clips);
     var editorTotal = Duration.zero;
     for (final clip in clips) {
       editorTotal += clip.playbackDuration;
@@ -610,16 +609,11 @@ class TransitionTimelineMap {
       }
     }
 
-    final outputDuration = editorTotal - removed;
-    final loopPoint = _loopPoint(outputDuration);
     return TransitionTimelineMap._(
       blends,
       editorDuration: editorTotal,
-      outputDuration: outputDuration,
-      flashes: [
-        for (final moment in _flashMoments(clips, clamped))
-          if (moment.at < loopPoint) moment.at,
-      ],
+      outputDuration: editorTotal - removed,
+      flashes: flashes,
     );
   }
 
