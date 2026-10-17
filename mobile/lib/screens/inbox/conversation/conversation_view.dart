@@ -1298,7 +1298,7 @@ class _BlockedThreadNotice extends StatelessWidget {
   }
 }
 
-/// [_BlockedThreadNotice] for a group with members the viewer blocked (#10150).
+/// [_BlockedThreadNotice] for a group with every member blocked (#10150).
 ///
 /// A group's sheet has no Unblock, so this notice says who was blocked: the
 /// member when there is one, otherwise how many.
