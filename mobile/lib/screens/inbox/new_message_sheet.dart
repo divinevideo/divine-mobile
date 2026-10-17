@@ -15,6 +15,7 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -191,6 +192,13 @@ class _NewMessageSheetViewState extends State<_NewMessageSheetView> {
               child: _SearchField(
                 controller: _searchController,
                 onChanged: _onSearchChanged,
+              ),
+            ),
+            ValueListenableBuilder(
+              valueListenable: _searchController,
+              builder: (context, value, _) => PrivateKeySearchWarning(
+                query: value.text,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               ),
             ),
             if (!isGroupMode && widget.allowGroups) const _NewGroupRow(),

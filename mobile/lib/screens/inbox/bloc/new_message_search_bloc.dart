@@ -12,6 +12,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -89,7 +90,9 @@ class NewMessageSearchBloc
   ) async {
     final query = event.query.trim();
 
-    if (query.isEmpty || query.length < minSearchQueryLength) {
+    if (query.isEmpty ||
+        query.length < minSearchQueryLength ||
+        NostrKeyUtils.containsPrivateKey(query)) {
       emit(
         state.copyWith(
           status: NewMessageSearchStatus.idle,

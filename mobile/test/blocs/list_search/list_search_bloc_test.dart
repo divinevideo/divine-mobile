@@ -12,6 +12,9 @@ class _MockCuratedListRepository extends Mock
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 // Full-length 64-char Nostr pubkeys — never truncate.
 const String _ownerA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -76,6 +79,33 @@ void main() {
     });
 
     group(ListSearchQueryChanged, () {
+      blocTest<ListSearchBloc, ListSearchState>(
+        'does not search and resets when the query contains a private key',
+        build: () => buildBloc(peopleEnabled: true),
+        seed: () => ListSearchState(
+          status: ListSearchStatus.success,
+          query: 'top',
+          videoResults: [testCuratedList],
+        ),
+        act: (bloc) => bloc.add(const ListSearchQueryChanged(_privateKeyQuery)),
+        wait: const Duration(milliseconds: 400),
+        expect: () => [const ListSearchState()],
+        verify: (_) {
+          verifyNever(
+            () => curatedListRepository.searchAllLists(
+              any(),
+              maxThumbnails: any(named: 'maxThumbnails'),
+            ),
+          );
+          verifyNever(
+            () => peopleListsRepository.searchPublicLists(
+              any(),
+              limit: any(named: 'limit'),
+            ),
+          );
+        },
+      );
+
       blocTest<ListSearchBloc, ListSearchState>(
         'emits loading then success when video query matches',
         setUp: () {

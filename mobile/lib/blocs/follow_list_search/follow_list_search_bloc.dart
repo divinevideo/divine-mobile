@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 part 'follow_list_search_event.dart';
@@ -88,8 +89,13 @@ class FollowListSearchBloc
   ) async {
     final trimmed = event.query.trim();
     // A single character matches almost everything and would fan out a
-    // profile fetch per list entry, so treat it as "not searching".
-    final query = trimmed.length < minSearchQueryLength ? '' : trimmed;
+    // profile fetch per list entry, so treat it as "not searching". Text
+    // holding a private key is never sent, so it is "not searching" too.
+    final query =
+        trimmed.length < minSearchQueryLength ||
+            NostrKeyUtils.containsPrivateKey(trimmed)
+        ? ''
+        : trimmed;
 
     // Emit before resolving so the query lands immediately on the names that
     // are already known. Remote matches belong to the previous query, so they

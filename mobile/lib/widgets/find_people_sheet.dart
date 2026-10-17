@@ -15,6 +15,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 /// Full-screen bottom sheet for finding and selecting a user to share with.
@@ -134,6 +135,10 @@ class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
             ),
             onChanged: _onSearchChanged,
           ),
+        ),
+        PrivateKeySearchWarning(
+          query: _searchQuery,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         ),
         Expanded(
           // VineBottomSheet paints its surface with a ColoredBox, which would

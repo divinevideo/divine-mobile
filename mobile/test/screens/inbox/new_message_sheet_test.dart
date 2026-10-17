@@ -454,6 +454,44 @@ void main() {
         expect(newGroupRow(), findsOneWidget);
       });
 
+      testWidgets(
+        'warns instead of searching when the text holds a private key',
+        (tester) async {
+          when(
+            () => profileRepository.searchUsers(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          ).thenAnswer((_) async => const []);
+          await openSheet(
+            tester,
+            allowGroups: false,
+            contacts: [candidate(alicePubkey, 'Alice')],
+          );
+
+          await tester.enterText(
+            find.byType(TextField),
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+          );
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+          verifyNever(
+            () => profileRepository.searchUsers(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          );
+        },
+      );
+
       testWidgets('shows no selection mark before group mode', (tester) async {
         await openSheet(
           tester,

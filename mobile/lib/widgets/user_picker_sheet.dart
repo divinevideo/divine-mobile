@@ -18,6 +18,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vanished_account_identity.dart';
 
@@ -608,6 +609,14 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                 contentPadding: const .symmetric(horizontal: 16, vertical: 14),
               ),
             ),
+          ),
+        ),
+
+        ValueListenableBuilder(
+          valueListenable: _searchController,
+          builder: (context, value, _) => PrivateKeySearchWarning(
+            query: value.text,
+            padding: const .fromLTRB(16, 8, 16, 4),
           ),
         ),
 

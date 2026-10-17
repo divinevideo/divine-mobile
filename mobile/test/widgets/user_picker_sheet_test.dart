@@ -1396,6 +1396,59 @@ void main() {
         expect(find.text('Viewer'), findsNothing);
       });
 
+      testWidgets(
+        'warns instead of searching when the text holds a private key',
+        (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final mockProfileRepo = _createMockProfileRepository();
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                _noVanishedProfiles,
+                profileRepositoryProvider.overrideWithValue(mockProfileRepo),
+                profileReadRepositoryProvider.overrideWithValue(
+                  mockProfileRepo,
+                ),
+                followRepositoryProvider.overrideWithValue(
+                  _createMockFollowRepository(),
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: UserPickerSheet(
+                    title: 'Title',
+                    filterMode: UserPickerFilterMode.allUsers,
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.enterText(
+            find.byType(TextField),
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+          );
+          // Past the 300ms search debounce.
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+          verifyNever(
+            () => mockProfileRepo.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
+              cancellationToken: any(named: 'cancellationToken'),
+            ),
+          );
+        },
+      );
+
       testWidgets('shows hint text initially', (tester) async {
         await tester.pumpWidget(
           ProviderScope(

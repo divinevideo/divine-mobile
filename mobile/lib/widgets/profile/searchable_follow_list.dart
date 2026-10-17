@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/follow_list_search/follow_list_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
 
 /// Builds the row rendered for [pubkey] at [index] in a follow list.
 typedef FollowListItemBuilder = Widget Function(
@@ -107,6 +108,13 @@ class _SearchableFollowListState extends State<SearchableFollowList> {
             controller: _controller,
             hintText: context.l10n.exploreSearchHint,
             onChanged: _onQueryChanged,
+          ),
+        ),
+        ValueListenableBuilder(
+          valueListenable: _controller,
+          builder: (context, value, _) => PrivateKeySearchWarning(
+            query: value.text,
+            padding: const .fromLTRB(16, 12, 16, 0),
           ),
         ),
         Expanded(

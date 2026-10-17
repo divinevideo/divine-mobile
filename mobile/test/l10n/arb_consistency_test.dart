@@ -807,6 +807,9 @@ const _knownUntranslatedDebt = <String>{
   'verifyConnectSignedInCta',
   'verifyConnectSignedInCancel',
   'verifyErrorNotSigned',
+  // Warning when search text looks like a private key (#10260); translations
+  // in the next human pass.
+  'searchPrivateKeyWarning',
 };
 
 const _profileBadgeSheetKeys = <String>{

@@ -79,4 +79,73 @@ void main() {
       );
     });
   });
+
+  group('NostrKeyUtils.containsPrivateKey', () {
+    final nsec = Nip19.encodePrivateKey(
+      '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa',
+    );
+    const publicKey =
+        '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+
+    test('matches a complete nsec', () {
+      expect(NostrKeyUtils.containsPrivateKey(nsec), isTrue);
+    });
+
+    test('matches an nsec in uppercase or with a capitalised first letter', () {
+      expect(NostrKeyUtils.containsPrivateKey(nsec.toUpperCase()), isTrue);
+      expect(
+        NostrKeyUtils.containsPrivateKey('N${nsec.substring(1)}'),
+        isTrue,
+      );
+    });
+
+    test('matches an nsec among other words', () {
+      expect(
+        NostrKeyUtils.containsPrivateKey('find my account $nsec please'),
+        isTrue,
+      );
+    });
+
+    test('matches an nsec behind a nostr: prefix', () {
+      expect(NostrKeyUtils.containsPrivateKey('nostr:$nsec'), isTrue);
+    });
+
+    test('matches an incomplete nsec', () {
+      expect(
+        NostrKeyUtils.containsPrivateKey(nsec.substring(0, 20)),
+        isTrue,
+      );
+    });
+
+    test('matches an nsec split by zero-width characters', () {
+      final pasted =
+          'nsec\u200B${nsec.substring(4, 30)}\u2060${nsec.substring(30)}';
+
+      expect(NostrKeyUtils.containsPrivateKey(pasted), isTrue);
+    });
+
+    test('matches an ncryptsec', () {
+      expect(
+        NostrKeyUtils.containsPrivateKey(
+          'ncryptsec1qgg9947rlpvqu76pj5ecreduf9j',
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not match ordinary search text', () {
+      expect(NostrKeyUtils.containsPrivateKey(''), isFalse);
+      expect(NostrKeyUtils.containsPrivateKey('nsec'), isFalse);
+      expect(NostrKeyUtils.containsPrivateKey('insecure'), isFalse);
+      expect(NostrKeyUtils.containsPrivateKey('#nostr'), isFalse);
+    });
+
+    test('does not match a public key', () {
+      expect(
+        NostrKeyUtils.containsPrivateKey(Nip19.encodePubKey(publicKey)),
+        isFalse,
+      );
+      expect(NostrKeyUtils.containsPrivateKey(publicKey), isFalse);
+    });
+  });
 }

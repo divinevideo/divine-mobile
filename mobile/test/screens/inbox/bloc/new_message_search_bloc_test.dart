@@ -17,6 +17,9 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 void main() {
   group(NewMessageSearchBloc, () {
     late _MockProfileRepository mockProfileRepo;
@@ -451,6 +454,49 @@ void main() {
               .having((s) => s.query, 'query', isEmpty)
               .having((s) => s.results, 'results', isEmpty),
         ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'resets to idle without searching when the query contains a '
+        'private key',
+        setUp: () {
+          when(
+            () => mockProfileRepo.searchUsers(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          ).thenAnswer((_) async => []);
+        },
+        build: createBloc,
+        seed: () => NewMessageSearchState(
+          status: NewMessageSearchStatus.searchSuccess,
+          contacts: [alice],
+          query: 'alice',
+          results: [alice],
+        ),
+        act: (bloc) =>
+            bloc.add(const NewMessageSearchQueryChanged(_privateKeyQuery)),
+        wait: debounceDuration,
+        expect: () => [
+          isA<NewMessageSearchState>()
+              .having((s) => s.status, 'status', NewMessageSearchStatus.idle)
+              .having((s) => s.query, 'query', isEmpty)
+              .having((s) => s.results, 'results', isEmpty),
+        ],
+        verify: (_) {
+          verifyNever(
+            () => mockProfileRepo.searchUsers(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          );
+        },
       );
 
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(

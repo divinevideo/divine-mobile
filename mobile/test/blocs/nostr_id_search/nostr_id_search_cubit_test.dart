@@ -55,6 +55,19 @@ void main() {
 
     group('queryChanged', () {
       blocTest<NostrIdSearchCubit, NostrIdSearchState>(
+        'does not open an identifier containing private-key-looking text',
+        build: buildCubit,
+        act: (cubit) => cubit.queryChanged('34236:$authorHex:nsec1'),
+        expect: () => const [
+          NostrIdSearchState(query: '34236:$authorHex:nsec1'),
+        ],
+        verify: (_) {
+          verifyZeroInteractions(profileRepository);
+          verifyZeroInteractions(videosRepository);
+        },
+      );
+
+      blocTest<NostrIdSearchCubit, NostrIdSearchState>(
         'opens the profile an npub names without a lookup',
         build: buildCubit,
         act: (cubit) => cubit.queryChanged(' $npub '),

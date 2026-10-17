@@ -204,6 +204,11 @@ class MentionResolutionService {
     var remoteLookups = 0;
 
     for (final MapEntry(key: token, value: query) in queryByToken.entries) {
+      // A mention holding a private key is never looked up.
+      if (NostrKeyUtils.containsPrivateKey(query)) {
+        unresolvedTokens.add(token);
+        continue;
+      }
       String? resolved;
       try {
         final localCandidates = await _profileRepository
