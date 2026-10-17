@@ -3985,7 +3985,6 @@
   "followersSortSemanticLabel": "فالوورز ترتیب دیں",
   "followingSortSemanticLabel": "فالوئنگ ترتیب دیں",
   "followSortTitle": "ترتیب بلحاظ",
-  "followSortSmart": "ذہین",
   "followSortNewest": "پہلے نئے",
   "followSortOldest": "پہلے پرانے",
   "newMessageTitle": "نیا پیغام",
@@ -6864,7 +6863,6 @@
   "followedHashtagsTitle": "فالو کیے گئے ہیش ٹیگز",
   "manageHashtags": "ہیش ٹیگز کا نظم کریں",
   "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔",
-<<<<<<< HEAD
   "soundRequestAction": "یہ آواز مانگیں",
   "soundRequestTitle": "کوئی آپ کی آواز استعمال کرنا چاہتا ہے",
   "soundRequestDescription": "اس ویڈیو کی آواز دوبارہ استعمال کرنے کی اجازت دیں تاکہ کوئی بھی اس سے ریمکس بنا سکے۔",
@@ -6875,9 +6873,8 @@
   "soundReadyUse": "یہ آواز استعمال کریں",
   "soundReadySave": "میری آوازوں میں محفوظ کریں",
   "soundRequestSaved": "محفوظ ہو گیا",
-=======
+  "followSortSmart": "ذہین",
   "userRowPosted": "{time} پوسٹ کی گئی",
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
     "placeholders": {

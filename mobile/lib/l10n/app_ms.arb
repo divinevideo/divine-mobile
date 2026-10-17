@@ -3985,7 +3985,6 @@
   "followersSortSemanticLabel": "Isih pengikut",
   "followingSortSemanticLabel": "Isih yang diikuti",
   "followSortTitle": "Isih mengikut",
-  "followSortSmart": "Pintar",
   "followSortNewest": "Terbaharu dahulu",
   "followSortOldest": "Terlama dahulu",
   "newMessageTitle": "Mesej baharu",
@@ -6864,7 +6863,6 @@
   "followedHashtagsTitle": "Hashtag yang diikuti",
   "manageHashtags": "Urus hashtag",
   "followedHashtagsEmpty": "Ikuti hashtag dari halamannya untuk menemuinya di sini.",
-<<<<<<< HEAD
   "soundRequestAction": "Minta bunyi ini",
   "soundRequestTitle": "Seseorang mahu menggunakan bunyi anda",
   "soundRequestDescription": "Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.",
@@ -6875,9 +6873,8 @@
   "soundReadyUse": "Gunakan bunyi ini",
   "soundReadySave": "Simpan ke Bunyi Saya",
   "soundRequestSaved": "Disimpan",
-=======
+  "followSortSmart": "Pintar",
   "userRowPosted": "Disiarkan {time}",
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
     "placeholders": {

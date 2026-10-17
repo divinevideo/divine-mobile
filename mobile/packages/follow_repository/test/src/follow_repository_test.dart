@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../cache_sync/test/fake_cache_dao.dart';
@@ -83,7 +84,9 @@ class _FakeRelay extends RelayBase {
     this.neverDisconnects = false,
     this.throwOnSend = false,
     this.throwOnDisconnect = false,
-  });
+  }) {
+    info = RelayInfo('', '', '', '', const [], '', '');
+  }
 
   /// Messages to deliver via [onMessage] when connecting.
   List<List<dynamic>> fakeResponses = [];

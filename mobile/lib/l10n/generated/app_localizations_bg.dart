@@ -8003,9 +8003,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get followSortTitle => 'Сортиране по';
 
   @override
-  String get followSortSmart => 'Интелигентно';
-
-  @override
   String get followSortNewest => 'Първо най-новите';
 
   @override
@@ -13859,6 +13856,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Запазено';
+
+  @override
+  String get followSortSmart => 'Интелигентно';
 
   @override
   String userRowPosted(String time) {

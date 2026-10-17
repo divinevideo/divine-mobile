@@ -8039,9 +8039,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get followSortTitle => 'Trier par';
 
   @override
-  String get followSortSmart => 'Intelligent';
-
-  @override
   String get followSortNewest => 'Plus récents d\'abord';
 
   @override
@@ -13941,6 +13938,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Enregistré';
+
+  @override
+  String get followSortSmart => 'Intelligent';
 
   @override
   String userRowPosted(String time) {

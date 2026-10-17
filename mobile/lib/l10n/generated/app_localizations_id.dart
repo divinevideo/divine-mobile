@@ -7844,9 +7844,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get followSortTitle => 'Urutkan menurut';
 
   @override
-  String get followSortSmart => 'Cerdas';
-
-  @override
   String get followSortNewest => 'Terbaru dulu';
 
   @override
@@ -13629,6 +13626,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Tersimpan';
+
+  @override
+  String get followSortSmart => 'Cerdas';
 
   @override
   String userRowPosted(String time) {

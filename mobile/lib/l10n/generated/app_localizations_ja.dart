@@ -7520,9 +7520,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get followSortTitle => '並べ替え';
 
   @override
-  String get followSortSmart => 'スマート';
-
-  @override
   String get followSortNewest => '新しい順';
 
   @override
@@ -13055,6 +13052,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '保存済み';
+
+  @override
+  String get followSortSmart => 'スマート';
 
   @override
   String userRowPosted(String time) {

@@ -7540,9 +7540,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get followSortTitle => '정렬 기준';
 
   @override
-  String get followSortSmart => '스마트';
-
-  @override
   String get followSortNewest => '최신순';
 
   @override
@@ -13072,6 +13069,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '저장됨';
+
+  @override
+  String get followSortSmart => '스마트';
 
   @override
   String userRowPosted(String time) {

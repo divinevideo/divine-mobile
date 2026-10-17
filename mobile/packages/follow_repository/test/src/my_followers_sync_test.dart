@@ -148,8 +148,35 @@ class _CappedFollowerIndexer extends _CompleteFollowerIndexer {
   }
 }
 
+class _DelayedCapIndexer extends _CappedFollowerIndexer {
+  _DelayedCapIndexer(super.url, super.relayStatus, super.follower)
+    : super(maxLimit: null) {
+    info = null;
+  }
+
+  final infoRequested = Completer<void>();
+  final delayedInfo = Completer<void>();
+
+  @override
+  Future<void> getRelayInfo(String url) async {
+    if (!infoRequested.isCompleted) infoRequested.complete();
+    await delayedInfo.future;
+    info = RelayInfo('', '', '', '', const [], '', '', maxLimit: 1);
+  }
+}
+
+class _MissingInfoIndexer extends _CompleteFollowerIndexer {
+  _MissingInfoIndexer(super.url, super.relayStatus, super.follower) {
+    info = null;
+  }
+}
+
 class _PartialRelay extends RelayBase {
-  _PartialRelay(super.url, super.relayStatus, this.follower);
+  _PartialRelay(super.url, super.relayStatus, this.follower) {
+    info = RelayInfo('', '', '', '', const [], '', '');
+  }
+  @override
+  Future<void> getRelayInfo(String url) async {}
   final String follower;
   @override
   Future<bool> doConnect() async {
@@ -858,6 +885,51 @@ void main() {
         expect((await MyFollowersSyncState().read(owner)).full, isNull);
       },
     );
+
+    test('late advertised indexer cap cannot prune stored followers', () async {
+      dao.rows[owner] = {stale: 50};
+      await repository.dispose();
+      late _DelayedCapIndexer indexer;
+      repository = build(
+        indexers: ['wss://capped.example'],
+        relayFactory: (url, status) =>
+            indexer = _DelayedCapIndexer(url, status, first),
+      );
+      final sync = repository.syncMyFollowers();
+      await pumpEventQueue();
+      expect(dao.replacements, 0);
+      indexer.delayedInfo.complete();
+      await sync;
+      expect(indexer.infoRequested.isCompleted, isTrue);
+      expect(dao.rows[owner], {stale: 50, first: 100});
+      expect(dao.replacements, 0);
+    });
+
+    test('stalled indexer information keeps the response merge-only', () async {
+      dao.rows[owner] = {stale: 50};
+      await repository.dispose();
+      repository = build(
+        indexers: ['wss://delayed.example'],
+        relayFactory: (url, status) => _DelayedCapIndexer(url, status, first),
+      );
+      await repository.syncMyFollowers();
+      expect(dao.rows[owner], {stale: 50, first: 100});
+      expect(dao.replacements, 0);
+      expect((await MyFollowersSyncState().read(owner)).full, isNull);
+    });
+
+    test('missing indexer information keeps the response merge-only', () async {
+      dao.rows[owner] = {stale: 50};
+      await repository.dispose();
+      repository = build(
+        indexers: ['wss://unadvertised.example'],
+        relayFactory: (url, status) => _MissingInfoIndexer(url, status, first),
+      );
+      await repository.syncMyFollowers();
+      expect(dao.rows[owner], {stale: 50, first: 100});
+      expect(dao.replacements, 0);
+      expect((await MyFollowersSyncState().read(owner)).full, isNull);
+    });
 
     test(
       'indexer EOSE at the requested limit remains merge-only without NIP-11',

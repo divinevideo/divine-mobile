@@ -7448,9 +7448,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get followSortTitle => '排序方式';
 
   @override
-  String get followSortSmart => '智能';
-
-  @override
   String get followSortNewest => '最新优先';
 
   @override
@@ -12900,6 +12897,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '已保存';
+
+  @override
+  String get followSortSmart => '智能';
 
   @override
   String userRowPosted(String time) {

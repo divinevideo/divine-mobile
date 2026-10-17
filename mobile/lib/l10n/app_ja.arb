@@ -3501,7 +3501,6 @@
     "followersSortSemanticLabel": "フォロワーを並べ替え",
     "followingSortSemanticLabel": "フォロー中を並べ替え",
     "followSortTitle": "並べ替え",
-    "followSortSmart": "スマート",
     "followSortNewest": "新しい順",
     "followSortOldest": "古い順",
     "newMessageTitle": "新しいメッセージ",
@@ -5100,7 +5099,6 @@
   "followedHashtagsTitle": "フォロー中のハッシュタグ",
   "manageHashtags": "ハッシュタグを管理",
   "followedHashtagsEmpty": "ハッシュタグのページでフォローすると、ここに表示されます。",
-<<<<<<< HEAD
   "soundRequestAction": "このサウンドをリクエスト",
   "soundRequestTitle": "あなたのサウンドを使いたい人がいます",
   "soundRequestDescription": "この動画のサウンドの再利用を許可すると、誰でもリミックスに使えます。",
@@ -5111,16 +5109,7 @@
   "soundReadyUse": "このサウンドを使う",
   "soundReadySave": "マイサウンドに保存",
   "soundRequestSaved": "保存済み",
-    "@userRowPosted": {
-        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
-        "placeholders": {
-            "time": {
-                "type": "String"
-            }
-        }
-    },
-    "userRowPosted": "{time}に投稿"
-=======
+  "followSortSmart": "スマート",
   "userRowPosted": "{time}に投稿",
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
@@ -5130,5 +5119,4 @@
       }
     }
   }
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

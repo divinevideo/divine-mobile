@@ -7982,9 +7982,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get followSortTitle => 'Ayusin ayon sa';
 
   @override
-  String get followSortSmart => 'Matalino';
-
-  @override
   String get followSortNewest => 'Pinakabago muna';
 
   @override
@@ -13849,6 +13846,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Na-save';
+
+  @override
+  String get followSortSmart => 'Matalino';
 
   @override
   String userRowPosted(String time) {

@@ -7894,9 +7894,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get followSortTitle => 'Sắp xếp theo';
 
   @override
-  String get followSortSmart => 'Thông minh';
-
-  @override
   String get followSortNewest => 'Mới nhất trước';
 
   @override
@@ -13670,6 +13667,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Đã lưu';
+
+  @override
+  String get followSortSmart => 'Thông minh';
 
   @override
   String userRowPosted(String time) {

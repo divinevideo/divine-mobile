@@ -7930,9 +7930,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get followSortTitle => 'ترتیب بلحاظ';
 
   @override
-  String get followSortSmart => 'ذہین';
-
-  @override
   String get followSortNewest => 'پہلے نئے';
 
   @override
@@ -13723,6 +13720,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'محفوظ ہو گیا';
+
+  @override
+  String get followSortSmart => 'ذہین';
 
   @override
   String userRowPosted(String time) {

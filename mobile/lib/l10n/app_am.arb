@@ -2703,7 +2703,6 @@
     "followersSortSemanticLabel": "ተከታዮችን ደርድር",
     "followingSortSemanticLabel": "የሚከተሉትን ደርድር",
     "followSortTitle": "ደርድር በ",
-    "followSortSmart": "ብልህ",
     "followSortNewest": "አዲሶቹ መጀመሪያ",
     "followSortOldest": "አሮጌዎቹ መጀመሪያ",
     "newMessageTitle": "አዲስ መልዕክት",
@@ -5200,7 +5199,6 @@
   "followedHashtagsTitle": "የተከተሏቸው ሃሽታጎች",
   "manageHashtags": "ሃሽታጎችን ያስተዳድሩ",
   "followedHashtagsEmpty": "እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።",
-<<<<<<< HEAD
   "soundRequestAction": "ይህን ድምፅ ጠይቅ",
   "soundRequestTitle": "አንድ ሰው ድምፅህን መጠቀም ይፈልጋል",
   "soundRequestDescription": "ማንም ሰው በዚህ ድምፅ ሪሚክስ እንዲሠራ የዚህን ቪዲዮ ድምፅ እንደገና መጠቀም ፍቀድ።",
@@ -5211,16 +5209,7 @@
   "soundReadyUse": "ይህን ድምፅ ተጠቀም",
   "soundReadySave": "በእኔ ድምፆች ውስጥ አስቀምጥ",
   "soundRequestSaved": "ተቀምጧል",
-    "@userRowPosted": {
-        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
-        "placeholders": {
-            "time": {
-                "type": "String"
-            }
-        }
-    },
-    "userRowPosted": "የተለጠፈው {time}"
-=======
+  "followSortSmart": "ብልህ",
   "userRowPosted": "የተለጠፈው {time}",
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
@@ -5230,5 +5219,4 @@
       }
     }
   }
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

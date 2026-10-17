@@ -3501,7 +3501,6 @@
     "followersSortSemanticLabel": "Sortera följare",
     "followingSortSemanticLabel": "Sortera följda",
     "followSortTitle": "Sortera efter",
-    "followSortSmart": "Smart",
     "followSortNewest": "Nyaste först",
     "followSortOldest": "Äldsta först",
     "newMessageTitle": "Nytt meddelande",
@@ -5100,7 +5099,6 @@
   "followedHashtagsTitle": "Hashtaggar du följer",
   "manageHashtags": "Hantera hashtaggar",
   "followedHashtagsEmpty": "Följ en hashtagg på dess sida för att hitta den här.",
-<<<<<<< HEAD
   "soundRequestAction": "Be om det här ljudet",
   "soundRequestTitle": "Någon vill använda ditt ljud",
   "soundRequestDescription": "Tillåt återanvändning av ljudet i den här videon så att alla kan remixa med det.",
@@ -5111,16 +5109,7 @@
   "soundReadyUse": "Använd det här ljudet",
   "soundReadySave": "Spara i Mina ljud",
   "soundRequestSaved": "Sparat",
-    "@userRowPosted": {
-        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
-        "placeholders": {
-            "time": {
-                "type": "String"
-            }
-        }
-    },
-    "userRowPosted": "Publicerat {time}"
-=======
+  "followSortSmart": "Smart",
   "userRowPosted": "Publicerat {time}",
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
@@ -5130,5 +5119,4 @@
       }
     }
   }
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

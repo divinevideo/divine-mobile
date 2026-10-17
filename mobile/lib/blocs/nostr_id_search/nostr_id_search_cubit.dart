@@ -21,11 +21,12 @@ class NostrIdSearchCubit extends Cubit<NostrIdSearchState>
   /// Creates the cubit with [initialQuery] as its current query, so text the
   /// route prefilled resolves only once the user edits it.
   NostrIdSearchCubit({
-    required ProfileRepository profileRepository,
+    required ProfileRepository? profileRepository,
     required VideosRepository videosRepository,
     String initialQuery = '',
   }) : _resolver = NostrIdSearchResolver(
          profileExists: (hexPubkey) async {
+           if (profileRepository == null) return false;
            final cached = await profileRepository.getCachedProfile(
              pubkey: hexPubkey,
            );

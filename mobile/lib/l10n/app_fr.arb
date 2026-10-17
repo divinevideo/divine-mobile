@@ -3501,7 +3501,6 @@
     "followersSortSemanticLabel": "Trier les abonnés",
     "followingSortSemanticLabel": "Trier les abonnements",
     "followSortTitle": "Trier par",
-    "followSortSmart": "Intelligent",
     "followSortNewest": "Plus récents d'abord",
     "followSortOldest": "Plus anciens d'abord",
     "newMessageTitle": "Nouveau message",
@@ -5100,7 +5099,6 @@
   "followedHashtagsTitle": "Hashtags suivis",
   "manageHashtags": "Gérer les hashtags",
   "followedHashtagsEmpty": "Suivez un hashtag depuis sa page pour le retrouver ici.",
-<<<<<<< HEAD
   "soundRequestAction": "Demander ce son",
   "soundRequestTitle": "Quelqu’un veut utiliser ton son",
   "soundRequestDescription": "Autorise la réutilisation du son de cette vidéo pour que tout le monde puisse créer avec.",
@@ -5111,16 +5109,7 @@
   "soundReadyUse": "Utiliser ce son",
   "soundReadySave": "Enregistrer dans Mes sons",
   "soundRequestSaved": "Enregistré",
-    "@userRowPosted": {
-        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
-        "placeholders": {
-            "time": {
-                "type": "String"
-            }
-        }
-    },
-    "userRowPosted": "Publié {time}"
-=======
+  "followSortSmart": "Intelligent",
   "userRowPosted": "Publié {time}",
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
@@ -5130,5 +5119,4 @@
       }
     }
   }
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

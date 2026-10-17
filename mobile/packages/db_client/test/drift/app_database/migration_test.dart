@@ -79,13 +79,49 @@ void main() {
       ]);
     });
 
+    test('v24 sound workflow data survives the v25 follower migration', () async {
+      final schema = await verifier.schemaAt(24);
+      final owner = 'a' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO sound_request_states (owner_pubkey, section, record_key, value) '
+        'VALUES (?, ?, ?, ?)',
+        [owner, 'jobs', 'pending', 'queued workflow'],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 25);
+      final soundState = await db.soundRequestStateDao.readAccount(owner);
+      expect(soundState, hasLength(1));
+      expect(soundState.single.section, 'jobs');
+      expect(soundState.single.recordKey, 'pending');
+      expect(soundState.single.value, 'queued workflow');
+      await db.myFollowersDao.upsertAll(
+        ownerPubkey: owner,
+        followers: [(pubkey: 'b' * 64, followedAt: 1700000000)],
+        seenAt: 1700000100,
+      );
+      expect(await db.myFollowersDao.followersOf(owner), [
+        (pubkey: 'b' * 64, followedAt: 1700000000),
+      ]);
+    });
+
+    test('v23 gains account-scoped sound request workflow state', () async {
+      final schema = await verifier.schemaAt(23);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 25);
+      await db.soundRequestStateDao.writeAccount('a' * 64, {
+        'jobs': {'pending': '{}'},
+      });
+      expect(await db.soundRequestStateDao.readAccount('a' * 64), hasLength(1));
+    });
 
     test('current schema version is 25', () {
       expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 25);
     });
 
     test(
-      'v22 migrates to v24 with writable account-scoped chat storage',
+      'v22 migrates to v25 with writable account-scoped chat storage',
       () async {
         final schema = await verifier.schemaAt(22);
         final db = AppDatabase(schema.newConnection());
@@ -165,8 +201,8 @@ void main() {
       },
     );
 
-    test('v24 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(24);
+    test('v25 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(25);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
       await db.close();

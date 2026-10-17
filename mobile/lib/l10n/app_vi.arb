@@ -3985,7 +3985,6 @@
   "followersSortSemanticLabel": "Sắp xếp người theo dõi",
   "followingSortSemanticLabel": "Sắp xếp đang theo dõi",
   "followSortTitle": "Sắp xếp theo",
-  "followSortSmart": "Thông minh",
   "followSortNewest": "Mới nhất trước",
   "followSortOldest": "Cũ nhất trước",
   "newMessageTitle": "Tin nhắn mới",
@@ -6864,7 +6863,6 @@
   "followedHashtagsTitle": "Hashtag đang theo dõi",
   "manageHashtags": "Quản lý hashtag",
   "followedHashtagsEmpty": "Theo dõi hashtag từ trang của nó để tìm thấy ở đây.",
-<<<<<<< HEAD
   "soundRequestAction": "Yêu cầu âm thanh này",
   "soundRequestTitle": "Có người muốn dùng âm thanh của bạn",
   "soundRequestDescription": "Cho phép sử dụng lại âm thanh của video này để mọi người có thể tạo bản phối lại.",
@@ -6875,9 +6873,8 @@
   "soundReadyUse": "Dùng âm thanh này",
   "soundReadySave": "Lưu vào Âm thanh của tôi",
   "soundRequestSaved": "Đã lưu",
-=======
+  "followSortSmart": "Thông minh",
   "userRowPosted": "Đã đăng {time}",
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
     "placeholders": {

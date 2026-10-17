@@ -7917,9 +7917,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get followSortTitle => 'Sortera efter';
 
   @override
-  String get followSortSmart => 'Smart';
-
-  @override
   String get followSortNewest => 'Nyaste först';
 
   @override
@@ -13734,6 +13731,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Sparat';
+
+  @override
+  String get followSortSmart => 'Smart';
 
   @override
   String userRowPosted(String time) {

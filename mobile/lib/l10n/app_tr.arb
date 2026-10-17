@@ -3501,7 +3501,6 @@
     "followersSortSemanticLabel": "Takipçileri sırala",
     "followingSortSemanticLabel": "Takip edilenleri sırala",
     "followSortTitle": "Sıralama ölçütü",
-    "followSortSmart": "Akıllı",
     "followSortNewest": "Önce en yeniler",
     "followSortOldest": "Önce en eskiler",
     "newMessageTitle": "Yeni mesaj",
@@ -5100,7 +5099,6 @@
   "followedHashtagsTitle": "Takip edilen etiketler",
   "manageHashtags": "Etiketleri yönet",
   "followedHashtagsEmpty": "Bir etiketi burada bulmak için kendi sayfasından takip et.",
-<<<<<<< HEAD
   "soundRequestAction": "Bu sesi iste",
   "soundRequestTitle": "Birisi sesini kullanmak istiyor",
   "soundRequestDescription": "Herkesin remiks yapabilmesi için bu videonun sesinin yeniden kullanılmasına izin ver.",
@@ -5111,16 +5109,7 @@
   "soundReadyUse": "Bu sesi kullan",
   "soundReadySave": "Seslerim’e kaydet",
   "soundRequestSaved": "Kaydedildi",
-    "@userRowPosted": {
-        "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
-        "placeholders": {
-            "time": {
-                "type": "String"
-            }
-        }
-    },
-    "userRowPosted": "{time} paylaşıldı"
-=======
+  "followSortSmart": "Akıllı",
   "userRowPosted": "{time} paylaşıldı",
   "@userRowPosted": {
     "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
@@ -5130,5 +5119,4 @@
       }
     }
   }
->>>>>>> 45474ab299 (style(l10n): restore the ARB layout of the posted-time entry)
 }

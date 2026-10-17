@@ -198,25 +198,37 @@ class _SearchResultsScope extends ConsumerWidget {
                 }
                 return bloc;
               },
-              child: _ListSearchPolicyScope(
-                repository: curatedListRepository,
-                peopleRepository: peopleListsRepository,
-                peopleListSearchEnabled: peopleListSearchEnabled,
-                policy: listThumbnailPolicy,
-                controller: controller,
-                child: _BlocklistRefreshListener(
-                  child: Scaffold(
-                    // bg/surface — matches SearchResultsView's body background so the
-                    // app bar area (which doesn't paint its own background) doesn't
-                    // show through to the root scaffold's darker default.
-                    backgroundColor: context.vineColors.surface,
-                    body: _SearchResultsBody(
+              child:
+                  RetainedBlocProvider<NostrIdSearchCubit, NostrIdSearchState>(
+                    dependencies: (profileRepository, videosRepository),
+                    create: (_) => NostrIdSearchCubit(
+                      profileRepository: profileRepository,
+                      videosRepository: videosRepository,
+                      initialQuery: controller.text,
+                    ),
+                    child: _NostrIdAutoOpenScope(
                       controller: controller,
-                      requestFocusOnMount: requestFocusOnMount,
+                      child: _ListSearchPolicyScope(
+                        repository: curatedListRepository,
+                        peopleRepository: peopleListsRepository,
+                        peopleListSearchEnabled: peopleListSearchEnabled,
+                        policy: listThumbnailPolicy,
+                        controller: controller,
+                        child: _BlocklistRefreshListener(
+                          child: Scaffold(
+                            // bg/surface — matches SearchResultsView's body background so the
+                            // app bar area (which doesn't paint its own background) doesn't
+                            // show through to the root scaffold's darker default.
+                            backgroundColor: context.vineColors.surface,
+                            body: _SearchResultsBody(
+                              controller: controller,
+                              requestFocusOnMount: requestFocusOnMount,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
             ),
           ),
         ),
