@@ -207,15 +207,18 @@ class CameraMobileService extends CameraService {
         category: .video,
       );
 
-      await _camera.switchCamera();
-      onUpdateState(forceCameraRebuild: true);
-
-      Log.info(
-        '📷 Camera switched',
-        name: 'CameraMobileService',
-        category: .video,
-      );
-      return true;
+      // False when only one camera is usable or a switch is already in
+      // flight; nothing changed, so there is nothing to rebuild.
+      final success = await _camera.switchCamera();
+      if (success) {
+        onUpdateState(forceCameraRebuild: true);
+        Log.info(
+          '📷 Camera switched',
+          name: 'CameraMobileService',
+          category: .video,
+        );
+      }
+      return success;
     } catch (e) {
       Log.error(
         '📷 Failed to switch camera (unexpected error): $e',

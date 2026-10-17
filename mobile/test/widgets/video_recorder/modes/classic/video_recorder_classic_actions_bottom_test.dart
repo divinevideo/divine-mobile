@@ -42,6 +42,7 @@ void main() {
       bool showLastClipOverlay = false,
       bool showGridLines = false,
       bool isFrontCamera = false,
+      bool canSwitchCamera = true,
     }) {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
@@ -53,6 +54,7 @@ void main() {
           showLastClipOverlay: showLastClipOverlay,
           showGridLines: showGridLines,
           isFrontCamera: isFrontCamera,
+          canSwitchCamera: canSwitchCamera,
         ),
       );
       return ProviderScope(
@@ -268,6 +270,23 @@ void main() {
           );
         });
       }
+
+      testWidgets('disables the flip button when the camera cannot switch', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(canSwitchCamera: false));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byType(DivineIconButton).first,
+          warnIfMissed: false,
+        );
+        await tester.pump();
+
+        verifyNever(
+          () => recorderBloc.add(const VideoRecorderCameraSwitched()),
+        );
+      });
 
       testWidgets('shows snackbar when ghost frame is toggled', (tester) async {
         await tester.pumpWidget(buildWidget());

@@ -9,6 +9,9 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 class _FakeCameraPlatform extends DivineCameraPlatform {
   bool shouldFail = true;
 
+  /// When false, the opened camera reports a single usable lens.
+  bool hasBothCameras = false;
+
   /// When set, the audio-capture calls throw instead of recording.
   bool failAudioCapture = false;
 
@@ -39,7 +42,23 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
   }) async {
     lastStabilizationMode = videoStabilizationMode;
     if (shouldFail) throw StateError('camera unavailable');
-    return const CameraState(isInitialized: true, textureId: 1);
+    return CameraState(
+      isInitialized: true,
+      textureId: 1,
+      hasFrontCamera: hasBothCameras,
+      hasBackCamera: hasBothCameras,
+    );
+  }
+
+  @override
+  Future<CameraState> switchCamera(DivineCameraLens lens) async {
+    return CameraState(
+      isInitialized: true,
+      textureId: 1,
+      lens: lens,
+      hasFrontCamera: true,
+      hasBackCamera: true,
+    );
   }
 
   @override
@@ -145,6 +164,32 @@ void main() {
 
         await expectLater(service.suspendAudioCapture(), completes);
         await expectLater(service.resumeAudioCapture(), completes);
+      });
+    });
+
+    group('switchCamera', () {
+      setUp(() {
+        platform.shouldFail = false;
+      });
+
+      test(
+        'reports a failed switch without a rebuild on a single camera',
+        () async {
+          await service.initialize();
+          rebuildRequests.clear();
+
+          expect(await service.switchCamera(), isFalse);
+          expect(rebuildRequests, isEmpty);
+        },
+      );
+
+      test('rebuilds the camera after a successful switch', () async {
+        platform.hasBothCameras = true;
+        await service.initialize();
+        rebuildRequests.clear();
+
+        expect(await service.switchCamera(), isTrue);
+        expect(rebuildRequests, [isTrue]);
       });
     });
 
