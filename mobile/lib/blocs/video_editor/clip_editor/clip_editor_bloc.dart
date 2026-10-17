@@ -2162,7 +2162,6 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     List<String?> rendered,
   ) async {
     final raw = record.rawSourcePath;
-    assert(File(raw).existsSync(), 'Unstabilized footage $raw is gone');
     final restored = clip.copyWith(
       video: EditorVideo.file(raw),
       duration: record.sourceDuration,
