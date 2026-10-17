@@ -5977,6 +5977,12 @@ class AppLocalizationsRo extends AppLocalizations {
       'Mesajele rămân aici ca să le poți citi sau captura. Deblochează din profil pentru a răspunde.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Această conversație nu a putut fi încărcată';
 

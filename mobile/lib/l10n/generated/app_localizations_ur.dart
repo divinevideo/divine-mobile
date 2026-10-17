@@ -5825,6 +5825,12 @@ class AppLocalizationsUr extends AppLocalizations {
       'پیغامات یہیں رہتے ہیں تاکہ آپ انہیں پڑھ سکیں یا اسکرین شاٹ لے سکیں۔ جواب دینے کے لیے ان کی پروفائل سے بلاک ہٹائیں۔';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'یہ گفتگو لوڈ نہیں ہو سکی';
 
   @override

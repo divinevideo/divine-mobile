@@ -1831,6 +1831,152 @@ void main() {
       );
     });
 
+    // Blocking or muting one member of a group hides that member, not the
+    // group: their messages collapse behind Show and stay on the device, so
+    // unblocking restores them with no reload (#7025). A one-to-one keeps
+    // showing a blocked peer's messages in full.
+    group('a group with a hidden member (#10150)', () {
+      const bob =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const hiddenText = 'a message from the hidden member';
+      const visibleText = 'a message from everyone else';
+
+      var hidden = <String>{};
+
+      setUp(() {
+        hidden = {bob};
+        when(() => mockBlocklist.dmHiddenPubkeys).thenAnswer((_) => hidden);
+      });
+
+      DmMessage messageFrom(String sender, String content, int second) =>
+          DmMessage(
+            id: second.toRadixString(16).padLeft(64, '0'),
+            conversationId: 'c' * 64,
+            senderPubkey: sender,
+            content: content,
+            createdAt: now.millisecondsSinceEpoch ~/ 1000 + second,
+            giftWrapId: 'a' * 64,
+          );
+
+      // Newest first, the order the bloc hands the view.
+      Widget groupThread() => buildSubject(
+        counterparties: const [otherPubkey, bob],
+        state: ConversationState(
+          status: ConversationStatus.loaded,
+          messages: [
+            messageFrom(otherPubkey, visibleText, 2),
+            messageFrom(bob, hiddenText, 1),
+          ],
+        ),
+        extraOverrides: [
+          fetchUserProfileProvider(bob).overrideWith((ref) async => null),
+          profileVanishedProvider(bob).overrideWith((ref) => false),
+          profileIdentityResolvingProvider(bob).overrideWithValue(false),
+        ],
+      );
+
+      testWidgets("collapses a blocked member's message behind Show", (
+        tester,
+      ) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.dmHiddenMessageLabel), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageShowAction), findsOneWidget);
+        expect(find.text(hiddenText), findsNothing);
+        expect(find.text(visibleText), findsOneWidget);
+      });
+
+      testWidgets('reveals the message when Show is tapped', (tester) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+        expect(find.text(hiddenText), findsNothing);
+
+        await tester.tap(find.text(l10n.dmHiddenMessageShowAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      testWidgets("shows a blocked peer's messages in full in a one-to-one", (
+        tester,
+      ) async {
+        hidden = {otherPubkey};
+        when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [messageFrom(otherPubkey, hiddenText, 1)],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      testWidgets('collapses a member on our own mute list too', (
+        tester,
+      ) async {
+        // Muted, not blocked: `isBlocked` stays false, so only the DM-hide
+        // set names this member.
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.dmHiddenMessageLabel), findsOneWidget);
+        expect(find.text(hiddenText), findsNothing);
+        expect(find.byType(MessageInputBar), findsOneWidget);
+      });
+
+      testWidgets('does not open message actions from a collapsed message', (
+        tester,
+      ) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.text(l10n.dmHiddenMessageLabel));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.dmMessageActionCopyText), findsNothing);
+
+        // The same gesture on the revealed message does open them, so the
+        // absence above is the gate's doing.
+        await tester.tap(find.text(l10n.dmHiddenMessageShowAction));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.text(hiddenText));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.dmMessageActionCopyText), findsOneWidget);
+      });
+
+      testWidgets('expands the message when the member is unblocked '
+          'mid-thread', (tester) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+        expect(find.text(hiddenText), findsNothing);
+
+        hidden = {};
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(false);
+        ProviderScope.containerOf(
+          tester.element(find.byType(ConversationView)),
+        ).read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+    });
+
     // #6416. Nothing has read a retired moderation key since the rotation, so
     // an appeal typed here published, turned the bubble green, and reached
     // nobody. Replace the composer rather than disable it: `MessageInputBar`

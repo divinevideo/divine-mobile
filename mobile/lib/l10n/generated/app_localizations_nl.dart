@@ -5837,6 +5837,12 @@ class AppLocalizationsNl extends AppLocalizations {
       'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer via hun profiel om te reageren.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Dit gesprek kon niet worden geladen';
 
   @override

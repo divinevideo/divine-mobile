@@ -5904,6 +5904,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'We couldn\'t load this conversation';
 
   @override

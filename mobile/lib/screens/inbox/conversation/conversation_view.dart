@@ -20,6 +20,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
     show LibraryClipTypeFilter;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
+import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/dm_thread_writability.dart';
 import 'package:openvine/blocs/dm/encrypted_video_save/encrypted_video_save_cubit.dart';
@@ -1560,7 +1561,8 @@ class _MessageList extends StatelessWidget {
   final String currentPubkey;
   final List<String> participantPubkeys;
 
-  /// Effective block/mute set; reactions from these pubkeys are hidden.
+  /// Effective block/mute set; reactions from these pubkeys are hidden, and
+  /// in a group their messages collapse behind Show (#10150).
   final Set<String> blockedPubkeys;
   final String senderDisplayName;
   final bool reactionsEnabled;
@@ -1917,11 +1919,23 @@ class _MessageList extends StatelessWidget {
             isSent: isSent,
           );
         }
+
+        // A hidden member's row collapses behind Show. Its message stays in
+        // [messagesById], so a reply quoting it still resolves its video.
+        final isCollapsed = dmMessageHiddenByDefault(
+          isGroup: isGroup,
+          senderPubkey: message.senderPubkey,
+          currentUserPubkey: currentPubkey,
+          isHidden: blockedPubkeys.contains,
+        );
+        Widget keyedRow(WidgetBuilder builder) => isCollapsed
+            ? _HiddenMessageGate(key: messageKey, builder: builder)
+            : KeyedSubtree(key: messageKey, child: builder(context));
+
         final invite = CollaboratorInviteParser.parse(message);
         if (invite != null) {
-          return KeyedSubtree(
-            key: messageKey,
-            child: withAuthor(
+          return keyedRow(
+            (_) => withAuthor(
               message,
               isSent: isSent,
               builder: (author) => CollaboratorInviteCard(
@@ -2083,9 +2097,8 @@ class _MessageList extends StatelessWidget {
         // outgoing queue, so they bypass the selector and short-circuit
         // to `delivered`.
         if (!isSent) {
-          return KeyedSubtree(
-            key: messageKey,
-            child: withAuthor(
+          return keyedRow(
+            (_) => withAuthor(
               message,
               isSent: isSent,
               builder: (author) => buildBubbleWithReactions(
@@ -2095,9 +2108,8 @@ class _MessageList extends StatelessWidget {
             ),
           );
         }
-        return KeyedSubtree(
-          key: messageKey,
-          child:
+        return keyedRow(
+          (_) =>
               BlocSelector<
                 ConversationBloc,
                 ConversationState,
@@ -2108,6 +2120,59 @@ class _MessageList extends StatelessWidget {
               ),
         );
       },
+    );
+  }
+}
+
+/// A message from a group member the viewer blocked or muted, collapsed
+/// until the viewer taps Show (#10150).
+///
+/// The collapsed row has no tap, long-press or double-tap handler, so reply,
+/// react and delete stay out of reach until it is revealed. The row's key
+/// keeps the revealed State across the index shifts newer messages cause.
+class _HiddenMessageGate extends StatefulWidget {
+  const _HiddenMessageGate({required this.builder, super.key});
+
+  /// Builds the row this gate stands in for, once revealed.
+  final WidgetBuilder builder;
+
+  @override
+  State<_HiddenMessageGate> createState() => _HiddenMessageGateState();
+}
+
+class _HiddenMessageGateState extends State<_HiddenMessageGate> {
+  bool _isRevealed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isRevealed) return widget.builder(context);
+    final l10n = context.l10n;
+    // Sits where a received [MessageBubble] standing alone in its run would.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            Flexible(
+              child: Text(
+                l10n.dmHiddenMessageLabel,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurfaceVariant,
+                ),
+              ),
+            ),
+            DivineButton(
+              type: DivineButtonType.link,
+              size: DivineButtonSize.small,
+              label: l10n.dmHiddenMessageShowAction,
+              onPressed: () => setState(() => _isRevealed = true),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -6002,6 +6002,12 @@ class AppLocalizationsTe extends AppLocalizations {
       'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి వారి ప్రొఫైల్ నుండి అన్‌బ్లాక్ చేయండి.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'ఈ సంభాషణను లోడ్ చేయడం సాధ్యపడలేదు';
 
   @override

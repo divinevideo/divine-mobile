@@ -5818,6 +5818,12 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat melalui profil mereka untuk membalas.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Tidak dapat memuatkan perbualan ini';
 
   @override

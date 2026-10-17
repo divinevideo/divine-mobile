@@ -5742,6 +5742,12 @@ class AppLocalizationsId extends AppLocalizations {
       'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir dari profil mereka untuk membalas.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Percakapan ini tidak dapat dimuat';
 
   @override

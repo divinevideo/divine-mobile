@@ -577,6 +577,10 @@ const _knownUntranslatedDebt = <String>{
   // rather than shipping a guess.
   'inboxConversationPreviewSenderPrefix',
 
+  // A blocked or muted group member's collapsed message (#10150).
+  'dmHiddenMessageLabel',
+  'dmHiddenMessageShowAction',
+
   // One report form with an optional note for every reason (#10003).
   'reportDetailsOptional',
   'reportWhyReportingComment',

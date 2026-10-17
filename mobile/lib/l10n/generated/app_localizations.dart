@@ -9937,6 +9937,18 @@ abstract class AppLocalizations {
   /// **'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.'**
   String get dmBlockedGroupThreadBody;
 
+  /// Shown in place of a message from someone the viewer blocked or muted, in a group conversation and as that group's inbox preview. The message is still on the device; tapping Show reveals it.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden message'**
+  String get dmHiddenMessageLabel;
+
+  /// Button beside a hidden message in a group conversation that reveals that one message.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get dmHiddenMessageShowAction;
+
   /// Title of the notice that replaces the message composer when the app cannot tell who a conversation is with because its participants failed to load. Replying is off because there is no one to address.
   ///
   /// In en, this message translates to:
