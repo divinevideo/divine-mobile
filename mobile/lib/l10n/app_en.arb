@@ -7117,6 +7117,46 @@
   "@videoEditorKeyframesHint": {
     "description": "One-line explanation at the top of the keyframe sheet of a layer in the video editor. The playhead is the vertical line marking the current time on the timeline."
   },
+  "videoEditorTrackLabel": "Track",
+  "@videoEditorTrackLabel": {
+    "description": "Action in the bar of a selected layer (text, sticker, drawing) in the video editor timeline: pins the layer to a moving object so it follows it. Short, shown under an icon."
+  },
+  "videoEditorTrackButtonSemanticLabel": "Make the layer follow something that moves",
+  "@videoEditorTrackButtonSemanticLabel": {
+    "description": "Accessibility label for the Track button in the bar of a selected layer in the video editor timeline."
+  },
+  "videoEditorTrackRegionHint": "Frame what this should follow",
+  "@videoEditorTrackRegionHint": {
+    "description": "Instruction over the video while the user drags a box around the object a layer should follow. 'This' is the layer."
+  },
+  "videoEditorTrackRegionResizeSemanticLabel": "Resize the frame",
+  "@videoEditorTrackRegionResizeSemanticLabel": {
+    "description": "Accessibility label for a corner handle of the box around the object a layer should follow; dragging it resizes the box."
+  },
+  "videoEditorTrackStartSemanticLabel": "Start tracking",
+  "@videoEditorTrackStartSemanticLabel": {
+    "description": "Accessibility label for the confirm button that starts tracking the framed object."
+  },
+  "videoEditorTrackProgressLabel": "Following it through the clip…",
+  "@videoEditorTrackProgressLabel": {
+    "description": "Shown with a progress ring while the app follows the framed object through the clip."
+  },
+  "videoEditorTrackUnavailable": "Tracking doesn't work on this clip.",
+  "@videoEditorTrackUnavailable": {
+    "description": "Snackbar when the clip under the playhead cannot be tracked: a still, a freeze frame or a stop-motion clip."
+  },
+  "videoEditorTrackNotFollowed": "Couldn't follow that. Frame something with more detail.",
+  "@videoEditorTrackNotFollowed": {
+    "description": "Snackbar when the framed region had too little detail to follow."
+  },
+  "videoEditorTrackFailed": "Tracking didn't work. Try again.",
+  "@videoEditorTrackFailed": {
+    "description": "Snackbar when tracking failed because the clip could not be read or it stopped responding."
+  },
+  "videoEditorTrackLostPartway": "Lost sight of it partway. The layer holds still from there.",
+  "@videoEditorTrackLostPartway": {
+    "description": "Snackbar when tracking lost the object before the end, for example because it left the frame. The layer follows it up to there and then stays still."
+  },
   "videoEditorKeyframeEffect": "Effect",
   "@videoEditorKeyframeEffect": {
     "description": "Label above the effects in the keyframe sheet of a layer in the video editor: none, wiggle, bounce or pulse, played while the layer moves from one keyframe to the next."

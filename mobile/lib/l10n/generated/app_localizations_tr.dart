@@ -10050,6 +10050,40 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bir ana kare ekle, oynatma kafasını kaydır, sonra katmanı taşı, boyutlandır ya da döndür. Katman ana kareden ana kareye kayar.';
 
   @override
+  String get videoEditorTrackLabel => 'Takip';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Katmanın hareket eden bir şeyi takip etmesini sağla';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Bunun takip edeceği şeyi çerçevele';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Çerçeveyi yeniden boyutlandır';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Takibi başlat';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Klip boyunca takip ediliyor…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'Bu klipte takip çalışmıyor.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Bu takip edilemedi. Daha fazla ayrıntısı olan bir şeyi çerçevele.';
+
+  @override
+  String get videoEditorTrackFailed => 'Takip işe yaramadı. Tekrar dene.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Yarı yolda gözden kayboldu. Katman oradan itibaren sabit kalır.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efekt';
 
   @override

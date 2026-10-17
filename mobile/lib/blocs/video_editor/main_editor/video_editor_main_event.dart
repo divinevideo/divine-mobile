@@ -238,6 +238,20 @@ class VideoEditorMaskEditingChanged extends VideoEditorMainEvent {
   List<Object?> get props => [isEditing];
 }
 
+/// Enters or exits marking the object a layer is tracked to.
+///
+/// Like placing a slide point, the editor gives the canvas the whole screen
+/// while the region is drawn, so the object is framed on the video as large
+/// as it gets; the region picker brings its own controls.
+class VideoEditorTrackRegionMarkingChanged extends VideoEditorMainEvent {
+  const VideoEditorTrackRegionMarkingChanged({required this.isMarking});
+
+  final bool isMarking;
+
+  @override
+  List<Object?> get props => [isMarking];
+}
+
 /// Shows [preview] on a detached clip's layer without touching the editor
 /// history, or ends the preview when it is `null`.
 class VideoEditorDetachedClipOpacityPreviewChanged

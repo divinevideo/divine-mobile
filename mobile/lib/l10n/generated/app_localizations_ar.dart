@@ -10106,6 +10106,39 @@ class AppLocalizationsAr extends AppLocalizations {
       'إضافة إطار رئيسي، ثم تحريك رأس التشغيل، ثم تحريك الطبقة أو تغيير حجمها أو تدويرها. تنتقل الطبقة بسلاسة من إطار رئيسي إلى آخر.';
 
   @override
+  String get videoEditorTrackLabel => 'التتبع';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'جعل الطبقة تتبع شيئًا متحركًا';
+
+  @override
+  String get videoEditorTrackRegionHint => 'تأطير ما يجب أن تتبعه الطبقة';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'تغيير حجم الإطار';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'بدء التتبع';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'جارٍ التتبع عبر المقطع…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'التتبع غير متاح في هذا المقطع.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'تعذّر التتبع. يُفضَّل تأطير شيء بتفاصيل أكثر.';
+
+  @override
+  String get videoEditorTrackFailed => 'تعذّر التتبع. يُرجى المحاولة مجددًا.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'فُقد الأثر في منتصف الطريق، وتبقى الطبقة ثابتة من هناك.';
+
+  @override
   String get videoEditorKeyframeEffect => 'التأثير';
 
   @override

@@ -40,6 +40,7 @@ class VideoEditorMainBloc
     on<VideoEditorTimelineVisibilityToggled>(_onTimelineVisibilityToggled);
     on<VideoEditorMarkerModeChanged>(_onMarkerModeChanged);
     on<VideoEditorSlidePointPlacementChanged>(_onSlidePointPlacementChanged);
+    on<VideoEditorTrackRegionMarkingChanged>(_onTrackRegionMarkingChanged);
     on<VideoEditorMaskEditingChanged>(_onMaskEditingChanged);
     on<VideoEditorDetachedClipOpacityPreviewChanged>(
       _onDetachedClipOpacityPreviewChanged,
@@ -286,6 +287,13 @@ class VideoEditorMainBloc
     Emitter<VideoEditorMainState> emit,
   ) {
     emit(state.copyWith(isPlacingSlidePoint: event.isPlacing));
+  }
+
+  void _onTrackRegionMarkingChanged(
+    VideoEditorTrackRegionMarkingChanged event,
+    Emitter<VideoEditorMainState> emit,
+  ) {
+    emit(state.copyWith(isMarkingTrackRegion: event.isMarking));
   }
 
   void _onMaskEditingChanged(

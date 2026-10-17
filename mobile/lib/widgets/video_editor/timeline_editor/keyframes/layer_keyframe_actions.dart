@@ -58,23 +58,39 @@ Layer layerWithKeyframeToggled(
     return updated;
   }
 
-  final shown =
-      updated.keyframePlacementAt(time) ??
-      LayerPlacement(
-        offset: updated.offset,
-        scale: updated.scale,
-        rotation: updated.rotation,
-        opacity: isDetachedClip
-            ? DetachedClipLayerData.opacityOf(
-                DetachedClipLayerData.metaOf(updated),
-              )
-            : updated.opacity,
-      );
+  final shown = layerPlacementAt(updated, time);
   if (isDetachedClip && !updated.hasKeyframes && updated is WidgetLayer) {
     _setDetachedClipOpacity(updated, 1);
   }
   updated.setKeyframeAt(time, placement: shown, tolerance: tolerance);
   return updated;
+}
+
+/// Where [layer] shows at [time] (video time): where its keyframes move it,
+/// or its own placement and opacity when it has none.
+LayerPlacement layerPlacementAt(Layer layer, Duration time) =>
+    layer.keyframePlacementAt(time) ??
+    LayerPlacement(
+      offset: layer.offset,
+      scale: layer.scale,
+      rotation: layer.rotation,
+      opacity: layerOpacityAt(layer, time),
+    );
+
+/// A copy of [layer] moved by [keyframes] instead of the ones it has.
+///
+/// A detached clip that had none keeps its still opacity in its meta; once
+/// keyframes move it they carry its opacity, so the meta's goes back to 1,
+/// as when its first keyframe is added by hand.
+Layer layerWithKeyframes(Layer layer, List<LayerKeyframe> keyframes) {
+  final updated = _copyKeepingKey(layer);
+  if (!updated.hasKeyframes &&
+      keyframes.isNotEmpty &&
+      DetachedClipLayerData.isDetachedClipLayer(updated) &&
+      updated is WidgetLayer) {
+    _setDetachedClipOpacity(updated, 1);
+  }
+  return updated..keyframes = keyframes;
 }
 
 /// [layer] with the keyframes from the one at or before [time] to the next

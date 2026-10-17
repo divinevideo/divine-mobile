@@ -10131,6 +10131,42 @@ class AppLocalizationsSv extends AppLocalizations {
       'Lägg till en nyckelbildruta, flytta uppspelningshuvudet och flytta, skala eller vrid sedan lagret. Det glider från nyckelbildruta till nyckelbildruta.';
 
   @override
+  String get videoEditorTrackLabel => 'Följ';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Låt lagret följa något som rör sig';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Rama in det som det här ska följa';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Ändra ramens storlek';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Börja följa';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Följer det genom klippet…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Följning fungerar inte på det här klippet.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Det gick inte att följa. Rama in något med fler detaljer.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Följningen fungerade inte. Försök igen.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Tappade bort det på vägen. Lagret står still därifrån.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effekt';
 
   @override

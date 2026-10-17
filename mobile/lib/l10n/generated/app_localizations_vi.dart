@@ -10091,6 +10091,42 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thêm khung hình chính, di chuyển đầu phát, rồi di chuyển, đổi kích thước hoặc xoay lớp. Lớp sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.';
 
   @override
+  String get videoEditorTrackLabel => 'Theo dõi';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Cho lớp đi theo thứ đang chuyển động';
+
+  @override
+  String get videoEditorTrackRegionHint =>
+      'Đóng khung thứ mà lớp này sẽ đi theo';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Đổi kích thước khung';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Bắt đầu theo dõi';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Đang theo dõi suốt clip…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'Không thể theo dõi trên clip này.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Không theo dõi được. Hãy đóng khung thứ gì đó có nhiều chi tiết hơn.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Theo dõi không thành công. Thử lại nhé.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Mất dấu giữa chừng. Từ đó lớp sẽ đứng yên.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Hiệu ứng';
 
   @override

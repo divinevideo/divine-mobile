@@ -17207,6 +17207,66 @@ abstract class AppLocalizations {
   /// **'Add a keyframe, move the playhead, then move, resize or turn the layer. It glides from keyframe to keyframe.'**
   String get videoEditorKeyframesHint;
 
+  /// Action in the bar of a selected layer (text, sticker, drawing) in the video editor timeline: pins the layer to a moving object so it follows it. Short, shown under an icon.
+  ///
+  /// In en, this message translates to:
+  /// **'Track'**
+  String get videoEditorTrackLabel;
+
+  /// Accessibility label for the Track button in the bar of a selected layer in the video editor timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the layer follow something that moves'**
+  String get videoEditorTrackButtonSemanticLabel;
+
+  /// Instruction over the video while the user drags a box around the object a layer should follow. 'This' is the layer.
+  ///
+  /// In en, this message translates to:
+  /// **'Frame what this should follow'**
+  String get videoEditorTrackRegionHint;
+
+  /// Accessibility label for a corner handle of the box around the object a layer should follow; dragging it resizes the box.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize the frame'**
+  String get videoEditorTrackRegionResizeSemanticLabel;
+
+  /// Accessibility label for the confirm button that starts tracking the framed object.
+  ///
+  /// In en, this message translates to:
+  /// **'Start tracking'**
+  String get videoEditorTrackStartSemanticLabel;
+
+  /// Shown with a progress ring while the app follows the framed object through the clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Following it through the clip…'**
+  String get videoEditorTrackProgressLabel;
+
+  /// Snackbar when the clip under the playhead cannot be tracked: a still, a freeze frame or a stop-motion clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking doesn\'t work on this clip.'**
+  String get videoEditorTrackUnavailable;
+
+  /// Snackbar when the framed region had too little detail to follow.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t follow that. Frame something with more detail.'**
+  String get videoEditorTrackNotFollowed;
+
+  /// Snackbar when tracking failed because the clip could not be read or it stopped responding.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking didn\'t work. Try again.'**
+  String get videoEditorTrackFailed;
+
+  /// Snackbar when tracking lost the object before the end, for example because it left the frame. The layer follows it up to there and then stays still.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost sight of it partway. The layer holds still from there.'**
+  String get videoEditorTrackLostPartway;
+
   /// Label above the effects in the keyframe sheet of a layer in the video editor: none, wiggle, bounce or pulse, played while the layer moves from one keyframe to the next.
   ///
   /// In en, this message translates to:

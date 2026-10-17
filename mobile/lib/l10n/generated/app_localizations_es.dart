@@ -10231,6 +10231,43 @@ class AppLocalizationsEs extends AppLocalizations {
       'Agregá un fotograma clave, mové el cabezal de reproducción y después mové, escalá o girá la capa. Se desliza de un fotograma clave al siguiente.';
 
   @override
+  String get videoEditorTrackLabel => 'Seguir';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Hacer que la capa siga algo que se mueve';
+
+  @override
+  String get videoEditorTrackRegionHint =>
+      'Encuadrá lo que esto tiene que seguir';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Cambiar el tamaño del recuadro';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Empezar a seguir';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Siguiéndolo por el clip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'El seguimiento no funciona en este clip.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'No se pudo seguir eso. Encuadrá algo con más detalle.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'El seguimiento no funcionó. Probá de nuevo.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Se perdió a mitad de camino. La capa se queda quieta desde ahí.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efecto';
 
   @override

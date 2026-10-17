@@ -10412,6 +10412,43 @@ class AppLocalizationsTe extends AppLocalizations {
       'కీఫ్రేమ్‌ను జోడించండి, ప్లేహెడ్‌ను కదిలించండి, ఆపై లేయర్‌ను కదిలించండి, పరిమాణం మార్చండి లేదా తిప్పండి. అది ఒక కీఫ్రేమ్ నుండి తదుపరి కీఫ్రేమ్‌కు సాఫీగా కదులుతుంది.';
 
   @override
+  String get videoEditorTrackLabel => 'ట్రాక్';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'కదిలే దాన్ని లేయర్ అనుసరించేలా చేయండి';
+
+  @override
+  String get videoEditorTrackRegionHint =>
+      'ఇది అనుసరించాల్సిన దాన్ని ఫ్రేమ్‌లో పెట్టండి';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'ఫ్రేమ్ పరిమాణం మార్చండి';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'ట్రాకింగ్ ప్రారంభించండి';
+
+  @override
+  String get videoEditorTrackProgressLabel =>
+      'క్లిప్ అంతటా దాన్ని అనుసరిస్తోంది…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'ఈ క్లిప్‌లో ట్రాకింగ్ పని చేయదు.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'దాన్ని అనుసరించలేకపోయాము. మరింత వివరాలు ఉన్న దాన్ని ఫ్రేమ్‌లో పెట్టండి.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'ట్రాకింగ్ పని చేయలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'మధ్యలో కనిపించకుండా పోయింది. అక్కడి నుండి లేయర్ కదలకుండా ఉంటుంది.';
+
+  @override
   String get videoEditorKeyframeEffect => 'ఎఫెక్ట్';
 
   @override

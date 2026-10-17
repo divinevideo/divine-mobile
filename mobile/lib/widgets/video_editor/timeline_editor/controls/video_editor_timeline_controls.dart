@@ -27,6 +27,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onKeyframes,
     this.hasKeyframes = false,
     this.isOnKeyframe = false,
+    this.onTrack,
     this.onStyles,
     this.onSpeed,
     this.onTransform,
@@ -132,6 +133,10 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the playhead is on one of the layer's keyframes, which fills the
   /// action's diamond in, as the keyframe's own diamond on the timeline is.
   final bool isOnKeyframe;
+
+  /// Frames the object the selected layer should follow and tracks it.
+  /// Layer overlays that keyframes can move only.
+  final VoidCallback? onTrack;
 
   /// Opens the saved title styles sheet. Text overlays only.
   final VoidCallback? onStyles;
@@ -312,6 +317,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
             semanticLabel: context.l10n.videoEditorKeyframesButtonSemanticLabel,
             onPressed: onKeyframes,
             type: hasKeyframes ? .primary : .secondary,
+          ),
+        if (onTrack != null)
+          TimelineActionButton(
+            icon: .crosshair,
+            label: context.l10n.videoEditorTrackLabel,
+            semanticLabel: context.l10n.videoEditorTrackButtonSemanticLabel,
+            onPressed: onTrack,
           ),
         if (onStyles != null)
           TimelineActionButton(

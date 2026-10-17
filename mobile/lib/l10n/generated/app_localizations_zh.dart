@@ -9535,6 +9535,36 @@ class AppLocalizationsZh extends AppLocalizations {
       '添加关键帧，移动播放头，然后移动、缩放或旋转图层。图层会在关键帧之间平滑移动。';
 
   @override
+  String get videoEditorTrackLabel => '跟踪';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel => '让图层跟随移动的物体';
+
+  @override
+  String get videoEditorTrackRegionHint => '框选要跟随的对象';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => '调整框的大小';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => '开始跟踪';
+
+  @override
+  String get videoEditorTrackProgressLabel => '正在整个片段中跟踪…';
+
+  @override
+  String get videoEditorTrackUnavailable => '此片段无法跟踪。';
+
+  @override
+  String get videoEditorTrackNotFollowed => '无法跟踪该对象。请框选细节更多的东西。';
+
+  @override
+  String get videoEditorTrackFailed => '跟踪失败，请重试。';
+
+  @override
+  String get videoEditorTrackLostPartway => '中途跟丢了，从那里起图层保持不动。';
+
+  @override
   String get videoEditorKeyframeEffect => '效果';
 
   @override

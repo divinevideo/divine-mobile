@@ -10262,6 +10262,42 @@ class AppLocalizationsDe extends AppLocalizations {
       'Füge einen Keyframe hinzu, versetz den Abspielkopf und verschieb, skalier oder dreh dann die Ebene. Sie gleitet von Keyframe zu Keyframe.';
 
   @override
+  String get videoEditorTrackLabel => 'Verfolgen';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Ebene etwas Bewegtem folgen lassen';
+
+  @override
+  String get videoEditorTrackRegionHint =>
+      'Zieh den Rahmen um das, dem es folgen soll';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'Rahmengröße ändern';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Verfolgen starten';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Verfolge es durch den Clip …';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Auf diesem Clip geht Verfolgen nicht.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Das ließ sich nicht verfolgen. Rahme etwas mit mehr Details ein.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Verfolgen hat nicht geklappt. Versuch es noch mal.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Unterwegs aus den Augen verloren. Ab da bleibt die Ebene stehen.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effekt';
 
   @override

@@ -10337,6 +10337,41 @@ class AppLocalizationsPl extends AppLocalizations {
       'Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem przesuń, przeskaluj lub obróć warstwę. Warstwa płynnie przechodzi między klatkami kluczowymi.';
 
   @override
+  String get videoEditorTrackLabel => 'Śledź';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Niech warstwa podąża za czymś, co się porusza';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Obramuj to, za czym ma podążać';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'Zmień rozmiar ramki';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Zacznij śledzić';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Śledzę to w klipie…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Śledzenie nie działa na tym klipie.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Nie udało się tego śledzić. Obramuj coś z większą liczbą szczegółów.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Śledzenie się nie udało. Spróbuj ponownie.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Zgubione po drodze. Od tego miejsca warstwa stoi w miejscu.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efekt';
 
   @override

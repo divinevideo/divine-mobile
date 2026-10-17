@@ -10143,6 +10143,40 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tambah bingkai kunci, alihkan kepala main, kemudian alihkan, ubah saiz atau putar lapisan. Lapisan meluncur dari bingkai kunci ke bingkai kunci.';
 
   @override
+  String get videoEditorTrackLabel => 'Jejak';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Jadikan lapisan mengikut sesuatu yang bergerak';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Bingkaikan apa yang perlu diikuti';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'Ubah saiz bingkai';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Mula menjejak';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Mengikutinya sepanjang klip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Penjejakan tidak berfungsi pada klip ini.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Tidak dapat mengikutinya. Bingkaikan sesuatu yang lebih terperinci.';
+
+  @override
+  String get videoEditorTrackFailed => 'Penjejakan tidak berjaya. Cuba lagi.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Hilang jejak di pertengahan jalan. Lapisan kekal diam dari situ.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Kesan';
 
   @override

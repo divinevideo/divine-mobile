@@ -10223,6 +10223,43 @@ class AppLocalizationsBg extends AppLocalizations {
       'Добави ключов кадър, премести главата за възпроизвеждане, после премести, оразмери или завърти слоя. Той се плъзга от ключов кадър към ключов кадър.';
 
   @override
+  String get videoEditorTrackLabel => 'Проследи';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Слоят да следва нещо, което се движи';
+
+  @override
+  String get videoEditorTrackRegionHint =>
+      'Огради това, което трябва да следва';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Промени размера на рамката';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Започни проследяването';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Проследявам го през клипа…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Проследяването не работи за този клип.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Не успях да го проследя. Огради нещо с повече детайли.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Проследяването не стана. Опитай отново.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Изгубено по пътя. Оттам слоят остава на място.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Ефект';
 
   @override

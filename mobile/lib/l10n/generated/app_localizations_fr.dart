@@ -10288,6 +10288,42 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoute une image clé, déplace la tête de lecture, puis déplace, redimensionne ou fais pivoter le calque. Il glisse d\'une image clé à l\'autre.';
 
   @override
+  String get videoEditorTrackLabel => 'Suivi';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Faire suivre au calque un élément en mouvement';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Cadre ce que ceci doit suivre';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Redimensionner le cadre';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Lancer le suivi';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Suivi à travers le clip…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'Le suivi ne fonctionne pas sur ce clip.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Impossible de suivre ça. Cadre quelque chose de plus détaillé.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'Le suivi n\'a pas fonctionné. Réessaie.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Perdu de vue en cours de route. Le calque reste immobile à partir de là.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effet';
 
   @override

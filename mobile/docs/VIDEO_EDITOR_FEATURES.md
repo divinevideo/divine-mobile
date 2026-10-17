@@ -133,6 +133,13 @@ Keyframes, per layer (text, sticker, drawing and detached clip):
 - Trimming the layer's start, splitting it or duplicating it keeps the motion where it was on the video. A detached clip's footage moves along when its start is trimmed, and its motion goes with the footage. Removing the last keyframe leaves the layer where it showed at the playhead.
 - Enter, leave and loop animations play on top of the keyframed motion, and the export moves the layer as the canvas does, through clip transitions too.
 
+Tracking, per layer that keyframes can move (text, sticker, drawing, audio visualizer and detached clip; not a hidden area, which would uncover what it hides if the track drifted):
+
+- The Track button in a selected layer's bar hands the screen to the canvas and puts a box over the frame at the playhead, centred on the layer. Dragging moves the box, a pinch or a corner handle resizes it, and the check mark starts tracking. A playhead outside the layer is moved onto its start first.
+- The object in the box is followed through the clip under the playhead, forward to where the layer or the clip ends and back to where either starts, with classical motion analysis and no ML model (pro_video_editor `VideoObjectTracker`): corners in the box are tracked from frame to frame, and only those that move against the rest of the scene count as the object, so a box drawn loosely around a moving subject follows the subject rather than the background. Their motion moves and scales the box; anything in the box that drifts away from it, like a swinging arm, is dropped. A blocking overlay shows the progress and can cancel it.
+- The path becomes the layer's keyframes in that stretch, as one undo step: the layer keeps where it sat against the object, so a label above someone's head stays above it, and it grows and shrinks with the object. Its turn and opacity stay as its keyframes had them. The path is cut down to as few linear keyframes as keep the layer within a pixel of it; keyframes outside the stretch stay, and the layer holds still before and after it.
+- When the object leaves the frame or gets covered, the layer follows it as far as it was seen and a message says so. A box with too little detail, a freeze frame, the still in a detached clip's slot and a clip still rendering cannot be tracked, which a message says too.
+
 ## Captions
 
 - **Auto captions:** the audio is transcribed on Divine's server first, with a fallback to the platform's speech recognition: Apple's on iOS, which runs on the device when it supports the language and on Apple's servers otherwise; Android 14 or later with language packs installed, on the device. Clip audio is transcribed; music and voice-over are not. The language is the app's language.

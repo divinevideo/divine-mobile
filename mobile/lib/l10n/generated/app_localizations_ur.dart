@@ -10134,6 +10134,42 @@ class AppLocalizationsUr extends AppLocalizations {
       'کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر لیئر کو ہلائیں، اس کا سائز بدلیں یا گھمائیں۔ لیئر ایک کی فریم سے اگلے تک سرکتی ہے۔';
 
   @override
+  String get videoEditorTrackLabel => 'ٹریک';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'لیئر کو کسی حرکت کرتی چیز کے پیچھے چلائیں';
+
+  @override
+  String get videoEditorTrackRegionHint =>
+      'اس چیز کو فریم میں لیں جس کے پیچھے یہ چلے';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => 'فریم کا سائز بدلیں';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'ٹریکنگ شروع کریں';
+
+  @override
+  String get videoEditorTrackProgressLabel =>
+      'پورے کلپ میں اس کے پیچھے چل رہے ہیں…';
+
+  @override
+  String get videoEditorTrackUnavailable => 'اس کلپ پر ٹریکنگ کام نہیں کرتی۔';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'اس کے پیچھے نہیں چلا جا سکا۔ زیادہ تفصیل والی چیز کو فریم میں لیں۔';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'ٹریکنگ کام نہیں کر سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'راستے میں نظر سے اوجھل ہو گئی۔ وہاں سے لیئر ٹھہری رہتی ہے۔';
+
+  @override
   String get videoEditorKeyframeEffect => 'ایفیکٹ';
 
   @override

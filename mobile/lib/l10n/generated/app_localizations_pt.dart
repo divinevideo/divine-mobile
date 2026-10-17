@@ -10215,6 +10215,42 @@ class AppLocalizationsPt extends AppLocalizations {
       'Adicione um quadro-chave, mova a cabeça de reprodução e depois mova, redimensione ou gire a camada. Ela desliza de um quadro-chave para o outro.';
 
   @override
+  String get videoEditorTrackLabel => 'Rastrear';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel =>
+      'Fazer a camada seguir algo em movimento';
+
+  @override
+  String get videoEditorTrackRegionHint => 'Enquadre o que isso deve seguir';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel =>
+      'Redimensionar o quadro';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => 'Começar a rastrear';
+
+  @override
+  String get videoEditorTrackProgressLabel => 'Seguindo pelo clipe…';
+
+  @override
+  String get videoEditorTrackUnavailable =>
+      'O rastreamento não funciona neste clipe.';
+
+  @override
+  String get videoEditorTrackNotFollowed =>
+      'Não deu para seguir isso. Enquadre algo com mais detalhes.';
+
+  @override
+  String get videoEditorTrackFailed =>
+      'O rastreamento não funcionou. Tente de novo.';
+
+  @override
+  String get videoEditorTrackLostPartway =>
+      'Perdeu de vista no meio do caminho. A camada fica parada a partir daí.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efeito';
 
   @override

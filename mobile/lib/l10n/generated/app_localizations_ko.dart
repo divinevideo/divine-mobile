@@ -9653,6 +9653,36 @@ class AppLocalizationsKo extends AppLocalizations {
       '키프레임을 추가하고 재생 헤드를 옮긴 다음 레이어를 이동하거나 크기를 조절하거나 회전하세요. 레이어가 키프레임 사이를 부드럽게 움직여요.';
 
   @override
+  String get videoEditorTrackLabel => '트래킹';
+
+  @override
+  String get videoEditorTrackButtonSemanticLabel => '움직이는 대상을 레이어가 따라가게 하기';
+
+  @override
+  String get videoEditorTrackRegionHint => '따라갈 대상을 틀로 감싸세요';
+
+  @override
+  String get videoEditorTrackRegionResizeSemanticLabel => '틀 크기 조절';
+
+  @override
+  String get videoEditorTrackStartSemanticLabel => '트래킹 시작';
+
+  @override
+  String get videoEditorTrackProgressLabel => '클립 전체에서 따라가는 중…';
+
+  @override
+  String get videoEditorTrackUnavailable => '이 클립에서는 트래킹할 수 없어요.';
+
+  @override
+  String get videoEditorTrackNotFollowed => '따라갈 수 없었어요. 더 세밀한 대상을 틀로 감싸 보세요.';
+
+  @override
+  String get videoEditorTrackFailed => '트래킹하지 못했어요. 다시 시도해 보세요.';
+
+  @override
+  String get videoEditorTrackLostPartway => '중간에 놓쳤어요. 그 이후로는 레이어가 멈춰 있어요.';
+
+  @override
   String get videoEditorKeyframeEffect => '효과';
 
   @override
