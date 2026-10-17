@@ -57,10 +57,10 @@ const _boxToSigma = 3.4641;
 /// under reduced motion still shows a picture.
 const _previewFlashPeak = 0.85;
 
-/// Slices the glitch preview moves, and how many times a second of the
-/// transition its pattern changes, as in the renderers.
+/// Slices the glitch preview moves, and how often its pattern changes over
+/// one transition.
 const _glitchBands = 6;
-const _glitchRateHz = 15;
+const _glitchPatterns = 8;
 
 /// Total preview loop length, in milliseconds. The transition itself occupies
 /// the middle `_duration` slice of every loop (so the preview literally plays
@@ -630,20 +630,15 @@ class _TransitionTile extends StatelessWidget {
                     child: ExcludeSemantics(
                       child: AnimatedBuilder(
                         animation: controller,
-                        builder: (context, _) {
-                          final linear = _holdProgress(
-                            controller.value,
-                            durationMs,
-                          );
-                          return _TransitionEffect(
-                            type: type,
-                            direction: direction,
-                            progress: curve.ease(linear),
-                            elapsedMs: linear * durationMs,
-                            from: fromFrame,
-                            to: toFrame,
-                          );
-                        },
+                        builder: (context, _) => _TransitionEffect(
+                          type: type,
+                          direction: direction,
+                          progress: curve.ease(
+                            _holdProgress(controller.value, durationMs),
+                          ),
+                          from: fromFrame,
+                          to: toFrame,
+                        ),
                       ),
                     ),
                   ),
@@ -673,7 +668,6 @@ class _TransitionEffect extends StatelessWidget {
     required this.type,
     required this.direction,
     required this.progress,
-    required this.elapsedMs,
     required this.from,
     required this.to,
   });
@@ -681,9 +675,6 @@ class _TransitionEffect extends StatelessWidget {
   final ClipTransitionType? type;
   final ClipTransitionDirection direction;
   final double progress;
-
-  /// How far into the transition [progress] is, before easing.
-  final double elapsedMs;
   final Widget from;
   final Widget to;
 
@@ -793,7 +784,6 @@ class _TransitionEffect extends StatelessWidget {
         ),
         ClipTransitionType.glitch => _GlitchPreview(
           progress: clamped,
-          pattern: (elapsedMs * _glitchRateHz / 1000).floor(),
           from: from,
           to: to,
         ),
@@ -1074,15 +1064,11 @@ class _Squeezed extends StatelessWidget {
 class _GlitchPreview extends StatelessWidget {
   const _GlitchPreview({
     required this.progress,
-    required this.pattern,
     required this.from,
     required this.to,
   });
 
   final double progress;
-
-  /// Which arrangement of slices shows; it changes with time, not progress.
-  final int pattern;
   final Widget from;
   final Widget to;
 
@@ -1090,6 +1076,7 @@ class _GlitchPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final strength = math.sin(math.pi * progress);
     final cut = progress >= 0.5;
+    final pattern = (progress * _glitchPatterns).floor();
     const bandHeight = _previewHeight / _glitchBands;
     return Stack(
       fit: .expand,
