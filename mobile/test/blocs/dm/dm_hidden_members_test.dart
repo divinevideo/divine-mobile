@@ -174,4 +174,58 @@ void main() {
       );
     });
   });
+
+  group('dmEveryPeerBlocked', () {
+    bool everyPeerBlocked(
+      List<String> participants, {
+      required bool Function(String pubkey) isBlockedByUs,
+    }) => dmEveryPeerBlocked(
+      participantPubkeys: participants,
+      currentUserPubkey: viewer,
+      isBlockedByUs: isBlockedByUs,
+    );
+
+    // A predicate that blocks everyone: only the missing peers can keep these
+    // false, which is the vacuous `every` the helper guards against.
+    test('is false for an empty participant list', () {
+      expect(everyPeerBlocked(const [], isBlockedByUs: (_) => true), isFalse);
+    });
+
+    test('is false when the viewer is the only participant', () {
+      expect(
+        everyPeerBlocked(const [viewer], isBlockedByUs: (_) => true),
+        isFalse,
+      );
+    });
+
+    test('does not count the viewer in another letter case as a peer', () {
+      expect(
+        everyPeerBlocked(
+          [viewer.toUpperCase(), hiddenMember],
+          isBlockedByUs: const {hiddenMember}.contains,
+        ),
+        isTrue,
+      );
+    });
+
+    test('is false when only some peers are blocked', () {
+      expect(
+        everyPeerBlocked(
+          const [viewer, hiddenMember, visibleMember],
+          isBlockedByUs: const {hiddenMember}.contains,
+        ),
+        isFalse,
+      );
+    });
+
+    test('is true when every peer is blocked', () {
+      expect(
+        everyPeerBlocked(
+          const [viewer, hiddenMember, visibleMember],
+          isBlockedByUs: const {hiddenMember, visibleMember}.contains,
+        ),
+        isTrue,
+      );
+    });
+  });
 }
