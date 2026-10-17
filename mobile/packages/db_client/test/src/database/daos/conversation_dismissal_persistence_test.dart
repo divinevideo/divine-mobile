@@ -234,6 +234,65 @@ void main() {
       },
     );
 
+    for (final timestamp in [100, 200, 201]) {
+      test(
+        'read cursor beyond dismissal classifies recovered '
+        'timestamp $timestamp',
+        () async {
+          await message('d' * 64);
+          await replay();
+          await dismiss();
+          // A self-addressed read marker can arrive before the rest of history.
+          await database.conversationsDao.applyReadCursor(
+            id,
+            200,
+            ownerPubkey: owner,
+          );
+          final before = (await database.conversationsDao.getConversation(
+            id,
+            ownerPubkey: owner,
+          ))!;
+          expect(before.lastReadTimestamp, 200);
+          expect(before.isDismissed, isTrue);
+          await message('e' * 64, timestamp: timestamp);
+          await replay(timestamp: timestamp);
+          final restored = (await database.conversationsDao.getConversation(
+            id,
+            ownerPubkey: owner,
+          ))!;
+          expect(restored.isDismissed, isFalse);
+          expect(restored.lastReadTimestamp, 200);
+          expect(restored.isRead, timestamp <= 200);
+        },
+      );
+    }
+
+    test('metadata-only refresh classifies stored incoming arrivals', () async {
+      await message('d' * 64);
+      await replay();
+      await dismiss();
+      await database.conversationsDao.applyReadCursor(
+        id,
+        200,
+        ownerPubkey: owner,
+      );
+      await message('e' * 64, timestamp: 200);
+      await database.conversationsDao.upsertConversation(
+        id: id,
+        participantPubkeys: '["$owner","$peer"]',
+        isGroup: false,
+        createdAt: 100,
+        ownerPubkey: owner,
+      );
+      final row = (await database.conversationsDao.getConversation(
+        id,
+        ownerPubkey: owner,
+      ))!;
+      expect(row.isDismissed, isFalse);
+      expect(row.isRead, isTrue);
+      expect(row.lastReadTimestamp, 200);
+    });
+
     test('explicit Restore removes the retained marker', () async {
       await replay();
       await dismiss();

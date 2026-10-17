@@ -64,7 +64,9 @@ END
   ///   latest message (a newer timestamp, or a distinct [isNewMessage] at
   ///   the same second); otherwise preserved. A newer message at or before
   ///   the row's read cursor (`lastReadTimestamp`) is written as read whatever
-  ///   [isRead] says, the same rule [applyReadCursor] uses. Notably NOT written
+  ///   [isRead] says, as [applyReadCursor] does. A restoring arrival at the
+  ///   dismissal boundary is unread unless the cursor advanced beyond it.
+  ///   Notably NOT written
   ///   under [forceUpdateLastMessage]: a deletion preview refresh must not
   ///   change read state. Flip read state explicitly via [markAsRead] /
   ///   [markMultipleAsRead].
@@ -114,7 +116,7 @@ END
             ))
             .getSingleOrNull();
     var keepDismissed = dismissal != null;
-    var restoredByIncoming = false;
+    int? restoringIncomingTimestamp;
     if (dismissal != null && !forceUpdateLastMessage) {
       final messages = attachedDatabase.directMessages;
       final candidates =
@@ -134,13 +136,20 @@ END
           .where((message) => !knownIds.contains(message.id))
           .toList();
       if (newMessages.isNotEmpty) {
-        restoredByIncoming = newMessages.any(
-          (message) => message.senderPubkey != ownerPubkey,
-        );
+        // A metadata-only refresh may omit the preview timestamp.
+        // Classify read state from the newest stored incoming arrival.
+        for (final message in newMessages) {
+          if (message.senderPubkey == ownerPubkey) continue;
+          final previous = restoringIncomingTimestamp;
+          if (previous == null || message.createdAt > previous) {
+            restoringIncomingTimestamp = message.createdAt;
+          }
+        }
         await _clearDismissal(id, ownerPubkey ?? '');
         keepDismissed = false;
       }
     }
+    final restoredByIncoming = restoringIncomingTimestamp != null;
     final row = ConversationsCompanion.insert(
       id: id,
       participantPubkeys: participantPubkeys,
@@ -183,8 +192,12 @@ END
         final previewCondition = forceUpdateLastMessage
             ? const Constant<bool>(true)
             : advancesAttention;
+        final readCursor = coalesce([
+          old.lastReadTimestamp,
+          const Constant(0),
+        ]);
         final coveredByReadCursor = excl.lastMessageTimestamp.isSmallerOrEqual(
-          coalesce([old.lastReadTimestamp, const Constant(0)]),
+          readCursor,
         );
 
         return ConversationsCompanion.custom(
@@ -194,12 +207,16 @@ END
           // Relay backfill and preview repairs must not undo dismissal.
           isDismissed: Constant(keepDismissed),
           // Retained dismissals stay read through replay. A newly restoring
-          // incoming message is unread. Other replay remains covered by the
-          // read cursor, including after an account switch.
+          // incoming message at the dismissal boundary is unread, even when
+          // that boundary's cursor covers the same second. A cursor advanced
+          // beyond dismissal still covers already-read recovered messages.
           isRead: keepDismissed
               ? const Constant(true)
               : restoredByIncoming
-              ? const Constant(false)
+              ? Constant(
+                      restoringIncomingTimestamp,
+                    ).isSmallerOrEqual(readCursor) &
+                    readCursor.isBiggerThanValue(dismissal!.boundaryTimestamp)
               : (excl.isRead | coveredByReadCursor).iif(
                   advancesAttention,
                   old.isRead,
