@@ -199,8 +199,12 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: ProviderScope(
             overrides: [
-              // The copy is independent of the recording flag; overriding it
-              // keeps the flag provider from reaching SharedPreferences here.
+              // The public screen is read signed out, where the copy does not
+              // depend on the recording flag; overriding it keeps the flag
+              // provider from reaching SharedPreferences here.
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.unauthenticated,
+              ),
               isFeatureEnabledProvider(
                 FeatureFlag.minorConsentInAppRecording,
               ).overrideWithValue(false),
