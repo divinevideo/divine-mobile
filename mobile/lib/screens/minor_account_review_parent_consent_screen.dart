@@ -12,6 +12,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/utils/share_position_origin.dart';
+import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
 
 class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
   static const routeName = 'minor-account-review-parent-consent';
@@ -68,7 +69,7 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                   textColor: context.vineColors.inverseOnSurface,
                 ),
                 const SizedBox(height: 16),
-                _ChecklistCard(
+                MinorAccountReviewChecklistCard(
                   title: context.l10n.minorAccountReviewParentConsentChecklist,
                   items: [
                     context.l10n.minorAccountReviewParentConsentChecklistKid,
@@ -84,7 +85,7 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _ChecklistCard(
+                MinorAccountReviewChecklistCard(
                   title: context.l10n.minorAccountReviewParentConsentPrivacy,
                   items: [
                     if (canRecordInApp)
@@ -212,64 +213,6 @@ class _InfoCard extends StatelessWidget {
             body,
             style: VineTheme.bodyMediumFont(color: textColor),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChecklistCard extends StatelessWidget {
-  const _ChecklistCard({required this.title, required this.items});
-
-  final String title;
-  final List<String> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.vineColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: VineTheme.titleMediumFont(
-              color: context.vineColors.primaryText,
-            ),
-          ),
-          const SizedBox(height: 10),
-          for (final item in items)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: ExcludeSemantics(
-                      child: DivineIcon(
-                        icon: DivineIconName.checkCircle,
-                        size: 16,
-                        color: VineTheme.vineGreen,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.mutedText,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
