@@ -868,10 +868,13 @@ class DmRepository {
   static const _readMarkerPayloadVersion = 1;
 
   /// Read cursors parsed from a restored marker whose conversation row did not
-  /// exist yet — a marker processed before its messages during the reinstall
-  /// drain. Flushed once the drain completes (all conversations present), keyed
-  /// by conversation id → max read timestamp. Cleared on reset. Loss on a
-  /// kill mid-drain self-heals on the next read + marker publish.
+  /// exist yet, keyed by conversation id → max read timestamp. Either the live
+  /// subscription or the drain can process a marker before its messages.
+  /// [_applyQueuedReadCursor] applies an entry as soon as an ingested message
+  /// creates or updates the row; the drain's completion flushes every entry,
+  /// which covers rows created any other way. Cleared on reset. A kill before
+  /// the row arrives loses the entry; it self-heals on the next read + marker
+  /// publish.
   final Map<String, int> _pendingReadCursors = {};
 
   /// A single long-lived decrypt isolate, alive only for the duration of a
@@ -2572,7 +2575,7 @@ class DmRepository {
             _drainRetryTimer = null;
           }
           // Restore read state now that the full conversation set is present:
-          // last-sent floor + any read markers stashed during the drain. #4977.
+          // last-sent floor + any stashed read markers. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
           Log.info(
             'DM history drain complete for ${pubkeyForLogs(pubkey)}: '
@@ -3835,6 +3838,10 @@ class DmRepository {
                 ? (existing?.dmProtocol ?? 'nip17')
                 : 'nip17',
           );
+          await _applyQueuedReadCursor(
+            conversationId,
+            ownerPubkey: ownerPubkey,
+          );
           // A newer message reopens a removed conversation: the row is
           // recreated above, while the tombstone is deliberately kept so
           // replayed history stamped at or before the removal stays
@@ -4668,6 +4675,7 @@ class DmRepository {
           ownerPubkey: ownerPubkey,
           dmProtocol: existing?.dmProtocol ?? 'nip04',
         );
+        await _applyQueuedReadCursor(conversationId, ownerPubkey: ownerPubkey);
         // A newer message reopens a removed conversation: the row is
         // recreated above, while the tombstone is deliberately kept so
         // replayed history stamped at or before the removal stays
@@ -9887,8 +9895,9 @@ class DmRepository {
   /// Reconcile a restored kind-30078 read-state marker rumor (#4977): advance
   /// each conversation's read cursor to the marker's timestamp (forward-only
   /// max). A conversation not yet ingested (marker processed before its
-  /// messages during the drain) is stashed in [_pendingReadCursors] and
-  /// applied when the drain completes.
+  /// messages) is stashed in [_pendingReadCursors], applied by
+  /// [_applyQueuedReadCursor] once a message creates its row, and flushed
+  /// again when the drain completes.
   Future<void> _reconcileReadMarker(Event rumor) async {
     if (!_hasReadMarkerDTag(rumor)) return;
     // The marker is a self-authored control message: the sender gift-wraps it
@@ -9940,6 +9949,26 @@ class DmRepository {
         }
       }
     }
+  }
+
+  /// Applies a read-marker cursor that arrived before [conversationId] had a
+  /// row (#4977) as soon as an ingested message creates or updates it.
+  ///
+  /// Waiting for [_restoreReadStateAfterDrain] is not enough: the drain only
+  /// starts when Messages or a conversation opens, so a conversation the user
+  /// already read would sit unread in the badge until then (#10275). The
+  /// entry stays queued for the drain's flush; re-applying it is a no-op.
+  Future<void> _applyQueuedReadCursor(
+    String conversationId, {
+    required String ownerPubkey,
+  }) async {
+    final cursor = _pendingReadCursors[conversationId];
+    if (cursor == null) return;
+    await _conversationsDao.applyReadCursor(
+      conversationId,
+      cursor,
+      ownerPubkey: ownerPubkey,
+    );
   }
 
   bool _hasReadMarkerDTag(Event rumor) {

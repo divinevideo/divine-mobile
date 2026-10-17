@@ -60,9 +60,12 @@ END
   /// * `participantPubkeys`, `isGroup` — always overwritten.
   /// * `isRead` — updated only when the incoming event becomes the stored
   ///   latest message (strictly newer [lastMessageTimestamp]); otherwise
-  ///   preserved. Notably NOT written under [forceUpdateLastMessage]: a
-  ///   deletion preview refresh must not change read state. Flip read
-  ///   state explicitly via [markAsRead] / [markMultipleAsRead].
+  ///   preserved. A newer message at or before the row's read cursor
+  ///   (`lastReadTimestamp`) is written as read whatever [isRead] says, the
+  ///   same rule [applyReadCursor] uses. Notably NOT written under
+  ///   [forceUpdateLastMessage]: a deletion preview refresh must not change
+  ///   read state. Flip read state explicitly via [markAsRead] /
+  ///   [markMultipleAsRead].
   /// * `subject`, `dmProtocol` — updated only when the incoming value is
   ///   non-null; an existing non-null value is preserved.
   /// * `ownerPubkey` — cannot change on a conflict, because it is part of the
@@ -131,6 +134,9 @@ END
         final previewCondition = forceUpdateLastMessage
             ? const Constant<bool>(true)
             : incomingIsNewer;
+        final coveredByReadCursor = excl.lastMessageTimestamp.isSmallerOrEqual(
+          coalesce([old.lastReadTimestamp, const Constant(0)]),
+        );
 
         return ConversationsCompanion.custom(
           // Always updated.
@@ -138,8 +144,13 @@ END
           isGroup: excl.isGroup,
           // Read state only follows the latest message: gated on
           // incomingIsNewer (not previewCondition) so a deletion
-          // force-refresh updates the preview without marking read.
-          isRead: excl.isRead.iif(incomingIsNewer, old.isRead),
+          // force-refresh updates the preview without marking read. A
+          // message the read cursor already covers stays read, so a
+          // re-ingest after an account switch cannot reopen a read chat.
+          isRead: (excl.isRead | coveredByReadCursor).iif(
+            incomingIsNewer,
+            old.isRead,
+          ),
           // Preserve existing non-null value; only update when incoming
           // value is non-null.
           subject: coalesce([excl.subject, old.subject]),
