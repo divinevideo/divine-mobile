@@ -3373,6 +3373,8 @@
     "videoEditorUnstabilizeProgressLabel": "አንድ ትንሽ ይቆዩ፣ የመጀመሪያውን እየመለስን ነው",
     "videoEditorStabilizeNoLocalFile": "ማረጋጋት አልተቻለም፤ ክሊፑ በመሣሪያው ላይ አይገኝም።",
     "videoEditorStabilizeFailed": "ክሊፑን ማረጋጋት አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+    "videoEditorUnstabilizeOriginalMissing": "የመጀመሪያው ቀረጻ ስለጠፋ ይህ ክሊፕ እንደተረጋጋ ይቆያል።",
+    "videoEditorUnstabilizeFailed": "ማረጋጋትን ማጥፋት አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
     "videoEditorSpeedSheetTitle": "የክሊፕ ፍጥነት",
     "videoEditorSpeedPresetSemanticLabel": "ፍጥነት {speed}×",
     "videoEditorFadeLabel": "ፌድ",

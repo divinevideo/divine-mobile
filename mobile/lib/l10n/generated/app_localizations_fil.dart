@@ -9996,6 +9996,14 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi na-stabilize ang clip. Pakisubukang muli.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Wala na ang original na footage, kaya mananatiling naka-stabilize ang clip na ito.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Hindi ma-off ang stabilization. Pakisubukang muli.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Bilis ng Clip';
 
   @override

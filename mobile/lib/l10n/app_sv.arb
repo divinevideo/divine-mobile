@@ -2784,6 +2784,8 @@
     "videoEditorUnstabilizeProgressLabel": "Ett ögonblick, vi tar tillbaka originalet",
     "videoEditorStabilizeNoLocalFile": "Kan inte stabilisera: klippet är inte tillgängligt lokalt.",
     "videoEditorStabilizeFailed": "Kunde inte stabilisera klippet. Försök igen.",
+    "videoEditorUnstabilizeOriginalMissing": "Originalmaterialet finns inte längre, så klippet förblir stabiliserat.",
+    "videoEditorUnstabilizeFailed": "Kunde inte stänga av stabiliseringen. Försök igen.",
     "videoEditorSpeedSheetTitle": "Klipphastighet",
     "videoEditorSpeedPresetSemanticLabel": "Hastighet {speed}×",
     "videoEditorFadeLabel": "Toning",

@@ -9916,6 +9916,14 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte stabilisera klippet. Försök igen.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Originalmaterialet finns inte längre, så klippet förblir stabiliserat.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Kunde inte stänga av stabiliseringen. Försök igen.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Klipphastighet';
 
   @override

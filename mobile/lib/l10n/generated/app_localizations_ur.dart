@@ -9917,6 +9917,14 @@ class AppLocalizationsUr extends AppLocalizations {
       'کلپ مستحکم نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'اصل فوٹیج اب موجود نہیں، اس لیے یہ کلپ مستحکم ہی رہے گی۔';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'استحکام بند نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'کلپ رفتار';
 
   @override

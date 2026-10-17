@@ -10006,6 +10006,14 @@ class AppLocalizationsBg extends AppLocalizations {
       'Клипът не можа да се стабилизира. Опитай отново.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Оригиналният запис вече го няма, затова клипът остава стабилизиран.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Стабилизацията не можа да се изключи. Опитай отново.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Скорост на клипа';
 
   @override

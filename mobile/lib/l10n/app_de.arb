@@ -2784,6 +2784,8 @@
     "videoEditorUnstabilizeProgressLabel": "Einen Moment, wir holen das Original zurück",
     "videoEditorStabilizeNoLocalFile": "Stabilisieren nicht möglich: Clip ist lokal nicht verfügbar.",
     "videoEditorStabilizeFailed": "Clip konnte nicht stabilisiert werden. Bitte erneut versuchen.",
+    "videoEditorUnstabilizeOriginalMissing": "Das Originalmaterial ist nicht mehr da, deshalb bleibt dieser Clip stabilisiert.",
+    "videoEditorUnstabilizeFailed": "Stabilisierung konnte nicht ausgeschaltet werden. Bitte erneut versuchen.",
     "videoEditorSpeedSheetTitle": "Clip-Geschwindigkeit",
     "videoEditorSpeedPresetSemanticLabel": "Geschwindigkeit {speed}×",
     "videoEditorFadeLabel": "Ein-/Ausblenden",

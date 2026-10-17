@@ -9831,6 +9831,14 @@ class AppLocalizationsId extends AppLocalizations {
       'Tidak dapat menstabilkan klip. Coba lagi.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Rekaman aslinya sudah tidak ada, jadi klip ini tetap distabilkan.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Tidak dapat mematikan stabilisasi. Coba lagi.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Kecepatan Klip';
 
   @override

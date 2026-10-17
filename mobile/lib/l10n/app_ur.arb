@@ -5075,6 +5075,8 @@
   "videoEditorUnstabilizeProgressLabel": "ایک لمحہ، ہم اصل واپس لا رہے ہیں",
   "videoEditorStabilizeNoLocalFile": "مستحکم نہیں ہو سکتا: کلپ مقامی طور پر دستیاب نہیں ہے۔",
   "videoEditorStabilizeFailed": "کلپ مستحکم نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "videoEditorUnstabilizeOriginalMissing": "اصل فوٹیج اب موجود نہیں، اس لیے یہ کلپ مستحکم ہی رہے گی۔",
+  "videoEditorUnstabilizeFailed": "استحکام بند نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
   "videoEditorSpeedSheetTitle": "کلپ رفتار",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

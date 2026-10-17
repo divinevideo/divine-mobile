@@ -2784,6 +2784,8 @@
     "videoEditorUnstabilizeProgressLabel": "O clipă, aducem înapoi originalul",
     "videoEditorStabilizeNoLocalFile": "Nu se poate stabiliza: clipul nu este disponibil local.",
     "videoEditorStabilizeFailed": "Nu s-a putut stabiliza clipul. Încearcă din nou.",
+    "videoEditorUnstabilizeOriginalMissing": "Filmarea originală nu mai există, așa că acest clip rămâne stabilizat.",
+    "videoEditorUnstabilizeFailed": "Nu s-a putut dezactiva stabilizarea. Încearcă din nou.",
     "videoEditorSpeedSheetTitle": "Viteza clipului",
     "videoEditorSpeedPresetSemanticLabel": "Viteză {speed}×",
     "videoEditorFadeLabel": "Estompare",

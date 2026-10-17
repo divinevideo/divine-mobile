@@ -9833,6 +9833,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorStabilizeFailed => 'Klip sabitlenemedi. Tekrar dene.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Orijinal görüntü artık yok, bu yüzden bu klip sabitlenmiş olarak kalacak.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Sabitleme kapatılamadı. Tekrar dene.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Klip Hızı';
 
   @override

@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bloc/bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
@@ -16,6 +17,17 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo, ExportTransform;
 
 const _key = ClipChromaKey(key: ChromaKey.greenScreen());
+
+/// Records every `addError`, the path a failure takes to Crashlytics.
+class _RecordingObserver extends BlocObserver {
+  final errors = <Object>[];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 /// A long imported clip, trimmed to its middle: 8 s to 16 s of 20 s. The
 /// stabilization window reaches a margin past both trims, 1.7 s to 20 s.
@@ -85,6 +97,16 @@ void main() {
       );
       addTearDown(bloc.close);
       return bloc..add(ClipEditorInitialized(clips));
+    }
+
+    /// The errors blocs built after this call report. A bloc reads the
+    /// observer when it is constructed, so call this before [seeded].
+    List<Object> recordBlocErrors() {
+      final observer = _RecordingObserver();
+      final previousObserver = Bloc.observer;
+      Bloc.observer = observer;
+      addTearDown(() => Bloc.observer = previousObserver);
+      return observer.errors;
     }
 
     /// Toggles stabilization of [clipId] and waits for its own outcome, not
@@ -296,20 +318,85 @@ void main() {
 
       final state = await toggle(bloc);
 
-      expect(state.lastStabilizeResult, isA<ClipStabilizeFailure>());
+      expect(
+        state.lastStabilizeResult,
+        isA<ClipStabilizeFailure>().having(
+          (r) => r.stabilizing,
+          'stabilizing',
+          isTrue,
+        ),
+      );
       expect(state.isStabilizing, isFalse);
       expect(state.clips.single.video!.file!.path, '/documents/clip.mp4');
       expect(state.clips.single.stabilization, isNull);
     });
 
-    test('fails to turn off when the unstabilized footage is gone', () async {
-      final bloc = seeded([_longClip(videoPath: '${temp.path}/missing.mp4')]);
-      await toggle(bloc);
+    test(
+      'keeps the steadied clip when the unstabilized footage is gone',
+      () async {
+        final errors = recordBlocErrors();
+        final bloc = seeded([
+          _longClip(videoPath: '${temp.path}/missing.mp4'),
+        ]);
+        final steadied = (await toggle(bloc)).clips.single;
+        expect(steadied.stabilization, isNotNull);
+        final states = <ClipEditorState>[];
+        final subscription = bloc.stream.listen(states.add);
+        addTearDown(subscription.cancel);
+
+        final state = await toggle(bloc);
+
+        expect(state.lastStabilizeResult, isA<ClipStabilizeOriginalMissing>());
+        expect(state.clips.single, same(steadied));
+        // Nothing was attempted, so no render spinner flashed up.
+        expect(states, isNotEmpty);
+        expect(states.where((s) => s.isStabilizing), isEmpty);
+        // A missing file is a storage condition, not a bug to report.
+        expect(errors, isEmpty);
+      },
+    );
+
+    test('reports a failed restore apart from missing footage', () async {
+      final errors = recordBlocErrors();
+      final raw = File('${temp.path}/clip.mp4')..writeAsBytesSync([0]);
+      var bakes = 0;
+      final bloc = seeded(
+        [
+          _longClip().copyWith(
+            video: EditorVideo.file('/documents/clip_keyed.mp4'),
+            chromaKey: _key,
+            chromaKeySourcePath: raw.path,
+          ),
+        ],
+        // The key bakes onto the steadied render, then fails on the way back.
+        bakeChromaKey:
+            ({
+              required sourceClip,
+              required chromaKey,
+              required renderId,
+            }) async {
+              if (bakes++ > 0) throw Exception('encoder failed');
+              return (
+                video: EditorVideo.file('/documents/clip_rekeyed.mp4'),
+                source: sourceClip.chromaKeySourcePath!,
+              );
+            },
+      );
+      final steadied = (await toggle(bloc)).clips.single;
+      expect(steadied.stabilization, isNotNull);
 
       final state = await toggle(bloc);
 
-      expect(state.lastStabilizeResult, isA<ClipStabilizeFailure>());
-      expect(state.clips.single.stabilization, isNotNull);
+      expect(
+        state.lastStabilizeResult,
+        isA<ClipStabilizeFailure>().having(
+          (r) => r.stabilizing,
+          'stabilizing',
+          isFalse,
+        ),
+      );
+      expect(state.clips.single, same(steadied));
+      expect(errors, [isA<Exception>()]);
     });
 
     test('keeps a poster that lands while the render runs', () async {

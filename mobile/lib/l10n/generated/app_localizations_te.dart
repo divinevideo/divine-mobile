@@ -10194,6 +10194,14 @@ class AppLocalizationsTe extends AppLocalizations {
       'క్లిప్‌ను స్థిరీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'అసలు ఫుటేజ్ ఇక లేదు, కాబట్టి ఈ క్లిప్ స్థిరీకరించబడినదిగానే ఉంటుంది.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'స్థిరీకరణను ఆఫ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'క్లిప్ స్పీడ్';
 
   @override

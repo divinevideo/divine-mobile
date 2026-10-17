@@ -2727,6 +2727,8 @@
     "videoEditorUnstabilizeProgressLabel": "少々お待ちください。元の映像に戻しています",
     "videoEditorStabilizeNoLocalFile": "手ぶれ補正できません：クリップがローカルで利用できません。",
     "videoEditorStabilizeFailed": "クリップの手ぶれを補正できませんでした。もう一度お試しください。",
+    "videoEditorUnstabilizeOriginalMissing": "元の映像が見つからないため、このクリップは手ぶれ補正されたままになります。",
+    "videoEditorUnstabilizeFailed": "手ぶれ補正をオフにできませんでした。もう一度お試しください。",
     "videoEditorSpeedSheetTitle": "クリップの速度",
     "videoEditorSpeedPresetSemanticLabel": "速度 {speed}×",
     "videoEditorFadeLabel": "フェード",

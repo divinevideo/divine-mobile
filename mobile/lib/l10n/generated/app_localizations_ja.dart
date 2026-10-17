@@ -9426,6 +9426,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorStabilizeFailed => 'クリップの手ぶれを補正できませんでした。もう一度お試しください。';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      '元の映像が見つからないため、このクリップは手ぶれ補正されたままになります。';
+
+  @override
+  String get videoEditorUnstabilizeFailed => '手ぶれ補正をオフにできませんでした。もう一度お試しください。';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'クリップの速度';
 
   @override

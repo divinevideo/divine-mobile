@@ -9926,6 +9926,14 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat menstabilkan klip. Sila cuba lagi.';
 
   @override
+  String get videoEditorUnstabilizeOriginalMissing =>
+      'Rakaman asal sudah tiada, jadi klip ini kekal distabilkan.';
+
+  @override
+  String get videoEditorUnstabilizeFailed =>
+      'Tidak dapat mematikan penstabilan. Sila cuba lagi.';
+
+  @override
   String get videoEditorSpeedSheetTitle => 'Kelajuan Klip';
 
   @override

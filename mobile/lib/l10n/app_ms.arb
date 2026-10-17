@@ -5075,6 +5075,8 @@
   "videoEditorUnstabilizeProgressLabel": "Sebentar, kami sedang mengembalikan versi asal",
   "videoEditorStabilizeNoLocalFile": "Tidak dapat menstabilkan: klip tidak tersedia secara setempat.",
   "videoEditorStabilizeFailed": "Tidak dapat menstabilkan klip. Sila cuba lagi.",
+  "videoEditorUnstabilizeOriginalMissing": "Rakaman asal sudah tiada, jadi klip ini kekal distabilkan.",
+  "videoEditorUnstabilizeFailed": "Tidak dapat mematikan penstabilan. Sila cuba lagi.",
   "videoEditorSpeedSheetTitle": "Kelajuan Klip",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."

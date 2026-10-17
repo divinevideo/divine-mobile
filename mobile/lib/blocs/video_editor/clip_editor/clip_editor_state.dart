@@ -798,8 +798,17 @@ final class ClipStabilizeNoLocalFile extends ClipStabilizeResult {}
 /// The render finished but the clip was removed in the meantime.
 final class ClipStabilizeDiscarded extends ClipStabilizeResult {}
 
-/// Stabilizing, or restoring the unstabilized footage, failed.
-final class ClipStabilizeFailure extends ClipStabilizeResult {}
+/// Turning stabilization off found the unstabilized footage gone, so the clip
+/// keeps its stabilized video. Retrying cannot bring the file back.
+final class ClipStabilizeOriginalMissing extends ClipStabilizeResult {}
+
+/// Stabilizing ([stabilizing] true), or restoring the unstabilized footage
+/// (false), failed.
+final class ClipStabilizeFailure extends ClipStabilizeResult {
+  ClipStabilizeFailure({required this.stabilizing});
+
+  final bool stabilizing;
+}
 
 // === CHROMA KEY RESULT ===
 
