@@ -1,7 +1,9 @@
 // ABOUTME: Tests which group members the viewer's own lists hide: whose
-// ABOUTME: messages collapse, and who is left for a chat without them.
+// ABOUTME: messages and inbox previews collapse, and who is left for a chat
+// ABOUTME: without them.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 
 void main() {
@@ -70,6 +72,74 @@ void main() {
         hiddenByDefault(senderPubkey: '', hidden: const {''}),
         isFalse,
       );
+    });
+  });
+
+  group('dmPreviewHidden', () {
+    bool previewHidden({
+      required String? lastSender,
+      bool isGroup = true,
+      bool everyMemberBlocked = false,
+      Set<String> hidden = const {hiddenMember},
+    }) => dmPreviewHidden(
+      conversation: DmConversation(
+        id: 'e' * 64,
+        participantPubkeys: const [viewer, hiddenMember, visibleMember],
+        isGroup: isGroup,
+        createdAt: 1700000000,
+        lastMessageContent: 'see you at 8',
+        lastMessageSenderPubkey: lastSender,
+      ),
+      currentUserPubkey: viewer,
+      everyMemberBlocked: everyMemberBlocked,
+      isHidden: hidden.contains,
+    );
+
+    test("hides a hidden member's last message in a group", () {
+      expect(previewHidden(lastSender: hiddenMember), isTrue);
+    });
+
+    test('never hides a one-to-one preview', () {
+      expect(
+        previewHidden(lastSender: hiddenMember, isGroup: false),
+        isFalse,
+      );
+    });
+
+    test('never hides the preview once every member is blocked', () {
+      expect(
+        previewHidden(lastSender: hiddenMember, everyMemberBlocked: true),
+        isFalse,
+      );
+    });
+
+    test("never hides the viewer's own last message", () {
+      expect(
+        previewHidden(lastSender: viewer, hidden: const {viewer}),
+        isFalse,
+      );
+    });
+
+    test("never hides the viewer's own last message when the key differs in "
+        'case', () {
+      final upperViewer = viewer.toUpperCase();
+
+      expect(
+        previewHidden(lastSender: upperViewer, hidden: {upperViewer}),
+        isFalse,
+      );
+    });
+
+    test('does not hide a member who is not hidden', () {
+      expect(previewHidden(lastSender: visibleMember), isFalse);
+    });
+
+    test('does not hide a preview whose sender was never recorded', () {
+      expect(previewHidden(lastSender: null), isFalse);
+    });
+
+    test('does not hide a preview with an empty sender', () {
+      expect(previewHidden(lastSender: '', hidden: const {''}), isFalse);
     });
   });
 

@@ -1,13 +1,17 @@
 // ABOUTME: Widget tests for ConversationTile.
 // ABOUTME: Verifies avatar, display name, last message, unread dot, and tap.
 
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/inbox/widgets/conversation_tile.dart';
@@ -17,6 +21,9 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
+
+class _MockContentBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
 
 void main() {
   const currentPubkey =
@@ -1690,6 +1697,189 @@ void main() {
           find.textContaining(UserProfile.defaultDisplayNameFor(memberPubkey)),
           findsNothing,
         );
+      });
+    });
+
+    group("a blocked member's last message (#10150)", () {
+      const memberPubkey =
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      const lastMessage = 'see you at 8';
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      DmConversation conversationWith({
+        required String lastSender,
+        bool isGroup = true,
+      }) => DmConversation(
+        id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        participantPubkeys: isGroup
+            ? const [currentPubkey, otherPubkey, memberPubkey]
+            : const [currentPubkey, otherPubkey],
+        isGroup: isGroup,
+        createdAt: nowUnix,
+        lastMessageContent: lastMessage,
+        lastMessageTimestamp: nowUnix,
+        lastMessageSenderPubkey: lastSender,
+      );
+
+      Future<ContentBlocklistRepository> blocklistBlocking(
+        WidgetTester tester,
+        List<String> pubkeys,
+      ) async {
+        final blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+        await tester.runAsync(
+          () => blocklist.blockUsers(pubkeys, ourPubkey: currentPubkey),
+        );
+        expect(pubkeys.every(blocklist.isBlocked), isTrue);
+        return blocklist;
+      }
+
+      Future<void> pumpRow(
+        WidgetTester tester,
+        DmConversation conversation, {
+        required ContentBlocklistRepository blocklist,
+      }) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+              fetchUserProfileProvider(otherPubkey).overrideWith(
+                (ref) async => createTestProfile(displayName: 'Alice'),
+              ),
+              fetchUserProfileProvider(memberPubkey).overrideWith(
+                (ref) async => UserProfile(
+                  pubkey: memberPubkey,
+                  displayName: 'Bob',
+                  rawData: const {},
+                  createdAt: now,
+                  eventId: 'c' * 64,
+                ),
+              ),
+            ],
+            home: Scaffold(
+              body: ConversationTile(
+                conversation: conversation,
+                currentUserPubkey: currentPubkey,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      String prefixFor(String name) =>
+          l10n.inboxConversationPreviewSenderPrefix(name);
+
+      testWidgets(
+        "shows Hidden message instead of a blocked member's last message",
+        (tester) async {
+          final blocklist = await blocklistBlocking(tester, [memberPubkey]);
+
+          await pumpRow(
+            tester,
+            conversationWith(lastSender: memberPubkey),
+            blocklist: blocklist,
+          );
+
+          expect(find.text(l10n.dmHiddenMessageLabel), findsOneWidget);
+          expect(find.textContaining(lastMessage), findsNothing);
+          // The "Name: " lead would name the person the viewer blocked.
+          expect(find.textContaining(prefixFor('Bob')), findsNothing);
+        },
+      );
+
+      testWidgets(
+        "shows Hidden message for a member on the viewer's own mute list",
+        (tester) async {
+          // A mute hides a member without blocking them, so only the DM-hide
+          // set can answer this.
+          final blocklist = _MockContentBlocklistRepository();
+          when(() => blocklist.isBlocked(any())).thenReturn(false);
+          when(
+            () => blocklist.shouldFilterFromDms(any()),
+          ).thenAnswer(
+            (invocation) =>
+                invocation.positionalArguments.first == memberPubkey,
+          );
+
+          await pumpRow(
+            tester,
+            conversationWith(lastSender: memberPubkey),
+            blocklist: blocklist,
+          );
+
+          expect(find.text(l10n.dmHiddenMessageLabel), findsOneWidget);
+          expect(find.textContaining(lastMessage), findsNothing);
+        },
+      );
+
+      testWidgets(
+        "keeps a visible member's last message in a group with a blocked "
+        'member',
+        (tester) async {
+          final blocklist = await blocklistBlocking(tester, [otherPubkey]);
+
+          await pumpRow(
+            tester,
+            conversationWith(lastSender: memberPubkey),
+            blocklist: blocklist,
+          );
+
+          expect(find.text('${prefixFor('Bob')}$lastMessage'), findsOneWidget);
+          expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+        },
+      );
+
+      testWidgets('keeps a one-to-one preview unchanged', (tester) async {
+        final blocklist = await blocklistBlocking(tester, [otherPubkey]);
+
+        await pumpRow(
+          tester,
+          conversationWith(lastSender: otherPubkey, isGroup: false),
+          blocklist: blocklist,
+        );
+
+        expect(find.text(lastMessage), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      testWidgets('keeps the preview of a group where every member is '
+          'blocked, like a blocked one-to-one', (tester) async {
+        final blocklist = await blocklistBlocking(tester, [
+          otherPubkey,
+          memberPubkey,
+        ]);
+
+        await pumpRow(
+          tester,
+          conversationWith(lastSender: memberPubkey),
+          blocklist: blocklist,
+        );
+
+        expect(find.text('${prefixFor('Bob')}$lastMessage'), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      testWidgets('shows the last message again once the member is unblocked', (
+        tester,
+      ) async {
+        final blocklist = await blocklistBlocking(tester, [memberPubkey]);
+        await pumpRow(
+          tester,
+          conversationWith(lastSender: memberPubkey),
+          blocklist: blocklist,
+        );
+        expect(find.text(l10n.dmHiddenMessageLabel), findsOneWidget);
+
+        await tester.runAsync(() => blocklist.unblockUser(memberPubkey));
+        ProviderScope.containerOf(
+          tester.element(find.byType(ConversationTile)),
+        ).read(blocklistVersionProvider.notifier).increment();
+        await tester.pumpAndSettle();
+
+        expect(find.text('${prefixFor('Bob')}$lastMessage'), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
       });
     });
   });
