@@ -195,6 +195,40 @@ void main() {
       },
     );
 
+    testWidgets('names the recording opt-in on its switch for screen readers', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _recordingEnabledOverrides(enabled: false),
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MinorAccountReviewParentConsentScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await scrollUntilTappable(
+        tester,
+        find.byType(DivineSwitch),
+        200,
+        scrollable: find.byType(Scrollable),
+      );
+
+      expect(
+        tester.getSemantics(find.byType(DivineSwitch)),
+        isSemantics(
+          label: l10n.minorAccountReviewRecordConsentTitle,
+          hasToggledState: true,
+        ),
+      );
+      semantics.dispose();
+    });
+
     testWidgets(
       'a voluntary case keeps its email fallback after an interrupted upload',
       (tester) async {
