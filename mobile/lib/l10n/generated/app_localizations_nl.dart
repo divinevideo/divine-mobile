@@ -5837,12 +5837,26 @@ class AppLocalizationsNl extends AppLocalizations {
       'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer via hun profiel om te reageren.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Hun berichten zijn hier verborgen. Ze zien nog steeds wat je stuurt.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hun berichten zijn hier verborgen. Ze zien nog steeds wat je stuurt.',
+      one: 'De berichten van deze persoon zijn hier verborgen. Die ziet nog steeds wat je stuurt.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Nieuwe chat starten zonder hen';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nieuwe chat starten zonder hen',
+      one: 'Nieuwe chat zonder deze persoon',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Verborgen bericht';

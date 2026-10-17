@@ -5753,12 +5753,26 @@ class AppLocalizationsTr extends AppLocalizations {
       'Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kişinin profilinden kaldır.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Bu kişilerin mesajları burada gizlenir. Gönderdiğin mesajları yine de görebilirler.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bu kişilerin mesajları burada gizlenir. Gönderdiğin mesajları yine de görebilirler.',
+      one: 'Bu kişinin mesajları burada gizlenir. Gönderdiğin mesajları yine de görebilir.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Bu kişiler olmadan yeni sohbet başlat';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bu kişiler olmadan yeni sohbet başlat',
+      one: 'Bu kişi olmadan yeni sohbet başlat',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Gizlenmiş mesaj';

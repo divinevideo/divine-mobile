@@ -5977,12 +5977,28 @@ class AppLocalizationsRo extends AppLocalizations {
       'Mesajele rămân aici ca să le poți citi sau captura. Deblochează din profil pentru a răspunde.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
+      few: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
+      one: 'Mesajele acestei persoane sunt ascunse aici. Încă poate vedea ce trimiți.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Discuție nouă fără aceste persoane';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Discuție nouă fără aceste persoane',
+      few: 'Discuție nouă fără aceste persoane',
+      one: 'Discuție nouă fără această persoană',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Mesaj ascuns';

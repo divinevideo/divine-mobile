@@ -5684,11 +5684,26 @@ class AppLocalizationsAm extends AppLocalizations {
       'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ ከመገለጫቸው እገዳውን ያንሱ።';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'መልእክቶቻቸው እዚህ ተደብቀዋል። እነሱ ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'መልእክቶቻቸው እዚህ ተደብቀዋል። እነሱ ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።',
+      one: 'መልእክቶቻቸው እዚህ ተደብቀዋል። እሳቸው ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'ያለ እነሱ አዲስ ውይይት ይጀምሩ';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ያለ እነሱ አዲስ ውይይት ይጀምሩ',
+      one: 'ያለ እሳቸው አዲስ ውይይት ይጀምሩ',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'የተደበቀ መልእክት';

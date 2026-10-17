@@ -5793,11 +5793,35 @@ class AppLocalizationsAr extends AppLocalizations {
       'تبقى الرسائل هنا لقراءتها أو التقاط صورة للشاشة. للرد، يلزم إلغاء الحظر من الملف الشخصي.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'رسائلهم مخفية هنا. وما زال بإمكانهم رؤية كل ما يُرسَل في المجموعة.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+      many: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+      few: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+      two: 'رسائلهما مخفية هنا، لكن ما زال بإمكانهما رؤية رسائلك.',
+      one:
+          'رسائل هذا الشخص مخفية هنا، لكن ما زال بإمكان هذا الشخص رؤية رسائلك.',
+      zero: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'بدء محادثة جديدة بدونهم';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'بدء محادثة جديدة بدونهم',
+      many: 'بدء محادثة جديدة بدونهم',
+      few: 'بدء محادثة جديدة بدونهم',
+      two: 'بدء محادثة جديدة بدونهما',
+      one: 'بدء محادثة جديدة بدون هذا الشخص',
+      zero: 'بدء محادثة جديدة بدونهم',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'رسالة مخفية';

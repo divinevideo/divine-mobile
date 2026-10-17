@@ -9937,17 +9937,17 @@ abstract class AppLocalizations {
   /// **'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.'**
   String get dmBlockedGroupThreadBody;
 
-  /// Body of the banner above the composer in a group conversation where the viewer blocked some members but not all. Group messages are encrypted to every member, so the blocked people still receive what the viewer writes.
+  /// Body of the banner above the composer in a group conversation where the viewer blocked some members but not all. Group messages are encrypted to every member, so the blocked people still receive what the viewer writes. {count} is how many members the viewer blocked, at least 1; it is not shown, it only picks whether the copy speaks of one person or several. English uses 'them' for both.
   ///
   /// In en, this message translates to:
-  /// **'Their messages are hidden here. They can still see what you send.'**
-  String get dmBlockedGroupMembersBannerBody;
+  /// **'{count, plural, =1{Their messages are hidden here. They can still see what you send.} other{Their messages are hidden here. They can still see what you send.}}'**
+  String dmBlockedGroupMembersBannerBody(int count);
 
-  /// Button in that banner. Opens a conversation with the group's other members only: a new group, or a one-to-one when one member is left. History does not carry over.
+  /// Button in that banner. Opens a conversation with the group's other members only: a new group, or a one-to-one when one member is left. History does not carry over. {count} is how many members the viewer blocked, at least 1; it is not shown, it only picks whether the label speaks of one person or several. English uses 'them' for both.
   ///
   /// In en, this message translates to:
-  /// **'Start a new chat without them'**
-  String get dmStartChatWithoutBlockedAction;
+  /// **'{count, plural, =1{Start a new chat without them} other{Start a new chat without them}}'**
+  String dmStartChatWithoutBlockedAction(int count);
 
   /// Shown in place of a message from someone the viewer blocked or muted, in a group conversation and as that group's inbox preview. The message is still on the device; tapping Show reveals it.
   ///

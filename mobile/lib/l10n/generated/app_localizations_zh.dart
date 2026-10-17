@@ -5463,10 +5463,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmBlockedGroupThreadBody => '消息会保留在这里，方便你查看或截图。在对方主页解除屏蔽后即可回复。';
 
   @override
-  String get dmBlockedGroupMembersBannerBody => '对方的消息在这里已隐藏。对方仍能看到你发送的内容。';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已屏蔽成员的消息在这里已隐藏。他们仍能看到你发送的内容。',
+      one: '该成员的消息在这里已隐藏。此人仍能看到你发送的内容。',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => '开始不含对方的新聊天';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '发起不含已屏蔽成员的新聊天',
+      one: '发起不含该成员的新聊天',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => '已隐藏的消息';

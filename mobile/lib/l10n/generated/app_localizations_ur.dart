@@ -5825,11 +5825,26 @@ class AppLocalizationsUr extends AppLocalizations {
       'پیغامات یہیں رہتے ہیں تاکہ آپ انہیں پڑھ سکیں یا اسکرین شاٹ لے سکیں۔ جواب دینے کے لیے ان کی پروفائل سے بلاک ہٹائیں۔';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
+      one: 'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'ان کے بغیر نئی چیٹ شروع کریں';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ان کے بغیر نئی چیٹ شروع کریں',
+      one: 'ان کے بغیر نئی چیٹ شروع کریں',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'چھپا ہوا پیغام';

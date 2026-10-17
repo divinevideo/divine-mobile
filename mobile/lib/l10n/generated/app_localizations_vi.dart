@@ -5782,12 +5782,27 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn từ hồ sơ của họ để trả lời.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Tin nhắn của họ được ẩn ở đây. Họ vẫn có thể xem những gì bạn gửi.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Tin nhắn của họ được ẩn ở đây. Họ vẫn có thể xem những gì bạn gửi.',
+      one: 'Tin nhắn của người này được ẩn ở đây. Người này vẫn có thể xem những gì bạn gửi.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Cuộc trò chuyện mới không có họ';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Cuộc trò chuyện mới không có họ',
+      one: 'Trò chuyện mới không có người này',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Tin nhắn đã ẩn';

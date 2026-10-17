@@ -1364,6 +1364,9 @@ class _BlockedMembersBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    // Picks one person or several in languages that tell them apart.
+    final blockedCount = blockedPubkeys.length;
+    final startChatLabel = l10n.dmStartChatWithoutBlockedAction(blockedCount);
     // No bottom safe-area inset: the composer sits below and carries it.
     return Container(
       color: context.vineColors.surface,
@@ -1379,7 +1382,7 @@ class _BlockedMembersBanner extends ConsumerWidget {
             ),
           ),
           Text(
-            l10n.dmBlockedGroupMembersBannerBody,
+            l10n.dmBlockedGroupMembersBannerBody(blockedCount),
             style: VineTheme.bodyMediumFont(
               color: context.vineColors.onSurfaceVariant,
             ),
@@ -1387,8 +1390,8 @@ class _BlockedMembersBanner extends ConsumerWidget {
           // `semanticLabel` makes it announce as a button; see
           // [_ClosedThreadNotice].
           DivineButton(
-            label: l10n.dmStartChatWithoutBlockedAction,
-            semanticLabel: l10n.dmStartChatWithoutBlockedAction,
+            label: startChatLabel,
+            semanticLabel: startChatLabel,
             type: DivineButtonType.secondary,
             size: DivineButtonSize.small,
             // A long translation wraps instead of losing "without them".
