@@ -3835,6 +3835,10 @@ class DmRepository {
                 ? (existing?.dmProtocol ?? 'nip17')
                 : 'nip17',
           );
+          await _applyQueuedReadCursor(
+            conversationId,
+            ownerPubkey: ownerPubkey,
+          );
           // A newer message reopens a removed conversation: the row is
           // recreated above, while the tombstone is deliberately kept so
           // replayed history stamped at or before the removal stays
@@ -4668,6 +4672,7 @@ class DmRepository {
           ownerPubkey: ownerPubkey,
           dmProtocol: existing?.dmProtocol ?? 'nip04',
         );
+        await _applyQueuedReadCursor(conversationId, ownerPubkey: ownerPubkey);
         // A newer message reopens a removed conversation: the row is
         // recreated above, while the tombstone is deliberately kept so
         // replayed history stamped at or before the removal stays
@@ -9887,8 +9892,9 @@ class DmRepository {
   /// Reconcile a restored kind-30078 read-state marker rumor (#4977): advance
   /// each conversation's read cursor to the marker's timestamp (forward-only
   /// max). A conversation not yet ingested (marker processed before its
-  /// messages during the drain) is stashed in [_pendingReadCursors] and
-  /// applied when the drain completes.
+  /// messages) is stashed in [_pendingReadCursors], applied by
+  /// [_applyQueuedReadCursor] once a message creates its row, and flushed
+  /// again when the drain completes.
   Future<void> _reconcileReadMarker(Event rumor) async {
     if (!_hasReadMarkerDTag(rumor)) return;
     // The marker is a self-authored control message: the sender gift-wraps it
@@ -9940,6 +9946,26 @@ class DmRepository {
         }
       }
     }
+  }
+
+  /// Applies a read-marker cursor that arrived before [conversationId] had a
+  /// row (#4977) as soon as an ingested message creates or updates it.
+  ///
+  /// Waiting for [_restoreReadStateAfterDrain] is not enough: the drain only
+  /// starts when Messages or a conversation opens, so a conversation the user
+  /// already read would sit unread in the badge until then (#10275). The
+  /// entry stays queued for the drain's flush; re-applying it is a no-op.
+  Future<void> _applyQueuedReadCursor(
+    String conversationId, {
+    required String? ownerPubkey,
+  }) async {
+    final cursor = _pendingReadCursors[conversationId];
+    if (cursor == null) return;
+    await _conversationsDao.applyReadCursor(
+      conversationId,
+      cursor,
+      ownerPubkey: ownerPubkey,
+    );
   }
 
   bool _hasReadMarkerDTag(Event rumor) {

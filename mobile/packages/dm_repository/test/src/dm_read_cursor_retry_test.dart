@@ -179,18 +179,20 @@ void main() {
         await settle();
       }
 
-      /// Creates the conversation the marker named, with one unread inbound
-      /// message at [messageAt] — the row the marker was racing.
-      Future<void> ingestConversation({required int messageAt}) async {
-        final wrapId = 'e' * 64;
-        final rumorId = 'f' * 64;
+      /// Delivers one kind-14 message in the conversation, sent by [sender].
+      Future<void> ingestMessage({
+        required String wrapId,
+        required String rumorId,
+        required String sender,
+        required int messageAt,
+      }) async {
         rumorByWrapId[wrapId] = Event.fromJson({
           'id': rumorId,
-          'pubkey': _peer,
+          'pubkey': sender,
           'created_at': messageAt,
           'kind': EventKind.privateDirectMessage,
           'tags': [
-            ['p', _owner],
+            ['p', if (sender == _owner) _peer else _owner],
           ],
           'content': 'hello',
           'sig': '',
@@ -211,6 +213,16 @@ void main() {
         await settle();
       }
 
+      /// Creates the conversation the marker named, with one unread inbound
+      /// message at [messageAt] — the row the marker was racing.
+      Future<void> ingestConversation({required int messageAt}) =>
+          ingestMessage(
+            wrapId: 'e' * 64,
+            rumorId: 'f' * 64,
+            sender: _peer,
+            messageAt: messageAt,
+          );
+
       Future<ConversationRow?> conversation() async {
         final rows = await conversationsDao.getAllConversations(
           ownerPubkey: _owner,
@@ -219,7 +231,8 @@ void main() {
       }
 
       test(
-        'a marker landing before its conversation is retried after the drain',
+        'a marker landing before its conversation applies when the '
+        'conversation is ingested, without waiting for the drain',
         () async {
           // The marker names a conversation that does not exist yet, so
           // applyReadCursor matches no row and returns false.
@@ -235,31 +248,92 @@ void main() {
                 'precondition: the marker must arrive before its row exists',
           );
 
-          // The drain then ingests the conversation it was racing.
+          // The live subscription then ingests the conversation it was
+          // racing. The drain only starts when Messages opens, so a cursor
+          // held back until then shows as an unread badge (#10275).
           await ingestConversation(messageAt: _baseCreatedAt + 50);
-          final beforeRetry = await conversation();
-          expect(beforeRetry, isNotNull);
-          expect(
-            beforeRetry!.isRead,
-            isFalse,
-            reason: 'the dropped cursor has not been re-applied yet',
-          );
 
-          // backfillHistoryIfNeeded flushes the queued cursors (#4977).
-          await repository.backfillHistoryIfNeeded();
-          await settle();
-
-          final afterRetry = await conversation();
+          final row = await conversation();
           expect(
-            afterRetry!.lastReadTimestamp,
+            row!.lastReadTimestamp,
             _baseCreatedAt + 100,
-            reason: 'the queued cursor must be re-applied, not discarded',
+            reason:
+                'the queued cursor must apply to the row it was waiting for',
           );
           expect(
-            afterRetry.isRead,
+            row.isRead,
             isTrue,
             reason: 'the cursor covers the latest message, so it reads as read',
           );
+        },
+      );
+
+      test(
+        'an already-read conversation re-downloaded after its marker stays '
+        'read through every message the cursor covers',
+        () async {
+          // The order seen on device after switching accounts back: the
+          // newest read marker sorts above the conversation's wraps, then
+          // the peer's message, the owner's reply and the peer's latest.
+          await deliverReadMarker(
+            wrapId: 'a' * 64,
+            rumorId: 'b' * 64,
+            readAt: _baseCreatedAt + 300,
+          );
+          await ingestMessage(
+            wrapId: '1' * 64,
+            rumorId: '2' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 100,
+          );
+          await ingestMessage(
+            wrapId: '3' * 64,
+            rumorId: '4' * 64,
+            sender: _owner,
+            messageAt: _baseCreatedAt + 200,
+          );
+          await ingestMessage(
+            wrapId: '5' * 64,
+            rumorId: '6' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 300,
+          );
+
+          final row = await conversation();
+          expect(row!.lastMessageTimestamp, _baseCreatedAt + 300);
+          expect(
+            row.isRead,
+            isTrue,
+            reason: 'every message is at or before the restored read cursor',
+          );
+        },
+      );
+
+      test(
+        'a message newer than the queued cursor is still unread',
+        () async {
+          // Control: the cursor restores what was read, not what was not.
+          await deliverReadMarker(
+            wrapId: 'a' * 64,
+            rumorId: 'b' * 64,
+            readAt: _baseCreatedAt + 100,
+          );
+          await ingestMessage(
+            wrapId: '1' * 64,
+            rumorId: '2' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 50,
+          );
+          await ingestMessage(
+            wrapId: '3' * 64,
+            rumorId: '4' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 150,
+          );
+
+          final row = await conversation();
+          expect(row!.lastReadTimestamp, _baseCreatedAt + 100);
+          expect(row.isRead, isFalse);
         },
       );
 
