@@ -206,6 +206,29 @@ void main() {
       expect(changes, hasLength(1));
     });
 
+    test(
+      'accepted subscription completes when disposed during publication',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        final publishing = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) {
+          publishing.complete();
+          return accepted.future;
+        });
+        final saving = repository.setSubscription(coordinate, subscribed: true);
+        await publishing.future;
+        await repository.dispose();
+        accepted.complete(_acceptedPublishOutcome(lastSignedEvent()!));
+        expect(await saving, {coordinate});
+      },
+    );
+
     test('dispose closes the subscription change stream', () async {
       final done = repository.subscriptionChanges.isEmpty;
 

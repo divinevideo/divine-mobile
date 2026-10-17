@@ -614,7 +614,7 @@ class BadgeRepository {
       label: 'badge subscriptions',
       tags: tags,
     );
-    _subscriptionChanges.add(null);
+    if (!_subscriptionChanges.isClosed) _subscriptionChanges.add(null);
     return Set.unmodifiable(current);
   }
 

@@ -429,6 +429,17 @@ class _AcceptedHolders extends ConsumerWidget {
       ],
       child: MultiBlocListener(
         listeners: [
+          BlocListener<BadgeVideosCubit, BadgeVideosState>(
+            listenWhen: (previous, current) =>
+                previous.loadMoreFailures != current.loadMoreFailures,
+            listener: (context, _) =>
+                ScaffoldMessenger.of(context).showSnackBar(
+                  DivineSnackbarContainer.snackBar(
+                    context.l10n.feedFailedToLoadVideos,
+                    error: true,
+                  ),
+                ),
+          ),
           BlocListener<BadgeHoldersCubit, BadgeHoldersState>(
             listenWhen: (previous, current) =>
                 previous.saveFailures != current.saveFailures,
@@ -575,8 +586,11 @@ class _AcceptedHolderListState extends State<_AcceptedHolderList> {
                 builder: (context, isFollowing) => UserProfileTile(
                   pubkey: holder,
                   isFollowing: isFollowing,
-                  onToggleFollow: () => context.read<MyFollowingBloc>().add(
-                    MyFollowingToggleRequested(holder),
+                  onFollow: () => context.read<MyFollowingBloc>().add(
+                    MyFollowingFollowRequested(holder),
+                  ),
+                  onUnfollow: () => context.read<MyFollowingBloc>().add(
+                    MyFollowingUnfollowRequested(holder),
                   ),
                   padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
                 ),

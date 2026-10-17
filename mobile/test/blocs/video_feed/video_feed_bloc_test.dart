@@ -1348,6 +1348,7 @@ void main() {
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'pages a subscribed badge and direct follows through one merged pager',
         setUp: () {
+          badgeAuthorLoads = 0;
           when(() => mockFollowRepository.followingPubkeys).thenReturn([
             'direct-follow',
           ]);
@@ -1371,7 +1372,10 @@ void main() {
           videosRepository: mockVideosRepository,
           followRepository: mockFollowRepository,
           curatedListRepository: mockCuratedListRepository,
-          badgeAuthors: () async => ['direct-follow', 'badge-holder'],
+          badgeAuthors: () async {
+            badgeAuthorLoads++;
+            return ['direct-follow', 'badge-holder'];
+          },
         ),
         act: (bloc) async {
           bloc.add(const VideoFeedStarted(mode: FeedMode.following));
@@ -1395,6 +1399,7 @@ void main() {
               .having((s) => s.hasMore, 'exhausted', false),
         ],
         verify: (_) {
+          expect(badgeAuthorLoads, 1);
           verify(
             () => mockVideosRepository.createBadgeVideoPager([
               'direct-follow',
@@ -1458,7 +1463,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(videos: [createTestVideo('follow')]),
@@ -1498,7 +1503,7 @@ void main() {
               videoRefs: any(named: 'videoRefs'),
               userPubkey: any(named: 'userPubkey'),
               limit: any(named: 'limit'),
-              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(videos: [createTestVideo('follow')]),
@@ -1528,6 +1533,59 @@ void main() {
               ]),
         ],
       );
+
+      test('continues direct-follow cursors after holder resolution fails', () async {
+        const follow =
+            '1111111111111111111111111111111111111111111111111111111111111111';
+        when(() => mockFollowRepository.followingPubkeys).thenReturn([follow]);
+        when(
+          () => mockVideosRepository.getHomeFeedVideos(
+            authors: [follow],
+            videoRefs: any(named: 'videoRefs'),
+            userPubkey: any(named: 'userPubkey'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as String?;
+          return HomeFeedResult(
+            videos: [
+              createTestVideo(cursor == null ? 'first-follow' : 'next-follow'),
+            ],
+            paginationCursor: cursor == null ? '1791995000' : null,
+            hasMore: cursor == null,
+          );
+        });
+        var holderLoads = 0;
+        final bloc = VideoFeedBloc(
+          videosRepository: mockVideosRepository,
+          followRepository: mockFollowRepository,
+          curatedListRepository: mockCuratedListRepository,
+          badgeAuthors: () async {
+            holderLoads++;
+            throw Exception('controlled holder read failure');
+          },
+        );
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+        await pumpEventQueue();
+        expect(bloc.state.paginationCursor, '1791995000');
+        expect(bloc.state.hasMore, isTrue);
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(bloc.state.videos.map((video) => video.id), [
+          'first-follow',
+          'next-follow',
+        ]);
+        expect(bloc.state.hasMore, isFalse);
+        expect(holderLoads, 1);
+        verify(
+          () => mockVideosRepository.getHomeFeedVideos(
+            authors: [follow],
+            cursor: '1791995000',
+          ),
+        ).called(1);
+      });
 
       blocTest<VideoFeedBloc, VideoFeedBlocState>(
         'does not emit noFollowedUsers for forYou when following list is empty',
