@@ -3,12 +3,14 @@
 // ABOUTME: timeline. Shared by the render pipeline, seam preview, picker and the
 // ABOUTME: timeline header so all of them agree on the same budget.
 
+import 'dart:math' as math;
+
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ClipTransition, ClipTransitionType;
+    show AnimationCurve, ClipTransition, ClipTransitionType;
 import 'package:unified_logger/unified_logger.dart';
 
 const _logName = 'TransitionGeometry';
@@ -156,15 +158,15 @@ Map<String, ClipTransition?> clampTransitions(List<DivineVideoClip> clips) {
   return _withSpacedFlashes(clips, clamped);
 }
 
-/// One flash transition on the exported video: the clip it follows and the
-/// midpoint of its blend, where the flash peaks.
+/// One flash transition on the exported video: the clip it follows and where
+/// in its blend the flash peaks.
 typedef _FlashMoment = ({String clipId, Duration at});
 
 /// Where the flash transitions in [transitions] (keyed like
 /// [clampTransitions]) flash on the exported video, in order.
 ///
-/// An internal blend is centred on its boundary, half the blend into it on
-/// the output. A loop-restart wrap moves the head of the first clip into the
+/// An internal blend ends at its boundary on the output, and the flash peaks
+/// [_flashAt] into it. A loop-restart wrap moves the head of the first clip into the
 /// blend that ends the video, so everything before that blend starts the
 /// wrap's length earlier than on the editor timeline.
 List<_FlashMoment> _flashMoments(
@@ -186,7 +188,7 @@ List<_FlashMoment> _flashMoments(
     if (transition.type.flashes) {
       moments.add((
         clipId: clips[i].id,
-        at: boundary - removed - _half(transition.duration),
+        at: boundary - removed - transition.duration + _flashAt(transition),
       ));
     }
     removed += transition.duration;
@@ -195,11 +197,88 @@ List<_FlashMoment> _flashMoments(
     final outputDuration = boundary + clips.last.playbackDuration - removed;
     moments.add((
       clipId: clips.last.id,
-      at: outputDuration - _half(wrap.duration),
+      at: outputDuration - wrap.duration + _flashAt(wrap),
     ));
   }
   return moments;
 }
+
+/// How far into its blend [transition]'s flash peaks: where its curve eases
+/// the progress to one half, which is the midpoint only on a curve symmetric
+/// about it.
+Duration _flashAt(ClipTransition transition) =>
+    transition.duration * _flashPeakShares[transition.curve]!;
+
+/// Where each curve's flash peaks, as a share of the blend.
+final Map<AnimationCurve, double> _flashPeakShares = {
+  for (final curve in AnimationCurve.values)
+    curve: _firstShareReaching(curve, 0.5),
+};
+
+/// The first share of a transition at which [curve] has eased its progress to
+/// [target]. A bounce or elastic curve can get there more than once.
+double _firstShareReaching(AnimationCurve curve, double target) {
+  const steps = 1024;
+  var below = 0.0;
+  for (var step = 1; step <= steps; step++) {
+    var above = step / steps;
+    if (_eased(curve, above) < target) {
+      below = above;
+      continue;
+    }
+    for (var i = 0; i < 40; i++) {
+      final middle = (below + above) / 2;
+      if (_eased(curve, middle) < target) {
+        below = middle;
+      } else {
+        above = middle;
+      }
+    }
+    return above;
+  }
+  return 1;
+}
+
+/// [t] eased by [curve] the way pro_video_editor's renderers ease a
+/// transition (`applyEasing`), which differs from Flutter's `Curves`.
+double _eased(AnimationCurve curve, double t) => switch (curve) {
+  AnimationCurve.linear => t,
+  AnimationCurve.easeIn => t * t,
+  AnimationCurve.easeOut => t * (2 - t),
+  AnimationCurve.easeInOut => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+  AnimationCurve.easeInCubic => t * t * t,
+  AnimationCurve.easeOutCubic => 1 - (1 - t) * (1 - t) * (1 - t),
+  AnimationCurve.easeInOutCubic =>
+    t < 0.5 ? 4 * t * t * t : 1 - math.pow(-2 * t + 2, 3) / 2,
+  AnimationCurve.bounceIn => 1 - _bounceOut(1 - t),
+  AnimationCurve.bounceOut => _bounceOut(t),
+  AnimationCurve.bounceInOut =>
+    t < 0.5 ? (1 - _bounceOut(1 - 2 * t)) / 2 : (1 + _bounceOut(2 * t - 1)) / 2,
+  AnimationCurve.elasticIn => 1 - _elasticOut(1 - t),
+  AnimationCurve.elasticOut => _elasticOut(t),
+  AnimationCurve.elasticInOut =>
+    t < 0.5
+        ? (1 - _elasticOut(1 - 2 * t)) / 2
+        : (1 + _elasticOut(2 * t - 1)) / 2,
+};
+
+double _bounceOut(double t) {
+  if (t < 1 / 2.75) return 7.5625 * t * t;
+  if (t < 2 / 2.75) {
+    final u = t - 1.5 / 2.75;
+    return 7.5625 * u * u + 0.75;
+  }
+  if (t < 2.5 / 2.75) {
+    final u = t - 2.25 / 2.75;
+    return 7.5625 * u * u + 0.9375;
+  }
+  final u = t - 2.625 / 2.75;
+  return 7.5625 * u * u + 0.984375;
+}
+
+double _elasticOut(double t) => t == 0 || t == 1
+    ? t
+    : math.pow(2, -10 * t) * math.sin((t - 0.075) * 2 * math.pi / 0.3) + 1;
 
 /// The point where the exported video of [clips] ends and starts over: its
 /// output duration, capped at [VideoEditorConstants.maxDuration].
@@ -268,8 +347,6 @@ Duration _outputDuration(
   }
   return total;
 }
-
-Duration _half(Duration d) => Duration(microseconds: d.inMicroseconds ~/ 2);
 
 /// Clamps [transition]'s duration to the room its boundary keeps after [scale]
 /// is applied to the requested per-side [demand], logging when it shrinks.

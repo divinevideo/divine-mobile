@@ -5,7 +5,7 @@ import 'package:models/models.dart' as model;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ClipTransition, ClipTransitionType, EditorVideo;
+    show AnimationCurve, ClipTransition, ClipTransitionType, EditorVideo;
 
 void main() {
   const dissolve = ClipTransition(type: ClipTransitionType.dissolve);
@@ -866,6 +866,46 @@ void main() {
         ms(1100),
         ms(2900),
       ]);
+    });
+
+    test('times a flash where its curve peaks, not at its midpoint', () {
+      // The renderers ease the progress and peak the flash where it is one
+      // half: an ease-in 200 ms blend from 1.0 s peaks √½ of the way in.
+      final clips = [
+        clip(
+          'a',
+          ms(1200),
+          transition: flash.copyWith(curve: AnimationCurve.easeIn),
+        ),
+        clip('b', ms(1200)),
+      ];
+
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [
+        const Duration(microseconds: 1141421),
+      ]);
+    });
+
+    test('spaces flashes by where their curves peak', () {
+      // Their midpoints are 1 s apart, but the ease-in one peaks late and
+      // the ease-out one early, 0.92 s apart.
+      final clips = [
+        clip(
+          'a',
+          ms(1200),
+          transition: flash.copyWith(curve: AnimationCurve.easeIn),
+        ),
+        clip(
+          'b',
+          ms(1200),
+          transition: flash.copyWith(curve: AnimationCurve.easeOut),
+        ),
+        clip('c', ms(1200)),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a']?.type, ClipTransitionType.flash);
+      expect(clamped['b']?.type, ClipTransitionType.dissolve);
     });
 
     test('plays the loop-restart flash as a dissolve when the first flash of '
