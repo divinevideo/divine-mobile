@@ -310,6 +310,37 @@ void main() {
       );
 
       test(
+        'a marker applied to an existing row keeps it read when a newer '
+        'message it covers is re-ingested',
+        () async {
+          // No queue here: the row exists when the marker lands, so the
+          // cursor is stored on it directly. The re-download then reaches
+          // the peer's newer message the user had also read.
+          await ingestMessage(
+            wrapId: '1' * 64,
+            rumorId: '2' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 100,
+          );
+          await deliverReadMarker(
+            wrapId: 'a' * 64,
+            rumorId: 'b' * 64,
+            readAt: _baseCreatedAt + 300,
+          );
+          await ingestMessage(
+            wrapId: '3' * 64,
+            rumorId: '4' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 300,
+          );
+
+          final row = await conversation();
+          expect(row!.lastMessageTimestamp, _baseCreatedAt + 300);
+          expect(row.isRead, isTrue);
+        },
+      );
+
+      test(
         'a message newer than the queued cursor is still unread',
         () async {
           // Control: the cursor restores what was read, not what was not.
