@@ -120,11 +120,9 @@ void main() {
         await tester.pump();
 
         // Two fingers on the shape, spread far past both sides of the item.
+        // A fixed `pointer:` can collide with an automatic id (#10245).
         final first = await tester.startGesture(const Offset(150, 300));
-        final second = await tester.startGesture(
-          const Offset(170, 300),
-          pointer: 2,
-        );
+        final second = await tester.startGesture(const Offset(170, 300));
         await tester.pump();
         for (var step = 1; step <= 10; step++) {
           await first.moveTo(Offset(150 - step * 30, 300));
@@ -135,6 +133,7 @@ void main() {
         await second.up();
         await tester.pump();
 
+        expect(changes, isNotEmpty);
         final mask = changes.last!;
         final halfWidth = mask.size.width / 2;
         expect(mask.size.width, greaterThan(circle.size.width));
