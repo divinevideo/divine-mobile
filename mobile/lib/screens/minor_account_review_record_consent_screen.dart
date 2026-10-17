@@ -22,6 +22,7 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/utils/validators.dart';
+import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Records the parent-consent video in-app, then lets the parent review it.
@@ -581,7 +582,7 @@ class _ConsentPromptCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PromptCard(
+    return MinorAccountReviewChecklistCard(
       title: context.l10n.minorAccountReviewRecordConsentPromptTitle,
       items: [
         context.l10n.minorAccountReviewParentConsentChecklistKid,
@@ -806,65 +807,6 @@ class _ClipPlaybackState extends State<_ClipPlayback> {
               ? DivineVideoPlayer(controller: _controller)
               : const SizedBox.shrink(),
         ),
-      ),
-    );
-  }
-}
-
-/// The on-screen prompt the parent reads aloud or shows to the camera.
-class _PromptCard extends StatelessWidget {
-  const _PromptCard({required this.title, required this.items});
-
-  final String title;
-  final List<String> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.vineColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: VineTheme.titleMediumFont(
-              color: context.vineColors.primaryText,
-            ),
-          ),
-          const SizedBox(height: 10),
-          for (final item in items)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: ExcludeSemantics(
-                      child: DivineIcon(
-                        icon: DivineIconName.checkCircle,
-                        size: 16,
-                        color: VineTheme.vineGreen,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.mutedText,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
       ),
     );
   }
