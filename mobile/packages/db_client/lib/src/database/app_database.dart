@@ -336,12 +336,16 @@ class AppDatabase extends _$AppDatabase {
     }
     // Preserve dismissals made by the earlier v24 build. This also repairs a
     // current-version database whose independent marker table is missing.
+    // Match runtime dismissal capture: include visible unowned legacy message
+    // rows, but never rows assigned to a different account.
     await customStatement('''
       INSERT OR IGNORE INTO conversation_dismissals
         (conversation_id, owner_pubkey, boundary_timestamp, known_message_ids)
       SELECT c.id, c.owner_pubkey, COALESCE(c.last_message_timestamp, 0),
         COALESCE((SELECT json_group_array(d.id) FROM direct_messages d
-          WHERE d.conversation_id = c.id AND d.owner_pubkey = c.owner_pubkey
+          WHERE d.conversation_id = c.id
+            AND (d.owner_pubkey = c.owner_pubkey OR d.owner_pubkey = ''
+              OR d.owner_pubkey IS NULL)
             AND d.created_at >= COALESCE(c.last_message_timestamp, 0)), '[]')
       FROM conversations c WHERE c.is_dismissed = 1
     ''');
