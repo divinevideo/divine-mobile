@@ -251,27 +251,30 @@ void main() {
       },
     );
 
-    test(
-      'keeps a destination whose only local data is saved dismissals',
-      () async {
-        _createSqliteDatabase(legacyPath, draftCount: 1);
-        _createSqliteDatabase(newPath);
-        final database = sqlite3.open(newPath);
-        try {
-          database
-            ..execute('CREATE TABLE conversation_dismissals (id TEXT);')
-            ..execute(
-              "INSERT INTO conversation_dismissals VALUES ('saved');",
-            );
-        } finally {
-          database.close();
-        }
-        await migrateLegacyDatabase(legacyPath: legacyPath, newPath: newPath);
-        expect(_tableCount(newPath, 'conversation_dismissals'), 1);
-        expect(_draftCount(newPath), 0);
-        expect(_draftCount(_legacyConflictBackupPath(newPath)), 1);
-      },
-    );
+    for (final entry in {
+      'saved dismissals': 'conversation_dismissals',
+      'saved sound jobs': 'sound_request_states',
+    }.entries) {
+      test(
+        'keeps a destination whose only local data is ${entry.key}',
+        () async {
+          _createSqliteDatabase(legacyPath, draftCount: 1);
+          _createSqliteDatabase(newPath);
+          final database = sqlite3.open(newPath);
+          try {
+            database
+              ..execute('CREATE TABLE ${entry.value} (id TEXT);')
+              ..execute("INSERT INTO ${entry.value} VALUES ('saved');");
+          } finally {
+            database.close();
+          }
+          await migrateLegacyDatabase(legacyPath: legacyPath, newPath: newPath);
+          expect(_tableCount(newPath, entry.value), 1);
+          expect(_draftCount(newPath), 0);
+          expect(_draftCount(_legacyConflictBackupPath(newPath)), 1);
+        },
+      );
+    }
 
     test(
       'restores legacy DB when destination has only replaceable cache rows',
@@ -1325,6 +1328,7 @@ void main() {
         'vanished_profiles',
         'personal_events',
         'concord_store_entries',
+        'sound_request_states',
       ];
       expect(
         [

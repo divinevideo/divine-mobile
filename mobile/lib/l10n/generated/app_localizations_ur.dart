@@ -13720,4 +13720,25 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'محفوظ ہو گیا';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'سب کو پڑھا ہوا نشان زد کریں';
+
+  @override
+  String get inboxRequestsDismissed => 'ایک طرف رکھی گئیں';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'ابھی کچھ ایک طرف نہیں رکھا گیا';
+
+  @override
+  String get inboxRequestDismiss => 'ایک طرف رکھیں';
+
+  @override
+  String get inboxRequestRestore => 'واپس لائیں';
+
+  @override
+  String get inboxThreadMarkRead => 'پڑھا ہوا نشان زد کریں';
+
+  @override
+  String get inboxThreadMarkedRead => 'پڑھا ہوا نشان زد کر دیا گیا';
 }

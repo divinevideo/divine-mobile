@@ -13844,4 +13844,25 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Salvo';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Marcar tudo como lido';
+
+  @override
+  String get inboxRequestsDismissed => 'Dispensadas';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Nenhuma conversa dispensada';
+
+  @override
+  String get inboxRequestDismiss => 'Dispensar';
+
+  @override
+  String get inboxRequestRestore => 'Restaurar';
+
+  @override
+  String get inboxThreadMarkRead => 'Marcar como lida';
+
+  @override
+  String get inboxThreadMarkedRead => 'Marcado como lida';
 }

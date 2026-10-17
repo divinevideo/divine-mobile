@@ -13725,4 +13725,25 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Disimpan';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Tandakan semua sudah dibaca';
+
+  @override
+  String get inboxRequestsDismissed => 'Diketepikan';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Tiada perbualan diketepikan';
+
+  @override
+  String get inboxRequestDismiss => 'Ketepikan';
+
+  @override
+  String get inboxRequestRestore => 'Pulihkan';
+
+  @override
+  String get inboxThreadMarkRead => 'Tandakan sudah dibaca';
+
+  @override
+  String get inboxThreadMarkedRead => 'Ditandakan sudah dibaca';
 }

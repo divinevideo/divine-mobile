@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 24** (see `app_database.dart`).
+**Version: 25** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -191,7 +191,10 @@ creating the Concord table idempotently, preserving both queues for either v22
 shape. Migration tests cover fresh v23 databases, the full legacy upgrade chain,
 main's v22, and the chat preview's v22 with queued data.
 
-Version 24 adds `conversations.is_dismissed` and the independent, owner-scoped
+Version 24 adds the account-scoped `sound_request_states` workflow store.
+Its committed snapshot remains unchanged.
+
+Version 25 adds `conversations.is_dismissed` and the independent, owner-scoped
 `conversation_dismissals` table for a conversation or message request the user
 put aside without deleting it. The conversation boolean is a cached projection;
 the independent marker survives ordinary sign-out and account switching.
@@ -211,11 +214,14 @@ isolated. Cross-device synchronization remains out of scope.
 The step creates the independent table and adds the cached column through the
 idempotent `_addColumnIfMissing` and checks `to` as well as `from`, like the v20
 and v22 steps. The v12 rebuild uses the current table definition, so a
-migration test that stops below v24 drops the column again. The repair probe
-lists the column and table, so an earlier v24 database missing either is repaired
-on open. Existing dismissed rows seed the independent store without losing
-their conversation data. This recovery does not replace reconciling migration
-versions and generated snapshots if another schema-changing PR lands first.
+migration test that stops below v25 drops the column again. The repair probe
+lists the column and table, so a damaged current database missing either is
+repaired on open. Existing dismissed rows seed the independent store without losing
+their conversation data. The v25 upgrade also accepts the earlier
+dismissal-preview v24 shape and creates its missing sound-request store while retaining dismissed rows. Main
+v24 audio rows remain intact through the upgrade. Native salvage and legacy-file
+replacement checks preserve both saved dismissal markers and sound-request
+workflow state.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

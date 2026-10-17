@@ -146,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -281,6 +281,13 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 24 && to >= 24) {
         await m.createTable(soundRequestStates);
+      }
+      if (from < 25 && to >= 25) {
+        // Dismissal previews also reported v24 before main reserved it for
+        // sound requests. Preserve their rows and add the missing audio store.
+        if (!await _tableExists('sound_request_states')) {
+          await m.createTable(soundRequestStates);
+        }
         await _addColumnIfMissing(
           'conversations',
           'is_dismissed',
@@ -289,8 +296,8 @@ class AppDatabase extends _$AppDatabase {
         await _repairConversationDismissals();
       }
       // Earlier table rebuilds use the current definition. Honor intermediate
-      // targets by withholding a column that belongs to v24.
-      if (to < 24 &&
+      // targets by withholding a column that belongs to v25.
+      if (to < 25 &&
           (await _columnNames('conversations')).contains('is_dismissed')) {
         await customStatement(
           'ALTER TABLE conversations DROP COLUMN is_dismissed',
@@ -322,7 +329,7 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
-  /// Creates or repairs the independent v24 dismissal store.
+  /// Creates or repairs the independent v25 dismissal store.
   Future<void> _repairConversationDismissals() async {
     if (!await _tableExists('conversation_dismissals')) {
       await createMigrator().createTable(conversationDismissals);

@@ -13382,4 +13382,25 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'ተቀምጧል';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'ሁሉንም እንደተነበቡ ምልክት ማድረግ';
+
+  @override
+  String get inboxRequestsDismissed => 'ወደ ጎን የተቀመጡ';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'ወደ ጎን የተቀመጠ ነገር የለም';
+
+  @override
+  String get inboxRequestDismiss => 'ወደ ጎን ማስቀመጥ';
+
+  @override
+  String get inboxRequestRestore => 'መመለስ';
+
+  @override
+  String get inboxThreadMarkRead => 'እንደተነበበ ምልክት ማድረግ';
+
+  @override
+  String get inboxThreadMarkedRead => 'እንደተነበበ ምልክት ተደርጓል';
 }

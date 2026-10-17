@@ -13069,4 +13069,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '저장됨';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => '모두 읽음으로 표시';
+
+  @override
+  String get inboxRequestsDismissed => '보류됨';
+
+  @override
+  String get inboxRequestsDismissedEmpty => '보류한 대화가 없어요';
+
+  @override
+  String get inboxRequestDismiss => '보류';
+
+  @override
+  String get inboxRequestRestore => '복원';
+
+  @override
+  String get inboxThreadMarkRead => '읽음으로 표시';
+
+  @override
+  String get inboxThreadMarkedRead => '읽음으로 표시했어요';
 }

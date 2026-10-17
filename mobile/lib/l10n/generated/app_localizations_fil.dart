@@ -13846,4 +13846,25 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Na-save';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Markahang nabasa lahat';
+
+  @override
+  String get inboxRequestsDismissed => 'Nakatabi';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Wala pang nakatabi';
+
+  @override
+  String get inboxRequestDismiss => 'Itabi';
+
+  @override
+  String get inboxRequestRestore => 'Ibalik';
+
+  @override
+  String get inboxThreadMarkRead => 'Markahang nabasa';
+
+  @override
+  String get inboxThreadMarkedRead => 'Minarkahang nabasa';
 }

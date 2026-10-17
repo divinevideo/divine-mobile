@@ -13817,4 +13817,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Saved';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Mark all read';
+
+  @override
+  String get inboxRequestsDismissed => 'Dismissed';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Nothing dismissed';
+
+  @override
+  String get inboxRequestDismiss => 'Dismiss';
+
+  @override
+  String get inboxRequestRestore => 'Restore';
+
+  @override
+  String get inboxThreadMarkRead => 'Mark as read';
+
+  @override
+  String get inboxThreadMarkedRead => 'Marked as read';
 }

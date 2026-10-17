@@ -13892,4 +13892,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Gespeichert';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Alle als gelesen markieren';
+
+  @override
+  String get inboxRequestsDismissed => 'Zurückgelegt';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Nichts zurückgelegt';
+
+  @override
+  String get inboxRequestDismiss => 'Zurücklegen';
+
+  @override
+  String get inboxRequestRestore => 'Wiederherstellen';
+
+  @override
+  String get inboxThreadMarkRead => 'Als gelesen markieren';
+
+  @override
+  String get inboxThreadMarkedRead => 'Als gelesen markiert';
 }
