@@ -53,6 +53,8 @@ final Finder _dragHandle = find.byWidgetPredicate((widget) {
 });
 
 void main() {
+  // Wraps the MaterialApp rather than its home: the modal route that `show`
+  // pushes sits above home, and must still resolve sticker assets here.
   late _TestAssetBundle bundle;
 
   setUp(() {
@@ -72,10 +74,10 @@ void main() {
     String? tertiaryButtonText,
     VoidCallback? onTertiaryPressed,
   }) {
-    return MaterialApp(
-      home: DefaultAssetBundle(
-        bundle: bundle,
-        child: Scaffold(
+    return DefaultAssetBundle(
+      bundle: bundle,
+      child: MaterialApp(
+        home: Scaffold(
           body: VineBottomSheetPrompt(
             sticker: sticker,
             title: title,
@@ -297,10 +299,10 @@ void main() {
     group('show', () {
       testWidgets('shows as modal bottom sheet', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
-            home: DefaultAssetBundle(
-              bundle: bundle,
-              child: Scaffold(
+          DefaultAssetBundle(
+            bundle: bundle,
+            child: MaterialApp(
+              home: Scaffold(
                 body: Builder(
                   builder: (context) => ElevatedButton(
                     onPressed: () async {
@@ -334,10 +336,10 @@ void main() {
 
       testWidgets('shows with additional text', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
-            home: DefaultAssetBundle(
-              bundle: bundle,
-              child: Scaffold(
+          DefaultAssetBundle(
+            bundle: bundle,
+            child: MaterialApp(
+              home: Scaffold(
                 body: Builder(
                   builder: (context) => ElevatedButton(
                     onPressed: () async {
@@ -371,10 +373,10 @@ void main() {
         var tertiaryTapped = false;
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: DefaultAssetBundle(
-              bundle: bundle,
-              child: Scaffold(
+          DefaultAssetBundle(
+            bundle: bundle,
+            child: MaterialApp(
+              home: Scaffold(
                 body: Builder(
                   builder: (context) => ElevatedButton(
                     onPressed: () async {
@@ -412,10 +414,10 @@ void main() {
 
       testWidgets('dismisses when tapping outside', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
-            home: DefaultAssetBundle(
-              bundle: bundle,
-              child: Scaffold(
+          DefaultAssetBundle(
+            bundle: bundle,
+            child: MaterialApp(
+              home: Scaffold(
                 body: Builder(
                   builder: (context) => ElevatedButton(
                     onPressed: () async {
@@ -454,10 +456,10 @@ void main() {
         'stays open when isDismissible and enableDrag are false',
         (tester) async {
           await tester.pumpWidget(
-            MaterialApp(
-              home: DefaultAssetBundle(
-                bundle: bundle,
-                child: Scaffold(
+            DefaultAssetBundle(
+              bundle: bundle,
+              child: MaterialApp(
+                home: Scaffold(
                   body: Builder(
                     builder: (context) => ElevatedButton(
                       onPressed: () async {

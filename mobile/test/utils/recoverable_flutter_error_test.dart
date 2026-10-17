@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart'
     show HttpExceptionWithStatus;
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +10,21 @@ import 'package:material_ui/material_ui.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:openvine/utils/recoverable_flutter_error.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+
+// The first 51 bytes of a 16x16 lossless WebP: a valid header over a cut-off
+// bitstream, so the codec opens and decoding the frame fails.
+const _truncatedWebp =
+    'UklGRvADAABXRUJQVlA4TOMDAAAvD8ADAP8Hwda2M84X/rEzU9u2sYdu3bbb/IOg8bcN';
+
+/// Serves the same bytes for every key.
+class _BytesBundle extends CachingAssetBundle {
+  _BytesBundle(this._bytes);
+
+  final Uint8List _bytes;
+
+  @override
+  Future<ByteData> load(String key) async => ByteData.sublistView(_bytes);
+}
 
 void main() {
   group('classifyRecoverableFlutterError', () {
@@ -470,6 +488,65 @@ void main() {
       );
 
       expect(classifyRecoverableFlutterError(details), isNull);
+    });
+
+    group('images the pipeline cannot read', () {
+      // The details come from Flutter's own image pipeline rather than being
+      // written by hand, so these tests pin the wording it really reports.
+      Future<FlutterErrorDetails> reportedFailure(ImageProvider image) {
+        final reported = Completer<FlutterErrorDetails>();
+        final previousOnError = FlutterError.onError;
+        addTearDown(() => FlutterError.onError = previousOnError);
+        FlutterError.onError = (details) {
+          if (!reported.isCompleted) reported.complete(details);
+        };
+        // A listener without onError leaves the failure unhandled, which is
+        // what sends it to FlutterError.onError in a release build.
+        image
+            .resolve(ImageConfiguration.empty)
+            .addListener(ImageStreamListener((_, _) {}));
+        return reported.future;
+      }
+
+      setUpAll(TestWidgetsFlutterBinding.ensureInitialized);
+
+      test('classifies a missing bundled image as recoverable', () async {
+        final details = await reportedFailure(
+          const AssetImage('assets/missing_recoverable_error_test.webp'),
+        );
+
+        expect(classifyRecoverableFlutterError(details), (
+          reason: 'Recoverable media load failure',
+          report: true,
+        ));
+      });
+
+      test('classifies an image that fails to decode as recoverable', () async {
+        final details = await reportedFailure(
+          ExactAssetImage(
+            'truncated.webp',
+            bundle: _BytesBundle(base64Decode(_truncatedWebp)),
+          ),
+        );
+
+        expect(classifyRecoverableFlutterError(details), (
+          reason: 'Recoverable media load failure',
+          report: true,
+        ));
+      });
+
+      test('keeps asset-load failures outside the image pipeline fatal', () {
+        // Same wording, different subsystem: only the image pipeline degrades
+        // to an empty box.
+        final details = FlutterErrorDetails(
+          exception: FlutterError(
+            'Unable to load asset: "assets/config.json".',
+          ),
+          library: 'services library',
+        );
+
+        expect(classifyRecoverableFlutterError(details), isNull);
+      });
     });
   });
 }
