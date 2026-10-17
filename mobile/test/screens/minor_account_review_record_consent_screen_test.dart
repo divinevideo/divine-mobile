@@ -640,7 +640,7 @@ void main() {
       expect(fallbackTapped, isFalse);
     });
 
-    testWidgets('keeps the clip and offers retry when submit fails', (
+    testWidgets('offers a retry and the email fallback when submit fails', (
       tester,
     ) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
@@ -701,8 +701,8 @@ void main() {
         findsNothing,
       );
 
-      // Retrying resubmits the same accepted clip, proving it was never
-      // discarded when the first attempt failed.
+      // Retrying resubmits the same accepted clip. Whether that file is still
+      // on disk is the screen's job, covered under clip cleanup.
       repository.throwOnSubmit = false;
       await tester.tap(
         find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
@@ -717,7 +717,7 @@ void main() {
     });
 
     testWidgets(
-      'an offline submit surfaces retry without discarding the clip',
+      'offers a retry when submit fails offline',
       (
         tester,
       ) async {
@@ -777,7 +777,7 @@ void main() {
           findsOneWidget,
         );
 
-        // Back online: the retry submits the retained clip.
+        // Back online: the retry resubmits the same clip.
         repository.submitError = null;
         await tester.tap(
           find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
@@ -1097,6 +1097,72 @@ void main() {
         await _pumpFrames(tester);
 
         expect(clip.existsSync(), isFalse);
+      },
+    );
+
+    testWidgets(
+      'keeps the accepted clip on disk after a failed upload so the retry '
+      'resends it',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final recorder = _FakeRecorder(stopResult: clip.path);
+        final repository = _FakeRepository()..throwOnSubmit = true;
+        _useTallSurface(tester);
+
+        await _pumpRecordConsentScreen(
+          tester,
+          recorder: recorder,
+          permissions: _FakePermissions(),
+          settle: false,
+          overrides: [
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => _statusWithCase(),
+            ),
+            minorAccountReviewRepositoryProvider.overrideWithValue(repository),
+          ],
+        );
+
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentRecordCta),
+        );
+        await _pumpFrames(tester);
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentStopCta),
+        );
+        await _pumpFrames(tester);
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentUseVideoCta),
+        );
+        await _pumpFrames(tester);
+        await tester.enterText(
+          find.byType(TextFormField),
+          'parent@example.com',
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
+        );
+        await _pumpFrames(tester);
+
+        expect(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitError),
+          findsOneWidget,
+        );
+        expect(clip.existsSync(), isTrue);
+
+        repository.throwOnSubmit = false;
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
+        );
+        await _pumpFrames(tester);
+
+        expect(repository.submittedVideoPath, clip.path);
+        expect(
+          find.text(l10n.minorAccountReviewVideoSubmittedTitle),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(const SizedBox());
+        await _pumpFrames(tester);
       },
     );
 
