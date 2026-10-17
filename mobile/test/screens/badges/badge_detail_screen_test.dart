@@ -556,6 +556,40 @@ void main() {
       );
     });
 
+    testWidgets('shows a retry message when the inline video page fails', (
+      tester,
+    ) async {
+      final videos = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadAcceptedHolders(any()))
+          .thenAnswer((_) async => {_pubkey(3)});
+      when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
+      var pages = 0;
+      when(pager.loadMore).thenAnswer((_) async {
+        if (pages++ == 0) return [_video()];
+        throw Exception('controlled page failure');
+      });
+      when(() => pager.hasMore).thenReturn(true);
+      await tester.pumpWidget(buildSubject(videosRepository: videos));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(l10n.profileShowMore),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.profileShowMore));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('reloads holder videos when the videos repository is rebuilt', (
       tester,
     ) async {
