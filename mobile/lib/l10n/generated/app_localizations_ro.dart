@@ -14168,9 +14168,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get liveEndThisLiveSession => 'Închei această sesiune live?';
 
   @override
-  String get liveFailedToReportUser => 'Nu s-a putut raporta utilizatorul';
-
-  @override
   String get liveFeaturedHosts => 'Gazde recomandate';
 
   @override
@@ -14401,9 +14398,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Utilizator blocat';
-
-  @override
-  String get liveUserReported => 'Utilizator raportat';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

@@ -13885,9 +13885,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get liveEndThisLiveSession => 'Tamatkan sesi langsung ini?';
 
   @override
-  String get liveFailedToReportUser => 'Gagal melaporkan pengguna';
-
-  @override
   String get liveFeaturedHosts => 'Hos pilihan';
 
   @override
@@ -14117,9 +14114,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Pengguna disekat';
-
-  @override
-  String get liveUserReported => 'Pengguna dilaporkan';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

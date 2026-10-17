@@ -10430,10 +10430,6 @@
   "@liveEndThisLiveSession": {
     "description": "Label or message in live rooms."
   },
-  "liveFailedToReportUser": "Failed to report user",
-  "@liveFailedToReportUser": {
-    "description": "Label or message in live rooms."
-  },
   "liveFeaturedHosts": "Featured hosts",
   "@liveFeaturedHosts": {
     "description": "Label or message in live rooms."
@@ -10720,10 +10716,6 @@
   },
   "liveUserBlocked": "User blocked",
   "@liveUserBlocked": {
-    "description": "Label or message in live rooms."
-  },
-  "liveUserReported": "User reported",
-  "@liveUserReported": {
     "description": "Label or message in live rooms."
   },
   "liveUsingYourProfilePhotoAsTheStartingThumbnail": "Using your profile photo as the starting thumbnail.",

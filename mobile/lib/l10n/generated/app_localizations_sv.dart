@@ -13893,9 +13893,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get liveEndThisLiveSession => 'Avsluta den här livesessionen?';
 
   @override
-  String get liveFailedToReportUser => 'Det gick inte att anmäla användaren';
-
-  @override
   String get liveFeaturedHosts => 'Utvalda värdar';
 
   @override
@@ -14125,9 +14122,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Användaren har blockerats';
-
-  @override
-  String get liveUserReported => 'Användaren har anmälts';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

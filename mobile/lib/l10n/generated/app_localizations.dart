@@ -23214,12 +23214,6 @@ abstract class AppLocalizations {
   /// Label or message in live rooms.
   ///
   /// In en, this message translates to:
-  /// **'Failed to report user'**
-  String get liveFailedToReportUser;
-
-  /// Label or message in live rooms.
-  ///
-  /// In en, this message translates to:
   /// **'Featured hosts'**
   String get liveFeaturedHosts;
 
@@ -23648,12 +23642,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'User blocked'**
   String get liveUserBlocked;
-
-  /// Label or message in live rooms.
-  ///
-  /// In en, this message translates to:
-  /// **'User reported'**
-  String get liveUserReported;
 
   /// Label or message in live rooms.
   ///

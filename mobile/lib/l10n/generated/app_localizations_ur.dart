@@ -13882,9 +13882,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get liveEndThisLiveSession => 'یہ براہِ راست سیشن ختم کریں؟';
 
   @override
-  String get liveFailedToReportUser => 'صارف کی رپورٹ نہیں ہو سکی';
-
-  @override
   String get liveFeaturedHosts => 'نمایاں میزبان';
 
   @override
@@ -14113,9 +14110,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'صارف بلاک ہو گیا';
-
-  @override
-  String get liveUserReported => 'صارف کی رپورٹ ہو گئی';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
