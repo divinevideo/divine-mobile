@@ -14,6 +14,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
@@ -21,6 +24,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -30,6 +34,8 @@ class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 // Full 64-character hex Nostr IDs for test data.
 const _testConversationId1 =
@@ -370,6 +376,57 @@ void main() {
             );
           });
         }
+
+        test('hides a group with a member muted in another Nostr app without '
+            'listing it under Blocked, the way a muted one-to-one is hidden', () async {
+          // `filterBlockedConversations` hides on the viewer's own mutes, while
+          // the Blocked list holds runtime blocks only. A one-to-one with a
+          // muted person behaves the same way.
+          registerFallbackValue(<Filter>[]);
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final blocklist = ContentBlocklistRepository(
+            prefs: await SharedPreferences.getInstance(),
+          );
+          addTearDown(blocklist.dispose);
+          final muteEvents = StreamController<Event>();
+          addTearDown(muteEvents.close);
+          final client = _MockNostrClient();
+          when(
+            () => client.subscribe(any()),
+          ).thenAnswer((_) => muteEvents.stream);
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+          await blocklist.syncMuteListsInBackground(client, _testPubkey1);
+          muteEvents.add(
+            Event(
+                _testPubkey1,
+                10000,
+                [
+                  ['p', _testPubkey3],
+                ],
+                '',
+                createdAt: 1,
+              )
+              ..id = 'own-mute'
+              ..sig = 'sig',
+          );
+          await pumpEventQueue();
+          expect(blocklist.isMutedByUs(_testPubkey3), isTrue);
+          _stubStreams(mockDmRepository, accepted: [room()]);
+          final bloc = createBlocWith(blocklist);
+          addTearDown(bloc.close);
+
+          final state = await load(bloc);
+
+          expect(state.conversations, isEmpty);
+          expect(state.blockedConversations, isEmpty);
+        });
 
         test(
           'keeps the group in the inbox when nobody in it is blocked',

@@ -33,8 +33,20 @@ DmThreadWritability resolveDmThreadWritability({
   if (participantPubkeys.any(isRetiredModerationAccount)) {
     return DmThreadWritability.closedRetired;
   }
-  if (participantPubkeys.any(isBlockedByUs)) {
-    return DmThreadWritability.blockedByUs;
-  }
+  final blocked = dmThreadBlockedParticipants(
+    participantPubkeys: participantPubkeys,
+    isBlockedByUs: isBlockedByUs,
+  );
+  if (blocked.isNotEmpty) return DmThreadWritability.blockedByUs;
   return DmThreadWritability.writable;
 }
+
+/// The participants whose block makes a thread
+/// [DmThreadWritability.blockedByUs], in route order.
+///
+/// A group's read-only notice names them, so it reads the same list the gate
+/// does rather than working it out a second time.
+List<String> dmThreadBlockedParticipants({
+  required List<String> participantPubkeys,
+  required bool Function(String pubkey) isBlockedByUs,
+}) => participantPubkeys.where(isBlockedByUs).toList();

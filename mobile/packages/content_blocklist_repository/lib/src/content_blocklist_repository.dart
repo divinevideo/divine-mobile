@@ -12,6 +12,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/utils/nostr_timestamp.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -1449,7 +1450,9 @@ class ContentBlocklistRepository {
     required String userPubkey,
   }) {
     return conversations.where((conv) {
-      final others = conv.participantPubkeys.where((pk) => pk != userPubkey);
+      final others = conv.participantPubkeys.where(
+        (pk) => !pubkeysEqual(pk, userPubkey),
+      );
       // Exclude self-conversations (no "other" participant found).
       if (others.isEmpty) return false;
       return !others.any(shouldFilterFromDms);

@@ -1625,6 +1625,7 @@ void main() {
           String pubkey, {
           String? name,
           bool resolving = false,
+          bool vanished = false,
         }) => [
           fetchUserProfileProvider(pubkey).overrideWith(
             (ref) async => name == null
@@ -1637,7 +1638,7 @@ void main() {
                     eventId: 'c' * 64,
                   ),
           ),
-          profileVanishedProvider(pubkey).overrideWith((ref) => false),
+          profileVanishedProvider(pubkey).overrideWith((ref) => vanished),
           profileIdentityResolvingProvider(pubkey).overrideWithValue(resolving),
         ];
 
@@ -1680,6 +1681,31 @@ void main() {
             findsOneWidget,
           );
           expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
+        });
+
+        testWidgets('does not name a member whose account is deleted', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob', vanished: true),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(1)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              l10n.dmBlockedGroupMemberTitle(l10n.profileDeletedAccountName),
+            ),
+            findsNothing,
+          );
         });
 
         testWidgets('does not name a member whose profile is still loading', (

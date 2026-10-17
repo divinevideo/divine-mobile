@@ -2686,6 +2686,26 @@ void main() {
       );
     }
 
+    test('treats the viewer key in another letter case as the viewer', () {
+      // Hex keys are case-insensitive, so a row that spells the viewer's own
+      // key in capitals is still a self-conversation.
+      const viewer =
+          'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd';
+      final service = ContentBlocklistRepository();
+
+      expect(
+        service.filterBlockedConversations([
+          DmConversation(
+            id: 'self',
+            participantPubkeys: [viewer, viewer.toUpperCase()],
+            isGroup: false,
+            createdAt: 1,
+          ),
+        ], userPubkey: viewer),
+        isEmpty,
+      );
+    });
+
     group('with mute lists', () {
       late StreamController<Event> muteEvents;
       late ContentBlocklistRepository service;
