@@ -577,7 +577,7 @@ class TransitionTimelineMap {
     this._blends, {
     required this.editorDuration,
     required this.outputDuration,
-    this.flashes = const [],
+    required this.flashes,
   });
 
   factory TransitionTimelineMap.fromClips(List<DivineVideoClip> clips) {
@@ -613,7 +613,7 @@ class TransitionTimelineMap {
       blends,
       editorDuration: editorTotal,
       outputDuration: editorTotal - removed,
-      flashes: flashes,
+      flashes: List.unmodifiable(flashes),
     );
   }
 

@@ -975,6 +975,16 @@ void main() {
       expect(TransitionTimelineMap.fromClips(clips).flashes, isEmpty);
     });
 
+    test('keeps its flashes fixed, as its equality depends on them', () {
+      final map = TransitionTimelineMap.fromClips([
+        clip('a', ms(1200), transition: flash),
+        clip('b', ms(1200)),
+      ]);
+
+      expect(map.flashes, isNotEmpty);
+      expect(() => map.flashes.add(ms(0)), throwsUnsupportedError);
+    });
+
     test('tells maps apart by their flashes alone', () {
       final dissolving = TransitionTimelineMap.fromClips([
         clip('a', ms(1200), transition: dissolve.copyWith(duration: ms(200))),
