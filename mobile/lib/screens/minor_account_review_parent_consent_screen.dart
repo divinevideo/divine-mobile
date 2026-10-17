@@ -97,21 +97,17 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 if (isSignedIn) ...[
-                  ListTile(
-                    title: Text(
-                      context.l10n.minorAccountReviewRecordConsentTitle,
-                    ),
-                    trailing: DivineSwitch(
-                      value: canRecordInApp,
-                      onChanged: (enabled) async {
-                        await ref
-                            .read(featureFlagServiceProvider)
-                            .setFlag(
-                              FeatureFlag.minorConsentInAppRecording,
-                              enabled,
-                            );
-                      },
-                    ),
+                  DivineSwitchTile(
+                    title: context.l10n.minorAccountReviewRecordConsentTitle,
+                    value: canRecordInApp,
+                    onChanged: (enabled) async {
+                      await ref
+                          .read(featureFlagServiceProvider)
+                          .setFlag(
+                            FeatureFlag.minorConsentInAppRecording,
+                            enabled,
+                          );
+                    },
                   ),
                   const SizedBox(height: 12),
                 ],
