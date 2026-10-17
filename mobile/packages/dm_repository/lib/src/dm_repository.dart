@@ -9960,7 +9960,7 @@ class DmRepository {
   /// entry stays queued for the drain's flush; re-applying it is a no-op.
   Future<void> _applyQueuedReadCursor(
     String conversationId, {
-    required String? ownerPubkey,
+    required String ownerPubkey,
   }) async {
     final cursor = _pendingReadCursors[conversationId];
     if (cursor == null) return;
