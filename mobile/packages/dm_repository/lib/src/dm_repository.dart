@@ -868,10 +868,13 @@ class DmRepository {
   static const _readMarkerPayloadVersion = 1;
 
   /// Read cursors parsed from a restored marker whose conversation row did not
-  /// exist yet — a marker processed before its messages during the reinstall
-  /// drain. Flushed once the drain completes (all conversations present), keyed
-  /// by conversation id → max read timestamp. Cleared on reset. Loss on a
-  /// kill mid-drain self-heals on the next read + marker publish.
+  /// exist yet, keyed by conversation id → max read timestamp. Either the live
+  /// subscription or the drain can process a marker before its messages.
+  /// [_applyQueuedReadCursor] applies an entry as soon as an ingested message
+  /// creates or updates the row; the drain's completion flushes every entry,
+  /// which covers rows created any other way. Cleared on reset. A kill before
+  /// the row arrives loses the entry; it self-heals on the next read + marker
+  /// publish.
   final Map<String, int> _pendingReadCursors = {};
 
   /// A single long-lived decrypt isolate, alive only for the duration of a
@@ -2572,7 +2575,7 @@ class DmRepository {
             _drainRetryTimer = null;
           }
           // Restore read state now that the full conversation set is present:
-          // last-sent floor + any read markers stashed during the drain. #4977.
+          // last-sent floor + any stashed read markers. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
           Log.info(
             'DM history drain complete for ${pubkeyForLogs(pubkey)}: '
