@@ -5960,16 +5960,17 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      'వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction =>
+      'వారు లేకుండా కొత్త చాట్ ప్రారంభించండి';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => 'దాచబడిన సందేశం';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => 'చూపించండి';
 
   @override
   String get dmUnresolvedThreadTitle => 'ఈ సంభాషణను లోడ్ చేయడం సాధ్యపడలేదు';

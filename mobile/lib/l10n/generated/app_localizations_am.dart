@@ -5640,16 +5640,16 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      'መልእክቶቻቸው እዚህ ተደብቀዋል። እነሱ ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction => 'ያለ እነሱ አዲስ ውይይት ይጀምሩ';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => 'የተደበቀ መልእክት';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => 'ያሳዩ';
 
   @override
   String get dmUnresolvedThreadTitle => 'ይህን ውይይት መጫን አልተቻለም';

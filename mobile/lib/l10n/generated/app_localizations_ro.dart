@@ -5933,16 +5933,17 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction =>
+      'Începe o conversație nouă fără aceste persoane';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => 'Mesaj ascuns';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => 'Arată';
 
   @override
   String get dmUnresolvedThreadTitle =>

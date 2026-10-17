@@ -5738,16 +5738,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+      'Tin nhắn của họ được ẩn ở đây. Họ vẫn có thể xem những gì bạn gửi.';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction =>
+      'Bắt đầu cuộc trò chuyện mới không có họ';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => 'Tin nhắn đã ẩn';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => 'Hiện';
 
   @override
   String get dmUnresolvedThreadTitle => 'Không tải được cuộc trò chuyện này';

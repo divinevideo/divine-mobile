@@ -5421,17 +5421,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmBlockedGroupThreadBody => '消息会保留在这里，方便你查看或截图。在对方主页解除屏蔽后即可回复。';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Their messages are hidden here. They can still see what you send.';
+  String get dmBlockedGroupMembersBannerBody => '对方的消息在这里已隐藏。对方仍能看到你发送的内容。';
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Start a new chat without them';
+  String get dmStartChatWithoutBlockedAction => '开始不含对方的新聊天';
 
   @override
-  String get dmHiddenMessageLabel => 'Hidden message';
+  String get dmHiddenMessageLabel => '已隐藏的消息';
 
   @override
-  String get dmHiddenMessageShowAction => 'Show';
+  String get dmHiddenMessageShowAction => '显示';
 
   @override
   String get dmUnresolvedThreadTitle => '无法加载此对话';
