@@ -1192,12 +1192,14 @@ class VideoEvent {
   /// [displayContent] without the hashtags it repeats from [chips], for
   /// surfaces that show those hashtags as chips.
   ///
-  /// The Vine archive import repeats the caption's hashtags on a line of their
-  /// own. That line is dropped, and so are the same hashtags where they end
-  /// another line, such as a caption's closing tags; a caption whose last word
-  /// is one of them loses it. Text with no line made up entirely of [chips]
-  /// keeps every word. A dropped line between two blank lines takes one of
-  /// them along; everything else is returned trimmed and otherwise as written.
+  /// A line made up entirely of [chips] is dropped, which removes the line the
+  /// Vine archive import appends with the caption's hashtags. For an imported
+  /// Vine ([isOriginalVine]) the hashtags on such a line are also dropped
+  /// where they end another line, such as the caption's closing tags, so a
+  /// Vine caption whose last word is one of them loses it. Any other caption
+  /// keeps every word of its remaining lines. A dropped line between two blank
+  /// lines takes one of them along; everything else is returned trimmed and
+  /// otherwise as written.
   String descriptionWithoutRepeatedChips(Iterable<String> chips) {
     final chipSet = {for (final tag in chips) tag.toLowerCase()};
     final lines = [
@@ -1231,7 +1233,9 @@ class VideoEvent {
       lastKeptBlank = isBlank;
       kept
         ..write(
-          keep < tokens.length ? text.substring(0, tokens[keep - 1].end) : text,
+          isOriginalVine && keep < tokens.length
+              ? text.substring(0, tokens[keep - 1].end)
+              : text,
         )
         ..write(lineBreak);
     }

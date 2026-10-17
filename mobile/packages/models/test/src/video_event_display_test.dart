@@ -125,10 +125,21 @@ void main() {
       );
     });
 
+    test('keeps the hashtags ending a native caption', () {
+      expect(
+        build(
+          content: 'I love #pizza\n\n#pizza #food',
+          hashtags: const ['pizza', 'food'],
+        ).chipCaptionDescription,
+        equals('I love #pizza'),
+      );
+    });
+
     test('keeps a repeated hashtag inside a sentence', () {
       expect(
         build(
           content: 'I love #pizza so much #yum\n\n#pizza #yum',
+          rawTags: const {'platform': 'vine'},
           hashtags: const ['pizza', 'yum'],
         ).chipCaptionDescription,
         equals('I love #pizza so much'),
@@ -139,6 +150,7 @@ void main() {
       expect(
         build(
           content: '#glenn\nCaption #glenn',
+          rawTags: const {'platform': 'vine'},
           hashtags: const ['glenn'],
         ).chipCaptionDescription,
         equals('Caption'),
@@ -149,6 +161,7 @@ void main() {
       expect(
         build(
           content: 'Caption #WindowsXP\n#windowsxp',
+          rawTags: const {'platform': 'vine'},
           hashtags: const ['windowsxp'],
         ).chipCaptionDescription,
         equals('Caption'),
@@ -159,6 +172,7 @@ void main() {
       expect(
         build(
           content: 'Caption #glenn #windowsxp\n#windowsxp',
+          rawTags: const {'platform': 'vine'},
           hashtags: const ['glenn', 'windowsxp'],
         ).chipCaptionDescription,
         equals('Caption #glenn'),
@@ -253,7 +267,7 @@ void main() {
           content: 'First\n\n#glenn\nSecond\n\n\n\nThird #glenn',
           hashtags: const ['glenn'],
         ).chipCaptionDescription,
-        equals('First\n\nSecond\n\n\n\nThird'),
+        equals('First\n\nSecond\n\n\n\nThird #glenn'),
       );
     });
 
@@ -284,6 +298,7 @@ void main() {
     test('drops a very long run of repeated trailing hashtags quickly', () {
       final video = build(
         content: 'Caption ${List.filled(20000, '#a').join(' ')}\n#a',
+        rawTags: const {'platform': 'vine'},
         hashtags: const ['a'],
       );
 
