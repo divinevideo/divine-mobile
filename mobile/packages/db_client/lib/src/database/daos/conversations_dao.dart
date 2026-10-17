@@ -531,6 +531,22 @@ END
     );
   }
 
+  /// Deletes every conversation whose owner is not in [keepOwnerPubkeys].
+  ///
+  /// Collects the conversations kept for a returning account once that
+  /// account is no longer known on the device (#10276). Unattributed legacy
+  /// rows (`''` or `NULL` owner) are left to the account-boundary cleanup.
+  /// Returns the number of conversations deleted.
+  Future<int> deleteForOwnersNotIn(Set<String> keepOwnerPubkeys) {
+    return (delete(conversations)..where(
+          (row) =>
+              row.ownerPubkey.isNotNull() &
+              row.ownerPubkey.equals('').not() &
+              row.ownerPubkey.isNotIn(keepOwnerPubkeys),
+        ))
+        .go();
+  }
+
   /// Owner filter for raw SQL retained by legacy repair queries: empty when
   /// [ownerPubkey] is null (all rows), else owner-or-legacy.
   String _ownerSqlClause(String? ownerPubkey) => ownerPubkey == null

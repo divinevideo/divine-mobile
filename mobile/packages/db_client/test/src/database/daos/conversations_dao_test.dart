@@ -1114,6 +1114,55 @@ void main() {
       });
     });
 
+    group('deleteForOwnersNotIn (#10276)', () {
+      Future<void> seed(String id, String? owner) => dao.upsertConversation(
+        id: id,
+        participantPubkeys: '["a","b"]',
+        isGroup: false,
+        createdAt: 1700000000,
+        lastMessageTimestamp: 1700000100,
+        ownerPubkey: owner,
+      );
+
+      Future<List<String>> remainingIds() async =>
+          (await dao.getAllConversations()).map((row) => row.id).toList()
+            ..sort();
+
+      test('deletes the conversations of owners outside the set', () async {
+        await seed('conv_known', 'owner_known');
+        await seed('conv_active', 'owner_active');
+        await seed('conv_forgotten', 'owner_forgotten');
+
+        final deleted = await dao.deleteForOwnersNotIn({
+          'owner_known',
+          'owner_active',
+        });
+
+        expect(deleted, 1);
+        expect(await remainingIds(), ['conv_active', 'conv_known']);
+      });
+
+      test('leaves unattributed legacy rows alone', () async {
+        await seed('conv_empty_owner', '');
+        await seed('conv_null_owner', null);
+
+        final deleted = await dao.deleteForOwnersNotIn({'owner_known'});
+
+        expect(deleted, 0);
+        expect(await remainingIds(), ['conv_empty_owner', 'conv_null_owner']);
+      });
+
+      test('an empty set deletes every attributed conversation', () async {
+        await seed('conv_a', 'owner_a');
+        await seed('conv_legacy', '');
+
+        final deleted = await dao.deleteForOwnersNotIn(const {});
+
+        expect(deleted, 1);
+        expect(await remainingIds(), ['conv_legacy']);
+      });
+    });
+
     group('isRead conflict semantics', () {
       test(
         'older backfill wrap does not re-mark a read conversation unread',

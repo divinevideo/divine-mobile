@@ -21,7 +21,9 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/constants/hive_box_names.dart';
+import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
@@ -1963,6 +1965,72 @@ void main() {
           expect(await conversationCountFor(_pubkeyA), 0);
         },
       );
+
+      group('accounts the device no longer knows', () {
+        const forgottenPubkey =
+            'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
+
+        Future<void> rememberAccounts(List<String> pubkeys) => prefs.setString(
+          kKnownAccountsKey,
+          jsonEncode([
+            for (final pubkey in pubkeys)
+              KnownAccount(
+                pubkeyHex: pubkey,
+                authSource: AuthenticationSource.importedKeys,
+                addedAt: DateTime.utc(2026),
+                lastUsedAt: DateTime.utc(2026),
+              ).toJson(),
+          ]),
+        );
+
+        test(
+          "an account cleanup deletes a forgotten account's kept "
+          'conversations',
+          () async {
+            await seedBoundary();
+            await seedConversation(
+              id: 'conv_forgotten',
+              ownerPubkey: forgottenPubkey,
+              lastMessageAt: 1700000300,
+              isRead: true,
+            );
+            await rememberAccounts([_pubkeyA, _pubkeyB]);
+
+            await readService().clearUserSpecificData(
+              reason: 'explicit_logout',
+              userPubkey: _pubkeyB,
+            );
+
+            expect(await conversationCountFor(forgottenPubkey), 0);
+            expect(await conversationCountFor(_pubkeyA), 3);
+          },
+        );
+
+        test('the sweep also runs once when the app starts', () async {
+          await seedConversation(
+            id: 'conv_forgotten',
+            ownerPubkey: forgottenPubkey,
+            lastMessageAt: 1700000300,
+            isRead: true,
+          );
+          await seedConversation(
+            id: 'conv_known',
+            ownerPubkey: _pubkeyA,
+            lastMessageAt: 1700000300,
+            isRead: true,
+          );
+          await rememberAccounts([_pubkeyA]);
+
+          readService();
+          for (var i = 0; i < 20; i++) {
+            if (await conversationCountFor(forgottenPubkey) == 0) break;
+            await pumpEventQueue();
+          }
+
+          expect(await conversationCountFor(forgottenPubkey), 0);
+          expect(await conversationCountFor(_pubkeyA), 1);
+        });
+      });
 
       group('returning to the account', () {
         late Map<String, Event> rumorByWrapId;

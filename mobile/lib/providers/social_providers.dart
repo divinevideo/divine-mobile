@@ -1063,6 +1063,16 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
     await db.notificationsDao.claimLegacyRows(userPubkey);
   };
 
+  service.onConversationSweep = db.conversationsDao.deleteForOwnersNotIn;
+  // A kept conversation outlives its account when the account leaves the
+  // known-accounts list without its own cleanup; collect those once per launch
+  // as well as after every account cleanup (#10276).
+  runProviderDetached(
+    service.sweepConversationsOfUnknownAccounts(),
+    'sweep conversations of accounts no longer on this device',
+    logName: 'UserDataCleanup',
+  );
+
   return service;
 }
 
