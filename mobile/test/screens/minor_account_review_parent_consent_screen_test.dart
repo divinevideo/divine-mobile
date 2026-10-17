@@ -231,7 +231,7 @@ void main() {
     });
 
     testWidgets(
-      'a voluntary case keeps its email fallback after an interrupted upload',
+      'emails support with the case ID for a voluntary application',
       (tester) async {
         String? capturedEmailBody;
         await tester.pumpWidget(
@@ -298,7 +298,8 @@ void main() {
     );
 
     testWidgets(
-      'an already restricted consent case keeps its email fallback after an interrupted upload',
+      'emails support with the case ID for a restricted case awaiting '
+      'parental consent',
       (tester) async {
         String? capturedEmailBody;
         await tester.pumpWidget(
