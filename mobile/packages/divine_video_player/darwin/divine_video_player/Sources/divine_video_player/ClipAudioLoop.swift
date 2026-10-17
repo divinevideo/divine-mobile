@@ -180,7 +180,18 @@ final class ClipAudioLoop {
         if let composition = source.composition {
             decoded = await decode(composition: composition)
         } else if let url = source.url, url.isFileURL {
-            decoded = await decode(url: url)
+            // Only the lap and what its seam blends with: a lap trimmed from
+            // a long recording must not decode the whole recording.
+            decoded = await decode(
+                url: url,
+                timeRange: CMTimeRange(
+                    start: source.fileStart,
+                    duration: CMTimeAdd(
+                        source.duration,
+                        CMTime(seconds: decodedPastTheLoopSeconds, preferredTimescale: 600)
+                    )
+                )
+            )
         } else {
             decoded = nil
         }
@@ -482,6 +493,10 @@ final class ClipAudioLoop {
         return UInt64(max(0, nanos) * Double(info.denom) / Double(info.numer))
     }
 
+    /// How far past the loop point a file is decoded. The seam blends at most
+    /// [LoopPcm.crossfadeMs] of it.
+    private static let decodedPastTheLoopSeconds = 1.0
+
     private struct Decoded {
         let samples: [Float]
         let channels: Int
@@ -556,15 +571,16 @@ final class ClipAudioLoop {
         }
     }
 
-    /// The audio track of [url] as interleaved floats, with where its first
-    /// sample sits on the clip's timeline.
-    private static func decode(url: URL) async -> Decoded? {
+    /// The audio track of [url] within [timeRange] as interleaved floats, with
+    /// where its first sample sits on the clip's timeline.
+    private static func decode(url: URL, timeRange: CMTimeRange) async -> Decoded? {
         let asset = AVURLAsset(url: url)
         do {
             guard let track = try await asset.loadTracks(withMediaType: .audio).first else {
                 return nil
             }
             let reader = try AVAssetReader(asset: asset)
+            reader.timeRange = timeRange
             let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
                 AVFormatIDKey: kAudioFormatLinearPCM,
                 AVLinearPCMBitDepthKey: 32,

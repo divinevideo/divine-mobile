@@ -1004,7 +1004,8 @@ internal class DivineVideoPlayerInstance(
      *
      * Only for the case that has the seam: one clip, repeating. Multi-clip
      * timelines keep the player's audio — there is no repeat of the same
-     * media period there, so nothing to avoid.
+     * media period there, so nothing to avoid — and so does a lap longer than
+     * [LoopPcm.MAX_LOOP_US].
      *
      * Decoding blocks, so it runs on [metadataExecutor]. The player keeps its
      * own audio until the loop is ready: a decode reads the source again and
@@ -1050,6 +1051,14 @@ internal class DivineVideoPlayerInstance(
             return
         }
         clipAudioPending = false
+        if (loopUs > LoopPcm.MAX_LOOP_US) {
+            DivineVideoPlayerLog.debug(
+                "Leaving the audio of a $loopUs us lap with ExoPlayer: " +
+                    "longer than a loop is built for",
+                name = "DivineVideoPlayer.AudioLoop",
+            )
+            return
+        }
         // Where the picture's lap begins in the source: past zero when the
         // source clipped an empty edit ahead of the first frame.
         val clipStartUs = presented?.positionInFirstPeriodUs?.coerceAtLeast(0L) ?: 0L

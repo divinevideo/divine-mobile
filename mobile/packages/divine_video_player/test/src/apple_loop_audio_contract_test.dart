@@ -125,6 +125,27 @@ void main() {
       );
     });
 
+    test('a loop decodes only its lap, and a long lap keeps the player '
+        'sound', () {
+      expect(
+        _body(_instanceSource(), 'private func startClipAudioLoop('),
+        contains(
+          'guard source.duration.seconds <= LoopPcm.maxLoopSeconds else {',
+        ),
+        reason:
+            'The loop holds its whole lap as PCM: a 15-minute recording '
+            'opened in the editor took the app past its memory limit '
+            '(#10198).',
+      );
+      expect(
+        _body(_loopSource(), 'private static func decode(url: URL,'),
+        contains('reader.timeRange = timeRange'),
+        reason:
+            'A lap trimmed from a long recording must not decode the whole '
+            'recording to loop a few seconds of it.',
+      );
+    });
+
     test('only a looping feed clip streams through the kept download', () {
       final source = _instanceSource();
 

@@ -13,6 +13,7 @@ enum LoopPcmTests {
         keepsAHeadOfDigitalSilence()
         rampsADecodeThatEndsBeforeTheLoop()
         placesTheDecodeByItsFirstTimestamp()
+        refusesALapLongerThanALoopIsBuiltFor()
         print("Loop PCM tests passed")
     }
 
@@ -94,6 +95,32 @@ enum LoopPcmTests {
         )!
         let expected = tone(frames: 10_001, channels: 1)[10_000]
         precondition(abs(early.samples[10_000] - expected) < 1e-6)
+    }
+
+    /// The loop holds its whole lap, padded however far the decode falls
+    /// short: a 15-minute recording took the app past its memory limit
+    /// (#10198). A lap past the bound is refused, one at it is built.
+    static func refusesALapLongerThanALoopIsBuiltFor() {
+        let samples = tone(frames: 1_000, channels: 1)
+        let longest = Int(LoopPcm.maxLoopSeconds * 1_000)
+        precondition(
+            LoopPcm.prepare(
+                samples: samples, channels: 1, sampleRate: 1_000, loopFrames: longest,
+                startFrame: 0
+            )?.loopFrames == longest
+        )
+        precondition(
+            LoopPcm.prepare(
+                samples: samples, channels: 1, sampleRate: 1_000, loopFrames: longest + 1,
+                startFrame: 0
+            ) == nil
+        )
+        precondition(
+            LoopPcm.prepare(
+                samples: tone(frames: loop, channels: 2), channels: 2, sampleRate: rate,
+                loopFrames: Int(909 * rate), startFrame: 0
+            ) == nil
+        )
     }
 
     // MARK: - Helpers
