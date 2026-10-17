@@ -14,6 +14,7 @@ import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
+import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:permissions_service/permissions_service.dart';
@@ -399,6 +400,10 @@ void main() {
       );
 
       await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MinorAccountReviewParentConsentScreen)),
+      );
+      await container.read(currentMinorAccountReviewStatusProvider.future);
       await scrollUntilTappable(
         tester,
         find.text(l10n.minorAccountReviewParentConsentEmailCta),
@@ -410,7 +415,13 @@ void main() {
 
       expect(sentToEmail, 'support@divine.video');
       expect(sentSubject, l10n.minorAccountReviewParentConsentEmailSubject);
-      expect(sentBody, l10n.minorAccountReviewParentConsentEmailBody);
+      expect(
+        sentBody,
+        [
+          l10n.minorAccountReviewParentConsentEmailBody,
+          l10n.minorAccountReviewCaseId('case-1'),
+        ].join('\n\n'),
+      );
       expect(sentSubject, contains('Divine Greenlight'));
       expect(sentBody, contains('Divine Greenlight'));
       // The composer's share-sheet fallback is refused on iPad without an
@@ -418,6 +429,94 @@ void main() {
       expect(sentOrigin, isNotNull);
       expect(sentOrigin!.isEmpty, isFalse);
     });
+
+    testWidgets(
+      'hands a restricted case awaiting the family to the parent-contact '
+      'form instead of composing an email',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        var composed = false;
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) =>
+                  MinorAccountReviewParentConsentScreen(
+                    composeEmail:
+                        ({
+                          required String toEmail,
+                          required String subject,
+                          required String body,
+                          Rect? sharePositionOrigin,
+                        }) async {
+                          composed = true;
+                        },
+                  ),
+            ),
+            GoRoute(
+              path: MinorAccountReviewParentContactScreen.path,
+              builder: (context, state) =>
+                  const MinorAccountReviewParentContactScreen(),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              _authState(AuthState.authenticated),
+              isFeatureEnabledProvider(
+                FeatureFlag.minorConsentInAppRecording,
+              ).overrideWithValue(false),
+              currentMinorAccountReviewStatusProvider.overrideWith(
+                (ref) async => const MinorAccountReviewStatus(
+                  restrictionStatus:
+                      AccountRestrictionStatus.restrictedMinorReview,
+                  currentCase: MinorReviewCase(
+                    id: 'case-1',
+                    state: MinorReviewCaseState.restrictedPendingUserResponse,
+                    suspectedAgeBand: SuspectedAgeBand.age13To15,
+                    allowedResolution:
+                        MinorReviewResolutionType.parentVideoOrEmail,
+                    instructions: MinorReviewInstructions(title: '', body: ''),
+                    supportEmail: 'support@divine.video',
+                  ),
+                ),
+              ),
+              minorAccountReviewRepositoryProvider.overrideWithValue(
+                _FakeRepository(),
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MinorAccountReviewParentConsentScreen)),
+        );
+        await container.read(currentMinorAccountReviewStatusProvider.future);
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byType(MinorAccountReviewParentContactScreen),
+          findsOneWidget,
+        );
+        expect(composed, isFalse);
+      },
+    );
 
     testWidgets(
       'primary action routes to the record screen and email is secondary',
