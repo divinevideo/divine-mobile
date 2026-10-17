@@ -1122,6 +1122,91 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Public videos from at most 200 authors, with moderation labels included.
+  /// Larger holder sets are split by the repository before calling this API.
+  Future<RecentVideosResponse> getVideosByAuthors({
+    required List<String> authors,
+    int limit = 50,
+    int offset = 0,
+    int? before,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    if (authors.isEmpty || authors.length > 200) {
+      throw const FunnelcakeException('Expected 1 to 200 authors');
+    }
+    final query = _videoQueryParameters({
+      'authors': authors.join(','),
+      'sort': 'recent',
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+      if (before != null) 'before': before.toString(),
+    });
+    final uri = Uri.parse(
+      '$_baseUrl/api/v2/videos/by-authors',
+    ).replace(queryParameters: query);
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch videos by authors',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      final (:items, :hasMore, :nextCursor) = _unwrapListResponse(
+        jsonDecode(response.body),
+      );
+      return RecentVideosResponse(
+        videos: items
+            .map((item) => VideoStats.fromJson(item as Map<String, dynamic>))
+            .where((video) => video.id.isNotEmpty && video.videoUrl.isNotEmpty)
+            .toList(),
+        serverItemCount: items.length,
+        hasMore: hasMore,
+        nextCursor: nextCursor,
+      );
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to fetch videos by authors: $error');
+    }
+  }
+
+  /// Locally indexed accepted holders from the first bounded award page.
+  ///
+  /// This is a fast preview only. Callers must reconcile with relays for the
+  /// complete federated holder set before treating the result as final.
+  Future<List<String>> getBadgeHolderPreview({
+    required String creatorPubkey,
+    required String dTag,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = Uri.parse(
+      '$_baseUrl/api/badges/${Uri.encodeComponent(creatorPubkey)}/${Uri.encodeComponent(dTag)}/holders',
+    ).replace(queryParameters: {'limit': '10'});
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch badge holder preview',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final holders = data['holders'] as List<dynamic>;
+      return holders.cast<String>();
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to fetch badge holder preview: $error');
+    }
+  }
+
   /// Searches for user profiles by query string.
   ///
   /// [query] is the search term to look for in profile names, display names,

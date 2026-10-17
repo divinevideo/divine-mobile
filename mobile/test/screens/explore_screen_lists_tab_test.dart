@@ -16,6 +16,7 @@ void main() {
         explorePopularTabName,
         exploreCategoriesTabName,
         exploreListsTabName,
+        exploreBadgesTabName,
       ]);
     });
 

@@ -24,6 +24,9 @@ const exploreCategoriesTabName = 'categories';
 /// Internal tab name for the Lists tab.
 const exploreListsTabName = 'lists';
 
+/// Internal tab name for curated public badges.
+const exploreBadgesTabName = 'badges';
+
 /// Internal tab name for the integrated Apps tab.
 const exploreAppsTabName = 'apps';
 
@@ -58,7 +61,7 @@ class ExploreTabsState extends Equatable {
   /// Ordered tab names based on current availability.
   ///
   /// Canonical order: `classics?`, `new`, `popular`, `categories`,
-  /// `for_you?`, `lists`, `apps?`, with the configured `featured?` tab
+  /// `for_you?`, `lists`, `badges`, `apps?`, with the configured `featured?` tab
   /// always between `new` and `popular`.
   List<String> get tabNames {
     final names = [
@@ -68,6 +71,7 @@ class ExploreTabsState extends Equatable {
       exploreCategoriesTabName,
       if (forYouAvailable) exploreForYouTabName,
       exploreListsTabName,
+      exploreBadgesTabName,
       if (appsAvailable) exploreAppsTabName,
     ];
     if (featuredTab == null) return names;
