@@ -120,11 +120,7 @@ void main() {
         await tester.pump();
 
         // Two fingers on the shape, spread far past both sides of the item.
-        // A second finger always makes the gesture a pinch, even when the
-        // first one landed on a resize handle, so where they land on the
-        // shape does not matter. Neither passes `pointer:`: a fixed id can
-        // equal the automatic one the other finger takes from flutter_test's
-        // shared counter (#10245).
+        // A fixed `pointer:` can collide with an automatic id (#10245).
         final first = await tester.startGesture(const Offset(150, 300));
         final second = await tester.startGesture(const Offset(170, 300));
         await tester.pump();
