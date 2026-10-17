@@ -2097,12 +2097,14 @@ class NostrClient {
   /// A temp relay that IS a pool member resolves to the pooled socket (see
   /// [_hasRelayOutsidePool]), so naming one keeps the whole read in the pool.
   ///
-  /// The only reads that land there today are DmRepository's kind-10050
-  /// legs: one slot per leg, each fanning out to its relays, and at most one
-  /// such leg per lookup at a time. Lookups are not deduplicated, so a send
-  /// and a retry resolving the same recipient together hold a slot each. A
-  /// send resolves every recipient at once against the same indexer, which is
-  /// why they still share a bounded pool rather than going unthrottled.
+  /// The reads that land there today are DmRepository's kind-10050 legs and
+  /// its catch-up debt pages for an inbox relay outside the pool, which read
+  /// one page at a time (#10192). Each kind-10050 leg takes one slot, fanning
+  /// out to its relays, and a lookup runs at most one such leg at a time.
+  /// Lookups are not deduplicated, so a send and a retry resolving the same
+  /// recipient together hold a slot each. A send resolves every recipient at
+  /// once against the same indexer, which is why they still share a bounded
+  /// pool rather than going unthrottled.
   /// Collaborator invites (at most 5) fit in its [maxConcurrentQueries] slots
   /// while nothing else is resolving an inbox beside them. Past that the legs
   /// queue, and with a slow indexer the queued ones can miss their slot

@@ -824,13 +824,45 @@ void main() {
           DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
         ]);
 
-        await state.setCatchUpDebtUntil(pkA, relayA, tsMid);
+        final moved = await state.replaceCatchUpDebt(
+          pkA,
+          const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+        );
 
+        expect(moved, isTrue);
         expect(state.catchUpDebt(pkA), const [
           DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
           DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
         ]);
       });
+
+      test(
+        "keeps a relay's top that was recorded again after it was read",
+        () async {
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          ]);
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+
+          final moved = await state.replaceCatchUpDebt(
+            pkA,
+            const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+            const DmCatchUpDebt(
+              relay: relayA,
+              floor: tsOldest,
+              until: tsOldest + 1,
+            ),
+          );
+
+          expect(moved, isFalse);
+          expect(state.catchUpDebt(pkA), const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+        },
+      );
 
       test('forgets one relay once it is read', () async {
         await state.addCatchUpDebt(pkA, const [
@@ -838,11 +870,53 @@ void main() {
           DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
         ]);
 
-        await state.clearCatchUpDebt(pkA, relayA);
+        final cleared = await state.clearCatchUpDebt(
+          pkA,
+          const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+        );
 
+        expect(cleared, isTrue);
         expect(state.catchUpDebt(pkA), const [
           DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
         ]);
+      });
+
+      test('keeps a relay recorded again after it was read', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsMid, until: tsNewer),
+        ]);
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+        ]);
+
+        final cleared = await state.clearCatchUpDebt(
+          pkA,
+          const DmCatchUpDebt(relay: relayA, floor: tsMid, until: tsNewer),
+        );
+
+        expect(cleared, isFalse);
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+        ]);
+      });
+
+      test('bounds a recorded top to the clock skew it tolerates', () async {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        await state.addCatchUpDebt(pkA, [
+          DmCatchUpDebt(
+            relay: relayA,
+            floor: tsOldest,
+            until: now + 365 * 86400,
+          ),
+        ]);
+
+        expect(
+          state.catchUpDebt(pkA).single.until,
+          inInclusiveRange(
+            now + DmSyncState.maxFutureSkewSeconds,
+            now + DmSyncState.maxFutureSkewSeconds + 5,
+          ),
+        );
       });
 
       test('clear removes it for the given pubkey only', () async {

@@ -1699,7 +1699,8 @@ class DmRepository {
   /// [since] bounds the page from below. [onlyRelay] asks that one relay
   /// alone, on its pooled connection when the pool has one, instead of the
   /// pool and [tempRelays].
-  Future<({List<Event> events, bool authoritative})?> _fetchHistoryPage({
+  Future<({List<Event> events, bool authoritative, bool possiblyCapped})?>
+  _fetchHistoryPage({
     required int until,
     required int limit,
     required String subscriptionId,
@@ -1708,6 +1709,7 @@ class DmRepository {
     int? since,
     String? onlyRelay,
     List<String>? tempRelays,
+    _LiveCatchUp? holdFor,
   }) async {
     final filter = nostr_filter.Filter(
       kinds: [
@@ -1731,24 +1733,37 @@ class DmRepository {
     // and the drain reads it as exhaustion. `requireAllRelaysSettled` is what
     // makes a relay's `CLOSED` refusal and a partial fan-out surface as
     // `timedOut` rather than completing on whichever relays did answer. #8209.
-    final result = onlyRelay == null
-        ? await _nostrClient.queryEventsDetailed(
-            [filter],
-            subscriptionId: subscriptionId,
-            useCache: false,
-            tempRelays: tempRelays,
-            requireAllRelaysSettled: true,
-          )
-        : await _nostrClient.queryEventsDetailed(
-            [filter],
-            subscriptionId: subscriptionId,
-            useCache: false,
-            tempRelays: [onlyRelay],
-            relayTypes: const [RelayType.temp],
-            requireAllRelaysSettled: true,
-          );
-    final events = result.events;
-    final authoritative = !result.noRelays && !result.timedOut;
+    final List<Event> events;
+    final bool authoritative;
+    final bool possiblyCapped;
+    if (onlyRelay == null) {
+      final result = await _nostrClient.queryEventsDetailed(
+        [filter],
+        subscriptionId: subscriptionId,
+        useCache: false,
+        tempRelays: tempRelays,
+        requireAllRelaysSettled: true,
+      );
+      events = result.events;
+      authoritative = !result.noRelays && !result.timedOut;
+      // The drain judges its pages by their size; this read keeps no cap
+      // evidence, so a cap is never ruled out.
+      possiblyCapped = true;
+    } else {
+      // The debt walk keeps the pool's judgement of whether the relay may
+      // have stopped at its limit: a settled page can still be incomplete.
+      final result = await _nostrClient.readEvents(
+        [filter],
+        subscriptionId: subscriptionId,
+        useCache: false,
+        tempRelays: [onlyRelay],
+        relayTypes: const [RelayType.temp],
+        requireAllRelaysSettled: true,
+      );
+      events = result.events;
+      authoritative = result.isComplete;
+      possiblyCapped = result.possiblyCapped;
+    }
     if (_ingestSessionEnded(pubkey, generation)) return null;
 
     // Pass 1 (off the _eventLock): batch-decrypt this page's gift wraps in one
@@ -1771,18 +1786,43 @@ class DmRepository {
         : events;
     for (var i = 0; i < ordered.length; i++) {
       if (_ingestSessionEnded(pubkey, generation)) return null;
+      // A walk whose subscription failed stops before saving anything: its
+      // catch-up was dropped with the stamps it held, and the next
+      // subscription asks for that window, and reads this page, again.
+      if (holdFor != null && !identical(_liveCatchUp, holdFor)) return null;
       final event = ordered[i];
       final rumor = preDecrypted[event.id];
-      if (rumor != null) {
-        await _withEventLock(
-          () => _persistDecryptedGiftWrap(event, rumor, ownerPubkey: pubkey),
-        );
-      } else {
-        await _handleIncomingEvent(event);
+      // An event read while [holdFor] still holds a stored batch's stamps is
+      // held with them, or saving its stamp could move the window past that
+      // batch's unhandled events (#10191).
+      final hold = holdFor != null && holdFor.holdsStamps ? holdFor : null;
+      hold?.beginHandling();
+      try {
+        if (rumor != null) {
+          await _withEventLock(
+            () => _persistDecryptedGiftWrap(
+              event,
+              rumor,
+              ownerPubkey: pubkey,
+              deferWireTo: hold,
+            ),
+          );
+        } else {
+          await _handleIncomingEvent(event, deferWireTo: hold);
+        }
+      } finally {
+        if (hold != null) {
+          hold.endHandling();
+          _maybeCommitCatchUp(hold);
+        }
       }
       await _maybeYieldDuringDrain(i);
     }
-    return (events: events, authoritative: authoritative);
+    return (
+      events: events,
+      authoritative: authoritative,
+      possiblyCapped: possiblyCapped,
+    );
   }
 
   /// [events] with the gift wraps decrypted in [rumors] rearranged among
@@ -3004,8 +3044,7 @@ class DmRepository {
   /// Whether a URL is a relay [catchUp]'s subscription reads: one of the
   /// pool's configured relays or the account's own inbox relays it was sent
   /// to. The debt walk sends the account's DM filter, which a relay the
-  /// subscription was never sent to must not get, and a relay the user has
-  /// since removed is not read any more.
+  /// subscription was never sent to must not get.
   bool Function(String url) _relaysReadBy(_LiveCatchUp catchUp) {
     final pool = {
       for (final url in _nostrClient.configuredRelays)
@@ -3019,24 +3058,26 @@ class DmRepository {
   }
 
   /// Durably records, for each of [capped], the part of the window it may
-  /// have withheld at its result cap: from the saved window's start up to
-  /// the oldest stamp it sent. Returns whether anything was recorded.
+  /// have withheld at its result cap: from the `since:` [catchUp]'s
+  /// subscription asked from up to the oldest stamp it sent. Returns whether
+  /// anything was recorded.
   ///
-  /// The window's start comes from what is saved now, before the stamps
-  /// this catch-up holds, so a later reconnect replay is recorded from the
-  /// window an earlier save moved to rather than from the subscription's
-  /// first `since:`.
+  /// Every REQ of the subscription, a reconnect's replay included, asks from
+  /// that `since:`. A relay that sent its first batch only after a save moved
+  /// the window, because it connected late or was still sending at the hold
+  /// limit, may have withheld any of it.
+  ///
+  /// The cost falls on a relay that caps again on a reconnect's replay after
+  /// it already sent a batch: its whole range is recorded and read again,
+  /// most of it already handled, at most [DmHistoryDrainConfig.maxPages]
+  /// pages per walk, each wrap skipped by the dedup check before decrypting.
   Future<bool> _recordCatchUpDebt(
     _LiveCatchUp catchUp,
     Map<String, int?> capped,
   ) async {
     final syncState = _syncState;
-    if (capped.isEmpty || syncState == null) return false;
-    final newest = syncState.newestSyncedAt(catchUp.owner);
-    if (newest == null) return false;
-    final floor =
-        (syncState.newestWireSyncedAt(catchUp.owner) ?? newest) -
-        _sinceOverlapSeconds;
+    final floor = catchUp.since;
+    if (capped.isEmpty || syncState == null || floor == null) return false;
     final reads = _relaysReadBy(catchUp);
     final debts = [
       for (final MapEntry(key: url, value: oldest) in capped.entries)
@@ -3066,14 +3107,33 @@ class DmRepository {
     unawaited(
       _walkCatchUpDebt(catchUp, syncState)
           .catchError((Object error, StackTrace stackTrace) {
+            // Relay and storage failures are expected and leave the debt for
+            // the next walk; a broken invariant is reported.
             Log.error(
               'Failed to read the DM catch-up debt: $error',
               category: LogCategory.system,
               error: error,
               stackTrace: stackTrace,
             );
+            if (error is StateError ||
+                error is TypeError ||
+                error is RangeError) {
+              _errorReporter?.call(
+                error,
+                stackTrace,
+                site: DmRepositoryReportableSites.catchUpDebtUnexpectedFailure,
+              );
+            }
           })
-          .whenComplete(() => _readingCatchUpDebt = false),
+          .whenComplete(() {
+            _readingCatchUpDebt = false;
+            // A session that started while this walk was reading found it
+            // busy, so its debt is read from here.
+            final live = _liveCatchUp;
+            if (live != null && !identical(live, catchUp)) {
+              _readCatchUpDebt(live);
+            }
+          }),
     );
   }
 
@@ -3081,39 +3141,76 @@ class DmRepository {
   /// its last walk stopped down to its floor, a page at a time, saving the
   /// position after every page so a later walk resumes there.
   ///
-  /// A relay's debt is forgotten once a page comes back empty or reaches
-  /// below its floor, or when the subscription no longer reads that relay.
-  /// The walk stops on a page the relay does not settle, and after
-  /// [DmHistoryDrainConfig.maxPages] pages, and the next end of stored
-  /// events or the next launch resumes it.
+  /// A relay's debt is forgotten once a page comes back empty and not capped,
+  /// or reaches below its floor. A relay this session does not read, or
+  /// stops reading mid-walk, keeps its debt for a later one: its inbox lookup
+  /// may have failed, or relay discovery may not have added it yet. The walk
+  /// stops on a page the relay does not settle, when its subscription ends,
+  /// and after [DmHistoryDrainConfig.maxPages] pages; the next end of stored
+  /// events, the next subscription or the next launch resumes it.
+  ///
+  /// A filter cannot page within one second, so a capped page whose events
+  /// all share its top may have left more of that second unsent. The walk
+  /// reads on below it, but keeps its saved position at the highest such
+  /// second, and at the floor keeps those seconds as the relay's debt rather
+  /// than forgetting it. A settled page that is empty but may be capped, from
+  /// a NIP-67 `more` or frames the pool dropped, proves nothing read and
+  /// leaves the debt for a later walk.
+  ///
+  /// Each write names the debt it read. A catch-up can record more of a
+  /// relay's debt between two pages, and a write from the old range would
+  /// lose it, so the write is refused and the walk reads the debt again,
+  /// from its new top.
   Future<void> _walkCatchUpDebt(
     _LiveCatchUp catchUp,
     DmSyncState syncState,
   ) async {
     final owner = catchUp.owner;
-    final reads = _relaysReadBy(catchUp);
+    // Relays this walk read as far as it can, which a later pass skips.
+    final leftForLater = <String>{};
     var pages = 0;
+    walk:
     while (true) {
-      final debts = syncState.catchUpDebt(owner);
+      final reads = _relaysReadBy(catchUp);
+      final debts = [
+        for (final debt in syncState.catchUpDebt(owner))
+          if (reads(debt.relay) && !leftForLater.contains(debt.relay)) debt,
+      ];
       if (debts.isEmpty) return;
-      for (final debt in debts) {
-        if (!reads(debt.relay)) {
-          await syncState.clearCatchUpDebt(owner, debt.relay);
-          continue;
+      for (final recorded in debts) {
+        var debt = recorded;
+        var until = debt.until;
+        if (until == null) {
+          // Bound the top before reading, so a record that leaves it
+          // unbounded again is told apart from this one.
+          until = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final bounded = DmCatchUpDebt(
+            relay: debt.relay,
+            floor: debt.floor,
+            until: until,
+          );
+          if (!await syncState.replaceCatchUpDebt(owner, debt, bounded)) {
+            continue walk;
+          }
+          debt = bounded;
         }
-        var until = debt.until ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        int? unresolvedTop;
+        int? unresolvedBottom;
         while (true) {
           if (pages >= DmHistoryDrainConfig.maxPages) return;
           if (_ingestSessionEnded(owner, catchUp.generation)) return;
+          // A relay the user removes while it is read is not asked again.
+          if (!_relaysReadBy(catchUp)(debt.relay)) break;
           pages++;
           final page = await _fetchHistoryPage(
-            until: until,
+            until: until!,
             since: debt.floor,
             limit: DmHistoryDrainConfig.pageSize,
             subscriptionId: dmCatchUpDebtSubscriptionId(owner, pages),
             pubkey: owner,
             generation: catchUp.generation,
             onlyRelay: debt.relay,
+            holdFor: catchUp,
           );
           if (page == null) return;
           if (!page.authoritative) {
@@ -3127,17 +3224,59 @@ class DmRepository {
           }
           final stamps = page.events.map((event) => event.createdAt);
           final oldest = stamps.isEmpty ? null : stamps.reduce(min);
-          // `until` is inclusive: step below a second the page filled, so the
-          // walk always moves.
-          final next = oldest == null
-              ? null
-              : (oldest < until ? oldest : until - 1);
+          if (oldest == null && page.possiblyCapped) {
+            Log.warning(
+              'DM catch-up debt walk for ${pubkeyForLogs(owner)} kept '
+              '${debt.relay} at $until: it settled an empty page that may '
+              'have more.',
+              category: LogCategory.system,
+            );
+            leftForLater.add(debt.relay);
+            break;
+          }
+          int? next;
+          if (oldest != null && oldest < until) {
+            // `until` is inclusive, so the oldest second is read again: the
+            // page may not have held all of it.
+            next = oldest;
+          } else if (oldest != null) {
+            if (page.possiblyCapped) {
+              unresolvedTop ??= until;
+              unresolvedBottom = until;
+            }
+            next = until - 1;
+          }
           if (next == null || next < debt.floor) {
-            await syncState.clearCatchUpDebt(owner, debt.relay);
+            if (unresolvedTop == null) {
+              // Kept if a catch-up recorded more of it meanwhile, which the
+              // next pass reads.
+              await syncState.clearCatchUpDebt(owner, debt);
+              break;
+            }
+            final unresolved = DmCatchUpDebt(
+              relay: debt.relay,
+              floor: unresolvedBottom!,
+              until: unresolvedTop,
+            );
+            // Refused if a catch-up recorded more of it meanwhile, which a
+            // later walk reads.
+            await syncState.replaceCatchUpDebt(owner, debt, unresolved);
+            leftForLater.add(debt.relay);
             break;
           }
           until = next;
-          await syncState.setCatchUpDebtUntil(owner, debt.relay, next);
+          // Past an unresolved second the saved position stays at it, so a
+          // walk that stops early reads that second again.
+          if (unresolvedTop != null) continue;
+          final moved = DmCatchUpDebt(
+            relay: debt.relay,
+            floor: debt.floor,
+            until: next,
+          );
+          if (!await syncState.replaceCatchUpDebt(owner, debt, moved)) {
+            continue walk;
+          }
+          debt = moved;
         }
       }
     }
@@ -11657,22 +11796,36 @@ class _LiveCatchUp {
   /// withheld; reported and not yet recorded as catch-up debt. See #10192.
   final Map<String, int?> _cappedRelays = {};
 
+  /// Relay url -> the highest top recorded as catch-up debt for it in the
+  /// current stored phase, or null when that top was unbounded.
+  final Map<String, int?> _recordedThisPhase = {};
+
   /// Whether relays reported as possibly capped wait to be recorded.
   bool get hasCappedRelays => _cappedRelays.isNotEmpty;
 
   /// Holds [relays] whose stored batch may have stopped at their result cap.
   /// A first open holds none: the history drain reads below its window.
+  ///
+  /// A relay the hold limit already recorded is reported again when its
+  /// phase ends, for the same batch; a part of the window already recorded
+  /// in this phase is not held again, or the walk would read it twice.
   void markCapped(Map<String, int?> relays) {
     if (since == null) return;
     relays.forEach((url, oldest) {
+      if (_recordedThisPhase.containsKey(url)) {
+        final recorded = _recordedThisPhase[url];
+        if (recorded == null || (oldest != null && oldest <= recorded)) return;
+      }
       if (!_cappedRelays.containsKey(url)) {
         _cappedRelays[url] = oldest;
         return;
       }
+      // The higher stamp bounds what either report withheld, as the pool
+      // reports it for two batches in one phase.
       final previous = _cappedRelays[url];
       _cappedRelays[url] = previous == null || oldest == null
           ? null
-          : min(previous, oldest);
+          : max(previous, oldest);
     });
   }
 
@@ -11680,6 +11833,16 @@ class _LiveCatchUp {
   Map<String, int?> takeCappedRelays() {
     final relays = Map<String, int?>.of(_cappedRelays);
     _cappedRelays.clear();
+    relays.forEach((url, oldest) {
+      if (!_recordedThisPhase.containsKey(url)) {
+        _recordedThisPhase[url] = oldest;
+        return;
+      }
+      final recorded = _recordedThisPhase[url];
+      _recordedThisPhase[url] = recorded == null || oldest == null
+          ? null
+          : max(recorded, oldest);
+    });
     return relays;
   }
 
@@ -11755,6 +11918,7 @@ class _LiveCatchUp {
   void reopen() {
     _storedOpen = true;
     _endsAfter = null;
+    _recordedThisPhase.clear();
   }
 
   void _closeIfArrived() {

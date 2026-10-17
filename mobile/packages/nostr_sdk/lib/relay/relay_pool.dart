@@ -4221,6 +4221,10 @@ class _StoredEventsPhase {
   /// Records that a batch from [url] whose oldest stamp was [oldest] may have
   /// stopped at the relay's limit. A batch with no stamp leaves the relay
   /// unbounded however many others it sent.
+  ///
+  /// Of two batches the relay capped in one phase, the higher oldest stamp
+  /// is kept: the later batch may have withheld what was published between
+  /// them, backdated below its own oldest stamp but above the earlier one.
   void recordPossiblyCapped(String url, int? oldest) {
     if (!possiblyCapped.containsKey(url)) {
       possiblyCapped[url] = oldest;
@@ -4229,7 +4233,7 @@ class _StoredEventsPhase {
     final previous = possiblyCapped[url];
     possiblyCapped[url] = previous == null || oldest == null
         ? null
-        : (oldest < previous ? oldest : previous);
+        : (oldest > previous ? oldest : previous);
   }
 
   /// [url]'s round for a frame from [generation], or null for a frame from

@@ -1069,8 +1069,11 @@ void main() {
       );
 
       test(
-        'keeps the lower stamp when one relay caps twice in a phase',
+        'keeps the higher stamp when one relay caps twice in a phase',
         () async {
+          // The replay may withhold what was published while the relay was
+          // gone, backdated below its oldest stamp but above the first
+          // batch's.
           final capping = _Relay('wss://capping.example')
             ..info = infoWithMaxLimit(1);
           final holding = _Relay('wss://holding.example');
@@ -1088,7 +1091,7 @@ void main() {
           await holding.deliver(['EOSE', subId]);
 
           expect(capped, [
-            {'wss://capping.example': 1700000005},
+            {'wss://capping.example': 1700000006},
           ]);
         },
       );

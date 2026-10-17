@@ -151,7 +151,9 @@ class StoredEventsEnd {
   /// Each value is the oldest `created_at` that relay sent in such a batch.
   /// A relay sends its newest events first, so it has sent everything it
   /// holds after that stamp, and anything it withheld lies at or below it.
-  /// The value is null when the batch held no event matching the filters,
-  /// so no stamp bounds what the relay withheld.
+  /// When the relay capped more than one batch in the phase, the value is
+  /// the highest of their oldest stamps, which bounds what any of them
+  /// withheld. The value is null when a batch held no event matching the
+  /// filters, so no stamp bounds what the relay withheld.
   final Map<String, int?> possiblyCappedRelays;
 }

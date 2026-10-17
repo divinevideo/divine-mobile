@@ -16,6 +16,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nip44/nip44_v2.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:nostr_sdk/subscription.dart';
@@ -90,6 +91,12 @@ class _CappedRelay {
   /// Single-relay pages from this one on are left unsettled.
   int unsettledFromPage = 1 << 30;
 
+  /// Completes when the first single-relay page is asked for.
+  final Completer<void> pageAsked = Completer<void>();
+
+  /// When set, single-relay pages are answered only once it completes.
+  Completer<void>? pageGate;
+
   List<Event> answer(List<nostr_filter.Filter> filters) {
     final filter = filters.single;
     final admitted = stored.where((e) => _admits(filter, e)).toList()
@@ -123,20 +130,31 @@ class _CappedRelay {
     );
   }
 
-  ({List<Event> events, bool timedOut, bool noRelays}) relayPage(
+  /// Answers a single-relay page, reporting it possibly capped when it
+  /// reaches the relay's limit, as the pool judges it.
+  Future<QueryResult> relayPage(
     nostr_filter.Filter filter,
     List<String>? tempRelays,
     List<int> types,
-  ) {
+  ) async {
     // Other single-relay reads, such as the inbox-relay lookup, find nothing.
     if (!(filter.kinds?.contains(EventKind.giftWrap) ?? false)) {
-      return (events: const <Event>[], timedOut: false, noRelays: false);
+      return const QueryResult(events: [], endedBy: QueryEnd.complete);
     }
+    if (!pageAsked.isCompleted) pageAsked.complete();
+    await pageGate?.future;
     relayPages.add((filter: filter, tempRelays: tempRelays, types: types));
     if (relayPages.length >= unsettledFromPage) {
-      return (events: const <Event>[], timedOut: true, noRelays: false);
+      return const QueryResult(events: [], endedBy: QueryEnd.deadline);
     }
-    return (events: answer([filter]), timedOut: false, noRelays: false);
+    final events = answer([filter]);
+    final limit = filter.limit;
+    final cap = limit == null || limit > maxLimit ? maxLimit : limit;
+    return QueryResult(
+      events: events,
+      endedBy: QueryEnd.complete,
+      possiblyCapped: events.length >= cap,
+    );
   }
 }
 
@@ -196,6 +214,18 @@ void main() {
     });
     when(
       () => client.queryEventsDetailed(
+        any(),
+        subscriptionId: any(named: 'subscriptionId'),
+        useCache: any(named: 'useCache'),
+        tempRelays: any(named: 'tempRelays'),
+        relayTypes: any(named: 'relayTypes'),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+      ),
+    ).thenAnswer(
+      (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+    );
+    when(
+      () => client.readEvents(
         any(),
         subscriptionId: any(named: 'subscriptionId'),
         useCache: any(named: 'useCache'),
@@ -453,6 +483,139 @@ void main() {
       await next.stopListening();
 
       expect(second.relayPages.first.filter.until, oldest.createdAt);
+    });
+
+    test('keeps what a later catch-up recorded while an earlier part was '
+        'being read', () async {
+      final first = _CappedRelay(stored, maxLimit: 3)..unsettledFromPage = 1;
+      final repository = await listen(first);
+      await repository.stopListening();
+      expect(
+        DmSyncState(prefs).catchUpDebt(_owner).single.until,
+        third.createdAt,
+      );
+
+      // Four more arrive before the next launch, which the relay again
+      // returns only the newest three of.
+      final at = now();
+      final arrived = [
+        for (var i = 1; i <= 4; i++)
+          await wrapAt(wire: at - 1200 - 300 * i, content: 'arrived $i'),
+      ];
+      final gate = Completer<void>();
+      final second = _CappedRelay([...arrived, ...stored], maxLimit: 3)
+        ..pageGate = gate;
+      final next = launch(second);
+      await next.startListening();
+      // The earlier launch's part is being read when the batch ends.
+      await second.pageAsked.future.timeout(_settleTimeout);
+      for (final wrap in second.sendBatch()) {
+        await settled(wrap);
+      }
+      second.endBatch();
+      // The batch's own unread part, down to the oldest it returned, joins
+      // the earlier launch's.
+      for (var i = 0; i < 100; i++) {
+        if (DmSyncState(prefs).catchUpDebt(_owner).single.until ==
+            arrived[2].createdAt) {
+          break;
+        }
+        await pumpEventQueue();
+      }
+      expect(
+        DmSyncState(prefs).catchUpDebt(_owner).single.until,
+        arrived[2].createdAt,
+      );
+      gate.complete();
+
+      await settled(arrived.last);
+      await settled(oldest);
+      await next.stopListening();
+      // The page that ended while more was recorded is not saved; the walk
+      // reads on from the new top.
+      expect(second.relayPages[1].filter.until, arrived[2].createdAt);
+    });
+
+    test('holds the stamps of what it reads while a stored batch is still '
+        'arriving', () async {
+      // A part an earlier launch recorded with no stamp to bound it reaches
+      // up to now, above the window this launch has not saved yet.
+      await DmSyncState(prefs).addCatchUpDebt(_owner, [
+        DmCatchUpDebt(relay: _relayUrl, floor: lastWire - 2 * _day),
+      ]);
+      final relay = _CappedRelay(stored, maxLimit: 3);
+      final repository = launch(relay);
+      await repository.startListening();
+      await settled(newest);
+      await pumpEventQueue();
+
+      expect(DmSyncState(prefs).newestWireSyncedAt(_owner), lastWire);
+
+      for (final wrap in relay.sendBatch()) {
+        await settled(wrap);
+      }
+      relay.endBatch();
+      await pumpEventQueue();
+      expect(DmSyncState(prefs).newestWireSyncedAt(_owner), newest.createdAt);
+      await repository.stopListening();
+    });
+
+    group('a second with more wraps than the relay returns at once', () {
+      late int second;
+      late List<Event> crowded;
+      late Event below;
+
+      setUp(() async {
+        // Below the window this launch asks from, so only an earlier
+        // launch's recorded part reaches it.
+        second = lastWire - 3 * _day;
+        crowded = [
+          for (var i = 0; i < 5; i++)
+            await wrapAt(wire: second, content: 'crowded $i'),
+        ];
+        below = await wrapAt(wire: second - 3600, content: 'below');
+        await DmSyncState(prefs).addCatchUpDebt(_owner, [
+          DmCatchUpDebt(
+            relay: _relayUrl,
+            floor: lastWire - 5 * _day,
+            until: second,
+          ),
+        ]);
+      });
+
+      test('keeps that second, and reads below it', () async {
+        final relay = _CappedRelay([...crowded, below], maxLimit: 3);
+        final repository = await listen(relay, waitFor: [below]);
+        await pumpEventQueue();
+        await repository.stopListening();
+
+        expect(DmSyncState(prefs).catchUpDebt(_owner), [
+          DmCatchUpDebt(relay: _relayUrl, floor: second, until: second),
+        ]);
+        expect(relay.relayPages.map((page) => page.filter.until), [
+          second,
+          second - 1,
+          below.createdAt,
+          below.createdAt - 1,
+        ]);
+      });
+
+      test(
+        'keeps its position at that second when it stops below it',
+        () async {
+          final relay = _CappedRelay([...crowded, below], maxLimit: 3)
+            ..unsettledFromPage = 2;
+          final repository = await listen(relay);
+          for (var i = 0; i < 100 && relay.relayPages.length < 2; i++) {
+            await pumpEventQueue();
+          }
+          await pumpEventQueue();
+          await repository.stopListening();
+
+          expect(relay.relayPages, hasLength(2));
+          expect(DmSyncState(prefs).catchUpDebt(_owner).single.until, second);
+        },
+      );
     });
 
     test('records the unread part before it saves the window', () async {

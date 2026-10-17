@@ -598,11 +598,15 @@ class _FakeDmSyncState implements DmSyncState {
   @override
   List<DmCatchUpDebt> catchUpDebt(String pubkey) => List.of(debt);
 
+  /// When set, recording catch-up debt waits for it.
+  Completer<void>? debtRecordGate;
+
   @override
   Future<void> addCatchUpDebt(
     String pubkey,
     Iterable<DmCatchUpDebt> debts,
   ) async {
+    await debtRecordGate?.future;
     boundaryWrites.add('debt');
     for (final added in debts) {
       final index = debt.indexWhere((entry) => entry.relay == added.relay);
@@ -623,23 +627,26 @@ class _FakeDmSyncState implements DmSyncState {
     }
   }
 
+  /// When set, a walk's write of the catch-up debt throws it.
+  Error? debtWriteError;
+
   @override
-  Future<void> setCatchUpDebtUntil(
+  Future<bool> replaceCatchUpDebt(
     String pubkey,
-    String relay,
-    int until,
+    DmCatchUpDebt read,
+    DmCatchUpDebt replacement,
   ) async {
-    final index = debt.indexWhere((entry) => entry.relay == relay);
-    debt[index] = DmCatchUpDebt(
-      relay: relay,
-      floor: debt[index].floor,
-      until: until,
-    );
+    if (debtWriteError case final error?) throw error;
+    final index = debt.indexOf(read);
+    if (index < 0) return false;
+    debt[index] = replacement;
+    return true;
   }
 
   @override
-  Future<void> clearCatchUpDebt(String pubkey, String relay) async {
-    debt.removeWhere((entry) => entry.relay == relay);
+  Future<bool> clearCatchUpDebt(String pubkey, DmCatchUpDebt read) async {
+    if (debtWriteError case final error?) throw error;
+    return debt.remove(read);
   }
 
   @override
@@ -3112,6 +3119,19 @@ void main() {
             ).thenAnswer(
               (_) async => (events: <Event>[], timedOut: true, noRelays: false),
             );
+            when(
+              () => mockNostrClient.readEvents(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  const QueryResult(events: [], endedBy: QueryEnd.deadline),
+            );
             final syncState = _FakeDmSyncState()
               ..newestOverride = 1690000000
               ..newestWireOverride = 1690000000;
@@ -3134,8 +3154,94 @@ void main() {
         },
       );
 
+      test(
+        'does not record again a batch the hold limit already recorded when '
+        'its stored events end (#10192)',
+        () {
+          fakeAsync((async) {
+            final controller = StreamController<Event>();
+            void Function(StoredEventsEnd)? storedEventsEnd;
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((invocation) {
+              storedEventsEnd =
+                  invocation.namedArguments[#onStoredEventsEnd]
+                      as void Function(StoredEventsEnd)?;
+              return controller.stream;
+            });
+            when(
+              () => mockNostrClient.configuredRelays,
+            ).thenReturn(const ['wss://capped.example']);
+            when(
+              () => mockNostrClient.storedEventsPossiblyCapped(any()),
+            ).thenReturn(const {'wss://capped.example': 1700000000});
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  (events: <Event>[], timedOut: false, noRelays: false),
+            );
+            when(
+              () => mockNostrClient.readEvents(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  const QueryResult(events: [], endedBy: QueryEnd.complete),
+            );
+            final syncState = _FakeDmSyncState()
+              ..newestOverride = 1690000000
+              ..newestWireOverride = 1690000000;
+            final repository = createRepository(syncState: syncState);
+
+            unawaited(repository.startListening());
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(minutes: 2))
+              ..flushMicrotasks();
+            // The hold limit's record was read to its floor and forgotten.
+            expect(syncState.boundaryWrites, ['debt']);
+            expect(syncState.debt, isEmpty);
+
+            storedEventsEnd!(
+              const StoredEventsEnd(
+                deliveredEventCount: 0,
+                possiblyCappedRelays: {'wss://capped.example': 1700000000},
+              ),
+            );
+            async.flushMicrotasks();
+
+            expect(syncState.boundaryWrites, ['debt']);
+            expect(syncState.debt, isEmpty);
+
+            unawaited(controller.close());
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
       group('catch-up debt (#10192)', () {
         late void Function(StoredEventsEnd)? storedEventsEnd;
+        late void Function()? storedEventsStart;
+        late StreamController<Event> live;
         late List<({nostr_filter.Filter filter, List<String>? relays})> pages;
         late List<String> poolRelays;
         late ({List<Event> events, bool timedOut, bool noRelays}) Function(
@@ -3143,11 +3249,15 @@ void main() {
         )
         answerPage;
         late _FakeDmSyncState syncState;
+        Completer<void>? pageGate;
+        late bool pageCapped;
 
         const window = 1690000000 - 2 * 86400;
 
         setUp(() {
           storedEventsEnd = null;
+          pageGate = null;
+          pageCapped = false;
           pages = [];
           poolRelays = ['wss://a.example', 'wss://b.example'];
           answerPage = (_) =>
@@ -3169,10 +3279,26 @@ void main() {
             storedEventsEnd =
                 invocation.namedArguments[#onStoredEventsEnd]
                     as void Function(StoredEventsEnd)?;
-            return StreamController<Event>().stream;
+            storedEventsStart =
+                invocation.namedArguments[#onStoredEventsStart]
+                    as void Function()?;
+            live = StreamController<Event>();
+            return live.stream;
           });
           when(
             () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+          when(
+            () => mockNostrClient.readEvents(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
@@ -3185,14 +3311,19 @@ void main() {
                 (invocation.positionalArguments.first
                         as List<nostr_filter.Filter>)
                     .single;
-            if (!(filter.kinds?.contains(EventKind.giftWrap) ?? false)) {
-              return (events: <Event>[], timedOut: false, noRelays: false);
-            }
             pages.add((
               filter: filter,
               relays: invocation.namedArguments[#tempRelays] as List<String>?,
             ));
-            return answerPage(filter);
+            await pageGate?.future;
+            final page = answerPage(filter);
+            return QueryResult(
+              events: page.events,
+              endedBy: page.noRelays
+                  ? QueryEnd.noRelay
+                  : (page.timedOut ? QueryEnd.deadline : QueryEnd.complete),
+              possiblyCapped: pageCapped,
+            );
           });
         });
 
@@ -3213,8 +3344,8 @@ void main() {
           await pumpEventQueue();
         }
 
-        test('records each relay reported capped from the saved window up to '
-            'its own oldest stamp', () async {
+        test('records each relay reported capped from the window the '
+            'subscription asked from up to its own oldest stamp', () async {
           final repository = await start();
           await endWith({
             'wss://a.example': 1700000100,
@@ -3256,20 +3387,21 @@ void main() {
           await repository.stopListening();
         });
 
-        test(
-          'records a replay from the window an earlier save moved to',
-          () async {
-            final repository = await start();
-            syncState.newestWireOverride = 1695000000;
-            await endWith({'wss://a.example': 1700000100});
+        test('records a relay first answering after a save from the window '
+            'its request asked from', () async {
+          // A relay that connects late, or is still sending at the hold
+          // limit, sends its first batch after the window moved on: all of
+          // that window is still its to send.
+          final repository = await start();
+          syncState.newestWireOverride = 1695000000;
+          await endWith({'wss://a.example': 1700000100});
 
-            expect(syncState.debt.single.floor, 1695000000 - 2 * 86400);
-            await repository.stopListening();
-          },
-        );
+          expect(syncState.debt.single.floor, window);
+          await repository.stopListening();
+        });
 
-        test('records nothing for a batch that reached no lower than the saved '
-            'window', () async {
+        test('records nothing for a batch that reached no lower than the '
+            'window its request asked from', () async {
           final repository = await start();
           await endWith({'wss://a.example': window - 1});
 
@@ -3310,6 +3442,46 @@ void main() {
           await repository.stopListening();
         });
 
+        test(
+          'records a relay again when a reconnect replays its batch',
+          () async {
+            answerPage = (_) =>
+                (events: <Event>[], timedOut: false, noRelays: false);
+            final repository = await start();
+            await endWith({'wss://a.example': 1700000100});
+            expect(syncState.debt, isEmpty);
+
+            storedEventsStart!();
+            await endWith({'wss://a.example': 1700000100});
+
+            expect(syncState.boundaryWrites, ['debt', 'debt']);
+            expect(pages, hasLength(2));
+            await repository.stopListening();
+          },
+        );
+
+        test('keeps an unbounded part recorded while the same relay is read '
+            'from an earlier unbounded part', () async {
+          final gate = Completer<void>();
+          pageGate = gate;
+          answerPage = (_) =>
+              (events: <Event>[], timedOut: false, noRelays: false);
+          syncState.debt.add(
+            const DmCatchUpDebt(relay: 'wss://a.example', floor: window),
+          );
+          final repository = await start();
+          expect(pages, hasLength(1));
+
+          await endWith({'wss://a.example': null});
+          pageGate = null;
+          gate.complete();
+          await pumpEventQueue();
+
+          expect(pages, hasLength(2));
+          expect(syncState.debt, isEmpty);
+          await repository.stopListening();
+        });
+
         test('records a relay whatever its trailing slash', () async {
           final repository = await start();
           await endWith({'wss://a.example/': 1700000100});
@@ -3318,16 +3490,185 @@ void main() {
           await repository.stopListening();
         });
 
+        test('keeps, without reading, the debt of a relay this session does '
+            'not read', () async {
+          // An inbox relay whose lookup failed this launch, or one discovery
+          // has not added yet, is read again by a later session.
+          syncState.debt.add(
+            const DmCatchUpDebt(
+              relay: 'wss://elsewhere.example',
+              floor: window,
+            ),
+          );
+          final repository = await start();
+
+          expect(syncState.debt, const [
+            DmCatchUpDebt(relay: 'wss://elsewhere.example', floor: window),
+          ]);
+          expect(pages, isEmpty);
+          await repository.stopListening();
+        });
+
+        test('keeps the highest stamp of one relay reported twice before it is '
+            'recorded', () async {
+          final gate = Completer<void>();
+          final repository = await start();
+          syncState.debtRecordGate = gate;
+          // The first report is being recorded while two more arrive.
+          await endWith({'wss://a.example': 1700000100});
+          await endWith({'wss://a.example': 1700000200});
+          await endWith({'wss://a.example': 1700000300});
+          syncState.debtRecordGate = null;
+          gate.complete();
+          await pumpEventQueue();
+
+          expect(syncState.debt.single.until, 1700000300);
+          await repository.stopListening();
+        });
+
+        test('stops reading, without saving the page, once its subscription '
+            'fails', () async {
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(any()),
+          ).thenAnswer((_) async => true);
+          final gate = Completer<void>();
+          pageGate = gate;
+          answerPage = (filter) => (
+            events: [createGiftWrapEvent(createdAt: filter.until! - 10)],
+            timedOut: false,
+            noRelays: false,
+          );
+          syncState.debt.add(
+            const DmCatchUpDebt(
+              relay: 'wss://a.example',
+              floor: window,
+              until: 1700000100,
+            ),
+          );
+          final repository = await start();
+          addTearDown(repository.stopListening);
+          expect(pages, hasLength(1));
+
+          live.addError(StateError('relay gone'));
+          await pumpEventQueue();
+          pageGate = null;
+          gate.complete();
+          await pumpEventQueue();
+
+          // The next subscription reads it again from where it was.
+          expect(pages, hasLength(1));
+          expect(syncState.debt.single.until, 1700000100);
+        });
+
+        test('stops asking a relay removed while its debt is read', () async {
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(any()),
+          ).thenAnswer((_) async => true);
+          final gate = Completer<void>();
+          pageGate = gate;
+          answerPage = (filter) => (
+            events: [createGiftWrapEvent(createdAt: filter.until! - 10)],
+            timedOut: false,
+            noRelays: false,
+          );
+          syncState.debt.add(
+            const DmCatchUpDebt(
+              relay: 'wss://a.example',
+              floor: window,
+              until: 1700000100,
+            ),
+          );
+          final repository = await start();
+          expect(pages, hasLength(1));
+
+          poolRelays = ['wss://b.example'];
+          pageGate = null;
+          gate.complete();
+          await pumpEventQueue();
+
+          expect(pages, hasLength(1));
+          expect(syncState.debt.single.until, 1700000090);
+          await repository.stopListening();
+        });
+
+        test('reads the debt for a session that starts while an earlier '
+            "session's walk is still reading", () async {
+          final gate = Completer<void>();
+          pageGate = gate;
+          syncState.debt.add(
+            const DmCatchUpDebt(
+              relay: 'wss://a.example',
+              floor: window,
+              until: 1700000100,
+            ),
+          );
+          final repository = await start();
+          expect(pages, hasLength(1));
+
+          await repository.stopListening();
+          await repository.startListening();
+          await pumpEventQueue();
+          expect(pages, hasLength(1));
+
+          pageGate = null;
+          gate.complete();
+          await pumpEventQueue();
+
+          expect(pages, hasLength(2));
+          await repository.stopListening();
+        });
+
         test(
-          'forgets debt for a relay the subscription no longer reads',
+          'reports a walk that fails for a reason no relay explains',
           () async {
+            answerPage = (_) =>
+                (events: <Event>[], timedOut: false, noRelays: false);
+            syncState
+              ..debt.add(
+                const DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              )
+              ..debtWriteError = StateError('broken invariant');
+            final repository = createRepository(syncState: syncState);
+            await repository.startListening();
+            await pumpEventQueue();
+
+            expect(reporterCalls.map((call) => call.site), [
+              DmRepositoryReportableSites.catchUpDebtUnexpectedFailure,
+            ]);
+            await repository.stopListening();
+          },
+        );
+
+        test(
+          'keeps the debt when a settled page is empty but may have more',
+          () async {
+            pageCapped = true;
+            answerPage = (_) =>
+                (events: <Event>[], timedOut: false, noRelays: false);
             syncState.debt.add(
-              const DmCatchUpDebt(relay: 'wss://gone.example', floor: window),
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
             );
             final repository = await start();
+            expect(pages, hasLength(1));
 
-            expect(syncState.debt, isEmpty);
-            expect(pages, isEmpty);
+            await endWith(const {});
+
+            expect(pages, hasLength(2));
+            expect(syncState.debt, const [
+              DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            ]);
             await repository.stopListening();
           },
         );

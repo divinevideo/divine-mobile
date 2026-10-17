@@ -516,7 +516,7 @@ class DmSyncState {
       ];
     } on Object {
       // A record this version cannot read is dropped rather than failing
-      // every catch-up; the window it guarded was saved long ago.
+      // every catch-up, though the part it named goes unread.
       return const [];
     }
   }
@@ -524,14 +524,28 @@ class DmSyncState {
   /// Records [debts] for [pubkey]. A relay already recorded keeps one range
   /// covering both: the lower floor and the higher top, where no top at all
   /// is the highest.
+  ///
+  /// A top is the stamp of a wrap a throwaway key signed, so it is bounded
+  /// to [maxFutureSkewSeconds] past now, the skew the repository allows any
+  /// stamp it accepts.
   Future<void> addCatchUpDebt(
     String pubkey,
     Iterable<DmCatchUpDebt> debts,
   ) async {
+    final latest =
+        DateTime.now().millisecondsSinceEpoch ~/ 1000 + maxFutureSkewSeconds;
     final byRelay = {
       for (final debt in catchUpDebt(pubkey)) debt.relay: debt,
     };
-    for (final debt in debts) {
+    for (final recorded in debts) {
+      final top = recorded.until;
+      final debt = top == null || top <= latest
+          ? recorded
+          : DmCatchUpDebt(
+              relay: recorded.relay,
+              floor: recorded.floor,
+              until: latest,
+            );
       final previous = byRelay[debt.relay];
       if (previous == null) {
         byRelay[debt.relay] = debt;
@@ -550,29 +564,40 @@ class DmSyncState {
     await _writeCatchUpDebt(pubkey, byRelay.values);
   }
 
-  /// Records that [relay]'s debt for [pubkey] has been read down to
-  /// [until], so a later walk resumes there.
-  Future<void> setCatchUpDebtUntil(
+  /// Replaces the debt [read] for [pubkey] with [replacement], what is left
+  /// of the same relay's range once a walk has read part of it, so a later
+  /// walk resumes there. Returns false, and writes nothing, when that
+  /// relay's debt is no longer [read]: a catch-up recorded more of it
+  /// meanwhile, which a write from [read] would lose.
+  ///
+  /// The comparison and the write happen in one synchronous step, as in
+  /// [addCatchUpDebt], so neither can land between them.
+  Future<bool> replaceCatchUpDebt(
     String pubkey,
-    String relay,
-    int until,
+    DmCatchUpDebt read,
+    DmCatchUpDebt replacement,
   ) async {
+    assert(replacement.relay == read.relay, 'a walk replaces one relay');
+    final debts = catchUpDebt(pubkey);
+    if (!debts.contains(read)) return false;
     await _writeCatchUpDebt(pubkey, [
-      for (final debt in catchUpDebt(pubkey))
-        if (debt.relay == relay)
-          DmCatchUpDebt(relay: relay, floor: debt.floor, until: until)
-        else
-          debt,
+      for (final debt in debts)
+        if (debt == read) replacement else debt,
     ]);
+    return true;
   }
 
-  /// Forgets [relay]'s debt for [pubkey], once it has been read or the relay
-  /// is no longer read at all.
-  Future<void> clearCatchUpDebt(String pubkey, String relay) async {
+  /// Forgets the debt [read] for [pubkey] once it has been read. Returns
+  /// false, and writes nothing, when that relay's debt is no longer [read],
+  /// as [replaceCatchUpDebt] does.
+  Future<bool> clearCatchUpDebt(String pubkey, DmCatchUpDebt read) async {
+    final debts = catchUpDebt(pubkey);
+    if (!debts.contains(read)) return false;
     await _writeCatchUpDebt(pubkey, [
-      for (final debt in catchUpDebt(pubkey))
-        if (debt.relay != relay) debt,
+      for (final debt in debts)
+        if (debt != read) debt,
     ]);
+    return true;
   }
 
   Future<void> _writeCatchUpDebt(
