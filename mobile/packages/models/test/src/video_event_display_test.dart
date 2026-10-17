@@ -8,7 +8,8 @@ import 'package:test/test.dart';
 /// Shows every hashtag as a chip, the way the details sheet does when none is
 /// too long to be one.
 extension on VideoEvent {
-  String get chipCaptionDescription => descriptionWithoutChipLines(allHashtags);
+  String get chipCaptionDescription =>
+      descriptionWithoutRepeatedChips(allHashtags);
 }
 
 void main() {
@@ -64,13 +65,13 @@ void main() {
     });
   });
 
-  group('VideoEvent.descriptionWithoutChipLines', () {
+  group('VideoEvent.descriptionWithoutRepeatedChips', () {
     test('keeps a hashtag line that is not among the chips passed in', () {
       expect(
         build(
           content: 'Caption\n#glenn',
           hashtags: const ['glenn'],
-        ).descriptionWithoutChipLines(const []),
+        ).descriptionWithoutRepeatedChips(const []),
         equals('Caption\n#glenn'),
       );
     });
@@ -103,6 +104,16 @@ void main() {
         build(
           content: 'I love #pizza',
           hashtags: const ['pizza'],
+        ).chipCaptionDescription,
+        equals('I love #pizza'),
+      );
+    });
+
+    test('keeps the hashtags ending a native caption', () {
+      expect(
+        build(
+          content: 'I love #pizza\n\n#pizza #food',
+          hashtags: const ['pizza', 'food'],
         ).chipCaptionDescription,
         equals('I love #pizza'),
       );
@@ -222,6 +233,83 @@ void main() {
 
       expect(description, equals('Caption'));
       expect(stopwatch.elapsedMilliseconds, lessThan(2000));
+    });
+
+    group('for an imported Vine', () {
+      test('drops the hashtags ending a caption that the import repeats', () {
+        expect(
+          build(
+            content:
+                'Two startup sounds together. #windowsxp #outoftune'
+                '\n\nOriginal stats: 1 loops - 2 likes'
+                '\n\n#windowsxp #outoftune',
+            rawTags: const {'platform': 'vine'},
+            hashtags: const ['windowsxp', 'outoftune'],
+          ).chipCaptionDescription,
+          equals(
+            'Two startup sounds together.\n\nOriginal stats: 1 loops - 2 likes',
+          ),
+        );
+      });
+
+      test('keeps a repeated hashtag inside a sentence', () {
+        expect(
+          build(
+            content: 'I love #pizza so much #yum\n\n#pizza #yum',
+            rawTags: const {'platform': 'vine'},
+            hashtags: const ['pizza', 'yum'],
+          ).chipCaptionDescription,
+          equals('I love #pizza so much'),
+        );
+      });
+
+      test('drops a trailing hashtag repeated on an earlier line', () {
+        expect(
+          build(
+            content: '#glenn\nCaption #glenn',
+            rawTags: const {'platform': 'vine'},
+            hashtags: const ['glenn'],
+          ).chipCaptionDescription,
+          equals('Caption'),
+        );
+      });
+
+      test('matches a repeated trailing hashtag without regard to case', () {
+        expect(
+          build(
+            content: 'Caption #WindowsXP\n#windowsxp',
+            rawTags: const {'platform': 'vine'},
+            hashtags: const ['windowsxp'],
+          ).chipCaptionDescription,
+          equals('Caption'),
+        );
+      });
+
+      test('stops at a trailing hashtag that no hashtag line repeats', () {
+        expect(
+          build(
+            content: 'Caption #glenn #windowsxp\n#windowsxp',
+            rawTags: const {'platform': 'vine'},
+            hashtags: const ['glenn', 'windowsxp'],
+          ).chipCaptionDescription,
+          equals('Caption #glenn'),
+        );
+      });
+
+      test('drops a very long run of repeated trailing hashtags quickly', () {
+        final video = build(
+          content: 'Caption ${List.filled(20000, '#a').join(' ')}\n#a',
+          rawTags: const {'platform': 'vine'},
+          hashtags: const ['a'],
+        );
+
+        final stopwatch = Stopwatch()..start();
+        final description = video.chipCaptionDescription;
+        stopwatch.stop();
+
+        expect(description, equals('Caption'));
+        expect(stopwatch.elapsedMilliseconds, lessThan(2000));
+      });
     });
   });
 
