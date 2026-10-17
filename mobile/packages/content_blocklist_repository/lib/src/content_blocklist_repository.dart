@@ -1435,10 +1435,11 @@ class ContentBlocklistRepository {
   List<T> filterContent<T>(List<T> content, String Function(T) getPubkey) =>
       content.where((item) => !shouldFilterFromFeeds(getPubkey(item))).toList();
 
-  /// Filter DM conversations where the other participant is blocked.
+  /// Filter out DM conversations with a participant the viewer hid.
   ///
-  /// [userPubkey] is the current user's pubkey, used to identify which
-  /// participant is "the other one" in each conversation.
+  /// [userPubkey] is the current user's pubkey; every other participant is
+  /// checked, so a group drops out when the viewer hid any one of its members,
+  /// whichever position that member sorts into (#10150).
   ///
   /// Filters on [shouldFilterFromDms], not [shouldFilterFromFeeds]: a thread
   /// the viewer already received stays reachable even when the counterparty
@@ -1448,13 +1449,10 @@ class ContentBlocklistRepository {
     required String userPubkey,
   }) {
     return conversations.where((conv) {
-      final otherPubkey = conv.participantPubkeys.firstWhere(
-        (pk) => pk != userPubkey,
-        orElse: () => '',
-      );
+      final others = conv.participantPubkeys.where((pk) => pk != userPubkey);
       // Exclude self-conversations (no "other" participant found).
-      if (otherPubkey.isEmpty) return false;
-      return !shouldFilterFromDms(otherPubkey);
+      if (others.isEmpty) return false;
+      return !others.any(shouldFilterFromDms);
     }).toList();
   }
 

@@ -36,11 +36,41 @@ void main() {
       expect(resolve([blockedPeer]), DmThreadWritability.blockedByUs);
     });
 
-    test('group block behavior follows the first route participant', () {
-      expect(
-        resolve([ordinaryPeer, blockedPeer]),
-        DmThreadWritability.writable,
-      );
+    group('in a group', () {
+      const otherPeer =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      test('a blocked first member makes it read-only', () {
+        expect(
+          resolve([blockedPeer, ordinaryPeer, otherPeer]),
+          DmThreadWritability.blockedByUs,
+        );
+      });
+
+      test('a blocked later member makes it read-only', () {
+        expect(
+          resolve([ordinaryPeer, blockedPeer, otherPeer]),
+          DmThreadWritability.blockedByUs,
+        );
+        expect(
+          resolve([ordinaryPeer, otherPeer, blockedPeer]),
+          DmThreadWritability.blockedByUs,
+        );
+      });
+
+      test('stays writable when nobody in it is blocked', () {
+        expect(
+          resolve([ordinaryPeer, otherPeer]),
+          DmThreadWritability.writable,
+        );
+      });
+
+      test('a retired moderation member still closes it ahead of a block', () {
+        expect(
+          resolve([blockedPeer, ordinaryPeer, kLegacyModerationPubkeys.first]),
+          DmThreadWritability.closedRetired,
+        );
+      });
     });
   });
 }

@@ -309,10 +309,10 @@ void main() {
       test(
         'keeps a blocked 1:1 that a group would otherwise displace',
         () async {
-          // `filterBlockedConversations` drops a group whose first non-self
-          // participant is blocked, so if the group took the account's only
-          // slot the 1:1 appeared in no list at all — the exact evidence loss
-          // this feature exists to prevent.
+          // `filterBlockedConversations` drops a group when any of its
+          // members is blocked, so if the group took the account's only slot
+          // the 1:1 appeared in no list at all — the exact evidence loss this
+          // feature exists to prevent.
           final direct = _createConversation(id: _testConversationId1);
           final group = _createConversation(
             id: _testConversationId2,
@@ -335,6 +335,61 @@ void main() {
           );
         },
       );
+
+      group('a group with a blocked member (#10150)', () {
+        // A real blocklist, not `blocklistBlocking`: which member counts is
+        // the rule under test. The viewer is _testPubkey1, and participants
+        // sort as _testPubkey1 < _testPubkey2 < _testPubkey3, so
+        // _testPubkey2 is the group's first member and _testPubkey3 its
+        // second.
+        DmConversation room() => _createConversation(
+          id: _testConversationId2,
+          isGroup: true,
+          participantPubkeys: const [_testPubkey1, _testPubkey2, _testPubkey3],
+        );
+
+        for (final (label, member) in [
+          ('first', _testPubkey2),
+          ('second', _testPubkey3),
+        ]) {
+          test('moves the group under Blocked when its $label member is '
+              'blocked', () async {
+            final blocklist = ContentBlocklistRepository();
+            addTearDown(blocklist.dispose);
+            await blocklist.blockUser(member, ourPubkey: _testPubkey1);
+            _stubStreams(mockDmRepository, accepted: [room()]);
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+
+            final state = await load(bloc);
+
+            expect(state.conversations, isEmpty);
+            expect(
+              state.blockedConversations.map((c) => c.id),
+              contains(_testConversationId2),
+            );
+          });
+        }
+
+        test(
+          'keeps the group in the inbox when nobody in it is blocked',
+          () async {
+            final blocklist = ContentBlocklistRepository();
+            addTearDown(blocklist.dispose);
+            _stubStreams(mockDmRepository, accepted: [room()]);
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+
+            final state = await load(bloc);
+
+            expect(
+              state.conversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+            expect(state.blockedConversations, isEmpty);
+          },
+        );
+      });
 
       test(
         'resolves names for blocked counterparties so search matches',

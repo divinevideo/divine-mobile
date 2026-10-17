@@ -595,18 +595,21 @@ class ConversationListBloc
     if (blocked == null || blocked.isEmpty) return const [];
 
     // Every hidden thread gets its own row, not one row per blocked account.
-    // `filterBlockedConversations` removes a group from the inbox whenever its
-    // first non-self participant is blocked, so collapsing to one row per
-    // pubkey let a group displace the 1:1 with that same account — and the
-    // displaced 1:1 then appeared in no list at all, which is the evidence
-    // loss this whole feature exists to prevent.
+    // `filterBlockedConversations` removes a group from the inbox whenever any
+    // of its members is blocked, so collapsing to one row per pubkey let a
+    // group displace the 1:1 with that same account — and the displaced 1:1
+    // then appeared in no list at all, which is the evidence loss this whole
+    // feature exists to prevent.
     final rows = <DmConversation>[];
     final pubkeysWithThread = <String>{};
     for (final conversation in candidates) {
-      final other = _otherParticipant(conversation, userPubkey);
-      if (!blocked.contains(other)) continue;
+      final peers = dmConversationPeerPubkeys(
+        participantPubkeys: conversation.participantPubkeys,
+        currentUserPubkey: userPubkey,
+      );
+      if (!peers.any(blocked.contains)) continue;
       rows.add(conversation);
-      if (!conversation.isGroup) pubkeysWithThread.add(other);
+      if (!conversation.isGroup) pubkeysWithThread.add(peers.first);
     }
 
     // A blocked account the viewer never messaged 1:1 still gets a row, so the
