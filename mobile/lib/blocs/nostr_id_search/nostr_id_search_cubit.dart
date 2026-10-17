@@ -4,6 +4,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -56,6 +57,8 @@ class NostrIdSearchCubit extends Cubit<NostrIdSearchState>
     final query = rawQuery.trim();
     if (query == state.query) return;
     emitIfOpen(NostrIdSearchState(query: query));
+    // Direct navigation follows the same query policy as text search.
+    if (NostrKeyUtils.containsPrivateKey(query)) return;
     final action = await _resolver.resolve(query);
     if (action == null || state.query != query) return;
     emitIfOpen(NostrIdSearchState(query: query, action: action));
