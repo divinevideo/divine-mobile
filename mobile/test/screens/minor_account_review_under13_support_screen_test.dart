@@ -1,3 +1,4 @@
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -143,5 +144,122 @@ void main() {
       expect(sentOrigin, isNotNull);
       expect(sentOrigin!.isEmpty, isFalse);
     });
+
+    // This screen is the under-13 contact path, so reaching a human is the
+    // point of it. Both buttons used to be primary, which gave "Back to
+    // Account Review" the same pull as the one action that contacts Divine.
+    testWidgets('gives the contact action the only primary button', (
+      tester,
+    ) async {
+      await _pumpUnder13Support(tester);
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MinorAccountReviewUnder13SupportScreen)),
+      );
+
+      DivineButton buttonLabelled(String label) => tester.widget<DivineButton>(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byType(DivineButton),
+        ),
+      );
+
+      expect(
+        buttonLabelled(l10n.authOpenEmailApp).type,
+        DivineButtonType.primary,
+      );
+      expect(
+        buttonLabelled(l10n.minorAccountReviewBackToReview).type,
+        DivineButtonType.secondary,
+      );
+    });
+
+    testWidgets('puts the contact action above the reference cards', (
+      tester,
+    ) async {
+      await _pumpUnder13Support(tester);
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MinorAccountReviewUnder13SupportScreen)),
+      );
+
+      final ctaY = tester.getTopLeft(find.text(l10n.authOpenEmailApp)).dy;
+      final emailCardY = tester
+          .getTopLeft(find.text(l10n.minorAccountReviewSupportEmailLabel))
+          .dy;
+      final caseCardY = tester
+          .getTopLeft(find.text(l10n.minorAccountReviewCaseIdShortLabel))
+          .dy;
+
+      expect(ctaY, lessThan(emailCardY));
+      expect(ctaY, lessThan(caseCardY));
+    });
+
+    // 375x667 is the smallest phone the iOS 16 minimum supports, and 1.3x text
+    // is a common accessibility setting. With the contact action below the
+    // reference cards it sat past the fold here, so reaching it meant scrolling.
+    testWidgets('keeps the contact action on screen on a small phone with '
+        'larger text', (tester) async {
+      await _pumpUnder13Support(
+        tester,
+        surfaceSize: const Size(375, 667),
+        textScale: 1.3,
+      );
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MinorAccountReviewUnder13SupportScreen)),
+      );
+      final cta = find.text(l10n.authOpenEmailApp);
+
+      expect(cta, findsOneWidget);
+      expect(
+        tester.getRect(cta).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(Scrollable).first).bottom),
+      );
+    });
   });
+}
+
+Future<void> _pumpUnder13Support(
+  WidgetTester tester, {
+  Size surfaceSize = const Size(800, 1600),
+  double textScale = 1,
+}) async {
+  await tester.binding.setSurfaceSize(surfaceSize);
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+          return const MinorAccountReviewStatus(
+            restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
+            currentCase: MinorReviewCase(
+              id: 'case-under13',
+              state: MinorReviewCaseState.restrictedPendingSupportEmail,
+              suspectedAgeBand: SuspectedAgeBand.under13,
+              allowedResolution: MinorReviewResolutionType.supportEmailOnly,
+              instructions: MinorReviewInstructions(
+                title: 'Under-13 review',
+                body: 'Parent support is required.',
+              ),
+              supportEmail: 'support@divine.video',
+            ),
+          );
+        }),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: const MinorAccountReviewUnder13SupportScreen(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
