@@ -40,20 +40,30 @@ void main() {
       const otherPeer =
           '4444444444444444444444444444444444444444444444444444444444444444';
 
-      test('a blocked first member makes it read-only', () {
+      test('stays writable when its first member is blocked', () {
         expect(
           resolve([blockedPeer, ordinaryPeer, otherPeer]),
-          DmThreadWritability.blockedByUs,
+          DmThreadWritability.writable,
         );
       });
 
-      test('a blocked later member makes it read-only', () {
+      test('stays writable when a later member is blocked', () {
         expect(
           resolve([ordinaryPeer, blockedPeer, otherPeer]),
-          DmThreadWritability.blockedByUs,
+          DmThreadWritability.writable,
         );
         expect(
           resolve([ordinaryPeer, otherPeer, blockedPeer]),
+          DmThreadWritability.writable,
+        );
+      });
+
+      test('is read-only when every member is blocked', () {
+        expect(
+          resolveDmThreadWritability(
+            participantPubkeys: const [blockedPeer, otherPeer],
+            isBlockedByUs: const {blockedPeer, otherPeer}.contains,
+          ),
           DmThreadWritability.blockedByUs,
         );
       });
@@ -67,7 +77,10 @@ void main() {
 
       test('a retired moderation member still closes it ahead of a block', () {
         expect(
-          resolve([blockedPeer, ordinaryPeer, kLegacyModerationPubkeys.first]),
+          resolveDmThreadWritability(
+            participantPubkeys: [blockedPeer, kLegacyModerationPubkeys.first],
+            isBlockedByUs: (_) => true,
+          ),
           DmThreadWritability.closedRetired,
         );
       });

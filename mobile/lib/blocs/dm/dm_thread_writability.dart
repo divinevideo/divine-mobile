@@ -23,8 +23,10 @@ enum DmThreadWritability {
 ///
 /// Retired moderation threads are one-to-one today, but checking every peer
 /// keeps a rotated key read-only if an old route reconstructs it as a group.
-/// Blocking checks every peer too: a group with any member the viewer blocked
-/// is read-only, like a blocked one-to-one (#10150).
+///
+/// Blocking one member of a group keeps the thread writable, and the view
+/// discloses the block (#10150). A group with every member blocked is
+/// read-only, like a blocked one-to-one, which stays readable (#7025).
 DmThreadWritability resolveDmThreadWritability({
   required List<String> participantPubkeys,
   required bool Function(String pubkey) isBlockedByUs,
@@ -33,19 +35,16 @@ DmThreadWritability resolveDmThreadWritability({
   if (participantPubkeys.any(isRetiredModerationAccount)) {
     return DmThreadWritability.closedRetired;
   }
-  final blocked = dmThreadBlockedParticipants(
-    participantPubkeys: participantPubkeys,
-    isBlockedByUs: isBlockedByUs,
-  );
-  if (blocked.isNotEmpty) return DmThreadWritability.blockedByUs;
+  if (participantPubkeys.every(isBlockedByUs)) {
+    return DmThreadWritability.blockedByUs;
+  }
   return DmThreadWritability.writable;
 }
 
-/// The participants whose block makes a thread
-/// [DmThreadWritability.blockedByUs], in route order.
+/// The participants the viewer blocked, in route order.
 ///
-/// A group's read-only notice names them, so it reads the same list the gate
-/// does rather than working it out a second time.
+/// The thread is [DmThreadWritability.blockedByUs] only when this holds every
+/// participant; a group's read-only notice is built from this list.
 List<String> dmThreadBlockedParticipants({
   required List<String> participantPubkeys,
   required bool Function(String pubkey) isBlockedByUs,
