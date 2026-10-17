@@ -26,8 +26,10 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/inbox_view.dart';
@@ -45,11 +47,24 @@ import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
+
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this.pubkey);
+  final String pubkey;
+  @override
+  NostrSessionReadiness build() =>
+      NostrSessionReadiness.identityKnown(pubkey: pubkey);
+}
 
 class _MockConversationListBloc
     extends MockBloc<ConversationListEvent, ConversationListState>
@@ -1490,6 +1505,7 @@ void main() {
       late MockProfileRepository profileRepository;
       late MockFollowRepository followRepository;
       late AppLocalizations l10n;
+      late _MockRankingSignalsLoader rankingSignalsLoader;
 
       UserProfile contact(String pubkey, String displayName) => UserProfile(
         pubkey: pubkey,
@@ -1502,6 +1518,17 @@ void main() {
 
       setUp(() {
         l10n = lookupAppLocalizations(const Locale('en'));
+        rankingSignalsLoader = _MockRankingSignalsLoader();
+        when(() => rankingSignalsLoader.isEligible(any())).thenAnswer(
+          (invocation) => invocation.positionalArguments.first != currentPubkey,
+        );
+        when(() => rankingSignalsLoader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final pubkey
+                in invocation.positionalArguments.first as Iterable<String>)
+              pubkey: UserRankingSignals(pubkey: pubkey, youFollow: true),
+          },
+        );
         profileRepository = createMockProfileRepository();
         followRepository = createMockFollowRepository(
           followingPubkeys: [alicePubkey, bobPubkey],
@@ -1535,6 +1562,12 @@ void main() {
             profileRepository: profileRepository,
             followRepository: followRepository,
             additionalOverrides: [
+              nostrSessionProvider.overrideWith(
+                () => _TestNostrSession(currentPubkey),
+              ),
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                rankingSignalsLoader,
+              ),
               isFeatureEnabledProvider(
                 FeatureFlag.groupMessages,
               ).overrideWithValue(groupMessagesEnabled),

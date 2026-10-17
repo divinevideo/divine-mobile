@@ -13713,4 +13713,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'تم الحفظ';
+
+  @override
+  String get followSortSmart => 'ذكي';
+
+  @override
+  String userRowPosted(String time) {
+    return 'نُشر $time';
+  }
 }

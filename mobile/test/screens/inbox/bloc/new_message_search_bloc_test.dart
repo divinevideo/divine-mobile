@@ -9,18 +9,25 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
+import 'package:openvine/blocs/new_message_search/new_message_search_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/screens/inbox/bloc/new_message_search_bloc.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
 void main() {
   group(NewMessageSearchBloc, () {
     late _MockProfileRepository mockProfileRepo;
     late _MockFollowRepository mockFollowRepo;
+    late _MockRankingSignalsLoader rankingSignalsLoader;
 
     const debounceDuration = Duration(milliseconds: 400);
     const currentUserPubkey =
@@ -30,6 +37,18 @@ void main() {
     setUp(() {
       mockProfileRepo = _MockProfileRepository();
       mockFollowRepo = _MockFollowRepository();
+      rankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => rankingSignalsLoader.isEligible(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first != currentUserPubkey,
+      );
+      when(() => rankingSignalsLoader.load(any())).thenAnswer(
+        (invocation) async => {
+          for (final pubkey
+              in invocation.positionalArguments.first as Iterable<String>)
+            pubkey: UserRankingSignals(pubkey: pubkey, youFollow: true),
+        },
+      );
       // The BLoC mirrors the durable vanish tombstones so its sort and filter
       // can resolve names the way the row renders them; every construction
       // needs the stream to exist.
@@ -41,6 +60,7 @@ void main() {
     NewMessageSearchBloc createBloc() => NewMessageSearchBloc(
       profileRepository: mockProfileRepo,
       followRepository: mockFollowRepo,
+      rankingSignalsLoader: rankingSignalsLoader,
       currentUserPubkey: currentUserPubkey,
       moderationPresentation: moderationPresentationOf,
     );
@@ -158,6 +178,284 @@ void main() {
           ),
         ],
       );
+    });
+
+    group('ranked contacts', () {
+      late List<UserProfile> contacts;
+      late Map<String, UserRankingSignals> signals;
+      setUp(() {
+        contacts = [
+          createTestProfile(pubkeyAt(1), 'Alice friend'),
+          createTestProfile(pubkeyAt(2), 'Zoe friend'),
+          createTestProfile(pubkeyAt(3), 'Bob friend'),
+        ];
+        when(() => mockFollowRepo.followingPubkeys).thenReturn(
+          contacts.map((profile) => profile.pubkey).toList(),
+        );
+        for (final profile in contacts) {
+          when(() => mockProfileRepo.getCachedProfile(pubkey: profile.pubkey))
+              .thenAnswer((_) async => profile);
+        }
+        signals = {
+          contacts[0].pubkey: UserRankingSignals(
+            pubkey: contacts[0].pubkey,
+            youFollow: true,
+            followsYou: true,
+          ),
+          contacts[1].pubkey: UserRankingSignals(
+            pubkey: contacts[1].pubkey,
+            lastInteractionAt: DateTime(2026, 1, 2),
+          ),
+          contacts[2].pubkey: UserRankingSignals(
+            pubkey: contacts[2].pubkey,
+            lastInteractionAt: DateTime(2026),
+          ),
+        };
+        when(() => rankingSignalsLoader.load(any()))
+            .thenAnswer((_) async => signals);
+      });
+
+      Future<void> load(NewMessageSearchBloc bloc) async {
+        bloc.add(const NewMessageSearchStarted());
+        await pumpEventQueue();
+      }
+
+      List<String> order(NewMessageSearchBloc bloc) =>
+          bloc.state.contacts.map((p) => p.pubkey).toList();
+      List<String> ranked() => [
+        contacts[1].pubkey,
+        contacts[2].pubkey,
+        contacts[0].pubkey,
+      ];
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'contacts are in ranked order',
+        build: createBloc,
+        act: load,
+        verify: (bloc) {
+          expect(order(bloc), ranked());
+          expect(bloc.state.rankingSignals, signals);
+          verify(() => rankingSignalsLoader.load(contacts.map((p) => p.pubkey)))
+              .called(1);
+          verify(() => rankingSignalsLoader.refreshInBackground(ranked()))
+              .called(1);
+        },
+      );
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'a peer label change keeps the ranked order',
+        build: createBloc,
+        act: (bloc) async {
+          await load(bloc);
+          expect(order(bloc), ranked());
+          bloc.add(
+            const NewMessageSearchPeerLabelsChanged(
+              DmPeerLabels(
+                deletedAccount: 'Deleted',
+                moderation: 'Moderation',
+                formerModeration: 'Former',
+                retiredConversationClosed: 'Closed',
+              ),
+            ),
+          );
+        },
+        verify: (bloc) => expect(order(bloc), ranked()),
+      );
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'filtering keeps the ranked order and network results come first',
+        setUp: () {
+          when(
+            () => mockProfileRepo.searchUsers(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer(
+            (_) async => [createTestProfile(pubkeyAt(4), 'Network friend')],
+          );
+        },
+        build: createBloc,
+        act: (bloc) async {
+          await load(bloc);
+          final filtering = bloc.stream.firstWhere(
+            (state) => state.status == NewMessageSearchStatus.searching,
+          );
+          bloc.add(const NewMessageSearchQueryChanged('friend'));
+          final local = await filtering;
+          expect(local.results.map((profile) => profile.pubkey), ranked());
+        },
+        wait: debounceDuration,
+        verify: (bloc) => expect(bloc.state.results.map((p) => p.pubkey), [
+          pubkeyAt(4),
+          ...ranked(),
+        ]),
+      );
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'successful snapshot exclusions never return as zero-signal contacts',
+        setUp: () {
+          signals.remove(contacts[0].pubkey);
+        },
+        build: createBloc,
+        act: load,
+        verify: (bloc) => expect(order(bloc), ranked().take(2)),
+      );
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'empty successful snapshot excludes every contact',
+        setUp: () {
+          signals.clear();
+        },
+        build: createBloc,
+        act: load,
+        verify: (bloc) => expect(bloc.state.contacts, isEmpty),
+      );
+      test(
+        'vanish and label updates preserve the first ranked order',
+        () async {
+          final vanished = StreamController<Set<String>>();
+          when(mockProfileRepo.watchVanishedPubkeys)
+              .thenAnswer((_) => vanished.stream);
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          addTearDown(vanished.close);
+          await load(bloc);
+          expect(order(bloc), ranked());
+          vanished.add({contacts[1].pubkey});
+          await pumpEventQueue();
+          expect(order(bloc), ranked());
+          bloc.add(
+            const NewMessageSearchPeerLabelsChanged(
+              DmPeerLabels(
+                deletedAccount: 'A deleted',
+                moderation: 'Moderation',
+                formerModeration: 'Former',
+                retiredConversationClosed: 'Closed',
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          expect(order(bloc), ranked());
+          bloc.add(
+            const NewMessageSearchPeerLabelsChanged(
+              DmPeerLabels(
+                deletedAccount: 'ZZ deleted',
+                moderation: 'Moderation',
+                formerModeration: 'Former',
+                retiredConversationClosed: 'Closed',
+              ),
+            ),
+          );
+          await pumpEventQueue();
+          expect(order(bloc), ranked());
+        },
+      );
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'programming errors from the loader remain reportable',
+        setUp: () {
+          when(() => rankingSignalsLoader.load(any()))
+              .thenThrow(StateError('invalid local snapshot'));
+        },
+        build: createBloc,
+        act: load,
+        errors: () => [isA<Reportable>()],
+        verify: (bloc) =>
+            expect(bloc.state.status, NewMessageSearchStatus.idle),
+      );
+      final blockedFallbackFailure = Exception('local snapshot unavailable');
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'throwing loader fallback excludes blocked cached follows before reads and refresh',
+        setUp: () {
+          when(() => mockFollowRepo.followingPubkeys)
+              .thenReturn([contacts[0].pubkey, contacts[1].pubkey]);
+          when(() => rankingSignalsLoader.load(any()))
+              .thenThrow(blockedFallbackFailure);
+          when(() => rankingSignalsLoader.isEligible(contacts[0].pubkey))
+              .thenReturn(false);
+        },
+        build: createBloc,
+        act: load,
+        errors: () => [blockedFallbackFailure],
+        verify: (bloc) {
+          expect(order(bloc), [contacts[1].pubkey]);
+          verifyNever(
+            () => mockProfileRepo.getCachedProfile(pubkey: contacts[0].pubkey),
+          );
+          verify(
+            () =>
+                rankingSignalsLoader.refreshInBackground([contacts[1].pubkey]),
+          ).called(1);
+        },
+      );
+
+      final loadFailure = Exception('local snapshot unavailable');
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'load failure reports error and keeps usable alphabetic contacts',
+        setUp: () {
+          when(() => rankingSignalsLoader.load(any())).thenThrow(loadFailure);
+        },
+        build: createBloc,
+        act: load,
+        errors: () => [loadFailure],
+        verify: (bloc) {
+          expect(order(bloc), [
+            contacts[0].pubkey,
+            contacts[2].pubkey,
+            contacts[1].pubkey,
+          ]);
+          expect(bloc.state.status, NewMessageSearchStatus.idle);
+        },
+      );
+    });
+
+    group('cancelled network queries', () {
+      for (final fails in [false, true]) {
+        test(
+          'a cancelled query ${fails ? "failure" : "result"} cannot replace the active search',
+          () async {
+            final firstResponse = Completer<List<UserProfile>>();
+            final firstRequested = Completer<void>();
+            when(() => mockFollowRepo.followingPubkeys).thenReturn([]);
+            when(
+              () => mockProfileRepo.searchUsers(
+                query: 'alice',
+                limit: any(named: 'limit'),
+                sortBy: any(named: 'sortBy'),
+              ),
+            ).thenAnswer((_) {
+              firstRequested.complete();
+              return firstResponse.future;
+            });
+            final bob = createTestProfile(pubkeyAt(2), 'Bob');
+            when(
+              () => mockProfileRepo.searchUsers(
+                query: 'bob',
+                limit: any(named: 'limit'),
+                sortBy: any(named: 'sortBy'),
+              ),
+            ).thenAnswer((_) async => [bob]);
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            bloc.add(const NewMessageSearchQueryChanged('alice'));
+            await firstRequested.future;
+            final secondCompleted = bloc.stream.firstWhere(
+              (state) =>
+                  state.query == 'bob' &&
+                  state.status == NewMessageSearchStatus.searchSuccess,
+            );
+            bloc.add(const NewMessageSearchQueryChanged('bob'));
+            await secondCompleted;
+            expect(bloc.state.results, [bob]);
+            if (fails) {
+              firstResponse.completeError(
+                Exception('cancelled request failed'),
+              );
+            } else {
+              firstResponse.complete([createTestProfile(pubkeyAt(1), 'Alice')]);
+            }
+            await pumpEventQueue();
+            expect(bloc.state.status, NewMessageSearchStatus.searchSuccess);
+            expect(bloc.state.results, [bob]);
+          },
+        );
+      }
     });
 
     group('NewMessageSearchStarted', () {
@@ -1157,6 +1455,7 @@ void main() {
         NewMessageSearchBloc createBlocFor() => NewMessageSearchBloc(
           profileRepository: mockProfileRepo,
           followRepository: mockFollowRepo,
+          rankingSignalsLoader: rankingSignalsLoader,
           currentUserPubkey: currentUserPubkey,
           moderationPresentation: (pubkey) => moderationPresentationOf(
             pubkey,

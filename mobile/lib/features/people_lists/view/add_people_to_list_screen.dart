@@ -16,7 +16,8 @@ import 'package:openvine/features/people_lists/models/people_list_candidate.dart
 import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/features/people_lists/view/widgets/person_pickable_row.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/people_picker_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
 
 /// Full-screen picker that lets the authenticated user batch-add candidate
@@ -48,6 +49,10 @@ class AddPeopleToListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final factory = ref.watch(addPeopleToListCubitFactoryProvider);
+    final ownerPubkey = ref.watch(
+      nostrSessionProvider.select((session) => session.pubkey),
+    );
     return BlocSelector<PeopleListsBloc, PeopleListsState, UserList?>(
       selector: (state) {
         for (final list in state.lists) {
@@ -59,28 +64,86 @@ class AddPeopleToListScreen extends ConsumerWidget {
         if (userList == null) {
           return const _ListNotFoundScaffold();
         }
-        final followRepository = ref.read(followRepositoryProvider);
-        final profileRepository = ref.read(profileRepositoryProvider);
-        return BlocProvider<AddPeopleToListCubit>(
-          create: (_) {
-            final cubit = AddPeopleToListCubit(
-              followRepository: followRepository,
-              profileRepository: profileRepository,
-              existingMemberPubkeys: userList.pubkeys,
-            );
-            runDetached(
-              cubit.started(),
-              'load people list candidates',
-              logName: 'AddPeopleToListScreen',
-              category: LogCategory.ui,
-            );
-            return cubit;
-          },
-          child: AddPeopleToListView(userList: userList),
+        return _AddPeopleToListScope(
+          key: ValueKey((ownerPubkey, userList.id)),
+          userList: userList,
+          factory: factory,
         );
       },
     );
   }
+}
+
+/// Owns dependency replacement while the owner/list selection flow lives.
+class _AddPeopleToListScope extends StatefulWidget {
+  const _AddPeopleToListScope({
+    required this.userList,
+    required this.factory,
+    super.key,
+  });
+
+  final UserList userList;
+  final AddPeopleToListCubitFactory factory;
+
+  @override
+  State<_AddPeopleToListScope> createState() => _AddPeopleToListScopeState();
+}
+
+class _AddPeopleToListScopeState extends State<_AddPeopleToListScope> {
+  late AddPeopleToListCubit _cubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit = _createCubit();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AddPeopleToListScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.factory, widget.factory)) {
+      return;
+    }
+    final previous = _cubit;
+    _cubit = _createCubit(previous.state);
+    _closeCubit(previous);
+  }
+
+  AddPeopleToListCubit _createCubit([
+    AddPeopleToListState initialState = const AddPeopleToListState(),
+  ]) {
+    final cubit = widget.factory.create(
+      existingMemberPubkeys: widget.userList.pubkeys,
+      initialState: initialState,
+    );
+    runDetached(
+      cubit.started(),
+      'load people list candidates',
+      logName: 'AddPeopleToListScreen',
+      category: LogCategory.ui,
+    );
+    return cubit;
+  }
+
+  void _closeCubit(AddPeopleToListCubit cubit) => runDetached(
+    cubit.close(),
+    'close people list candidates',
+    logName: 'AddPeopleToListScreen',
+    category: LogCategory.ui,
+  );
+
+  @override
+  void dispose() {
+    _closeCubit(_cubit);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      BlocProvider<AddPeopleToListCubit>.value(
+        value: _cubit,
+        child: AddPeopleToListView(userList: widget.userList),
+      );
 }
 
 class _ListNotFoundScaffold extends StatelessWidget {
@@ -309,6 +372,10 @@ class _CandidateList extends StatelessWidget {
       (AddPeopleToListCubit c) => c.state.selectedPubkeys,
     );
 
+    final rankingSignals = context.select(
+      (AddPeopleToListCubit c) => c.state.rankingSignals,
+    );
+
     return ListView.builder(
       padding: EdgeInsets.zero,
       itemCount: candidates.length,
@@ -319,6 +386,8 @@ class _CandidateList extends StatelessWidget {
 
         return PersonPickableRow(
           candidate: candidate,
+          videoCount: rankingSignals[candidate.pubkey]?.videoCount,
+          lastPostedAt: rankingSignals[candidate.pubkey]?.lastPostedAt,
           isSelected: isSelected,
           enabled: !isMember,
           onTap: () => context.read<AddPeopleToListCubit>().candidateToggled(
@@ -384,7 +453,6 @@ class _AddButtonBarState extends State<_AddButtonBar> {
 
   Future<void> _submit(Set<String> selected) async {
     final bloc = context.read<PeopleListsBloc>();
-    final cubit = context.read<AddPeopleToListCubit>();
     if (_pending) return;
     if (_owner == null || _owner != bloc.state.activeOwnerPubkey) {
       setState(() => _result = PeopleListsOperationResult.cancelled);
@@ -402,7 +470,9 @@ class _AddButtonBarState extends State<_AddButtonBar> {
         ),
     ]);
     if (!mounted) return;
-    cubit.additionsConfirmed({
+    // Read after the submit: a dependency refresh can replace the cubit while
+    // it runs, and the replaced one drops this confirmation.
+    context.read<AddPeopleToListCubit>().additionsConfirmed({
       for (var i = 0; i < pubkeys.length; i++)
         if (results[i] == PeopleListsOperationResult.succeeded) pubkeys[i],
     });

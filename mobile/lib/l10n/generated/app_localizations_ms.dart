@@ -13725,4 +13725,12 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Disimpan';
+
+  @override
+  String get followSortSmart => 'Pintar';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Disiarkan $time';
+  }
 }

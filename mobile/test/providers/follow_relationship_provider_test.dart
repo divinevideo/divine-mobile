@@ -40,8 +40,8 @@ void main() {
         when(() => nostrClient.hasKeys).thenReturn(true);
         when(() => nostrClient.publicKey).thenReturn(currentPubkey);
         when(
-          repository.getMyFollowers,
-        ).thenAnswer((_) async => const <String>[]);
+          repository.syncMyFollowers,
+        ).thenAnswer((_) async {});
 
         final container = ProviderContainer(
           overrides: [
@@ -54,7 +54,7 @@ void main() {
         addTearDown(container.dispose);
 
         await container.read(myFollowersWarmupProvider.future);
-        verifyNever(repository.getMyFollowers);
+        verifyNever(repository.syncMyFollowers);
 
         container
             .read(nostrSessionProvider.notifier)
@@ -66,7 +66,8 @@ void main() {
             );
 
         await container.read(myFollowersWarmupProvider.future);
-        verify(repository.getMyFollowers).called(1);
+        verify(repository.syncMyFollowers).called(1);
+        verifyNever(repository.getMyFollowers);
       },
     );
   });
@@ -77,15 +78,14 @@ void main() {
       () async {
         final repository = _MockFollowRepository();
         final nostrClient = _MockNostrClient();
-        final warmupCompleter = Completer<List<String>>();
+        final warmupCompleter = Completer<void>();
         var warmupComplete = false;
 
         when(() => nostrClient.hasKeys).thenReturn(true);
         when(() => nostrClient.publicKey).thenReturn(currentPubkey);
-        when(repository.getMyFollowers).thenAnswer((_) async {
-          final followers = await warmupCompleter.future;
+        when(repository.syncMyFollowers).thenAnswer((_) async {
+          await warmupCompleter.future;
           warmupComplete = true;
-          return followers;
         });
         when(() => repository.relationshipTo(targetPubkey)).thenAnswer(
           (_) => warmupComplete
@@ -134,7 +134,7 @@ void main() {
         await initial.future;
         expect(emitted.last.value, FollowRelationship.youFollow);
 
-        warmupCompleter.complete(const <String>[targetPubkey]);
+        warmupCompleter.complete();
         await container.read(myFollowersWarmupProvider.future);
         await upgraded.future;
 

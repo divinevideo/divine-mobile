@@ -32,6 +32,7 @@ import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
@@ -187,6 +188,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
             videoSharingService: widget.videoSharingService,
             profileRepository: widget.profileRepository,
             followRepository: ref.read(followRepositoryProvider),
+            rankingSignalsLoader: ref.read(userRankingSignalsLoaderProvider),
             // Empty when signed out: no viewer to exclude, and an empty
             // string never matches a real pubkey (#8351).
             currentUserPubkey:

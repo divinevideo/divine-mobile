@@ -11,6 +11,7 @@ import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
@@ -219,6 +220,143 @@ void main() {
         expect(box.get(a1.id), isNull);
         expect(box.get(a2.id), isNull);
         expect(box.get(b1.id), isNotNull);
+      },
+    );
+
+    test(
+      'account switch clears the departing owner my_followers rows and keeps the other owner',
+      () async {
+        final checkpoints = MyFollowersSyncState();
+        await checkpoints.stampFull(_pubkeyA, 123);
+        await checkpoints.stampFullAttempt(_pubkeyA, 456);
+        await checkpoints.stampFull(_pubkeyB, 789);
+        await checkpoints.stampFullAttempt(_pubkeyB, 900);
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyA,
+          followers: [(pubkey: _reactionIdA, followedAt: 100)],
+          seenAt: 200,
+        );
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyB,
+          followers: [(pubkey: _reactionIdB, followedAt: 150)],
+          seenAt: 200,
+        );
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), [
+          (pubkey: _reactionIdA, followedAt: 100),
+        ]);
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        expect(await checkpoints.read(_pubkeyA), (
+          full: null,
+          incremental: null,
+          attempt: null,
+          fullAttempt: null,
+        ));
+        expect(await checkpoints.read(_pubkeyB), (
+          full: 789,
+          incremental: 789,
+          attempt: 900,
+          fullAttempt: 900,
+        ));
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+      },
+    );
+
+    test(
+      'follower cache cleanup failure does not skip account history cleanup',
+      () async {
+        await db.seenVideosDao.markSeenBatch([
+          const SeenVideoRow(
+            videoId: _reactionIdA,
+            firstSeenAt: 100,
+            lastSeenAt: 100,
+          ),
+        ]);
+        await db.customStatement('DROP TABLE my_followers');
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+        expect(await db.seenVideosDao.getAll(), isEmpty);
+      },
+    );
+
+    test(
+      'destructive account deletion reports follower cache cleanup failure',
+      () async {
+        await db.customStatement('DROP TABLE my_followers');
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await expectLater(
+          subscription.read().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            deleteUserData: true,
+          ),
+          throwsA(isA<SqliteException>()),
+        );
+      },
+    );
+
+    test(
+      'deleting an inactive account clears its my_followers rows and keeps the active account',
+      () async {
+        final checkpoints = MyFollowersSyncState();
+        await checkpoints.stampFull(_pubkeyA, 123);
+        await checkpoints.stampFull(_pubkeyB, 789);
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyA,
+          followers: [(pubkey: _reactionIdA, followedAt: 100)],
+          seenAt: 200,
+        );
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyB,
+          followers: [(pubkey: _reactionIdB, followedAt: 150)],
+          seenAt: 200,
+        );
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), [
+          (pubkey: _reactionIdA, followedAt: 100),
+        ]);
+        expect((await checkpoints.read(_pubkeyA)).full, 123);
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+          preserveActiveSession: true,
+        );
+
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+        expect(await checkpoints.read(_pubkeyA), (
+          full: null,
+          incremental: null,
+          attempt: null,
+          fullAttempt: null,
+        ));
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+        expect((await checkpoints.read(_pubkeyB)).full, 789);
       },
     );
 

@@ -5108,5 +5108,15 @@
   "soundReadyDescription": "Bir sonraki videonda kullan veya ses kitaplığına kaydet.",
   "soundReadyUse": "Bu sesi kullan",
   "soundReadySave": "Seslerim’e kaydet",
-  "soundRequestSaved": "Kaydedildi"
+  "soundRequestSaved": "Kaydedildi",
+  "followSortSmart": "Akıllı",
+  "userRowPosted": "{time} paylaşıldı",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

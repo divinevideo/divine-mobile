@@ -5108,5 +5108,15 @@
   "soundReadyDescription": "استخدمه في الفيديو القادم أو احفظه في مكتبة الأصوات.",
   "soundReadyUse": "استخدم هذا الصوت",
   "soundReadySave": "حفظ في أصواتي",
-  "soundRequestSaved": "تم الحفظ"
+  "soundRequestSaved": "تم الحفظ",
+  "followSortSmart": "ذكي",
+  "userRowPosted": "نُشر {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

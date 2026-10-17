@@ -6872,5 +6872,15 @@
   "soundReadyDescription": "Dùng trong video tiếp theo hoặc lưu vào thư viện âm thanh của bạn.",
   "soundReadyUse": "Dùng âm thanh này",
   "soundReadySave": "Lưu vào Âm thanh của tôi",
-  "soundRequestSaved": "Đã lưu"
+  "soundRequestSaved": "Đã lưu",
+  "followSortSmart": "Thông minh",
+  "userRowPosted": "Đã đăng {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -15,6 +15,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
@@ -88,6 +89,9 @@ void main() {
       ).thenAnswer((_) => const Stream<AuthState>.empty());
 
       when(() => mockFollowRepository.followingPubkeys).thenReturn(const []);
+      when(mockFollowRepository.watchMyFollowingCached).thenAnswer(
+        (_) => const Stream<CacheResult<FollowingSnapshot>>.empty(),
+      );
       when(
         () => mockFollowRepository.followingStream,
       ).thenAnswer((_) => const Stream.empty());
@@ -238,6 +242,9 @@ void main() {
             contentBlocklistRepositoryProvider.overrideWithValue(
               mockBlocklistRepository,
             ),
+            // This fixture exercises dependency handoff, not notifications.
+            // Profile readiness must not create a real authenticated HTTP client.
+            notificationRepositoryProvider.overrideWithValue(null),
             // Nullable-gated in production: null until Nostr is ready.
             profileRepositoryProvider.overrideWith(
               (ref) =>

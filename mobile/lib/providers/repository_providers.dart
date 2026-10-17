@@ -144,10 +144,14 @@ FollowRepository followRepository(Ref ref) {
     cacheUserEvent: personalEventCache.cacheUserEvent,
     funnelcakeApiClient: funnelcakeApiClient,
     profileStatsDao: profileStatsDao,
+    myFollowersDao: ref.watch(databaseProvider).myFollowersDao,
     indexerRelayUrls: env.indexerRelays,
     queryContactList: ContactListCompletionHelper.queryContactList,
     isOnline: () =>
         connectionStatus.isOnline && authService.canPublishNostrWritesNow,
+    // Follower sync only reads, so a signer that is still starting must not
+    // skip it the way it defers a follow.
+    isConnected: () => connectionStatus.isOnline,
     queueOfflineAction: pendingActionService != null
         ? ({required bool isFollow, required String pubkey}) async {
             await pendingActionService.queueAction(
@@ -194,6 +198,16 @@ FollowRepository followRepository(Ref ref) {
       runProviderDetached(
         repository.initialize(),
         'reinitialize the follow repository after keys become ready',
+        logName: 'FollowRepository',
+      );
+    }
+  });
+
+  ref.listen<bool>(appForegroundProvider, (previous, next) {
+    if (next && previous == false) {
+      runProviderDetached(
+        repository.syncMyFollowers(),
+        'refresh followers on app foreground',
         logName: 'FollowRepository',
       );
     }

@@ -13892,4 +13892,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Gespeichert';
+
+  @override
+  String get followSortSmart => 'Intelligent';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Gepostet $time';
+  }
 }

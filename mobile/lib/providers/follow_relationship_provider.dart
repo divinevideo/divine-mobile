@@ -8,11 +8,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'follow_relationship_provider.g.dart';
 
-/// Populates the current user's follower cache once per session.
+/// Refreshes the current user's local follower cache within repository budgets.
 ///
 /// [FollowRepository.relationshipTo] reads that cache but never fills it, and
 /// a user row must not trigger its own fetch — one shared warm-up keeps the
-/// cost at one request per session instead of one per visible row.
+/// work shared across rows while preserving incremental and full-retry limits.
 ///
 /// Completes with no value on failure: an unreachable relay degrades the
 /// relationship to "unknown", which [FollowRelationship] already models, and
@@ -24,7 +24,7 @@ Future<void> myFollowersWarmup(Ref ref) async {
 
   final repository = ref.watch(followRepositoryProvider);
   try {
-    await repository.getMyFollowers();
+    await repository.syncMyFollowers();
   } on Exception {
     return;
   }

@@ -13626,4 +13626,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Tersimpan';
+
+  @override
+  String get followSortSmart => 'Cerdas';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Diposting $time';
+  }
 }

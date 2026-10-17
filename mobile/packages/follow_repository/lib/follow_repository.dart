@@ -15,3 +15,4 @@ export 'src/followers_snapshot.dart';
 export 'src/following_cache_record.dart';
 export 'src/following_cache_seed.dart';
 export 'src/following_snapshot.dart';
+export 'src/my_followers_sync_state.dart';

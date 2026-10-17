@@ -5108,5 +5108,15 @@
   "soundReadyDescription": "Använd det i din nästa video eller spara det i ditt ljudbibliotek.",
   "soundReadyUse": "Använd det här ljudet",
   "soundReadySave": "Spara i Mina ljud",
-  "soundRequestSaved": "Sparat"
+  "soundRequestSaved": "Sparat",
+  "followSortSmart": "Smart",
+  "userRowPosted": "Publicerat {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

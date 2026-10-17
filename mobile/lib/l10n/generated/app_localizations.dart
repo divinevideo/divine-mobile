@@ -22910,6 +22910,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saved'**
   String get soundRequestSaved;
+
+  /// Sort option that puts people you are closer to first, using recent interactions, follow relationships, and locally cached activity. Shared by your followers and following lists.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart'**
+  String get followSortSmart;
+
+  /// Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as "2h ago".
+  ///
+  /// In en, this message translates to:
+  /// **'Posted {time}'**
+  String userRowPosted(String time);
 }
 
 class _AppLocalizationsDelegate

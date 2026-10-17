@@ -13856,4 +13856,12 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Запазено';
+
+  @override
+  String get followSortSmart => 'Интелигентно';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Публикувано $time';
+  }
 }

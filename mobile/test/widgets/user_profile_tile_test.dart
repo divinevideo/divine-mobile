@@ -3,6 +3,7 @@
 // ABOUTME: engagement lists all render, so the picker and the screens it feeds
 // ABOUTME: have to agree about who an account is (#8421 adjacent).
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -11,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
@@ -42,6 +44,8 @@ void main() {
     required bool isVanished,
     UserProfile? profile,
     FollowRelationship relationship = FollowRelationship.none,
+    int? videoCount,
+    DateTime? lastPostedAt,
   }) async {
     await tester.pumpWidget(
       testMaterialApp(
@@ -59,8 +63,13 @@ void main() {
               pubkey,
             ).overrideWith((ref) => Stream.value(profile)),
         ],
-        home: const Scaffold(
-          body: UserProfileTile(pubkey: pubkey, showFollowButton: false),
+        home: Scaffold(
+          body: UserProfileTile(
+            pubkey: pubkey,
+            showFollowButton: false,
+            videoCount: videoCount,
+            lastPostedAt: lastPostedAt,
+          ),
         ),
       ),
     );
@@ -120,8 +129,13 @@ void main() {
             isVanished: true,
             profile: profileWith(nip05: '_@aeontropy.divine.video'),
             relationship: FollowRelationship.mutual,
+            videoCount: 18,
+            lastPostedAt: clock.now(),
           );
 
+          // Activity would join the same line, so exact-text checks alone
+          // could not see a relationship, handle or count that still renders.
+          expect(find.byType(UserIndicatorLine), findsNothing);
           expect(find.text(l10n.socialProofMutual), findsNothing);
           expect(find.text('@aeontropy'), findsNothing);
         },

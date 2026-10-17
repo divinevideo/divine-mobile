@@ -10105,5 +10105,18 @@
   },
   "@soundRequestSaved": {
     "description": "Sound request DM flow: Saved"
+  },
+  "followSortSmart": "Smart",
+  "@followSortSmart": {
+    "description": "Sort option that puts people you are closer to first, using recent interactions, follow relationships, and locally cached activity. Shared by your followers and following lists."
+  },
+  "userRowPosted": "Posted {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   }
 }

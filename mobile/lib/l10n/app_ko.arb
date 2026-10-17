@@ -4654,5 +4654,15 @@
   "soundReadyDescription": "다음 동영상에서 사용하거나 사운드 라이브러리에 저장하세요.",
   "soundReadyUse": "이 사운드 사용",
   "soundReadySave": "내 사운드에 저장",
-  "soundRequestSaved": "저장됨"
+  "soundRequestSaved": "저장됨",
+  "followSortSmart": "스마트",
+  "userRowPosted": "{time} 게시",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

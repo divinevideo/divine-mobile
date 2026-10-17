@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../cache_sync/test/fake_cache_dao.dart';
@@ -23,6 +24,17 @@ class _MockNostrClient extends Mock implements NostrClient {
     // Self-registered so the stub below works in every file that builds this
     // mock, whether or not that file has its own `setUpAll`. Idempotent.
     registerFallbackValue(Duration.zero);
+    // List fixtures describe complete follower reads; dedicated sync tests
+    // override this adapter for incomplete and capped QueryResult outcomes.
+    when(() => readEvents(any(), requireAllRelaysSettled: true)).thenAnswer(
+      (invocation) async => QueryResult(
+        events: await queryEvents(
+          invocation.positionalArguments.single as List<Filter>,
+        ),
+        endedBy: QueryEnd.complete,
+        confirmedExhaustive: true,
+      ),
+    );
     // The pre-broadcast read of our own kind 3 goes through
     // `queryEventsDetailed` so it can tell a relay's "I hold nothing" apart
     // from an answer nobody gave (#8265). Default to a *settled* empty answer
@@ -72,7 +84,9 @@ class _FakeRelay extends RelayBase {
     this.neverDisconnects = false,
     this.throwOnSend = false,
     this.throwOnDisconnect = false,
-  });
+  }) {
+    info = RelayInfo('', '', '', '', const [], '', '');
+  }
 
   /// Messages to deliver via [onMessage] when connecting.
   List<List<dynamic>> fakeResponses = [];

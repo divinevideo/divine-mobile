@@ -38,8 +38,9 @@ class FollowListSearchBloc
   ///
   /// [subjectPubkey] is whose list this is, and [listKind] which side of it —
   /// together they address the server-side search. An empty [subjectPubkey]
-  /// runs on-device matching only; push the real one in later with
-  /// [FollowListSearchSubjectPubkeyChanged].
+  /// runs on-device matching only. Once the real key resolves, the own-list
+  /// screens build a replacement from this BLoC's state, which reruns an
+  /// active query.
   ///
   /// [profileRepository] is nullable because `profileRepositoryProvider` is
   /// gated on Nostr readiness and hands over the real instance after cold
@@ -50,11 +51,18 @@ class FollowListSearchBloc
     required String subjectPubkey,
     required FollowListKind listKind,
     ProfileRepository? profileRepository,
+    FollowListSearchState initialState = const FollowListSearchState(),
   }) : _followRepository = followRepository,
        _subjectPubkey = subjectPubkey,
        _listKind = listKind,
        _profileRepository = profileRepository,
-       super(const FollowListSearchState()) {
+       super(
+         initialState.copyWith(
+           candidatePubkeys: List.unmodifiable(initialState.candidatePubkeys),
+           searchTerms: Map.unmodifiable(initialState.searchTerms),
+           remoteMatches: Set.unmodifiable(initialState.remoteMatches),
+         ),
+       ) {
     on<FollowListSearchQueryChanged>(
       _onQueryChanged,
       transformer: debounceRestartable(),
@@ -63,16 +71,20 @@ class FollowListSearchBloc
       _onProfileRepositoryChanged,
       transformer: restartable(),
     );
-    on<FollowListSearchSubjectPubkeyChanged>(_onSubjectPubkeyChanged);
+    if (initialState.isActive) {
+      add(
+        FollowListSearchQueryChanged(
+          initialState.query,
+          initialState.candidatePubkeys,
+        ),
+      );
+    }
   }
 
   final FollowRepository _followRepository;
   final FollowListKind _listKind;
 
-  /// Swappable for the same reason as [_profileRepository]: on the own-list
-  /// screens this starts empty during cold boot and is pushed in by
-  /// [FollowListSearchSubjectPubkeyChanged] once auth restores.
-  String _subjectPubkey;
+  final String _subjectPubkey;
 
   /// Swappable rather than final for the same reason as
   /// `ConversationListBloc._profileRepository`: re-pointing this one field is
@@ -92,13 +104,13 @@ class FollowListSearchBloc
     final query = trimmed.length < minSearchQueryLength ? '' : trimmed;
 
     // Emit before resolving so the query lands immediately on the names that
-    // are already known. Remote matches belong to the previous query, so they
-    // are dropped rather than carried over.
+    // are already known. Remote matches answer one query, so they carry over
+    // only when it is unchanged, as when a replacement bloc re-runs it.
     emit(
       state.copyWith(
         query: query,
         candidatePubkeys: event.candidatePubkeys,
-        remoteMatches: const {},
+        remoteMatches: state.query == query ? state.remoteMatches : const {},
       ),
     );
 
@@ -150,17 +162,6 @@ class FollowListSearchBloc
     await _resolveSearchTerms(emit);
   }
 
-  Future<void> _onSubjectPubkeyChanged(
-    FollowListSearchSubjectPubkeyChanged event,
-    Emitter<FollowListSearchState> emit,
-  ) async {
-    if (event.pubkey == _subjectPubkey) return;
-    _subjectPubkey = event.pubkey;
-    // A query typed before auth restored ran on-device only. Now that the
-    // server-side search is addressable, run it for the query still on screen.
-    await _searchRemotely(emit, query: state.query);
-  }
-
   /// Fill [FollowListSearchState.searchTerms] for candidates that have none.
   ///
   /// No-ops unless a query is active, so an untouched search field never
@@ -171,10 +172,14 @@ class FollowListSearchBloc
     if (query.isEmpty || repository == null) return;
 
     final generation = ++_resolveGeneration;
-    final unresolved = state.candidatePubkeys
-        .where((pubkey) => !state.searchTerms.containsKey(pubkey))
-        .toSet()
-        .toList();
+    // Sorted before chunking: the own lists arrive in Smart order, which comes
+    // from message history, and lookups must not reveal it chunk by chunk.
+    final unresolved =
+        state.candidatePubkeys
+            .where((pubkey) => !state.searchTerms.containsKey(pubkey))
+            .toSet()
+            .toList()
+          ..sort();
 
     for (var i = 0; i < unresolved.length; i += searchProfileResolveChunkSize) {
       if (!_canEmitResolve(emit, generation, repository, query)) return;

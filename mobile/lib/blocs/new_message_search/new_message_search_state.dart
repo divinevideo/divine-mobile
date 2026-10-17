@@ -40,6 +40,7 @@ final class NewMessageSearchState extends Equatable {
   const NewMessageSearchState({
     this.status = NewMessageSearchStatus.loadingContacts,
     this.contacts = const [],
+    this.rankingSignals = const {},
     this.query = '',
     this.results = const [],
     this.networkResults = const [],
@@ -52,8 +53,11 @@ final class NewMessageSearchState extends Equatable {
   /// Current status of the search flow.
   final NewMessageSearchStatus status;
 
-  /// All followed contacts, sorted alphabetically.
+  /// Eligible followed contacts, ranked once by interaction and closeness.
   final List<UserProfile> contacts;
+
+  /// Local ranking snapshot retained for row relationship indicators.
+  final Map<String, UserRankingSignals> rankingSignals;
 
   /// Current search query (trimmed).
   final String query;
@@ -110,6 +114,7 @@ final class NewMessageSearchState extends Equatable {
   NewMessageSearchState copyWith({
     NewMessageSearchStatus? status,
     List<UserProfile>? contacts,
+    Map<String, UserRankingSignals>? rankingSignals,
     String? query,
     List<UserProfile>? results,
     List<UserProfile>? networkResults,
@@ -121,6 +126,7 @@ final class NewMessageSearchState extends Equatable {
     return NewMessageSearchState(
       status: status ?? this.status,
       contacts: contacts ?? this.contacts,
+      rankingSignals: rankingSignals ?? this.rankingSignals,
       query: query ?? this.query,
       results: results ?? this.results,
       networkResults: networkResults ?? this.networkResults,
@@ -135,6 +141,7 @@ final class NewMessageSearchState extends Equatable {
   List<Object?> get props => [
     status,
     contacts,
+    rankingSignals,
     query,
     results,
     networkResults,

@@ -6872,5 +6872,15 @@
   "soundReadyDescription": "在下一个视频中使用它，或保存到你的声音库。",
   "soundReadyUse": "使用此声音",
   "soundReadySave": "保存到我的声音",
-  "soundRequestSaved": "已保存"
+  "soundRequestSaved": "已保存",
+  "followSortSmart": "智能",
+  "userRowPosted": "发布于{time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

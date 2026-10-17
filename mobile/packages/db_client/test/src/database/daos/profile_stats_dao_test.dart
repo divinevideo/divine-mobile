@@ -44,6 +44,59 @@ void main() {
   });
 
   group('ProfileStatsDao', () {
+    group('getStatsRawMany', () {
+      test(
+        'returns only requested existing rows without expiry checking',
+        () async {
+          final old = DateTime(2020);
+          await database
+              .into(database.profileStats)
+              .insert(
+                ProfileStatsCompanion.insert(
+                  pubkey: testPubkey,
+                  videoCount: const Value(12),
+                  cachedAt: old,
+                ),
+              );
+          await dao.upsertStats(pubkey: testPubkey2, videoCount: 99);
+
+          final result = await dao.getStatsRawMany([testPubkey, 'missing']);
+
+          expect(result.keys, [testPubkey]);
+          expect(result[testPubkey]!.videoCount, 12);
+          expect(result[testPubkey]!.cachedAt, old);
+          expect(await dao.getStatsRaw(testPubkey), isNotNull);
+        },
+      );
+
+      test('returns empty for no pubkeys', () async {
+        expect(await dao.getStatsRawMany([]), isEmpty);
+      });
+
+      test('reads rows across the 500-key boundary', () async {
+        final pubkeys = List.generate(
+          501,
+          (i) => i.toRadixString(16).padLeft(64, '0'),
+        );
+        await database.batch((batch) {
+          batch.insertAll(database.profileStats, [
+            for (final pubkey in pubkeys)
+              ProfileStatsCompanion.insert(
+                pubkey: pubkey,
+                videoCount: const Value(7),
+                cachedAt: DateTime(2026),
+              ),
+          ]);
+        });
+
+        final result = await dao.getStatsRawMany(pubkeys);
+
+        expect(result, hasLength(501));
+        expect(result.keys, unorderedEquals(pubkeys));
+        expect(result[pubkeys.last]!.videoCount, 7);
+      });
+    });
+
     group('upsertStats', () {
       test('inserts new stats', () async {
         await dao.upsertStats(

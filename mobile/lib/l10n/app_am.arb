@@ -5208,5 +5208,15 @@
   "soundReadyDescription": "በሚቀጥለው ቪዲዮህ ተጠቀምበት ወይም በድምፅ ቤተ መጻሕፍትህ ውስጥ አስቀምጠው።",
   "soundReadyUse": "ይህን ድምፅ ተጠቀም",
   "soundReadySave": "በእኔ ድምፆች ውስጥ አስቀምጥ",
-  "soundRequestSaved": "ተቀምጧል"
+  "soundRequestSaved": "ተቀምጧል",
+  "followSortSmart": "ብልህ",
+  "userRowPosted": "የተለጠፈው {time}",
+  "@userRowPosted": {
+    "description": "Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as \"2h ago\".",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

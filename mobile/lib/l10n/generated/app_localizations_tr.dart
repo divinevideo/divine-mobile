@@ -13650,4 +13650,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Kaydedildi';
+
+  @override
+  String get followSortSmart => 'Akıllı';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time paylaşıldı';
+  }
 }

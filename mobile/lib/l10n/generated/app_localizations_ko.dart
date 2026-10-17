@@ -13069,4 +13069,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '저장됨';
+
+  @override
+  String get followSortSmart => '스마트';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time 게시';
+  }
 }

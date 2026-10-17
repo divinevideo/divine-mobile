@@ -91,6 +91,9 @@ class _PeopleContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = context.select((UserSearchBloc bloc) => bloc.state.status);
     final results = context.select((UserSearchBloc bloc) => bloc.state.results);
+    final rankingSignals = context.select(
+      (UserSearchBloc bloc) => bloc.state.rankingSignals,
+    );
     final query = context.select((UserSearchBloc bloc) => bloc.state.query);
     final isDegradedEmpty = context.select(
       (UserSearchBloc bloc) => bloc.state.isDegradedEmpty,
@@ -137,6 +140,8 @@ class _PeopleContent extends StatelessWidget {
               container: true,
               child: SearchUserTile(
                 profile: profile,
+                videoCount: rankingSignals[profile.pubkey]?.videoCount,
+                lastPostedAt: rankingSignals[profile.pubkey]?.lastPostedAt,
                 onTap: () => _navigateToProfile(context, profile),
               ),
             ),

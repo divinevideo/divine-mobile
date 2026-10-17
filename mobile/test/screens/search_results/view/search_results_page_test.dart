@@ -12,18 +12,23 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
+import 'package:openvine/blocs/nostr_id_search/nostr_id_search_cubit.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:user_ranking/user_ranking.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -41,9 +46,34 @@ class _MockPeopleListsRepository extends Mock
 final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
 final _videosRepositorySelection = StateProvider<int>((ref) => 0);
 final _curatedRepositorySelection = StateProvider<int>((ref) => 0);
+final _rankingLoaderSelection = StateProvider<bool>((ref) => false);
 final _profileReadinessSelection = StateProvider<int>((ref) => 0);
 
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this.owner);
+  final String owner;
+  @override
+  NostrSessionReadiness build() =>
+      NostrSessionReadiness.identityKnown(pubkey: owner);
+}
+
 void main() {
+  late _MockRankingSignalsLoader rankingLoader;
+  setUp(() {
+    rankingLoader = _MockRankingSignalsLoader();
+    when(() => rankingLoader.isEligible(any())).thenReturn(true);
+    when(() => rankingLoader.load(any())).thenAnswer(
+      (invocation) async => {
+        for (final key
+            in invocation.positionalArguments.single as Iterable<String>)
+          key: UserRankingSignals(pubkey: key),
+      },
+    );
+    when(() => rankingLoader.refreshInBackground(any())).thenReturn(null);
+  });
   setUpAll(() {
     registerFallbackValue(defaultVideoSearchSort);
     registerFallbackValue(SearchCancellationToken('test-search'));
@@ -66,6 +96,7 @@ void main() {
 
     Widget createTestWidget({
       Override? profileRepositoryOverride,
+      Override? rankingLoaderOverride,
       Override? videosRepositoryOverride,
       Override? curatedRepositoryOverride,
       Override? listThumbnailPolicyOverride,
@@ -79,6 +110,8 @@ void main() {
             ? mockProfileRepository
             : null,
         additionalOverrides: [
+          rankingLoaderOverride ??
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
           videosRepositoryOverride ??
               videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           hashtagRepositoryProvider.overrideWithValue(mockHashtagRepository),
@@ -99,6 +132,217 @@ void main() {
         ],
       );
     }
+
+    testWidgets('Nostr resolver follows edits through profile readiness', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          profileRepositoryOverride: profileRepositoryProvider.overrideWith(
+            (ref) => ref.watch(_profileRepositoryAvailable)
+                ? mockProfileRepository
+                : null,
+          ),
+        ),
+      );
+      final view = find.byType(SearchResultsView, skipOffstage: false);
+      final context = tester.element(view);
+      final container = ProviderScope.containerOf(context);
+      final controller = tester
+          .widget<TextField>(find.byType(TextField, skipOffstage: false))
+          .controller!;
+      controller.text = 'cats';
+      await tester.pump();
+      expect(
+        tester.element(view).read<NostrIdSearchCubit>().state.query,
+        'cats',
+      );
+      container.read(_profileRepositoryAvailable.notifier).state = true;
+      await tester.pump();
+      expect(
+        tester.element(view).read<NostrIdSearchCubit>().state.query,
+        'cats',
+      );
+      controller.text = 'dogs';
+      await tester.pump();
+      expect(
+        tester.element(view).read<NostrIdSearchCubit>().state.query,
+        'dogs',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 500));
+    });
+
+    testWidgets(
+      'same-owner fresh profiles retain loaded pages and continue pagination',
+      (tester) async {
+        final fresh = createMockProfileRepository();
+        when(
+          () => mockVideosRepository.searchVideos(
+            query: any(named: 'query'),
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer((_) => Stream.value(const <VideoEvent>[]));
+        when(
+          () => mockHashtagRepository.searchHashtags(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => const <String>[]);
+        when(() => mockCuratedListRepository.searchAllLists(any()))
+            .thenAnswer((_) => Stream.value(const <CuratedList>[]));
+
+        final first = UserProfile(
+          pubkey: 'a' * 64,
+          name: 'First',
+          createdAt: DateTime.utc(2026),
+          eventId: '1' * 64,
+          rawData: const {},
+        );
+        final second = UserProfile(
+          pubkey: 'b' * 64,
+          name: 'Second',
+          createdAt: DateTime.utc(2026),
+          eventId: '2' * 64,
+          rawData: const {},
+        );
+        final third = UserProfile(
+          pubkey: 'c' * 64,
+          name: 'Third',
+          createdAt: DateTime.utc(2026),
+          eventId: '3' * 64,
+          rawData: const {},
+        );
+        void stub(
+          MockProfileRepository repository,
+          List<UserProfile> Function(int) page,
+        ) {
+          when(
+            () => repository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
+              cancellationToken: any(named: 'cancellationToken'),
+            ),
+          ).thenAnswer((call) {
+            final offset = call.namedArguments[#offset] as int;
+            return Stream.value(
+              ProgressiveSearchResult(
+                profiles: page(offset),
+                sources: const {},
+                isComplete: true,
+                nextRestOffset: offset + 20,
+                restHasMore: true,
+              ),
+            );
+          });
+        }
+
+        stub(
+          mockProfileRepository,
+          (offset) => offset == 0 ? [first] : [second],
+        );
+        stub(fresh, (_) => [third]);
+        await tester.pumpWidget(
+          createTestWidget(
+            profileRepositoryOverride: profileRepositoryProvider.overrideWith(
+              (ref) => switch (ref.watch(_profileReadinessSelection)) {
+                0 => mockProfileRepository,
+                1 => null,
+                _ => fresh,
+              },
+            ),
+          ),
+        );
+        final context = tester.element(find.byType(SearchResultsView));
+        final original = context.read<UserSearchBloc>();
+        final videos = context.read<VideoSearchBloc>();
+        final hashtags = context.read<HashtagSearchBloc>();
+        await tester.enterText(find.byType(TextField), 'person');
+        await tester.pump(const Duration(milliseconds: 350));
+        for (
+          var i = 0;
+          i < 10 && original.state.status != UserSearchStatus.success;
+          i++
+        ) {
+          await tester.runAsync(() async {});
+          await tester.pump();
+        }
+        expect(original.state.results, [first]);
+        original.add(const UserSearchLoadMore());
+        for (var i = 0; i < 10 && original.state.results.length < 2; i++) {
+          await tester.runAsync(() async {});
+          await tester.pump();
+        }
+        expect(original.state.results, [first, second]);
+        final container = ProviderScope.containerOf(context);
+        container.read(_profileReadinessSelection.notifier).state = 1;
+        await tester.pump();
+        container.read(_profileReadinessSelection.notifier).state = 2;
+        await tester.pump();
+        final current = tester.element(find.byType(SearchResultsView));
+        final next = current.read<UserSearchBloc>();
+        expect(original.isClosed, isTrue);
+        expect(current.read<VideoSearchBloc>(), same(videos));
+        expect(current.read<HashtagSearchBloc>(), same(hashtags));
+        expect(next.state.query, 'person');
+        expect(next.state.results, [first, second]);
+        expect(next.state.offset, 40);
+        next.add(const UserSearchLoadMore());
+        for (var i = 0; i < 10 && next.state.results.length < 3; i++) {
+          await tester.runAsync(() async {});
+          await tester.pump();
+        }
+        expect(next.state.results, [first, second, third]);
+        verify(
+          () => fresh.searchUsersProgressive(
+            query: 'person',
+            limit: any(named: 'limit'),
+            offset: 40,
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'refreshes people dependencies while retaining unrelated search blocs',
+      (tester) async {
+        final replacement = _MockRankingSignalsLoader();
+        await tester.pumpWidget(
+          createTestWidget(
+            rankingLoaderOverride: userRankingSignalsLoaderProvider
+                .overrideWith(
+                  (ref) => ref.watch(_rankingLoaderSelection)
+                      ? replacement
+                      : rankingLoader,
+                ),
+          ),
+        );
+        await tester.pump();
+        final context = tester.element(find.byType(SearchResultsView));
+        final original = context.read<UserSearchBloc>();
+        final videos = context.read<VideoSearchBloc>();
+        final hashtags = context.read<HashtagSearchBloc>();
+        expect(original.isClosed, isFalse);
+        final container = ProviderScope.containerOf(context);
+        container.read(_rankingLoaderSelection.notifier).state = true;
+        await tester.pump();
+        await tester.pump();
+        expect(original.isClosed, isTrue);
+        final refreshedContext = tester.element(find.byType(SearchResultsView));
+        expect(refreshedContext.read<VideoSearchBloc>(), same(videos));
+        expect(refreshedContext.read<HashtagSearchBloc>(), same(hashtags));
+        expect(
+          tester.element(find.byType(SearchResultsView)).read<UserSearchBloc>(),
+          isNot(same(original)),
+        );
+      },
+    );
 
     testWidgets(
       'policy and readiness replacements preserve typed query and category',
@@ -243,7 +487,7 @@ void main() {
         expect(find.byType(TextField), findsNothing);
         expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
         for (final result in nextResults) {
-          expect(result.isClosed, isTrue);
+          expect(result.isClosed, result is UserSearchBloc);
         }
         expect(category.isClosed, isFalse);
         expect(category.state, SearchResultsFilter.lists);
@@ -253,8 +497,8 @@ void main() {
         final readyBloc = BlocProvider.of<ListSearchBloc>(
           tester.element(find.byType(SearchResultsView)),
         );
-        expect(readyBloc, isNot(same(newBloc)));
-        expect(readyBloc.state.videoResults, isEmpty);
+        expect(readyBloc, same(newBloc));
+        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
         expect(
           BlocProvider.of<SearchResultsFilterCubit>(
             tester.element(find.byType(SearchResultsView)),
@@ -269,9 +513,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 350));
         await tester.runAsync(() async {});
         await tester.pump();
-        verify(() => replacement.searchAllLists('dance')).called(1);
+        verifyNever(() => replacement.searchAllLists('dance'));
         expect(readyBloc.state.query, 'dance');
-        expect(readyBloc.state.videoResults, isEmpty);
+        expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
         pending.add([row.copyWith(thumbnailUrls: const [])]);
         await tester.pump();
         expect(readyBloc.state.videoResults.single.thumbnailUrls, isEmpty);
@@ -481,6 +725,63 @@ void main() {
       ).called(1);
     });
 
+    testWidgets('lists the signed-in account in people search', (
+      tester,
+    ) async {
+      final viewer = 'f' * 64;
+      final ownProfile = UserProfile(
+        pubkey: viewer,
+        displayName: 'Sam',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        eventId: 'event-$viewer',
+        rawData: const {},
+      );
+      // Ranking never scores the viewer, as the real loader does.
+      when(() => rankingLoader.isEligible(viewer)).thenReturn(false);
+      when(() => rankingLoader.load(any())).thenAnswer(
+        (invocation) async => {
+          for (final key
+              in invocation.positionalArguments.single as Iterable<String>)
+            if (key != viewer) key: UserRankingSignals(pubkey: key),
+        },
+      );
+      when(
+        () => mockProfileRepository.searchUsersProgressive(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+          boostPubkeys: any(named: 'boostPubkeys'),
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).thenAnswer(
+        (_) => Stream.value(
+          ProgressiveSearchResult(
+            profiles: [ownProfile],
+            sources: const {},
+            isComplete: true,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(
+          flagOverrides: [
+            nostrSessionProvider.overrideWith(() => _TestNostrSession(viewer)),
+          ],
+        ),
+      );
+      final bloc = BlocProvider.of<UserSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
+      bloc.add(const UserSearchQueryChanged('sam'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      expect(bloc.state.results, [ownProfile]);
+    });
+
     testWidgets('shows a waiting state while the profile repository is null', (
       tester,
     ) async {
@@ -495,6 +796,20 @@ void main() {
 
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
+      final context = tester.element(
+        find.byType(DivineCircularProgressIndicator),
+      );
+      expect(
+        find.ancestor(
+          of: find.byType(DivineCircularProgressIndicator),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is ColoredBox &&
+                widget.color == context.vineColors.surface,
+          ),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows search when the profile repository becomes available', (

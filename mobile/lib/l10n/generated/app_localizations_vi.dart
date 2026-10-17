@@ -13667,4 +13667,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Đã lưu';
+
+  @override
+  String get followSortSmart => 'Thông minh';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Đã đăng $time';
+  }
 }

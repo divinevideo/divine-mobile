@@ -14072,4 +14072,12 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'సేవ్ చేయబడింది';
+
+  @override
+  String get followSortSmart => 'తెలివైన క్రమం';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time పోస్ట్ చేయబడింది';
+  }
 }

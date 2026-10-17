@@ -1,18 +1,24 @@
 // ABOUTME: Tappable row used inside the add-people-to-list picker.
-// ABOUTME: Shows avatar, display name, handle, and a selection checkbox.
+// ABOUTME: Shows avatar, display name, account facts, and a checkbox.
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/user_identifier_line_resolver.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 
 /// A presentational row representing a [PeopleListCandidate] for inclusion
 /// in a people list. Purely display-and-callback — it holds no bloc or
 /// provider references so it can be reused from any picker variant.
 ///
-/// The row renders the user avatar, their display name, a secondary handle
-/// line, and a trailing [DivineSpriteCheckbox] reflecting [isSelected]. When
+/// The row renders the user avatar, their display name, a secondary line of
+/// account facts (relationship, handle, video count, recent posting), and a
+/// trailing [DivineSpriteCheckbox] reflecting [isSelected]. When
 /// [enabled] is `false` the row becomes non-interactive and the checkbox
 /// renders in its disabled state — used to indicate a candidate that is
 /// already a member of the target list.
@@ -23,11 +29,17 @@ class PersonPickableRow extends StatelessWidget {
     required this.isSelected,
     required this.enabled,
     required this.onTap,
+    this.videoCount,
+    this.lastPostedAt,
     super.key,
   });
 
   /// Candidate whose metadata drives the row's display.
   final PeopleListCandidate candidate;
+
+  /// Cached activity supplied by the owning picker.
+  final int? videoCount;
+  final DateTime? lastPostedAt;
 
   /// Whether the candidate is currently selected for batch add.
   final bool isSelected;
@@ -47,9 +59,9 @@ class PersonPickableRow extends StatelessWidget {
   String get displayName =>
       candidate.displayName ?? UserProfile.defaultDisplayNameFor(pubkey);
 
-  /// Effective handle line: either the resolved handle or the full pubkey
-  /// as a stable fallback.
-  String get handle => candidate.handle ?? pubkey;
+  /// Optional resolved handle. The semantic identifier retains the full pubkey
+  /// without crowding activity out of the secondary line.
+  String? get handle => candidate.handle;
 
   /// Optional avatar URL for the candidate.
   String? get avatarUrl => candidate.avatarUrl;
@@ -68,6 +80,27 @@ class PersonPickableRow extends StatelessWidget {
     final textColor = enabled
         ? context.vineColors.onSurface
         : context.vineColors.secondaryText;
+    final relationship = switch ((
+      candidate.isFollowing,
+      candidate.isFollower,
+    )) {
+      (true, true) => FollowRelationship.mutual,
+      (true, false) => FollowRelationship.youFollow,
+      (false, true) => FollowRelationship.followsYou,
+      _ => FollowRelationship.none,
+    };
+    final indicators = UserIndicatorLine(
+      identifier: resolveUserIdentifierLine(
+        l10n: context.l10n,
+        locale: Localizations.localeOf(context).toLanguageTag(),
+        handle: handle,
+      ),
+      relationship: relationship,
+      videoCount: videoCount,
+      lastPostedAt: lastPostedAt,
+      now: clock.now(),
+      style: VineTheme.bodyMediumFont(color: context.vineColors.secondaryText),
+    );
     return Semantics(
       identifier: 'person_pickable_row_$pubkey',
       button: true,
@@ -101,15 +134,10 @@ class PersonPickableRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          handle,
-                          style: VineTheme.bodyMediumFont(
-                            color: context.vineColors.secondaryText,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        if (indicators.hasContent) ...[
+                          const SizedBox(height: 2),
+                          indicators,
+                        ],
                       ],
                     ),
                   ),

@@ -9,6 +9,7 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -847,9 +848,20 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           'notifications',
           () => db.notificationsDao.clearAll(ownerPubkey: userPubkey),
         );
-        // Issue #3936 requires the NIP-39 identity caches to clear on logout
-        // and account switches rather than persisting across identities.
+        // Owner-scoped, so it also runs when another account stays active and
+        // only this one is being deleted from the device.
+        if (userPubkey != null) {
+          await (deleteUserData ? requiredCleanup : safeCleanup)(
+            'myFollowers',
+            () async {
+              await db.myFollowersDao.clearAllForUser(userPubkey);
+              await MyFollowersSyncState().clear(userPubkey);
+            },
+          );
+        }
         if (!preserveActiveSession) {
+          // Issue #3936 requires the NIP-39 identity caches to clear on logout
+          // and account switches rather than persisting across identities.
           await safeCleanup('identityEvents', db.identityEventsDao.clearAll);
           await safeCleanup(
             'identityVerifications',
