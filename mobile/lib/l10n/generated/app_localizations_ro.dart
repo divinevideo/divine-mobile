@@ -5911,6 +5911,27 @@ class AppLocalizationsRo extends AppLocalizations {
       'Mesajele rămân aici ca să le poți citi sau captura. Deblochează pentru a răspunde.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Ai blocat contul $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ai blocat $count de persoane aici',
+      few: 'Ai blocat $count persoane aici',
+      one: 'Ai blocat $count persoană aici',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Mesajele rămân aici ca să le poți citi sau captura. Deblochează din profil pentru a răspunde.';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Această conversație nu a putut fi încărcată';
 

@@ -5755,6 +5755,25 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat untuk membalas.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Anda menyekat $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Anda menyekat $count orang di sini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat melalui profil mereka untuk membalas.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Tidak dapat memuatkan perbualan ini';
 
   @override

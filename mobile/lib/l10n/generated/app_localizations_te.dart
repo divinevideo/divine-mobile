@@ -5939,6 +5939,26 @@ class AppLocalizationsTe extends AppLocalizations {
       'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి అన్‌బ్లాక్ చేయండి.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'మీరు $nameని బ్లాక్ చేసారు';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'మీరు ఇక్కడ $count మందిని బ్లాక్ చేసారు',
+      one: 'మీరు ఇక్కడ $count వ్యక్తిని బ్లాక్ చేసారు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి వారి ప్రొఫైల్ నుండి అన్‌బ్లాక్ చేయండి.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'ఈ సంభాషణను లోడ్ చేయడం సాధ్యపడలేదు';
 
   @override

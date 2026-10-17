@@ -5718,6 +5718,25 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn để trả lời.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Bạn đã chặn $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bạn đã chặn $count người ở đây',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn từ hồ sơ của họ để trả lời.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Không tải được cuộc trò chuyện này';
 
   @override

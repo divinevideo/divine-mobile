@@ -5761,6 +5761,26 @@ class AppLocalizationsUr extends AppLocalizations {
       'پیغامات یہیں رہتے ہیں تاکہ آپ انہیں پڑھ سکیں یا اسکرین شاٹ لے سکیں۔ جواب دینے کے لیے بلاک ہٹائیں۔';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'آپ نے $name کو مسدود کیا ہے';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'آپ نے یہاں $count لوگوں کو مسدود کیا ہے',
+      one: 'آپ نے یہاں $count شخص کو مسدود کیا ہے',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'پیغامات یہیں رہتے ہیں تاکہ آپ انہیں پڑھ سکیں یا اسکرین شاٹ لے سکیں۔ جواب دینے کے لیے ان کی پروفائل سے بلاک ہٹائیں۔';
+
+  @override
   String get dmUnresolvedThreadTitle => 'یہ گفتگو لوڈ نہیں ہو سکی';
 
   @override

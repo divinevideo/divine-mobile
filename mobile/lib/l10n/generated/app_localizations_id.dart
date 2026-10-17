@@ -5679,6 +5679,25 @@ class AppLocalizationsId extends AppLocalizations {
       'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir untuk membalas.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Kamu memblokir $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Kamu memblokir $count orang di sini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir dari profil mereka untuk membalas.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Percakapan ini tidak dapat dimuat';
 
   @override

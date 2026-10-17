@@ -5721,6 +5721,30 @@ class AppLocalizationsAr extends AppLocalizations {
       'تبقى الرسائل هنا لتتمكن من قراءتها أو التقاط صورة لها. ألغِ الحظر للرد.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'تم حظر $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم حظر $count شخص هنا',
+      many: 'تم حظر $count شخصًا هنا',
+      few: 'تم حظر $count أشخاص هنا',
+      two: 'تم حظر شخصين هنا',
+      one: 'تم حظر شخص واحد هنا',
+      zero: 'لم يُحظر أحد هنا',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'تبقى الرسائل هنا لقراءتها أو التقاط صورة للشاشة. للرد، يلزم إلغاء الحظر من الملف الشخصي.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'تعذّر تحميل هذه المحادثة';
 
   @override

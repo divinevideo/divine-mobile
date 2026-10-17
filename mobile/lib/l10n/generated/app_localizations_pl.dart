@@ -5901,6 +5901,28 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wiadomości pozostają tutaj, żebyś mógł je przeczytać lub zrobić zrzut ekranu. Odblokuj, aby odpowiedzieć.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Zablokowano $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Zablokowano tu $count osoby',
+      many: 'Zablokowano tu $count osób',
+      few: 'Zablokowano tu $count osoby',
+      one: 'Zablokowano tu $count osobę',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Wiadomości zostają tutaj, więc możesz je przeczytać lub zrobić zrzut ekranu. Aby odpowiedzieć, odblokuj w profilu.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Nie udało się wczytać tej rozmowy';
 
   @override

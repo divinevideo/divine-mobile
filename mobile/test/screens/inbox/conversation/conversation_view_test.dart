@@ -1620,6 +1620,93 @@ void main() {
         expect(find.text(l10n.dmBlockedThreadTitle), findsNothing);
       });
 
+      // A group's sheet has no Unblock, so the notice says who was blocked
+      // and where to undo it (#10150).
+      group('in a group', () {
+        const bob =
+            '3333333333333333333333333333333333333333333333333333333333333333';
+
+        List<Override> memberOverrides(
+          String pubkey, {
+          String? name,
+          bool resolving = false,
+        }) => [
+          fetchUserProfileProvider(pubkey).overrideWith(
+            (ref) async => name == null
+                ? null
+                : UserProfile(
+                    pubkey: pubkey,
+                    displayName: name,
+                    rawData: const {},
+                    createdAt: now,
+                    eventId: 'c' * 64,
+                  ),
+          ),
+          profileVanishedProvider(pubkey).overrideWith((ref) => false),
+          profileIdentityResolvingProvider(pubkey).overrideWithValue(resolving),
+        ];
+
+        testWidgets('names the one member the viewer blocked', (tester) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(MessageInputBar), findsNothing);
+          expect(
+            find.text(l10n.dmBlockedGroupMemberTitle('Bob')),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
+          expect(find.text(l10n.dmBlockedThreadTitle), findsNothing);
+        });
+
+        testWidgets('counts the members when the viewer blocked several', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(2)),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
+        });
+
+        testWidgets('does not name a member whose profile is still loading', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, resolving: true),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(1)),
+            findsOneWidget,
+          );
+        });
+      });
+
       // Removing the composer is not the whole of "read-only": a send that
       // hard-failed before the block is still on screen as a red bubble, and
       // its tap opens the recovery sheet whose primary action republishes the

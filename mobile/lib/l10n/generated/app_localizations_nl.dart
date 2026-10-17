@@ -5773,6 +5773,26 @@ class AppLocalizationsNl extends AppLocalizations {
       'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer om te reageren.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Je hebt $name geblokkeerd';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Je hebt hier $count mensen geblokkeerd',
+      one: 'Je hebt hier $count persoon geblokkeerd',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer via hun profiel om te reageren.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Dit gesprek kon niet worden geladen';
 
   @override

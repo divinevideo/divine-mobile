@@ -5619,6 +5619,26 @@ class AppLocalizationsAm extends AppLocalizations {
       'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ እገዳውን ያንሱ።';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '$nameን አግደዋል';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'እዚህ $count ሰዎችን አግደዋል',
+      one: 'እዚህ $count ሰው አግደዋል',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ ከመገለጫቸው እገዳውን ያንሱ።';
+
+  @override
   String get dmUnresolvedThreadTitle => 'ይህን ውይይት መጫን አልተቻለም';
 
   @override

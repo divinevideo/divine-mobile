@@ -5403,6 +5403,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmBlockedThreadBody => '消息会保留在这里，方便你查看或截图。解除屏蔽后即可回复。';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '你已屏蔽$name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '你已屏蔽这个群聊里的$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody => '消息会保留在这里，方便你查看或截图。在对方主页解除屏蔽后即可回复。';
+
+  @override
   String get dmUnresolvedThreadTitle => '无法加载此对话';
 
   @override

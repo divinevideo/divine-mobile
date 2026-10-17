@@ -5790,6 +5790,26 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. Mag-unblock para makasagot.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Na-block mo si $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Na-block mo ang $count tao rito',
+      one: 'Na-block mo ang $count tao rito',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. I-unblock mula sa profile nila para makasagot.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Hindi na-load ang usapang ito';
 
   @override

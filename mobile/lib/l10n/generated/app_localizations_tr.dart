@@ -5689,6 +5689,26 @@ class AppLocalizationsTr extends AppLocalizations {
       'Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kaldır.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '$name adlı kişiyi engelledin';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Burada $count kişiyi engelledin',
+      one: 'Burada $count kişiyi engelledin',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kişinin profilinden kaldır.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Bu sohbet yüklenemedi';
 
   @override

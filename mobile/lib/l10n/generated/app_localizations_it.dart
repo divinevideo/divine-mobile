@@ -5815,6 +5815,27 @@ class AppLocalizationsIt extends AppLocalizations {
       'I messaggi restano qui così puoi leggerli o farne uno screenshot. Sblocca per rispondere.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Hai bloccato $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hai bloccato $count persone qui',
+      many: 'Hai bloccato $count persone qui',
+      one: 'Hai bloccato $count persona qui',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'I messaggi restano qui così puoi leggerli o farne uno screenshot. Per rispondere, sblocca dal profilo.';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Impossibile caricare questa conversazione';
 
