@@ -5769,6 +5769,67 @@ class AppLocalizationsAr extends AppLocalizations {
       'تبقى الرسائل هنا لتتمكن من قراءتها أو التقاط صورة لها. ألغِ الحظر للرد.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'تم حظر $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم حظر $count شخص هنا',
+      many: 'تم حظر $count شخصًا هنا',
+      few: 'تم حظر $count أشخاص هنا',
+      two: 'تم حظر شخصين هنا',
+      one: 'تم حظر شخص واحد هنا',
+      zero: 'لم يُحظر أحد هنا',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'تبقى الرسائل هنا لقراءتها أو التقاط صورة للشاشة. للرد، يلزم إلغاء الحظر من الملف الشخصي.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+      many: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+      few: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+      two: 'رسائلهما مخفية هنا، لكن ما زال بإمكانهما رؤية رسائلك.',
+      one:
+          'رسائل هذا الشخص مخفية هنا، لكن ما زال بإمكان هذا الشخص رؤية رسائلك.',
+      zero: 'رسائلهم مخفية هنا، لكن ما زال بإمكانهم رؤية رسائلك.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'بدء محادثة جديدة بدونهم',
+      many: 'بدء محادثة جديدة بدونهم',
+      few: 'بدء محادثة جديدة بدونهم',
+      two: 'بدء محادثة جديدة بدونهما',
+      one: 'بدء محادثة جديدة بدون هذا الشخص',
+      zero: 'بدء محادثة جديدة بدونهم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'رسالة مخفية';
+
+  @override
+  String get dmHiddenMessageShowAction => 'عرض';
+
+  @override
   String get dmUnresolvedThreadTitle => 'تعذّر تحميل هذه المحادثة';
 
   @override

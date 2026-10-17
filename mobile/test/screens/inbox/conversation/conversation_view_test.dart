@@ -260,6 +260,7 @@ void main() {
       ProfileReader? profileReadRepository,
       FollowRepository? followRepository,
       List<Override> extraOverrides = const [],
+      Locale? locale,
     }) {
       final effectiveState = state ?? const ConversationState();
       if (restoreStatus != null) {
@@ -283,6 +284,7 @@ void main() {
         mockAuthService: mockAuthService,
         mockNostrService: mockNostrClient,
         mockFollowRepository: followRepository,
+        locale: locale,
         additionalOverrides: [
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           watermarkDownloadServiceProvider.overrideWithValue(
@@ -1615,6 +1617,409 @@ void main() {
         expect(find.text(l10n.dmBlockedThreadTitle), findsNothing);
       });
 
+      // Blocking some members keeps a group writable, with a banner above the
+      // composer saying whom and that they still get what the viewer sends.
+      // Only a group with every member blocked is read-only (#10150).
+      group('a group with a blocked member (#10150)', () {
+        const bob =
+            '3333333333333333333333333333333333333333333333333333333333333333';
+        const carol =
+            '5555555555555555555555555555555555555555555555555555555555555555';
+
+        List<Override> memberOverrides(
+          String pubkey, {
+          String? name,
+          bool resolving = false,
+          bool vanished = false,
+        }) => [
+          fetchUserProfileProvider(pubkey).overrideWith(
+            (ref) async => name == null
+                ? null
+                : UserProfile(
+                    pubkey: pubkey,
+                    displayName: name,
+                    rawData: const {},
+                    createdAt: now,
+                    eventId: 'c' * 64,
+                  ),
+          ),
+          profileVanishedProvider(pubkey).overrideWith((ref) => vanished),
+          profileIdentityResolvingProvider(pubkey).overrideWithValue(resolving),
+        ];
+
+        testWidgets('keeps the composer and names the blocked member in a '
+            'banner', (tester) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(MessageInputBar), findsOneWidget);
+          expect(
+            find.text(l10n.dmBlockedGroupMemberTitle('Bob')),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmStartChatWithoutBlockedAction(1)),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.dmBlockedGroupThreadBody), findsNothing);
+        });
+
+        // English says "them" for one person and for several, so only a
+        // locale that tells them apart shows which count the banner passed.
+        group('in a locale that tells one person from several', () {
+          const spanish = Locale('es');
+          final es = lookupAppLocalizations(spanish);
+
+          testWidgets('speaks of one person when one member is blocked', (
+            tester,
+          ) async {
+            when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+            final semantics = tester.ensureSemantics();
+            try {
+              await tester.pumpWidget(
+                buildSubject(
+                  counterparties: const [otherPubkey, bob],
+                  extraOverrides: memberOverrides(bob, name: 'Bob'),
+                  locale: spanish,
+                ),
+              );
+              await tester.pump();
+
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(1)),
+                findsOneWidget,
+              );
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(2)),
+                findsNothing,
+              );
+              expect(
+                find.bySemanticsLabel(es.dmStartChatWithoutBlockedAction(1)),
+                findsOneWidget,
+              );
+              expect(
+                find.bySemanticsLabel(es.dmStartChatWithoutBlockedAction(2)),
+                findsNothing,
+              );
+            } finally {
+              semantics.dispose();
+            }
+          });
+
+          testWidgets('speaks of several people when several are blocked', (
+            tester,
+          ) async {
+            when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+            when(() => mockBlocklist.isBlocked(carol)).thenReturn(true);
+            final semantics = tester.ensureSemantics();
+            try {
+              await tester.pumpWidget(
+                buildSubject(
+                  counterparties: const [otherPubkey, bob, carol],
+                  locale: spanish,
+                ),
+              );
+              await tester.pump();
+
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(2)),
+                findsOneWidget,
+              );
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(1)),
+                findsNothing,
+              );
+              expect(
+                find.bySemanticsLabel(es.dmStartChatWithoutBlockedAction(2)),
+                findsOneWidget,
+              );
+            } finally {
+              semantics.dispose();
+            }
+          });
+        });
+
+        testWidgets('counts the members when several are blocked', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+          when(() => mockBlocklist.isBlocked(carol)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(counterparties: const [otherPubkey, bob, carol]),
+          );
+          await tester.pump();
+
+          expect(find.byType(MessageInputBar), findsOneWidget);
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(2)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(2)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmStartChatWithoutBlockedAction(2)),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('does not name a member whose account is deleted', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob', vanished: true),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(1)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              l10n.dmBlockedGroupMemberTitle(l10n.profileDeletedAccountName),
+            ),
+            findsNothing,
+          );
+          expect(
+            find.text(l10n.dmBlockedGroupMemberTitle('Bob')),
+            findsNothing,
+          );
+        });
+
+        testWidgets('does not name a member whose profile is still loading', (
+          tester,
+        ) async {
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, resolving: true),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(1)),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('is read-only with the group notice when every member is '
+            'blocked', (tester) async {
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(MessageInputBar), findsNothing);
+          expect(
+            find.text(l10n.dmBlockedGroupMembersTitle(2)),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(2)),
+            findsNothing,
+          );
+          expect(
+            find.text(l10n.dmStartChatWithoutBlockedAction(2)),
+            findsNothing,
+          );
+        });
+
+        // A group with every member blocked reads like a blocked one-to-one:
+        // the thread is read-only, so nothing collapses (#7025).
+        testWidgets('shows messages in full when every member is blocked', (
+          tester,
+        ) async {
+          const otherText = 'a message from the first blocked member';
+          const bobText = 'a message from the second blocked member';
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+          when(
+            () => mockBlocklist.dmHiddenPubkeys,
+          ).thenReturn(const {otherPubkey, bob});
+
+          DmMessage messageFrom(String sender, String content, int second) =>
+              DmMessage(
+                id: second.toRadixString(16).padLeft(64, '0'),
+                conversationId: 'c' * 64,
+                senderPubkey: sender,
+                content: content,
+                createdAt: now.millisecondsSinceEpoch ~/ 1000 + second,
+                giftWrapId: 'a' * 64,
+              );
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [
+                  messageFrom(bob, bobText, 2),
+                  messageFrom(otherPubkey, otherText, 1),
+                ],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(otherText), findsOneWidget);
+          expect(find.text(bobText), findsOneWidget);
+          expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+          expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
+        });
+
+        // A three-person room with one member blocked leaves a one-to-one.
+        testWidgets('opens a chat with the remaining members', (tester) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<Object?>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async => null);
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+              goRouter: goRouter,
+            ),
+          );
+          await tester.pump();
+          await tester.tap(find.text(l10n.dmStartChatWithoutBlockedAction(1)));
+          await tester.pump();
+
+          verify(
+            () => goRouter.push<Object?>(
+              ConversationPage.pathForId(
+                DmRepository.computeConversationId([
+                  currentPubkey,
+                  otherPubkey,
+                ]),
+              ),
+              extra: [otherPubkey],
+            ),
+          ).called(1);
+        });
+
+        testWidgets('drops the banner and expands messages once the member is '
+            'unblocked', (tester) async {
+          const hiddenText = 'a message from the blocked member';
+          var hidden = {bob};
+          var bobBlocked = true;
+          when(() => mockBlocklist.dmHiddenPubkeys).thenAnswer((_) => hidden);
+          when(
+            () => mockBlocklist.isBlocked(bob),
+          ).thenAnswer((_) => bobBlocked);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [
+                  DmMessage(
+                    id: '1'.padLeft(64, '0'),
+                    conversationId: 'c' * 64,
+                    senderPubkey: bob,
+                    content: hiddenText,
+                    createdAt: now.millisecondsSinceEpoch ~/ 1000,
+                    giftWrapId: 'a' * 64,
+                  ),
+                ],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+            findsOneWidget,
+          );
+          expect(find.text(hiddenText), findsNothing);
+
+          hidden = {};
+          bobBlocked = false;
+          ProviderScope.containerOf(
+            tester.element(find.byType(ConversationView)),
+          ).read(blocklistVersionProvider.notifier).increment();
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+            findsNothing,
+          );
+          expect(find.text(hiddenText), findsOneWidget);
+        });
+
+        // The composer stays mounted while the banner comes and goes, so a
+        // draft survives unblocking from the member's profile.
+        testWidgets('keeps a typed draft when the banner goes', (
+          tester,
+        ) async {
+          const draft = 'half a thought';
+          var bobBlocked = true;
+          when(
+            () => mockBlocklist.isBlocked(bob),
+          ).thenAnswer((_) => bobBlocked);
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              extraOverrides: memberOverrides(bob, name: 'Bob'),
+            ),
+          );
+          await tester.pump();
+          await tester.enterText(
+            find.descendant(
+              of: find.byType(MessageInputBar),
+              matching: find.byType(TextField),
+            ),
+            draft,
+          );
+          await tester.pump();
+
+          bobBlocked = false;
+          ProviderScope.containerOf(
+            tester.element(find.byType(ConversationView)),
+          ).read(blocklistVersionProvider.notifier).increment();
+          await tester.pump();
+
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+            findsNothing,
+          );
+          expect(find.text(draft), findsOneWidget);
+        });
+      });
+
       // Removing the composer is not the whole of "read-only": a send that
       // hard-failed before the block is still on screen as a red bubble, and
       // its tap opens the recovery sheet whose primary action republishes the
@@ -1730,6 +2135,223 @@ void main() {
           );
         },
       );
+    });
+
+    // Blocking or muting one member of a group hides that member, not the
+    // group: their messages collapse behind Show and stay on the device, so
+    // unblocking restores them with no reload (#7025). A one-to-one keeps
+    // showing a blocked peer's messages in full.
+    group('a group with a hidden member (#10150)', () {
+      const bob =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const hiddenText = 'a message from the hidden member';
+      const visibleText = 'a message from everyone else';
+
+      var hidden = <String>{};
+
+      setUp(() {
+        hidden = {bob};
+        when(() => mockBlocklist.dmHiddenPubkeys).thenAnswer((_) => hidden);
+      });
+
+      DmMessage messageFrom(String sender, String content, int second) =>
+          DmMessage(
+            id: second.toRadixString(16).padLeft(64, '0'),
+            conversationId: 'c' * 64,
+            senderPubkey: sender,
+            content: content,
+            createdAt: now.millisecondsSinceEpoch ~/ 1000 + second,
+            giftWrapId: 'a' * 64,
+          );
+
+      // Newest first, the order the bloc hands the view.
+      Widget groupThread() => buildSubject(
+        counterparties: const [otherPubkey, bob],
+        state: ConversationState(
+          status: ConversationStatus.loaded,
+          messages: [
+            messageFrom(otherPubkey, visibleText, 2),
+            messageFrom(bob, hiddenText, 1),
+          ],
+        ),
+        extraOverrides: [
+          fetchUserProfileProvider(bob).overrideWith((ref) async => null),
+          profileVanishedProvider(bob).overrideWith((ref) => false),
+          profileIdentityResolvingProvider(bob).overrideWithValue(false),
+        ],
+      );
+
+      testWidgets("collapses a blocked member's message behind Show", (
+        tester,
+      ) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.dmHiddenMessageLabel), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageShowAction), findsOneWidget);
+        expect(find.text(hiddenText), findsNothing);
+        expect(find.text(visibleText), findsOneWidget);
+      });
+
+      // Several collapsed rows each carry a Show, so each must say what it
+      // reveals and announce as a button.
+      testWidgets('reads the collapsed row as one button naming what it '
+          'reveals', (tester) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(groupThread());
+          await tester.pumpAndSettle();
+
+          final data = tester
+              .getSemantics(find.text(l10n.dmHiddenMessageLabel))
+              .getSemanticsData();
+          expect(data.label, contains(l10n.dmHiddenMessageLabel));
+          expect(data.label, contains(l10n.dmHiddenMessageShowAction));
+          expect(data.flagsCollection.isButton, isTrue);
+          expect(data.hasAction(SemanticsAction.tap), isTrue);
+        } finally {
+          semantics.dispose();
+        }
+      });
+
+      testWidgets('reveals the message when Show is tapped', (tester) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+        expect(find.text(hiddenText), findsNothing);
+
+        await tester.tap(find.text(l10n.dmHiddenMessageShowAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      // A newer message shifts every row's index; the revealed one must keep
+      // its State rather than collapse again.
+      testWidgets('keeps a revealed message open when a newer one arrives', (
+        tester,
+      ) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+        final states = StreamController<ConversationState>();
+        addTearDown(states.close);
+        final hiddenMessage = messageFrom(bob, hiddenText, 1);
+        final visibleMessage = messageFrom(otherPubkey, visibleText, 2);
+
+        await tester.pumpWidget(
+          buildSubject(
+            counterparties: const [otherPubkey, bob],
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [visibleMessage, hiddenMessage],
+            ),
+            stateStream: states.stream,
+            extraOverrides: [
+              fetchUserProfileProvider(bob).overrideWith((ref) async => null),
+              profileVanishedProvider(bob).overrideWith((ref) => false),
+              profileIdentityResolvingProvider(bob).overrideWithValue(false),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.dmHiddenMessageShowAction));
+        await tester.pumpAndSettle();
+        expect(find.text(hiddenText), findsOneWidget);
+
+        const newerText = 'a newer message from everyone else';
+        states.add(
+          ConversationState(
+            status: ConversationStatus.loaded,
+            messages: [
+              messageFrom(otherPubkey, newerText, 3),
+              visibleMessage,
+              hiddenMessage,
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(newerText), findsOneWidget);
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      testWidgets("shows a blocked peer's messages in full in a one-to-one", (
+        tester,
+      ) async {
+        hidden = {otherPubkey};
+        when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [messageFrom(otherPubkey, hiddenText, 1)],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      testWidgets('collapses a member on our own mute list too', (
+        tester,
+      ) async {
+        // Muted, not blocked: `isBlocked` stays false, so only the DM-hide
+        // set names this member.
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.dmHiddenMessageLabel), findsOneWidget);
+        expect(find.text(hiddenText), findsNothing);
+        expect(find.byType(MessageInputBar), findsOneWidget);
+      });
+
+      testWidgets('does not open message actions from a collapsed message', (
+        tester,
+      ) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.text(l10n.dmHiddenMessageLabel));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.dmMessageActionCopyText), findsNothing);
+
+        // The same gesture on the revealed message does open them, so the
+        // absence above is the gate's doing.
+        await tester.tap(find.text(l10n.dmHiddenMessageShowAction));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.text(hiddenText));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.dmMessageActionCopyText), findsOneWidget);
+      });
+
+      testWidgets('expands the message when the member is unblocked '
+          'mid-thread', (tester) async {
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+        await tester.pumpWidget(groupThread());
+        await tester.pumpAndSettle();
+        expect(find.text(hiddenText), findsNothing);
+
+        hidden = {};
+        when(() => mockBlocklist.isBlocked(bob)).thenReturn(false);
+        ProviderScope.containerOf(
+          tester.element(find.byType(ConversationView)),
+        ).read(blocklistVersionProvider.notifier).increment();
+        await tester.pump();
+
+        expect(find.text(hiddenText), findsOneWidget);
+        expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
     });
 
     // #6416. Nothing has read a retired moderation key since the rotation, so

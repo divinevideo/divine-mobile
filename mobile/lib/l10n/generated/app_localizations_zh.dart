@@ -5445,6 +5445,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmBlockedThreadBody => '消息会保留在这里，方便你查看或截图。解除屏蔽后即可回复。';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '你已屏蔽$name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '你已屏蔽这个群聊里的$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody => '消息会保留在这里，方便你查看或截图。在对方主页解除屏蔽后即可回复。';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已屏蔽成员的消息在这里已隐藏。他们仍能看到你发送的内容。',
+      one: '该成员的消息在这里已隐藏。此人仍能看到你发送的内容。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '发起不含已屏蔽成员的新聊天',
+      one: '发起不含该成员的新聊天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => '已隐藏的消息';
+
+  @override
+  String get dmHiddenMessageShowAction => '显示';
+
+  @override
   String get dmUnresolvedThreadTitle => '无法加载此对话';
 
   @override

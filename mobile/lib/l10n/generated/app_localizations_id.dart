@@ -5723,6 +5723,53 @@ class AppLocalizationsId extends AppLocalizations {
       'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir untuk membalas.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Kamu memblokir $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Kamu memblokir $count orang di sini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir dari profil mereka untuk membalas.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Pesan mereka disembunyikan di sini. Mereka tetap bisa melihat apa yang kamu kirim.',
+      one: 'Pesan orang ini disembunyikan di sini. Dia tetap bisa melihat apa yang kamu kirim.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mulai chat baru tanpa mereka',
+      one: 'Mulai chat baru tanpa orang ini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Pesan tersembunyi';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Tampilkan';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Percakapan ini tidak dapat dimuat';
 
   @override

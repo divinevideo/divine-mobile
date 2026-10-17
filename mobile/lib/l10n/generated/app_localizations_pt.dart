@@ -5839,6 +5839,57 @@ class AppLocalizationsPt extends AppLocalizations {
       'As mensagens ficam aqui para você ler ou capturar a tela. Desbloqueie para responder.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Você bloqueou $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Você bloqueou $count pessoas aqui',
+      many: 'Você bloqueou $count pessoas aqui',
+      one: 'Você bloqueou $count pessoa aqui',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'As mensagens ficam aqui para você ler ou fazer captura de tela. Desbloqueie pelo perfil para responder.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'As mensagens dessas pessoas ficam ocultas aqui. Elas ainda podem ver o que você envia.',
+      many: 'As mensagens dessas pessoas ficam ocultas aqui. Elas ainda podem ver o que você envia.',
+      one: 'As mensagens dessa pessoa ficam ocultas aqui. Ela ainda pode ver o que você envia.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nova conversa sem essas pessoas',
+      many: 'Nova conversa sem essas pessoas',
+      one: 'Nova conversa sem essa pessoa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Mensagem oculta';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Mostrar';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Não foi possível carregar esta conversa';
 

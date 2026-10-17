@@ -5805,6 +5805,54 @@ class AppLocalizationsUr extends AppLocalizations {
       'پیغامات یہیں رہتے ہیں تاکہ آپ انہیں پڑھ سکیں یا اسکرین شاٹ لے سکیں۔ جواب دینے کے لیے بلاک ہٹائیں۔';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'آپ نے $name کو مسدود کیا ہے';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'آپ نے یہاں $count لوگوں کو مسدود کیا ہے',
+      one: 'آپ نے یہاں $count شخص کو مسدود کیا ہے',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'پیغامات یہیں رہتے ہیں تاکہ آپ انہیں پڑھ سکیں یا اسکرین شاٹ لے سکیں۔ جواب دینے کے لیے ان کی پروفائل سے بلاک ہٹائیں۔';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
+      one: 'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ان کے بغیر نئی چیٹ شروع کریں',
+      one: 'ان کے بغیر نئی چیٹ شروع کریں',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'چھپا ہوا پیغام';
+
+  @override
+  String get dmHiddenMessageShowAction => 'دکھائیں';
+
+  @override
   String get dmUnresolvedThreadTitle => 'یہ گفتگو لوڈ نہیں ہو سکی';
 
   @override

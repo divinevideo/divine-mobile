@@ -5817,6 +5817,54 @@ class AppLocalizationsNl extends AppLocalizations {
       'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer om te reageren.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Je hebt $name geblokkeerd';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Je hebt hier $count mensen geblokkeerd',
+      one: 'Je hebt hier $count persoon geblokkeerd',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer via hun profiel om te reageren.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hun berichten zijn hier verborgen. Ze zien nog steeds wat je stuurt.',
+      one: 'De berichten van deze persoon zijn hier verborgen. Die ziet nog steeds wat je stuurt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nieuwe chat starten zonder hen',
+      one: 'Nieuwe chat zonder deze persoon',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Verborgen bericht';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Tonen';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Dit gesprek kon niet worden geladen';
 
   @override

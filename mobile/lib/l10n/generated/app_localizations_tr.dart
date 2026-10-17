@@ -5733,6 +5733,54 @@ class AppLocalizationsTr extends AppLocalizations {
       'Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kaldır.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '$name adlı kişiyi engelledin';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Burada $count kişiyi engelledin',
+      one: 'Burada $count kişiyi engelledin',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kişinin profilinden kaldır.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bu kişilerin mesajları burada gizlenir. Gönderdiğin mesajları yine de görebilirler.',
+      one: 'Bu kişinin mesajları burada gizlenir. Gönderdiğin mesajları yine de görebilir.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bu kişiler olmadan yeni sohbet başlat',
+      one: 'Bu kişi olmadan yeni sohbet başlat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Gizlenmiş mesaj';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Göster';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Bu sohbet yüklenemedi';
 
   @override

@@ -5852,6 +5852,54 @@ class AppLocalizationsBg extends AppLocalizations {
       'Съобщенията остават тук, за да можете да ги прочетете или да направите екранна снимка. Отблокирайте, за да отговорите.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Ти блокира $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ти блокира $count души тук',
+      one: 'Ти блокира $count човек тук',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Съобщенията остават тук, за да можеш да ги прочетеш или да направиш екранна снимка. Отблокирай от профила им, за да отговориш.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Съобщенията им са скрити тук. Те все още виждат какво изпращаш.',
+      one: 'Съобщенията на този човек са скрити тук. Този човек все още вижда какво изпращаш.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Започни нов чат без тях',
+      one: 'Започни нов чат без този човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Скрито съобщение';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Покажи';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Този разговор не се зареди';
 
   @override

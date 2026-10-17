@@ -5872,6 +5872,54 @@ class AppLocalizationsDe extends AppLocalizations {
       'Nachrichten bleiben hier, damit du sie lesen oder einen Screenshot machen kannst. Hebe die Blockierung auf, um zu antworten.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Du hast $name blockiert';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Du hast hier $count Personen blockiert',
+      one: 'Du hast hier 1 Person blockiert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Nachrichten bleiben hier, damit du sie lesen oder einen Screenshot machen kannst. Hebe die Blockierung im jeweiligen Profil auf, um zu antworten.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Was sie schreiben, ist hier ausgeblendet. Was du sendest, sehen sie weiterhin.',
+      one: 'Was diese Person schreibt, ist hier ausgeblendet. Was du sendest, sieht sie weiterhin.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Neuen Chat ohne sie starten',
+      one: 'Neuer Chat ohne diese Person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Ausgeblendete Nachricht';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Anzeigen';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Diese Unterhaltung konnte nicht geladen werden';
 

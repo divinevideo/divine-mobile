@@ -5477,6 +5477,51 @@ class AppLocalizationsJa extends AppLocalizations {
       'メッセージはここに残るので、読んだりスクリーンショットを撮ったりできます。返信するにはブロックを解除してください。';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '$nameをブロックしました';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'このグループで$count人をブロックしました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'メッセージはここに残るので、読んだりスクリーンショットを撮ったりできます。返信するには、プロフィールからブロックを解除してください。';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロックした人のメッセージは、ここでは非表示になります。あなたが送るメッセージは、ブロックした人にも引き続き表示されます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロックした人を除いて新しいチャットを開始',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => '非表示のメッセージ';
+
+  @override
+  String get dmHiddenMessageShowAction => '表示';
+
+  @override
   String get dmUnresolvedThreadTitle => 'この会話を読み込めませんでした';
 
   @override

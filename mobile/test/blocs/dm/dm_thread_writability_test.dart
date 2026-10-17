@@ -36,10 +36,93 @@ void main() {
       expect(resolve([blockedPeer]), DmThreadWritability.blockedByUs);
     });
 
-    test('group block behavior follows the first route participant', () {
+    group('in a group', () {
+      const otherPeer =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      test('stays writable when its first member is blocked', () {
+        expect(
+          resolve([blockedPeer, ordinaryPeer, otherPeer]),
+          DmThreadWritability.writable,
+        );
+      });
+
+      test('stays writable when a later member is blocked', () {
+        expect(
+          resolve([ordinaryPeer, blockedPeer, otherPeer]),
+          DmThreadWritability.writable,
+        );
+        expect(
+          resolve([ordinaryPeer, otherPeer, blockedPeer]),
+          DmThreadWritability.writable,
+        );
+      });
+
+      // Not a majority rule: one member left unblocked keeps it writable.
+      test('stays writable when two of its three members are blocked', () {
+        expect(
+          resolveDmThreadWritability(
+            participantPubkeys: const [blockedPeer, otherPeer, ordinaryPeer],
+            isBlockedByUs: const {blockedPeer, otherPeer}.contains,
+          ),
+          DmThreadWritability.writable,
+        );
+      });
+
+      test('is read-only when every member is blocked', () {
+        expect(
+          resolveDmThreadWritability(
+            participantPubkeys: const [blockedPeer, otherPeer],
+            isBlockedByUs: const {blockedPeer, otherPeer}.contains,
+          ),
+          DmThreadWritability.blockedByUs,
+        );
+      });
+
+      test('stays writable when nobody in it is blocked', () {
+        expect(
+          resolve([ordinaryPeer, otherPeer]),
+          DmThreadWritability.writable,
+        );
+      });
+
+      test('a retired moderation member still closes it ahead of a block', () {
+        expect(
+          resolveDmThreadWritability(
+            participantPubkeys: [blockedPeer, kLegacyModerationPubkeys.first],
+            isBlockedByUs: (_) => true,
+          ),
+          DmThreadWritability.closedRetired,
+        );
+      });
+    });
+  });
+
+  group('dmThreadBlockedParticipants', () {
+    const otherBlockedPeer =
+        '5555555555555555555555555555555555555555555555555555555555555555';
+
+    test('lists every blocked participant in route order', () {
       expect(
-        resolve([ordinaryPeer, blockedPeer]),
-        DmThreadWritability.writable,
+        dmThreadBlockedParticipants(
+          participantPubkeys: const [
+            blockedPeer,
+            ordinaryPeer,
+            otherBlockedPeer,
+          ],
+          isBlockedByUs: const {blockedPeer, otherBlockedPeer}.contains,
+        ),
+        equals(const [blockedPeer, otherBlockedPeer]),
+      );
+    });
+
+    test('is empty when nobody is blocked', () {
+      expect(
+        dmThreadBlockedParticipants(
+          participantPubkeys: const [ordinaryPeer],
+          isBlockedByUs: (pubkey) => pubkey == blockedPeer,
+        ),
+        isEmpty,
       );
     });
   });

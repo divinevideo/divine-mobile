@@ -5956,6 +5956,57 @@ class AppLocalizationsRo extends AppLocalizations {
       'Mesajele rămân aici ca să le poți citi sau captura. Deblochează pentru a răspunde.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Ai blocat contul $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ai blocat $count de persoane aici',
+      few: 'Ai blocat $count persoane aici',
+      one: 'Ai blocat $count persoană aici',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Mesajele rămân aici ca să le poți citi sau captura. Deblochează din profil pentru a răspunde.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
+      few: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
+      one: 'Mesajele acestei persoane sunt ascunse aici. Încă poate vedea ce trimiți.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Discuție nouă fără aceste persoane',
+      few: 'Discuție nouă fără aceste persoane',
+      one: 'Discuție nouă fără această persoană',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Mesaj ascuns';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Arată';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Această conversație nu a putut fi încărcată';
 

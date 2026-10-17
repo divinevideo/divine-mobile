@@ -14,6 +14,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
@@ -21,6 +24,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -30,6 +34,8 @@ class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 // Full 64-character hex Nostr IDs for test data.
 const _testConversationId1 =
@@ -42,6 +48,8 @@ const _testPubkey2 =
     'd4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5';
 const _testPubkey3 =
     'e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6';
+const _testPubkey4 =
+    'f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1';
 
 /// Approves a fixed set of counterparties; a conversation is visible only when
 /// every non-self participant is approved. `changes` never emits (C1).
@@ -211,11 +219,16 @@ void main() {
     );
 
     group('blocked chats (#7025)', () {
-      /// Behaves like the real repository: drop any conversation whose
-      /// counterparty the viewer blocked, and report those pubkeys.
+      /// Behaves like the real repository: the inbox drops a conversation only
+      /// when every other participant is blocked, requests drop it when any
+      /// is, both drop a conversation with no participant but the viewer, and
+      /// the blocked pubkeys are reported.
       _MockContentBlocklistRepository blocklistBlocking(Set<String> blocked) {
         final blocklist = _MockContentBlocklistRepository();
         when(() => blocklist.runtimeBlockedUsers).thenReturn(blocked);
+        Iterable<String> peers(Invocation inv, DmConversation c) => c
+            .participantPubkeys
+            .where((pk) => pk != inv.namedArguments[#userPubkey]);
         when(
           () => blocklist.filterBlockedConversations(
             any(),
@@ -223,9 +236,22 @@ void main() {
           ),
         ).thenAnswer((inv) {
           final input = inv.positionalArguments.first as List<DmConversation>;
-          return input
-              .where((c) => !c.participantPubkeys.any(blocked.contains))
-              .toList();
+          return input.where((c) {
+            final others = peers(inv, c);
+            return others.isNotEmpty && !others.every(blocked.contains);
+          }).toList();
+        });
+        when(
+          () => blocklist.filterBlockedRequests(
+            any(),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((inv) {
+          final input = inv.positionalArguments.first as List<DmConversation>;
+          return input.where((c) {
+            final others = peers(inv, c);
+            return others.isNotEmpty && !others.any(blocked.contains);
+          }).toList();
         });
         return blocklist;
       }
@@ -306,14 +332,53 @@ void main() {
         );
       });
 
+      // "Every other member is blocked" is vacuously true for a row with no
+      // other member, so without its guard a self-only row would land here.
       test(
-        'keeps a blocked 1:1 that a group would otherwise displace',
+        'never lists a conversation with no member but the viewer',
         () async {
-          // `filterBlockedConversations` drops a group whose first non-self
-          // participant is blocked, so if the group took the account's only
-          // slot the 1:1 appeared in no list at all — the exact evidence loss
-          // this feature exists to prevent.
-          final direct = _createConversation(id: _testConversationId1);
+          final selfOnly = _createConversation(
+            id: _testConversationId1,
+            participantPubkeys: const [_testPubkey1],
+          );
+          final selfInAnotherCase = _createConversation(
+            id: _testConversationId2,
+            participantPubkeys: [_testPubkey1, _testPubkey1.toUpperCase()],
+          );
+          _stubStreams(
+            mockDmRepository,
+            accepted: [selfOnly, selfInAnotherCase],
+          );
+          // Blocking someone else keeps the Blocked list from short-circuiting.
+          final bloc = createBlocWith(blocklistBlocking({_testPubkey3}));
+          addTearDown(bloc.close);
+
+          // Unguarded, the recompute throws on the self-only one-to-one and
+          // never reaches a loaded state; fail fast rather than at the
+          // default ten-minute timeout.
+          final state = await load(bloc).timeout(const Duration(seconds: 5));
+
+          expect(
+            state.blockedConversations.map((c) => c.participantPubkeys),
+            equals([
+              [_testPubkey1, _testPubkey3],
+            ]),
+            reason: 'only the placeholder row for the blocked account',
+          );
+        },
+      );
+
+      test(
+        'keeps a blocked 1:1 that a request group would otherwise displace',
+        () async {
+          // A request with a blocked member leaves Message requests and goes
+          // under Blocked. If that group took the account's only slot, the
+          // 1:1 appeared in no list at all — the exact evidence loss this
+          // feature exists to prevent.
+          final direct = _createConversation(
+            id: _testConversationId1,
+            currentUserHasSent: true,
+          );
           final group = _createConversation(
             id: _testConversationId2,
             isGroup: true,
@@ -323,7 +388,12 @@ void main() {
               _testPubkey3,
             ],
           );
-          _stubStreams(mockDmRepository, accepted: [group, direct]);
+          when(() => mockFollowRepository.isFollowing(any())).thenReturn(false);
+          _stubStreams(
+            mockDmRepository,
+            accepted: [direct],
+            potentialRequests: [group],
+          );
           final bloc = createBlocWith(blocklistBlocking({_testPubkey2}));
           addTearDown(bloc.close);
 
@@ -335,6 +405,352 @@ void main() {
           );
         },
       );
+
+      group('a group with a blocked member (#10150)', () {
+        // A real blocklist, not `blocklistBlocking`: which members count is
+        // the rule under test. The viewer is _testPubkey1, and the other
+        // members sort _testPubkey2 < _testPubkey3 < _testPubkey4.
+        const positions = [
+          ('first', _testPubkey2),
+          ('middle', _testPubkey3),
+          ('last', _testPubkey4),
+        ];
+
+        DmConversation room({bool currentUserHasSent = true}) =>
+            _createConversation(
+              id: _testConversationId2,
+              isGroup: true,
+              currentUserHasSent: currentUserHasSent,
+              participantPubkeys: const [
+                _testPubkey1,
+                _testPubkey2,
+                _testPubkey3,
+                _testPubkey4,
+              ],
+            );
+
+        Future<ContentBlocklistRepository> blocklistBlockingMembers(
+          Iterable<String> pubkeys,
+        ) async {
+          final blocklist = ContentBlocklistRepository();
+          addTearDown(blocklist.dispose);
+          await blocklist.blockUsers(pubkeys, ourPubkey: _testPubkey1);
+          return blocklist;
+        }
+
+        Future<ContentBlocklistRepository> blocklistMutingMember(
+          String pubkey,
+        ) async {
+          registerFallbackValue(<Filter>[]);
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final blocklist = ContentBlocklistRepository(
+            prefs: await SharedPreferences.getInstance(),
+          );
+          addTearDown(blocklist.dispose);
+          final muteEvents = StreamController<Event>();
+          addTearDown(muteEvents.close);
+          final client = _MockNostrClient();
+          when(
+            () => client.subscribe(any()),
+          ).thenAnswer((_) => muteEvents.stream);
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+          await blocklist.syncMuteListsInBackground(client, _testPubkey1);
+          muteEvents.add(
+            Event(
+                _testPubkey1,
+                10000,
+                [
+                  ['p', pubkey],
+                ],
+                '',
+                createdAt: 1,
+              )
+              ..id = 'own-mute'
+              ..sig = 'sig',
+          );
+          await pumpEventQueue();
+          expect(blocklist.isMutedByUs(pubkey), isTrue);
+          return blocklist;
+        }
+
+        for (final (label, member) in positions) {
+          test('keeps the group in the inbox and off the Blocked list when its '
+              '$label member is blocked', () async {
+            final blocklist = await blocklistBlockingMembers([member]);
+            _stubStreams(mockDmRepository, accepted: [room()]);
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+
+            final state = await load(bloc);
+
+            expect(
+              state.conversations.map((c) => c.id),
+              contains(_testConversationId2),
+            );
+            expect(
+              state.blockedConversations.map((c) => c.id),
+              isNot(contains(_testConversationId2)),
+            );
+          });
+        }
+
+        test('moves an accepted group under Blocked when every other member '
+            'is blocked', () async {
+          final blocklist = await blocklistBlockingMembers([
+            _testPubkey2,
+            _testPubkey3,
+            _testPubkey4,
+          ]);
+          _stubStreams(mockDmRepository, accepted: [room()]);
+          final bloc = createBlocWith(blocklist);
+          addTearDown(bloc.close);
+
+          final state = await load(bloc);
+
+          expect(state.conversations, isEmpty);
+          expect(
+            state.blockedConversations.map((c) => c.id),
+            contains(_testConversationId2),
+          );
+        });
+
+        test('keeps an accepted group whose member is on our own mute list in '
+            'the inbox', () async {
+          final blocklist = await blocklistMutingMember(_testPubkey3);
+          _stubStreams(mockDmRepository, accepted: [room()]);
+          final bloc = createBlocWith(blocklist);
+          addTearDown(bloc.close);
+
+          final state = await load(bloc);
+
+          expect(
+            state.conversations.map((c) => c.id),
+            contains(_testConversationId2),
+          );
+          expect(state.blockedConversations, isEmpty);
+        });
+
+        test(
+          'keeps the group in the inbox when nobody in it is blocked',
+          () async {
+            final blocklist = ContentBlocklistRepository();
+            addTearDown(blocklist.dispose);
+            _stubStreams(mockDmRepository, accepted: [room()]);
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+
+            final state = await load(bloc);
+
+            expect(
+              state.conversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+            expect(state.blockedConversations, isEmpty);
+          },
+        );
+
+        group('search', () {
+          const lastMessage = 'meet at noon';
+
+          // The room's last message was written by its middle member.
+          DmConversation roomWrittenByMiddleMember() => room().copyWith(
+            subject: 'Book club',
+            lastMessageContent: lastMessage,
+            lastMessageSenderPubkey: _testPubkey3,
+          );
+
+          Future<ConversationListState> search(
+            ConversationListBloc bloc,
+            String query,
+          ) {
+            bloc.add(ConversationListSearchQueryChanged(query));
+            return bloc.stream.firstWhere((s) => s.searchQuery == query);
+          }
+
+          test('matches a last message when nobody is blocked', () async {
+            final blocklist = ContentBlocklistRepository();
+            addTearDown(blocklist.dispose);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+
+            final state = await search(bloc, 'noon');
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+          });
+
+          test(
+            "does not match search on a blocked member's last message",
+            () async {
+              final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+              _stubStreams(
+                mockDmRepository,
+                accepted: [roomWrittenByMiddleMember()],
+              );
+              final bloc = createBlocWith(blocklist);
+              addTearDown(bloc.close);
+              final loaded = await load(bloc);
+              expect(
+                loaded.visibleConversations.map((c) => c.id),
+                equals([_testConversationId2]),
+                reason: 'the room stays in the inbox; only its preview hides',
+              );
+
+              final state = await search(bloc, 'noon');
+
+              expect(state.visibleConversations, isEmpty);
+            },
+          );
+
+          test("does not match search on an own-muted member's last "
+              'message', () async {
+            final blocklist = await blocklistMutingMember(_testPubkey3);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            final loaded = await load(bloc);
+            expect(
+              loaded.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+
+            final state = await search(bloc, 'noon');
+
+            expect(state.visibleConversations, isEmpty);
+          });
+
+          test('still finds the room by its name when its last message is '
+              'hidden', () async {
+            final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+
+            final state = await search(bloc, 'book');
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+          });
+
+          test('matches the last message of a group where every member is '
+              'blocked, like a blocked one-to-one', () async {
+            final blocklist = await blocklistBlockingMembers([
+              _testPubkey2,
+              _testPubkey3,
+              _testPubkey4,
+            ]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByMiddleMember()],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+            bloc.add(const ConversationListFilterChanged(InboxFilter.blocked));
+            await bloc.stream.firstWhere(
+              (s) => s.filter == InboxFilter.blocked,
+            );
+
+            final state = await search(bloc, 'noon');
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+          });
+        });
+
+        group('as a message request', () {
+          setUp(() {
+            when(
+              () => mockFollowRepository.isFollowing(any()),
+            ).thenReturn(false);
+          });
+
+          test('keeps a request in Message requests when nobody in it is '
+              'blocked', () async {
+            final blocklist = ContentBlocklistRepository();
+            addTearDown(blocklist.dispose);
+            _stubStreams(
+              mockDmRepository,
+              potentialRequests: [room(currentUserHasSent: false)],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+
+            final state = await load(bloc);
+
+            expect(
+              state.requestConversations.map((c) => c.id),
+              equals([_testConversationId2]),
+            );
+            expect(state.blockedConversations, isEmpty);
+          });
+
+          for (final (label, member) in positions) {
+            test('moves a request under Blocked when its $label member is '
+                'blocked', () async {
+              final blocklist = await blocklistBlockingMembers([member]);
+              _stubStreams(
+                mockDmRepository,
+                potentialRequests: [room(currentUserHasSent: false)],
+              );
+              final bloc = createBlocWith(blocklist);
+              addTearDown(bloc.close);
+
+              final state = await load(bloc);
+
+              expect(
+                state.requestConversations.map((c) => c.id),
+                isNot(contains(_testConversationId2)),
+              );
+              expect(
+                state.blockedConversations.map((c) => c.id),
+                contains(_testConversationId2),
+              );
+            });
+          }
+
+          test('hides a request with a member on our own mute list without '
+              'listing it under Blocked', () async {
+            final blocklist = await blocklistMutingMember(_testPubkey3);
+            _stubStreams(
+              mockDmRepository,
+              potentialRequests: [room(currentUserHasSent: false)],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+
+            final state = await load(bloc);
+
+            expect(state.requestConversations, isEmpty);
+            expect(state.blockedConversations, isEmpty);
+          });
+        });
+      });
 
       test(
         'resolves names for blocked counterparties so search matches',
@@ -407,6 +823,14 @@ void main() {
               .where((c) => !c.participantPubkeys.any(blocked.contains))
               .toList();
         });
+        when(
+          () => blocklist.filterBlockedRequests(
+            any(),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer(
+          (inv) => inv.positionalArguments.first as List<DmConversation>,
+        );
 
         final bloc = createBlocWith(blocklist);
         addTearDown(bloc.close);
@@ -626,8 +1050,9 @@ void main() {
           ).thenAnswer((_) => const Stream<bool>.empty());
           when(() => mockDmRepository.isRecoveringHistory).thenReturn(false);
 
-          // filterBlockedConversations runs once per `onData` pass (inbox +
-          // requests = 2 calls), so it doubles as a recompute counter.
+          // The inbox filter (filterBlockedConversations) and the request
+          // filter (filterBlockedRequests) each run once per `onData` pass
+          // (2 calls), so together they double as a recompute counter.
           var filterCalls = 0;
           final blocklist = _MockContentBlocklistRepository();
           when(
@@ -635,6 +1060,15 @@ void main() {
           ).thenReturn(const <String>{});
           when(
             () => blocklist.filterBlockedConversations(
+              any(),
+              userPubkey: any(named: 'userPubkey'),
+            ),
+          ).thenAnswer((inv) {
+            filterCalls++;
+            return inv.positionalArguments.first as List<DmConversation>;
+          });
+          when(
+            () => blocklist.filterBlockedRequests(
               any(),
               userPubkey: any(named: 'userPubkey'),
             ),
@@ -4159,6 +4593,20 @@ void main() {
         ).thenReturn(const <String>{});
         when(
           () => blocklist.filterBlockedConversations(
+            any(),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((invocation) {
+          final input =
+              invocation.positionalArguments.first as List<DmConversation>;
+          return input
+              .where(
+                (c) => !c.participantPubkeys.contains(moderationPubkey),
+              )
+              .toList();
+        });
+        when(
+          () => blocklist.filterBlockedRequests(
             any(),
             userPubkey: any(named: 'userPubkey'),
           ),

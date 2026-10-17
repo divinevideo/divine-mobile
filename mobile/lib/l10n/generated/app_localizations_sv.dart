@@ -5788,6 +5788,54 @@ class AppLocalizationsSv extends AppLocalizations {
       'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen för att svara.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Du blockerade $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Du blockerade $count personer här',
+      one: 'Du blockerade $count person här',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen via deras profil för att svara.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Deras meddelanden är dolda här. De kan fortfarande se det du skickar.',
+      one: 'Den här personens meddelanden är dolda här. Personen kan fortfarande se det du skickar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Starta en ny chatt utan dem',
+      one: 'Ny chatt utan den här personen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Dolt meddelande';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Visa';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Det gick inte att läsa in den här konversationen';
 

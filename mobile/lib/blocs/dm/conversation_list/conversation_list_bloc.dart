@@ -14,6 +14,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
+import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/blocs/dm/dm_peer_account_predicate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/constants/search_constants.dart';
@@ -117,7 +118,7 @@ class ConversationListBloc
 
   /// Window over which bursty conversation writes are coalesced before the
   /// list is re-composed. The combined stream re-runs `classifyPotentialRequests`
-  /// + `mergeAndSort` + two `filterBlockedConversations` passes in `onData` on
+  /// + `mergeAndSort` + an inbox and a request blocklist pass in `onData` on
   /// every conversations-table write; relay deliveries, the mark-read fan-out,
   /// and the post-reinstall drain fire those in bursts. Debouncing collapses a
   /// burst into a single recompute. The list is not latency-critical, so the
@@ -243,8 +244,10 @@ class ConversationListBloc
         // Filters the FULL request set, not the recovery-held-back one, so the
         // pin below is extracted from — and inherits the filters of — every
         // request regardless of the drain. The hold-back is applied after.
+        // Stricter than the inbox pass: a request is hidden when ANY member is,
+        // because the viewer has not joined it yet.
         final blocklistedRequests =
-            _blocklistRepository?.filterBlockedConversations(
+            _blocklistRepository?.filterBlockedRequests(
               split.requests,
               userPubkey: userPubkey,
             ) ??
@@ -263,7 +266,8 @@ class ConversationListBloc
         // now, see #7345.
         final blockedConversations = _computeBlockedConversations(
           userPubkey: userPubkey,
-          candidates: [...inboxConversations, ...split.requests],
+          inboxCandidates: inboxConversations,
+          requestCandidates: split.requests,
         );
 
         // Protected-minor inbound filter (#176): hide conversations whose
@@ -510,11 +514,11 @@ class ConversationListBloc
     if (query.isEmpty || profileRepository == null) return;
 
     var profileNames = state.profileNames;
-    // Blocked counterparties are structurally absent from `conversations` —
-    // `filterBlockedConversations` removed them — so resolving only that list
-    // left the Blocked slice searchable by the generated "Adjective Animal N"
-    // fallback while the row rendered the real kind-0 name. Searching for the
-    // name on screen found nothing.
+    // Blocked threads are absent from `conversations` — the inbox filter
+    // dropped them — so resolving only that list left the Blocked slice
+    // searchable by the generated "Adjective Animal N" fallback while the row
+    // rendered the real kind-0 name. Searching for the name on screen found
+    // nothing.
     final unresolved = [...state.conversations, ...state.blockedConversations]
         .map((c) => _namedParticipant(c, userPubkey))
         .where((pk) => !profileNames.containsKey(pk))
@@ -573,14 +577,22 @@ class ConversationListBloc
 
   /// Every blocked account, each carrying its conversation when one exists.
   ///
-  /// Seeded from the blocklist rather than from [candidates] so an account the
-  /// viewer blocked but never messaged still appears — the list answers "who
-  /// have I blocked", and the thread is what you can read once you tap in.
+  /// Seeded from the blocklist rather than from the candidates so an account
+  /// the viewer blocked but never messaged still appears — the list answers
+  /// "who have I blocked", and the thread is what you can read once you tap in.
   /// Rows without history carry no `lastMessage*` and are rendered
   /// non-tappable by the inbox.
+  ///
+  /// Lists the threads the blocks hide, under the same two rules as the lists
+  /// themselves (#10150): an [inboxCandidates] thread, which the viewer has
+  /// joined, is listed once **every** other member is blocked; a
+  /// [requestCandidates] thread, which they have not, once **any** is. Only
+  /// blocks count, so a group whose other members are partly blocked and
+  /// partly muted is hidden but not listed, like a muted one-to-one.
   List<DmConversation> _computeBlockedConversations({
     required String userPubkey,
-    required List<DmConversation> candidates,
+    required List<DmConversation> inboxCandidates,
+    required List<DmConversation> requestCandidates,
   }) {
     // `runtimeBlockedUsers` rather than `blockedPubkeys` so this matches the
     // Content & Safety list exactly: both are the viewer's own runtime blocks,
@@ -589,19 +601,43 @@ class ConversationListBloc
     if (blocked == null || blocked.isEmpty) return const [];
 
     // Every hidden thread gets its own row, not one row per blocked account.
-    // `filterBlockedConversations` removes a group from the inbox whenever its
-    // first non-self participant is blocked, so collapsing to one row per
-    // pubkey let a group displace the 1:1 with that same account — and the
-    // displaced 1:1 then appeared in no list at all, which is the evidence
-    // loss this whole feature exists to prevent.
+    // A request group with a blocked member leaves Message requests, so
+    // collapsing to one row per pubkey let it displace the 1:1 with that same
+    // account — and the displaced 1:1 then appeared in no list at all, which is
+    // the evidence loss this whole feature exists to prevent.
     final rows = <DmConversation>[];
     final pubkeysWithThread = <String>{};
-    for (final conversation in candidates) {
-      final other = _otherParticipant(conversation, userPubkey);
-      if (!blocked.contains(other)) continue;
-      rows.add(conversation);
-      if (!conversation.isGroup) pubkeysWithThread.add(other);
+    List<String> peersOf(DmConversation conversation) =>
+        dmConversationPeerPubkeys(
+          participantPubkeys: conversation.participantPubkeys,
+          currentUserPubkey: userPubkey,
+        );
+    void collectHidden(
+      List<DmConversation> candidates,
+      bool Function(DmConversation conversation) isHidden,
+    ) {
+      for (final conversation in candidates) {
+        if (!isHidden(conversation)) continue;
+        rows.add(conversation);
+        // Neither rule holds for a row with no peer, so a hidden one has one.
+        if (!conversation.isGroup) {
+          pubkeysWithThread.add(peersOf(conversation).first);
+        }
+      }
     }
+
+    collectHidden(
+      inboxCandidates,
+      (conversation) => dmEveryPeerBlocked(
+        participantPubkeys: conversation.participantPubkeys,
+        currentUserPubkey: userPubkey,
+        isBlockedByUs: blocked.contains,
+      ),
+    );
+    collectHidden(
+      requestCandidates,
+      (conversation) => peersOf(conversation).any(blocked.contains),
+    );
 
     // A blocked account the viewer never messaged 1:1 still gets a row, so the
     // list answers "who have I blocked" as well as "what did they send me".
@@ -629,13 +665,6 @@ class ConversationListBloc
         currentUserPubkey: self,
         moderationPresentation: _moderationPresentation,
       ).pubkey;
-
-  static String _otherParticipant(DmConversation conversation, String self) {
-    return dmConversationFirstPeer(
-      participantPubkeys: conversation.participantPubkeys,
-      currentUserPubkey: self,
-    );
-  }
 
   /// A synthetic pin carries no timestamp, so it needs a `createdAt` that is
   /// stable across recomputes — a clock read would make every debounce tick
@@ -792,6 +821,8 @@ class ConversationListBloc
     if (unreadOnly) result = result.where((c) => !c.isRead).toList();
     if (query.isEmpty) return result;
     final normalized = query.toLowerCase();
+    final isHidden = _blocklistRepository?.shouldFilterFromDms ?? (_) => false;
+    final isBlockedByUs = _blocklistRepository?.isBlocked ?? (_) => false;
     return result.where((c) {
       // Named as the row names it, so a room is never matched by the name of
       // the moderation account in it (#10151).
@@ -838,14 +869,29 @@ class ConversationListBloc
                 )
                 .map((entry) => entry.name!.toLowerCase())
           : [peerName.toLowerCase()];
-      // Any member, as the row decides it: a room that includes a retired key
-      // is closed wherever that member sorts (#10151).
-      final isClosed = dmConversationPeerPubkeys(
+      final peers = dmConversationPeerPubkeys(
         participantPubkeys: c.participantPubkeys,
         currentUserPubkey: userPubkey,
-      ).any(_retiredModerationAccount);
+      );
+      // Any member, as the row decides it: a room that includes a retired key
+      // is closed wherever that member sorts (#10151).
+      final isClosed = peers.any(_retiredModerationAccount);
+      // A preview the row hides is not searchable either, or the search would
+      // surface a hidden member's words (#10150).
+      final previewHidden = dmPreviewHidden(
+        conversation: c,
+        currentUserPubkey: userPubkey,
+        everyMemberBlocked: dmEveryPeerBlocked(
+          participantPubkeys: c.participantPubkeys,
+          currentUserPubkey: userPubkey,
+          isBlockedByUs: isBlockedByUs,
+        ),
+        isHidden: isHidden,
+      );
       final preview = peerLabels != null && isClosed
           ? peerLabels.retiredConversationClosed.toLowerCase()
+          : previewHidden
+          ? ''
           : c.lastMessageContent?.toLowerCase() ?? '';
       return name.contains(normalized) ||
           knownMemberNames.any(
