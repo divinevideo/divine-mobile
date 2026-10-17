@@ -12,8 +12,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -226,6 +228,7 @@ Future<void> _pumpRecordConsentScreen(
         minorConsentWakelockProvider.overrideWithValue((_) async {}),
         minorConsentRecorderProvider.overrideWithValue(recorder),
         permissionsServiceProvider.overrideWithValue(permissions),
+        currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
         isFeatureEnabledProvider(
           FeatureFlag.minorConsentInAppRecording,
         ).overrideWithValue(true),
@@ -405,6 +408,9 @@ void main() {
                   cameraStatus: PermissionStatus.requiresSettings,
                 ),
               ),
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
+              ),
               isFeatureEnabledProvider(
                 FeatureFlag.minorConsentInAppRecording,
               ).overrideWithValue(true),
@@ -474,6 +480,7 @@ void main() {
             permissionsServiceProvider.overrideWithValue(
               _FakePermissions(cameraStatus: PermissionStatus.requiresSettings),
             ),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
             isFeatureEnabledProvider(
               FeatureFlag.minorConsentInAppRecording,
             ).overrideWithValue(true),

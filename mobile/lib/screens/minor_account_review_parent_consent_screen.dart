@@ -6,6 +6,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
@@ -25,11 +26,15 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // In-app recording stays dark until its upload route ships; while the flag
-    // is off the email / private-link route is the only consent path.
-    final canRecordInApp = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),
-    );
+    // This screen is public, but a recording is submitted by the signed-in
+    // account, so a signed-out visitor is offered only the email route.
+    final isSignedIn =
+        ref.watch(currentAuthStateProvider) == AuthState.authenticated;
+    final canRecordInApp =
+        isSignedIn &&
+        ref.watch(
+          isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),
+        );
     return Scaffold(
       appBar: DiVineAppBar(
         title: context.l10n.minorAccountReviewTitle,
@@ -91,23 +96,25 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                ListTile(
-                  title: Text(
-                    context.l10n.minorAccountReviewRecordConsentTitle,
+                if (isSignedIn) ...[
+                  ListTile(
+                    title: Text(
+                      context.l10n.minorAccountReviewRecordConsentTitle,
+                    ),
+                    trailing: DivineSwitch(
+                      value: canRecordInApp,
+                      onChanged: (enabled) async {
+                        await ref
+                            .read(featureFlagServiceProvider)
+                            .setFlag(
+                              FeatureFlag.minorConsentInAppRecording,
+                              enabled,
+                            );
+                      },
+                    ),
                   ),
-                  trailing: DivineSwitch(
-                    value: canRecordInApp,
-                    onChanged: (enabled) async {
-                      await ref
-                          .read(featureFlagServiceProvider)
-                          .setFlag(
-                            FeatureFlag.minorConsentInAppRecording,
-                            enabled,
-                          );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
+                ],
                 if (canRecordInApp) ...[
                   DivineButton(
                     label:

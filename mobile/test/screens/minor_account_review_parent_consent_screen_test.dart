@@ -6,7 +6,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -110,7 +112,14 @@ MinorAccountReviewStatus _statusWithCase() {
   );
 }
 
-List<Override> _recordingEnabledOverrides({bool enabled = true}) => [
+Override _authState(AuthState state) =>
+    currentAuthStateProvider.overrideWithValue(state);
+
+List<Override> _recordingEnabledOverrides({
+  bool enabled = true,
+  AuthState authState = AuthState.authenticated,
+}) => [
+  _authState(authState),
   isFeatureEnabledProvider(
     FeatureFlag.minorConsentInAppRecording,
   ).overrideWithValue(enabled),
@@ -131,7 +140,10 @@ void main() {
         final prefs = await SharedPreferences.getInstance();
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              _authState(AuthState.authenticated),
+            ],
             child: const MaterialApp(
               locale: Locale('es'),
               localizationsDelegates: appLocalizationsDelegates,
@@ -190,6 +202,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              _authState(AuthState.authenticated),
               isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording)
                   .overrideWithValue(true),
               currentMinorAccountReviewStatusProvider.overrideWith(
@@ -256,6 +269,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              _authState(AuthState.authenticated),
               isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording)
                   .overrideWithValue(true),
               currentMinorAccountReviewStatusProvider.overrideWith(
@@ -496,6 +510,56 @@ void main() {
             l10n.minorAccountReviewParentConsentRecordCta,
           ),
           findsNothing,
+        );
+        final emailButton = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.minorAccountReviewParentConsentEmailCta),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(emailButton.type, equals(DivineButtonType.primary));
+      },
+    );
+
+    testWidgets(
+      'offers a signed-out visitor only the email route, even with recording '
+      'on',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: _recordingEnabledOverrides(
+              authState: AuthState.unauthenticated,
+            ),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MinorAccountReviewParentConsentScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+
+        // The record route sends a signed-out visitor to Welcome, so neither
+        // the opt-in nor the record action may be offered here.
+        expect(find.byType(DivineSwitch), findsNothing);
+        expect(
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
+          findsNothing,
+        );
+        expect(
+          find.textContaining(l10n.minorAccountReviewParentConsentBody),
+          findsOneWidget,
         );
         final emailButton = tester.widget<DivineButton>(
           find.ancestor(
