@@ -5332,7 +5332,7 @@
   "dmBlockedGroupMembersTitle": "{count, plural, one{Bloqueaste a {count} persona acá} many{Bloqueaste a {count} personas acá} other{Bloqueaste a {count} personas acá}}",
   "dmBlockedGroupThreadBody": "Los mensajes se quedan acá para que puedas leerlos o capturarlos. Desbloqueá desde su perfil para responder.",
   "dmBlockedGroupMembersBannerBody": "Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.",
-  "dmStartChatWithoutBlockedAction": "Iniciar un chat nuevo sin estas personas",
+  "dmStartChatWithoutBlockedAction": "Chat nuevo sin estas personas",
   "dmHiddenMessageLabel": "Mensaje oculto",
   "dmHiddenMessageShowAction": "Mostrar",
   "dmUnresolvedThreadTitle": "No se pudo cargar esta conversación",

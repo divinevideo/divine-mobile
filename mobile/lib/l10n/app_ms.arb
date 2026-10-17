@@ -6623,7 +6623,7 @@
   "dmBlockedGroupMembersTitle": "{count, plural, other{Anda menyekat {count} orang di sini}}",
   "dmBlockedGroupThreadBody": "Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat melalui profil mereka untuk membalas.",
   "dmBlockedGroupMembersBannerBody": "Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.",
-  "dmStartChatWithoutBlockedAction": "Mulakan sembang baharu tanpa mereka",
+  "dmStartChatWithoutBlockedAction": "Sembang baharu tanpa mereka",
   "dmHiddenMessageLabel": "Mesej tersembunyi",
   "dmHiddenMessageShowAction": "Tunjuk",
   "dmUnresolvedThreadTitle": "Tidak dapat memuatkan perbualan ini",

@@ -5830,8 +5830,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.';
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Iniciar un chat nuevo sin estas personas';
+  String get dmStartChatWithoutBlockedAction => 'Chat nuevo sin estas personas';
 
   @override
   String get dmHiddenMessageLabel => 'Mensaje oculto';

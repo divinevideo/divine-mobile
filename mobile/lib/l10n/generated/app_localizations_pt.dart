@@ -5821,7 +5821,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get dmStartChatWithoutBlockedAction =>
-      'Iniciar uma nova conversa sem essas pessoas';
+      'Nova conversa sem essas pessoas';
 
   @override
   String get dmHiddenMessageLabel => 'Mensagem oculta';

@@ -5937,7 +5937,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get dmStartChatWithoutBlockedAction =>
-      'Începe o conversație nouă fără aceste persoane';
+      'Discuție nouă fără aceste persoane';
 
   @override
   String get dmHiddenMessageLabel => 'Mesaj ascuns';

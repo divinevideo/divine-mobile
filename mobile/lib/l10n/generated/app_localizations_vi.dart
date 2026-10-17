@@ -5742,7 +5742,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get dmStartChatWithoutBlockedAction =>
-      'Bắt đầu cuộc trò chuyện mới không có họ';
+      'Cuộc trò chuyện mới không có họ';
 
   @override
   String get dmHiddenMessageLabel => 'Tin nhắn đã ẩn';

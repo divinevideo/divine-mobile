@@ -5778,8 +5778,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.';
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Mulakan sembang baharu tanpa mereka';
+  String get dmStartChatWithoutBlockedAction => 'Sembang baharu tanpa mereka';
 
   @override
   String get dmHiddenMessageLabel => 'Mesej tersembunyi';
