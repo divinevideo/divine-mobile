@@ -5,6 +5,23 @@
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 
+/// Whether the viewer has blocked every other participant.
+///
+/// Such a thread reads like a blocked one-to-one: listed under Blocked, shown
+/// in full, and its preview not hidden. False with no other participant, where
+/// `every` would be vacuously true. [isBlockedByUs] must answer from the
+/// viewer's own block list only (#7345).
+bool dmEveryPeerBlocked({
+  required List<String> participantPubkeys,
+  required String currentUserPubkey,
+  required bool Function(String pubkey) isBlockedByUs,
+}) {
+  final peers = participantPubkeys.where(
+    (pubkey) => !pubkeysEqual(pubkey, currentUserPubkey),
+  );
+  return peers.isNotEmpty && peers.every(isBlockedByUs);
+}
+
 /// Whether a message renders collapsed until the viewer asks to see it.
 ///
 /// Only a group collapses: blocking one member hides that member, not the

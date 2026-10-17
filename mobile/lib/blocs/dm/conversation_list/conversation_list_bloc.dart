@@ -613,28 +613,37 @@ class ConversationListBloc
     // the evidence loss this whole feature exists to prevent.
     final rows = <DmConversation>[];
     final pubkeysWithThread = <String>{};
-    void collectHidden(
-      List<DmConversation> candidates, {
-      required bool hiddenWhenAnyBlocked,
-    }) {
-      for (final conversation in candidates) {
-        final peers = dmConversationPeerPubkeys(
+    List<String> peersOf(DmConversation conversation) =>
+        dmConversationPeerPubkeys(
           participantPubkeys: conversation.participantPubkeys,
           currentUserPubkey: userPubkey,
         );
-        // `every` is vacuously true for a row with no peer.
-        if (peers.isEmpty) continue;
-        final hidden = hiddenWhenAnyBlocked
-            ? peers.any(blocked.contains)
-            : peers.every(blocked.contains);
-        if (!hidden) continue;
+    void collectHidden(
+      List<DmConversation> candidates,
+      bool Function(DmConversation conversation) isHidden,
+    ) {
+      for (final conversation in candidates) {
+        if (!isHidden(conversation)) continue;
         rows.add(conversation);
-        if (!conversation.isGroup) pubkeysWithThread.add(peers.first);
+        // Neither rule holds for a row with no peer, so a hidden one has one.
+        if (!conversation.isGroup) {
+          pubkeysWithThread.add(peersOf(conversation).first);
+        }
       }
     }
 
-    collectHidden(inboxCandidates, hiddenWhenAnyBlocked: false);
-    collectHidden(requestCandidates, hiddenWhenAnyBlocked: true);
+    collectHidden(
+      inboxCandidates,
+      (conversation) => dmEveryPeerBlocked(
+        participantPubkeys: conversation.participantPubkeys,
+        currentUserPubkey: userPubkey,
+        isBlockedByUs: blocked.contains,
+      ),
+    );
+    collectHidden(
+      requestCandidates,
+      (conversation) => peersOf(conversation).any(blocked.contains),
+    );
 
     // A blocked account the viewer never messaged 1:1 still gets a row, so the
     // list answers "who have I blocked" as well as "what did they send me".
@@ -884,7 +893,11 @@ class ConversationListBloc
       final previewHidden = dmPreviewHidden(
         conversation: c,
         currentUserPubkey: userPubkey,
-        everyMemberBlocked: peers.isNotEmpty && peers.every(isBlockedByUs),
+        everyMemberBlocked: dmEveryPeerBlocked(
+          participantPubkeys: c.participantPubkeys,
+          currentUserPubkey: userPubkey,
+          isBlockedByUs: isBlockedByUs,
+        ),
         isHidden: isHidden,
       );
       final preview = peerLabels != null && isClosed
