@@ -457,7 +457,10 @@ class TransitionSeamRenderService {
   /// a dip transition under a letterbox, so an earlier seam can carry either.
   /// v8: pro_video_editor 2.32.0 plays each clip's volume and equalizer in
   /// an overlap blend, where earlier seams played both clips as recorded.
-  static const _seamCacheVersion = 8;
+  /// v9: pro_video_editor 2.38.0 keeps the outgoing clip through an overlap
+  /// blend on iOS/macOS when its file runs past its last video frame, where
+  /// an earlier seam lost it partway through.
+  static const _seamCacheVersion = 9;
 
   String _key(
     DivineVideoClip clipA,
