@@ -472,11 +472,11 @@ class _CommentContent extends StatelessWidget {
       text: content,
       style: baseStyle,
       linkStyle: baseStyle.copyWith(
-        color: VineTheme.info,
+        color: context.vineColors.link,
         fontWeight: FontWeight.w500,
       ),
       mentionStyle: baseStyle.copyWith(
-        color: VineTheme.tabIndicatorGreen,
+        color: context.vineColors.link,
         fontWeight: FontWeight.w600,
       ),
     );
