@@ -12963,9 +12963,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get liveEndThisLiveSession => '结束这场直播？';
 
   @override
-  String get liveFailedToReportUser => '举报用户失败';
-
-  @override
   String get liveFeaturedHosts => '精选主持人';
 
   @override
@@ -13180,9 +13177,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get liveUserBlocked => '已屏蔽用户';
-
-  @override
-  String get liveUserReported => '已举报用户';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

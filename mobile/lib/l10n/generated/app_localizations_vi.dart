@@ -13736,9 +13736,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get liveEndThisLiveSession => 'Kết thúc phiên trực tiếp này?';
 
   @override
-  String get liveFailedToReportUser => 'Không thể báo cáo người dùng';
-
-  @override
   String get liveFeaturedHosts => 'Người chủ trì nổi bật';
 
   @override
@@ -13967,9 +13964,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Đã chặn người dùng';
-
-  @override
-  String get liveUserReported => 'Đã báo cáo người dùng';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

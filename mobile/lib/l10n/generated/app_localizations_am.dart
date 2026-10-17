@@ -13450,9 +13450,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get liveEndThisLiveSession => 'ይህን የቀጥታ ክፍለ ጊዜ ማብቃት ይፈልጋሉ?';
 
   @override
-  String get liveFailedToReportUser => 'ተጠቃሚውን ሪፖርት ማድረግ አልተቻለም';
-
-  @override
   String get liveFeaturedHosts => 'ተለይተው የቀረቡ አስተናጋጆች';
 
   @override
@@ -13673,9 +13670,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'ተጠቃሚው ታግዷል';
-
-  @override
-  String get liveUserReported => 'ተጠቃሚው ሪፖርት ተደርጓል';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

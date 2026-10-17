@@ -13118,9 +13118,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get liveEndThisLiveSession => 'このライブセッションを終了しますか？';
 
   @override
-  String get liveFailedToReportUser => 'ユーザーを報告できませんでした';
-
-  @override
   String get liveFeaturedHosts => '注目のホスト';
 
   @override
@@ -13336,9 +13333,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'ユーザーをブロックしました';
-
-  @override
-  String get liveUserReported => 'ユーザーを報告しました';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

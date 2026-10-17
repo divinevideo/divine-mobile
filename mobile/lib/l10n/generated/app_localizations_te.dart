@@ -14141,9 +14141,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get liveEndThisLiveSession => 'ఈ లైవ్ సెషన్‌ను ముగించాలా?';
 
   @override
-  String get liveFailedToReportUser => 'వినియోగదారుని రిపోర్ట్ చేయలేకపోయాం';
-
-  @override
   String get liveFeaturedHosts => 'ఎంపిక చేసిన హోస్ట్‌లు';
 
   @override
@@ -14371,9 +14368,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'వినియోగదారు బ్లాక్ అయ్యారు';
-
-  @override
-  String get liveUserReported => 'వినియోగదారుపై రిపోర్ట్ పంపబడింది';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

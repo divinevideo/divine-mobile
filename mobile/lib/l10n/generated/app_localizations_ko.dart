@@ -13135,9 +13135,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get liveEndThisLiveSession => '이 라이브 세션을 종료할까요?';
 
   @override
-  String get liveFailedToReportUser => '사용자를 신고하지 못했어요';
-
-  @override
   String get liveFeaturedHosts => '주목할 호스트';
 
   @override
@@ -13354,9 +13351,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get liveUserBlocked => '사용자를 차단했어요';
-
-  @override
-  String get liveUserReported => '사용자를 신고했어요';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

@@ -13961,9 +13961,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get liveEndThisLiveSession => 'Diese Live-Session beenden?';
 
   @override
-  String get liveFailedToReportUser => 'Person konnte nicht gemeldet werden';
-
-  @override
   String get liveFeaturedHosts => 'Hosts im Fokus';
 
   @override
@@ -14192,9 +14189,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Person blockiert';
-
-  @override
-  String get liveUserReported => 'Person gemeldet';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

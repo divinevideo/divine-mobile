@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -26,13 +27,16 @@ import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/live_room_page.dart';
 import 'package:openvine/screens/live/live_room_view.dart';
 import 'package:openvine/screens/live/live_route_data.dart';
+import 'package:openvine/screens/live/widgets/live_speaker_queue_sheet.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/live_api_service.dart';
 import 'package:openvine/services/livekit_room_service.dart';
 import 'package:openvine/services/native_camera_permission_service.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockLiveRepository extends Mock implements LiveRepository {}
@@ -119,6 +123,7 @@ void main() {
     setUpAll(() {
       registerFallbackValue(room);
       registerFallbackValue(LiveRole.audience);
+      registerFallbackValue(ContentFilterReason.other);
     });
 
     setUp(() {
@@ -183,10 +188,11 @@ void main() {
       ).thenAnswer((_) async {});
       when(
         () => mockContentReportingService.reportUser(
-          userPubkey: 'audience-pubkey',
-          reason: ContentFilterReason.other,
-          details: 'Reported from live room moderation',
-          relatedEventIds: const <String>[],
+          userPubkey: any(named: 'userPubkey'),
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
         ),
       ).thenAnswer(
         (_) async => ReportResult.createSuccess(
@@ -586,6 +592,58 @@ void main() {
         final hostAuth = createMockAuthService();
         when(() => hostAuth.currentPublicKeyHex).thenReturn('host-pubkey');
 
+        const participantPubkey =
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        when(
+          () =>
+              mockLiveRepository.watchPresence(sessionAddress: sessionAddress),
+        ).thenAnswer(
+          (_) => Stream.value([
+            hostPresence,
+            LivePresence(
+              sessionId: session.id,
+              pubkey: participantPubkey,
+              role: LiveRole.audience,
+              handRaised: true,
+              updatedAt: raisedHandPresence.updatedAt,
+            ),
+          ]),
+        );
+        when(
+          () => mockLiveChatRepository.watchChatMessages(
+            sessionAddress: sessionAddress,
+          ),
+        ).thenAnswer(
+          (_) => Stream.value([
+            LiveChatMessage(
+              id: 'chat-1',
+              sessionAddress: sessionAddress,
+              pubkey: participantPubkey,
+              content: 'This room is live.',
+              createdAt: DateTime.utc(2026, 4, 6, 8, 1),
+            ),
+          ]),
+        );
+        when(
+          () => mockContentBlocklistRepository.blockUser(
+            participantPubkey,
+            ourPubkey: 'host-pubkey',
+          ),
+        ).thenAnswer((_) async => true);
+
+        void expectNoReportSubmission() {
+          verifyNever(
+            () => mockContentReportingService.reportUser(
+              userPubkey: any(named: 'userPubkey'),
+              reason: any(named: 'reason'),
+              details: any(named: 'details'),
+              moderationContent: any(named: 'moderationContent'),
+              moderationTags: any(named: 'moderationTags'),
+            ),
+          );
+        }
+
         await tester.pumpWidget(
           testMaterialApp(
             mockSharedPreferences: sharedPreferences,
@@ -630,17 +688,81 @@ void main() {
         await tester.tap(find.text('Manage participants'));
         await tester.pumpAndSettle();
 
+        final reportParticipant = tester
+            .widget<LiveSpeakerQueueSheet>(find.byType(LiveSpeakerQueueSheet))
+            .onReport;
+
         await tester.tap(find.text('Report user').first);
-        await tester.pump();
+        await tester.pumpAndSettle();
+        expect(find.byType(ReportContentDialog), findsOneWidget);
+        expect(
+          tester
+              .widget<ReportContentDialog>(find.byType(ReportContentDialog))
+              .userPubkey,
+          participantPubkey,
+        );
+        expectNoReportSubmission();
+        expect(
+          tester
+              .widget<DivineButton>(
+                find.widgetWithText(DivineButton, l10n.reportSubmit),
+              )
+              .onPressed,
+          isNull,
+        );
+
+        Navigator.of(
+          tester.element(find.byType(ReportContentDialog)),
+        ).pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(ReportContentDialog), findsNothing);
+        expectNoReportSubmission();
+
+        await tester.tap(find.text('Report user').first);
+        await tester.pumpAndSettle();
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.reportReasonOther),
+          200,
+          scrollable: find
+              .descendant(
+                of: find.byType(ReportContentDialog),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.tap(find.text(l10n.reportReasonOther));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.reportOtherRequiresDetails), findsOneWidget);
+        expectNoReportSubmission();
+
+        await tester.enterText(
+          find.descendant(
+            of: find.byType(ReportContentDialog),
+            matching: find.byType(TextField),
+          ),
+          'Harassment during the live room',
+        );
+        expectNoReportSubmission();
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
         await tester.pumpAndSettle();
         verify(
           () => mockContentReportingService.reportUser(
-            userPubkey: 'audience-pubkey',
+            userPubkey: participantPubkey,
             reason: ContentFilterReason.other,
-            details: 'Reported from live room moderation',
-            relatedEventIds: const <String>[],
+            details: 'Harassment during the live room',
+            moderationContent: any(
+              named: 'moderationContent',
+              that: contains('User Pubkey: $participantPubkey'),
+            ),
+            moderationTags: any(named: 'moderationTags'),
           ),
         ).called(1);
+        expect(find.text(l10n.reportReceivedTitle), findsOneWidget);
+        await tester.tap(find.widgetWithText(DivineButton, l10n.reportClose));
+        await tester.pumpAndSettle();
 
         await tester.tap(find.text('Hide chat for me').first);
         await tester.pumpAndSettle();
@@ -655,10 +777,18 @@ void main() {
         await tester.pumpAndSettle();
         verify(
           () => mockContentBlocklistRepository.blockUser(
-            'audience-pubkey',
+            participantPubkey,
             ourPubkey: 'host-pubkey',
           ),
         ).called(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        reportParticipant(participantPubkey);
+        await tester.pumpAndSettle();
+        expect(find.byType(ReportContentDialog), findsNothing);
+        expectNoReportSubmission();
+        expect(tester.takeException(), isNull);
       },
     );
 

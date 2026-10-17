@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/live_room/live_room_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/content_moderation.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/live/widgets/live_local_media_controls.dart';
 import 'package:openvine/screens/live/widgets/live_room_error_banner.dart';
 import 'package:openvine/screens/live/widgets/live_speaker_queue_sheet.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 
 class LiveHostControlsSheet extends ConsumerStatefulWidget {
   const LiveHostControlsSheet({super.key});
@@ -245,7 +245,13 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
                                   );
                                 },
                                 onReport: (pubkey) {
-                                  unawaited(_reportUser(pubkey));
+                                  if (!mounted) return;
+                                  unawaited(
+                                    ReportContentDialog.showForUser(
+                                      context,
+                                      userPubkey: pubkey,
+                                    ),
+                                  );
                                 },
                                 onBlock: (pubkey) {
                                   unawaited(_blockUser(pubkey));
@@ -337,40 +343,6 @@ class _LiveHostControlsSheetState extends ConsumerState<LiveHostControlsSheet> {
     bool requestedMicrophoneEnabled,
   ) {
     return microphoneBusy && requestedMicrophoneEnabled;
-  }
-
-  Future<void> _reportUser(String pubkey) async {
-    try {
-      final service = await ref.read(contentReportingServiceProvider.future);
-      final result = await service.reportUser(
-        userPubkey: pubkey,
-        reason: ContentFilterReason.other,
-        details: 'Reported from live room moderation',
-        relatedEventIds: const <String>[],
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.success
-                ? context.l10n.liveUserReported
-                : context.l10n.liveFailedToReportUser,
-          ),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.liveFailedToReportUser)),
-      );
-    }
   }
 
   Future<void> _blockUser(String pubkey) async {

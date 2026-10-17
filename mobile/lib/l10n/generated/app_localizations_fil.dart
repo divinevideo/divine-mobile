@@ -13915,9 +13915,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get liveEndThisLiveSession => 'Tapusin ang live session na ito?';
 
   @override
-  String get liveFailedToReportUser => 'Hindi na-report ang user';
-
-  @override
   String get liveFeaturedHosts => 'Mga tampok na host';
 
   @override
@@ -14146,9 +14143,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Na-block ang user';
-
-  @override
-  String get liveUserReported => 'Na-report ang user';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

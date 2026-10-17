@@ -13925,9 +13925,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get liveEndThisLiveSession => 'Да приключи ли тази сесия на живо?';
 
   @override
-  String get liveFailedToReportUser => 'Неуспешно докладване на човека';
-
-  @override
   String get liveFeaturedHosts => 'Избрани домакини';
 
   @override
@@ -14155,9 +14152,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Блокирането е успешно';
-
-  @override
-  String get liveUserReported => 'Докладването е успешно';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

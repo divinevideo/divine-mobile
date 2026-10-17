@@ -13719,9 +13719,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get liveEndThisLiveSession => 'Bu canlı oturum bitsin mi?';
 
   @override
-  String get liveFailedToReportUser => 'Kullanıcı bildirilemedi';
-
-  @override
   String get liveFeaturedHosts => 'Öne çıkan sunucular';
 
   @override
@@ -13949,9 +13946,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'Kullanıcı engellendi';
-
-  @override
-  String get liveUserReported => 'Kullanıcı bildirildi';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>

@@ -13781,9 +13781,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get liveEndThisLiveSession => 'إنهاء هذه الجلسة المباشرة؟';
 
   @override
-  String get liveFailedToReportUser => 'تعذّر الإبلاغ عن الحساب';
-
-  @override
   String get liveFeaturedHosts => 'استضافات مميزة';
 
   @override
@@ -14008,9 +14005,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get liveUserBlocked => 'تم حظر الحساب';
-
-  @override
-  String get liveUserReported => 'تم الإبلاغ عن الحساب';
 
   @override
   String get liveUsingYourProfilePhotoAsTheStartingThumbnail =>
