@@ -8,9 +8,10 @@ tags:
 # validate each control actually changes recorder state, and leave every one
 # of them back on its default.
 #
-# Lip-sync declares the same `supportsCountdownTimer` and
-# `supportsVideoStabilization` as capture and captures no stills, so its rail
-# is capture's rail exactly — same five controls, same order, same behaviour.
+# Lip-sync declares the same `supportsCountdownTimer`,
+# `supportsVideoStabilization` and `supportsGhostFrame` as capture and captures
+# no stills, so its rail is capture's rail exactly — same six controls, same
+# order, same behaviour.
 # It therefore runs the same ../utils/driveCaptureRail.yaml, which is where
 # the selector mechanics and the `enabled` guards are documented.
 #
