@@ -426,6 +426,35 @@ void main() {
         l10n.videoEditorTransitionStretch,
       ];
 
+      testWidgets('eases the flash tile with the native quadratic curve', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(
+          tester,
+          disableAnimations: true,
+          initial: const editor.ClipTransition(
+            type: editor.ClipTransitionType.flash,
+            curve: editor.AnimationCurve.easeIn,
+          ),
+        );
+
+        // Reduced motion freezes raw progress at one half. Native ease-in
+        // is t², so progress is 0.25 and flash alpha is (2 * 0.25)^4 * 0.85.
+        // Flutter's similarly named Bézier produces a different brightness.
+        final tile = find
+            .ancestor(
+              of: find.text(l10n.videoEditorTransitionFlash),
+              matching: find.byType(Column),
+            )
+            .first;
+        final overlay = tester.widget<ColoredBox>(
+          find.descendant(of: tile, matching: find.byType(ColoredBox)),
+        );
+
+        expect(overlay.color.a, closeTo(0.053125, 0.000001));
+      });
+
       testWidgets('offers each one and plays its preview through a loop', (
         tester,
       ) async {

@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/transition_boundary/transition_boundary_cubit.dart';
+import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -637,7 +638,7 @@ class _TransitionTile extends StatelessWidget {
                           return _TransitionEffect(
                             type: type,
                             direction: direction,
-                            progress: flutterCurveFor(curve).transform(linear),
+                            progress: curve.ease(linear),
                             elapsedMs: linear * durationMs,
                             from: fromFrame,
                             to: toFrame,

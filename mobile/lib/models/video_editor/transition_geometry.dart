@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show AnimationCurve, ClipTransition, ClipTransitionType;
@@ -243,13 +244,13 @@ double _firstShareReaching(AnimationCurve curve, double target) {
   var below = 0.0;
   for (var step = 1; step <= steps; step++) {
     var above = step / steps;
-    if (_eased(curve, above) < target) {
+    if (curve.ease(above) < target) {
       below = above;
       continue;
     }
     for (var i = 0; i < 40; i++) {
       final middle = (below + above) / 2;
-      if (_eased(curve, middle) < target) {
+      if (curve.ease(middle) < target) {
         below = middle;
       } else {
         above = middle;
@@ -259,47 +260,6 @@ double _firstShareReaching(AnimationCurve curve, double target) {
   }
   return 1;
 }
-
-/// [t] eased by [curve] the way pro_video_editor's renderers ease a
-/// transition (`applyEasing`), which differs from Flutter's `Curves`.
-double _eased(AnimationCurve curve, double t) => switch (curve) {
-  AnimationCurve.linear => t,
-  AnimationCurve.easeIn => t * t,
-  AnimationCurve.easeOut => t * (2 - t),
-  AnimationCurve.easeInOut => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
-  AnimationCurve.easeInCubic => t * t * t,
-  AnimationCurve.easeOutCubic => 1 - (1 - t) * (1 - t) * (1 - t),
-  AnimationCurve.easeInOutCubic =>
-    t < 0.5 ? 4 * t * t * t : 1 - math.pow(-2 * t + 2, 3) / 2,
-  AnimationCurve.bounceIn => 1 - _bounceOut(1 - t),
-  AnimationCurve.bounceOut => _bounceOut(t),
-  AnimationCurve.bounceInOut =>
-    t < 0.5 ? (1 - _bounceOut(1 - 2 * t)) / 2 : (1 + _bounceOut(2 * t - 1)) / 2,
-  AnimationCurve.elasticIn => 1 - _elasticOut(1 - t),
-  AnimationCurve.elasticOut => _elasticOut(t),
-  AnimationCurve.elasticInOut =>
-    t < 0.5
-        ? (1 - _elasticOut(1 - 2 * t)) / 2
-        : (1 + _elasticOut(2 * t - 1)) / 2,
-};
-
-double _bounceOut(double t) {
-  if (t < 1 / 2.75) return 7.5625 * t * t;
-  if (t < 2 / 2.75) {
-    final u = t - 1.5 / 2.75;
-    return 7.5625 * u * u + 0.75;
-  }
-  if (t < 2.5 / 2.75) {
-    final u = t - 2.25 / 2.75;
-    return 7.5625 * u * u + 0.9375;
-  }
-  final u = t - 2.625 / 2.75;
-  return 7.5625 * u * u + 0.984375;
-}
-
-double _elasticOut(double t) => t == 0 || t == 1
-    ? t
-    : math.pow(2, -10 * t) * math.sin((t - 0.075) * 2 * math.pi / 0.3) + 1;
 
 /// Where an exported video [outputDuration] long ends and starts over: capped
 /// at [VideoEditorConstants.maxDuration].
