@@ -677,6 +677,32 @@ void main() {
         }
       });
 
+      test('counts a capped transition against beats on the next pass', () {
+        final map = TransitionTimelineMap.fromClips([
+          clip(
+            'a',
+            duration: ms(6800),
+            transition: const ClipTransition(
+              type: ClipTransitionType.flash,
+              duration: Duration(seconds: 1),
+            ),
+          ),
+          clip('b'),
+        ]);
+        final beats = [ms(0), ms(350), ms(700)];
+
+        expect(map.flashes, [const Duration(microseconds: 6153553)]);
+        final output = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          map,
+          beats: beats,
+        );
+
+        // One transition before the cap plus these three next-pass beats
+        // would otherwise put four flashes into the same looping second.
+        expect(output.single.triggers.length, lessThan(beats.length));
+      });
+
       test('counts a flash transition from where it starts, like a beat', () {
         // A 2 s flash from 3 s starts at 3.71 s, where it reaches a quarter
         // of white, and peaks at 4 s. The first beat's second holds the

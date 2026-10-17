@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -904,7 +905,7 @@ void main() {
       ]);
     });
 
-    test('spaces flashes by where their curves peak', () {
+    test('spaces flashes by where their curves first reach quarter white', () {
       // Their midpoints are 1 s apart, but the ease-in one flashes late and
       // the ease-out one early, 0.92 s apart.
       final clips = [
@@ -925,6 +926,53 @@ void main() {
 
       expect(clamped['a']?.type, ClipTransitionType.flash);
       expect(clamped['b']?.type, ClipTransitionType.dissolve);
+    });
+
+    test('locates the first flash onset on every native easing curve', () {
+      for (final curve in AnimationCurve.values) {
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', ms(3000), transition: flash.copyWith(curve: curve)),
+          clip('b', ms(3000)),
+        ]);
+        final offset = map.flashes.single - ms(2800);
+        final share = offset.inMicroseconds / flash.duration.inMicroseconds;
+        final progress = curve.ease(share);
+        final rise = 2 * progress;
+
+        expect(
+          rise * rise * rise * rise,
+          closeTo(flashOnsetStrength, 0.0001),
+          reason: curve.name,
+        );
+        // Bounce/elastic easing can turn back elsewhere. No earlier sample
+        // may already have reached the onset we claim is the first one.
+        for (var step = 0; step < 1000; step++) {
+          final earlier = share * step / 1000;
+          expect(curve.ease(earlier), lessThan(progress), reason: curve.name);
+        }
+      }
+    });
+
+    test('times an eased wrap flash from the start of its final blend', () {
+      final map = TransitionTimelineMap.fromClips([
+        clip('a', ms(1600), transition: flash.copyWith(curve: .easeOut)),
+      ]);
+      final offset = map.flashes.single - ms(1200);
+
+      expect(map.outputDuration, ms(1400));
+      // easeOut(t) = t(2-t), with the onset at p = fourthRoot(0.25) / 2.
+      expect(offset.inMicroseconds, closeTo(39196, 1));
+    });
+
+    test('counts an onset before the export cap even if its peak is later', () {
+      final clips = [
+        clip('a', ms(6800), transition: flash.copyWith(duration: ms(1000))),
+        clip('b', ms(3000)),
+      ];
+
+      expect(clampTransitions(clips)['a']?.type, ClipTransitionType.flash);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [us(6153553)]);
+      expect(TransitionTimelineMap.fromClips(clips).loopPoint, ms(6300));
     });
 
     test('plays the loop-restart flash as a dissolve when the first flash of '
