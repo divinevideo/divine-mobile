@@ -125,12 +125,12 @@ void main() {
         // shape does not matter. Neither passes `pointer:`: a fixed id can
         // equal the automatic one the other finger takes from flutter_test's
         // shared counter (#10245).
-        final first = await tester.startGesture(const Offset(140, 280));
-        final second = await tester.startGesture(const Offset(160, 280));
+        final first = await tester.startGesture(const Offset(150, 300));
+        final second = await tester.startGesture(const Offset(170, 300));
         await tester.pump();
         for (var step = 1; step <= 10; step++) {
-          await first.moveTo(Offset(140 - step * 30, 280));
-          await second.moveTo(Offset(160 + step * 30, 280));
+          await first.moveTo(Offset(150 - step * 30, 300));
+          await second.moveTo(Offset(170 + step * 30, 300));
           await tester.pump();
         }
         await first.up();
