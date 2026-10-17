@@ -10111,6 +10111,37 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Vegen';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Inzoomen';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Uitzoomen';
+
+  @override
+  String get videoEditorTransitionSpin => 'Draaien';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Snelle pan';
+
+  @override
+  String get videoEditorTransitionBlur => 'Vervagen';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Flits';
+
+  @override
+  String get videoEditorTransitionIris => 'Iris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Uitrekken';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Minder dan een seconde van een andere flits, dus hier vervloeit het beeld. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Overgang bewerken';
 
   @override

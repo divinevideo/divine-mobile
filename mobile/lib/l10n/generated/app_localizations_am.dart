@@ -9831,6 +9831,37 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTransitionWipe => 'ማበስ';
 
   @override
+  String get videoEditorTransitionZoomIn => 'ማጉላት';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'ማሳነስ';
+
+  @override
+  String get videoEditorTransitionSpin => 'ማሽከርከር';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'ፈጣን ማንሸራተት';
+
+  @override
+  String get videoEditorTransitionBlur => 'ማደብዘዝ';
+
+  @override
+  String get videoEditorTransitionGlitch => 'ግሊች';
+
+  @override
+  String get videoEditorTransitionFlash => 'ብልጭታ';
+
+  @override
+  String get videoEditorTransitionIris => 'ክብ መግለጫ';
+
+  @override
+  String get videoEditorTransitionStretch => 'መለጠጥ';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'ከሌላ ብልጭታ አንድ ሰከንድ ውስጥ ስለሆነ እዚህ እንደ መሟሟት ይጫወታል። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'ሽግግርን አርትዕ';
 
   @override

@@ -9981,6 +9981,37 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Silme';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Yakınlaşma';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Uzaklaşma';
+
+  @override
+  String get videoEditorTransitionSpin => 'Dönme';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Hızlı kaydırma';
+
+  @override
+  String get videoEditorTransitionBlur => 'Bulanıklık';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Flaş';
+
+  @override
+  String get videoEditorTransitionIris => 'İris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Esneme';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Başka bir flaşa bir saniyeden yakın, bu yüzden burada erime olarak oynatılır. Fazla yanıp sönme hassas kişilere zarar verebilir.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Geçişi düzenle';
 
   @override

@@ -932,7 +932,7 @@ class VideoEditorRenderService {
     }
 
     // Overlay/effect time windows are authored on the editor timeline (clips at
-    // full length). Overlap transitions (dissolve/slide/push/wipe) shorten the
+    // full length). Overlap transitions (every type but the dips) shorten the
     // rendered output, so every time anchor is mapped onto the output axis via
     // [timelineMap] (computed above); otherwise anything near the end — a
     // layer's leave animation especially — lands past the real video end and is

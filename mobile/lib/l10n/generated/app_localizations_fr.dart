@@ -10218,6 +10218,37 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Balayage';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Zoom avant';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Zoom arrière';
+
+  @override
+  String get videoEditorTransitionSpin => 'Rotation';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Panoramique filé';
+
+  @override
+  String get videoEditorTransitionBlur => 'Flou';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Flash';
+
+  @override
+  String get videoEditorTransitionIris => 'Iris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Étirement';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'À moins d\'une seconde d\'un autre flash, il s\'affiche donc ici en fondu enchaîné. Trop de clignotements peuvent faire du mal aux personnes sensibles.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel =>
       'Modifier la transition';
 

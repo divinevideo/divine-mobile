@@ -2,6 +2,8 @@
 // ABOUTME: Shows looped previews on the real neighbour frames + duration/curve.
 
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -29,7 +31,8 @@ const _minDurationMs = 10;
 const _maxDurationMs = 2000;
 const _durationStepMs = 10;
 
-/// Directions offered for direction-aware transitions (slide/push/wipe).
+/// Directions offered for direction-aware transitions
+/// ([ClipTransitionType.usesDirection]).
 const _directionOptions = <ClipTransitionDirection>[
   ClipTransitionDirection.left,
   ClipTransitionDirection.right,
@@ -37,15 +40,26 @@ const _directionOptions = <ClipTransitionDirection>[
   ClipTransitionDirection.down,
 ];
 
-/// Transition types whose effect depends on [ClipTransitionDirection].
-const _directionalTypes = <ClipTransitionType>{
-  ClipTransitionType.slide,
-  ClipTransitionType.push,
-  ClipTransitionType.wipe,
-};
-
 const _previewWidth = 64.0;
 const _previewHeight = 84.0;
+
+/// How the previews draw the transitions `ClipTransitionType` specifies: how
+/// far a zoom goes, where a clip change happens, how strong a blur is.
+const _zoomAmount = 0.5;
+const _whipBlurLength = 0.25;
+const _blurSigma = 0.05;
+
+/// A box blur's standard deviation is its length over √12.
+const _boxToSigma = 3.4641;
+
+/// The preview's flash stops short of white, so a tile frozen at its peak
+/// under reduced motion still shows a picture.
+const _previewFlashPeak = 0.85;
+
+/// Slices the glitch preview moves, and how often its pattern changes over
+/// one transition.
+const _glitchBands = 6;
+const _glitchPatterns = 8;
 
 /// Total preview loop length, in milliseconds. The transition itself occupies
 /// the middle `_duration` slice of every loop (so the preview literally plays
@@ -74,6 +88,7 @@ Future<void> editClipTransition(BuildContext context, int leftClipIndex) async {
 
   await _showTransitionSheet(
     context,
+    clips: clips,
     // A transition runs at the boundary: clip A's tail into clip B's head.
     fromClip: clip,
     toClip: nextClip,
@@ -110,6 +125,7 @@ Future<void> editLoopTransition(BuildContext context) async {
 
   await _showTransitionSheet(
     context,
+    clips: clips,
     // The wrap seam: the last clip's tail into the first clip's head.
     fromClip: lastClip,
     toClip: firstClip,
@@ -128,6 +144,7 @@ Future<void> editLoopTransition(BuildContext context) async {
 /// any neighbour reduced it, so the picker can hint when it was limited.
 Future<void> _showTransitionSheet(
   BuildContext context, {
+  required List<DivineVideoClip> clips,
   required DivineVideoClip fromClip,
   required DivineVideoClip toClip,
   required DivineVideoClip editedClip,
@@ -175,6 +192,8 @@ Future<void> _showTransitionSheet(
           ).inMilliseconds,
         ),
         limitedByNeighbor: roomPerSide < unconstrainedRoom,
+        flashSuppressed: (transition) =>
+            _flashSuppressed(clips, editedClip, transition),
         initial: editedClip.transition,
       ),
     ),
@@ -238,6 +257,26 @@ Duration _roomPerSide(List<DivineVideoClip> clips, int leftClipIndex) {
   return room.isNegative ? Duration.zero : room;
 }
 
+/// Whether [transition], set on [editedClip], would render without its flash
+/// because [clampTransitions] finds it within a second of another flash
+/// transition on the looping video.
+bool _flashSuppressed(
+  List<DivineVideoClip> clips,
+  DivineVideoClip editedClip,
+  ClipTransition transition,
+) {
+  if (!transition.type.flashes) return false;
+  final edited = [
+    for (final clip in clips)
+      if (clip.id == editedClip.id)
+        clip.copyWith(transition: transition)
+      else
+        clip,
+  ];
+  final rendered = clampTransitions(edited)[editedClip.id];
+  return rendered != null && !rendered.type.flashes;
+}
+
 /// Snaps [ms] down to the slider's step grid and into its valid range, so every
 /// division lands on a clean 0.01s value (an off-grid max makes the slider
 /// interpolate ugly intermediate steps).
@@ -253,11 +292,12 @@ class TransitionPickerView extends StatefulWidget {
     this.overlapMaxMs = _maxDurationMs,
     this.dipMaxMs = _maxDurationMs,
     this.limitedByNeighbor = false,
+    this.flashSuppressed,
     super.key,
   });
 
   /// Duration-slider ceilings for the two transition families. An overlap
-  /// (dissolve/slide/push/wipe) blends both clips at once, so it's capped at
+  /// (every type but the dips) blends both clips at once, so it's capped at
   /// half the available per-side room; a dip (fadeToBlack/White) fades out then
   /// in, so it can run up to twice it. The room already excludes what the
   /// adjacent clips' own transitions consume, so two transitions never overlap
@@ -270,6 +310,11 @@ class TransitionPickerView extends StatefulWidget {
   /// has a transition that uses part of the shared clip. Drives the hint shown
   /// under the duration slider.
   final bool limitedByNeighbor;
+
+  /// Whether a picked flash transition would play as a dissolve because it
+  /// is within a second of another flash; drives the hint under the options.
+  /// `null` never shows the hint.
+  final bool Function(ClipTransition transition)? flashSuppressed;
 
   final ClipTransition? initial;
 
@@ -287,19 +332,12 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
 
   static const _options = <ClipTransitionType?>[
     null,
-    ClipTransitionType.dissolve,
-    ClipTransitionType.fadeToBlack,
-    ClipTransitionType.fadeToWhite,
-    ClipTransitionType.slide,
-    ClipTransitionType.push,
-    ClipTransitionType.wipe,
+    ...ClipTransitionType.values,
   ];
 
   /// Dip transitions fade out then in (no simultaneous blend), so they may run
   /// up to twice the shorter clip; overlaps blend both at once and cap at half.
-  bool _isDip(ClipTransitionType? type) =>
-      type == ClipTransitionType.fadeToBlack ||
-      type == ClipTransitionType.fadeToWhite;
+  bool _isDip(ClipTransitionType? type) => type?.isDip ?? false;
 
   /// The duration-slider ceiling for the currently selected type.
   int get _currentMaxMs =>
@@ -359,6 +397,10 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final transition = _buildTransition();
+    final flashSuppressed =
+        transition != null &&
+        (widget.flashSuppressed?.call(transition) ?? false);
     final fromPath = context.select(
       (TransitionBoundaryCubit c) => c.state.fromFramePath,
     );
@@ -452,6 +494,15 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
                       ),
                     ),
                   ],
+                  if (flashSuppressed) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.videoEditorTransitionFlashTooClose,
+                      style: VineTheme.labelSmallFont(
+                        color: context.vineColors.secondaryText,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   SectionLabel(l10n.videoEditorTransitionCurve),
                   const SizedBox(height: 8),
@@ -459,7 +510,7 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
                     selected: _curve,
                     onChanged: (curve) => setState(() => _curve = curve),
                   ),
-                  if (_directionalTypes.contains(_type)) ...[
+                  if (_type?.usesDirection ?? false) ...[
                     const SizedBox(height: 16),
                     SectionLabel(l10n.videoEditorTransitionDirection),
                     const SizedBox(height: 8),
@@ -492,7 +543,7 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
             child: DivineButton(
               label: l10n.videoEditorDoneLabel,
               onPressed: () =>
-                  Navigator.of(context).pop((transition: _buildTransition())),
+                  Navigator.of(context).pop((transition: transition)),
             ),
           ),
           const SizedBox(height: 16),
@@ -671,9 +722,125 @@ class _TransitionEffect extends StatelessWidget {
           fit: .expand,
           children: [from, _wipe(clamped)],
         ),
+        ClipTransitionType.zoomIn => Stack(
+          fit: .expand,
+          children: [
+            Transform.scale(scale: 1 + _zoomAmount * progress, child: from),
+            Opacity(
+              opacity: _smoothstep(0, 0.4, clamped),
+              child: Transform.scale(scale: math.max(progress, 0), child: to),
+            ),
+          ],
+        ),
+        ClipTransitionType.zoomOut => Stack(
+          fit: .expand,
+          children: [
+            Transform.scale(
+              scale: 1 + _zoomAmount * (1 - progress),
+              child: to,
+            ),
+            Opacity(
+              opacity: 1 - _smoothstep(0.6, 1, clamped),
+              child: Transform.scale(
+                scale: math.max(1 - progress, 0),
+                child: from,
+              ),
+            ),
+          ],
+        ),
+        ClipTransitionType.spin => Stack(
+          fit: .expand,
+          children: [
+            _Spun(angle: math.pi * progress, child: from),
+            Opacity(
+              opacity: _smoothstep(0.35, 0.65, clamped),
+              child: _Spun(angle: math.pi * (progress - 1), child: to),
+            ),
+          ],
+        ),
+        ClipTransitionType.whipPan => ImageFiltered(
+          imageFilter: _whipBlur(clamped),
+          child: Stack(
+            fit: .expand,
+            children: [
+              Transform.translate(offset: _exit, child: from),
+              Transform.translate(offset: _enter, child: to),
+            ],
+          ),
+        ),
+        ClipTransitionType.blur => ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: _blurAmount(clamped),
+            sigmaY: _blurAmount(clamped),
+          ),
+          child: Stack(
+            fit: .expand,
+            children: [
+              from,
+              Opacity(opacity: _smoothstep(0.3, 0.7, clamped), child: to),
+            ],
+          ),
+        ),
+        ClipTransitionType.glitch => _GlitchPreview(
+          progress: clamped,
+          from: from,
+          to: to,
+        ),
+        ClipTransitionType.flash => Stack(
+          fit: .expand,
+          children: [
+            from,
+            Opacity(opacity: _smoothstep(0.45, 0.55, clamped), child: to),
+            // Names the rendered effect, not a surface, like the fades.
+            ColoredBox(
+              color: VineTheme.whiteText.withValues(
+                alpha:
+                    math.pow(1 - (2 * clamped - 1).abs(), 4) *
+                    _previewFlashPeak,
+              ),
+            ),
+          ],
+        ),
+        ClipTransitionType.iris => Stack(
+          fit: .expand,
+          children: [
+            from,
+            ClipOval(
+              clipper: _IrisClipper(progress: progress),
+              child: to,
+            ),
+          ],
+        ),
+        ClipTransitionType.stretch => _StretchPreview(
+          progress: progress,
+          direction: direction,
+          from: from,
+          to: to,
+        ),
       },
     );
   }
+
+  bool get _horizontal =>
+      direction == ClipTransitionDirection.left ||
+      direction == ClipTransitionDirection.right;
+
+  ImageFilter _whipBlur(double p) {
+    final length =
+        _whipBlurLength *
+        (_horizontal ? _previewWidth : _previewHeight) *
+        math.sin(math.pi * p);
+    final sigma = length / _boxToSigma;
+    return ImageFilter.blur(
+      sigmaX: _horizontal ? sigma : 0,
+      sigmaY: _horizontal ? 0 : sigma,
+    );
+  }
+
+  double _blurAmount(double p) =>
+      _blurSigma *
+      math.min(_previewWidth, _previewHeight) *
+      math.sin(math.pi * p);
 
   Widget _dip(Color color, double p) {
     final overlay = p < 0.5 ? p * 2 : (1 - p) * 2;
@@ -750,6 +917,219 @@ class _WipeClipper extends CustomClipper<Rect> {
   @override
   bool shouldReclip(_WipeClipper oldClipper) =>
       oldClipper.progress != progress || oldClipper.direction != direction;
+}
+
+/// [child] turned clockwise by [angle] about its center and zoomed just far
+/// enough to keep the tile covered.
+class _Spun extends StatelessWidget {
+  const _Spun({required this.angle, required this.child});
+
+  final double angle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final cos = math.cos(angle).abs();
+    final sin = math.sin(angle).abs();
+    final cover = math.max(
+      (_previewWidth * cos + _previewHeight * sin) / _previewWidth,
+      (_previewWidth * sin + _previewHeight * cos) / _previewHeight,
+    );
+    return Transform.rotate(
+      angle: angle,
+      child: Transform.scale(scale: cover, child: child),
+    );
+  }
+}
+
+/// The incoming frame inside a circle about the center that reaches the
+/// corners at [progress] 1.
+class _IrisClipper extends CustomClipper<Rect> {
+  const _IrisClipper({required this.progress});
+
+  final double progress;
+
+  @override
+  Rect getClip(Size size) {
+    final center = size.center(Offset.zero);
+    final corner = math.sqrt(
+      center.dx * center.dx + center.dy * center.dy,
+    );
+    return Rect.fromCircle(
+      center: center,
+      radius: math.max(progress, 0) * corner,
+    );
+  }
+
+  @override
+  bool shouldReclip(_IrisClipper oldClipper) => oldClipper.progress != progress;
+}
+
+/// The incoming frame squeezed into a share [progress] of the tile at the
+/// edge opposite [direction], the outgoing frame into the rest.
+class _StretchPreview extends StatelessWidget {
+  const _StretchPreview({
+    required this.progress,
+    required this.direction,
+    required this.from,
+    required this.to,
+  });
+
+  final double progress;
+  final ClipTransitionDirection direction;
+  final Widget from;
+  final Widget to;
+
+  @override
+  Widget build(BuildContext context) {
+    final horizontal =
+        direction == ClipTransitionDirection.left ||
+        direction == ClipTransitionDirection.right;
+    // Moving left or up, the incoming frame enters at the far edge.
+    final entersAtFarEnd =
+        direction == ClipTransitionDirection.left ||
+        direction == ClipTransitionDirection.up;
+    final length = horizontal ? _previewWidth : _previewHeight;
+    final incomingLength = length * progress;
+    final outgoingLength = length - incomingLength;
+    final incomingStart = entersAtFarEnd ? outgoingLength : 0.0;
+    final outgoingStart = entersAtFarEnd ? 0.0 : incomingLength;
+    return Stack(
+      fit: .expand,
+      children: [
+        if (outgoingLength > 0)
+          _Squeezed(
+            horizontal: horizontal,
+            start: outgoingStart,
+            length: outgoingLength,
+            child: from,
+          ),
+        if (incomingLength > 0)
+          _Squeezed(
+            horizontal: horizontal,
+            start: incomingStart,
+            length: incomingLength,
+            child: to,
+          ),
+      ],
+    );
+  }
+}
+
+/// A whole preview frame squeezed along one axis into [length] from [start].
+class _Squeezed extends StatelessWidget {
+  const _Squeezed({
+    required this.horizontal,
+    required this.start,
+    required this.length,
+    required this.child,
+  });
+
+  final bool horizontal;
+  final double start;
+  final double length;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final frame = FittedBox(
+      fit: .fill,
+      child: SizedBox(
+        width: _previewWidth,
+        height: _previewHeight,
+        child: child,
+      ),
+    );
+    return horizontal
+        ? Positioned(
+            left: start,
+            width: length,
+            top: 0,
+            bottom: 0,
+            child: frame,
+          )
+        : Positioned(
+            top: start,
+            height: length,
+            left: 0,
+            right: 0,
+            child: frame,
+          );
+  }
+}
+
+/// The glitch preview: the frame cuts halfway through while slices of it jump
+/// sideways, some showing the other frame, most at mid-transition.
+class _GlitchPreview extends StatelessWidget {
+  const _GlitchPreview({
+    required this.progress,
+    required this.from,
+    required this.to,
+  });
+
+  final double progress;
+  final Widget from;
+  final Widget to;
+
+  @override
+  Widget build(BuildContext context) {
+    final strength = math.sin(math.pi * progress);
+    final cut = progress >= 0.5;
+    final pattern = (progress * _glitchPatterns).floor();
+    const bandHeight = _previewHeight / _glitchBands;
+    return Stack(
+      fit: .expand,
+      children: [
+        if (cut) to else from,
+        for (var band = 0; band < _glitchBands; band++)
+          if (_noise(band, pattern, 0) < 0.7 * strength)
+            ClipRect(
+              clipper: _BandClipper(
+                top: band * bandHeight,
+                height: bandHeight,
+              ),
+              child: Transform.translate(
+                offset: Offset(
+                  (_noise(band, pattern, 1) * 2 - 1) *
+                      0.12 *
+                      strength *
+                      _previewWidth,
+                  0,
+                ),
+                child: (_noise(band, pattern, 2) < 0.4) != cut ? to : from,
+              ),
+            ),
+      ],
+    );
+  }
+
+  /// A repeatable value in 0..1 for [band] in [pattern].
+  static double _noise(int band, int pattern, int salt) {
+    final value =
+        math.sin(band * 12.9898 + pattern * 78.233 + salt * 37.719) *
+        43758.5453;
+    return value - value.floorToDouble();
+  }
+}
+
+/// Clips to one horizontal slice of the preview.
+class _BandClipper extends CustomClipper<Rect> {
+  const _BandClipper({required this.top, required this.height});
+
+  final double top;
+  final double height;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTWH(0, top, size.width, height);
+
+  @override
+  bool shouldReclip(_BandClipper oldClipper) =>
+      oldClipper.top != top || oldClipper.height != height;
+}
+
+double _smoothstep(double edge0, double edge1, double x) {
+  final t = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
+  return t * t * (3 - 2 * t);
 }
 
 /// A single preview frame backed by a clip thumbnail, or a gradient fallback
@@ -830,4 +1210,13 @@ String _typeLabel(AppLocalizations l10n, ClipTransitionType? type) =>
       ClipTransitionType.slide => l10n.videoEditorTransitionSlide,
       ClipTransitionType.push => l10n.videoEditorTransitionPush,
       ClipTransitionType.wipe => l10n.videoEditorTransitionWipe,
+      ClipTransitionType.zoomIn => l10n.videoEditorTransitionZoomIn,
+      ClipTransitionType.zoomOut => l10n.videoEditorTransitionZoomOut,
+      ClipTransitionType.spin => l10n.videoEditorTransitionSpin,
+      ClipTransitionType.whipPan => l10n.videoEditorTransitionWhipPan,
+      ClipTransitionType.blur => l10n.videoEditorTransitionBlur,
+      ClipTransitionType.glitch => l10n.videoEditorTransitionGlitch,
+      ClipTransitionType.flash => l10n.videoEditorTransitionFlash,
+      ClipTransitionType.iris => l10n.videoEditorTransitionIris,
+      ClipTransitionType.stretch => l10n.videoEditorTransitionStretch,
     };

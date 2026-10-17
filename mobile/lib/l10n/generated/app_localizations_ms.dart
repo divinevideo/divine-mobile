@@ -10074,6 +10074,37 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Sapu';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Zum masuk';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Zum keluar';
+
+  @override
+  String get videoEditorTransitionSpin => 'Putar';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Pan pantas';
+
+  @override
+  String get videoEditorTransitionBlur => 'Kaburkan';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Kilat';
+
+  @override
+  String get videoEditorTransitionIris => 'Bulatan';
+
+  @override
+  String get videoEditorTransitionStretch => 'Regangkan';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Kurang daripada sesaat dari kilat lain, jadi di sini ia dimainkan sebagai larut. Kelipan berlebihan boleh memudaratkan orang yang sensitif.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Sunting peralihan';
 
   @override

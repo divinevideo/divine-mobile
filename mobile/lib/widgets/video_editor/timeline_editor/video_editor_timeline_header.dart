@@ -182,7 +182,7 @@ class _TimeDisplay extends StatelessWidget {
       color: context.vineColors.primaryText,
     ).copyWith(fontFeatures: [const FontFeature.tabularFigures()]);
     // The editor timeline draws clips at full length, but an overlap transition
-    // (dissolve/slide/push/wipe) blends two clips so the rendered output is
+    // (every type but the dips) blends two clips so the rendered output is
     // shorter. Show the output length — and the playhead mapped onto it — so the
     // header reflects the final video, not the editing space. The timeline
     // layout itself stays on the editor axis.

@@ -17087,6 +17087,66 @@ abstract class AppLocalizations {
   /// **'Wipe'**
   String get videoEditorTransitionWipe;
 
+  /// Transition option: the camera flies into the current clip while the next clip grows out of the middle of the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get videoEditorTransitionZoomIn;
+
+  /// Transition option: the current clip shrinks into the middle of the picture, uncovering the next clip behind it.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get videoEditorTransitionZoomOut;
+
+  /// Transition option: the picture spins all the way round as it changes from the current clip to the next.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin'**
+  String get videoEditorTransitionSpin;
+
+  /// Transition option: both clips move out of and into the picture fast, smeared by motion blur, like a camera swung quickly to one side. 'Whip pan' is the film term.
+  ///
+  /// In en, this message translates to:
+  /// **'Whip pan'**
+  String get videoEditorTransitionWhipPan;
+
+  /// Transition option: the picture blurs out and comes back sharp as the next clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur'**
+  String get videoEditorTransitionBlur;
+
+  /// Transition option: the picture breaks into shifted slices and split colors as it cuts to the next clip, like a damaged video signal.
+  ///
+  /// In en, this message translates to:
+  /// **'Glitch'**
+  String get videoEditorTransitionGlitch;
+
+  /// Transition option: a flash of white light hides the cut to the next clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash'**
+  String get videoEditorTransitionFlash;
+
+  /// Transition option: the next clip appears inside a circle that grows from the middle of the picture until it fills it.
+  ///
+  /// In en, this message translates to:
+  /// **'Iris'**
+  String get videoEditorTransitionIris;
+
+  /// Transition option: the next clip stretches in from one edge while the current clip is squeezed away toward the other.
+  ///
+  /// In en, this message translates to:
+  /// **'Stretch'**
+  String get videoEditorTransitionStretch;
+
+  /// Hint under the transition options when the 'Flash' transition is picked but is less than a second from another flash transition, so the video shows a plain dissolve there instead. Keep the second sentence consistent with videoEditorEffectsFlashingNotDuplicated.
+  ///
+  /// In en, this message translates to:
+  /// **'Within a second of another flash, so it plays as a dissolve here. Too much flashing can hurt people who are sensitive to it.'**
+  String get videoEditorTransitionFlashTooClose;
+
   /// Accessibility label for the button between two clips that opens the transition picker.
   ///
   /// In en, this message translates to:

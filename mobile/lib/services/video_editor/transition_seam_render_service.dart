@@ -20,7 +20,7 @@ import 'package:openvine/services/video_editor/video_editor_render_service.dart'
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ClipTransition, ClipTransitionType, EditorVideo, ProVideoEditor;
+    show ClipTransition, EditorVideo, ProVideoEditor;
 import 'package:unified_logger/unified_logger.dart';
 
 /// A rendered transition seam — a small clip that already contains the blended
@@ -279,7 +279,7 @@ class TransitionSeamRenderService {
         // (consumed×2). If output ≈ consumed×2 the overlap fell back to a cut.
         Log.info(
           '🎬 Seam rendered: ${transition.type.name} '
-          'overlap=${_isOverlap(transition.type)} '
+          'overlap=${transition.type.isOverlap} '
           'consumed=${consumed.inMilliseconds}ms '
           'blend=${blend.inMilliseconds}ms '
           '→ output=${metadata.duration.inMilliseconds}ms '
@@ -393,7 +393,7 @@ class TransitionSeamRenderService {
       clipB.playbackDuration,
       transition,
     );
-    if (_isOverlap(transition.type)) {
+    if (transition.type.isOverlap) {
       final blend = _half(consumed);
       return (
         consumed: consumed,
@@ -484,10 +484,6 @@ class TransitionSeamRenderService {
         '${transition.curve.name}:${transition.direction.name}';
     return 'v$_seamCacheVersion|${clipKey(clipA)}|${clipKey(clipB)}|$t';
   }
-
-  bool _isOverlap(ClipTransitionType type) =>
-      type != ClipTransitionType.fadeToBlack &&
-      type != ClipTransitionType.fadeToWhite;
 
   Duration _half(Duration d) => Duration(microseconds: d.inMicroseconds ~/ 2);
 
