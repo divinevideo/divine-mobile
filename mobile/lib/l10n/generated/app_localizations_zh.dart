@@ -9470,6 +9470,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTransitionWipe => '擦除';
 
   @override
+  String get videoEditorTransitionZoomIn => '放大';
+
+  @override
+  String get videoEditorTransitionZoomOut => '缩小';
+
+  @override
+  String get videoEditorTransitionSpin => '旋转';
+
+  @override
+  String get videoEditorTransitionWhipPan => '甩镜';
+
+  @override
+  String get videoEditorTransitionBlur => '模糊';
+
+  @override
+  String get videoEditorTransitionGlitch => '故障';
+
+  @override
+  String get videoEditorTransitionFlash => '闪光';
+
+  @override
+  String get videoEditorTransitionIris => '圆形展开';
+
+  @override
+  String get videoEditorTransitionStretch => '拉伸';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      '与另一个闪光相隔不到一秒，所以这里会以叠化播放。闪烁太多可能会伤害对闪光敏感的人。';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => '编辑转场';
 
   @override

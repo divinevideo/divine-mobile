@@ -58,11 +58,12 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 
 Transitions between clips ([`video_editor_transition_sheet.dart`](../lib/widgets/video_editor/timeline_editor/controls/video_editor_transition_sheet.dart)):
 
-- Dissolve, fade to black, fade to white, slide, push, wipe. Slide, push and wipe take a direction (left, right, up, down).
+- Dissolve, fade to black, fade to white, slide, push, wipe, zoom in, zoom out, spin, whip pan, blur, glitch, flash, iris, stretch. Slide, push, wipe, whip pan and stretch take a direction (left, right, up, down).
 - Duration 10–2000 ms in 10 ms steps, further limited by how long the neighbouring clips are.
 - 13 easing curves.
 - A transition from the last clip back into the first, for the loop.
-- Across a dissolve, slide, push or wipe the two clips' sounds cross-fade, each at its own volume and EQ.
+- A flash less than a second from another flash on the looping video plays as a dissolve, and the picker says so. Flashing effects on the beat skip the beats next to a flash, so the video never flashes more than three times a second.
+- Across every transition but the fades to black and white the two clips' sounds cross-fade, each at its own volume and EQ.
 
 Detach (picture-in-picture):
 
@@ -84,7 +85,7 @@ Shape mask:
 - Shows a timeline clip, a detached clip, a text, a sticker or a drawing only inside a circle (stretchable into an oval), a rectangle with rounded corners or a heart, or on one side of a straight line (linear). Not offered for a blurred or pixelated area or an audio visualizer, which the export draws from their own settings.
 - The mask is shaped in a full-screen editor over the paused video: one finger moves it, two resize and turn it, and the handles on its right and bottom sides stretch it. None of these can take it off its item: a move stops at the item's edge, a pinch that grows it against an edge pushes it away from that edge, and a handle stops where the shape touches one. Softness fades its edge over up to half the item's shorter side, so a soft linear mask fades the item out; corners round the rectangle; invert shows the item outside the shape instead. The change is one undo step, and cancelling leaves the item as it was.
 - It moves, scales and turns with its item, keyframes included.
-- On a timeline clip, what the mask hides is black in both the preview and the export, and across a dissolve, slide, push or wipe the black fades with the clip. On a detached clip or an overlay, it shows what lies underneath.
+- On a timeline clip, what the mask hides is black in both the preview and the export, and across every transition but the fades to black and white the black fades with the clip. On a detached clip or an overlay, it shows what lies underneath.
 - A masked sticker or drawing is not combined with others, since the combined layer would carry one mask at most.
 
 Timeline:

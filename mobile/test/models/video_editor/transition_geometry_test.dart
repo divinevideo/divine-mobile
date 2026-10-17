@@ -808,4 +808,126 @@ void main() {
       });
     });
   });
+
+  group('flash transitions', () {
+    const flash = ClipTransition(
+      type: ClipTransitionType.flash,
+      duration: Duration(milliseconds: 200),
+    );
+    Duration ms(int milliseconds) => Duration(milliseconds: milliseconds);
+
+    DivineVideoClip clip(
+      String id,
+      Duration duration, {
+      ClipTransition? transition,
+    }) => DivineVideoClip(
+      id: id,
+      video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
+      duration: duration,
+      recordedAt: DateTime(2026),
+      targetAspectRatio: model.AspectRatio.vertical,
+      originalAspectRatio: 9 / 16,
+      transition: transition,
+    );
+
+    test('plays a flash within a second of the one before as a dissolve of '
+        'the same length', () {
+      // Flashes peak at 1.1 s and 1.9 s of the exported video.
+      final clips = [
+        clip('a', ms(1200), transition: flash),
+        clip('b', ms(1000), transition: flash),
+        clip('c', ms(1200)),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a'], flash);
+      expect(
+        clamped['b'],
+        flash.copyWith(type: ClipTransitionType.dissolve),
+      );
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [ms(1100)]);
+      expect(renderedOutputDuration(clips), ms(3000));
+    });
+
+    test('keeps flashes a second or more apart', () {
+      // Flashes peak at 1.1 s and 2.9 s of the 4 s video.
+      final clips = [
+        clip('a', ms(1200), transition: flash),
+        clip('b', ms(2000), transition: flash),
+        clip('c', ms(1200)),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a'], flash);
+      expect(clamped['b'], flash);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [
+        ms(1100),
+        ms(2900),
+      ]);
+    });
+
+    test('plays the loop-restart flash as a dissolve when the first flash of '
+        'the next pass follows within a second', () {
+      // The wrap moves 200 ms of a's head to the end: a's flash peaks at
+      // 0.7 s, the wrap's at 1.5 s of the 1.6 s video, 0.8 s before the
+      // next pass's first flash.
+      final clips = [
+        clip('a', ms(1000), transition: flash),
+        clip('b', ms(1000), transition: flash),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a'], flash);
+      expect(
+        clamped['b'],
+        flash.copyWith(type: ClipTransitionType.dissolve),
+      );
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [ms(700)]);
+    });
+
+    test('keeps a lone flash on a video that loops every second or slower, '
+        'but not on a shorter one', () {
+      final long = [clip('a', ms(1600), transition: flash)];
+      final short = [
+        clip(
+          'a',
+          ms(900),
+          transition: flash.copyWith(duration: ms(100)),
+        ),
+      ];
+
+      expect(clampTransitions(long)['a']?.type, ClipTransitionType.flash);
+      expect(TransitionTimelineMap.fromClips(long).flashes, [ms(1300)]);
+      expect(clampTransitions(short)['a']?.type, ClipTransitionType.dissolve);
+      expect(TransitionTimelineMap.fromClips(short).flashes, isEmpty);
+    });
+
+    test('leaves a flash past the end of the export alone', () {
+      // The export stops at 6.3 s; this flash would peak at 6.9 s.
+      final clips = [
+        clip('a', ms(7000), transition: flash),
+        clip('b', ms(1200)),
+      ];
+
+      expect(clampTransitions(clips)['a'], flash);
+      expect(TransitionTimelineMap.fromClips(clips).flashes, isEmpty);
+    });
+
+    test('tells maps apart by their flashes alone', () {
+      final dissolving = TransitionTimelineMap.fromClips([
+        clip('a', ms(1200), transition: dissolve.copyWith(duration: ms(200))),
+        clip('b', ms(1200)),
+      ]);
+      final flashing = TransitionTimelineMap.fromClips([
+        clip('a', ms(1200), transition: flash),
+        clip('b', ms(1200)),
+      ]);
+
+      expect(flashing.outputDuration, dissolving.outputDuration);
+      expect(flashing, isNot(dissolving));
+    });
+  });
 }

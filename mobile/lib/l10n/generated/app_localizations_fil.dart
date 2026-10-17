@@ -10144,6 +10144,37 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Pagpunas';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Zoom in';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Zoom out';
+
+  @override
+  String get videoEditorTransitionSpin => 'Pag-ikot';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Whip pan';
+
+  @override
+  String get videoEditorTransitionBlur => 'Blur';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Flash';
+
+  @override
+  String get videoEditorTransitionIris => 'Iris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Pag-unat';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Wala pang isang segundo mula sa isa pang flash, kaya dissolve ang lalabas dito. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel =>
       'I-edit ang transisyon';
 

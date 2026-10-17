@@ -12,7 +12,7 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 /// sub-second markers (10f, 20f) fill the gaps — like TikTok.
 ///
 /// Labels read the **rendered output** time, not the editor axis: an overlap
-/// transition (dissolve/slide/push/wipe) blends two clips so the output is
+/// transition (every type but the dips) blends two clips so the output is
 /// shorter than the editor layout. The box keeps the editor width so it stays
 /// aligned with the clip strip and scrolls together, but each tick is placed at
 /// the editor pixel where its output second actually falls (via

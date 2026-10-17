@@ -10146,6 +10146,37 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorTransitionWipe => 'Varredura';
 
   @override
+  String get videoEditorTransitionZoomIn => 'Aproximar';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'Afastar';
+
+  @override
+  String get videoEditorTransitionSpin => 'Girar';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'Pan rápido';
+
+  @override
+  String get videoEditorTransitionBlur => 'Desfocar';
+
+  @override
+  String get videoEditorTransitionGlitch => 'Glitch';
+
+  @override
+  String get videoEditorTransitionFlash => 'Clarão';
+
+  @override
+  String get videoEditorTransitionIris => 'Íris';
+
+  @override
+  String get videoEditorTransitionStretch => 'Esticar';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'Fica a menos de um segundo de outro clarão, então aqui vira uma dissolução. Piscar demais pode fazer mal a pessoas sensíveis.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'Editar transição';
 
   @override

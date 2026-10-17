@@ -9587,6 +9587,37 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTransitionWipe => '와이프';
 
   @override
+  String get videoEditorTransitionZoomIn => '줌 인';
+
+  @override
+  String get videoEditorTransitionZoomOut => '줌 아웃';
+
+  @override
+  String get videoEditorTransitionSpin => '회전';
+
+  @override
+  String get videoEditorTransitionWhipPan => '휩 팬';
+
+  @override
+  String get videoEditorTransitionBlur => '흐리게';
+
+  @override
+  String get videoEditorTransitionGlitch => '글리치';
+
+  @override
+  String get videoEditorTransitionFlash => '플래시';
+
+  @override
+  String get videoEditorTransitionIris => '아이리스';
+
+  @override
+  String get videoEditorTransitionStretch => '늘이기';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      '다른 플래시와 1초 이내라서 여기서는 디졸브로 재생돼요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => '전환 편집';
 
   @override

@@ -636,6 +636,47 @@ void main() {
         );
       });
 
+      test('counts a flash transition toward three flashes a second', () {
+        // A 200 ms flash between the two 3 s clips peaks at 2.9 s.
+        final map = TransitionTimelineMap.fromClips([
+          clip(
+            'a',
+            transition: const ClipTransition(
+              type: ClipTransitionType.flash,
+              duration: Duration(milliseconds: 200),
+            ),
+          ),
+          clip('b'),
+        ]);
+        final beats = [ms(2400), ms(2750), ms(3100), ms(3450)];
+        expect(map.flashes, [ms(2900)]);
+
+        final alone = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          plain,
+          beats: beats,
+        );
+        final beside = videoEffectsOnOutput(
+          [onBeat(.strobe)],
+          map,
+          beats: beats,
+        );
+
+        expect(alone.single.triggers, beats);
+        final kept = beside.single.triggers;
+        expect(kept.length, lessThan(beats.length));
+        final flashes = [...kept, ...map.flashes]..sort();
+        for (final start in flashes) {
+          expect(
+            flashes.where(
+              (t) => t >= start && t - start < const Duration(seconds: 1),
+            ),
+            hasLength(lessThanOrEqualTo(3)),
+            reason: 'from $start in $flashes',
+          );
+        }
+      });
+
       test('flashes on every other beat of a song too fast for every one', () {
         final onOutput = videoEffectsOnOutput(
           [onBeat(.strobe)],

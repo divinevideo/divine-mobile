@@ -10343,6 +10343,37 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTransitionWipe => 'తుడవడం';
 
   @override
+  String get videoEditorTransitionZoomIn => 'జూమ్ ఇన్';
+
+  @override
+  String get videoEditorTransitionZoomOut => 'జూమ్ అవుట్';
+
+  @override
+  String get videoEditorTransitionSpin => 'తిప్పు';
+
+  @override
+  String get videoEditorTransitionWhipPan => 'వేగవంతమైన ప్యాన్';
+
+  @override
+  String get videoEditorTransitionBlur => 'బ్లర్';
+
+  @override
+  String get videoEditorTransitionGlitch => 'గ్లిచ్';
+
+  @override
+  String get videoEditorTransitionFlash => 'ఫ్లాష్';
+
+  @override
+  String get videoEditorTransitionIris => 'ఐరిస్';
+
+  @override
+  String get videoEditorTransitionStretch => 'సాగదీయు';
+
+  @override
+  String get videoEditorTransitionFlashTooClose =>
+      'మరో ఫ్లాష్‌కు ఒక సెకను లోపే ఉంది, కాబట్టి ఇక్కడ ఇది రద్దుగా ప్లే అవుతుంది. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
+
+  @override
   String get videoEditorTransitionButtonSemanticLabel => 'పరివర్తనను సవరించండి';
 
   @override

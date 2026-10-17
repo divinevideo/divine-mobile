@@ -5149,6 +5149,16 @@
     "description": "Transition option where the next clip pushes the current one out of frame."
   },
   "videoEditorTransitionWipe": "擦除",
+  "videoEditorTransitionZoomIn": "放大",
+  "videoEditorTransitionZoomOut": "缩小",
+  "videoEditorTransitionSpin": "旋转",
+  "videoEditorTransitionWhipPan": "甩镜",
+  "videoEditorTransitionBlur": "模糊",
+  "videoEditorTransitionGlitch": "故障",
+  "videoEditorTransitionFlash": "闪光",
+  "videoEditorTransitionIris": "圆形展开",
+  "videoEditorTransitionStretch": "拉伸",
+  "videoEditorTransitionFlashTooClose": "与另一个闪光相隔不到一秒，所以这里会以叠化播放。闪烁太多可能会伤害对闪光敏感的人。",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
   },

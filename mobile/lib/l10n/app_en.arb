@@ -7026,6 +7026,46 @@
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
   },
+  "videoEditorTransitionZoomIn": "Zoom in",
+  "@videoEditorTransitionZoomIn": {
+    "description": "Transition option: the camera flies into the current clip while the next clip grows out of the middle of the picture."
+  },
+  "videoEditorTransitionZoomOut": "Zoom out",
+  "@videoEditorTransitionZoomOut": {
+    "description": "Transition option: the current clip shrinks into the middle of the picture, uncovering the next clip behind it."
+  },
+  "videoEditorTransitionSpin": "Spin",
+  "@videoEditorTransitionSpin": {
+    "description": "Transition option: the picture spins all the way round as it changes from the current clip to the next."
+  },
+  "videoEditorTransitionWhipPan": "Whip pan",
+  "@videoEditorTransitionWhipPan": {
+    "description": "Transition option: both clips move out of and into the picture fast, smeared by motion blur, like a camera swung quickly to one side. 'Whip pan' is the film term."
+  },
+  "videoEditorTransitionBlur": "Blur",
+  "@videoEditorTransitionBlur": {
+    "description": "Transition option: the picture blurs out and comes back sharp as the next clip."
+  },
+  "videoEditorTransitionGlitch": "Glitch",
+  "@videoEditorTransitionGlitch": {
+    "description": "Transition option: the picture breaks into shifted slices and split colors as it cuts to the next clip, like a damaged video signal."
+  },
+  "videoEditorTransitionFlash": "Flash",
+  "@videoEditorTransitionFlash": {
+    "description": "Transition option: a flash of white light hides the cut to the next clip."
+  },
+  "videoEditorTransitionIris": "Iris",
+  "@videoEditorTransitionIris": {
+    "description": "Transition option: the next clip appears inside a circle that grows from the middle of the picture until it fills it."
+  },
+  "videoEditorTransitionStretch": "Stretch",
+  "@videoEditorTransitionStretch": {
+    "description": "Transition option: the next clip stretches in from one edge while the current clip is squeezed away toward the other."
+  },
+  "videoEditorTransitionFlashTooClose": "Within a second of another flash, so it plays as a dissolve here. Too much flashing can hurt people who are sensitive to it.",
+  "@videoEditorTransitionFlashTooClose": {
+    "description": "Hint under the transition options when the 'Flash' transition is picked but is less than a second from another flash transition, so the video shows a plain dissolve there instead. Keep the second sentence consistent with videoEditorEffectsFlashingNotDuplicated."
+  },
   "videoEditorTransitionButtonSemanticLabel": "Edit transition",
   "@videoEditorTransitionButtonSemanticLabel": {
     "description": "Accessibility label for the button between two clips that opens the transition picker."
