@@ -485,6 +485,51 @@ void main() {
       });
     });
 
+    group('a group with a blocked member (#10150)', () {
+      // A real blocklist, not a stub: the rule for which member counts is
+      // the thing under test. Participants sort as _me < _alice < _bob, so
+      // _alice is the group's first member and _bob its second.
+      DmConversation room() => _groupConvo(
+        'room',
+        peers: [_alice, _bob],
+        isRead: false,
+        currentUserHasSent: true,
+      );
+
+      for (final (label, member) in [('first', _alice), ('second', _bob)]) {
+        test('drops the group from the badge when its $label member is '
+            'blocked', () async {
+          final blocklist = ContentBlocklistRepository();
+          addTearDown(blocklist.dispose);
+          await blocklist.blockUser(member, ourPubkey: _me);
+
+          fakeAsync((fake) {
+            final cubit = buildCubit(contentBlocklistRepository: blocklist);
+            acceptedController.add([room()]);
+            potentialController.add(const []);
+            _settle(fake);
+
+            expect(cubit.state, equals(0));
+            _close(fake, cubit);
+          });
+        });
+      }
+
+      _testWithFakeAsync('counts the group when nobody in it is blocked', (
+        fake,
+      ) {
+        final blocklist = ContentBlocklistRepository();
+        final cubit = buildCubit(contentBlocklistRepository: blocklist);
+        acceptedController.add([room()]);
+        potentialController.add(const []);
+        _settle(fake);
+
+        expect(cubit.state, equals(1));
+        _close(fake, cubit);
+        blocklist.dispose();
+      });
+    });
+
     _testWithFakeAsync(
       'setRepositories re-points the count at fresh repositories and stops '
       'counting against the stale ones (app-shell auth-ready rebuild, #4976)',

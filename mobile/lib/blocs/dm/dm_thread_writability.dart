@@ -18,14 +18,13 @@ enum DmThreadWritability {
 ///
 /// An empty [participantPubkeys] means the counterparties could not be
 /// resolved, so [DmThreadWritability.unresolved] is checked first and wins
-/// over every other rule: there is no first participant to test for a block,
-/// and no peer to compare against a retired moderation account.
+/// over every other rule: there is no participant to test for a block, and no
+/// peer to compare against a retired moderation account.
 ///
 /// Retired moderation threads are one-to-one today, but checking every peer
 /// keeps a rotated key read-only if an old route reconstructs it as a group.
-/// Blocking deliberately follows the conversation's existing rule: the route
-/// identifies its target with the first participant. Changing group semantics
-/// is a separate product decision.
+/// Blocking checks every peer too: a group with any member the viewer blocked
+/// is read-only, like a blocked one-to-one (#10150).
 DmThreadWritability resolveDmThreadWritability({
   required List<String> participantPubkeys,
   required bool Function(String pubkey) isBlockedByUs,
@@ -34,7 +33,7 @@ DmThreadWritability resolveDmThreadWritability({
   if (participantPubkeys.any(isRetiredModerationAccount)) {
     return DmThreadWritability.closedRetired;
   }
-  if (isBlockedByUs(participantPubkeys.first)) {
+  if (participantPubkeys.any(isBlockedByUs)) {
     return DmThreadWritability.blockedByUs;
   }
   return DmThreadWritability.writable;

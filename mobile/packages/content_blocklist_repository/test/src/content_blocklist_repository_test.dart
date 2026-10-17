@@ -2644,6 +2644,115 @@ void main() {
     });
   });
 
+  group('filterBlockedConversations in a group (#10150)', () {
+    const ourPubkey =
+        '0000000000000000000000000000000000000000000000000000000000000001';
+    // Participants are stored sorted, so after the viewer these are the
+    // group's members in positions 0, 1 and 2.
+    const members = [
+      '000000000000000000000000000000000000000000000000000000000000000a',
+      '000000000000000000000000000000000000000000000000000000000000000b',
+      '000000000000000000000000000000000000000000000000000000000000000c',
+    ];
+
+    DmConversation room() => DmConversation(
+      id: 'room',
+      participantPubkeys: const [ourPubkey, ...members],
+      isGroup: true,
+      createdAt: 1,
+    );
+
+    test('keeps a group when nobody in it is blocked', () {
+      final service = ContentBlocklistRepository();
+
+      expect(
+        service.filterBlockedConversations([room()], userPubkey: ourPubkey),
+        hasLength(1),
+      );
+    });
+
+    for (final (position, member) in members.indexed) {
+      test(
+        'hides a group whose member in position $position is blocked',
+        () async {
+          final service = ContentBlocklistRepository();
+          await service.blockUser(member, ourPubkey: ourPubkey);
+
+          expect(
+            service.filterBlockedConversations([room()], userPubkey: ourPubkey),
+            isEmpty,
+          );
+        },
+      );
+    }
+
+    group('with mute lists', () {
+      late StreamController<Event> muteEvents;
+      late ContentBlocklistRepository service;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final prefs = await SharedPreferences.getInstance();
+        service = ContentBlocklistRepository(prefs: prefs);
+        muteEvents = StreamController<Event>();
+        final client = _MockNostrClient();
+        when(
+          () => client.subscribe(any()),
+        ).thenAnswer((_) => muteEvents.stream);
+        await service.syncMuteListsInBackground(client, ourPubkey);
+      });
+
+      tearDown(() async {
+        await muteEvents.close();
+      });
+
+      Event muteList(String author, String target) =>
+          Event(
+              author,
+              10000,
+              [
+                ['p', target],
+              ],
+              '',
+              createdAt: 1,
+            )
+            ..id = 'mute-$author'
+            ..sig = 'sig';
+
+      for (final (position, member) in members.indexed) {
+        test('hides a group whose member in position $position is on our own '
+            'mute list', () async {
+          muteEvents.add(muteList(ourPubkey, member));
+          await pumpEventQueue();
+          expect(service.isMutedByUs(member), isTrue);
+
+          expect(
+            service.filterBlockedConversations([room()], userPubkey: ourPubkey),
+            isEmpty,
+          );
+        });
+      }
+
+      test(
+        'keeps a group when its members muted us, wherever they sit',
+        () async {
+          // A third party's list never removes the viewer's own DM threads
+          // (#7345); a group is no exception.
+          for (final member in members) {
+            muteEvents.add(muteList(member, ourPubkey));
+          }
+          await pumpEventQueue();
+          expect(members.every(service.hasMutedUs), isTrue);
+
+          expect(
+            service.filterBlockedConversations([room()], userPubkey: ourPubkey),
+            hasLength(1),
+          );
+        },
+      );
+    });
+  });
+
   group('blockedPubkeysForAccount', () {
     const ourPubkey =
         '0000000000000000000000000000000000000000000000000000000000000001';
