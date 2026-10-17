@@ -132,6 +132,25 @@ void main() {
               'known_message_ids) VALUES (?, ?, ?, ?)',
               [conversationId, owner, 100, '["${'d' * 64}"]'],
             );
+          } else {
+            // A visible legacy message can still be unowned even after its
+            // conversation has an owner. Its replay id must survive upgrade.
+            for (final entry in {'d': '', 'e': 'b' * 64}.entries) {
+              schema.rawDatabase.execute(
+                'INSERT INTO direct_messages (id, conversation_id, '
+                'sender_pubkey, content, created_at, gift_wrap_id, owner_pubkey) '
+                'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [
+                  entry.key * 64,
+                  conversationId,
+                  'b' * 64,
+                  'Legacy',
+                  100,
+                  entry.key * 64,
+                  entry.value,
+                ],
+              );
+            }
           }
           final db = AppDatabase(schema.newConnection());
           addTearDown(db.close);
@@ -147,7 +166,7 @@ void main() {
           expect(marker.read<int>('boundary_timestamp'), 100);
           expect(
             marker.read<String>('known_message_ids'),
-            hasIndependentMarkers ? '["${'d' * 64}"]' : '[]',
+            '["${'d' * 64}"]',
           );
           expect(
             (await db.conversationsDao.getConversation(
@@ -156,6 +175,34 @@ void main() {
             ))!.isDismissed,
             isTrue,
           );
+          if (!hasIndependentMarkers) {
+            await db.directMessagesDao.clearForAccountSwitch(owner);
+            await db.conversationsDao.clearForAccountSwitch(owner);
+            await db.directMessagesDao.insertMessage(
+              id: 'd' * 64,
+              conversationId: conversationId,
+              senderPubkey: 'b' * 64,
+              content: 'Legacy',
+              createdAt: 100,
+              giftWrapId: 'f' * 64,
+              ownerPubkey: owner,
+            );
+            await db.conversationsDao.upsertConversation(
+              id: conversationId,
+              participantPubkeys: '["$owner"]',
+              isGroup: false,
+              createdAt: 100,
+              lastMessageTimestamp: 100,
+              ownerPubkey: owner,
+            );
+            expect(
+              (await db.conversationsDao.getConversation(
+                conversationId,
+                ownerPubkey: owner,
+              ))!.isDismissed,
+              isTrue,
+            );
+          }
           await db.soundRequestStateDao.writeAccount(owner, {
             'jobs': {'pending': '{}'},
           });
