@@ -18,6 +18,7 @@ import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nip04/nip04.dart';
 import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -82,7 +83,7 @@ class _Relay {
   final StreamController<Event> controller =
       StreamController<Event>.broadcast();
   void Function()? onStart;
-  void Function(int)? onEnd;
+  void Function(StoredEventsEnd)? onEnd;
   int handedOver = 0;
 
   List<Event> admitted(List<nostr_filter.Filter> filters) =>
@@ -98,7 +99,9 @@ class _Relay {
       handedOver++;
       controller.add(event);
     }
-    if (count == null) onEnd?.call(handedOver);
+    if (count == null) {
+      onEnd?.call(StoredEventsEnd(deliveredEventCount: handedOver));
+    }
   }
 
   /// A reconnect replays the REQ: the relay sends its stored events again.
@@ -190,7 +193,7 @@ void main() {
             invocation.namedArguments[#onStoredEventsStart] as void Function()?
         ..onEnd =
             invocation.namedArguments[#onStoredEventsEnd]
-                as void Function(int)?;
+                as void Function(StoredEventsEnd)?;
       return relay.controller.stream;
     });
     return client;

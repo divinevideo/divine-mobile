@@ -18,6 +18,7 @@ void main() {
         for (var page = 0; page < 1000; page++) ...[
           dmHistoryDrainSubscriptionId(_pubkey, page),
           dmNip04DrainSubscriptionId(_pubkey, page),
+          dmCatchUpDebtSubscriptionId(_pubkey, page),
         ],
       ];
 

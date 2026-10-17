@@ -67,9 +67,8 @@ class Subscription {
   /// every event received so far has been handed to [onEvent].
   ///
   /// Unlike [onEose], a relay that is not connected does not hold this up.
-  /// The argument is how many events [onEvent] has received for this
-  /// subscription, so a caller can tell when it has handled all of them.
-  void Function(int deliveredEventCount)? onStoredEventsEnd;
+  /// See [StoredEventsEnd] for what it reports.
+  void Function(StoredEventsEnd end)? onStoredEventsEnd;
 
   /// [filters] parsed once at construction.
   ///
@@ -129,4 +128,32 @@ class Subscription {
 
     return json;
   }
+}
+
+/// How a live subscription's stored-events phase ended, as
+/// [Subscription.onStoredEventsEnd] reports it.
+class StoredEventsEnd {
+  /// Creates the report of a stored-events phase that ended.
+  const StoredEventsEnd({
+    required this.deliveredEventCount,
+    this.possiblyCappedRelays = const {},
+  });
+
+  /// How many events [Subscription.onEvent] has received for the
+  /// subscription, so a caller can tell when it has handled all of them.
+  final int deliveredEventCount;
+
+  /// The relays whose stored batch, since the phase last ended, may have
+  /// stopped at the relay's result-size limit rather than run out of
+  /// matching events, keyed by url. Judged as a one-shot read's
+  /// `QueryResult.possiblyCapped` is.
+  ///
+  /// Each value is the oldest `created_at` that relay sent in such a batch.
+  /// A relay sends its newest events first, so it has sent everything it
+  /// holds after that stamp, and anything it withheld lies at or below it.
+  /// When the relay capped more than one batch in the phase, the value is
+  /// the highest of their oldest stamps, which bounds what any of them
+  /// withheld. The value is null when a batch held no event matching the
+  /// filters, so no stamp bounds what the relay withheld.
+  final Map<String, int?> possiblyCappedRelays;
 }

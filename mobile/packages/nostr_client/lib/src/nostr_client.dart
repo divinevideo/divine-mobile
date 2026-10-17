@@ -1877,8 +1877,9 @@ class NostrClient {
   ///
   /// [onStoredEventsEnd] fires when every relay that can still send stored
   /// events has finished, with the number of events this subscription has
-  /// received so far; unlike [onEose], an unreachable relay does not hold it
-  /// up. [onStoredEventsStart] fires when a relay sends them again, after a
+  /// received so far and the relays whose batch may have stopped at their
+  /// result-size limit; unlike [onEose], an unreachable relay does not hold
+  /// it up. [onStoredEventsStart] fires when a relay sends them again, after a
   /// reconnect or a REQ re-sent after AUTH. See
   /// [Subscription.onStoredEventsEnd].
   /// Like [onEose], both belong to the call that opens the subscription: a
@@ -1895,7 +1896,7 @@ class NostrClient {
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
     void Function()? onStoredEventsStart,
-    void Function(int deliveredEventCount)? onStoredEventsEnd,
+    void Function(StoredEventsEnd end)? onStoredEventsEnd,
   }) {
     final effectiveTempRelays = _allowedRelays(tempRelays);
     final effectiveTargetRelays = _allowedRelays(targetRelays);
@@ -1990,6 +1991,14 @@ class NostrClient {
 
     return controller.stream;
   }
+
+  /// The relays whose stored batch for the live subscription
+  /// [subscriptionId] has been judged possibly capped since its stored
+  /// events last ended, without ending that phase; see
+  /// [StoredEventsEnd.possiblyCappedRelays]. A subscriber that stops waiting
+  /// for a slow relay reads this before acting on what has arrived.
+  Map<String, int?> storedEventsPossiblyCapped(String subscriptionId) =>
+      _nostr.storedEventsPossiblyCapped(subscriptionId);
 
   /// Unsubscribes from a subscription
   Future<void> unsubscribe(String subscriptionId) async {
@@ -2088,12 +2097,14 @@ class NostrClient {
   /// A temp relay that IS a pool member resolves to the pooled socket (see
   /// [_hasRelayOutsidePool]), so naming one keeps the whole read in the pool.
   ///
-  /// The only reads that land there today are DmRepository's kind-10050
-  /// legs: one slot per leg, each fanning out to its relays, and at most one
-  /// such leg per lookup at a time. Lookups are not deduplicated, so a send
-  /// and a retry resolving the same recipient together hold a slot each. A
-  /// send resolves every recipient at once against the same indexer, which is
-  /// why they still share a bounded pool rather than going unthrottled.
+  /// The reads that land there today are DmRepository's kind-10050 legs and
+  /// its catch-up debt pages for an inbox relay outside the pool, which read
+  /// one page at a time (#10192). Each kind-10050 leg takes one slot, fanning
+  /// out to its relays, and a lookup runs at most one such leg at a time.
+  /// Lookups are not deduplicated, so a send and a retry resolving the same
+  /// recipient together hold a slot each. A send resolves every recipient at
+  /// once against the same indexer, which is why they still share a bounded
+  /// pool rather than going unthrottled.
   /// Collaborator invites (at most 5) fit in its [maxConcurrentQueries] slots
   /// while nothing else is resolving an inbox beside them. Past that the legs
   /// queue, and with a slow indexer the queued ones can miss their slot
