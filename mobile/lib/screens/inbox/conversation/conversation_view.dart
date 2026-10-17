@@ -2289,8 +2289,9 @@ class _MessageList extends StatelessWidget {
             ),
           );
         }
-        return keyedRow(
-          (_) =>
+        return KeyedSubtree(
+          key: messageKey,
+          child:
               BlocSelector<
                 ConversationBloc,
                 ConversationState,
