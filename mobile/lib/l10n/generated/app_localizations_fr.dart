@@ -5902,8 +5902,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Leurs messages sont masqués ici. Ces personnes voient toujours ce que tu envoies.';
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Démarrer une nouvelle conversation sans ces personnes';
+  String get dmStartChatWithoutBlockedAction => 'Discuter sans ces personnes';
 
   @override
   String get dmHiddenMessageLabel => 'Message masqué';

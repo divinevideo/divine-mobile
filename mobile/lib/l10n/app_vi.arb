@@ -6521,7 +6521,7 @@
   "dmBlockedGroupMembersTitle": "{count, plural, other{Bạn đã chặn {count} người ở đây}}",
   "dmBlockedGroupThreadBody": "Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn từ hồ sơ của họ để trả lời.",
   "dmBlockedGroupMembersBannerBody": "Tin nhắn của họ được ẩn ở đây. Họ vẫn có thể xem những gì bạn gửi.",
-  "dmStartChatWithoutBlockedAction": "Bắt đầu cuộc trò chuyện mới không có họ",
+  "dmStartChatWithoutBlockedAction": "Cuộc trò chuyện mới không có họ",
   "dmHiddenMessageLabel": "Tin nhắn đã ẩn",
   "dmHiddenMessageShowAction": "Hiện",
   "dmUnresolvedThreadTitle": "Không tải được cuộc trò chuyện này",

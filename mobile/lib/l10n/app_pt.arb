@@ -4757,7 +4757,7 @@
   "dmBlockedGroupMembersTitle": "{count, plural, one{Você bloqueou {count} pessoa aqui} many{Você bloqueou {count} pessoas aqui} other{Você bloqueou {count} pessoas aqui}}",
   "dmBlockedGroupThreadBody": "As mensagens ficam aqui para você ler ou fazer captura de tela. Desbloqueie pelo perfil para responder.",
   "dmBlockedGroupMembersBannerBody": "As mensagens dessas pessoas ficam ocultas aqui. Elas ainda podem ver o que você envia.",
-  "dmStartChatWithoutBlockedAction": "Iniciar uma nova conversa sem essas pessoas",
+  "dmStartChatWithoutBlockedAction": "Nova conversa sem essas pessoas",
   "dmHiddenMessageLabel": "Mensagem oculta",
   "dmHiddenMessageShowAction": "Mostrar",
   "dmUnresolvedThreadTitle": "Não foi possível carregar esta conversa",

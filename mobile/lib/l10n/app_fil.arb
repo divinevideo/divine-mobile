@@ -3763,7 +3763,7 @@
   "dmBlockedGroupMembersTitle": "{count, plural, one{Na-block mo ang {count} tao rito} other{Na-block mo ang {count} tao rito}}",
   "dmBlockedGroupThreadBody": "Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. I-unblock mula sa profile nila para makasagot.",
   "dmBlockedGroupMembersBannerBody": "Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.",
-  "dmStartChatWithoutBlockedAction": "Magsimula ng bagong chat nang wala sila",
+  "dmStartChatWithoutBlockedAction": "Bagong chat nang wala sila",
   "dmHiddenMessageLabel": "Nakatagong mensahe",
   "dmHiddenMessageShowAction": "Ipakita",
   "dmUnresolvedThreadTitle": "Hindi na-load ang usapang ito",

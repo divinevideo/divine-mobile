@@ -1391,6 +1391,8 @@ class _BlockedMembersBanner extends ConsumerWidget {
             semanticLabel: l10n.dmStartChatWithoutBlockedAction,
             type: DivineButtonType.secondary,
             size: DivineButtonSize.small,
+            // A long translation wraps instead of losing "without them".
+            maxLines: 2,
             onPressed: onStartChatWithout,
           ),
         ],

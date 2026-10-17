@@ -5858,8 +5858,7 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.';
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Magsimula ng bagong chat nang wala sila';
+  String get dmStartChatWithoutBlockedAction => 'Bagong chat nang wala sila';
 
   @override
   String get dmHiddenMessageLabel => 'Nakatagong mensahe';
