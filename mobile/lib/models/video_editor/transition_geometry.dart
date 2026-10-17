@@ -301,8 +301,8 @@ double _elasticOut(double t) => t == 0 || t == 1
     ? t
     : math.pow(2, -10 * t) * math.sin((t - 0.075) * 2 * math.pi / 0.3) + 1;
 
-/// The point where the exported video of [clips] ends and starts over: its
-/// output duration, capped at [VideoEditorConstants.maxDuration].
+/// Where an exported video [outputDuration] long ends and starts over: capped
+/// at [VideoEditorConstants.maxDuration].
 Duration _loopPoint(Duration outputDuration) =>
     outputDuration < VideoEditorConstants.maxDuration
     ? outputDuration
@@ -624,6 +624,10 @@ class TransitionTimelineMap {
   /// blend, including the loop-restart wrap's. This is what the final export
   /// lasts.
   final Duration outputDuration;
+
+  /// Where the posted video ends and starts over: [outputDuration], capped
+  /// where the export stops at [VideoEditorConstants.maxDuration].
+  Duration get loopPoint => _loopPoint(outputDuration);
 
   /// Where flash transitions start to flash on the exported video, in order,
   /// after [clampTransitions] has spaced them; one past the loop point never

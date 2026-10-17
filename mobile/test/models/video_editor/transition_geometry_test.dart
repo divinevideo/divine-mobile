@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -489,6 +490,21 @@ void main() {
 
         expect(map.editorDuration, equals(const Duration(seconds: 2)));
         expect(map.outputDuration, equals(const Duration(milliseconds: 1500)));
+      });
+
+      test('loops where the output ends, or where the export stops', () {
+        final short = TransitionTimelineMap.fromClips([
+          clip('a', const Duration(seconds: 1), transition: overlap500),
+          clip('b', const Duration(seconds: 1)),
+        ]);
+        final long = TransitionTimelineMap.fromClips([
+          clip('a', const Duration(seconds: 5), transition: overlap500),
+          clip('b', const Duration(seconds: 5)),
+        ]);
+
+        expect(short.loopPoint, const Duration(milliseconds: 1500));
+        expect(long.outputDuration, const Duration(milliseconds: 9500));
+        expect(long.loopPoint, VideoEditorConstants.maxDuration);
       });
 
       test('is equal for clips that place time alike', () {

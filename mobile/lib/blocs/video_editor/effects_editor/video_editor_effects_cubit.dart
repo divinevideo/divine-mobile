@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/close_guard.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
@@ -60,10 +59,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
     required List<DivineVideoClip> clips,
   }) {
     final timelineMap = TransitionTimelineMap.fromClips(clips);
-    final outputDuration = timelineMap.outputDuration;
-    final videoEnd = outputDuration < VideoEditorConstants.maxDuration
-        ? outputDuration
-        : VideoEditorConstants.maxDuration;
+    final videoEnd = timelineMap.loopPoint;
     emit(
       state.copyWith(
         beatInput: VideoEditorBeatInput(

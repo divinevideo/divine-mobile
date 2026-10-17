@@ -3,7 +3,6 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -336,11 +335,7 @@ List<VideoEffect> videoEffectsOnOutput(
       ),
     );
   }
-  // The posted video ends, and starts over, where the export is capped.
-  final outputDuration = timelineMap.outputDuration;
-  final loopPoint = outputDuration < VideoEditorConstants.maxDuration
-      ? outputDuration
-      : VideoEditorConstants.maxDuration;
+  final loopPoint = timelineMap.loopPoint;
   return _withinFlashLimit(
     _endFlashingBeforeLoopPoint(result, loopPoint: loopPoint),
     loopPoint: loopPoint,
