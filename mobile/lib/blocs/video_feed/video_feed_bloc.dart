@@ -1207,7 +1207,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
               skipCache: skipCache,
               revalidate: revalidate,
             ),
-    VideoFeedSourceType.following => _fetchFollowingWithBadges(until: until),
+    VideoFeedSourceType.following => _fetchFollowingWithBadges(
+      cursor: paginationCursor,
+    ),
     VideoFeedSourceType.subscribedHashtag => _fetchHashtagVideos(
       source.hashtag!,
       skipCache: skipCache,
@@ -1260,15 +1262,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     );
   }
 
-  Future<HomeFeedResult> _fetchFollowingWithBadges({int? until}) async {
-    final badgeAuthors = until != null && _cachedBadgeAuthors != null
+  Future<HomeFeedResult> _fetchFollowingWithBadges({String? cursor}) async {
+    final badgeAuthors = cursor != null && _cachedBadgeAuthors != null
         ? _cachedBadgeAuthors!
         : await _loadBadgeAuthors();
     _cachedBadgeAuthors = badgeAuthors;
     _hasBadgeAuthors = badgeAuthors.isNotEmpty;
     if (badgeAuthors.isNotEmpty) {
       try {
-        if (until == null || _badgeVideoPager == null) {
+        if (cursor == null || _badgeVideoPager == null) {
           _badgeVideoPager = _videosRepository.createBadgeVideoPager([
             ..._followRepository.followingPubkeys,
             ...badgeAuthors,
@@ -1276,11 +1278,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         }
         final pager = _badgeVideoPager!;
         final videos = await pager.loadMore(limit: 5);
-        return HomeFeedResult(videos: videos, hasMore: pager.hasMore);
+        return HomeFeedResult(
+          videos: videos,
+          hasMore: pager.hasMore,
+          // Resume the live pager's buffers and offsets with an opaque token.
+          paginationCursor: pager.hasMore ? 'badge-following' : null,
+        );
       } catch (error, stackTrace) {
         // A later page keeps the merged feed's ordering; only the first page
         // may fall back without mixing two orderings in one list.
-        if (until != null || _followRepository.followingPubkeys.isEmpty) {
+        if (cursor != null || _followRepository.followingPubkeys.isEmpty) {
           rethrow;
         }
         Log.warning(
@@ -1298,7 +1305,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     return _videosRepository.getHomeFeedVideos(
       authors: _followRepository.followingPubkeys,
       userPubkey: _userPubkey,
-      until: until,
+      cursor: cursor,
     );
   }
 
