@@ -336,14 +336,9 @@ _Clamped _withSpacedFlashes(
       dissolved.add(moment.clipId);
     }
   }
+  // No log here: this runs from build methods and selectors many times a
+  // frame, and each seam render logs the type it draws.
   if (dissolved.isEmpty) return (transitions: transitions, flashes: kept);
-  Log.debug(
-    '⚡ ${dissolved.length} flash transition(s) within '
-    '${minimumFlashTransitionGap.inMilliseconds}ms of another play as a '
-    'dissolve',
-    name: _logName,
-    category: .video,
-  );
   return (
     transitions: {
       for (final entry in transitions.entries)
