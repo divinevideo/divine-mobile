@@ -5923,6 +5923,12 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wiadomości zostają tutaj, więc możesz je przeczytać lub zrobić zrzut ekranu. Aby odpowiedzieć, odblokuj w profilu.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Nie udało się wczytać tej rozmowy';
 
   @override

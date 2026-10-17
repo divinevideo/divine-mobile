@@ -5745,6 +5745,12 @@ class AppLocalizationsAr extends AppLocalizations {
       'تبقى الرسائل هنا لقراءتها أو التقاط صورة للشاشة. للرد، يلزم إلغاء الحظر من الملف الشخصي.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'تعذّر تحميل هذه المحادثة';
 
   @override

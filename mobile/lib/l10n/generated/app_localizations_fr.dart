@@ -5854,6 +5854,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les messages restent ici pour que tu puisses les lire ou les capturer. Pour répondre, débloque depuis le profil concerné.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Impossible de charger cette conversation';
 

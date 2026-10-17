@@ -3646,6 +3646,14 @@
   "@dmBlockedGroupThreadBody": {
     "description": "Body of the notice replacing the composer in a group conversation where the viewer blocked one or more members. Explains that history is preserved and that replying again means unblocking those members, which is done on each member's profile because the group itself has no unblock action."
   },
+  "dmHiddenMessageLabel": "Hidden message",
+  "@dmHiddenMessageLabel": {
+    "description": "Shown in place of a message from someone the viewer blocked or muted, in a group conversation and as that group's inbox preview. The message is still on the device; tapping Show reveals it."
+  },
+  "dmHiddenMessageShowAction": "Show",
+  "@dmHiddenMessageShowAction": {
+    "description": "Button beside a hidden message in a group conversation that reveals that one message."
+  },
   "dmUnresolvedThreadTitle": "We couldn't load this conversation",
   "@dmUnresolvedThreadTitle": {
     "description": "Title of the notice that replaces the message composer when the app cannot tell who a conversation is with because its participants failed to load. Replying is off because there is no one to address."

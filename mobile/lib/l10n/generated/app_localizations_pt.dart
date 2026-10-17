@@ -5816,6 +5816,12 @@ class AppLocalizationsPt extends AppLocalizations {
       'As mensagens ficam aqui para você ler ou fazer captura de tela. Desbloqueie pelo perfil para responder.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Não foi possível carregar esta conversa';
 

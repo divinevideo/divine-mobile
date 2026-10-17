@@ -5810,6 +5810,12 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. I-unblock mula sa profile nila para makasagot.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Hindi na-load ang usapang ito';
 
   @override

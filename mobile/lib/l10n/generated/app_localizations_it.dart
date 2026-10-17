@@ -5836,6 +5836,12 @@ class AppLocalizationsIt extends AppLocalizations {
       'I messaggi restano qui così puoi leggerli o farne uno screenshot. Per rispondere, sblocca dal profilo.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Impossibile caricare questa conversazione';
 

@@ -5737,6 +5737,12 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn từ hồ sơ của họ để trả lời.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Không tải được cuộc trò chuyện này';
 
   @override

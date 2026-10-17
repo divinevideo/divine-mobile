@@ -5828,6 +5828,12 @@ class AppLocalizationsBg extends AppLocalizations {
       'Съобщенията остават тук, за да можеш да ги прочетеш или да направиш екранна снимка. Отблокирай от профила им, за да отговориш.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Този разговор не се зареди';
 
   @override

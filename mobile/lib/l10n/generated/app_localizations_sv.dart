@@ -5765,6 +5765,12 @@ class AppLocalizationsSv extends AppLocalizations {
       'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen via deras profil för att svara.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Det gick inte att läsa in den här konversationen';
 

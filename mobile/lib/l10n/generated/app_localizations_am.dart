@@ -5639,6 +5639,12 @@ class AppLocalizationsAm extends AppLocalizations {
       'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ ከመገለጫቸው እገዳውን ያንሱ።';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'ይህን ውይይት መጫን አልተቻለም';
 
   @override

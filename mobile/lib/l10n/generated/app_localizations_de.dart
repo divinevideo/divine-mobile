@@ -5849,6 +5849,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Nachrichten bleiben hier, damit du sie lesen oder einen Screenshot machen kannst. Hebe die Blockierung im jeweiligen Profil auf, um zu antworten.';
 
   @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Diese Unterhaltung konnte nicht geladen werden';
 
