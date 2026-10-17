@@ -244,6 +244,14 @@ columns and are filtered at flush, so they never leaked — they are cleaned on
 `deleteAccountData`, scoped by owner. An unscoped delete there would destroy a
 still-signed-in account's queued work.
 
+Owner-scoped rows can also be kept on purpose. `conversations` rows survive a
+switch or sign-out while the device still knows the account, so its chats come
+back read instead of waiting for a read marker that may be outside the first
+download (#10276). They are deleted when the account is removed from the device
+or deleted, and `UserDataCleanupService.sweepConversationsOfUnknownAccounts`
+deletes rows whose owner is no longer a known account. Keeping is only safe
+because every read filters by owner.
+
 Enforced by `check_prefs_key_classification.sh`; see AGENTS.md.
 
 ## Corruption Salvage

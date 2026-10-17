@@ -995,9 +995,10 @@ class DmMessageReactions extends Table {
   /// reaction's recipients.
   ///
   /// A retry or a removal replays this set instead of re-reading
-  /// `conversations`, whose rows an account switch deletes while the queued
-  /// rows here are kept, set included (#7880). A self-wrap echo that re-files
-  /// the row under another conversation leaves the set as it is.
+  /// `conversations`, whose rows removing the account from the device deletes
+  /// while the queued rows here are kept, set included (#7880). A self-wrap
+  /// echo that re-files the row under another conversation leaves the set as
+  /// it is.
   ///
   /// NULL means the set is not established: a received reaction, a row
   /// queued before schema v20, a row queued while its recipients could not
@@ -1089,7 +1090,8 @@ class Conversations extends Table {
       boolean().withDefault(const Constant(true)).named('is_read')();
 
   /// Cached dismissal projection. [ConversationDismissals] retains the state
-  /// when sign-out or account switching clears these conversation rows.
+  /// when these conversation rows are deleted, as removing the account from
+  /// the device does; sign-out and account switching keep them (#10276).
   BoolColumn get isDismissed =>
       boolean().withDefault(const Constant(false)).named('is_dismissed')();
 

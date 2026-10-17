@@ -1,7 +1,7 @@
 // ABOUTME: Regression coverage for #7880 — a queued DM reaction, or a queued
-// ABOUTME: kind-5 removal, is sent to the people it was queued for. An account
-// ABOUTME: switch deletes the conversation rows a retry used to read them
-// ABOUTME: from, which narrowed a group reaction to the message's author.
+// ABOUTME: kind-5 removal, is sent to the people it was queued for. Removing an
+// ABOUTME: account from the device deletes the conversation rows a retry used
+// ABOUTME: to read them from, which narrowed a group reaction to its author.
 
 import 'dart:convert';
 
@@ -139,10 +139,10 @@ void main() {
       return conversationId;
     }
 
-    /// The cleanup the incoming account runs for the one that left
+    /// The cleanup that runs when the account is removed from the device
     /// (`social_providers.dart`): its messages and conversations go, and so
     /// does every reaction row except the ones still waiting to be sent.
-    Future<void> switchAccountAwayAndBack() async {
+    Future<void> removeAccountFromDeviceAndReturn() async {
       await db.transaction(() async {
         await messagesDao.clearForAccountSwitch(_owner);
         await conversationsDao.clearForAccountSwitch(_owner);
@@ -230,7 +230,7 @@ void main() {
       );
     }
 
-    group('after an account switch', () {
+    group('after the account is removed from the device and returns', () {
       test('a queued group reaction is sent to every member', () async {
         final group = await seedConversation([_owner, _peer, _peer2]);
         final rumorId = await queueReactionOffline(
@@ -239,7 +239,7 @@ void main() {
           targetMessageAuthor: _peer,
         );
 
-        await switchAccountAwayAndBack();
+        await removeAccountFromDeviceAndReturn();
         final result = await reactions.retry(
           rumorId: rumorId,
           targetMessageAuthor: _peer,
@@ -263,7 +263,7 @@ void main() {
             targetMessageAuthor: _owner,
           );
 
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final result = await reactions.retry(
             rumorId: rumorId,
             targetMessageAuthor: _owner,
@@ -287,7 +287,7 @@ void main() {
             targetMessageAuthor: _owner,
           );
 
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final result = await reactions.retry(
             rumorId: rumorId,
             targetMessageAuthor: _owner,
@@ -308,7 +308,7 @@ void main() {
             targetMessageAuthor: _peer,
           );
 
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final outcome = await reactions.retryDeletion(
             rumorId: rumorId,
             targetMessageAuthor: _peer,
@@ -587,7 +587,7 @@ void main() {
           );
           await forgetStoredRecipients();
 
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final result = await reactions.retry(
             rumorId: rumorId,
             targetMessageAuthor: _peer,
@@ -615,7 +615,7 @@ void main() {
           );
           await forgetStoredRecipients();
 
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final outcome = await reactions.retryDeletion(
             rumorId: rumorId,
             targetMessageAuthor: _peer,
@@ -780,7 +780,7 @@ void main() {
             targetMessageAuthor: _peer,
           );
           await forgetStoredRecipients();
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final direct = await seedConversation([_owner, _peer]);
           stubWire(lands: false);
           await reactions.publish(
@@ -839,7 +839,7 @@ void main() {
               targetMessageAuthor: _peer,
             );
             await forgetStoredRecipients();
-            await switchAccountAwayAndBack();
+            await removeAccountFromDeviceAndReturn();
             await syncBackPeerMessage(pTags: [_owner, _peer2]);
 
             final result = await reactions.retry(
@@ -865,7 +865,7 @@ void main() {
               targetMessageAuthor: _peer,
             );
             await forgetStoredRecipients();
-            await switchAccountAwayAndBack();
+            await removeAccountFromDeviceAndReturn();
             await syncBackPeerMessage(pTags: [_owner, _peer2]);
             final queued = await reactionsDao.getById(
               id: rumorId,
@@ -907,7 +907,7 @@ void main() {
               targetMessageAuthor: _peer,
             );
             await forgetStoredRecipients();
-            await switchAccountAwayAndBack();
+            await removeAccountFromDeviceAndReturn();
             final direct = DmRepository.computeConversationId([
               _owner,
               _peer,
@@ -945,7 +945,7 @@ void main() {
               targetMessageAuthor: _peer,
             );
             await forgetStoredRecipients();
-            await switchAccountAwayAndBack();
+            await removeAccountFromDeviceAndReturn();
             await syncBackPeerMessage(pTags: [_owner]);
 
             final result = await reactions.retry(
@@ -969,7 +969,7 @@ void main() {
         );
         await forgetStoredRecipients();
 
-        await switchAccountAwayAndBack();
+        await removeAccountFromDeviceAndReturn();
         final result = await reactions.retry(
           rumorId: rumorId,
           targetMessageAuthor: _peer,
@@ -990,7 +990,7 @@ void main() {
             targetMessageAuthor: _owner,
           );
           await forgetStoredRecipients();
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
 
           final held = await reactions.retry(
             rumorId: rumorId,
@@ -1013,7 +1013,7 @@ void main() {
 
       test(
         'a retry records the recipients it resolved, so the next one survives '
-        'an account switch',
+        'the account being removed from the device',
         () async {
           final group = await seedConversation([_owner, _peer, _peer2]);
           final rumorId = await queueReactionOffline(
@@ -1027,7 +1027,7 @@ void main() {
           wire.clear();
           stubWire(lands: true);
 
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final result = await reactions.retry(
             rumorId: rumorId,
             targetMessageAuthor: _peer,
@@ -1091,7 +1091,7 @@ void main() {
             targetMessageAuthor: _peer,
           );
           await forgetStoredRecipients();
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           await messagesDao.insertMessage(
             id: _peerMessageId,
             conversationId: await seedConversation([_owner, _peer]),
@@ -1163,12 +1163,12 @@ void main() {
           targetMessageAuthor: _peer,
         );
         await forgetStoredRecipients();
-        await switchAccountAwayAndBack();
+        await removeAccountFromDeviceAndReturn();
 
         expect(
           await reactions.retryableReactions(),
           hasLength(1),
-          reason: 'precondition: the queued reaction survived the switch',
+          reason: 'precondition: the queued reaction survived the removal',
         );
 
         final filled = await reactions.backfillQueuedRecipients(
@@ -1197,7 +1197,7 @@ void main() {
           userPubkey: _owner,
           messageService: messageService,
         );
-        await switchAccountAwayAndBack();
+        await removeAccountFromDeviceAndReturn();
         await reactions.retry(rumorId: rumorId, targetMessageAuthor: _peer);
 
         expect(filled, equals(1));
@@ -1218,7 +1218,7 @@ void main() {
             targetMessageAuthor: _peer,
           );
           await forgetStoredRecipients();
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
 
           reactions.clearCredentials();
           final filled = await reactions.backfillQueuedRecipients(
@@ -1245,7 +1245,7 @@ void main() {
             targetMessageAuthor: _peer,
           );
           await forgetStoredRecipients();
-          await switchAccountAwayAndBack();
+          await removeAccountFromDeviceAndReturn();
           final direct = await seedConversation([_owner, _peer]);
           await messagesDao.insertMessage(
             id: _peerMessageId,
@@ -1325,7 +1325,7 @@ void main() {
           userPubkey: _owner,
           reactionsRepository: reactions,
         ).getConversations();
-        await switchAccountAwayAndBack();
+        await removeAccountFromDeviceAndReturn();
         await reactions.retry(rumorId: rumorId, targetMessageAuthor: _peer);
 
         expect(

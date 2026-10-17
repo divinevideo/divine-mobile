@@ -11203,9 +11203,10 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
   /// reaction's recipients.
   ///
   /// A retry or a removal replays this set instead of re-reading
-  /// `conversations`, whose rows an account switch deletes while the queued
-  /// rows here are kept, set included (#7880). A self-wrap echo that re-files
-  /// the row under another conversation leaves the set as it is.
+  /// `conversations`, whose rows removing the account from the device deletes
+  /// while the queued rows here are kept, set included (#7880). A self-wrap
+  /// echo that re-files the row under another conversation leaves the set as
+  /// it is.
   ///
   /// NULL means the set is not established: a received reaction, a row
   /// queued before schema v20, a row queued while its recipients could not
@@ -12079,7 +12080,8 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
   final bool isRead;
 
   /// Cached dismissal projection. [ConversationDismissals] retains the state
-  /// when sign-out or account switching clears these conversation rows.
+  /// when these conversation rows are deleted, as removing the account from
+  /// the device does; sign-out and account switching keep them (#10276).
   final bool isDismissed;
 
   /// Per-conversation read cursor (unix seconds) for cross-device read-state

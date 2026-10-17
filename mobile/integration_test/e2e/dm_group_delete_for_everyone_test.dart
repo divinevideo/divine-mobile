@@ -1,9 +1,9 @@
 // ABOUTME: E2E for #8188 — a group DM must carry ONE shared rumor id, so
 // ABOUTME: delete-for-everyone reaches every participant and a reaction from
 // ABOUTME: one member lands for the rest. Also #7880 — a reaction queued
-// ABOUTME: offline still lands for the rest after an account switch. Three
-// ABOUTME: real DmRepository stacks over real sockets. Requires: NO Docker
-// ABOUTME: stack — everything is local.
+// ABOUTME: offline still lands for the rest after the account is removed from
+// ABOUTME: the device and comes back. Three real DmRepository stacks over real
+// ABOUTME: sockets. Requires: NO Docker stack — everything is local.
 
 @Tags(['service'])
 library;
@@ -343,134 +343,141 @@ void main() {
     );
   });
 
-  group('#7880 queued group reaction after an account switch', () {
-    testWidgets(
-      'a reaction queued offline still lands for EVERY participant once the '
-      'reactor has switched account and back',
-      (tester) async {
-        final relay = await FakeRelay.start(broadcast: true);
-        addTearDown(relay.stop);
+  group(
+    '#7880 queued group reaction after removing the account from the device',
+    () {
+      testWidgets(
+        'a reaction queued offline still lands for EVERY participant once the '
+        'reactor was removed from the device and signed back in',
+        (tester) async {
+          final relay = await FakeRelay.start(broadcast: true);
+          addTearDown(relay.stop);
 
-        var reactorOffline = false;
-        final reactor = await buildParty(
-          relay,
-          keyA,
-          isOffline: () async => reactorOffline,
-        );
-        final author = await buildParty(relay, keyB);
-        final bystander = await buildParty(relay, keyC);
-
-        await reactor.repository.startListening();
-        await author.repository.startListening();
-        await bystander.repository.startListening();
-        await waitFor(
-          () async =>
-              relay.receivedFrames
-                  .where(
-                    (f) =>
-                        f.isNotEmpty &&
-                        f[0] == 'REQ' &&
-                        f.length >= 2 &&
-                        (f[1] as String).startsWith('dm_inbox_'),
-                  )
-                  .length >=
-              3,
-        );
-
-        // The reactor has never written to this room. It files the author's
-        // message under the room because the rumor names all three (#7338).
-        final groupId = DmRepository.computeConversationId([pubA, pubB, pubC]);
-
-        final sent = await author.repository.sendGroupMessage(
-          recipientPubkeys: [reactor.pubkey, bystander.pubkey],
-          content: 'react to me',
-        );
-        expect(sent.where((r) => r.success), hasLength(2));
-        // Every member's wrap carries the same rumor (#8188).
-        final targetId = sent.first.rumorEventId!;
-
-        final everyoneHoldsTheMessage = await waitFor(() async {
-          final r = await reactor.messages.getMessageById(
-            targetId,
-            ownerPubkey: reactor.pubkey,
+          var reactorOffline = false;
+          final reactor = await buildParty(
+            relay,
+            keyA,
+            isOffline: () async => reactorOffline,
           );
-          final c = await bystander.messages.getMessageById(
-            targetId,
-            ownerPubkey: bystander.pubkey,
-          );
-          return r?.conversationId == groupId && c != null;
-        });
-        expect(
-          everyoneHoldsTheMessage,
-          isTrue,
-          reason: 'precondition: the reactor holds the message in the group',
-        );
+          final author = await buildParty(relay, keyB);
+          final bystander = await buildParty(relay, keyC);
 
-        Future<bool> holdsTheReaction(_Party party) async =>
-            (await party.db.select(party.db.dmMessageReactions).get()).any(
-              (row) =>
-                  row.ownerPubkey == party.pubkey &&
-                  row.targetMessageId == targetId &&
-                  row.reactorPubkey == reactor.pubkey,
+          await reactor.repository.startListening();
+          await author.repository.startListening();
+          await bystander.repository.startListening();
+          await waitFor(
+            () async =>
+                relay.receivedFrames
+                    .where(
+                      (f) =>
+                          f.isNotEmpty &&
+                          f[0] == 'REQ' &&
+                          f.length >= 2 &&
+                          (f[1] as String).startsWith('dm_inbox_'),
+                    )
+                    .length >=
+                3,
+          );
+
+          // The reactor has never written to this room. It files the author's
+          // message under the room because the rumor names all three (#7338).
+          final groupId = DmRepository.computeConversationId([
+            pubA,
+            pubB,
+            pubC,
+          ]);
+
+          final sent = await author.repository.sendGroupMessage(
+            recipientPubkeys: [reactor.pubkey, bystander.pubkey],
+            content: 'react to me',
+          );
+          expect(sent.where((r) => r.success), hasLength(2));
+          // Every member's wrap carries the same rumor (#8188).
+          final targetId = sent.first.rumorEventId!;
+
+          final everyoneHoldsTheMessage = await waitFor(() async {
+            final r = await reactor.messages.getMessageById(
+              targetId,
+              ownerPubkey: reactor.pubkey,
             );
-
-        reactorOffline = true;
-        final queued = await reactor.reactions.publish(
-          conversationId: groupId,
-          targetMessageId: targetId,
-          targetMessageAuthor: author.pubkey,
-          emoji: '🔥',
-        );
-        expect(queued.success, isFalse);
-        expect(await reactor.reactions.retryableReactions(), hasLength(1));
-
-        // The database half of what the incoming account runs for the one
-        // that left (`social_providers.dart`): its messages and conversations
-        // go, and every reaction row except the ones still waiting to be sent.
-        await reactor.db.transaction(() async {
-          await reactor.messages.clearForAccountSwitch(reactor.pubkey);
-          await reactor.db.conversationsDao.clearForAccountSwitch(
-            reactor.pubkey,
+            final c = await bystander.messages.getMessageById(
+              targetId,
+              ownerPubkey: bystander.pubkey,
+            );
+            return r?.conversationId == groupId && c != null;
+          });
+          expect(
+            everyoneHoldsTheMessage,
+            isTrue,
+            reason: 'precondition: the reactor holds the message in the group',
           );
-        });
-        await reactor.reactionsDao.deleteNonRetryableForOwner(reactor.pubkey);
-        expect(
-          await reactor.db.conversationsDao.getConversation(
-            groupId,
-            ownerPubkey: reactor.pubkey,
-          ),
-          isNull,
-          reason: 'precondition: the switch removed the group conversation',
-        );
-        expect(
-          await holdsTheReaction(author) || await holdsTheReaction(bystander),
-          isFalse,
-          reason: 'precondition: the offline reaction reached nobody',
-        );
 
-        reactorOffline = false;
-        final retried = await reactor.reactions.retry(
-          rumorId: queued.rumorId,
-          targetMessageAuthor: author.pubkey,
-        );
+          Future<bool> holdsTheReaction(_Party party) async =>
+              (await party.db.select(party.db.dmMessageReactions).get()).any(
+                (row) =>
+                    row.ownerPubkey == party.pubkey &&
+                    row.targetMessageId == targetId &&
+                    row.reactorPubkey == reactor.pubkey,
+              );
 
-        final landed = await waitFor(
-          () async =>
-              await holdsTheReaction(author) &&
-              await holdsTheReaction(bystander),
-        );
+          reactorOffline = true;
+          final queued = await reactor.reactions.publish(
+            conversationId: groupId,
+            targetMessageId: targetId,
+            targetMessageAuthor: author.pubkey,
+            emoji: '🔥',
+          );
+          expect(queued.success, isFalse);
+          expect(await reactor.reactions.retryableReactions(), hasLength(1));
 
-        expect(
-          landed,
-          isTrue,
-          reason:
-              'the retry must send the reaction to the people it was queued '
-              'for — with the conversation gone it went to the author of the '
-              'message alone and was recorded as delivered',
-        );
-        expect(retried.success, isTrue);
-        expect(await reactor.reactions.retryableReactions(), isEmpty);
-      },
-    );
-  });
+          // The database half of removing the account from the device
+          // (`social_providers.dart`): its messages and conversations go, and
+          // every reaction row except the ones still waiting to be sent.
+          await reactor.db.transaction(() async {
+            await reactor.messages.clearForAccountSwitch(reactor.pubkey);
+            await reactor.db.conversationsDao.clearForAccountSwitch(
+              reactor.pubkey,
+            );
+          });
+          await reactor.reactionsDao.deleteNonRetryableForOwner(reactor.pubkey);
+          expect(
+            await reactor.db.conversationsDao.getConversation(
+              groupId,
+              ownerPubkey: reactor.pubkey,
+            ),
+            isNull,
+            reason: 'precondition: the removal deleted the group conversation',
+          );
+          expect(
+            await holdsTheReaction(author) || await holdsTheReaction(bystander),
+            isFalse,
+            reason: 'precondition: the offline reaction reached nobody',
+          );
+
+          reactorOffline = false;
+          final retried = await reactor.reactions.retry(
+            rumorId: queued.rumorId,
+            targetMessageAuthor: author.pubkey,
+          );
+
+          final landed = await waitFor(
+            () async =>
+                await holdsTheReaction(author) &&
+                await holdsTheReaction(bystander),
+          );
+
+          expect(
+            landed,
+            isTrue,
+            reason:
+                'the retry must send the reaction to the people it was queued '
+                'for — with the conversation gone it went to the author of the '
+                'message alone and was recorded as delivered',
+          );
+          expect(retried.success, isTrue);
+          expect(await reactor.reactions.retryableReactions(), isEmpty);
+        },
+      );
+    },
+  );
 }

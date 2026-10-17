@@ -517,7 +517,10 @@ class DmMessageDeletionRetryTarget {
 /// Nothing here expires. No DM table is pruned by age or size: rows leave only
 /// when the user removes a conversation, when an account is switched or signed
 /// out, or when the account's data is deleted. `pending_gift_wraps` is the one
-/// exception, bounded by its decrypt-attempt cap.
+/// exception, bounded by its decrypt-attempt cap. A switch or sign-out keeps
+/// the account's `conversations` rows, which hold its read state, until the
+/// account is removed from the device or the device no longer knows it
+/// (#10276).
 ///
 /// That makes the **relay** the binding constraint on how long a message
 /// survives, not this repository. NIP-59 makes storing a `kind:1059` optional
