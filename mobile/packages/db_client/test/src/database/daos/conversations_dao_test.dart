@@ -1012,6 +1012,108 @@ void main() {
       });
     });
 
+    group('pinReadCursorsToLatestMessage (#10276)', () {
+      Future<void> seed({
+        required String id,
+        required int lastMessageAt,
+        required bool isRead,
+        String? owner = 'owner_a',
+      }) => dao.upsertConversation(
+        id: id,
+        participantPubkeys: '["a","b"]',
+        isGroup: false,
+        createdAt: 1700000000,
+        lastMessageTimestamp: lastMessageAt,
+        lastMessageSenderPubkey: 'b',
+        isRead: isRead,
+        ownerPubkey: owner,
+      );
+
+      test(
+        'pins a read conversation without a cursor to its latest message',
+        () async {
+          // Read because the user sent the last message: no cursor was ever
+          // written, so nothing records the read state once the row's preview
+          // columns are rebuilt.
+          await seed(id: 'conv_1', lastMessageAt: 1700000400, isRead: true);
+          expect(
+            (await dao.getConversation('conv_1'))!.lastReadTimestamp,
+            isNull,
+          );
+
+          final pinned = await dao.pinReadCursorsToLatestMessage('owner_a');
+
+          expect(pinned, 1);
+          final result = await dao.getConversation('conv_1');
+          expect(result!.isRead, isTrue);
+          expect(result.lastReadTimestamp, 1700000400);
+        },
+      );
+
+      test(
+        'leaves an unread conversation and its cursor as they were',
+        () async {
+          await seed(id: 'conv_1', lastMessageAt: 1700000500, isRead: false);
+          await dao.applyReadCursor(
+            'conv_1',
+            1700000100,
+            ownerPubkey: 'owner_a',
+          );
+
+          final pinned = await dao.pinReadCursorsToLatestMessage('owner_a');
+
+          expect(pinned, 0);
+          final result = await dao.getConversation('conv_1');
+          expect(result!.isRead, isFalse);
+          expect(result.lastReadTimestamp, 1700000100);
+        },
+      );
+
+      test(
+        'never lowers a cursor that is already past the latest message',
+        () async {
+          await seed(id: 'conv_1', lastMessageAt: 1700000300, isRead: true);
+          await dao.applyReadCursor(
+            'conv_1',
+            1700000500,
+            ownerPubkey: 'owner_a',
+          );
+
+          final pinned = await dao.pinReadCursorsToLatestMessage('owner_a');
+
+          expect(pinned, 0);
+          final result = await dao.getConversation('conv_1');
+          expect(result!.lastReadTimestamp, 1700000500);
+        },
+      );
+
+      test('pins only the named owner', () async {
+        await seed(id: 'conv_a', lastMessageAt: 1700000400, isRead: true);
+        await seed(
+          id: 'conv_b',
+          lastMessageAt: 1700000400,
+          isRead: true,
+          owner: 'owner_b',
+        );
+        await seed(
+          id: 'conv_legacy',
+          lastMessageAt: 1700000400,
+          isRead: true,
+          owner: '',
+        );
+
+        final pinned = await dao.pinReadCursorsToLatestMessage('owner_a');
+
+        expect(pinned, 1);
+        final b = await dao.getConversation('conv_b', ownerPubkey: 'owner_b');
+        expect(b!.lastReadTimestamp, isNull);
+        final legacy = (await dao.getAllConversations()).singleWhere(
+          (row) => row.id == 'conv_legacy',
+        );
+        expect(legacy.lastReadTimestamp, isNull);
+      });
+    });
+
     group('isRead conflict semantics', () {
       test(
         'older backfill wrap does not re-mark a read conversation unread',

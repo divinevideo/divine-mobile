@@ -508,6 +508,29 @@ END
     return rows > 0;
   }
 
+  /// Advances the read cursor of every read conversation [ownerPubkey] owns to
+  /// its latest message, the rule [markAsRead] applies to one row.
+  ///
+  /// A conversation can be read with no cursor at all, because the user sent
+  /// its last message. Called when the account is left with its conversations
+  /// kept and its messages deleted: preview backfill then clears
+  /// `last_message_timestamp`, and from there only the cursor tells
+  /// [upsertConversation] that a re-downloaded message was already read
+  /// (#10276). Matches the exact owner, never legacy rows. Returns the number
+  /// of conversations whose cursor moved.
+  Future<int> pinReadCursorsToLatestMessage(String ownerPubkey) {
+    return customUpdate(
+      'UPDATE conversations SET last_read_timestamp = '
+      'COALESCE(last_message_timestamp, 0) '
+      'WHERE owner_pubkey = ? AND is_read = 1 '
+      'AND COALESCE(last_read_timestamp, 0) < '
+      'COALESCE(last_message_timestamp, 0)',
+      variables: [Variable(ownerPubkey)],
+      updates: {attachedDatabase.conversations},
+      updateKind: UpdateKind.update,
+    );
+  }
+
   /// Owner filter for raw SQL retained by legacy repair queries: empty when
   /// [ownerPubkey] is null (all rows), else owner-or-legacy.
   String _ownerSqlClause(String? ownerPubkey) => ownerPubkey == null
