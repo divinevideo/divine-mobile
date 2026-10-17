@@ -5884,6 +5884,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Messages stay here so you can read or screenshot them. Unblock to reply.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'You blocked $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You blocked $count people here',
+      one: 'You blocked 1 person here',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'We couldn\'t load this conversation';
 
   @override

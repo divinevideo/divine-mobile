@@ -9919,6 +9919,24 @@ abstract class AppLocalizations {
   /// **'Messages stay here so you can read or screenshot them. Unblock to reply.'**
   String get dmBlockedThreadBody;
 
+  /// Title of the notice that replaces the message composer in a group conversation where the viewer blocked exactly one member. {name} is that member's display name.
+  ///
+  /// In en, this message translates to:
+  /// **'You blocked {name}'**
+  String dmBlockedGroupMemberTitle(String name);
+
+  /// Title of the notice that replaces the message composer in a group conversation where the viewer blocked one or more members. Shown with the number of blocked members, and with 1 while the one blocked member's name is still loading.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You blocked 1 person here} other{You blocked {count} people here}}'**
+  String dmBlockedGroupMembersTitle(int count);
+
+  /// Body of the notice replacing the composer in a group conversation where the viewer blocked one or more members. Explains that history is preserved and that replying again means unblocking those members, which is done on each member's profile because the group itself has no unblock action.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.'**
+  String get dmBlockedGroupThreadBody;
+
   /// Title of the notice that replaces the message composer when the app cannot tell who a conversation is with because its participants failed to load. Replying is off because there is no one to address.
   ///
   /// In en, this message translates to:

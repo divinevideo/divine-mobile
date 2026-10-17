@@ -5852,6 +5852,26 @@ class AppLocalizationsBg extends AppLocalizations {
       'Съобщенията остават тук, за да можете да ги прочетете или да направите екранна снимка. Отблокирайте, за да отговорите.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Ти блокира $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ти блокира $count души тук',
+      one: 'Ти блокира $count човек тук',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Съобщенията остават тук, за да можеш да ги прочетеш или да направиш екранна снимка. Отблокирай от профила им, за да отговориш.';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Този разговор не се зареди';
 
   @override

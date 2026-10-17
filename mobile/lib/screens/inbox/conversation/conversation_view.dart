@@ -294,6 +294,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       participantPubkeys: widget.participantPubkeys,
       isBlockedByUs: blocklistRepository.isBlocked,
     );
+    // Whom the viewer blocked in a group, for its read-only notice.
+    final blockedMembers = isGroup
+        ? widget.participantPubkeys
+              .where(blocklistRepository.isBlocked)
+              .toList()
+        : const <String>[];
     final isRetiredModerationThread =
         threadWritability == DmThreadWritability.closedRetired;
     final isUnresolved = threadWritability == DmThreadWritability.unresolved;
@@ -643,7 +649,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                     isGroup: isGroup,
                   ),
                   DmThreadWritability.blockedByUs =>
-                    const _BlockedThreadNotice(),
+                    blockedMembers.isEmpty
+                        ? const _BlockedThreadNotice()
+                        : _BlockedGroupNotice(blockedPubkeys: blockedMembers),
                   DmThreadWritability.unresolved =>
                     const _UnresolvedThreadNotice(),
                   DmThreadWritability.writable => _SendBar(
@@ -1273,6 +1281,45 @@ class _BlockedThreadNotice extends StatelessWidget {
       title: l10n.dmBlockedThreadTitle,
       body: l10n.dmBlockedThreadBody,
     );
+  }
+}
+
+/// [_BlockedThreadNotice] for a group with members the viewer blocked (#10150).
+///
+/// A group's sheet has no Unblock, so this notice says who was blocked: the
+/// member when there is one, otherwise how many.
+class _BlockedGroupNotice extends ConsumerWidget {
+  const _BlockedGroupNotice({required this.blockedPubkeys});
+
+  final List<String> blockedPubkeys;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final title = switch (blockedPubkeys) {
+      [final pubkey] => _memberTitle(context, ref, pubkey),
+      _ => l10n.dmBlockedGroupMembersTitle(blockedPubkeys.length),
+    };
+    return _ReadOnlyThreadNotice(
+      title: title,
+      body: l10n.dmBlockedGroupThreadBody,
+    );
+  }
+
+  /// Falls back to the count while the name is loading, so a generated
+  /// placeholder never stands in for the person who was blocked.
+  String _memberTitle(BuildContext context, WidgetRef ref, String pubkey) {
+    final name = dmPeerDisplayName(
+      context,
+      pubkeyHex: pubkey,
+      isVanished: ref.watch(profileVanishedProvider(pubkey)),
+      moderation: ref.watch(moderationPresentationProvider(pubkey)),
+      profile: ref.watch(fetchUserProfileProvider(pubkey)).asData?.value,
+      isResolving: ref.watch(profileIdentityResolvingProvider(pubkey)),
+    );
+    return name.isEmpty
+        ? context.l10n.dmBlockedGroupMembersTitle(1)
+        : context.l10n.dmBlockedGroupMemberTitle(name);
   }
 }
 

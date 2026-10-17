@@ -5497,6 +5497,25 @@ class AppLocalizationsKo extends AppLocalizations {
       '메시지는 여기에 남아 있어 읽거나 스크린샷을 찍을 수 있습니다. 답장하려면 차단을 해제하세요.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '$name 님을 차단했어요';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '이 그룹에서 $count명을 차단했어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      '메시지는 여기에 남아 있어서 읽거나 스크린샷을 찍을 수 있어요. 답장하려면 프로필에서 차단을 해제하세요.';
+
+  @override
   String get dmUnresolvedThreadTitle => '이 대화를 불러오지 못했어요';
 
   @override

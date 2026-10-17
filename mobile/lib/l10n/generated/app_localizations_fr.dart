@@ -5877,6 +5877,27 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les messages restent ici pour que vous puissiez les lire ou les capturer. Débloquez pour répondre.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Tu as bloqué $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tu as bloqué $count personnes ici',
+      many: 'Tu as bloqué $count personnes ici',
+      one: 'Tu as bloqué $count personne ici',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Les messages restent ici pour que tu puisses les lire ou les capturer. Pour répondre, débloque depuis le profil concerné.';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Impossible de charger cette conversation';
 
