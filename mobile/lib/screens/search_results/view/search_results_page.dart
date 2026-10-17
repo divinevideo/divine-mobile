@@ -4,18 +4,25 @@ import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
+import 'package:openvine/blocs/nostr_id_search/nostr_id_search_cubit.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/search_results_app_bar.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/nostr_search_query.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Page that creates and wires the search BLoCs, then renders
 /// [SearchResultsView].
@@ -171,26 +178,108 @@ class _SearchResultsScope extends ConsumerWidget {
             hashtagRepository: hashtagRepository,
           ),
         ),
+        // Created on the first build, before any edit, so the text a route
+        // prefilled is the cubit's starting query.
+        BlocProvider(
+          create: (_) => NostrIdSearchCubit(
+            profileRepository: profileRepository,
+            videosRepository: videosRepository,
+            initialQuery: controller.text,
+          ),
+        ),
       ],
-      child: _ListSearchPolicyScope(
-        repository: curatedListRepository,
-        peopleRepository: peopleListsRepository,
-        peopleListSearchEnabled: peopleListSearchEnabled,
-        policy: listThumbnailPolicy,
+      child: _NostrIdAutoOpenScope(
         controller: controller,
-        child: _BlocklistRefreshListener(
-          child: Scaffold(
-            // bg/surface — matches SearchResultsView's body background so the
-            // app bar area (which doesn't paint its own background) doesn't
-            // show through to the root scaffold's darker default.
-            backgroundColor: context.vineColors.surface,
-            body: _SearchResultsBody(
-              controller: controller,
-              requestFocusOnMount: requestFocusOnMount,
+        child: _ListSearchPolicyScope(
+          repository: curatedListRepository,
+          peopleRepository: peopleListsRepository,
+          peopleListSearchEnabled: peopleListSearchEnabled,
+          policy: listThumbnailPolicy,
+          controller: controller,
+          child: _BlocklistRefreshListener(
+            child: Scaffold(
+              // bg/surface — matches SearchResultsView's body background so the
+              // app bar area (which doesn't paint its own background) doesn't
+              // show through to the root scaffold's darker default.
+              backgroundColor: context.vineColors.surface,
+              body: _SearchResultsBody(
+                controller: controller,
+                requestFocusOnMount: requestFocusOnMount,
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Opens the profile or video that a typed or pasted Nostr identifier names.
+///
+/// Forwards every change of the search text to [NostrIdSearchCubit] and
+/// navigates when it resolves one. The text search runs for every query
+/// either way.
+class _NostrIdAutoOpenScope extends StatefulWidget {
+  const _NostrIdAutoOpenScope({required this.controller, required this.child});
+
+  final TextEditingController controller;
+  final Widget child;
+
+  @override
+  State<_NostrIdAutoOpenScope> createState() => _NostrIdAutoOpenScopeState();
+}
+
+class _NostrIdAutoOpenScopeState extends State<_NostrIdAutoOpenScope> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(_NostrIdAutoOpenScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.controller, widget.controller)) {
+      oldWidget.controller.removeListener(_onControllerChanged);
+      widget.controller.addListener(_onControllerChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    runDetached(
+      context.read<NostrIdSearchCubit>().queryChanged(widget.controller.text),
+      'resolve Nostr id search query',
+      logName: 'SearchResultsPage',
+      category: LogCategory.ui,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<NostrIdSearchCubit, NostrIdSearchState>(
+      listenWhen: (_, current) => current.action != null,
+      listener: (context, state) {
+        switch (state.action) {
+          case OpenProfileAction(:final hexPubkey):
+            context.pushOtherProfile(hexPubkey);
+          case OpenVideoAction(:final routeId):
+            runDetached(
+              context.push<void>(VideoDetailScreen.pathForId(routeId)),
+              'open video from search',
+              logName: 'SearchResultsPage',
+              category: LogCategory.ui,
+            );
+          case null:
+            break;
+        }
+      },
+      child: widget.child,
     );
   }
 }
