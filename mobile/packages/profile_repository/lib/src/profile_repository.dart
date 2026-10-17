@@ -2853,9 +2853,14 @@ class ProfileRepository implements ProfileReader {
         pubkeys.sublist(start, end),
       );
       if (response == null) return;
-      for (final entry in response.profiles.entries) {
-        if (entry.value is UserProfileVanished) continue;
-        await _cacheProfileStatsFromResult(entry.key, entry.value);
+      for (final pubkey in pubkeys.sublist(start, end)) {
+        final result = response.profiles[pubkey];
+        if (result is UserProfileVanished) continue;
+        if (result != null) await _cacheProfileStatsFromResult(pubkey, result);
+        // A successful sparse response also records freshness for missing
+        // stats. Unknown counters stay null; existing values are preserved.
+        // Without a row, every list open would request this account again.
+        await _profileStatsDao?.upsertStats(pubkey: pubkey);
       }
     }
   }

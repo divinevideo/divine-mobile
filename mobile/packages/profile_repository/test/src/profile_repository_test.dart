@@ -7312,6 +7312,32 @@ void main() {
         },
       );
 
+      test(
+        'successful missing stats cache unknown values without erasing counts',
+        () async {
+          await database.profileStatsDao.upsertStats(
+            pubkey: testPubkey,
+            videoCount: 12,
+          );
+          when(() => api.getBulkProfiles(any())).thenAnswer(
+            (_) async => const BulkProfilesResponse(profiles: {}),
+          );
+          await repository.refreshStatsForPubkeys([testPubkey, otherPubkey]);
+          expect(
+            (await database.profileStatsDao.getStatsRaw(
+              testPubkey,
+            ))!.videoCount,
+            12,
+          );
+          final missing = await database.profileStatsDao.getStatsRaw(
+            otherPubkey,
+          );
+          expect(missing, isNotNull);
+          expect(missing!.videoCount, isNull);
+          expect(missing.followerCount, isNull);
+        },
+      );
+
       test('refreshStatsForPubkeys skips empty inputs', () async {
         await repository.refreshStatsForPubkeys([]);
         verifyNever(() => api.getBulkProfiles(any()));

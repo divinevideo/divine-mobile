@@ -28,10 +28,6 @@ void main() {
   });
 
   group('schema validation', () {
-<<<<<<< HEAD
-    test('current schema version is 25', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 25);
-=======
     test('a v21 database gains my_followers', () async {
       final schema = await verifier.schemaAt(21);
       final db = AppDatabase(schema.newConnection());
@@ -47,7 +43,6 @@ void main() {
       expect(await db.myFollowersDao.followersOf(owner), [
         (pubkey: follower, followedAt: 1700000000),
       ]);
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
     });
 
     test('a v22 database gains my_followers', () async {
@@ -84,13 +79,48 @@ void main() {
       ]);
     });
 
+    test('v24 sound workflow data survives the v25 follower migration', () async {
+      final schema = await verifier.schemaAt(24);
+      final owner = 'a' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO sound_request_states (owner_pubkey, section, record_key, value) '
+        'VALUES (?, ?, ?, ?)',
+        [owner, 'jobs', 'pending', 'queued workflow'],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 25);
+      final soundState = await db.soundRequestStateDao.readAccount(owner);
+      expect(soundState, hasLength(1));
+      expect(soundState.single.section, 'jobs');
+      expect(soundState.single.recordKey, 'pending');
+      expect(soundState.single.value, 'queued workflow');
+      await db.myFollowersDao.upsertAll(
+        ownerPubkey: owner,
+        followers: [(pubkey: 'b' * 64, followedAt: 1700000000)],
+        seenAt: 1700000100,
+      );
+      expect(await db.myFollowersDao.followersOf(owner), [
+        (pubkey: 'b' * 64, followedAt: 1700000000),
+      ]);
+    });
 
     test('current schema version is 25', () {
       expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 25);
     });
 
+    test('v23 gains account-scoped sound request workflow state', () async {
+      final schema = await verifier.schemaAt(23);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 24);
+      await db.soundRequestStateDao.writeAccount('a' * 64, {
+        'jobs': {'pending': '{}'},
+      });
+      expect(await db.soundRequestStateDao.readAccount('a' * 64), hasLength(1));
+    });
+
     test(
-<<<<<<< HEAD
       'v24 sound requests and conversations survive the v25 upgrade',
       () async {
         final schema = await verifier.schemaAt(24);
@@ -263,13 +293,10 @@ void main() {
 
     test(
       'v22 migrates to v23 with writable account-scoped chat storage',
-=======
-      'v22 migrates to v24 with writable account-scoped chat storage',
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       () async {
         final schema = await verifier.schemaAt(22);
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 25);
+        await verifier.migrateAndValidate(db, 23);
         await db.concordStoreDao.put(
           account: 'a' * 64,
           scope: 'relay/channel',
@@ -345,7 +372,6 @@ void main() {
       },
     );
 
-<<<<<<< HEAD
     test(
       'v23 requests remain active with messages intact after upgrade',
       () async {
@@ -377,10 +403,6 @@ void main() {
 
     test('v25 schema is valid and up to date', () async {
       final schema = await verifier.schemaAt(25);
-=======
-    test('v24 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(24);
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
       await db.close();
@@ -762,11 +784,7 @@ void main() {
       },
     );
 
-<<<<<<< HEAD
     test('v8 schema migrates to v25', () async {
-=======
-    test('v8 schema migrates to v24', () async {
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
@@ -791,66 +809,42 @@ void main() {
       await db.close();
     });
 
-<<<<<<< HEAD
     test('v7 schema migrates to v25', () async {
-=======
-    test('v7 schema migrates to v24', () async {
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-<<<<<<< HEAD
     test('v6 schema migrates to v25', () async {
-=======
-    test('v6 schema migrates to v24', () async {
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-<<<<<<< HEAD
     test('v5 schema migrates to v25', () async {
-=======
-    test('v5 schema migrates to v24', () async {
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-<<<<<<< HEAD
     test('v3 schema migrates to v25', () async {
-=======
-    test('v3 schema migrates to v24', () async {
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-<<<<<<< HEAD
     test('v2 schema migrates to v25', () async {
-=======
-    test('v2 schema migrates to v24', () async {
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);
       await db.close();
     });
 
-<<<<<<< HEAD
     test('legacy v1 schema migrates to v25', () async {
-=======
-    test('legacy v1 schema migrates to v24', () async {
->>>>>>> 7df9d7496a (feat(db_client): add owner-scoped my_followers table (schema v22))
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 25);

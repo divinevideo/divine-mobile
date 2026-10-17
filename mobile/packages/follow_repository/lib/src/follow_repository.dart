@@ -14,6 +14,7 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -2264,6 +2265,18 @@ class FollowRepository {
         },
       );
 
+      // Connection starts NIP-11 asynchronously. EOSE can beat it, so wait
+      // within this operation's existing budget before trusting an uncapped
+      // read. Missing information cannot authorize pruning cached followers.
+      final relayInfo =
+          relay.info ??
+          await _awaitIndexerOperation<RelayInfo?>(
+            relay.getRelayInfo(indexerUrl).then((_) => relay.info),
+            deadline,
+            onTimeout: () => null,
+          );
+      final advertisedLimit = relayInfo?.maxLimit;
+
       await _awaitIndexerOperation<bool>(
         relay.send(<dynamic>['CLOSE', subscriptionId]),
         deadline,
@@ -2274,7 +2287,9 @@ class FollowRepository {
         // Match the SDK's size-cap rule: EOSE at either the requested bound
         // or the relay's advertised smaller bound cannot prove absence.
         anySourceFailed:
-            failed || result.length >= min(5000, relay.info?.maxLimit ?? 5000),
+            failed ||
+            relayInfo == null ||
+            result.length >= min(5000, advertisedLimit ?? 5000),
       );
     } catch (e) {
       Log.warning(

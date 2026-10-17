@@ -1,7 +1,7 @@
 # Smart User Ranking Implementation Plan
 
 > **Status:** historical. Part A shipped in #10155 and Parts B and C in
-> #10172, at schema v24 because main took v22 and v23 first. Review rounds
+> #10172, at schema v25 because main took v22–v24 first. Review rounds
 > changed parts of this plan, so the code and the design spec are the source
 > of truth.
 

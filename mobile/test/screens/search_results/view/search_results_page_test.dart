@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
+import 'package:openvine/blocs/nostr_id_search/nostr_id_search_cubit.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
@@ -131,6 +132,46 @@ void main() {
         ],
       );
     }
+
+    testWidgets('Nostr resolver follows edits through profile readiness', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          profileRepositoryOverride: profileRepositoryProvider.overrideWith(
+            (ref) => ref.watch(_profileRepositoryAvailable)
+                ? mockProfileRepository
+                : null,
+          ),
+        ),
+      );
+      final view = find.byType(SearchResultsView, skipOffstage: false);
+      final context = tester.element(view);
+      final container = ProviderScope.containerOf(context);
+      final controller = tester
+          .widget<TextField>(find.byType(TextField, skipOffstage: false))
+          .controller!;
+      controller.text = 'cats';
+      await tester.pump();
+      expect(
+        tester.element(view).read<NostrIdSearchCubit>().state.query,
+        'cats',
+      );
+      container.read(_profileRepositoryAvailable.notifier).state = true;
+      await tester.pump();
+      expect(
+        tester.element(view).read<NostrIdSearchCubit>().state.query,
+        'cats',
+      );
+      controller.text = 'dogs';
+      await tester.pump();
+      expect(
+        tester.element(view).read<NostrIdSearchCubit>().state.query,
+        'dogs',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 500));
+    });
 
     testWidgets(
       'same-owner fresh profiles retain loaded pages and continue pagination',

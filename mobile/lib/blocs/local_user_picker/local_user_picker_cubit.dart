@@ -63,7 +63,8 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
     final retained = snapshot.profiles
         .where(
           (profile) =>
-              following.contains(profile.pubkey) &&
+              (!followRepository.isInitialized ||
+                  following.contains(profile.pubkey)) &&
               (loader?.isEligible(profile.pubkey) ?? true) &&
               !isBlocked(profile.pubkey) &&
               (excludedPubkey == null ||
@@ -116,6 +117,12 @@ class LocalUserPickerCubit extends Cubit<LocalUserPickerState>
     bool isCurrent() => !isClosed && state.loadRevision == revision;
     await _followersSubscription?.cancel();
     if (!isCurrent()) return;
+    // A same-owner repository replacement has no following snapshot yet.
+    // Preserve inherited mutuals until initialization can confirm membership.
+    if (!_followRepository.isInitialized) {
+      await _followRepository.initialized;
+      if (!isCurrent()) return;
+    }
     final followingPubkeys = List<String>.of(
       _followRepository.followingPubkeys,
     );

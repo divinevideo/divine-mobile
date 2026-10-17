@@ -53,6 +53,7 @@ void main() {
       addTearDown(() {
         unawaited(followers.close());
       });
+      when(() => follow.isInitialized).thenReturn(true);
       when(() => follow.followingPubkeys).thenReturn([a, b, c]);
       when(follow.streamMyFollowers).thenAnswer((_) => followers.stream);
       when(() => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')))
@@ -154,6 +155,48 @@ void main() {
       expect(replacement.state.profiles.map((p) => p.pubkey), [b, a, c]);
       expect(replacement.state.visibleProfiles.map((p) => p.pubkey), [b, c]);
     });
+
+    test('replacement retains mutuals until following initializes', () async {
+      final original = create();
+      await original.started();
+      followers.add([a, b]);
+      final snapshot = original.state;
+      await original.close();
+      final initialized = Completer<void>();
+      when(() => follow.isInitialized).thenReturn(false);
+      when(() => follow.initialized).thenAnswer((_) => initialized.future);
+      when(() => follow.followingPubkeys).thenReturn([]);
+      final replacement = create(initialState: snapshot);
+      final loading = replacement.started();
+      await pumpEventQueue();
+      expect(replacement.state.profiles.map((p) => p.pubkey), [b, a]);
+      verifyNever(() => loader.load(const <String>[]));
+      when(() => follow.followingPubkeys).thenReturn([a, b, c]);
+      when(() => follow.isInitialized).thenReturn(true);
+      initialized.complete();
+      await loading;
+      followers.add([a, b, c]);
+      expect(replacement.state.profiles.map((p) => p.pubkey), [b, a, c]);
+    });
+
+    test(
+      'closing before following initializes ignores its late result',
+      () async {
+        final initialized = Completer<void>();
+        when(() => follow.isInitialized).thenReturn(false);
+        when(() => follow.initialized).thenAnswer((_) => initialized.future);
+        when(() => follow.followingPubkeys).thenReturn([]);
+        final cubit = create();
+        final loading = cubit.started();
+        await pumpEventQueue();
+        await cubit.close();
+        final closed = cubit.state;
+        initialized.complete();
+        await loading;
+        expect(cubit.state, closed);
+        verifyNever(() => loader.load(any()));
+      },
+    );
 
     test(
       'vanished identity updates matching without moving existing rows',
