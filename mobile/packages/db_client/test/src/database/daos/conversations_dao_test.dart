@@ -980,6 +980,42 @@ void main() {
       );
 
       test(
+        'a newer received message the read cursor already covers stays read',
+        () async {
+          // A rebuilt row: its first re-ingested message is older than the
+          // cursor a read marker restored, so the cursor marks it read.
+          await dao.upsertConversation(
+            id: 'conv_1',
+            participantPubkeys: '["a","b"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageContent: 'First',
+            lastMessageTimestamp: 1700000100,
+            lastMessageSenderPubkey: 'b',
+            isRead: false,
+          );
+          await dao.applyReadCursor('conv_1', 1700000300);
+
+          // The re-ingest then reaches a message the user had also read:
+          // newer than the row, not newer than the cursor.
+          await dao.upsertConversation(
+            id: 'conv_1',
+            participantPubkeys: '["a","b"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageContent: 'Second',
+            lastMessageTimestamp: 1700000300,
+            lastMessageSenderPubkey: 'b',
+            isRead: false,
+          );
+
+          final result = await dao.getConversation('conv_1');
+          expect(result!.lastMessageTimestamp, equals(1700000300));
+          expect(result.isRead, isTrue);
+        },
+      );
+
+      test(
         'a genuinely newer received message marks a read conversation unread',
         () async {
           await dao.upsertConversation(
