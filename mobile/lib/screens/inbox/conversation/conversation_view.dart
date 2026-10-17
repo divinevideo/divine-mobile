@@ -300,16 +300,18 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     // both go. Reading and screenshotting is the point (#7025); replying
     // would undo the block the viewer deliberately set. Rebuilds off the
     // `blocklistVersionProvider` watch above, so unblocking from the kebab
-    // brings the composer straight back.
+    // (a one-to-one) or a member's profile (a group) brings the composer
+    // straight back.
     final threadWritability = resolveDmThreadWritability(
       participantPubkeys: widget.participantPubkeys,
       isBlockedByUs: blocklistRepository.isBlocked,
     );
     // Whom the viewer blocked in a group, for its read-only notice.
     final blockedMembers = isGroup
-        ? widget.participantPubkeys
-              .where(blocklistRepository.isBlocked)
-              .toList()
+        ? dmThreadBlockedParticipants(
+            participantPubkeys: widget.participantPubkeys,
+            isBlockedByUs: blocklistRepository.isBlocked,
+          )
         : const <String>[];
     final isRetiredModerationThread =
         threadWritability == DmThreadWritability.closedRetired;
@@ -1319,12 +1321,15 @@ class _BlockedGroupNotice extends ConsumerWidget {
   }
 
   /// Falls back to the count while the name is loading, so a generated
-  /// placeholder never stands in for the person who was blocked.
+  /// placeholder never stands in for the person who was blocked, and for a
+  /// deleted account, which has no name to give.
   String _memberTitle(BuildContext context, WidgetRef ref, String pubkey) {
+    final isVanished = ref.watch(profileVanishedProvider(pubkey));
+    if (isVanished) return context.l10n.dmBlockedGroupMembersTitle(1);
     final name = dmPeerDisplayName(
       context,
       pubkeyHex: pubkey,
-      isVanished: ref.watch(profileVanishedProvider(pubkey)),
+      isVanished: isVanished,
       moderation: ref.watch(moderationPresentationProvider(pubkey)),
       profile: ref.watch(fetchUserProfileProvider(pubkey)).asData?.value,
       isResolving: ref.watch(profileIdentityResolvingProvider(pubkey)),
@@ -1364,8 +1369,8 @@ class _UnresolvedThreadNotice extends StatelessWidget {
   }
 }
 
-/// Shared read-only composer-slot layout for [_BlockedThreadNotice] and
-/// [_UnresolvedThreadNotice].
+/// Shared read-only composer-slot layout for [_BlockedThreadNotice],
+/// [_BlockedGroupNotice] and [_UnresolvedThreadNotice].
 ///
 /// Matches the composer's slot geometry so replacing [MessageInputBar] with
 /// either notice does not shift the layout.

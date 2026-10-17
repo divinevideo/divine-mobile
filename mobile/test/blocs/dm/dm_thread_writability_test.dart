@@ -73,4 +73,33 @@ void main() {
       });
     });
   });
+
+  group('dmThreadBlockedParticipants', () {
+    const otherBlockedPeer =
+        '5555555555555555555555555555555555555555555555555555555555555555';
+
+    test('lists every blocked participant in route order', () {
+      expect(
+        dmThreadBlockedParticipants(
+          participantPubkeys: const [
+            blockedPeer,
+            ordinaryPeer,
+            otherBlockedPeer,
+          ],
+          isBlockedByUs: const {blockedPeer, otherBlockedPeer}.contains,
+        ),
+        equals(const [blockedPeer, otherBlockedPeer]),
+      );
+    });
+
+    test('is empty when nobody is blocked', () {
+      expect(
+        dmThreadBlockedParticipants(
+          participantPubkeys: const [ordinaryPeer],
+          isBlockedByUs: (pubkey) => pubkey == blockedPeer,
+        ),
+        isEmpty,
+      );
+    });
+  });
 }
