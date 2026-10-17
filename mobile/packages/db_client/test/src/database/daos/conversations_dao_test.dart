@@ -1218,8 +1218,8 @@ void main() {
           id: 'msg_1',
           conversationId: 'conv_1',
           senderPubkey: 'b',
-          content: 'older',
-          createdAt: 1700000100,
+          content: 'newer',
+          createdAt: 1700000300,
           giftWrapId: 'gw_1',
           ownerPubkey: 'owner_a',
         );

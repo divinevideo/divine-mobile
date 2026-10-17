@@ -752,10 +752,12 @@ END
   /// no preview because every message was deleted), subsequent runs are
   /// no-ops.
   ///
-  /// A conversation with no message rows at all is left alone: that is a
-  /// returning account's kept conversation whose messages the account boundary
-  /// deleted, and its stamp is what keeps an unread chat unread while older
-  /// messages are downloaded again (#10276).
+  /// A conversation ahead of its locally stored messages is left alone: an
+  /// account boundary may have deleted its messages, and a later download may
+  /// only have restored older wraps. Its kept stamp prevents those older wraps
+  /// from marking an unread chat read, including across restarts (#10276).
+  /// Deleted rows still count as restored history so a deleted latest message
+  /// can have its preview cleared or replaced.
   ///
   /// Returns the number of conversations updated.
   Future<int> backfillLatestMessagePreviews({String? ownerPubkey}) {
@@ -811,6 +813,8 @@ LIMIT 1
         AND EXISTS (
           SELECT 1 FROM direct_messages dm
           WHERE dm.conversation_id = c.id AND $latestMessageOwnerFilter
+            AND (c.last_message_timestamp IS NULL
+                 OR dm.created_at >= c.last_message_timestamp)
         )
         AND (
           COALESCE(c.last_message_content, '') !=
