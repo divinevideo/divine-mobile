@@ -1461,7 +1461,7 @@ void main() {
       await tester.pump();
 
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
-      final holdFinger = await tester.startGesture(center);
+      final holdFinger = await tester.startGesture(center, pointer: 1);
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
       await pumpFade(tester);
 
@@ -1470,6 +1470,7 @@ void main() {
       // A second finger touches down and lifts while the first still holds.
       final secondFinger = await tester.startGesture(
         center + const Offset(24, 24),
+        pointer: 2,
       );
       await secondFinger.up();
       await pumpFade(tester);
@@ -1741,11 +1742,21 @@ void main() {
   group('pinch to pin', () {
     // Lands two fingers 40 apart and drags them 280 apart. Measured from the
     // landing separation, so it matches the production rule.
-    Future<void> pinch(WidgetTester tester, Offset center) async {
+    Future<void> pinch(
+      WidgetTester tester,
+      Offset center, {
+      int basePointer = 1,
+    }) async {
       const landing = 20.0;
       const spread = 140.0;
-      final a = await tester.startGesture(center - const Offset(landing, 0));
-      final b = await tester.startGesture(center + const Offset(landing, 0));
+      final a = await tester.startGesture(
+        center - const Offset(landing, 0),
+        pointer: basePointer,
+      );
+      final b = await tester.startGesture(
+        center + const Offset(landing, 0),
+        pointer: basePointer + 1,
+      );
       await tester.pump();
       await a.moveTo(center - const Offset(spread, 0));
       await b.moveTo(center + const Offset(spread, 0));
@@ -1800,7 +1811,7 @@ void main() {
       await pumpFade(tester);
       expect(immersiveCubit.state.isPinned, isTrue);
 
-      await pinch(tester, center);
+      await pinch(tester, center, basePointer: 3);
       await pumpFade(tester);
 
       expect(immersiveCubit.state.isPinned, isFalse);
@@ -1844,8 +1855,14 @@ void main() {
       Offset center, {
       required double apart,
     }) async {
-      final a = await tester.startGesture(center - const Offset(20, 0));
-      final b = await tester.startGesture(center + const Offset(20, 0));
+      final a = await tester.startGesture(
+        center - const Offset(20, 0),
+        pointer: 1,
+      );
+      final b = await tester.startGesture(
+        center + const Offset(20, 0),
+        pointer: 2,
+      );
       await tester.pump();
       await a.moveBy(Offset(-apart / 2, 40));
       await b.moveBy(Offset(apart / 2, 40));
@@ -1919,11 +1936,17 @@ void main() {
       await tester.pump();
 
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
-      final holding = await tester.startGesture(center - const Offset(20, 0));
+      final holding = await tester.startGesture(
+        center - const Offset(20, 0),
+        pointer: 1,
+      );
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
       expect(immersiveCubit.state.isHolding, isTrue);
 
-      final spreading = await tester.startGesture(center + const Offset(20, 0));
+      final spreading = await tester.startGesture(
+        center + const Offset(20, 0),
+        pointer: 2,
+      );
       await tester.pump();
       await spreading.moveTo(center + const Offset(140, 0));
       await tester.pump();
@@ -1955,9 +1978,18 @@ void main() {
         await tester.pump();
 
         final center = tester.getCenter(find.byType(InfiniteVideoFeed));
-        final a = await tester.startGesture(center - const Offset(20, 0));
-        final b = await tester.startGesture(center + const Offset(20, 0));
-        final c = await tester.startGesture(center + const Offset(160, 0));
+        final a = await tester.startGesture(
+          center - const Offset(20, 0),
+          pointer: 1,
+        );
+        final b = await tester.startGesture(
+          center + const Offset(20, 0),
+          pointer: 2,
+        );
+        final c = await tester.startGesture(
+          center + const Offset(160, 0),
+          pointer: 3,
+        );
         await tester.pump();
         // Lifting one of the first two fingers leaves a pair that is much
         // further apart than the pair the pinch was measured from.
@@ -2020,7 +2052,7 @@ void main() {
             expect(immersiveCubit.state.isImmersive, isTrue);
 
             if (restoreWithPinch) {
-              await pinch(tester, tester.getCenter(feed));
+              await pinch(tester, tester.getCenter(feed), basePointer: 5);
             } else {
               await tester.tapAt(tester.getCenter(feed));
             }
@@ -2325,8 +2357,14 @@ void main() {
       await tester.pump();
 
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
-      final upper = await tester.startGesture(center - const Offset(0, 20));
-      final lower = await tester.startGesture(center + const Offset(0, 20));
+      final upper = await tester.startGesture(
+        center - const Offset(0, 20),
+        pointer: 1,
+      );
+      final lower = await tester.startGesture(
+        center + const Offset(0, 20),
+        pointer: 2,
+      );
       await tester.pump();
       for (var i = 0; i < 9; i++) {
         await upper.moveBy(const Offset(0, -40));
