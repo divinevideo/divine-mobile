@@ -713,7 +713,13 @@ END
   /// Fixes stale conversation previews written by app versions prior to the
   /// write-path timestamp guard in [upsertConversation]. Idempotent: once a
   /// conversation row matches the newest non-deleted message (or correctly has
-  /// no preview because no messages remain), subsequent runs are no-ops.
+  /// no preview because every message was deleted), subsequent runs are
+  /// no-ops.
+  ///
+  /// A conversation with no message rows at all is left alone: that is a
+  /// returning account's kept conversation whose messages the account boundary
+  /// deleted, and its stamp is what keeps an unread chat unread while older
+  /// messages are downloaded again (#10276).
   ///
   /// Returns the number of conversations updated.
   Future<int> backfillLatestMessagePreviews({String? ownerPubkey}) {
@@ -765,6 +771,10 @@ LIMIT 1
           last_message_timestamp = ($latestTimestampSubquery),
           last_message_sender_pubkey = ($latestSenderSubquery)
       WHERE $scopedConversationFilter
+        AND EXISTS (
+          SELECT 1 FROM direct_messages dm
+          WHERE dm.conversation_id = c.id AND $latestMessageOwnerFilter
+        )
         AND (
           COALESCE(c.last_message_content, '') !=
               COALESCE(($latestPreviewContentSubquery), '') OR
@@ -776,13 +786,7 @@ LIMIT 1
       ''',
       variables: [
         if (ownerPubkey != null) ...[
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
+          for (var i = 0; i < 8; i++) Variable(ownerPubkey),
         ],
       ],
       updates: {attachedDatabase.conversations},

@@ -2140,12 +2140,12 @@ void main() {
             await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
 
             final (secondSession, secondRelay) = await startSessionForA();
-            // Startup maintenance rebuilds previews from messages, and A's
-            // messages are gone: the kept rows lose their last-message stamp.
+            // Startup maintenance rebuilds previews from messages. A's messages
+            // are gone, and the kept rows must keep their last-message stamp.
             await secondSession.getConversations();
             expect(
               (await conversationOf(withB, _pubkeyA)).lastMessageTimestamp,
-              isNull,
+              1700000300,
             );
             // The re-download holds no read marker and misses A's reply.
             await deliver(
@@ -2179,6 +2179,55 @@ void main() {
               at: 1700000600,
             );
             expect((await conversationOf(withB, _pubkeyA)).isRead, isFalse);
+          },
+        );
+
+        test(
+          'a chat that was unread when A left is still unread when an older '
+          'message is re-downloaded first',
+          () async {
+            final withB = DmRepository.computeConversationId([
+              _pubkeyA,
+              _pubkeyB,
+            ]);
+            final (firstSession, firstRelay) = await startSessionForA();
+            await deliver(
+              firstRelay,
+              wrapId: 'b' * 64,
+              rumorId: 'ab' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000300,
+            );
+            await firstSession.markConversationAsRead(withB);
+            await deliver(
+              firstRelay,
+              wrapId: 'e' * 64,
+              rumorId: 'ae' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000500,
+            );
+            expect((await conversationOf(withB, _pubkeyA)).isRead, isFalse);
+            await firstSession.stopListening();
+
+            await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+            final (secondSession, secondRelay) = await startSessionForA();
+            await secondSession.getConversations();
+            // Only the message A had read comes back; the unread one is
+            // outside the re-download window.
+            await deliver(
+              secondRelay,
+              wrapId: 'b' * 64,
+              rumorId: 'ab' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000300,
+            );
+
+            expect((await conversationOf(withB, _pubkeyA)).isRead, isFalse);
+            expect(await secondSession.watchUnreadCount().first, 1);
           },
         );
       });

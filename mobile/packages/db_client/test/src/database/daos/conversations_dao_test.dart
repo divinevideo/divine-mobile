@@ -1789,6 +1789,39 @@ void main() {
         },
       );
 
+      test(
+        'leaves a conversation whose messages are not on the device as it is',
+        () async {
+          // An account boundary keeps a returning account's conversations and
+          // deletes its messages (#10276). Clearing the stamp here would let a
+          // re-downloaded older message mark an unread chat read.
+          await dao.upsertConversation(
+            id: 'conv_kept',
+            participantPubkeys: '["$userA","$userB"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageContent: 'kept preview',
+            lastMessageTimestamp: 1700000500,
+            lastMessageSenderPubkey: userB,
+            isRead: false,
+            ownerPubkey: userA,
+          );
+
+          final updated = await dao.backfillLatestMessagePreviews(
+            ownerPubkey: userA,
+          );
+
+          expect(updated, equals(0));
+          final conv = await dao.getConversation(
+            'conv_kept',
+            ownerPubkey: userA,
+          );
+          expect(conv!.lastMessageContent, 'kept preview');
+          expect(conv.lastMessageTimestamp, 1700000500);
+          expect(conv.lastMessageSenderPubkey, userB);
+        },
+      );
+
       test('only updates conversations in the requested owner scope', () async {
         await dao.upsertConversation(
           id: 'conv_a',
