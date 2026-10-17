@@ -5810,11 +5810,26 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. I-unblock mula sa profile nila para makasagot.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
+      one: 'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Bagong chat nang wala sila';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bagong chat nang wala sila',
+      one: 'Bagong chat nang wala sila',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Nakatagong mensahe';

@@ -5854,11 +5854,28 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les messages restent ici pour que tu puisses les lire ou les capturer. Pour répondre, débloque depuis le profil concerné.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Leurs messages sont masqués ici. Ces personnes voient toujours ce que tu envoies.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Leurs messages sont masqués ici. Ces personnes voient toujours ce que tu envoies.',
+      many: 'Leurs messages sont masqués ici. Ces personnes voient toujours ce que tu envoies.',
+      one: 'Les messages de cette personne sont masqués ici. Elle voit toujours ce que tu envoies.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Discuter sans ces personnes';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouveau message sans ces personnes',
+      many: 'Nouveau message sans ces personnes',
+      one: 'Nouveau message sans cette personne',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Message masqué';

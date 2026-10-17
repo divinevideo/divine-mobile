@@ -5765,11 +5765,26 @@ class AppLocalizationsSv extends AppLocalizations {
       'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen via deras profil för att svara.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Deras meddelanden är dolda här. De kan fortfarande se det du skickar.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Deras meddelanden är dolda här. De kan fortfarande se det du skickar.',
+      one: 'Den här personens meddelanden är dolda här. Personen kan fortfarande se det du skickar.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Starta en ny chatt utan dem';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Starta en ny chatt utan dem',
+      one: 'Ny chatt utan den här personen',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Dolt meddelande';

@@ -5452,11 +5452,24 @@ class AppLocalizationsJa extends AppLocalizations {
       'メッセージはここに残るので、読んだりスクリーンショットを撮ったりできます。返信するには、プロフィールからブロックを解除してください。';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'ブロックした人のメッセージは、ここでは非表示になります。あなたが送るメッセージは、引き続き相手にも表示されます。';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロックした人のメッセージは、ここでは非表示になります。あなたが送るメッセージは、ブロックした人にも引き続き表示されます。',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'ブロックした人を除いて新しいチャットを開始';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロックした人を除いて新しいチャットを開始',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => '非表示のメッセージ';

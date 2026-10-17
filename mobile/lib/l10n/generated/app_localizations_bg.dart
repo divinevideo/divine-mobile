@@ -5828,11 +5828,26 @@ class AppLocalizationsBg extends AppLocalizations {
       'Съобщенията остават тук, за да можеш да ги прочетеш или да направиш екранна снимка. Отблокирай от профила им, за да отговориш.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Съобщенията им са скрити тук. Те все още виждат какво изпращаш.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Съобщенията им са скрити тук. Те все още виждат какво изпращаш.',
+      one: 'Съобщенията на този човек са скрити тук. Този човек все още вижда какво изпращаш.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Започни нов чат без тях';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Започни нов чат без тях',
+      one: 'Започни нов чат без този човек',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Скрито съобщение';

@@ -264,6 +264,7 @@ void main() {
       ProfileReader? profileReadRepository,
       FollowRepository? followRepository,
       List<Override> extraOverrides = const [],
+      Locale? locale,
     }) {
       final effectiveState = state ?? const ConversationState();
       if (restoreStatus != null) {
@@ -287,6 +288,7 @@ void main() {
         mockAuthService: mockAuthService,
         mockNostrService: mockNostrClient,
         mockFollowRepository: followRepository,
+        locale: locale,
         additionalOverrides: [
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           watermarkDownloadServiceProvider.overrideWithValue(
@@ -1668,10 +1670,89 @@ void main() {
             findsOneWidget,
           );
           expect(
-            find.text(l10n.dmBlockedGroupMembersBannerBody),
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmStartChatWithoutBlockedAction(1)),
             findsOneWidget,
           );
           expect(find.text(l10n.dmBlockedGroupThreadBody), findsNothing);
+        });
+
+        // English says "them" for one person and for several, so only a
+        // locale that tells them apart shows which count the banner passed.
+        group('in a locale that tells one person from several', () {
+          const spanish = Locale('es');
+          final es = lookupAppLocalizations(spanish);
+
+          testWidgets('speaks of one person when one member is blocked', (
+            tester,
+          ) async {
+            when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+            final semantics = tester.ensureSemantics();
+            try {
+              await tester.pumpWidget(
+                buildSubject(
+                  counterparties: const [otherPubkey, bob],
+                  extraOverrides: memberOverrides(bob, name: 'Bob'),
+                  locale: spanish,
+                ),
+              );
+              await tester.pump();
+
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(1)),
+                findsOneWidget,
+              );
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(2)),
+                findsNothing,
+              );
+              expect(
+                find.bySemanticsLabel(es.dmStartChatWithoutBlockedAction(1)),
+                findsOneWidget,
+              );
+              expect(
+                find.bySemanticsLabel(es.dmStartChatWithoutBlockedAction(2)),
+                findsNothing,
+              );
+            } finally {
+              semantics.dispose();
+            }
+          });
+
+          testWidgets('speaks of several people when several are blocked', (
+            tester,
+          ) async {
+            when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+            when(() => mockBlocklist.isBlocked(carol)).thenReturn(true);
+            final semantics = tester.ensureSemantics();
+            try {
+              await tester.pumpWidget(
+                buildSubject(
+                  counterparties: const [otherPubkey, bob, carol],
+                  locale: spanish,
+                ),
+              );
+              await tester.pump();
+
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(2)),
+                findsOneWidget,
+              );
+              expect(
+                find.text(es.dmBlockedGroupMembersBannerBody(1)),
+                findsNothing,
+              );
+              expect(
+                find.bySemanticsLabel(es.dmStartChatWithoutBlockedAction(2)),
+                findsOneWidget,
+              );
+            } finally {
+              semantics.dispose();
+            }
+          });
         });
 
         testWidgets('counts the members when several are blocked', (
@@ -1691,7 +1772,11 @@ void main() {
             findsOneWidget,
           );
           expect(
-            find.text(l10n.dmBlockedGroupMembersBannerBody),
+            find.text(l10n.dmBlockedGroupMembersBannerBody(2)),
+            findsOneWidget,
+          );
+          expect(
+            find.text(l10n.dmStartChatWithoutBlockedAction(2)),
             findsOneWidget,
           );
         });
@@ -1763,8 +1848,14 @@ void main() {
             findsOneWidget,
           );
           expect(find.text(l10n.dmBlockedGroupThreadBody), findsOneWidget);
-          expect(find.text(l10n.dmBlockedGroupMembersBannerBody), findsNothing);
-          expect(find.text(l10n.dmStartChatWithoutBlockedAction), findsNothing);
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(2)),
+            findsNothing,
+          );
+          expect(
+            find.text(l10n.dmStartChatWithoutBlockedAction(2)),
+            findsNothing,
+          );
         });
 
         // A group with every member blocked reads like a blocked one-to-one:
@@ -1827,7 +1918,7 @@ void main() {
             ),
           );
           await tester.pump();
-          await tester.tap(find.text(l10n.dmStartChatWithoutBlockedAction));
+          await tester.tap(find.text(l10n.dmStartChatWithoutBlockedAction(1)));
           await tester.pump();
 
           verify(
@@ -1874,7 +1965,7 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(
-            find.text(l10n.dmBlockedGroupMembersBannerBody),
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
             findsOneWidget,
           );
           expect(find.text(hiddenText), findsNothing);
@@ -1886,7 +1977,10 @@ void main() {
           ).read(blocklistVersionProvider.notifier).increment();
           await tester.pump();
 
-          expect(find.text(l10n.dmBlockedGroupMembersBannerBody), findsNothing);
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+            findsNothing,
+          );
           expect(find.text(hiddenText), findsOneWidget);
         });
 
@@ -1923,7 +2017,10 @@ void main() {
           ).read(blocklistVersionProvider.notifier).increment();
           await tester.pump();
 
-          expect(find.text(l10n.dmBlockedGroupMembersBannerBody), findsNothing);
+          expect(
+            find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+            findsNothing,
+          );
           expect(find.text(draft), findsOneWidget);
         });
       });

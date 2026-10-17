@@ -5959,12 +5959,27 @@ class AppLocalizationsTe extends AppLocalizations {
       'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి వారి ప్రొఫైల్ నుండి అన్‌బ్లాక్ చేయండి.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.',
+      one: 'వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'వారు లేకుండా కొత్త చాట్ ప్రారంభించండి';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'వారు లేకుండా కొత్త చాట్ ప్రారంభించండి',
+      one: 'వారు లేకుండా కొత్త చాట్ ప్రారంభించండి',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'దాచబడిన సందేశం';

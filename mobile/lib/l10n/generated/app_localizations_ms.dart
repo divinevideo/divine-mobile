@@ -5774,11 +5774,26 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat melalui profil mereka untuk membalas.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.',
+      one: 'Mesej orang ini disembunyikan di sini. Dia masih boleh melihat apa yang anda hantar.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => 'Sembang baharu tanpa mereka';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sembang baharu tanpa mereka',
+      one: 'Sembang baharu tanpa orang ini',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Mesej tersembunyi';

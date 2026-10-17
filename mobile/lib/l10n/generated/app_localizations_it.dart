@@ -5836,12 +5836,28 @@ class AppLocalizationsIt extends AppLocalizations {
       'I messaggi restano qui così puoi leggerli o farne uno screenshot. Per rispondere, sblocca dal profilo.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      'I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.',
+      many: 'I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.',
+      one: 'I messaggi di questa persona sono nascosti qui. Può comunque vedere quello che invii.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction =>
-      'Avvia una nuova chat senza di loro';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Avvia una nuova chat senza di loro',
+      many: 'Avvia una nuova chat senza di loro',
+      one: 'Nuova chat senza questa persona',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => 'Messaggio nascosto';

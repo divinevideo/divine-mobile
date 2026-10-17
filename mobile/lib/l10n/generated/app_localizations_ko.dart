@@ -5472,11 +5472,24 @@ class AppLocalizationsKo extends AppLocalizations {
       '메시지는 여기에 남아 있어서 읽거나 스크린샷을 찍을 수 있어요. 답장하려면 프로필에서 차단을 해제하세요.';
 
   @override
-  String get dmBlockedGroupMembersBannerBody =>
-      '차단한 사람의 메시지는 여기서 숨겨져요. 상대방은 내가 보내는 메시지를 계속 볼 수 있어요.';
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '차단한 사람의 메시지는 여기서 숨겨져요. 차단한 사람도 내가 보내는 메시지를 계속 볼 수 있어요.',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get dmStartChatWithoutBlockedAction => '차단한 사람을 제외하고 새 대화 시작';
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '차단한 사람을 제외하고 새 대화 시작',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get dmHiddenMessageLabel => '숨겨진 메시지';
