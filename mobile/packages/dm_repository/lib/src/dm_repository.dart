@@ -3823,6 +3823,9 @@ class DmRepository {
             createdAt: existing?.createdAt ?? persistedCreatedAt,
             lastMessageContent: previewContent,
             lastMessageTimestamp: persistedCreatedAt,
+            // Unbounded on purpose: only the read-cursor pin reads it, and it
+            // bounds the value by the clock itself (#10276).
+            lastMessageCreatedAt: rumor.createdAt,
             lastMessageSenderPubkey: rumor.pubkey,
             subject: subject,
             isRead: isSentByMe,
@@ -4669,6 +4672,9 @@ class DmRepository {
           createdAt: existing?.createdAt ?? persistedCreatedAt,
           lastMessageContent: plaintext,
           lastMessageTimestamp: persistedCreatedAt,
+          // Unbounded on purpose: only the read-cursor pin reads it, and it
+          // bounds the value by the clock itself (#10276).
+          lastMessageCreatedAt: nip04Event.createdAt,
           lastMessageSenderPubkey: senderPubkey,
           isRead: isSentByMe,
           isNewMessage: existing?.isDismissed ?? false,

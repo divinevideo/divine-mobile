@@ -28,9 +28,115 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 25', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 25);
+    test('current schema version is 26', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 26);
     });
+
+    test(
+      'v25 dismissals, read cursors and sound requests survive the v26 '
+      'upgrade, which adds the preview created_at',
+      () async {
+        final schema = await verifier.schemaAt(25);
+        final owner = 'a' * 64;
+        final otherOwner = 'd' * 64;
+        final dismissedId = 'c' * 64;
+        final openId = 'e' * 64;
+        schema.rawDatabase.execute(
+          'INSERT INTO sound_request_states '
+          '(owner_pubkey, section, record_key, value) VALUES (?, ?, ?, ?)',
+          [owner, 'jobs', 'pending', '{"status":"pending"}'],
+        );
+        for (final (id, dismissed, read, cursor, latest) in [
+          (dismissedId, 1, 1, 200, 200),
+          (openId, 0, 0, 150, 180),
+        ]) {
+          schema.rawDatabase.execute(
+            'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+            'last_message_content, last_message_timestamp, owner_pubkey, '
+            'is_read, is_dismissed, last_read_timestamp) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+              id,
+              '["$owner","${'b' * 64}"]',
+              100,
+              'Keep me',
+              latest,
+              owner,
+              read,
+              dismissed,
+              cursor,
+            ],
+          );
+        }
+        for (final (markerOwner, boundary, knownIds) in [
+          (owner, 200, '["m1"]'),
+          (otherOwner, 300, '["m2","m3"]'),
+        ]) {
+          schema.rawDatabase.execute(
+            'INSERT INTO conversation_dismissals '
+            '(conversation_id, owner_pubkey, boundary_timestamp, '
+            'known_message_ids) VALUES (?, ?, ?, ?)',
+            [dismissedId, markerOwner, boundary, knownIds],
+          );
+        }
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 26);
+
+        final sound = (await db.soundRequestStateDao.readAccount(owner)).single;
+        expect(sound.recordKey, 'pending');
+        expect(sound.value, '{"status":"pending"}');
+        final dismissed = (await db.conversationsDao.getConversation(
+          dismissedId,
+          ownerPubkey: owner,
+        ))!;
+        expect(dismissed.isDismissed, isTrue);
+        expect(dismissed.isRead, isTrue);
+        expect(dismissed.lastReadTimestamp, 200);
+        expect(dismissed.lastMessageCreatedAt, isNull);
+        final open = (await db.conversationsDao.getConversation(
+          openId,
+          ownerPubkey: owner,
+        ))!;
+        expect(open.isDismissed, isFalse);
+        expect(open.isRead, isFalse);
+        expect(open.lastReadTimestamp, 150);
+        expect(open.lastMessageTimestamp, 180);
+        final markers = await db
+            .customSelect(
+              'SELECT owner_pubkey, boundary_timestamp, known_message_ids '
+              'FROM conversation_dismissals ORDER BY owner_pubkey',
+            )
+            .get();
+        expect(
+          markers.map(
+            (r) => (
+              r.read<String>('owner_pubkey'),
+              r.read<int>('boundary_timestamp'),
+              r.read<String>('known_message_ids'),
+            ),
+          ),
+          [(owner, 200, '["m1"]'), (otherOwner, 300, '["m2","m3"]')],
+        );
+
+        await db.conversationsDao.upsertConversation(
+          id: openId,
+          participantPubkeys: '["$owner","${'b' * 64}"]',
+          isGroup: false,
+          createdAt: 100,
+          lastMessageTimestamp: 190,
+          lastMessageCreatedAt: 195,
+          isRead: false,
+          ownerPubkey: owner,
+        );
+        final written = (await db.conversationsDao.getConversation(
+          openId,
+          ownerPubkey: owner,
+        ))!;
+        expect(written.lastMessageCreatedAt, 195);
+      },
+    );
 
     test('v23 gains account-scoped sound request workflow state', () async {
       final schema = await verifier.schemaAt(23);
@@ -155,7 +261,7 @@ void main() {
           final db = AppDatabase(schema.newConnection());
           addTearDown(db.close);
 
-          await verifier.migrateAndValidate(db, 25);
+          await verifier.migrateAndValidate(db, 26);
 
           final marker = await db
               .customSelect(
@@ -324,10 +430,10 @@ void main() {
       },
     );
 
-    test('v25 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(25);
+    test('v26 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(26);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       await db.close();
     });
 
@@ -707,10 +813,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v25', () async {
+    test('v8 schema migrates to v26', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -732,45 +838,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v25', () async {
+    test('v7 schema migrates to v26', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       await db.close();
     });
 
-    test('v6 schema migrates to v25', () async {
+    test('v6 schema migrates to v26', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       await db.close();
     });
 
-    test('v5 schema migrates to v25', () async {
+    test('v5 schema migrates to v26', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       await db.close();
     });
 
-    test('v3 schema migrates to v25', () async {
+    test('v3 schema migrates to v26', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       await db.close();
     });
 
-    test('v2 schema migrates to v25', () async {
+    test('v2 schema migrates to v26', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v25', () async {
+    test('legacy v1 schema migrates to v26', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 25);
+      await verifier.migrateAndValidate(db, 26);
       await db.close();
     });
 

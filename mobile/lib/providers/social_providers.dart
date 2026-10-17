@@ -803,6 +803,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
                   // cannot restore before the history drain (#10276).
                   await db.conversationsDao.pinReadCursorsToLatestMessage(
                     userPubkey,
+                    nowSeconds: DateTime.now().millisecondsSinceEpoch ~/ 1000,
                   );
                   await db.conversationsDao.clearUnowned();
                 }

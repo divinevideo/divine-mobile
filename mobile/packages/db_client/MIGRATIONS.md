@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 25** (see `app_database.dart`).
+**Version: 26** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -222,6 +222,18 @@ dismissal-preview v24 shape and creates its missing sound-request store while re
 v24 audio rows remain intact through the upgrade. Native salvage and legacy-file
 replacement checks preserve both saved dismissal markers and sound-request
 workflow state.
+
+Version 26 adds `conversations.last_message_created_at`, the `created_at` of the
+message in a conversation's preview (#10276). `last_message_timestamp` is capped
+at the local clock when a message is stored, so for a sender whose clock runs
+ahead it sits below the message's real `created_at`. The read cursor pinned when
+an account switches away covers this column too, capped at the current time, so
+the re-downloaded message does not reopen an already-read chat as unread. The
+step adds the column through `_addColumnIfMissing` and checks `to` as well as
+`from`. The v12 rebuild lists it in `newColumns` beside `is_dismissed`, and a
+migration test that stops below v26 drops it again. The repair probe lists it.
+Existing rows keep NULL until their preview next changes. The v25 snapshot is
+unchanged.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

@@ -1097,10 +1097,20 @@ class Conversations extends Table {
   /// sync (#4977). Monotonic high-water mark of the newest message the user
   /// has read; published encrypted-to-self over Nostr and restored on
   /// reinstall. NULL until the conversation is first read. Ingest never writes
-  /// it — only `ConversationsDao.markAsRead` / `applyReadCursor` advance it,
-  /// and only ever forward (`max`).
+  /// it — only `ConversationsDao.markAsRead`, `applyReadCursor` and
+  /// `pinReadCursorsToLatestMessage` advance it, and only ever forward (`max`).
   IntColumn get lastReadTimestamp =>
       integer().nullable().named('last_read_timestamp')();
+
+  /// The rumor's own `created_at` for the message in the preview, before
+  /// ingest bounds [lastMessageTimestamp] by the local clock.
+  ///
+  /// The two differ when the sender's clock runs ahead. A re-download after
+  /// the local clock has passed `created_at` stores the larger value, so a
+  /// read cursor taken from the bounded one would leave the chat unread
+  /// (#10276). NULL when the preview was rebuilt from stored messages.
+  IntColumn get lastMessageCreatedAt =>
+      integer().nullable().named('last_message_created_at')();
 
   /// Whether the current user has sent a message in this conversation.
   BoolColumn get currentUserHasSent => boolean()

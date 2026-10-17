@@ -11766,6 +11766,16 @@ class $ConversationsTable extends Conversations
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _lastMessageCreatedAtMeta =
+      const VerificationMeta('lastMessageCreatedAt');
+  @override
+  late final GeneratedColumn<int> lastMessageCreatedAt = GeneratedColumn<int>(
+    'last_message_created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _currentUserHasSentMeta =
       const VerificationMeta('currentUserHasSent');
   @override
@@ -11826,6 +11836,7 @@ class $ConversationsTable extends Conversations
     isRead,
     isDismissed,
     lastReadTimestamp,
+    lastMessageCreatedAt,
     currentUserHasSent,
     createdAt,
     ownerPubkey,
@@ -11922,6 +11933,15 @@ class $ConversationsTable extends Conversations
         ),
       );
     }
+    if (data.containsKey('last_message_created_at')) {
+      context.handle(
+        _lastMessageCreatedAtMeta,
+        lastMessageCreatedAt.isAcceptableOrUnknown(
+          data['last_message_created_at']!,
+          _lastMessageCreatedAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('current_user_has_sent')) {
       context.handle(
         _currentUserHasSentMeta,
@@ -12003,6 +12023,10 @@ class $ConversationsTable extends Conversations
         DriftSqlType.int,
         data['${effectivePrefix}last_read_timestamp'],
       ),
+      lastMessageCreatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_message_created_at'],
+      ),
       currentUserHasSent: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}current_user_has_sent'],
@@ -12062,9 +12086,18 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
   /// sync (#4977). Monotonic high-water mark of the newest message the user
   /// has read; published encrypted-to-self over Nostr and restored on
   /// reinstall. NULL until the conversation is first read. Ingest never writes
-  /// it — only `ConversationsDao.markAsRead` / `applyReadCursor` advance it,
-  /// and only ever forward (`max`).
+  /// it — only `ConversationsDao.markAsRead`, `applyReadCursor` and
+  /// `pinReadCursorsToLatestMessage` advance it, and only ever forward (`max`).
   final int? lastReadTimestamp;
+
+  /// The rumor's own `created_at` for the message in the preview, before
+  /// ingest bounds [lastMessageTimestamp] by the local clock.
+  ///
+  /// The two differ when the sender's clock runs ahead. A re-download after
+  /// the local clock has passed `created_at` stores the larger value, so a
+  /// read cursor taken from the bounded one would leave the chat unread
+  /// (#10276). NULL when the preview was rebuilt from stored messages.
+  final int? lastMessageCreatedAt;
 
   /// Whether the current user has sent a message in this conversation.
   final bool currentUserHasSent;
@@ -12101,6 +12134,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     required this.isRead,
     required this.isDismissed,
     this.lastReadTimestamp,
+    this.lastMessageCreatedAt,
     required this.currentUserHasSent,
     required this.createdAt,
     required this.ownerPubkey,
@@ -12130,6 +12164,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     map['is_dismissed'] = Variable<bool>(isDismissed);
     if (!nullToAbsent || lastReadTimestamp != null) {
       map['last_read_timestamp'] = Variable<int>(lastReadTimestamp);
+    }
+    if (!nullToAbsent || lastMessageCreatedAt != null) {
+      map['last_message_created_at'] = Variable<int>(lastMessageCreatedAt);
     }
     map['current_user_has_sent'] = Variable<bool>(currentUserHasSent);
     map['created_at'] = Variable<int>(createdAt);
@@ -12162,6 +12199,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastReadTimestamp: lastReadTimestamp == null && nullToAbsent
           ? const Value.absent()
           : Value(lastReadTimestamp),
+      lastMessageCreatedAt: lastMessageCreatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastMessageCreatedAt),
       currentUserHasSent: Value(currentUserHasSent),
       createdAt: Value(createdAt),
       ownerPubkey: Value(ownerPubkey),
@@ -12195,6 +12235,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       isRead: serializer.fromJson<bool>(json['isRead']),
       isDismissed: serializer.fromJson<bool>(json['isDismissed']),
       lastReadTimestamp: serializer.fromJson<int?>(json['lastReadTimestamp']),
+      lastMessageCreatedAt: serializer.fromJson<int?>(
+        json['lastMessageCreatedAt'],
+      ),
       currentUserHasSent: serializer.fromJson<bool>(json['currentUserHasSent']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
@@ -12217,6 +12260,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       'isRead': serializer.toJson<bool>(isRead),
       'isDismissed': serializer.toJson<bool>(isDismissed),
       'lastReadTimestamp': serializer.toJson<int?>(lastReadTimestamp),
+      'lastMessageCreatedAt': serializer.toJson<int?>(lastMessageCreatedAt),
       'currentUserHasSent': serializer.toJson<bool>(currentUserHasSent),
       'createdAt': serializer.toJson<int>(createdAt),
       'ownerPubkey': serializer.toJson<String>(ownerPubkey),
@@ -12235,6 +12279,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     bool? isRead,
     bool? isDismissed,
     Value<int?> lastReadTimestamp = const Value.absent(),
+    Value<int?> lastMessageCreatedAt = const Value.absent(),
     bool? currentUserHasSent,
     int? createdAt,
     String? ownerPubkey,
@@ -12258,6 +12303,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     lastReadTimestamp: lastReadTimestamp.present
         ? lastReadTimestamp.value
         : this.lastReadTimestamp,
+    lastMessageCreatedAt: lastMessageCreatedAt.present
+        ? lastMessageCreatedAt.value
+        : this.lastMessageCreatedAt,
     currentUserHasSent: currentUserHasSent ?? this.currentUserHasSent,
     createdAt: createdAt ?? this.createdAt,
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
@@ -12287,6 +12335,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastReadTimestamp: data.lastReadTimestamp.present
           ? data.lastReadTimestamp.value
           : this.lastReadTimestamp,
+      lastMessageCreatedAt: data.lastMessageCreatedAt.present
+          ? data.lastMessageCreatedAt.value
+          : this.lastMessageCreatedAt,
       currentUserHasSent: data.currentUserHasSent.present
           ? data.currentUserHasSent.value
           : this.currentUserHasSent,
@@ -12313,6 +12364,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
           ..write('isRead: $isRead, ')
           ..write('isDismissed: $isDismissed, ')
           ..write('lastReadTimestamp: $lastReadTimestamp, ')
+          ..write('lastMessageCreatedAt: $lastMessageCreatedAt, ')
           ..write('currentUserHasSent: $currentUserHasSent, ')
           ..write('createdAt: $createdAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
@@ -12333,6 +12385,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     isRead,
     isDismissed,
     lastReadTimestamp,
+    lastMessageCreatedAt,
     currentUserHasSent,
     createdAt,
     ownerPubkey,
@@ -12352,6 +12405,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
           other.isRead == this.isRead &&
           other.isDismissed == this.isDismissed &&
           other.lastReadTimestamp == this.lastReadTimestamp &&
+          other.lastMessageCreatedAt == this.lastMessageCreatedAt &&
           other.currentUserHasSent == this.currentUserHasSent &&
           other.createdAt == this.createdAt &&
           other.ownerPubkey == this.ownerPubkey &&
@@ -12369,6 +12423,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
   final Value<bool> isRead;
   final Value<bool> isDismissed;
   final Value<int?> lastReadTimestamp;
+  final Value<int?> lastMessageCreatedAt;
   final Value<bool> currentUserHasSent;
   final Value<int> createdAt;
   final Value<String> ownerPubkey;
@@ -12385,6 +12440,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     this.isRead = const Value.absent(),
     this.isDismissed = const Value.absent(),
     this.lastReadTimestamp = const Value.absent(),
+    this.lastMessageCreatedAt = const Value.absent(),
     this.currentUserHasSent = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.ownerPubkey = const Value.absent(),
@@ -12402,6 +12458,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     this.isRead = const Value.absent(),
     this.isDismissed = const Value.absent(),
     this.lastReadTimestamp = const Value.absent(),
+    this.lastMessageCreatedAt = const Value.absent(),
     this.currentUserHasSent = const Value.absent(),
     required int createdAt,
     this.ownerPubkey = const Value.absent(),
@@ -12421,6 +12478,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     Expression<bool>? isRead,
     Expression<bool>? isDismissed,
     Expression<int>? lastReadTimestamp,
+    Expression<int>? lastMessageCreatedAt,
     Expression<bool>? currentUserHasSent,
     Expression<int>? createdAt,
     Expression<String>? ownerPubkey,
@@ -12441,6 +12499,8 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
       if (isRead != null) 'is_read': isRead,
       if (isDismissed != null) 'is_dismissed': isDismissed,
       if (lastReadTimestamp != null) 'last_read_timestamp': lastReadTimestamp,
+      if (lastMessageCreatedAt != null)
+        'last_message_created_at': lastMessageCreatedAt,
       if (currentUserHasSent != null)
         'current_user_has_sent': currentUserHasSent,
       if (createdAt != null) 'created_at': createdAt,
@@ -12461,6 +12521,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     Value<bool>? isRead,
     Value<bool>? isDismissed,
     Value<int?>? lastReadTimestamp,
+    Value<int?>? lastMessageCreatedAt,
     Value<bool>? currentUserHasSent,
     Value<int>? createdAt,
     Value<String>? ownerPubkey,
@@ -12479,6 +12540,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
       isRead: isRead ?? this.isRead,
       isDismissed: isDismissed ?? this.isDismissed,
       lastReadTimestamp: lastReadTimestamp ?? this.lastReadTimestamp,
+      lastMessageCreatedAt: lastMessageCreatedAt ?? this.lastMessageCreatedAt,
       currentUserHasSent: currentUserHasSent ?? this.currentUserHasSent,
       createdAt: createdAt ?? this.createdAt,
       ownerPubkey: ownerPubkey ?? this.ownerPubkey,
@@ -12522,6 +12584,11 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     if (lastReadTimestamp.present) {
       map['last_read_timestamp'] = Variable<int>(lastReadTimestamp.value);
     }
+    if (lastMessageCreatedAt.present) {
+      map['last_message_created_at'] = Variable<int>(
+        lastMessageCreatedAt.value,
+      );
+    }
     if (currentUserHasSent.present) {
       map['current_user_has_sent'] = Variable<bool>(currentUserHasSent.value);
     }
@@ -12553,6 +12620,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
           ..write('isRead: $isRead, ')
           ..write('isDismissed: $isDismissed, ')
           ..write('lastReadTimestamp: $lastReadTimestamp, ')
+          ..write('lastMessageCreatedAt: $lastMessageCreatedAt, ')
           ..write('currentUserHasSent: $currentUserHasSent, ')
           ..write('createdAt: $createdAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
@@ -27980,6 +28048,7 @@ typedef $$ConversationsTableCreateCompanionBuilder =
       Value<bool> isRead,
       Value<bool> isDismissed,
       Value<int?> lastReadTimestamp,
+      Value<int?> lastMessageCreatedAt,
       Value<bool> currentUserHasSent,
       required int createdAt,
       Value<String> ownerPubkey,
@@ -27998,6 +28067,7 @@ typedef $$ConversationsTableUpdateCompanionBuilder =
       Value<bool> isRead,
       Value<bool> isDismissed,
       Value<int?> lastReadTimestamp,
+      Value<int?> lastMessageCreatedAt,
       Value<bool> currentUserHasSent,
       Value<int> createdAt,
       Value<String> ownerPubkey,
@@ -28061,6 +28131,11 @@ class $$ConversationsTableFilterComposer
 
   ColumnFilters<int> get lastReadTimestamp => $composableBuilder(
     column: $table.lastReadTimestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastMessageCreatedAt => $composableBuilder(
+    column: $table.lastMessageCreatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -28144,6 +28219,11 @@ class $$ConversationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get lastMessageCreatedAt => $composableBuilder(
+    column: $table.lastMessageCreatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get currentUserHasSent => $composableBuilder(
     column: $table.currentUserHasSent,
     builder: (column) => ColumnOrderings(column),
@@ -28216,6 +28296,11 @@ class $$ConversationsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get lastMessageCreatedAt => $composableBuilder(
+    column: $table.lastMessageCreatedAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get currentUserHasSent => $composableBuilder(
     column: $table.currentUserHasSent,
     builder: (column) => column,
@@ -28276,6 +28361,7 @@ class $$ConversationsTableTableManager
                 Value<bool> isRead = const Value.absent(),
                 Value<bool> isDismissed = const Value.absent(),
                 Value<int?> lastReadTimestamp = const Value.absent(),
+                Value<int?> lastMessageCreatedAt = const Value.absent(),
                 Value<bool> currentUserHasSent = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<String> ownerPubkey = const Value.absent(),
@@ -28292,6 +28378,7 @@ class $$ConversationsTableTableManager
                 isRead: isRead,
                 isDismissed: isDismissed,
                 lastReadTimestamp: lastReadTimestamp,
+                lastMessageCreatedAt: lastMessageCreatedAt,
                 currentUserHasSent: currentUserHasSent,
                 createdAt: createdAt,
                 ownerPubkey: ownerPubkey,
@@ -28310,6 +28397,7 @@ class $$ConversationsTableTableManager
                 Value<bool> isRead = const Value.absent(),
                 Value<bool> isDismissed = const Value.absent(),
                 Value<int?> lastReadTimestamp = const Value.absent(),
+                Value<int?> lastMessageCreatedAt = const Value.absent(),
                 Value<bool> currentUserHasSent = const Value.absent(),
                 required int createdAt,
                 Value<String> ownerPubkey = const Value.absent(),
@@ -28326,6 +28414,7 @@ class $$ConversationsTableTableManager
                 isRead: isRead,
                 isDismissed: isDismissed,
                 lastReadTimestamp: lastReadTimestamp,
+                lastMessageCreatedAt: lastMessageCreatedAt,
                 currentUserHasSent: currentUserHasSent,
                 createdAt: createdAt,
                 ownerPubkey: ownerPubkey,

@@ -99,6 +99,7 @@ END
     required int createdAt,
     String? lastMessageContent,
     int? lastMessageTimestamp,
+    int? lastMessageCreatedAt,
     String? lastMessageSenderPubkey,
     String? subject,
     bool isRead = true,
@@ -157,6 +158,7 @@ END
       createdAt: createdAt,
       lastMessageContent: Value(lastMessageContent),
       lastMessageTimestamp: Value(lastMessageTimestamp),
+      lastMessageCreatedAt: Value(lastMessageCreatedAt),
       lastMessageSenderPubkey: Value(lastMessageSenderPubkey),
       subject: Value(subject),
       isRead: Value(keepDismissed || (!restoredByIncoming && isRead)),
@@ -241,6 +243,10 @@ END
           lastMessageSenderPubkey: excl.lastMessageSenderPubkey.iif(
             previewCondition,
             old.lastMessageSenderPubkey,
+          ),
+          lastMessageCreatedAt: excl.lastMessageCreatedAt.iif(
+            previewCondition,
+            old.lastMessageCreatedAt,
           ),
         );
       }),
@@ -511,6 +517,12 @@ END
   /// Advances the read cursor of every read conversation [ownerPubkey] owns to
   /// its latest message, the rule [markAsRead] applies to one row.
   ///
+  /// The latest message's own `created_at` counts too, bounded by
+  /// [nowSeconds]: ingest stores the timestamp bounded by the clock at the
+  /// time, so a message from a sender whose clock ran ahead comes back from a
+  /// later re-download with a larger timestamp than the one read. The bound
+  /// stops a far-future `created_at` from marking later messages read.
+  ///
   /// A conversation can be read with no cursor at all, because the user sent
   /// its last message. Called when the account is left with its conversations
   /// kept and its messages deleted: preview backfill then clears
@@ -518,14 +530,22 @@ END
   /// [upsertConversation] that a re-downloaded message was already read
   /// (#10276). Matches the exact owner, never legacy rows. Returns the number
   /// of conversations whose cursor moved.
-  Future<int> pinReadCursorsToLatestMessage(String ownerPubkey) {
+  Future<int> pinReadCursorsToLatestMessage(
+    String ownerPubkey, {
+    required int nowSeconds,
+  }) {
+    const latest =
+        'MAX(COALESCE(last_message_timestamp, 0), '
+        'MIN(COALESCE(last_message_created_at, 0), ?))';
     return customUpdate(
-      'UPDATE conversations SET last_read_timestamp = '
-      'COALESCE(last_message_timestamp, 0) '
+      'UPDATE conversations SET last_read_timestamp = $latest '
       'WHERE owner_pubkey = ? AND is_read = 1 '
-      'AND COALESCE(last_read_timestamp, 0) < '
-      'COALESCE(last_message_timestamp, 0)',
-      variables: [Variable(ownerPubkey)],
+      'AND COALESCE(last_read_timestamp, 0) < $latest',
+      variables: [
+        Variable(nowSeconds),
+        Variable(ownerPubkey),
+        Variable(nowSeconds),
+      ],
       updates: {attachedDatabase.conversations},
       updateKind: UpdateKind.update,
     );
@@ -785,7 +805,8 @@ LIMIT 1
       UPDATE conversations AS c
       SET last_message_content = ($latestPreviewContentSubquery),
           last_message_timestamp = ($latestTimestampSubquery),
-          last_message_sender_pubkey = ($latestSenderSubquery)
+          last_message_sender_pubkey = ($latestSenderSubquery),
+          last_message_created_at = NULL
       WHERE $scopedConversationFilter
         AND EXISTS (
           SELECT 1 FROM direct_messages dm
