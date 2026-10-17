@@ -14084,4 +14084,26 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Zapisano';
+
+  @override
+  String get inboxRequestsMarkAllReadShort =>
+      'Oznacz wszystkie jako przeczytane';
+
+  @override
+  String get inboxRequestsDismissed => 'Odłożone';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Brak odłożonych rozmów';
+
+  @override
+  String get inboxRequestDismiss => 'Odłóż';
+
+  @override
+  String get inboxRequestRestore => 'Przywróć';
+
+  @override
+  String get inboxThreadMarkRead => 'Oznacz jako przeczytane';
+
+  @override
+  String get inboxThreadMarkedRead => 'Oznaczono jako przeczytane';
 }

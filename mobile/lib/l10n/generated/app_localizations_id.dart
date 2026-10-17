@@ -13699,4 +13699,25 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Tersimpan';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Tandai semua dibaca';
+
+  @override
+  String get inboxRequestsDismissed => 'Disisihkan';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Belum ada yang disisihkan';
+
+  @override
+  String get inboxRequestDismiss => 'Sisihkan';
+
+  @override
+  String get inboxRequestRestore => 'Pulihkan';
+
+  @override
+  String get inboxThreadMarkRead => 'Tandai dibaca';
+
+  @override
+  String get inboxThreadMarkedRead => 'Ditandai dibaca';
 }

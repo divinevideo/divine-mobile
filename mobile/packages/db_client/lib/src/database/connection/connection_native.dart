@@ -1354,6 +1354,10 @@ const _localOnlyDataQueries = [
     'conversation_dismissals',
     'SELECT 1 FROM conversation_dismissals LIMIT 1',
   ),
+  _LocalOnlyDataQuery(
+    'sound_request_states',
+    'SELECT 1 FROM sound_request_states LIMIT 1',
+  ),
 ];
 
 class _LocalOnlyDataQuery {

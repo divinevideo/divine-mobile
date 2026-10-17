@@ -743,17 +743,11 @@
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."
   },
   "videoErrorAdultContentHiddenTitle": "بالغ مواد بند ہے",
-  "@videoErrorAdultContentHiddenTitle": {
-    "description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."
-  },
+  "@videoErrorAdultContentHiddenTitle": {"description": "Title of the bottom sheet shown when an age-verified viewer taps Verify age on an age-restricted video but their Content Filters keep adult content hidden."},
   "videoErrorAdultContentHiddenBody": "یہ ویڈیو دیکھنے کے لیے اسے مواد فلٹرز میں چالو کریں۔",
-  "@videoErrorAdultContentHiddenBody": {
-    "description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."
-  },
+  "@videoErrorAdultContentHiddenBody": {"description": "Body of the adult-content-hidden sheet. The remedy is switching adult content on in Content Filters, not re-verifying age."},
   "videoErrorAdultContentHiddenAction": "مواد فلٹرز کھولیں",
-  "@videoErrorAdultContentHiddenAction": {
-    "description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."
-  },
+  "@videoErrorAdultContentHiddenAction": {"description": "Primary button on the adult-content-hidden sheet; opens the Content Filters settings screen."},
   "videoDetailLoadError": "ویڈیو لوڈ نہیں ہو سکی",
   "videoDetailLoadErrorBody": "یہاں پہنچتے پہنچتے کچھ گڑبڑ ہو گئی۔ دوبارہ کوشش کریں۔",
   "videoDetailNotFoundBody": "ہو سکتا ہے یہ حذف ہو چکی ہو، ہماری پہنچ سے باہر ہو، یا آپ کی ترتیبات نے اسے چھپا دیا ہو۔",
@@ -993,7 +987,7 @@
   "metadataC2paCredentials": "C2PA مواد اسناد",
   "metadataProofManifest": "ثبوت مینی فیسٹ",
   "metadataVerificationInfoTooltip": "ان جانچوں کا کیا مطلب ہے؟",
-  "metadataSectionInfoSemanticsLabel": "{section}. {question}",
+    "metadataSectionInfoSemanticsLabel": "{section}. {question}",
   "metadataVerificationInfoTitle": "ان جانچوں کا مطلب",
   "metadataVerificationInfoIntro": "یہ اشارے کیمرے اور خود ویڈیو فائل سے آتے ہیں۔ ویڈیو کے پاس جتنے زیادہ اشارے ہوں، ہم اس کے ماخذ کے بارے میں اتنا ہی زیادہ ثابت کر سکتے ہیں۔",
   "metadataVerificationInfoDeviceAttestation": "فون کے آپریٹنگ سسٹم نے اُس ایپ کی ضمانت دی جس نے یہ ریکارڈ کیا۔ یہ اس بات کا مضبوط ثبوت ہے کہ یہ کیمرے سے آیا، نہ کہ کسی کی اپ لوڈ کی ہوئی فائل سے۔",
@@ -2256,29 +2250,11 @@
   "postPublishConfirmationShare": "شیئر",
   "postPublishConfirmationThumbnailLabel": "اس ویڈیو کا تھمب نیل جو آپ نے ابھی شائع کی",
   "postPublishCrosspostSuggest": "کیا یہ لوپ {platforms} پر بھی بھیجیں؟",
-  "@postPublishCrosspostSuggest": {
-    "placeholders": {
-      "platforms": {
-        "type": "String"
-      }
-    }
-  },
+  "@postPublishCrosspostSuggest": {"placeholders": {"platforms": {"type": "String"}}},
   "postPublishCrosspostSetUp": "ایک بار پوسٹ کریں، {platform} پر بھی نظر آئیں۔",
-  "@postPublishCrosspostSetUp": {
-    "placeholders": {
-      "platform": {
-        "type": "String"
-      }
-    }
-  },
+  "@postPublishCrosspostSetUp": {"placeholders": {"platform": {"type": "String"}}},
   "postPublishCrosspostAutomatic": "خودکار طور پر {platforms} پر جا رہا ہے۔",
-  "@postPublishCrosspostAutomatic": {
-    "placeholders": {
-      "platforms": {
-        "type": "String"
-      }
-    }
-  },
+  "@postPublishCrosspostAutomatic": {"placeholders": {"platforms": {"type": "String"}}},
   "userSearchNoResults": "کوئی صارف نہیں ملا",
   "userPickerFilterByNameHint": "نام سے فلٹر کریں...",
   "userPickerSearchByNameHint": "نام سے تلاش کریں...",
@@ -2947,8 +2923,8 @@
     "description": "SnackBar text shown when a protected minor (13-15) tries to DM a non-approved account (#176). Neutral, no retry action."
   },
   "dmSendBlockedRetiredMessage": "یہ گفتگو کوئی نہیں پڑھ رہا۔ اس کے بجائے Divine Moderation کو پیغام بھیجیں۔",
-  "dmDeleteRefusedMessage": "سب کے لیے حذف نہیں ہو سکا۔",
-  "dmDeleteRefusedDetails": "کچھ لوگ اب بھی یہ پیغام دیکھ سکتے ہیں۔",
+    "dmDeleteRefusedMessage": "سب کے لیے حذف نہیں ہو سکا۔",
+    "dmDeleteRefusedDetails": "کچھ لوگ اب بھی یہ پیغام دیکھ سکتے ہیں۔",
   "dmRetiredThreadClosedTitle": "یہ گفتگو بند ہو چکی ہے۔",
   "dmFormerModerationAccountName": "سابقہ ماڈریشن اکاؤنٹ",
   "messageRequestModerationNoticeCannotBeRemoved": "Divine Moderation کا یہ نوٹس ہٹایا نہیں جا سکتا۔",
@@ -3676,13 +3652,7 @@
   "inboxRequestsRemoveAll": "تمام درخواستیں ہٹائیں",
   "messageRequestDeclineAndRemoveButton": "انکار کر کے ہٹائیں",
   "messageRequestDeclinedSnackbar": "{displayName} کی درخواست مسترد کر دی",
-  "@messageRequestDeclinedSnackbar": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      }
-    }
-  },
+  "@messageRequestDeclinedSnackbar": {"placeholders": {"displayName": {"type": "String"}}},
   "messageRequestLoadFailed": "یہ درخواست لوڈ نہیں ہو سکی۔",
   "messageRequestFollowersCount": "{count} فالوورز",
   "@messageRequestFollowersCount": {
@@ -3740,9 +3710,7 @@
   },
   "deleteAccountDeleteAllContentButton": "تمام مواد حذف کریں",
   "deleteAccountDeletionUnavailable": "اکاؤنٹ حذف کرنے کی سہولت ابھی دستیاب نہیں ہے۔ کچھ بھی حذف نہیں ہوا۔",
-  "@deleteAccountDeletionUnavailable": {
-    "description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."
-  },
+  "@deleteAccountDeletionUnavailable": {"description": "Error shown when account deletion cannot start because the deletion coordinator is unavailable; no destructive deletion has occurred."},
   "deleteAccountDeletionIncomplete": "ہم آپ کا اکاؤنٹ مکمل حذف نہیں کر سکے۔ دوبارہ کوشش کریں۔",
   "@deleteAccountDeletionIncomplete": {
     "description": "Neutral error when account deletion could not complete and the username-burn state is uncertain (an unresolved network timeout). Makes no claim about the username; retrying resolves it."
@@ -3935,7 +3903,7 @@
     }
   },
   "ogVinerBadgeLabel": "OG Viner",
-  "ogBetaTesterBadgeLabel": "OG Beta Tester",
+    "ogBetaTesterBadgeLabel": "OG Beta Tester",
   "profileBadgeOgVinerBody": "اس شخص نے ایک اصل Vine پوسٹ کیا تھا جو Divine کو آرکائیو میں ملا۔ یہ اکاؤنٹ کی تصدیق کا بیج نہیں ہے۔",
   "profileBadgeCheckmarkTitle": "پروفائل چیک مارک",
   "profileBadgeCheckmarkBody": "Divine یہ چیک مارک ٹیم کے اکاؤنٹس کو دیتا ہے۔ یہ NIP-05، تصدیق شدہ اکاؤنٹ لنکس اور OG Viner اسٹیٹس سے الگ ہے۔",
@@ -4058,18 +4026,12 @@
   "blueskyEnabledSubtitle": "آپ کی ویڈیوز Bluesky پر شائع ہوں گی",
   "blueskyDisabledSubtitle": "آپ کی ویڈیوز Bluesky پر شائع نہیں ہوں گی",
   "blueskyBackfillDisclosureTitle": "آپ کی پچھلی ویڈیوز بھی پوسٹ ہوں گی",
-  "@blueskyBackfillDisclosureTitle": {
-    "description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."
-  },
+  "@blueskyBackfillDisclosureTitle": {"description": "Title for the Bluesky publishing disclosure explaining historical videos are backfilled when crossposting is enabled."},
   "blueskyBackfillDisclosureSubtitle": "جب آپ اسے آن کریں گے تو Divine آپ کی پرانی ویڈیوز Bluesky پر بھیجنا شروع کرے گا، سب سے پرانی پہلے، روزانہ حد میں جلدی کیے بغیر۔",
-  "@blueskyBackfillDisclosureSubtitle": {
-    "description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."
-  },
+  "@blueskyBackfillDisclosureSubtitle": {"description": "Body text for the Bluesky publishing disclosure explaining that enabling crossposting starts a historical video backfill."},
   "blueskyHandle": "Bluesky ہینڈل",
   "blueskyDid": "Bluesky DID",
-  "@blueskyDid": {
-    "description": "Label for the ATProto DID shown when a Bluesky account is provisioned."
-  },
+  "@blueskyDid": {"description": "Label for the ATProto DID shown when a Bluesky account is provisioned."},
   "blueskyStatus": "اسٹیٹس",
   "blueskyStatusReady": "اکاؤنٹ تیار اور دستیاب ہے",
   "blueskyStatusPending": "اکاؤنٹ تیار ہو رہا ہے...",
@@ -6438,32 +6400,11 @@
   "crosspostingGenericError": "کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔",
   "crosspostingCallbackTimeoutError": "سائن ان صفحے سے کوئی جواب نہیں آیا۔ اگر آپ نے وہاں منسلک کر لیا ہے تو ریفریش کریں — ہو سکتا ہے آپ کا اکاؤنٹ پہلے ہی منسلک ہو۔",
   "crosspostingConnectionSuccess": "{platform} منسلک ہو گیا",
-  "@crosspostingConnectionSuccess": {
-    "description": "Snackbar after returning from a successful platform connection.",
-    "placeholders": {
-      "platform": {
-        "type": "String"
-      }
-    }
-  },
+  "@crosspostingConnectionSuccess": {"description": "Snackbar after returning from a successful platform connection.", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingConnectionFailed": "{platform} منسلک نہیں ہو سکا",
-  "@crosspostingConnectionFailed": {
-    "description": "Snackbar after returning from a failed platform connection.",
-    "placeholders": {
-      "platform": {
-        "type": "String"
-      }
-    }
-  },
+  "@crosspostingConnectionFailed": {"description": "Snackbar after returning from a failed platform connection.", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingConnectionDenied": "{platform} پر کنکشن منسوخ کر دیا گیا",
-  "@crosspostingConnectionDenied": {
-    "description": "Snackbar when the user denied the connection on the provider's page.",
-    "placeholders": {
-      "platform": {
-        "type": "String"
-      }
-    }
-  },
+  "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
   "supporterTitle": "Divine سپورٹرز",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
@@ -6557,21 +6498,9 @@
   "soundSharedAs": "بطور شیئر کیا گیا",
   "soundOwnWork": "یہ ساؤنڈ میں نے بنایا ہے",
   "soundCreatorBy": "بذریعہ {creator}",
-  "@soundCreatorBy": {
-    "placeholders": {
-      "creator": {
-        "type": "String"
-      }
-    }
-  },
+  "@soundCreatorBy": {"placeholders": {"creator": {"type": "String"}}},
   "soundSharedBy": "{publisher} کی جانب سے شیئر کیا گیا",
-  "@soundSharedBy": {
-    "placeholders": {
-      "publisher": {
-        "type": "String"
-      }
-    }
-  },
+  "@soundSharedBy": {"placeholders": {"publisher": {"type": "String"}}},
   "soundRemixingAllowed": "ری مکسنگ کی اجازت ہے",
   "soundCreditOnly": "صرف کریڈٹ",
   "soundCreditTitleLabel": "ساؤنڈ کا عنوان",
@@ -6755,12 +6684,12 @@
   "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "کوئی دوسرا ردعمل شامل کرنے سے پہلے پچھلا ردعمل ہٹانے کا عمل مکمل کریں۔",
   "updateGentleBanner": "ایک نئی اپ ڈیٹ آ گئی ہے۔ دیکھیں ←",
-  "updateModerateTitle": "آپ کے آخری بار چیک کرنے کے بعد ایک اپ ڈیٹ آئی ہے",
-  "updateUrgentTitle": "آپ اہم اصلاحات سے محروم ہیں",
-  "updateNotNow": "ابھی نہیں",
-  "updateAction": "اپ ڈیٹ کریں",
-  "updateNewIn": "{version} میں نیا:",
-  "settingsUpdateAvailable": "اپ ڈیٹ دستیاب ہے",
+    "updateModerateTitle": "آپ کے آخری بار چیک کرنے کے بعد ایک اپ ڈیٹ آئی ہے",
+    "updateUrgentTitle": "آپ اہم اصلاحات سے محروم ہیں",
+    "updateNotNow": "ابھی نہیں",
+    "updateAction": "اپ ڈیٹ کریں",
+    "updateNewIn": "{version} میں نیا:",
+    "settingsUpdateAvailable": "اپ ڈیٹ دستیاب ہے",
   "soundUploadChooseFile": "آڈیو فائل منتخب کریں",
   "soundUploadSupportedFormats": "AAC، M4A، MP3 یا WAV",
   "soundUploadChangeFile": "تبدیل کریں",
@@ -6779,74 +6708,52 @@
   "savedSoundDeleteFailedNotOwner": "آپ صرف وہی ساؤنڈز حذف کر سکتے ہیں جو آپ نے خود شیئر کیے ہوں۔",
   "audioPickerTypeGroup": "آڈیو",
   "soundUploadRetrySaveAction": "آوازوں میں دوبارہ محفوظ کریں",
-  "libraryScheduledSectionTitle": "شیڈول شدہ",
-  "libraryScheduledGoesOutAt": "{time} کو شائع ہوگی",
-  "libraryScheduledBadgeWaitingForServer": "سرور کا انتظار",
-  "libraryScheduledBadgeFailed": "شائع نہیں ہوئی",
-  "libraryScheduledBadgeUploading": "اپلوڈ ہو رہی ہے",
-  "libraryScheduledRemoteTitle": "کسی اور ڈیوائس پر شیڈول کی گئی",
-  "libraryScheduledMoreActionsSemanticLabel": "{title} کے لیے مزید اختیارات",
-  "libraryScheduledActionReschedule": "وقت تبدیل کریں",
-  "libraryScheduledActionPublishNow": "ابھی پوسٹ کریں",
-  "libraryScheduledActionRetry": "دوبارہ کوشش کریں",
-  "libraryScheduledActionCancel": "پوسٹ منسوخ کریں",
-  "libraryScheduledCancelTitle": "یہ پوسٹ منسوخ کریں؟",
-  "libraryScheduledCancelMessage": "یہ آپ کے مسودوں میں واپس چلی جائے گی۔ کچھ شائع نہیں ہوگا۔",
-  "libraryScheduledCancelConfirm": "ہاں، منسوخ کریں",
-  "libraryScheduledCancelKeep": "رہنے دیں",
-  "libraryScheduledCancelledSnackbar": "منسوخ ہو گئی۔ آپ کے مسودوں میں واپس آ گئی ہے۔",
-  "libraryScheduledRescheduledSnackbar": "نئے وقت پر منتقل ہو گئی۔",
-  "libraryScheduledPublishedNowSnackbar": "پوسٹ ہو گئی۔",
-  "libraryScheduledRetryQueuedSnackbar": "دوبارہ کوشش ہو رہی ہے۔",
-  "libraryScheduledAlreadyPublishedSnackbar": "دیر ہو گئی — وہ پہلے ہی شائع ہو چکی ہے۔",
-  "libraryScheduledUnavailableSnackbar": "ریلے تک رسائی نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
-  "libraryScheduledActionFailedSnackbar": "یہ کام نہیں ہوا۔ دوبارہ کوشش کریں۔",
-  "publishErrorScheduleRejected": "ریلے اس پوسٹ کو بعد کے لیے محفوظ نہیں رکھ سکا۔ کوئی اور وقت منتخب کریں یا ابھی پوسٹ کریں۔",
-  "videoMetadataScheduleLabel": "پوسٹ کا وقت",
-  "videoMetadataSelectScheduleSemanticLabel": "پوسٹ کا وقت منتخب کریں",
-  "videoMetadataScheduleNow": "ابھی",
-  "videoMetadataScheduleTonight": "آج رات {time} بجے",
-  "videoMetadataScheduleTomorrowMorning": "کل {time} بجے",
-  "videoMetadataSchedulePickDateTime": "تاریخ اور وقت منتخب کریں",
-  "videoMetadataSchedulePickerTitle": "یہ کب شائع ہو؟",
-  "videoMetadataScheduleTooSoon": "{minutes, plural, =1{کم از کم {minutes} منٹ کا وقفہ رکھیں۔} other{کم از کم {minutes} منٹ کا وقفہ رکھیں۔}}",
-  "videoMetadataScheduleTooFar": "{days, plural, =1{یہ {days} دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔} other{یہ {days} دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔}}",
-  "videoMetadataScheduleButton": "شیڈول کریں",
-  "videoMetadataScheduleVideoHint": "یہ ویڈیو {time} کے لیے شیڈول کرتا ہے",
+    "libraryScheduledSectionTitle": "شیڈول شدہ",
+    "libraryScheduledGoesOutAt": "{time} کو شائع ہوگی",
+    "libraryScheduledBadgeWaitingForServer": "سرور کا انتظار",
+    "libraryScheduledBadgeFailed": "شائع نہیں ہوئی",
+    "libraryScheduledBadgeUploading": "اپلوڈ ہو رہی ہے",
+    "libraryScheduledRemoteTitle": "کسی اور ڈیوائس پر شیڈول کی گئی",
+    "libraryScheduledMoreActionsSemanticLabel": "{title} کے لیے مزید اختیارات",
+    "libraryScheduledActionReschedule": "وقت تبدیل کریں",
+    "libraryScheduledActionPublishNow": "ابھی پوسٹ کریں",
+    "libraryScheduledActionRetry": "دوبارہ کوشش کریں",
+    "libraryScheduledActionCancel": "پوسٹ منسوخ کریں",
+    "libraryScheduledCancelTitle": "یہ پوسٹ منسوخ کریں؟",
+    "libraryScheduledCancelMessage": "یہ آپ کے مسودوں میں واپس چلی جائے گی۔ کچھ شائع نہیں ہوگا۔",
+    "libraryScheduledCancelConfirm": "ہاں، منسوخ کریں",
+    "libraryScheduledCancelKeep": "رہنے دیں",
+    "libraryScheduledCancelledSnackbar": "منسوخ ہو گئی۔ آپ کے مسودوں میں واپس آ گئی ہے۔",
+    "libraryScheduledRescheduledSnackbar": "نئے وقت پر منتقل ہو گئی۔",
+    "libraryScheduledPublishedNowSnackbar": "پوسٹ ہو گئی۔",
+    "libraryScheduledRetryQueuedSnackbar": "دوبارہ کوشش ہو رہی ہے۔",
+    "libraryScheduledAlreadyPublishedSnackbar": "دیر ہو گئی — وہ پہلے ہی شائع ہو چکی ہے۔",
+    "libraryScheduledUnavailableSnackbar": "ریلے تک رسائی نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+    "libraryScheduledActionFailedSnackbar": "یہ کام نہیں ہوا۔ دوبارہ کوشش کریں۔",
+    "publishErrorScheduleRejected": "ریلے اس پوسٹ کو بعد کے لیے محفوظ نہیں رکھ سکا۔ کوئی اور وقت منتخب کریں یا ابھی پوسٹ کریں۔",
+    "videoMetadataScheduleLabel": "پوسٹ کا وقت",
+    "videoMetadataSelectScheduleSemanticLabel": "پوسٹ کا وقت منتخب کریں",
+    "videoMetadataScheduleNow": "ابھی",
+    "videoMetadataScheduleTonight": "آج رات {time} بجے",
+    "videoMetadataScheduleTomorrowMorning": "کل {time} بجے",
+    "videoMetadataSchedulePickDateTime": "تاریخ اور وقت منتخب کریں",
+    "videoMetadataSchedulePickerTitle": "یہ کب شائع ہو؟",
+    "videoMetadataScheduleTooSoon": "{minutes, plural, =1{کم از کم {minutes} منٹ کا وقفہ رکھیں۔} other{کم از کم {minutes} منٹ کا وقفہ رکھیں۔}}",
+    "videoMetadataScheduleTooFar": "{days, plural, =1{یہ {days} دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔} other{یہ {days} دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔}}",
+    "videoMetadataScheduleButton": "شیڈول کریں",
+    "videoMetadataScheduleVideoHint": "یہ ویڈیو {time} کے لیے شیڈول کرتا ہے",
   "crosspostingBenefitTitle": "اپنے لوپس کو ہر جگہ لے جائیں",
-  "@crosspostingBenefitTitle": {
-    "description": "Headline of the crossposting benefit card in settings"
-  },
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
   "crosspostingBenefitBody": "Divine پر ایک بار پوسٹ کریں، سیدھا Instagram پر شیئر کریں۔ آپ کے لوگ وہاں پہلے سے موجود ہیں — جا کر ان سے ملیں۔ آپ کا بھیجا ہوا ہر لوپ ساتھ ایک چھوٹا لنک گھر لے کر جاتا ہے، تاکہ اگلا تخلیق کار بھی ہمیں ڈھونڈ سکے۔",
-  "@crosspostingBenefitBody": {
-    "description": "Body of the crossposting benefit card in settings"
-  },
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
   "crosspostingBenefitConnect": "{platform} منسلک کریں",
-  "@crosspostingBenefitConnect": {
-    "description": "Primary action on the crossposting benefit card",
-    "placeholders": {
-      "platform": {
-        "type": "String"
-      }
-    }
-  },
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoTitle": "ایک بار سیٹ کریں",
-  "@crosspostingAutoTitle": {
-    "description": "Headline of the automatic crossposting encouragement card"
-  },
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
   "crosspostingAutoBody": "آپ کا ہر نیا لوپ آپ کی طرف سے {platform} پر چلا جاتا ہے — بغیر کسی اضافی ٹیپ کے۔ صرف اُن لوپس پر لاگو ہوتا ہے جو آپ اسے آن کرنے کے بعد شائع کریں۔",
-  "@crosspostingAutoBody": {
-    "description": "Body of the automatic crossposting encouragement card",
-    "placeholders": {
-      "platform": {
-        "type": "String"
-      }
-    }
-  },
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
   "crosspostingAutoEnable": "خودکار آن کریں",
-  "@crosspostingAutoEnable": {
-    "description": "Action that switches a platform to automatic crossposting"
-  },
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"},
   "analyticsConnectionIssue": "کریئیٹر تجزیات سے رابطہ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
   "analyticsDiagnosticsFailedSources": "ناکام ذرائع: {sources}",
   "analyticsServerUnavailable": "کریئیٹر تجزیات کے سرور میں مسئلہ ہے۔ کچھ دیر بعد دوبارہ کوشش کریں۔",
