@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -30,7 +31,34 @@ void main() {
         channelFactory: factory,
       );
       await nostr.relayPool.add(relay);
+      addTearDown(nostr.relayPool.removeAll);
     });
+
+    void withControlledRelayClock(void Function(FakeAsync time) body) {
+      nostr.relayPool.removeAll();
+      fakeAsync((time) {
+        // The socket streams and every callback belong to this clock zone.
+        signer = LocalNostrSigner(
+          '0000000000000000000000000000000000000000000000000000000000000001',
+        );
+        nostr = Nostr(signer, [], (url) => RelayBase(url, RelayStatus(url)));
+        unawaited(nostr.refreshPublicKey());
+        factory = FakeWebSocketChannelFactory();
+        relay = RelayBase(
+          relayUrl,
+          RelayStatus(relayUrl),
+          channelFactory: factory,
+        );
+        unawaited(nostr.relayPool.add(relay));
+        time.flushMicrotasks();
+        try {
+          body(time);
+        } finally {
+          nostr.relayPool.removeAll();
+          time.flushMicrotasks();
+        }
+      });
+    }
 
     Future<PublishOutcome> publishAwaitOk() {
       return nostr.relayPool.sendEventAwaitOk(
@@ -46,44 +74,51 @@ void main() {
 
     test('a relay that accepts the frame but stays silent for the whole OK '
         'window is force-reconnected and its subscriptions re-sent', () async {
-      // Live subscription established before the socket goes zombie.
-      nostr.relayPool.subscribe([
-        Filter(kinds: const [1059], limit: 1).toJson(),
-      ], (_) {});
-      expect(factory.createdChannels, hasLength(1));
-      final zombieChannel = factory.createdChannels.single;
-      final reqFrames = zombieChannel.sentMessages
-          .map((m) => jsonDecode(m as String) as List<dynamic>)
-          .where((m) => m.first == 'REQ')
-          .toList();
-      expect(reqFrames, hasLength(1));
+      withControlledRelayClock((time) {
+        // Live subscription established before the socket goes zombie.
+        nostr.relayPool.subscribe([
+          Filter(kinds: const [1059], limit: 1).toJson(),
+        ], (_) {});
+        expect(factory.createdChannels, hasLength(1));
+        final zombieChannel = factory.createdChannels.single;
+        final reqFrames = zombieChannel.sentMessages
+            .map((m) => jsonDecode(m as String) as List<dynamic>)
+            .where((m) => m.first == 'REQ')
+            .toList();
+        expect(reqFrames, hasLength(1));
 
-      final outcome = await publishAwaitOk();
+        PublishOutcome? outcome;
+        unawaited(publishAwaitOk().then((value) => outcome = value));
+        time.flushMicrotasks();
+        // The EVENT is written before the test advances the OK deadline.
+        expect(
+          zombieChannel.sentMessages
+              .map((m) => jsonDecode(m as String) as List<dynamic>)
+              .where((frame) => frame.first == 'EVENT'),
+          hasLength(1),
+        );
+        time.elapse(const Duration(milliseconds: 100));
 
-      // Frame was written, no OK of either polarity arrived.
-      expect(outcome.confirmed, isFalse);
-      expect(outcome.noResponseFrom, contains(relayUrl));
-
-      // Remediation runs asynchronously after the outcome resolves: the
-      // stale connection is cycled and the subscription re-established on
-      // the fresh channel.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(
-        factory.createdChannels,
-        hasLength(2),
-        reason: 'the silent zombie connection must be force-reconnected',
-      );
-      final freshChannel = factory.createdChannels.last;
-      final replayedReqs = freshChannel.sentMessages
-          .map((m) => jsonDecode(m as String) as List<dynamic>)
-          .where((m) => m.first == 'REQ')
-          .toList();
-      expect(
-        replayedReqs,
-        hasLength(1),
-        reason: 'live subscriptions must survive the forced reconnect',
-      );
-      expect(replayedReqs.single[1], equals(reqFrames.single[1]));
+        expect(outcome?.confirmed, isFalse);
+        expect(outcome?.noResponseFrom, contains(relayUrl));
+        time.elapse(const Duration(milliseconds: 50));
+        expect(
+          factory.createdChannels,
+          hasLength(2),
+          reason: 'the silent zombie connection must be force-reconnected',
+        );
+        final freshChannel = factory.createdChannels.last;
+        final replayedReqs = freshChannel.sentMessages
+            .map((m) => jsonDecode(m as String) as List<dynamic>)
+            .where((m) => m.first == 'REQ')
+            .toList();
+        expect(
+          replayedReqs,
+          hasLength(1),
+          reason: 'live subscriptions must survive the forced reconnect',
+        );
+        expect(replayedReqs.single[1], equals(reqFrames.single[1]));
+      });
     });
 
     test('a relay that stays inbound-active during the OK window is left '
@@ -111,19 +146,32 @@ void main() {
 
     test('an OK true within the window confirms the publish and triggers no '
         'reconnect', () async {
-      final channel = factory.createdChannels.single;
-      final okTimer = Timer(const Duration(milliseconds: 20), () {
+      withControlledRelayClock((time) {
+        final channel = factory.createdChannels.single;
+        PublishOutcome? outcome;
+        unawaited(publishAwaitOk().then((value) => outcome = value));
+        time.flushMicrotasks();
+        expect(
+          channel.sentMessages
+              .map((raw) => jsonDecode(raw as String) as List<dynamic>)
+              .where((frame) => frame.first == 'EVENT'),
+          hasLength(1),
+          reason: 'the relay must receive the publication before its OK',
+        );
+        expect(outcome, isNull);
+
+        time.elapse(const Duration(milliseconds: 20));
         channel.simulateMessage(
           jsonEncode(['OK', 'zombie-event-id', true, '']),
         );
+        time.flushMicrotasks();
+        expect(outcome?.confirmed, isTrue);
+        expect(outcome?.acceptedBy, equals([relayUrl]));
+
+        // Passing the original deadline must not repair an accepted publish.
+        time.elapse(const Duration(milliseconds: 100));
+        expect(factory.createdChannels, hasLength(1));
       });
-      addTearDown(okTimer.cancel);
-
-      final outcome = await publishAwaitOk();
-      expect(outcome.confirmed, isTrue);
-
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(factory.createdChannels, hasLength(1));
     });
 
     test('on a multi-relay publish, a sibling that stayed silent for the whole '

@@ -10,7 +10,7 @@ dependencies:
   concord_protocol:
     path: ../concord_protocol
   cryptography: ^2.7.0
-  pointycastle: ^3.7.3
+  pointycastle: ^4.0.0
   web_socket_channel: ^3.0.3
 dev_dependencies:
   test: ^1.26.3

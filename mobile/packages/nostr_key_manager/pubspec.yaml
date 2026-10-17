@@ -15,7 +15,7 @@ dependencies:
   logging: ^1.2.0
   nostr_sdk:
     path: ../nostr_sdk
-  pointycastle: ^3.7.3
+  pointycastle: ^4.0.0
   shared_preferences: ^2.2.3
   unified_logger:
     path: ../unified_logger

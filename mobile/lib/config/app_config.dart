@@ -1,7 +1,51 @@
 // ABOUTME: Application configuration including backend URLs and environment settings
 // ABOUTME: Centralizes app configuration for different environments (dev, staging, prod)
 
+import 'package:flutter/foundation.dart';
+import 'package:openvine/models/environment_config.dart';
+
 class AppConfig {
+  static const String liveApiBaseUrlOverride = String.fromEnvironment(
+    'LIVE_API_URL',
+  );
+
+  /// Live API base for the build-time default environment.
+  ///
+  /// Prefer [resolveLiveApiBaseUrl] with the runtime-selected
+  /// [AppEnvironment] (see `liveApiServiceProvider`).
+  static String get liveApiBaseUrl => resolveLiveApiBaseUrl();
+
+  /// Resolves the live API base URL.
+  ///
+  /// `LIVE_API_URL` (or [overrideBaseUrl]) wins. Otherwise only
+  /// [AppEnvironment.local] targets the local stack; every other environment
+  /// uses the hosted live API. [appEnvironment] defaults to the build's
+  /// `DEFAULT_ENV`, not the `ENVIRONMENT` define, which release pipelines
+  /// never set.
+  static String resolveLiveApiBaseUrl({
+    String? overrideBaseUrl,
+    AppEnvironment? appEnvironment,
+    TargetPlatform? targetPlatform,
+    bool? isWeb,
+  }) {
+    final explicitOverride = (overrideBaseUrl ?? liveApiBaseUrlOverride).trim();
+    if (explicitOverride.isNotEmpty) {
+      return explicitOverride.replaceFirst(RegExp(r'/+$'), '');
+    }
+
+    final resolvedEnvironment = appEnvironment ?? buildTimeDefaultEnvironment;
+    if (resolvedEnvironment == AppEnvironment.local) {
+      final resolvedPlatform = targetPlatform ?? defaultTargetPlatform;
+      final resolvedIsWeb = isWeb ?? kIsWeb;
+      final host = !resolvedIsWeb && resolvedPlatform == TargetPlatform.android
+          ? androidEmulatorHost
+          : loopbackHost;
+      return 'http://$host:$localLiveApiPort';
+    }
+
+    return productionLiveApiBaseUrl;
+  }
+
   // Backend configuration
 
   /// Canonical Divine REST API base (funnelcake, `api.divine.video`).
