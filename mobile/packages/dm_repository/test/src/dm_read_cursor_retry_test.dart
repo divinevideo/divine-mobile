@@ -269,6 +269,73 @@ void main() {
       );
 
       test(
+        'the drain still applies a queued marker to a row created outside '
+        'message ingest',
+        () async {
+          await deliverReadMarker(
+            wrapId: 'a' * 64,
+            rumorId: 'b' * 64,
+            readAt: _baseCreatedAt + 100,
+          );
+          expect(await conversation(), isNull);
+
+          // Other repository paths can create a row without passing through
+          // either message-ingest hook. Keep the drain's fallback covered.
+          await conversationsDao.upsertConversation(
+            id: conversationId,
+            participantPubkeys: jsonEncode(participants),
+            isGroup: false,
+            createdAt: _baseCreatedAt,
+            lastMessageTimestamp: _baseCreatedAt + 50,
+            isRead: false,
+            ownerPubkey: _owner,
+          );
+          final beforeDrain = await conversation();
+          expect(beforeDrain!.isRead, isFalse);
+          expect(beforeDrain.lastReadTimestamp, isNull);
+
+          await repository.backfillHistoryIfNeeded();
+          await settle();
+
+          final afterDrain = await conversation();
+          expect(afterDrain!.lastReadTimestamp, _baseCreatedAt + 100);
+          expect(afterDrain.isRead, isTrue);
+        },
+      );
+
+      test(
+        'a queued marker applies when a NIP-04 message creates its row',
+        () async {
+          await deliverReadMarker(
+            wrapId: 'a' * 64,
+            rumorId: 'b' * 64,
+            readAt: _baseCreatedAt + 100,
+          );
+          expect(await conversation(), isNull);
+
+          relay.add(
+            Event.fromJson({
+              'id': 'c' * 64,
+              'pubkey': _peer,
+              'created_at': _baseCreatedAt + 50,
+              'kind': EventKind.directMessage,
+              'tags': [
+                ['p', _owner],
+              ],
+              'content': 'legacy hello',
+              'sig': '',
+            }),
+          );
+          await settle();
+
+          final row = await conversation();
+          expect(row!.dmProtocol, 'nip04');
+          expect(row.lastReadTimestamp, _baseCreatedAt + 100);
+          expect(row.isRead, isTrue);
+        },
+      );
+
+      test(
         'an already-read conversation re-downloaded after its marker stays '
         'read through every message the cursor covers',
         () async {
