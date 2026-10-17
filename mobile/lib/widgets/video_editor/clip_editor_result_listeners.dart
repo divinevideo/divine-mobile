@@ -182,7 +182,8 @@ class _ClipStabilizeResultListener extends StatelessWidget {
         context.l10n.videoEditorUnstabilizeOriginalMissing,
       ClipStabilizeFailure(stabilizing: true) =>
         context.l10n.videoEditorStabilizeFailed,
-      ClipStabilizeFailure() => context.l10n.videoEditorUnstabilizeFailed,
+      ClipStabilizeFailure(stabilizing: false) =>
+        context.l10n.videoEditorUnstabilizeFailed,
       // A removed clip has nothing to report; a success shows in the player.
       ClipStabilizeDiscarded() || ClipStabilizeSuccess() || null => null,
     };
