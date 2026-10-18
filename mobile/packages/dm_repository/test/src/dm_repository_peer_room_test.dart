@@ -1159,6 +1159,51 @@ void main() {
         );
       });
 
+      test('does not carry a member message into the one-to-one when the '
+          'room is above the cap', () async {
+        final members = [
+          _alice,
+          for (var i = 0; i < _roomCap - 1; i++)
+            getPublicKey((i + 5).toRadixString(16).padLeft(64, '0')),
+        ];
+        final bigRoomId = DmRepository.computeConversationId([
+          _owner,
+          ...members,
+        ]);
+        final own = message(
+          author: _owner,
+          pTags: members,
+          content: 'the user opened the room',
+        );
+        await deliver(own, authorSecret: _ownerSecret);
+        expect(await messageIdsIn(bigRoomId), equals([own.id]));
+        expect(
+          await repository.removeConversation(bigRoomId),
+          ConversationRemovalOutcome.removed,
+        );
+        await db.customStatement(
+          'UPDATE removed_conversations SET removed_at = ? '
+          'WHERE conversation_id = ? AND owner_pubkey = ?',
+          [leftAt, bigRoomId, _owner],
+        );
+
+        await deliverLeavingNoTrace(
+          message(
+            author: _alice,
+            pTags: [_owner, ...members.skip(1)],
+            content: 'sent after the user left',
+            createdAt: leftAt + 100,
+          ),
+          authorSecret: _aliceSecret,
+        );
+
+        expect(
+          await conversations(),
+          isEmpty,
+          reason: 'neither the room nor the one-to-one with its sender',
+        );
+      });
+
       test('leaves a one-to-one reopening on a newer message', () async {
         final oneToOneId = DmRepository.computeConversationId([
           _owner,

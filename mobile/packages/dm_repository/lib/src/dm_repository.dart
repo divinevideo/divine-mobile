@@ -11704,9 +11704,7 @@ class DmRepository {
   /// * a p tag is not a pubkey. Nobody can be addressed by it, so a room
   ///   holding it could never be replied to.
   /// * its p tags omit the current user, so it is not a room we are in.
-  /// * receiving rooms is switched off ([receivesPeerRooms]), unless the
-  ///   user left the room and has not written in it since: it then resolves
-  ///   to the room, which the receive path keeps out (#10150).
+  /// * receiving rooms is switched off ([receivesPeerRooms]).
   ///
   /// A mention is filed under the conversation it answers instead: a reply
   /// ([replyToId]) to a stored message in a strictly smaller conversation that
@@ -11721,6 +11719,11 @@ class DmRepository {
   /// room and is filed as one (#7338). Waiting for a row to exist made a
   /// room's first message collapse into a 1:1 with its speaker, so where it
   /// landed depended on who spoke first.
+  ///
+  /// A room the user left and has not written in since wins the same way
+  /// (#10150): its message resolves to that room, which the receive path keeps
+  /// out, instead of being carried into a one-to-one or a mentioned
+  /// conversation.
   Future<List<String>> _resolveConversationParticipants(
     List<String> extractedParticipants,
     String senderPubkey, {
@@ -11744,6 +11747,16 @@ class DmRepository {
     );
     if (existingFull != null) return extractedParticipants;
 
+    final room = _inLowerCase(extractedParticipants);
+    final owner = _ownerPubkey;
+    final tombstone = owner == null
+        ? null
+        : await _removedConversationsDao?.tombstoneFor(
+            conversationId: computeConversationId(room),
+            ownerPubkey: owner,
+          );
+    if (tombstone != null && tombstone.rejoinedAt == null) return room;
+
     if (extractedParticipants.length > maxRoomParticipants) {
       return canonical1to1;
     }
@@ -11751,8 +11764,6 @@ class DmRepository {
     if (!extractedParticipants.every(NostrHexUtils.isValidPubkey)) {
       return canonical1to1;
     }
-
-    final room = _inLowerCase(extractedParticipants);
 
     final namesCurrentUser = room.any(
       (pubkey) => pubkeysEqual(pubkey, _userPubkey),
@@ -11768,19 +11779,7 @@ class DmRepository {
         return _homeOfMention(answered, senderPubkey).participants;
       }
     }
-    if (_receivesPeerRooms()) return room;
-    // Not the one-to-one with its sender: that would carry a left room's
-    // message into a conversation the user still has.
-    final owner = _ownerPubkey;
-    final tombstone = owner == null
-        ? null
-        : await _removedConversationsDao?.tombstoneFor(
-            conversationId: computeConversationId(room),
-            ownerPubkey: owner,
-          );
-    return tombstone != null && tombstone.rejoinedAt == null
-        ? room
-        : canonical1to1;
+    return _receivesPeerRooms() ? room : canonical1to1;
   }
 
   /// Where a mention from [senderPubkey] of the conversation [answered]
