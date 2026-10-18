@@ -57,6 +57,17 @@ class _TestNewVideosFeed extends NewVideosFeed {
   }
 }
 
+Completer<void>? _newVideosBuildGate;
+
+class _GatedNewVideosFeed extends NewVideosFeed {
+  @override
+  Future<VideoFeedState> build() async {
+    _feedBuilds.add('newVideos');
+    await _newVideosBuildGate!.future;
+    return const VideoFeedState(videos: [], hasMoreContent: false);
+  }
+}
+
 class _TestPopularVideosFeed extends PopularVideosFeed {
   @override
   Future<VideoFeedState> build() async {
@@ -76,6 +87,7 @@ void main() {
 
     ProviderContainer createContainer({
       bool funnelcakeAvailabilityLoading = false,
+      bool newVideosGated = false,
     }) {
       when(
         () => notificationCoordinator.refresh(
@@ -94,7 +106,9 @@ void main() {
                 : _AvailableFunnelcake.new,
           ),
           forYouFeedProvider.overrideWith(_TestForYouFeed.new),
-          newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new),
+          newVideosFeedProvider.overrideWith(
+            newVideosGated ? _GatedNewVideosFeed.new : _TestNewVideosFeed.new,
+          ),
           popularVideosFeedProvider.overrideWith(_TestPopularVideosFeed.new),
         ],
       );
@@ -106,7 +120,34 @@ void main() {
       notificationCoordinator = _MockNotificationRefreshCoordinator();
       _feedBuilds.clear();
       _funnelcakeAvailabilityCompleter = null;
+      _newVideosBuildGate = null;
     });
+
+    test(
+      'a pass still running when the container is disposed ends quietly',
+      () async {
+        _newVideosBuildGate = Completer<void>();
+        final container = createContainer(newVideosGated: true);
+        await container.read(funnelcakeAvailableProvider.future);
+
+        final pass = container
+            .read(foregroundIdleWarmupCoordinatorProvider)
+            .requestWarmup(trigger: ForegroundIdleWarmupTrigger.startupSettled);
+        await pumpEventQueue();
+        expect(_feedBuilds, ['forYou', 'newVideos']);
+
+        // An in-place account switch disposes the outgoing container while
+        // its startup pass is still inside a task (#10291).
+        container.dispose();
+        _newVideosBuildGate!.complete();
+
+        await expectLater(
+          pass.timeout(const Duration(seconds: 5)),
+          completes,
+        );
+        expect(_feedBuilds, ['forYou', 'newVideos']);
+      },
+    );
 
     test('foreground=false gates all warmup work', () async {
       final container = createContainer();

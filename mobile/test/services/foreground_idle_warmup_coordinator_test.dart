@@ -492,6 +492,40 @@ void main() {
 
       expect(calls, ['forYou']);
     });
+
+    group('dispose', () {
+      test('ends a pass whose task fails after dispose', () async {
+        final forYou = Completer<void>();
+        final coordinator = coordinatorWith([
+          task(ForegroundIdleWarmupTaskId.forYou, run: () => forYou.future),
+          task(ForegroundIdleWarmupTaskId.popular),
+        ]);
+
+        final pass = coordinator.requestWarmup(
+          trigger: ForegroundIdleWarmupTrigger.startupSettled,
+        );
+        coordinator.dispose();
+        forYou.completeError(StateError('owner disposed'));
+
+        await expectLater(
+          pass.timeout(const Duration(seconds: 5)),
+          completes,
+        );
+        expect(calls, isEmpty);
+      });
+
+      test('ignores requests made after dispose', () async {
+        final coordinator = coordinatorWith([
+          task(ForegroundIdleWarmupTaskId.forYou),
+        ])..dispose();
+
+        await coordinator.requestWarmup(
+          trigger: ForegroundIdleWarmupTrigger.periodicIdleCheck,
+        );
+
+        expect(calls, isEmpty);
+      });
+    });
   });
 
   group('ForegroundIdleWarmupScheduler', () {
