@@ -45,6 +45,13 @@ void main() {
       expect(a, isNot(b));
     });
 
+    test('newId stays unique when called within one microsecond', () {
+      // Back-to-back calls land in the same microsecond most of the time, so
+      // a clock-only id made the test above fail at random.
+      final ids = {for (var i = 0; i < 1000; i++) TuneSet.newId()};
+      expect(ids, hasLength(1000));
+    });
+
     test('memberId combines kind and set id', () {
       expect(
         TuneSet.memberId(kind: 'contrast', setId: 'set-9'),

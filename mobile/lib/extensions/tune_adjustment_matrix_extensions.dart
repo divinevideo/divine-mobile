@@ -3,6 +3,7 @@
 
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:uuid/uuid.dart';
 
 /// Set-oriented reads over a single [TuneAdjustmentMatrix].
 extension TuneAdjustmentMatrixTuneSet on TuneAdjustmentMatrix {
@@ -25,7 +26,10 @@ extension TuneAdjustmentMatrixTuneSet on TuneAdjustmentMatrix {
 /// sharing one time window.
 abstract class TuneSet {
   /// A fresh, unique timeline-set id.
-  static String newId() => 'set_${DateTime.now().microsecondsSinceEpoch}';
+  ///
+  /// Random rather than clock-based: two calls in one microsecond would share
+  /// a timestamp.
+  static String newId() => 'set_${const Uuid().v4()}';
 
   /// The unique per-instance id for a member of set [setId] of the given
   /// [kind]. Members need unique ids so multiple sets — or multiple segments
