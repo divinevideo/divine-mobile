@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:db_client/db_client.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
@@ -19,6 +19,7 @@ import 'package:models/models.dart' as model;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/constants/hive_box_names.dart';
@@ -32,6 +33,7 @@ import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
@@ -118,12 +120,14 @@ void main() {
     late Directory tempDir;
     late PathProviderPlatform originalPathProviderInstance;
     late ProviderContainer container;
+    FollowRepository? activeFollowerRepository;
 
     setUpAll(() async {
       await initializeServiceTestEnvironment();
     });
 
     setUp(() async {
+      activeFollowerRepository = null;
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
       db = AppDatabase.test(NativeDatabase.memory());
@@ -172,6 +176,9 @@ void main() {
           databaseProvider.overrideWithValue(db),
           sharedPreferencesProvider.overrideWithValue(prefs),
           dmRepositoryProvider.overrideWithValue(dmRepository),
+          followRepositoryProvider.overrideWith(
+            (ref) => activeFollowerRepository!,
+          ),
           openVineImageCacheClearProvider.overrideWithValue(() async {}),
           uploadManagerProvider.overrideWithValue(uploadManager),
         ],
@@ -302,6 +309,76 @@ void main() {
         ]);
       },
     );
+
+    for (final incremental in [false, true]) {
+      test(
+        'cleanup rejects a late ${incremental ? 'incremental' : 'full'} '
+        'follower response before auth identity changes',
+        () async {
+          registerFallbackValue(<Filter>[]);
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_pubkeyA);
+          when(() => client.hasKeys).thenReturn(true);
+          final started = Completer<void>();
+          final response = Completer<List<Event>>();
+          when(() => client.queryEvents(any())).thenAnswer((_) {
+            if (!started.isCompleted) started.complete();
+            return response.future;
+          });
+          when(() => client.readEvents(any(), requireAllRelaysSettled: true))
+              .thenAnswer((_) async {
+                if (!started.isCompleted) started.complete();
+                return QueryResult(
+                  events: await response.future,
+                  endedBy: QueryEnd.complete,
+                );
+              });
+          final repository = FollowRepository(
+            nostrClient: client,
+            myFollowersDao: db.myFollowersDao,
+            indexerRelayUrls: const [],
+            nowSeconds: () => 1700000000,
+          );
+          addTearDown(repository.dispose);
+          activeFollowerRepository = repository;
+          container.read(followRepositoryProvider);
+          final checkpoints = MyFollowersSyncState();
+          if (incremental) await checkpoints.stampFull(_pubkeyA, 1699999000);
+          final sync = repository.syncMyFollowers();
+          await started.future;
+          final subscription = container.listen(
+            userDataCleanupServiceProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+          // The old signer remains usable throughout cleanup. It must not
+          // authorize a late read to restore deleted rows or preferences.
+          expect(client.publicKey, _pubkeyA);
+          response.complete([
+            Event(
+              _pubkeyB,
+              EventKind.contactList,
+              [
+                ['p', _pubkeyA],
+              ],
+              '',
+              createdAt: 1699999900,
+            ),
+          ]);
+          await sync;
+          expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+          expect(await checkpoints.read(_pubkeyA), (
+            full: null,
+            incremental: null,
+            attempt: null,
+            fullAttempt: null,
+          ));
+          await repository.syncMyFollowers();
+          expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+        },
+      );
+    }
 
     test(
       'follower cache cleanup failure does not skip account history cleanup',

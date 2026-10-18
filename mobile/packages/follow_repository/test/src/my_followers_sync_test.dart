@@ -87,6 +87,26 @@ class _MemoryFollowersDao extends Fake implements MyFollowersDao {
   }
 }
 
+class _DelayedWriteFollowersDao extends _MemoryFollowersDao {
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<void> upsertAll({
+    required String ownerPubkey,
+    required Iterable<({String pubkey, int? followedAt})> followers,
+    required int seenAt,
+  }) async {
+    started.complete();
+    await release.future;
+    await super.upsertAll(
+      ownerPubkey: ownerPubkey,
+      followers: followers,
+      seenAt: seenAt,
+    );
+  }
+}
+
 class _UnreadableFollowersDao extends _MemoryFollowersDao {
   @override
   Future<List<({String pubkey, int? followedAt})>> followersOf(
@@ -1083,6 +1103,49 @@ void main() {
         expect(repository.relationshipTo(first), FollowRelationship.none);
       },
     );
+    test(
+      'stopping follower writes drains storage before owner cleanup',
+      () async {
+        final delayed = _DelayedWriteFollowersDao();
+        dao = delayed;
+        await repository.dispose();
+        repository = build();
+        when(() => client.queryEvents(any())).thenAnswer(
+          (_) async => [contact(first, 100)],
+        );
+        final sync = repository.syncMyFollowers();
+        await delayed.started.future;
+        var stopped = false;
+        final stop = repository
+            .stopFollowerWrites(owner)
+            .then((_) => stopped = true);
+        await Future<void>.value();
+        expect(stopped, isFalse);
+        delayed.release.complete();
+        await stop;
+        dao.rows.remove(owner);
+        await MyFollowersSyncState().clear(owner);
+        await sync;
+        expect(dao.rows[owner], isNull);
+        expect((await MyFollowersSyncState().read(owner)).full, isNull);
+        await repository.syncMyFollowers();
+        verify(() => client.queryEvents(any())).called(1);
+      },
+    );
+
+    test(
+      'removing an inactive owner does not stop the active follower sync',
+      () async {
+        await repository.stopFollowerWrites(otherOwner);
+        when(() => client.queryEvents(any())).thenAnswer(
+          (_) async => [contact(first, 100)],
+        );
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner], {first: 100});
+        expect((await MyFollowersSyncState().read(owner)).full, now);
+      },
+    );
+
     test('dispose during fetch does not persist followers', () async {
       final response = Completer<List<Event>>();
       final started = Completer<void>();

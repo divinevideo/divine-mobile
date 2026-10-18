@@ -166,6 +166,16 @@ final dmListeningStopProvider = Provider<Future<void> Function()>((ref) {
   };
 });
 
+/// Stops only an existing outgoing follower repository before cache deletion.
+/// Cleanup must not construct an auth-dependent repository just to stop it.
+final myFollowersWritesStopProvider =
+    Provider<Future<void> Function(String owner)>((ref) {
+      return (owner) async {
+        if (!ref.exists(followRepositoryProvider)) return;
+        await ref.read(followRepositoryProvider).stopFollowerWrites(owner);
+      };
+    });
+
 /// Reports whether the device currently has no network connectivity. Wired into
 /// `NIP17MessageService` so an offline DM send fails hard (a red "Not delivered"
 /// bubble that re-drives on reconnect) instead of being misread as a soft "OK
@@ -898,6 +908,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           await (deleteUserData ? requiredCleanup : safeCleanup)(
             'myFollowers',
             () async {
+              await ref.read(myFollowersWritesStopProvider)(userPubkey);
               await db.myFollowersDao.clearAllForUser(userPubkey);
               await MyFollowersSyncState().clear(userPubkey);
             },

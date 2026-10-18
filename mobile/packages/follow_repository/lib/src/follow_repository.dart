@@ -159,6 +159,37 @@ class FollowRepository {
 
   String? _myFollowersOwner;
   bool _disposed = false;
+  bool _followerWritesStopped = false;
+  Future<void>? _followerPersistenceTail;
+
+  /// Stops this session's follower writes before its rows and markers clear.
+  ///
+  /// Network reads need not finish first: their late results are rejected.
+  /// Already-started storage writes drain before account cleanup deletes them.
+  /// Removing an inactive account must not stop the active owner's sync.
+  Future<void> stopFollowerWrites(String owner) async {
+    if (_nostrClient.publicKey != owner) return;
+    _followerWritesStopped = true;
+    await _followerPersistenceTail;
+  }
+
+  Future<void> _withFollowerPersistence(
+    String owner,
+    Future<void> Function() operation,
+  ) async {
+    final previous = _followerPersistenceTail;
+    final done = Completer<void>();
+    _followerPersistenceTail = done.future;
+    try {
+      await previous;
+      if (_isCurrentFollowerOwner(owner)) await operation();
+    } finally {
+      if (identical(_followerPersistenceTail, done.future)) {
+        _followerPersistenceTail = null;
+      }
+      done.complete();
+    }
+  }
 
   /// Minimum interval between incremental follower queries.
   static const myFollowersIncrementalInterval = Duration(minutes: 15);
@@ -624,7 +655,10 @@ class FollowRepository {
       if (!_isCurrentFollowerOwner(pubkey)) {
         return (pubkeys: <String>[], datedCount: 0);
       }
-      await _myFollowersSyncState.stampFullAttempt(pubkey, _nowSeconds());
+      await _withFollowerPersistence(
+        pubkey,
+        () => _myFollowersSyncState.stampFullAttempt(pubkey, _nowSeconds()),
+      );
       final result = await _fetchOrderedFollowers(pubkey);
       await _completeFullFollowers(
         pubkey,
@@ -636,7 +670,10 @@ class FollowRepository {
   }
 
   bool _isCurrentFollowerOwner(String owner) =>
-      !_disposed && _nostrClient.hasKeys && _nostrClient.publicKey == owner;
+      !_disposed &&
+      !_followerWritesStopped &&
+      _nostrClient.hasKeys &&
+      _nostrClient.publicKey == owner;
 
   void _cacheMyFollowers(String owner, Iterable<_FollowerRef> refs) {
     final ordered = _newestFirst(refs);
@@ -689,10 +726,12 @@ class FollowRepository {
     required bool complete,
   }) async {
     try {
-      await _persistMyFollowers(owner, refs, replace: complete);
-      if (complete && _isCurrentFollowerOwner(owner)) {
-        await _myFollowersSyncState.stampFull(owner, _nowSeconds());
-      }
+      await _withFollowerPersistence(owner, () async {
+        await _persistMyFollowers(owner, refs, replace: complete);
+        if (complete && _isCurrentFollowerOwner(owner)) {
+          await _myFollowersSyncState.stampFull(owner, _nowSeconds());
+        }
+      });
     } catch (error) {
       Log.warning(
         'Failed to persist followers: $error',
@@ -717,6 +756,7 @@ class FollowRepository {
   /// Partial full queries only merge: a failed source cannot prove an unfollow.
   Future<void> syncMyFollowers() {
     if (_disposed ||
+        _followerWritesStopped ||
         _myFollowersDao == null ||
         !_nostrClient.hasKeys ||
         _nostrClient.publicKey.isEmpty ||
@@ -749,7 +789,10 @@ class FollowRepository {
       myFollowersFullRetryInterval,
     );
     if (fullDue && fullRetryDue) {
-      await _myFollowersSyncState.stampFullAttempt(owner, now);
+      await _withFollowerPersistence(
+        owner,
+        () => _myFollowersSyncState.stampFullAttempt(owner, now),
+      );
       final result = await _fetchOrderedFollowers(owner);
       await _completeFullFollowers(
         owner,
@@ -761,7 +804,10 @@ class FollowRepository {
       now,
       myFollowersIncrementalInterval,
     )) {
-      await _myFollowersSyncState.stampAttempt(owner, now);
+      await _withFollowerPersistence(
+        owner,
+        () => _myFollowersSyncState.stampAttempt(owner, now),
+      );
       final highWater = min(await dao.newestFollowedAt(owner) ?? 0, now);
       if (!_isCurrentFollowerOwner(owner)) return;
       final events = await _nostrClient
@@ -774,15 +820,17 @@ class FollowRepository {
           ])
           .timeout(_fetchFollowersTimeout);
       if (!_isCurrentFollowerOwner(owner)) return;
-      await _persistMyFollowers(owner, [
-        for (final event in events)
-          (
-            pubkey: event.pubkey,
-            followedAt: _datableFollowedAt(event.createdAt),
-          ),
-      ], replace: false);
-      if (!_isCurrentFollowerOwner(owner)) return;
-      await _myFollowersSyncState.stampIncremental(owner, now);
+      await _withFollowerPersistence(owner, () async {
+        await _persistMyFollowers(owner, [
+          for (final event in events)
+            (
+              pubkey: event.pubkey,
+              followedAt: _datableFollowedAt(event.createdAt),
+            ),
+        ], replace: false);
+        if (!_isCurrentFollowerOwner(owner)) return;
+        await _myFollowersSyncState.stampIncremental(owner, now);
+      });
     }
   }
 
@@ -2052,7 +2100,10 @@ class FollowRepository {
     final lease = _reserveFollowerWrite();
     try {
       if (owner.isNotEmpty && _isCurrentFollowerOwner(owner)) {
-        await _myFollowersSyncState.stampFullAttempt(owner, _nowSeconds());
+        await _withFollowerPersistence(
+          owner,
+          () => _myFollowersSyncState.stampFullAttempt(owner, _nowSeconds()),
+        );
       }
       yield* _streamFollowers(owner, beforePersist: lease.ready);
     } finally {
