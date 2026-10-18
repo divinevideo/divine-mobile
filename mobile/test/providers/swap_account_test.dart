@@ -19,6 +19,7 @@ import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
+import 'package:openvine/providers/live_account_container.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -677,6 +678,33 @@ void main() {
       expect(_isDisposed(signedInto!), isFalse);
       expect(_isDisposed(initial), isTrue);
       expect(currentAuthService.calls, equals(['archive']));
+    });
+
+    testWidgets('keeps the live account container when sign-in fails', (
+      tester,
+    ) async {
+      final initial = await pumpHost(tester);
+      final resolve = liveAccountContainer(initial);
+      ProviderContainer? attempted;
+
+      await expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (container, _) async {
+            attempted = container;
+            throw StateError('session expired');
+          },
+        ),
+        throwsStateError,
+      );
+      await tester.pump();
+
+      expect(_isDisposed(attempted!), isTrue);
+      expect(resolve(), same(initial));
+      expect(_isDisposed(initial), isFalse);
     });
   });
 

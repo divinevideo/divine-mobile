@@ -14,6 +14,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
+import 'package:openvine/providers/live_account_container.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -27,6 +28,7 @@ import 'package:openvine/services/video_format_preference.dart';
 import 'package:openvine/startup/app_bootstrap.dart';
 import 'package:openvine/startup/startup_phases.dart';
 import 'package:openvine/startup/timed_startup_task.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/platform_support.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -258,6 +260,9 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
       name: 'PushNotifications',
       phase: StartupPhase.deferred,
       initialize: () async {
+        // Taps can arrive long after an account switch has disposed
+        // `container`, so every route resolves the live one (#9764).
+        final liveContainer = liveAccountContainer(container);
         FirebaseMessaging.onBackgroundMessage(
           firebaseMessagingBackgroundHandler,
         );
@@ -283,7 +288,7 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
                 senderPubkey: parsed.senderPubkey,
                 tapTargetType: parsed.tapTargetType,
                 tapTargetValue: parsed.tapTargetValue,
-                container: container,
+                container: liveContainer(),
               ),
             );
           }
@@ -293,7 +298,7 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
         // rendered by flutter_local_notifications, so a tap that launches the
         // app from a terminated state arrives here — not via getInitialMessage,
         // which only covers OS-rendered pushes (iOS).
-        final launchTap = await container
+        final launchTap = await liveContainer()
             .read(notificationServiceProvider)
             .takeLaunchNotificationTap();
         if (launchTap != null) {
@@ -312,35 +317,20 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
               senderPubkey: launchTap.senderPubkey,
               tapTargetType: launchTap.tapTargetType,
               tapTargetValue: launchTap.tapTargetValue,
-              container: container,
+              container: liveContainer(),
             ),
           );
         }
 
         // Handle taps on notifications while app is in background
-        FirebaseMessaging.onMessageOpenedApp.listen((message) {
-          final parsed = parseFcmPayload(message.data);
-          if (parsed != null) {
-            Log.info(
-              'Push notification tapped (background) (type: '
-              '${parsed.notificationType})',
-              name: 'main',
-              category: LogCategory.system,
-            );
-            unawaited(
-              routeNotificationTap(
-                referencedAddress: parsed.referencedAddress,
-                referencedEventId: parsed.referencedEventId,
-                eventId: parsed.eventId,
-                notificationType: parsed.notificationType,
-                senderPubkey: parsed.senderPubkey,
-                tapTargetType: parsed.tapTargetType,
-                tapTargetValue: parsed.tapTargetValue,
-                container: container,
-              ),
-            );
-          }
-        });
+        FirebaseMessaging.onMessageOpenedApp.listen(
+          (message) => runDetached(
+            routeBackgroundPushTap(message.data, liveContainer: liveContainer),
+            'route a background push tap',
+            logName: 'main',
+            category: LogCategory.system,
+          ),
+        );
       },
       optional: true,
     );
