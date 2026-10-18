@@ -1141,28 +1141,32 @@ class FunnelcakeApiClient {
 
   /// Public videos from at most 200 authors, with moderation labels included.
   /// Larger holder sets are split by the repository before calling this API.
+  /// JSON POST keeps full author chunks out of the request URL. The backend
+  /// must support this route before callers ship; there is no GET fallback.
   Future<RecentVideosResponse> getVideosByAuthors({
     required List<String> authors,
     int limit = 50,
     int offset = 0,
     int? before,
+    String? cursor,
+    String sort = 'recent',
   }) async {
     if (!isAvailable) throw const FunnelcakeNotConfiguredException();
     if (authors.isEmpty || authors.length > 200) {
       throw const FunnelcakeException('Expected 1 to 200 authors');
     }
-    final query = _videoQueryParameters({
-      'authors': authors.join(','),
-      'sort': 'recent',
-      'limit': limit.toString(),
-      'offset': offset.toString(),
-      if (before != null) 'before': before.toString(),
-    });
-    final uri = Uri.parse(
-      '$_baseUrl/api/v2/videos/by-authors',
-    ).replace(queryParameters: query);
+    final body = <String, Object>{
+      ..._videoQueryParameters(const {}),
+      'authors': authors,
+      'sort': sort,
+      'limit': limit,
+      'offset': offset,
+      'before': ?before,
+      'cursor': ?cursor,
+    };
+    final uri = Uri.parse('$_baseUrl/api/v2/videos/by-authors');
     try {
-      final response = await _get(uri);
+      final response = await _post(uri, body: body);
       if (response.statusCode != 200) {
         throw FunnelcakeApiException(
           message: 'Failed to fetch videos by authors',
