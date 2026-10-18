@@ -21,8 +21,35 @@ import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+/// A preferences store that refuses to save the catch-up debt while
+/// [refusesDebt], as a full disk does. [SharedPreferences] updates its own
+/// copy before it hears the refusal, so this session still reads the debt.
+class _DebtRefusingStore extends InMemorySharedPreferencesStore {
+  _DebtRefusingStore.withData(super.data) : super.withData();
+
+  bool refusesDebt = true;
+  int refused = 0;
+
+  bool _refuses(String key) {
+    if (!refusesDebt || !key.startsWith('flutter.dm.catchUpDebt.')) {
+      return false;
+    }
+    refused++;
+    return true;
+  }
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      !_refuses(key) && await super.setValue(valueType, key, value);
+
+  @override
+  Future<bool> remove(String key) async =>
+      !_refuses(key) && await super.remove(key);
+}
 
 /// Holds [addCatchUpDebt] until the test releases it, so the app can close
 /// while the unread part of a window is still being recorded.
@@ -630,6 +657,103 @@ void main() {
       await pumpEventQueue();
       expect(DmSyncState(prefs).newestWireSyncedAt(_owner), newest.createdAt);
       await repository.stopListening();
+    });
+
+    group('when the store refuses to save the unread part', () {
+      late SharedPreferencesStorePlatform originalStore;
+      late _DebtRefusingStore store;
+
+      setUp(() async {
+        originalStore = SharedPreferencesStorePlatform.instance;
+        store = _DebtRefusingStore.withData(await originalStore.getAll());
+        SharedPreferencesStorePlatform.instance = store;
+        SharedPreferences.resetStatic();
+        prefs = await SharedPreferences.getInstance();
+      });
+
+      tearDown(() {
+        SharedPreferencesStorePlatform.instance = originalStore;
+        SharedPreferences.resetStatic();
+      });
+
+      /// The sync state the next launch reads: what the store saved, not this
+      /// session's copy.
+      Future<DmSyncState> durable() async {
+        SharedPreferences.resetStatic();
+        return DmSyncState(await SharedPreferences.getInstance());
+      }
+
+      Future<void> until(bool Function() condition) async {
+        for (var i = 0; i < 100 && !condition(); i++) {
+          await pumpEventQueue();
+        }
+        expect(condition(), isTrue);
+      }
+
+      test('keeps the window where it was, and reads the part on the next '
+          'launch', () async {
+        // The part is read no further this session, as when the app is
+        // closed while reading it.
+        final relay = _CappedRelay(stored, maxLimit: 3)..unsettledFromPage = 1;
+        final repository = await listen(relay);
+        final live = await wrapAt(wire: now() - 60, content: 'live');
+        relay.controller.add(live);
+        await settled(live);
+        // The message that arrived after the batch tried to save the window
+        // again, and was refused again.
+        await until(() => store.refused >= 2);
+        await pumpEventQueue();
+        await repository.stopListening();
+
+        // This session's copy shows the part the store never saved.
+        expect(DmSyncState(prefs).catchUpDebt(_owner), isNotEmpty);
+        final next = await durable();
+        expect(next.catchUpDebt(_owner), isEmpty);
+        expect(next.newestWireSyncedAt(_owner), lastWire);
+
+        store.refusesDebt = false;
+        prefs = await SharedPreferences.getInstance();
+        final second = _CappedRelay([...stored, live], maxLimit: 3);
+        final relaunched = await listen(second, waitFor: [fourth, oldest]);
+        await pumpEventQueue();
+        await relaunched.stopListening();
+
+        for (final wrap in stored) {
+          expect(await isStored(wrap), isTrue, reason: '${wrap.createdAt}');
+        }
+        expect((await durable()).newestWireSyncedAt(_owner), live.createdAt);
+      });
+
+      test(
+        'records the part on a later save before it moves the window',
+        () async {
+          final relay = _CappedRelay(stored, maxLimit: 3)
+            ..unsettledFromPage = 1;
+          final repository = await listen(relay);
+          await until(() => store.refused >= 1);
+          expect(DmSyncState(prefs).newestWireSyncedAt(_owner), lastWire);
+
+          store.refusesDebt = false;
+          final live = await wrapAt(wire: now() - 60, content: 'live');
+          relay.controller.add(live);
+          await settled(live);
+          await until(
+            () =>
+                DmSyncState(prefs).newestWireSyncedAt(_owner) == live.createdAt,
+          );
+          await repository.stopListening();
+
+          final next = await durable();
+          expect(next.catchUpDebt(_owner), [
+            DmCatchUpDebt(
+              relay: _relayUrl,
+              floor: lastWire - 2 * _day,
+              until: third.createdAt,
+            ),
+          ]);
+          expect(next.newestWireSyncedAt(_owner), live.createdAt);
+        },
+      );
     });
 
     test('drops the stamps when the session ends while the unread part is '

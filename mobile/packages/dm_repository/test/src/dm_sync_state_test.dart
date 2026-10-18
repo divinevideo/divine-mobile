@@ -4,6 +4,19 @@
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+/// A preferences store that refuses every write, as a full disk does.
+class _RefusingStore extends InMemorySharedPreferencesStore {
+  _RefusingStore.withData(super.data) : super.withData();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      false;
+
+  @override
+  Future<bool> remove(String key) async => false;
+}
 
 void main() {
   group(DmSyncState, () {
@@ -951,6 +964,65 @@ void main() {
         await prefs.setString('dm.catchUpDebt.$pkA', 'not json');
 
         expect(state.catchUpDebt(pkA), isEmpty);
+      });
+
+      group('when the store refuses the write', () {
+        late SharedPreferencesStorePlatform originalStore;
+
+        setUp(() async {
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+          originalStore = SharedPreferencesStorePlatform.instance;
+          SharedPreferencesStorePlatform.instance = _RefusingStore.withData(
+            await originalStore.getAll(),
+          );
+          SharedPreferences.resetStatic();
+          state = DmSyncState(await SharedPreferences.getInstance());
+        });
+
+        tearDown(() {
+          SharedPreferencesStorePlatform.instance = originalStore;
+          SharedPreferences.resetStatic();
+        });
+
+        test('recording throws', () async {
+          await expectLater(
+            state.addCatchUpDebt(pkA, const [
+              DmCatchUpDebt(relay: relayB, floor: tsOldest),
+            ]),
+            throwsA(isA<DmCatchUpDebtNotSavedException>()),
+          );
+        });
+
+        test('moving a top throws', () async {
+          await expectLater(
+            state.replaceCatchUpDebt(
+              pkA,
+              const DmCatchUpDebt(
+                relay: relayA,
+                floor: tsOldest,
+                until: tsNewer,
+              ),
+              const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+            ),
+            throwsA(isA<DmCatchUpDebtNotSavedException>()),
+          );
+        });
+
+        test('forgetting the last relay throws', () async {
+          await expectLater(
+            state.clearCatchUpDebt(
+              pkA,
+              const DmCatchUpDebt(
+                relay: relayA,
+                floor: tsOldest,
+                until: tsNewer,
+              ),
+            ),
+            throwsA(isA<DmCatchUpDebtNotSavedException>()),
+          );
+        });
       });
     });
   });

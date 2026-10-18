@@ -56,6 +56,20 @@ class DmCatchUpDebt {
   String toString() => 'DmCatchUpDebt($relay, $floor..${until ?? 'top'})';
 }
 
+/// Thrown when the preferences store refuses to save the catch-up debt.
+///
+/// [SharedPreferences] updates its own copy before the store answers, so
+/// this session still reads what was refused while the next launch does not:
+/// the debt is not recorded, and nothing may move past it.
+class DmCatchUpDebtNotSavedException implements Exception {
+  /// Creates the exception.
+  const DmCatchUpDebtNotSavedException();
+
+  @override
+  String toString() =>
+      'DmCatchUpDebtNotSavedException: the store refused the catch-up debt';
+}
+
 /// Persists per-pubkey DM sync boundaries in SharedPreferences.
 class DmSyncState {
   /// Creates a [DmSyncState] backed by [_prefs].
@@ -528,6 +542,8 @@ class DmSyncState {
   /// A top is the stamp of a wrap a throwaway key signed, so it is bounded
   /// to [maxFutureSkewSeconds] past now, the skew the repository allows any
   /// stamp it accepts.
+  ///
+  /// Throws [DmCatchUpDebtNotSavedException] if the store refuses the write.
   Future<void> addCatchUpDebt(
     String pubkey,
     Iterable<DmCatchUpDebt> debts,
@@ -572,6 +588,8 @@ class DmSyncState {
   ///
   /// The comparison and the write happen in one synchronous step, as in
   /// [addCatchUpDebt], so neither can land between them.
+  ///
+  /// Throws [DmCatchUpDebtNotSavedException] if the store refuses the write.
   Future<bool> replaceCatchUpDebt(
     String pubkey,
     DmCatchUpDebt read,
@@ -590,6 +608,8 @@ class DmSyncState {
   /// Forgets the debt [read] for [pubkey] once it has been read. Returns
   /// false, and writes nothing, when that relay's debt is no longer [read],
   /// as [replaceCatchUpDebt] does.
+  ///
+  /// Throws [DmCatchUpDebtNotSavedException] if the store refuses the write.
   Future<bool> clearCatchUpDebt(String pubkey, DmCatchUpDebt read) async {
     final debts = catchUpDebt(pubkey);
     if (!debts.contains(read)) return false;
@@ -605,17 +625,16 @@ class DmSyncState {
     Iterable<DmCatchUpDebt> debts,
   ) async {
     final key = '$_catchUpDebtPrefix$pubkey';
-    if (debts.isEmpty) {
-      await _prefs.remove(key);
-      return;
-    }
-    await _prefs.setString(
-      key,
-      jsonEncode([
-        for (final debt in debts)
-          {'relay': debt.relay, 'floor': debt.floor, 'until': debt.until},
-      ]),
-    );
+    final saved = debts.isEmpty
+        ? await _prefs.remove(key)
+        : await _prefs.setString(
+            key,
+            jsonEncode([
+              for (final debt in debts)
+                {'relay': debt.relay, 'floor': debt.floor, 'until': debt.until},
+            ]),
+          );
+    if (!saved) throw const DmCatchUpDebtNotSavedException();
   }
 
   /// Removes all sync state for [pubkey]. Called on account switch.

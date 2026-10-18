@@ -2996,7 +2996,7 @@ class DmRepository {
       catchUp.cancelHoldLimit();
       return;
     }
-    if (!catchUp.holdsStamps) catchUp.cancelHoldLimit();
+    if (!catchUp.holdsBatch) catchUp.cancelHoldLimit();
     if (!catchUp.readyToSave && !catchUp.hasCappedRelays) return;
     unawaited(
       _withGiftWrapProcessingLock(
@@ -3006,10 +3006,11 @@ class DmRepository {
               _userPubkey != catchUp.owner) {
             return;
           }
-          final recorded = await _recordCatchUpDebt(
-            catchUp,
-            catchUp.takeCappedRelays(),
-          );
+          // A record that fails leaves the relays held, and with them every
+          // stamp, so no later save moves the window past what they withheld.
+          final capped = catchUp.cappedRelaysToRecord();
+          final recorded = await _recordCatchUpDebt(catchUp, capped);
+          catchUp.settleCappedRelays(capped);
           if (recorded) _readCatchUpDebt(catchUp);
           // A reconnect may have reopened the batch, or the session ended,
           // while this waited.
@@ -11797,7 +11798,9 @@ class _LiveCatchUp {
   final Map<String, int?> _cappedRelays = {};
 
   /// Relay url -> the highest top recorded as catch-up debt for it in the
-  /// current stored phase, or null when that top was unbounded.
+  /// current stored phase, or null when that top was unbounded. A top whose
+  /// record failed counts too: that relay stays in [_cappedRelays], which
+  /// covers every report this skips.
   final Map<String, int?> _recordedThisPhase = {};
 
   /// Whether relays reported as possibly capped wait to be recorded.
@@ -11829,11 +11832,10 @@ class _LiveCatchUp {
     });
   }
 
-  /// Hands over the relays held as possibly capped and holds none after.
-  Map<String, int?> takeCappedRelays() {
-    final relays = Map<String, int?>.of(_cappedRelays);
-    _cappedRelays.clear();
-    relays.forEach((url, oldest) {
+  /// The relays held as possibly capped, counted as recorded in this phase.
+  /// They stay held until [settleCappedRelays] is told they were recorded.
+  Map<String, int?> cappedRelaysToRecord() {
+    _cappedRelays.forEach((url, oldest) {
       if (!_recordedThisPhase.containsKey(url)) {
         _recordedThisPhase[url] = oldest;
         return;
@@ -11843,7 +11845,18 @@ class _LiveCatchUp {
           ? null
           : max(recorded, oldest);
     });
-    return relays;
+    return Map<String, int?>.of(_cappedRelays);
+  }
+
+  /// Stops holding [recorded], from [cappedRelaysToRecord], now that it is
+  /// recorded. A relay reported again meanwhile with a higher stamp, or none,
+  /// stays held for the next save to record.
+  void settleCappedRelays(Map<String, int?> recorded) {
+    recorded.forEach((url, oldest) {
+      if (_cappedRelays.containsKey(url) && _cappedRelays[url] == oldest) {
+        _cappedRelays.remove(url);
+      }
+    });
   }
 
   /// Whether arriving events may belong to a stored batch. True from the
@@ -11864,12 +11877,17 @@ class _LiveCatchUp {
 
   Timer? _holdLimit;
 
-  /// Whether the hold limit passed: stamps are saved as events are handled
-  /// until a reconnect reopens the stored events.
+  /// Whether the hold limit passed: stamps are saved as events are handled,
+  /// unless relays wait to be recorded, until a reconnect reopens the stored
+  /// events.
   bool _released = false;
 
-  /// Whether the next arriving event's stamp must be held back.
-  bool get holdsStamps => !_released && (_storedOpen || _handling > 0);
+  /// Whether a stored batch, or the handling of its events, is under way.
+  bool get holdsBatch => !_released && (_storedOpen || _handling > 0);
+
+  /// Whether the next arriving event's stamp must be held back: while a
+  /// batch is under way, or while relays wait to be recorded.
+  bool get holdsStamps => holdsBatch || hasCappedRelays;
 
   int? _oldestHeldRumor;
 
