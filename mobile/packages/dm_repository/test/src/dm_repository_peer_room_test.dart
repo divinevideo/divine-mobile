@@ -1090,11 +1090,15 @@ void main() {
       });
 
       /// A repository that can send, sharing the receiving fixture's
-      /// database. The relays confirm every wrap; [onRecipientWrap] runs
-      /// before the first confirm, while the send is still in flight.
+      /// database. The relays confirm every wrap, or refuse every one when
+      /// [relaysRefuse]; [onRecipientWrap] runs before the first answer, while
+      /// the send is still in flight. [outgoingDmsDao] queues the send, as the
+      /// app does.
       DmRepository sendingRepository({
         Future<void> Function()? onRecipientWrap,
         RemovedConversationsDao? removalDao,
+        bool relaysRefuse = false,
+        OutgoingDmsDao? outgoingDmsDao,
       }) {
         when(() => nostrClient.configuredRelays).thenReturn(const [_pool]);
         when(() => nostrClient.isRelayAllowed(any())).thenReturn(true);
@@ -1111,8 +1115,10 @@ void main() {
           final event = invocation.positionalArguments.first as Event;
           return PublishOutcome(
             eventId: event.id,
-            acceptedBy: const [_pool],
-            rejectedBy: const {},
+            acceptedBy: relaysRefuse ? const [] : const [_pool],
+            rejectedBy: relaysRefuse
+                ? const {_pool: 'error: unavailable'}
+                : const {},
             noResponseFrom: const [],
           );
         });
@@ -1137,6 +1143,7 @@ void main() {
           directMessagesDao: messagesDao,
           conversationsDao: conversationsDao,
           removedConversationsDao: removalDao ?? RemovedConversationsDao(db),
+          outgoingDmsDao: outgoingDmsDao,
           userPubkey: _owner,
           signer: signer,
         );
@@ -1320,6 +1327,35 @@ void main() {
         expect(removal!.rejoinedAt, isNull);
       });
 
+      // A one-to-one reopens on any newer message, so it needs no rejoin to
+      // hear its member, and the failed bubble has to stay reachable.
+      test('lists a removed one-to-one again when a group send to its one '
+          'member is refused', () async {
+        final oneToOneId = DmRepository.computeConversationId([
+          _owner,
+          _alice,
+        ]);
+        await deliver(
+          message(author: _alice, pTags: [_owner]),
+          authorSecret: _aliceSecret,
+        );
+        expect(
+          await repository.removeConversation(oneToOneId),
+          ConversationRemovalOutcome.removed,
+        );
+
+        final results = await sendingRepository(
+          relaysRefuse: true,
+          outgoingDmsDao: OutgoingDmsDao(db),
+        ).sendGroupMessage(recipientPubkeys: [_alice], content: 'just you');
+
+        expect(results.single.success, isFalse);
+        expect(
+          (await conversations()).map((conversation) => conversation.id),
+          equals([oneToOneId]),
+        );
+      });
+
       test('lets in a member reply that lands while the send is still being '
           'confirmed', () async {
         await joinTheRoom();
@@ -1347,6 +1383,60 @@ void main() {
           await messageIdsIn(_roomId),
           unorderedEquals([results.first.rumorEventId, reply.id]),
         );
+      });
+
+      // A send written before Leave found no removal to rejoin from, so the
+      // leave has to win: the group must not come back unable to receive.
+      // The leave runs on the sending repository, which owns the queue, as
+      // the app's one repository does.
+      for (final relaysRefuse in [false, true]) {
+        test('keeps the room left when the user leaves it while a message '
+            'they wrote before is going out and the relays '
+            '${relaysRefuse ? 'refuse' : 'take'} it', () async {
+          await joinTheRoom();
+          late final DmRepository sender;
+          sender = sendingRepository(
+            relaysRefuse: relaysRefuse,
+            outgoingDmsDao: OutgoingDmsDao(db),
+            onRecipientWrap: () async => expect(
+              await sender.removeConversation(_roomId),
+              ConversationRemovalOutcome.removed,
+            ),
+          );
+
+          final results = await sender.sendGroupMessage(
+            recipientPubkeys: [_alice, _bob],
+            content: 'written before leaving',
+          );
+
+          expect(results.first.success, !relaysRefuse);
+          expect(await conversations(), isEmpty);
+          expect((await tombstone())!.rejoinedAt, isNull);
+        });
+      }
+
+      // The failed bubble has to stay reachable for a retry, and the send
+      // rejoined the room, so it can hear its members again.
+      test('lists a left room again when the message the user writes in it '
+          'is refused', () async {
+        await joinTheRoom();
+        await leave();
+
+        final results =
+            await sendingRepository(
+              relaysRefuse: true,
+              outgoingDmsDao: OutgoingDmsDao(db),
+            ).sendGroupMessage(
+              recipientPubkeys: [_alice, _bob],
+              content: 'back again',
+            );
+
+        expect(results.any((result) => result.success), isFalse);
+        expect(
+          (await conversations()).map((conversation) => conversation.id),
+          equals([_roomId]),
+        );
+        expect((await tombstone())!.rejoinedAt, isNotNull);
       });
 
       test('does not carry a member message into the one-to-one while '

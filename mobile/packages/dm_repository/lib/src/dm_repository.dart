@@ -6160,6 +6160,12 @@ class DmRepository {
   /// thread is invisible in the inbox and the user cannot find the failed
   /// bubble to retry or delete it. Established threads are left untouched.
   /// Non-throwing: visibility is best-effort on an already-failing path.
+  ///
+  /// A group the user left while the send was out, which the send therefore
+  /// did not rejoin, stays left: listed again, it would hear nothing from its
+  /// members (#10150), and the leave took the queued send with it. Counted by
+  /// [participants], as the send's rejoin is: a group send to one member is a
+  /// one-to-one, which reopens on any newer message.
   Future<void> _ensureConversationVisibleAfterSendFailure({
     required String conversationId,
     required List<String> participants,
@@ -6172,6 +6178,15 @@ class DmRepository {
         ownerPubkey: _userPubkey,
       );
       if (existing != null) return;
+      if (participants.length > 2 &&
+          await _isLeftConversation(conversationId)) {
+        Log.debug(
+          'Not surfacing group $conversationId after a failed send: the '
+          'user left it while the send was out',
+          category: LogCategory.system,
+        );
+        return;
+      }
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       await _conversationsDao.runInTransaction(() async {
         await _upsertSentConversationAndMarkRead(
@@ -11784,11 +11799,15 @@ class DmRepository {
   }
 
   /// Whether the user left [room] and has not written in it since (#10150).
-  Future<bool> _isLeftRoom(List<String> room) async {
+  Future<bool> _isLeftRoom(List<String> room) =>
+      _isLeftConversation(computeConversationId(room));
+
+  /// [_isLeftRoom] for the conversation with id [conversationId].
+  Future<bool> _isLeftConversation(String conversationId) async {
     final owner = _ownerPubkey;
     if (owner == null) return false;
     final tombstone = await _removedConversationsDao?.tombstoneFor(
-      conversationId: computeConversationId(room),
+      conversationId: conversationId,
       ownerPubkey: owner,
     );
     return tombstone != null && tombstone.rejoinedAt == null;
