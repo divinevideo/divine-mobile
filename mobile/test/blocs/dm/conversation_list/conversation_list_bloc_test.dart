@@ -843,6 +843,50 @@ void main() {
             );
           });
 
+          group('when reading what the members leave visible fails', () {
+            final failure = Exception('database closed');
+            late ContentBlocklistRepository blocklist;
+
+            // The badge counts the stored rows then, so the list shows them
+            // rather than failing the whole inbox.
+            blocTest<ConversationListBloc, ConversationListState>(
+              'lists the stored rows and reports the failure',
+              setUp: () async {
+                registerFallbackValue(<String, Set<String>>{});
+                when(
+                  () => mockDmRepository.visibleActivityExcluding(any()),
+                ).thenAnswer((_) => Future.error(failure));
+                blocklist = await blocklistBlockingMembers([_testPubkey3]);
+                _stubStreams(
+                  mockDmRepository,
+                  accepted: [roomWrittenByBlockedMember(), direct],
+                );
+              },
+              build: () => createBlocWith(blocklist),
+              act: (bloc) => bloc.add(const ConversationListStarted()),
+              wait: const Duration(milliseconds: 100),
+              expect: () => [
+                isA<ConversationListState>().having(
+                  (s) => s.status,
+                  'status',
+                  ConversationListStatus.loading,
+                ),
+                isA<ConversationListState>()
+                    .having(
+                      (s) => s.status,
+                      'status',
+                      ConversationListStatus.loaded,
+                    )
+                    .having(
+                      (s) => s.conversations,
+                      'conversations',
+                      equals([roomWrittenByBlockedMember(), direct]),
+                    ),
+              ],
+              errors: () => [same(failure)],
+            );
+          });
+
           test(
             'restores the stored row once the member is unblocked',
             () async {

@@ -13,6 +13,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Cubit that tracks the number of unread DM conversations shown in the
 /// Messages tab.
@@ -220,6 +221,7 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
                 userPubkey: userPubkey,
                 dmRepository: dmRepository,
                 contentBlocklistRepository: contentBlocklistRepository,
+                generation: generation,
               );
               return _countUnread(
                 accepted: await asSeen(accepted),
@@ -245,24 +247,40 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
   ///
   /// Takes the repositories the current subscription was built with, so a
   /// pass still in flight across [setRepositories] reads the identity it was
-  /// counting for; the generation guard then drops its result.
+  /// counting for; the generation guard then drops its result, and its
+  /// error. A list whose read fails is counted as stored, as the Messages
+  /// list shows it.
   Future<List<DmConversation>> _asSeenByViewer(
     List<DmConversation> conversations, {
     required String userPubkey,
     required DmRepository dmRepository,
     required ContentBlocklistRepository? contentBlocklistRepository,
+    required int generation,
   }) async {
     // The empty pre-auth identity is held in `_countUnread`; nothing to read.
     if (userPubkey.isEmpty || contentBlocklistRepository == null) {
       return conversations;
     }
-    return dmConversationsAsSeen(
-      conversations: conversations,
-      currentUserPubkey: userPubkey,
-      isHidden: contentBlocklistRepository.shouldFilterFromDms,
-      isBlockedByUs: contentBlocklistRepository.isBlocked,
-      dmRepository: dmRepository,
-    );
+    try {
+      return await dmConversationsAsSeen(
+        conversations: conversations,
+        currentUserPubkey: userPubkey,
+        isHidden: contentBlocklistRepository.shouldFilterFromDms,
+        isBlockedByUs: contentBlocklistRepository.isBlocked,
+        dmRepository: dmRepository,
+      );
+    } on Object catch (error, stackTrace) {
+      // A Drift read failing, or the database closing during an account
+      // switch: expected, so not Reportable (error_handling.md).
+      Log.warning(
+        'Could not read what hidden group members leave visible, so the '
+        'badge counts the stored rows: $error',
+        name: 'DmUnreadCountCubit',
+        category: LogCategory.storage,
+      );
+      if (_subscriptionGeneration == generation) addError(error, stackTrace);
+      return conversations;
+    }
   }
 
   /// Composes the visible Messages list (accepted ∪ followed-but-unreplied,

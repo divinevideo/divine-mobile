@@ -21,6 +21,7 @@ import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/models/moderation_presentation.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 part 'conversation_list_event.dart';
 part 'conversation_list_state.dart';
@@ -685,20 +686,39 @@ class ConversationListBloc
   /// messages neither mark a group unread nor move it up (#10150).
   ///
   /// The same pass [DmUnreadCountCubit] runs over the same two lists, so the
-  /// badge counts exactly the unread rows the list renders.
+  /// badge counts exactly the unread rows the list renders. A list whose read
+  /// fails stays as stored, as it does in the badge, rather than failing the
+  /// whole inbox while the badge keeps counting.
   Future<_ConversationListInputs> _asSeenByViewer(
     _ConversationListInputs data,
   ) async {
     final userPubkey = data.userPubkey;
     if (userPubkey.isEmpty) return data;
-    Future<List<DmConversation>> asSeen(List<DmConversation> conversations) =>
-        dmConversationsAsSeen(
+    Future<List<DmConversation>> asSeen(
+      List<DmConversation> conversations,
+    ) async {
+      try {
+        return await dmConversationsAsSeen(
           conversations: conversations,
           currentUserPubkey: userPubkey,
           isHidden: _isHiddenFromDms,
           isBlockedByUs: _isBlockedByUs,
           dmRepository: _dmRepository,
         );
+      } on Object catch (error, stackTrace) {
+        // A Drift read failing, or the database closing during an account
+        // switch: expected, so not Reportable (error_handling.md).
+        Log.warning(
+          'Could not read what hidden group members leave visible, so the '
+          'inbox shows the stored rows: $error',
+          name: 'ConversationListBloc',
+          category: LogCategory.storage,
+        );
+        addError(error, stackTrace);
+        return conversations;
+      }
+    }
+
     return (
       accepted: await asSeen(data.accepted),
       potentialRequests: await asSeen(data.potentialRequests),

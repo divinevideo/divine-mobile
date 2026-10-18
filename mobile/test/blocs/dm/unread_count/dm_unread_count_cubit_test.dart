@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -639,6 +640,31 @@ void main() {
             expect(cubit.state, equals(1));
             _close(fake, cubit);
           });
+        });
+
+        group('when reading what the members leave visible fails', () {
+          final failure = Exception('database closed');
+          late ContentBlocklistRepository blocklist;
+
+          // The Messages list shows the stored rows then, so the badge has to
+          // count them rather than keep the count it had.
+          blocTest<DmUnreadCountCubit, int>(
+            'counts the stored rows and reports the failure',
+            setUp: () async {
+              when(
+                () => dmRepository.visibleActivityExcluding(any()),
+              ).thenAnswer((_) => Future.error(failure));
+              blocklist = await blocklistBlockingBob();
+            },
+            build: () => buildCubit(contentBlocklistRepository: blocklist),
+            act: (_) {
+              acceptedController.add([roomWrittenByBlockedMember(), direct]);
+              potentialController.add(const []);
+            },
+            wait: const Duration(milliseconds: 100),
+            expect: () => [2],
+            errors: () => [same(failure)],
+          );
         });
 
         test('counts the group again once the member is unblocked', () async {
