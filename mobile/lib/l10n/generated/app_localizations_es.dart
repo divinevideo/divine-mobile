@@ -14132,4 +14132,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Algunos clips no entraron: todas las celdas están llenas.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publicado $time';
+  }
 }

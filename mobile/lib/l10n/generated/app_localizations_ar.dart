@@ -13961,4 +13961,9 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'بعض المقاطع لم تتّسع: كل الخلايا ممتلئة.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'نُشر $time';
+  }
 }

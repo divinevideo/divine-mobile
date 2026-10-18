@@ -13899,4 +13899,9 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Bazı klipler sığmadı: tüm hücreler dolu.';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time paylaşıldı';
+  }
 }

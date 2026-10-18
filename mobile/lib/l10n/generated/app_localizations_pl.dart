@@ -14261,4 +14261,9 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Nie wszystkie klipy się zmieściły — wszystkie komórki są zajęte.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Opublikowano $time';
+  }
 }

@@ -14097,4 +14097,9 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'May mga clip na hindi nagkasya — puno na lahat ng cell.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Na-post $time';
+  }
 }

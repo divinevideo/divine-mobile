@@ -6905,7 +6905,7 @@
   },
   "videoEditorStabilizeFailed": "Could not stabilize clip. Please try again.",
   "@videoEditorStabilizeFailed": {
-    "description": "Snackbar message shown when stabilizing a clip, or turning stabilization off, fails."
+    "description": "Snackbar message shown when stabilizing a clip fails."
   },
   "videoEditorUnstabilizeOriginalMissing": "The original footage is gone, so this clip stays stabilized.",
   "@videoEditorUnstabilizeOriginalMissing": {

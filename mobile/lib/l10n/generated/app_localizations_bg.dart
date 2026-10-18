@@ -14110,4 +14110,9 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Някои клипове не се събраха — всички клетки са пълни.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Публикувано $time';
+  }
 }

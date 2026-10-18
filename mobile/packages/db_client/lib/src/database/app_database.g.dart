@@ -12129,7 +12129,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
   /// Known message IDs at the kept preview's boundary, captured before an
   /// account switch clears local history. Dismissing the kept row can then
   /// distinguish replay from a genuinely new message in the same second.
-  /// Cleared when the preview changes; owned and deleted with this row.
+  /// Cleared when its timestamp changes; owned and deleted with this row.
   final String? retainedMessageIds;
 
   /// Whether the current user has sent a message in this conversation.

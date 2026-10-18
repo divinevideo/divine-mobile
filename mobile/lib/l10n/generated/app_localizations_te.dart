@@ -14329,4 +14329,9 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'కొన్ని క్లిప్‌లు సరిపోలేదు — అన్ని గడులు నిండిపోయాయి.';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time పోస్ట్ చేయబడింది';
+  }
 }

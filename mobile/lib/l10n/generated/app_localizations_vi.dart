@@ -13920,4 +13920,9 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Một số clip không vừa: tất cả các ô đã đầy.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Đã đăng $time';
+  }
 }

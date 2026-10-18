@@ -13293,4 +13293,9 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       '一部のクリップが入りませんでした。すべてのセルが埋まっています。';
+
+  @override
+  String userRowPosted(String time) {
+    return '$timeに投稿';
+  }
 }

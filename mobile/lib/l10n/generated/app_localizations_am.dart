@@ -13627,4 +13627,9 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'አንዳንድ ቅንጥቦች አልገቡም — ሁሉም ሕዋሶች ሞልተዋል።';
+
+  @override
+  String userRowPosted(String time) {
+    return 'የተለጠፈው $time';
+  }
 }

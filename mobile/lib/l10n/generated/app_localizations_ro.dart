@@ -14260,4 +14260,9 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Unele clipuri nu au încăput: toate celulele sunt pline.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publicat $time';
+  }
 }

@@ -148,7 +148,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -324,6 +324,30 @@ class AppDatabase extends _$AppDatabase {
           'retained_message_ids',
           'TEXT NULL',
         );
+      }
+      if (from < 27 && to >= 27) {
+        // Ranking previews used v25/v26 before main reserved those versions.
+        // They may lack dismissal and retained-conversation storage; preserve
+        // existing follower rows while completing the canonical schema.
+        await _addColumnIfMissing(
+          'conversations',
+          'is_dismissed',
+          'INTEGER NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1))',
+        );
+        await _repairConversationDismissals();
+        await _addColumnIfMissing(
+          'conversations',
+          'last_message_created_at',
+          'INTEGER NULL',
+        );
+        await _addColumnIfMissing(
+          'conversations',
+          'retained_message_ids',
+          'TEXT NULL',
+        );
+        if (!await _tableExists('my_followers')) {
+          await m.createTable(myFollowers);
+        }
       }
       // The same holds for the v26 column.
       if (to < 26 &&

@@ -13976,4 +13976,9 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Sesetengah klip tidak muat — semua sel sudah penuh.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Disiarkan $time';
+  }
 }

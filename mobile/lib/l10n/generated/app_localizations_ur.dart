@@ -13970,4 +13970,9 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'کچھ کلپس نہیں سما سکے — تمام خانے بھر چکے ہیں۔';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time پوسٹ کی گئی';
+  }
 }

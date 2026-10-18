@@ -13982,4 +13982,9 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Alla klipp fick inte plats – alla rutor är fulla.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publicerat $time';
+  }
 }
