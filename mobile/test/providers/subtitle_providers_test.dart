@@ -2,6 +2,8 @@
 // ABOUTME: Verifies parsing embedded content (REST API), Blossom VTT fetch,
 // ABOUTME: and relay query fallback.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,8 +15,10 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
+import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -455,6 +459,53 @@ void main() {
       expect(callCount, equals(2));
       expect(requestedDelays, equals([const Duration(seconds: 5)]));
     });
+
+    test(
+      'a fetch whose container is disposed mid-flight ends without a failure',
+      () async {
+        // An account switch disposes the container while a Blossom request is
+        // in flight. Closing the container's HTTP client fails that request;
+        // nothing is left to read the result, so it is not logged as a fetch
+        // failure (#10290).
+        final container = createContainer();
+        final pending = Completer<http.Response>();
+        var requests = 0;
+        when(() => mockHttpClient.get(any())).thenAnswer((_) {
+          requests++;
+          return pending.future;
+        });
+        await LogCaptureService().clearAllLogs();
+
+        final subscription = container.listen(
+          subtitleTrackProvider(videoId: 'test-id', sha256: 'abc123').future,
+          (_, _) {},
+        );
+        final track = subscription.read();
+        await pumpEventQueue();
+        expect(requests, equals(1));
+
+        container.dispose();
+        pending.completeError(
+          http.ClientException(
+            'HTTP request failed. Client is already closed.',
+          ),
+        );
+        await track.catchError(
+          (Object _) => const SubtitleFetchResult(
+            SubtitleFetchStatus.unavailable,
+          ),
+        );
+        await pumpEventQueue();
+
+        final warnings = LogCaptureService().getRecentLogs(
+          minLevel: LogLevel.warning,
+        );
+        expect(
+          warnings.map((entry) => entry.message),
+          isNot(contains(contains('VTT fetch failed'))),
+        );
+      },
+    );
 
     test('prefers relay textTrackRef over auto-gen sha256 Blossom', () async {
       final container = createContainer();

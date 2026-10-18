@@ -100,6 +100,8 @@ Duration _parseRetryAfter(Map<String, String> headers) {
   return Duration(seconds: seconds);
 }
 
+bool _neverCancelled() => false;
+
 Uri? _parseHttpSubtitleUrl(String ref) {
   if (ref.isEmpty) return null;
 
@@ -114,7 +116,11 @@ String _decodeVtt(http.Response response) {
   return utf8.decode(response.bodyBytes, allowMalformed: true);
 }
 
-Future<SubtitleFetchResult?> _fetchHttp(http.Client client, Uri url) async {
+Future<SubtitleFetchResult?> _fetchHttp(
+  http.Client client,
+  Uri url, {
+  required void Function(String message) warn,
+}) async {
   try {
     final response = await client.get(url);
     if (response.statusCode == 200) {
@@ -127,11 +133,7 @@ Future<SubtitleFetchResult?> _fetchHttp(http.Client client, Uri url) async {
       return const SubtitleFetchResult(SubtitleFetchStatus.processing);
     }
   } catch (e) {
-    Log.warning(
-      'Direct VTT fetch failed for $url: $e',
-      name: 'fetchSubtitleCues',
-      category: LogCategory.video,
-    );
+    warn('Direct VTT fetch failed for $url: $e');
   }
   return null;
 }
@@ -165,6 +167,7 @@ Future<SubtitleFetchResult?> _fetchBlossom({
   required http.Client client,
   required SubtitlePollDelay delay,
   required Uri vttUrl,
+  required bool Function() isCancelled,
 }) async {
   var waited = Duration.zero;
 
@@ -186,6 +189,7 @@ Future<SubtitleFetchResult?> _fetchBlossom({
 
       waited += retryAfter;
       await delay(retryAfter);
+      if (isCancelled()) return null;
       continue;
     }
 
@@ -199,6 +203,7 @@ Future<SubtitleFetchResult?> _fetchTranslation({
   required http.Client client,
   required String sha256,
   required String lang,
+  required void Function(String message) warn,
 }) async {
   final url = Uri.parse('https://media.divine.video/$sha256/vtt')
       .replace(queryParameters: {'lang': lang});
@@ -215,11 +220,7 @@ Future<SubtitleFetchResult?> _fetchTranslation({
       isMachineTranslated: true,
     );
   } on Object catch (error) {
-    Log.warning(
-      'Translated VTT fetch failed for $sha256: $error',
-      name: 'fetchSubtitleCues',
-      category: LogCategory.video,
-    );
+    warn('Translated VTT fetch failed for $sha256: $error');
     return null;
   }
 }
@@ -243,6 +244,13 @@ Future<SubtitleFetchResult?> _fetchTranslation({
 ///
 /// Only a body carrying the WebVTT signature counts as a served track — see
 /// [SubtitleFetchResult.fromBody].
+///
+/// [isCancelled] reports that the caller no longer wants the result: its
+/// provider was disposed or rebuilt. An account switch disposes the container
+/// that owns [httpClient], and closing that client fails an in-flight request.
+/// Once cancelled the chain stops trying sources and polling, and records a
+/// failure at debug level rather than as a warning, since nobody is waiting on
+/// the subtitles (#10290).
 Future<SubtitleFetchResult> fetchSubtitleCues({
   required http.Client httpClient,
   required NostrClient? nostrClient,
@@ -253,12 +261,31 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
   String? lang,
   SubtitleSourcePreference sourcePreference =
       SubtitleSourcePreference.embeddedFirst,
+  bool Function() isCancelled = _neverCancelled,
 }) async {
+  const cancelled = SubtitleFetchResult(SubtitleFetchStatus.unavailable);
+  void warn(String message) {
+    if (isCancelled()) {
+      Log.debug(
+        '$message (nothing was waiting for it any more)',
+        name: 'fetchSubtitleCues',
+        category: LogCategory.video,
+      );
+      return;
+    }
+    Log.warning(
+      message,
+      name: 'fetchSubtitleCues',
+      category: LogCategory.video,
+    );
+  }
+
   if (lang != null && lang.isNotEmpty && sha256 != null && sha256.isNotEmpty) {
     final translated = await _fetchTranslation(
       client: httpClient,
       sha256: sha256,
       lang: lang,
+      warn: warn,
     );
     if (translated?.status == SubtitleFetchStatus.available) return translated!;
   }
@@ -294,9 +321,10 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
   }
 
   for (final ref in textTrackRefs) {
+    if (isCancelled()) return cancelled;
     final httpUrl = _parseHttpSubtitleUrl(ref);
     if (httpUrl != null) {
-      final cues = accept(await _fetchHttp(httpClient, httpUrl));
+      final cues = accept(await _fetchHttp(httpClient, httpUrl, warn: warn));
       if (cues != null) return cues;
       continue;
     }
@@ -306,11 +334,7 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
         final cues = accept(await _fetchRelay(nostrClient, ref));
         if (cues != null) return cues;
       } catch (e) {
-        Log.warning(
-          'Relay VTT fetch failed for $ref: $e',
-          name: 'fetchSubtitleCues',
-          category: LogCategory.video,
-        );
+        warn('Relay VTT fetch failed for $ref: $e');
       }
     }
   }
@@ -320,19 +344,21 @@ Future<SubtitleFetchResult> fetchSubtitleCues({
     if (cues != null) return cues;
   }
 
+  if (isCancelled()) return cancelled;
   if (sha256 != null && sha256.isNotEmpty) {
     final vttUrl = Uri.parse('https://media.divine.video/$sha256/vtt');
     try {
       final cues = accept(
-        await _fetchBlossom(client: httpClient, delay: delay, vttUrl: vttUrl),
+        await _fetchBlossom(
+          client: httpClient,
+          delay: delay,
+          vttUrl: vttUrl,
+          isCancelled: isCancelled,
+        ),
       );
       if (cues != null) return cues;
     } catch (e) {
-      Log.warning(
-        'Blossom VTT fetch failed for $sha256: $e',
-        name: 'fetchSubtitleCues',
-        category: LogCategory.video,
-      );
+      warn('Blossom VTT fetch failed for $sha256: $e');
     }
   }
 

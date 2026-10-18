@@ -98,7 +98,7 @@ final class SubtitleTrackProvider
   }
 }
 
-String _$subtitleTrackHash() => r'e446944e2c02ac5120332ceccec83bc61257fc0b';
+String _$subtitleTrackHash() => r'db28e7dd3346d795fa8009b0c42c53c3b0770fc1';
 
 /// Fetches the track and its verified machine-translation attribution.
 
