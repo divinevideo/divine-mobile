@@ -1159,6 +1159,41 @@ void main() {
         );
       });
 
+      // A client widening a one-to-one reply names exactly the left room's
+      // members (#2740); the reply still belongs in the one-to-one.
+      for (final roomsOn in [true, false]) {
+        test('files a widened reply to a one-to-one message in the '
+            'one-to-one, receiving rooms ${roomsOn ? 'on' : 'off'}', () async {
+          receivesPeerRooms = roomsOn;
+          final own = message(
+            author: _owner,
+            pTags: [_alice, _bob],
+            content: 'the user opened the room',
+          );
+          await deliver(own, authorSecret: _ownerSecret);
+          await leave();
+          final parent = message(
+            author: _alice,
+            pTags: [_owner],
+            content: 'just the two of us',
+          );
+          await deliver(parent, authorSecret: _aliceSecret);
+
+          final reply = message(
+            author: _alice,
+            pTags: [_owner, _bob],
+            content: 'cc bob',
+            createdAt: leftAt + 100,
+            extraTags: [
+              ['e', parent.id],
+            ],
+          );
+          await deliver(reply, authorSecret: _aliceSecret);
+
+          await expectOnlyTheOneToOneHolding(_alice, [parent.id, reply.id]);
+        });
+      }
+
       test('does not carry a member message into the one-to-one when the '
           'room is above the cap', () async {
         final members = [

@@ -11720,10 +11720,10 @@ class DmRepository {
   /// room's first message collapse into a 1:1 with its speaker, so where it
   /// landed depended on who spoke first.
   ///
-  /// A room the user left and has not written in since wins the same way
-  /// (#10150): its message resolves to that room, which the receive path keeps
-  /// out, instead of being carried into a one-to-one or a mentioned
-  /// conversation.
+  /// A room the user left and has not written in since (#10150) resolves to
+  /// itself where its message would otherwise fall back to the one-to-one with
+  /// its sender, above the cap or while receiving rooms is off, and the
+  /// receive path keeps it out. A mention is still filed where it belongs.
   Future<List<String>> _resolveConversationParticipants(
     List<String> extractedParticipants,
     String senderPubkey, {
@@ -11748,17 +11748,9 @@ class DmRepository {
     if (existingFull != null) return extractedParticipants;
 
     final room = _inLowerCase(extractedParticipants);
-    final owner = _ownerPubkey;
-    final tombstone = owner == null
-        ? null
-        : await _removedConversationsDao?.tombstoneFor(
-            conversationId: computeConversationId(room),
-            ownerPubkey: owner,
-          );
-    if (tombstone != null && tombstone.rejoinedAt == null) return room;
 
     if (extractedParticipants.length > maxRoomParticipants) {
-      return canonical1to1;
+      return await _isLeftRoom(room) ? room : canonical1to1;
     }
 
     if (!extractedParticipants.every(NostrHexUtils.isValidPubkey)) {
@@ -11779,7 +11771,20 @@ class DmRepository {
         return _homeOfMention(answered, senderPubkey).participants;
       }
     }
-    return _receivesPeerRooms() ? room : canonical1to1;
+    return _receivesPeerRooms() || await _isLeftRoom(room)
+        ? room
+        : canonical1to1;
+  }
+
+  /// Whether the user left [room] and has not written in it since (#10150).
+  Future<bool> _isLeftRoom(List<String> room) async {
+    final owner = _ownerPubkey;
+    if (owner == null) return false;
+    final tombstone = await _removedConversationsDao?.tombstoneFor(
+      conversationId: computeConversationId(room),
+      ownerPubkey: owner,
+    );
+    return tombstone != null && tombstone.rejoinedAt == null;
   }
 
   /// Where a mention from [senderPubkey] of the conversation [answered]
