@@ -70,6 +70,44 @@ void main() {
     );
 
     group('dispose', () {
+      test('does not encrypt after disposal during signer lookup', () async {
+        final pubkey = Completer<String?>();
+        when(signer.getPublicKey).thenAnswer((_) => pubkey.future);
+        final service = buildService();
+        final sync = service.fetchUserListsFromRelays();
+        await pumpEventQueue();
+        await relay.close();
+        await pumpEventQueue();
+        verify(signer.getPublicKey).called(1);
+
+        service.dispose();
+        pubkey.complete(_owner);
+        await sync;
+
+        verifyNever(() => signer.nip44Encrypt(any(), any()));
+      });
+
+      test('does not decrypt after disposal during signer lookup', () async {
+        final pubkey = Completer<String?>();
+        when(signer.getPublicKey).thenAnswer((_) => pubkey.future);
+        final service = buildService();
+        final sync = service.fetchUserListsFromRelays();
+        relay.add(
+          Event(_owner, 30005, const [
+            ['d', 'relay_list'],
+          ], sealForTest('[]')),
+        );
+        await relay.close();
+        await pumpEventQueue();
+        verify(signer.getPublicKey).called(1);
+
+        service.dispose();
+        pubkey.complete(_owner);
+        await sync;
+
+        verifyNever(() => signer.nip44Decrypt(any(), any()));
+      });
+
       test(
         'does not sign after disposal during private-list sealing',
         () async {

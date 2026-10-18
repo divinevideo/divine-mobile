@@ -144,7 +144,11 @@ class CuratedListRelayGateway {
   /// Returns `null` when there is nobody to encrypt to or the signer refuses,
   /// which callers must treat as "do not publish": a private list published
   /// without this would expose exactly what it is meant to hide.
-  Future<String?> sealItemTags(CuratedList list) async {
+  /// [canRun] lets an account owner stop encryption after signer lookup.
+  Future<String?> sealItemTags(
+    CuratedList list, {
+    bool Function()? canRun,
+  }) async {
     final ownerPubkey = currentAuthenticatedPubkey();
     if (ownerPubkey == null || ownerPubkey.isEmpty) {
       Log.warning(
@@ -168,6 +172,7 @@ class CuratedListRelayGateway {
 
     final signer = _nostrService.signer;
     final signerPubkey = await signer.getPublicKey();
+    if (canRun != null && !canRun()) return null;
     if (signerPubkey == null || signerPubkey != ownerPubkey) {
       Log.error(
         'Cannot seal private list ${list.id} - signer does not match the '
@@ -643,7 +648,11 @@ class CuratedListRelayGateway {
   /// A failed unseal is distinct from a public list: merging a sealed event as
   /// public would drop the private items locally and publish them in plain tags
   /// on the next edit.
-  Future<UnsealedItemTags> unsealItemTags(Event event) async {
+  /// [canRun] lets an account owner stop decryption after signer lookup.
+  Future<UnsealedItemTags> unsealItemTags(
+    Event event, {
+    bool Function()? canRun,
+  }) async {
     if (event.content.isEmpty || _hasPublicItemTags(event.tags)) {
       return const UnsealedItemTags.notSealed();
     }
@@ -661,6 +670,9 @@ class CuratedListRelayGateway {
     try {
       final signer = _nostrService.signer;
       if (await signer.getPublicKey() != ownerPubkey) {
+        return const UnsealedItemTags.failed();
+      }
+      if (canRun != null && !canRun()) {
         return const UnsealedItemTags.failed();
       }
       final plaintext = CuratedListConverter.isNip44Payload(event.content)

@@ -100,6 +100,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Nothing this service reads or holds may be saved or published.
   bool get _isStopped => _isDisposed || _isSuspended;
+  bool _canRun() => !_isStopped;
 
   /// One per relay sync in progress; completing it ends that sync.
   final Set<Completer<void>> _relaySyncCancels = {};
@@ -131,10 +132,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Abandons a relay sync still in flight.
   ///
-  /// Disposing the account's `NostrClient` closes the sync's subscription, and
-  /// a closed stream reads as a completed sync. By then the next account's
-  /// sign-in has cleared the lists key, so finishing the sync would save this
-  /// account's lists into it and back up lists with a disposed signer (#10288).
+  /// Teardown must not back up cleared data with a disposed signer (#10288).
   @override
   void dispose() {
     _isDisposed = true;
@@ -1296,7 +1294,7 @@ class CuratedListService extends ChangeNotifier {
         content = list.description ?? 'Curated video list: ${list.name}';
         tags = CuratedListConverter.toEventTags(list);
       } else {
-        final sealed = await _relayGateway.sealItemTags(list);
+        final sealed = await _relayGateway.sealItemTags(list, canRun: _canRun);
         if (sealed == null || _isStopped) return false;
         content = sealed;
         tags = CuratedListConverter.toPrivateMetadataTags(list);
@@ -1651,7 +1649,10 @@ class CuratedListService extends ChangeNotifier {
   /// Process a single list event from Nostr
   Future<void> _processListEvent(Event event) async {
     try {
-      final unsealedItemTags = await _relayGateway.unsealItemTags(event);
+      final unsealedItemTags = await _relayGateway.unsealItemTags(
+        event,
+        canRun: _canRun,
+      );
       if (unsealedItemTags.status == UnsealItemTagsStatus.failed) {
         Log.warning(
           'Skipping list event ${event.id} because its private items '
