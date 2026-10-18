@@ -1,6 +1,8 @@
 // ABOUTME: Tests for reactive router location provider
 // ABOUTME: Verifies location stream emits when router navigates
 
+import 'dart:async';
+
 import 'package:async/async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,15 +118,7 @@ void main() {
       // StreamProvider, which then calls setValue mid-build and throws
       // `Tried to modify a provider while the widget tree was building` into
       // the app zone — and on to Crashlytics — on every cold start.
-      final router = _MockGoRouter();
-      final delegate = _MockGoRouterDelegate();
-      final routeInformation = GoRouteInformationProvider(
-        initialLocation: '/sentinel-location',
-        initialExtra: null,
-      );
-      addTearDown(routeInformation.dispose);
-      when(() => router.routerDelegate).thenReturn(delegate);
-      when(() => router.routeInformationProvider).thenReturn(routeInformation);
+      final (router, delegate) = _mockRouterAt('/sentinel-location');
       final container = ProviderContainer(
         overrides: [goRouterProvider.overrideWithValue(router)],
       );
@@ -160,15 +154,7 @@ void main() {
     });
 
     test('removes its listener and closes the stream on dispose', () async {
-      final router = _MockGoRouter();
-      final delegate = _MockGoRouterDelegate();
-      final routeInformation = GoRouteInformationProvider(
-        initialLocation: '/sentinel-location',
-        initialExtra: null,
-      );
-      addTearDown(routeInformation.dispose);
-      when(() => router.routerDelegate).thenReturn(delegate);
-      when(() => router.routeInformationProvider).thenReturn(routeInformation);
+      final (router, delegate) = _mockRouterAt('/sentinel-location');
       final container = ProviderContainer(
         overrides: [goRouterProvider.overrideWithValue(router)],
       );
@@ -197,9 +183,136 @@ void main() {
       await pumpEventQueue();
       expect(isDone, isTrue);
     });
+
+    group('after a redirect the router runs itself', () {
+      testWidgets('emits the gate the redirect leads to', (tester) async {
+        final gated = ValueNotifier(false);
+        addTearDown(gated.dispose);
+        final router = _gatedRouter(gated);
+        addTearDown(router.dispose);
+        final container = await _pumpGatedRouter(tester, router);
+        expect(container.read(routerLocationProvider).value, _profile);
+
+        gated.value = true;
+        await tester.pumpAndSettle();
+
+        expect(router.routeInformationProvider.value.uri.toString(), _gate);
+        expect(container.read(routerLocationProvider).value, _gate);
+      });
+
+      testWidgets('emits the page the gate returns to', (tester) async {
+        final gated = ValueNotifier(true);
+        addTearDown(gated.dispose);
+        final router = _gatedRouter(gated);
+        addTearDown(router.dispose);
+        final container = await _pumpGatedRouter(tester, router);
+        expect(container.read(routerLocationProvider).value, _gate);
+
+        gated.value = false;
+        await tester.pumpAndSettle();
+
+        expect(router.routeInformationProvider.value.uri.toString(), _profile);
+        expect(container.read(routerLocationProvider).value, _profile);
+      });
+    });
+
+    group('after a push', () {
+      testWidgets('emits the pushed location', (tester) async {
+        // The app router sets this, so the URL follows imperative pushes.
+        final reflected = GoRouter.optionURLReflectsImperativeAPIs;
+        GoRouter.optionURLReflectsImperativeAPIs = true;
+        addTearDown(
+          () => GoRouter.optionURLReflectsImperativeAPIs = reflected,
+        );
+        final gated = ValueNotifier(false);
+        addTearDown(gated.dispose);
+        final router = _gatedRouter(gated);
+        addTearDown(router.dispose);
+        final container = await _pumpGatedRouter(tester, router);
+        expect(container.read(routerLocationProvider).value, _profile);
+
+        unawaited(router.push<void>('/details'));
+        await tester.pumpAndSettle();
+
+        expect(container.read(routerLocationProvider).value, '/details');
+      });
+    });
   });
+}
+
+const _profile = '/profile/a';
+const _gate = '/gate?from=%2Fprofile%2Fa';
+
+/// A router whose redirect sends every route to `/gate` while [gated] is
+/// true and back to the `from` location once it is false, re-evaluated
+/// through `refreshListenable` the way the app's auth and review gates are.
+GoRouter _gatedRouter(ValueNotifier<bool> gated) {
+  return GoRouter(
+    initialLocation: _profile,
+    refreshListenable: gated,
+    redirect: (context, state) {
+      final atGate = state.matchedLocation == '/gate';
+      if (gated.value && !atGate) {
+        return '/gate?from=${Uri.encodeComponent(state.uri.toString())}';
+      }
+      if (!gated.value && atGate) return state.uri.queryParameters['from'];
+      return null;
+    },
+    routes: [
+      GoRoute(path: '/profile/:id', builder: (_, _) => const SizedBox()),
+      GoRoute(path: '/gate', builder: (_, _) => const SizedBox()),
+      GoRoute(path: '/details', builder: (_, _) => const SizedBox()),
+    ],
+  );
+}
+
+Future<ProviderContainer> _pumpGatedRouter(
+  WidgetTester tester,
+  GoRouter router,
+) async {
+  final container = ProviderContainer(
+    overrides: [goRouterProvider.overrideWithValue(router)],
+  );
+  addTearDown(container.dispose);
+  container.listen(routerLocationProvider, (_, _) {});
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return container;
+}
+
+/// A mocked router at [location] whose delegate has no configuration yet, so
+/// the stream falls back to the information provider's location.
+(GoRouter, GoRouterDelegate) _mockRouterAt(String location) {
+  final router = _MockGoRouter();
+  final delegate = _MockGoRouterDelegate();
+  final parser = _MockGoRouteInformationParser();
+  final routeInformation = GoRouteInformationProvider(
+    initialLocation: location,
+    initialExtra: null,
+  );
+  addTearDown(routeInformation.dispose);
+  when(() => router.routerDelegate).thenReturn(delegate);
+  when(() => router.routeInformationProvider).thenReturn(routeInformation);
+  when(() => router.routeInformationParser).thenReturn(parser);
+  when(() => delegate.currentConfiguration).thenReturn(RouteMatchList.empty);
+  when(
+    () => parser.restoreRouteInformation(RouteMatchList.empty),
+  ).thenReturn(null);
+  return (router, delegate);
 }
 
 class _MockGoRouter extends Mock implements GoRouter {}
 
 class _MockGoRouterDelegate extends Mock implements GoRouterDelegate {}
+
+class _MockGoRouteInformationParser extends Mock
+    implements GoRouteInformationParser {}

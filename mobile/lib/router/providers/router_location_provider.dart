@@ -26,10 +26,15 @@ final routerLocationStreamProvider = Provider<Stream<String>>((ref) {
   // building` into the app zone, and on to Crashlytics, on every cold start.
   final ctrl = StreamController<String>();
 
+  // Not routeInformationProvider.value: after a refreshListenable redirect the
+  // router writes the new location there only after this notification, and
+  // silently, so it would stay on the previous page (#10279).
   void emit() {
-    // Access location via routeInformationProvider
-    final location = router.routeInformationProvider.value.uri.toString();
-    if (!ctrl.isClosed) ctrl.add(location);
+    final reported = router.routeInformationParser.restoreRouteInformation(
+      router.routerDelegate.currentConfiguration,
+    );
+    final location = reported?.uri ?? router.routeInformationProvider.value.uri;
+    if (!ctrl.isClosed) ctrl.add(location.toString());
   }
 
   // Queue the current location so a subscriber gets one without waiting for
