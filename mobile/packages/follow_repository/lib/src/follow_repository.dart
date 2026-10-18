@@ -158,7 +158,6 @@ class FollowRepository {
   }
 
   String? _myFollowersOwner;
-  bool _disposed = false;
   bool _followerWritesStopped = false;
   Future<void>? _followerPersistenceTail;
 
@@ -574,7 +573,6 @@ class FollowRepository {
   /// Dispose resources (idempotent — safe to call multiple times).
   Future<void> dispose() async {
     _isDisposed = true;
-    _disposed = true;
     unawaited(_contactListSubscription?.cancel());
     if (_contactListSubscriptionId != null) {
       await _nostrClient.unsubscribe(_contactListSubscriptionId!);
@@ -670,7 +668,7 @@ class FollowRepository {
   }
 
   bool _isCurrentFollowerOwner(String owner) =>
-      !_disposed &&
+      !_isDisposed &&
       !_followerWritesStopped &&
       _nostrClient.hasKeys &&
       _nostrClient.publicKey == owner;
@@ -762,7 +760,7 @@ class FollowRepository {
   ///
   /// Partial full queries only merge: a failed source cannot prove an unfollow.
   Future<void> syncMyFollowers() {
-    if (_disposed ||
+    if (_isDisposed ||
         _followerWritesStopped ||
         _myFollowersDao == null ||
         !_nostrClient.hasKeys ||
@@ -1087,7 +1085,7 @@ class FollowRepository {
         );
       }
     }
-    if (_disposed || owner != _nostrClient.publicKey) return;
+    if (_isDisposed || owner != _nostrClient.publicKey) return;
     await for (final result in CacheSync.watchOne<FollowersSnapshot>(
       key: _myFollowersCacheKey(owner),
       fetch: fetchMyFollowersSnapshot,
@@ -1095,7 +1093,7 @@ class FollowRepository {
       toJson: (s) => s.toJson(),
       ttl: _profileListCacheTtl,
     )) {
-      if (_disposed || owner != _nostrClient.publicKey) return;
+      if (_isDisposed || owner != _nostrClient.publicKey) return;
       if (result.isLive || !deliveredDurable) yield result;
     }
   }
