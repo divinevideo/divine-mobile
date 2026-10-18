@@ -16,6 +16,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -67,6 +68,75 @@ class CuratedListRelayGateway {
     return currentPubkey;
   }
 
+  /// Reads [ownerPubkey]'s kind 30005 lists from relays.
+  ///
+  /// `completedNormally` is true only when the relay stream closed by itself.
+  /// The read reports an incomplete one when it errors, when [timeout] passes,
+  /// or when [cancelled] completes first; the events received until then are
+  /// returned either way.
+  Future<({List<Event> events, bool completedNormally})> readOwnedLists(
+    String ownerPubkey, {
+    required Duration timeout,
+    required Future<void> cancelled,
+  }) async {
+    final completer = Completer<bool>();
+    final events = <Event>[];
+    StreamSubscription<Event>? relaySubscription;
+    Timer? timeoutTimer;
+    // Stops listening before the caller resumes, so no event lands in
+    // [events] while the caller is still reading it.
+    void finish({required bool completedNormally}) {
+      if (completer.isCompleted) return;
+      timeoutTimer?.cancel();
+      unawaited(relaySubscription?.cancel());
+      relaySubscription = null;
+      completer.complete(completedNormally);
+    }
+
+    unawaited(cancelled.then((_) => finish(completedNormally: false)));
+    try {
+      Log.debug(
+        '📋 Subscribing with filter: authors=[${pubkeyForLogs(ownerPubkey)}], kinds=[30005]',
+        name: 'CuratedListRelayGateway',
+        category: LogCategory.system,
+      );
+      final filter = Filter(authors: [ownerPubkey], kinds: [30005]);
+      final subscription = _nostrService.subscribe([filter]);
+      timeoutTimer = Timer(timeout, () {
+        Log.debug(
+          'Relay sync timeout reached, processing received events',
+          name: 'CuratedListRelayGateway',
+          category: LogCategory.system,
+        );
+        finish(completedNormally: false);
+      });
+      relaySubscription = subscription.listen(
+        (event) {
+          events.add(event);
+          Log.debug(
+            'Received list event from relay: ${event.id}',
+            name: 'CuratedListRelayGateway',
+            category: LogCategory.system,
+          );
+        },
+        onDone: () => finish(completedNormally: true),
+        onError: (Object error) {
+          Log.error(
+            'Error fetching lists from relay: $error',
+            name: 'CuratedListRelayGateway',
+            category: LogCategory.system,
+          );
+          finish(completedNormally: false);
+        },
+        cancelOnError: true,
+      );
+      final completedNormally = await completer.future;
+      return (events: events, completedNormally: completedNormally);
+    } finally {
+      finish(completedNormally: false);
+    }
+  }
+
   /// NIP-44 encrypts [list]'s item tags to their owner.
   ///
   /// Encrypting to our own pubkey is what makes a list readable on our other
@@ -74,7 +144,11 @@ class CuratedListRelayGateway {
   /// Returns `null` when there is nobody to encrypt to or the signer refuses,
   /// which callers must treat as "do not publish": a private list published
   /// without this would expose exactly what it is meant to hide.
-  Future<String?> sealItemTags(CuratedList list) async {
+  /// [canRun] lets an account owner stop encryption after signer lookup.
+  Future<String?> sealItemTags(
+    CuratedList list, {
+    bool Function()? canRun,
+  }) async {
     final ownerPubkey = currentAuthenticatedPubkey();
     if (ownerPubkey == null || ownerPubkey.isEmpty) {
       Log.warning(
@@ -98,6 +172,7 @@ class CuratedListRelayGateway {
 
     final signer = _nostrService.signer;
     final signerPubkey = await signer.getPublicKey();
+    if (canRun != null && !canRun()) return null;
     if (signerPubkey == null || signerPubkey != ownerPubkey) {
       Log.error(
         'Cannot seal private list ${list.id} - signer does not match the '
@@ -573,7 +648,11 @@ class CuratedListRelayGateway {
   /// A failed unseal is distinct from a public list: merging a sealed event as
   /// public would drop the private items locally and publish them in plain tags
   /// on the next edit.
-  Future<UnsealedItemTags> unsealItemTags(Event event) async {
+  /// [canRun] lets an account owner stop decryption after signer lookup.
+  Future<UnsealedItemTags> unsealItemTags(
+    Event event, {
+    bool Function()? canRun,
+  }) async {
     if (event.content.isEmpty || _hasPublicItemTags(event.tags)) {
       return const UnsealedItemTags.notSealed();
     }
@@ -591,6 +670,9 @@ class CuratedListRelayGateway {
     try {
       final signer = _nostrService.signer;
       if (await signer.getPublicKey() != ownerPubkey) {
+        return const UnsealedItemTags.failed();
+      }
+      if (canRun != null && !canRun()) {
         return const UnsealedItemTags.failed();
       }
       final plaintext = CuratedListConverter.isNip44Payload(event.content)

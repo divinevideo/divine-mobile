@@ -728,7 +728,7 @@ final class CuratedListsStateProvider
   CuratedListsState create() => CuratedListsState();
 }
 
-String _$curatedListsStateHash() => r'c6255dcf311db8ce01adb1aa64f5b40e38bd9729';
+String _$curatedListsStateHash() => r'39c808b7b3455397d1a1d3563d80e0c0276cfbde';
 
 /// Lists state notifier - manages curated lists state
 
