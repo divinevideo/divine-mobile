@@ -223,7 +223,15 @@ class _InMemoryRemovedConversationsDao extends Mock
       _tombstones[(conversationId: conversationId, ownerPubkey: ownerPubkey)];
 }
 
-class _MockNostrClient extends Mock implements NostrClient {}
+class _MockNostrClient extends Mock implements NostrClient {
+  // An empty pool unless a test stubs one: history restore's own inbox read
+  // asks which relays the pool already covers (#8528).
+  @override
+  List<String> get configuredRelays =>
+      super.noSuchMethod(Invocation.getter(#configuredRelays))
+          as List<String>? ??
+      const [];
+}
 
 /// Serves a stored event set through a subscription the way a relay does:
 /// only the events the REQ's `since:` / `until:` admit ever reach the stream.
@@ -7359,10 +7367,12 @@ void main() {
       );
 
       test(
-        'resolves the own kind-10050 once per session, reused across the live '
-        'subscription and the drain',
+        'resolves the own kind-10050 memo once per session, shared by the live '
+        'subscription and the drain, which also reads the relays itself '
+        '(#8528)',
         () async {
-          var resolveQueries = 0;
+          var memoReads = 0;
+          final drainLegs = <List<String>?>[];
           final controller = StreamController<Event>();
           stubNip04RecoveryAnsweredEmpty();
           when(
@@ -7377,13 +7387,14 @@ void main() {
           ).thenAnswer((_) => controller.stream);
           // Answered on purpose: an unanswered read resolves to `failed`,
           // which is deliberately NOT memoized, so the second consumer would
-          // re-query and this count would be 2 (#8212).
+          // re-query the memo (#8212).
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
@@ -7395,7 +7406,11 @@ void main() {
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
             if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-              resolveQueries++;
+              if (inv.namedArguments[#useCache] as bool) {
+                memoReads++;
+              } else {
+                drainLegs.add(inv.namedArguments[#tempRelays] as List<String>?);
+              }
               return answeredList([
                 ownInbox(['wss://own.example']),
               ]);
@@ -7410,7 +7425,10 @@ void main() {
           await repository.startListening();
           await repository.backfillHistoryIfNeeded();
 
-          expect(resolveQueries, 1);
+          expect(memoReads, 1);
+          // History restore does not trust the memo: it reads the pool and the
+          // relays the memo's list names itself (#8528).
+          expect(drainLegs, [isNull, contains('wss://own.example')]);
 
           await repository.stopListening();
           await controller.close();
@@ -7441,6 +7459,7 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
@@ -7452,7 +7471,8 @@ void main() {
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
             if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-              resolveQueries++;
+              // Count the memo's reads only; history restore makes its own.
+              if (inv.namedArguments[#useCache] as bool) resolveQueries++;
               return resolveQueries == 1
                   ? unansweredList(timedOut: true)
                   : answeredList([
