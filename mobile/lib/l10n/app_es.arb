@@ -5130,5 +5130,12 @@
   "soundReadyDescription": "Úsalo en tu próximo video o guárdalo en tu biblioteca de sonidos.",
   "soundReadyUse": "Usar este sonido",
   "soundReadySave": "Guardar en Mis sonidos",
-  "soundRequestSaved": "Guardado"
+  "soundRequestSaved": "Guardado",
+    "inboxRequestsMarkAllReadShort": "Marcar todo como leído",
+    "inboxRequestsDismissed": "Apartados",
+    "inboxRequestsDismissedEmpty": "No hay nada apartado",
+    "inboxRequestDismiss": "Apartar",
+    "inboxRequestRestore": "Restaurar",
+    "inboxThreadMarkRead": "Marcar como leído",
+    "inboxThreadMarkedRead": "Marcado como leído"
 }

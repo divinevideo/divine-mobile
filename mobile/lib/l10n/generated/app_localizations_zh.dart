@@ -12964,4 +12964,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundRequestSaved => '已保存';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => '全部标为已读';
+
+  @override
+  String get inboxRequestsDismissed => '已搁置';
+
+  @override
+  String get inboxRequestsDismissedEmpty => '没有已搁置的对话';
+
+  @override
+  String get inboxRequestDismiss => '搁置';
+
+  @override
+  String get inboxRequestRestore => '恢复';
+
+  @override
+  String get inboxThreadMarkRead => '标为已读';
+
+  @override
+  String get inboxThreadMarkedRead => '已标为已读';
 }

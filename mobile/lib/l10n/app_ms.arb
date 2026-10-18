@@ -6894,5 +6894,12 @@
   "soundReadyDescription": "Gunakannya dalam video seterusnya atau simpan ke pustaka bunyi anda.",
   "soundReadyUse": "Gunakan bunyi ini",
   "soundReadySave": "Simpan ke Bunyi Saya",
-  "soundRequestSaved": "Disimpan"
+  "soundRequestSaved": "Disimpan",
+  "inboxRequestsMarkAllReadShort": "Tandakan semua sudah dibaca",
+  "inboxRequestsDismissed": "Diketepikan",
+  "inboxRequestsDismissedEmpty": "Tiada perbualan diketepikan",
+  "inboxRequestDismiss": "Ketepikan",
+  "inboxRequestRestore": "Pulihkan",
+  "inboxThreadMarkRead": "Tandakan sudah dibaca",
+  "inboxThreadMarkedRead": "Ditandakan sudah dibaca"
 }

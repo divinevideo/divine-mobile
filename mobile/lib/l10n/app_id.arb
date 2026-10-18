@@ -5130,5 +5130,12 @@
   "soundReadyDescription": "Pakai di video berikutnya atau simpan ke koleksi suaramu.",
   "soundReadyUse": "Pakai suara ini",
   "soundReadySave": "Simpan ke Suara Saya",
-  "soundRequestSaved": "Tersimpan"
+  "soundRequestSaved": "Tersimpan",
+    "inboxRequestsMarkAllReadShort": "Tandai semua dibaca",
+    "inboxRequestsDismissed": "Disisihkan",
+    "inboxRequestsDismissedEmpty": "Belum ada yang disisihkan",
+    "inboxRequestDismiss": "Sisihkan",
+    "inboxRequestRestore": "Pulihkan",
+    "inboxThreadMarkRead": "Tandai dibaca",
+    "inboxThreadMarkedRead": "Ditandai dibaca"
 }

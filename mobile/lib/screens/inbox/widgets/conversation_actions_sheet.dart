@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet with long-press actions for DM conversations.
-// ABOUTME: Provides contextual Report, Block, and Remove actions.
+// ABOUTME: Provides read, dismiss/restore, Report, Block, and Remove actions.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -7,6 +7,12 @@ import 'package:openvine/l10n/l10n.dart';
 
 /// Actions available from the conversation long-press sheet.
 enum ConversationAction {
+  /// Clear unread status for this thread.
+  markRead,
+
+  /// Put the thread aside, or restore an already dismissed thread.
+  dismiss,
+
   /// Report the other participant.
   report,
 
@@ -39,16 +45,11 @@ class ConversationActionsSheet {
     required bool isGroup,
     required bool canRemove,
   }) => [
+    ConversationAction.markRead,
+    if (canRemove) ConversationAction.dismiss,
     if (!isGroup) ...[ConversationAction.report, ConversationAction.block],
     if (canRemove) ConversationAction.remove,
   ];
-
-  /// Whether the sheet would offer any action for a conversation.
-  ///
-  /// A group offers only Remove, so a group that cannot be removed has none.
-  /// Callers check this before [show] rather than open an empty sheet.
-  static bool hasActions({required bool isGroup, required bool canRemove}) =>
-      _actionsFor(isGroup: isGroup, canRemove: canRemove).isNotEmpty;
 
   static Future<ConversationAction?> show(
     BuildContext context, {
@@ -57,9 +58,9 @@ class ConversationActionsSheet {
     required bool isBlocked,
     required bool isGroup,
     bool canRemove = true,
+    bool isDismissed = false,
   }) {
     final actions = _actionsFor(isGroup: isGroup, canRemove: canRemove);
-    assert(actions.isNotEmpty, 'Check hasActions before opening the sheet.');
 
     // A vanished peer can publish again under the same key, and their DMs
     // remain in the recipient's history. Keep Report and Block available for
@@ -67,6 +68,7 @@ class ConversationActionsSheet {
     return VineBottomSheet.show<ConversationAction>(
       context: context,
       scrollable: false,
+      isScrollControlled: true,
       expanded: false,
       // Route through the root Navigator so the sheet sits above the
       // tab shell's nested Navigator and covers the bottom nav bar —
@@ -79,6 +81,18 @@ class ConversationActionsSheet {
           children: [
             for (final action in actions)
               switch (action) {
+                ConversationAction.markRead => _ActionTile(
+                  icon: DivineIconName.checks,
+                  label: context.l10n.inboxThreadMarkRead,
+                  result: action,
+                ),
+                ConversationAction.dismiss => _ActionTile(
+                  icon: DivineIconName.eyeSlash,
+                  label: isDismissed
+                      ? context.l10n.inboxRequestRestore
+                      : context.l10n.inboxRequestDismiss,
+                  result: action,
+                ),
                 ConversationAction.report => _ActionTile(
                   icon: DivineIconName.flag,
                   label: isVanished

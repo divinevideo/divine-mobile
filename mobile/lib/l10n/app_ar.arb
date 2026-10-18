@@ -5130,5 +5130,12 @@
   "soundReadyDescription": "استخدمه في الفيديو القادم أو احفظه في مكتبة الأصوات.",
   "soundReadyUse": "استخدم هذا الصوت",
   "soundReadySave": "حفظ في أصواتي",
-  "soundRequestSaved": "تم الحفظ"
+  "soundRequestSaved": "تم الحفظ",
+    "inboxRequestsMarkAllReadShort": "تحديد الكل كمقروء",
+    "inboxRequestsDismissed": "المؤجلة",
+    "inboxRequestsDismissedEmpty": "لا توجد محادثات مؤجلة",
+    "inboxRequestDismiss": "تأجيل",
+    "inboxRequestRestore": "استعادة",
+    "inboxThreadMarkRead": "تحديد كمقروء",
+    "inboxThreadMarkedRead": "تم التحديد كمقروء"
 }

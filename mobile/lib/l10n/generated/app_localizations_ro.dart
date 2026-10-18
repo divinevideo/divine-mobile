@@ -14081,4 +14081,25 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Salvat';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Marchează tot ca citit';
+
+  @override
+  String get inboxRequestsDismissed => 'Puse deoparte';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Nicio conversație pusă deoparte';
+
+  @override
+  String get inboxRequestDismiss => 'Pune deoparte';
+
+  @override
+  String get inboxRequestRestore => 'Restabilește';
+
+  @override
+  String get inboxThreadMarkRead => 'Marchează ca citit';
+
+  @override
+  String get inboxThreadMarkedRead => 'Marcat ca citit';
 }

@@ -14013,4 +14013,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Enregistré';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Tout marquer comme lu';
+
+  @override
+  String get inboxRequestsDismissed => 'Mises de côté';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Aucune conversation mise de côté';
+
+  @override
+  String get inboxRequestDismiss => 'Mettre de côté';
+
+  @override
+  String get inboxRequestRestore => 'Restaurer';
+
+  @override
+  String get inboxThreadMarkRead => 'Marquer comme lu';
+
+  @override
+  String get inboxThreadMarkedRead => 'Marqué comme lu';
 }

@@ -5230,5 +5230,12 @@
   "soundReadyDescription": "በሚቀጥለው ቪዲዮህ ተጠቀምበት ወይም በድምፅ ቤተ መጻሕፍትህ ውስጥ አስቀምጠው።",
   "soundReadyUse": "ይህን ድምፅ ተጠቀም",
   "soundReadySave": "በእኔ ድምፆች ውስጥ አስቀምጥ",
-  "soundRequestSaved": "ተቀምጧል"
+  "soundRequestSaved": "ተቀምጧል",
+    "inboxRequestsMarkAllReadShort": "ሁሉንም እንደተነበቡ ምልክት ማድረግ",
+    "inboxRequestsDismissed": "ወደ ጎን የተቀመጡ",
+    "inboxRequestsDismissedEmpty": "ወደ ጎን የተቀመጠ ነገር የለም",
+    "inboxRequestDismiss": "ወደ ጎን ማስቀመጥ",
+    "inboxRequestRestore": "መመለስ",
+    "inboxThreadMarkRead": "እንደተነበበ ምልክት ማድረግ",
+    "inboxThreadMarkedRead": "እንደተነበበ ምልክት ተደርጓል"
 }

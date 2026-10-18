@@ -1653,6 +1653,69 @@ void main() {
         },
       );
 
+      blocTest<ConversationListBloc, ConversationListState>(
+        'dismissed requests stay recoverable and do not count as pending',
+        setUp: () {
+          when(() => mockFollowRepository.isFollowing(any())).thenReturn(false);
+          when(() => mockDmRepository.userPubkey).thenReturn(_testPubkey1);
+          _stubStreams(
+            mockDmRepository,
+            potentialRequests: [
+              _createConversation(id: _testConversationId1)
+                  .copyWith(isDismissed: true),
+              _createConversation(id: _testConversationId2, isRead: false),
+            ],
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ConversationListStarted()),
+        verify: (bloc) {
+          expect(bloc.state.requestConversations.map((c) => c.id), [
+            _testConversationId2,
+          ]);
+          expect(bloc.state.dismissedRequestConversations.map((c) => c.id), [
+            _testConversationId1,
+          ]);
+          expect(bloc.state.requestUnreadCount, 1);
+        },
+      );
+
+      blocTest<ConversationListBloc, ConversationListState>(
+        'dismissed accepted threads are reachable only through Dismissed',
+        setUp: () {
+          _stubStreams(
+            mockDmRepository,
+            accepted: [
+              _createConversation(
+                id: _testConversationId1,
+                currentUserHasSent: true,
+              ).copyWith(isDismissed: true),
+              _createConversation(
+                id: _testConversationId2,
+                currentUserHasSent: true,
+              ),
+            ],
+          );
+        },
+        build: createBloc,
+        act: (bloc) async {
+          final loaded = bloc.stream.firstWhere(
+            (s) => s.status == ConversationListStatus.loaded,
+          );
+          bloc.add(const ConversationListStarted());
+          await loaded;
+          expect(bloc.state.visibleConversations.map((c) => c.id), [
+            _testConversationId2,
+          ]);
+          bloc.add(const ConversationListFilterChanged(InboxFilter.dismissed));
+        },
+        verify: (bloc) {
+          expect(bloc.state.visibleConversations.map((c) => c.id), [
+            _testConversationId1,
+          ]);
+        },
+      );
+
       test('requestUnreadCount counts unread requests', () {
         final state = ConversationListState(
           status: ConversationListStatus.loaded,
@@ -2012,7 +2075,8 @@ void main() {
         const <String, String>{}, // profileNames
         const <String>{}, // vanishedPubkeys
         null, // peerLabels
-        const <DmConversation>[],
+        const <DmConversation>[], // requestConversations
+        const <DmConversation>[], // dismissedRequestConversations
         const <DmConversation>[],
         true,
         false, // isRestoringHistory

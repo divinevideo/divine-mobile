@@ -13723,4 +13723,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Kaydedildi';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Tümünü okundu olarak işaretle';
+
+  @override
+  String get inboxRequestsDismissed => 'Kenara ayrılanlar';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Kenara ayrılan sohbet yok';
+
+  @override
+  String get inboxRequestDismiss => 'Kenara ayır';
+
+  @override
+  String get inboxRequestRestore => 'Geri getir';
+
+  @override
+  String get inboxThreadMarkRead => 'Okundu olarak işaretle';
+
+  @override
+  String get inboxThreadMarkedRead => 'Okundu olarak işaretlendi';
 }

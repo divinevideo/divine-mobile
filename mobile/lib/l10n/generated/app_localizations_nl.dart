@@ -13873,4 +13873,25 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Opgeslagen';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Alles als gelezen markeren';
+
+  @override
+  String get inboxRequestsDismissed => 'Weggelegd';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Geen weggelegde gesprekken';
+
+  @override
+  String get inboxRequestDismiss => 'Wegleggen';
+
+  @override
+  String get inboxRequestRestore => 'Terugzetten';
+
+  @override
+  String get inboxThreadMarkRead => 'Als gelezen markeren';
+
+  @override
+  String get inboxThreadMarkedRead => 'Als gelezen gemarkeerd';
 }

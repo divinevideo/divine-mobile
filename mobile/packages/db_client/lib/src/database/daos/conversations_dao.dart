@@ -3,6 +3,8 @@
 // ABOUTME: for the messages tab conversation list.
 // ABOUTME: All queries are scoped by ownerPubkey for multi-account isolation.
 
+import 'dart:convert';
+
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 
@@ -59,12 +61,14 @@ END
   ///
   /// * `participantPubkeys`, `isGroup` — always overwritten.
   /// * `isRead` — updated only when the incoming event becomes the stored
-  ///   latest message (strictly newer [lastMessageTimestamp]); otherwise
-  ///   preserved. A newer message at or before the row's read cursor
-  ///   (`lastReadTimestamp`) is written as read whatever [isRead] says, the
-  ///   same rule [applyReadCursor] uses. Notably NOT written under
-  ///   [forceUpdateLastMessage]: a deletion preview refresh must not change
-  ///   read state. Flip read state explicitly via [markAsRead] /
+  ///   latest message (a newer timestamp, or a distinct [isNewMessage] at
+  ///   the same second); otherwise preserved. A newer message at or before
+  ///   the row's read cursor (`lastReadTimestamp`) is written as read whatever
+  ///   [isRead] says, as [applyReadCursor] does. A restoring arrival at the
+  ///   dismissal boundary is unread unless the cursor advanced beyond it.
+  ///   Notably NOT written
+  ///   under [forceUpdateLastMessage]: a deletion preview refresh must not
+  ///   change read state. Flip read state explicitly via [markAsRead] /
   ///   [markMultipleAsRead].
   /// * `subject`, `dmProtocol` — updated only when the incoming value is
   ///   non-null; an existing non-null value is preserved.
@@ -102,7 +106,50 @@ END
     String? ownerPubkey,
     String? dmProtocol,
     bool forceUpdateLastMessage = false,
-  }) {
+    bool isNewMessage = false,
+  }) => attachedDatabase.transaction(() async {
+    final dismissal =
+        await (select(attachedDatabase.conversationDismissals)..where(
+              (t) =>
+                  t.conversationId.equals(id) &
+                  t.ownerPubkey.equals(ownerPubkey ?? ''),
+            ))
+            .getSingleOrNull();
+    var keepDismissed = dismissal != null;
+    int? restoringIncomingTimestamp;
+    if (dismissal != null && !forceUpdateLastMessage) {
+      final messages = attachedDatabase.directMessages;
+      final candidates =
+          await (select(messages)..where(
+                (t) =>
+                    t.conversationId.equals(id) &
+                    t.ownerPubkey.equals(ownerPubkey ?? '') &
+                    t.createdAt.isBiggerOrEqualValue(
+                      dismissal.boundaryTimestamp,
+                    ),
+              ))
+              .get();
+      final knownIds = (jsonDecode(dismissal.knownMessageIds) as List)
+          .cast<String>()
+          .toSet();
+      final newMessages = candidates
+          .where((message) => !knownIds.contains(message.id))
+          .toList();
+      if (newMessages.isNotEmpty) {
+        // A metadata-only refresh may omit the preview timestamp.
+        // Classify read state from the newest stored incoming arrival.
+        for (final message in newMessages) {
+          if (message.senderPubkey == ownerPubkey) continue;
+          final previous = restoringIncomingTimestamp;
+          if (previous == null || message.createdAt > previous) {
+            restoringIncomingTimestamp = message.createdAt;
+          }
+        }
+        await _clearDismissal(id, ownerPubkey ?? '');
+        keepDismissed = false;
+      }
+    }
+    final restoredByIncoming = restoringIncomingTimestamp != null;
     final row = ConversationsCompanion.insert(
       id: id,
       participantPubkeys: participantPubkeys,
@@ -112,7 +159,11 @@ END
       lastMessageTimestamp: Value(lastMessageTimestamp),
       lastMessageSenderPubkey: Value(lastMessageSenderPubkey),
       subject: Value(subject),
-      isRead: Value(isRead),
+      isRead: Value(keepDismissed || (!restoredByIncoming && isRead)),
+      isDismissed: Value(keepDismissed),
+      lastReadTimestamp: keepDismissed
+          ? Value(dismissal!.boundaryTimestamp)
+          : const Value.absent(),
       currentUserHasSent: Value(currentUserHasSent),
       // A caller with no owner is writing an unattributed row; `''` is
       // this schema's legacy sentinel and is what the composite key
@@ -121,7 +172,7 @@ END
       dmProtocol: Value(dmProtocol),
     );
 
-    return into(conversations).insert(
+    await into(conversations).insert(
       row,
       onConflict: DoUpdate.withExcluded((old, excl) {
         // Determine whether the incoming preview columns should win.
@@ -131,26 +182,45 @@ END
         final incomingIsNewer = excl.lastMessageTimestamp.isBiggerThan(
           coalesce([old.lastMessageTimestamp, const Constant(0)]),
         );
+        // Distinct messages can share a Nostr timestamp (whole seconds).
+        // Only ingestion after a successful insert may treat a tie as new;
+        // replay and preview repair keep dismissal/read state intact.
+        final advancesAttention =
+            incomingIsNewer |
+            (Constant(isNewMessage) &
+                excl.lastMessageTimestamp.equalsExp(old.lastMessageTimestamp));
         final previewCondition = forceUpdateLastMessage
             ? const Constant<bool>(true)
-            : incomingIsNewer;
+            : advancesAttention;
+        final readCursor = coalesce([
+          old.lastReadTimestamp,
+          const Constant(0),
+        ]);
         final coveredByReadCursor = excl.lastMessageTimestamp.isSmallerOrEqual(
-          coalesce([old.lastReadTimestamp, const Constant(0)]),
+          readCursor,
         );
 
         return ConversationsCompanion.custom(
           // Always updated.
           participantPubkeys: excl.participantPubkeys,
           isGroup: excl.isGroup,
-          // Read state only follows the latest message: gated on
-          // incomingIsNewer (not previewCondition) so a deletion
-          // force-refresh updates the preview without marking read. A
-          // message the read cursor already covers stays read, so a
-          // re-ingest after an account switch cannot reopen a read chat.
-          isRead: (excl.isRead | coveredByReadCursor).iif(
-            incomingIsNewer,
-            old.isRead,
-          ),
+          // Relay backfill and preview repairs must not undo dismissal.
+          isDismissed: Constant(keepDismissed),
+          // Retained dismissals stay read through replay. A newly restoring
+          // incoming message at the dismissal boundary is unread, even when
+          // that boundary's cursor covers the same second. A cursor advanced
+          // beyond dismissal still covers already-read recovered messages.
+          isRead: keepDismissed
+              ? const Constant(true)
+              : restoredByIncoming
+              ? Constant(
+                      restoringIncomingTimestamp,
+                    ).isSmallerOrEqual(readCursor) &
+                    readCursor.isBiggerThanValue(dismissal!.boundaryTimestamp)
+              : (excl.isRead | coveredByReadCursor).iif(
+                  advancesAttention,
+                  old.isRead,
+                ),
           // Preserve existing non-null value; only update when incoming
           // value is non-null.
           subject: coalesce([excl.subject, old.subject]),
@@ -175,7 +245,7 @@ END
         );
       }),
     );
-  }
+  });
 
   /// Get all conversations sorted by last message (newest first).
   Future<List<ConversationRow>> getAllConversations({
@@ -312,6 +382,76 @@ END
     );
     return rows > 0;
   }
+
+  /// Dismiss or restore without deleting or accepting a conversation.
+  /// Saves account-lifetime state independently of this disposable cache row,
+  /// and advances the read cursor in the same transaction.
+  Future<bool> setDismissed(
+    String id, {
+    required String ownerPubkey,
+    required bool dismissed,
+  }) => attachedDatabase.transaction(() async {
+    final query = update(conversations)
+      ..where(
+        (t) => t.id.equals(id) & _visibleToOwner(t, ownerPubkey),
+      );
+    final changed = await query.write(
+      dismissed
+          ? ConversationsCompanion.custom(
+              isDismissed: const Constant(true),
+              isRead: const Constant(true),
+              lastReadTimestamp: const CustomExpression<int>(
+                'MAX(COALESCE(last_read_timestamp, 0), '
+                'COALESCE(last_message_timestamp, 0))',
+              ),
+            )
+          : const ConversationsCompanion(isDismissed: Value(false)),
+    );
+    if (changed == 0) return false;
+    if (dismissed) {
+      final row = (await getConversation(id, ownerPubkey: ownerPubkey))!;
+      final boundary = row.lastMessageTimestamp ?? 0;
+      // The visible conversation may still be an unattributed legacy row.
+      // Capture its replay ids too, but never another known account's rows.
+      final messages =
+          await (select(attachedDatabase.directMessages)..where(
+                (t) =>
+                    t.conversationId.equals(id) &
+                    (t.ownerPubkey.equals(ownerPubkey) |
+                        t.ownerPubkey.equals('') |
+                        t.ownerPubkey.isNull()) &
+                    t.createdAt.isBiggerOrEqualValue(boundary),
+              ))
+              .get();
+      await into(
+        attachedDatabase.conversationDismissals,
+      ).insertOnConflictUpdate(
+        ConversationDismissalsCompanion.insert(
+          conversationId: id,
+          ownerPubkey: ownerPubkey,
+          boundaryTimestamp: boundary,
+          knownMessageIds: Value(
+            jsonEncode(messages.map((m) => m.id).toList()),
+          ),
+        ),
+      );
+    } else {
+      await _clearDismissal(id, ownerPubkey);
+    }
+    return true;
+  });
+
+  Future<int> _clearDismissal(String id, String ownerPubkey) =>
+      (delete(attachedDatabase.conversationDismissals)..where(
+            (t) =>
+                t.conversationId.equals(id) & t.ownerPubkey.equals(ownerPubkey),
+          ))
+          .go();
+
+  /// Account-lifetime state: never called by ordinary sign-out/switch cleanup.
+  Future<int> clearDismissalsForOwner(String ownerPubkey) => (delete(
+    attachedDatabase.conversationDismissals,
+  )..where((t) => t.ownerPubkey.equals(ownerPubkey))).go();
 
   /// Clears a `'nip04'` protocol latch on [id], marking the thread NIP-17.
   ///

@@ -4136,5 +4136,12 @@
   "soundReadyDescription": "Gamitin ito sa susunod mong video o i-save sa library ng mga tunog mo.",
   "soundReadyUse": "Gamitin ang tunog na ito",
   "soundReadySave": "I-save sa Mga Tunog Ko",
-  "soundRequestSaved": "Na-save"
+  "soundRequestSaved": "Na-save",
+    "inboxRequestsMarkAllReadShort": "Markahang nabasa lahat",
+    "inboxRequestsDismissed": "Nakatabi",
+    "inboxRequestsDismissedEmpty": "Wala pang nakatabi",
+    "inboxRequestDismiss": "Itabi",
+    "inboxRequestRestore": "Ibalik",
+    "inboxThreadMarkRead": "Markahang nabasa",
+    "inboxThreadMarkedRead": "Minarkahang nabasa"
 }

@@ -28,16 +28,22 @@ enum DeclineRequestOutcome {
 class MessageRequestActionsState extends Equatable {
   const MessageRequestActionsState({
     this.status = MessageRequestActionsStatus.idle,
+    this.showDismissed = false,
   });
 
   final MessageRequestActionsStatus status;
+  final bool showDismissed;
 
-  MessageRequestActionsState copyWith({MessageRequestActionsStatus? status}) {
-    return MessageRequestActionsState(status: status ?? this.status);
-  }
+  MessageRequestActionsState copyWith({
+    MessageRequestActionsStatus? status,
+    bool? showDismissed,
+  }) => MessageRequestActionsState(
+    status: status ?? this.status,
+    showDismissed: showDismissed ?? this.showDismissed,
+  );
 
   @override
-  List<Object?> get props => [status];
+  List<Object?> get props => [status, showDismissed];
 }
 
 class MessageRequestActionsCubit extends Cubit<MessageRequestActionsState> {
@@ -46,6 +52,34 @@ class MessageRequestActionsCubit extends Cubit<MessageRequestActionsState> {
       super(const MessageRequestActionsState());
 
   final DmRepository _dmRepository;
+
+  /// Switch between pending and dismissed requests.
+  void showDismissedRequests({required bool show}) {
+    emit(state.copyWith(showDismissed: show));
+  }
+
+  /// Put a request aside or restore it, keeping all messages.
+  Future<void> setRequestDismissed(
+    String conversationId, {
+    required bool dismissed,
+  }) async {
+    if (state.status == MessageRequestActionsStatus.processing) return;
+    emit(state.copyWith(status: MessageRequestActionsStatus.processing));
+    try {
+      await _dmRepository.setConversationDismissed(
+        conversationId,
+        dismissed: dismissed,
+      );
+      if (!isClosed) {
+        emit(state.copyWith(status: MessageRequestActionsStatus.success));
+      }
+    } catch (e, stackTrace) {
+      addError(e, stackTrace);
+      if (!isClosed) {
+        emit(state.copyWith(status: MessageRequestActionsStatus.error));
+      }
+    }
+  }
 
   /// Decline and remove a single message request.
   ///

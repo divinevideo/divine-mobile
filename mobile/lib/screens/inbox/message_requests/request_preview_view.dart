@@ -22,6 +22,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
+import 'package:openvine/screens/inbox/widgets/conversation_triage_bar.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
@@ -203,6 +204,13 @@ class RequestPreviewView extends ConsumerWidget {
       body: _PreviewBackdrop(
         child: Column(
           children: [
+            ConversationTriageBar(
+              conversationId: context
+                  .read<RequestPreviewCubit>()
+                  .conversationId,
+              showRemove: false,
+              participantPubkeys: participantPubkeys,
+            ),
             Expanded(
               child: _ProfileContent(
                 displayName: displayName,

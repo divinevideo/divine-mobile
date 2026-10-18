@@ -5130,5 +5130,12 @@
   "soundReadyDescription": "Użyj go w kolejnym filmie lub zapisz w bibliotece dźwięków.",
   "soundReadyUse": "Użyj tego dźwięku",
   "soundReadySave": "Zapisz w Moich dźwiękach",
-  "soundRequestSaved": "Zapisano"
+  "soundRequestSaved": "Zapisano",
+    "inboxRequestsMarkAllReadShort": "Oznacz wszystkie jako przeczytane",
+    "inboxRequestsDismissed": "Odłożone",
+    "inboxRequestsDismissedEmpty": "Brak odłożonych rozmów",
+    "inboxRequestDismiss": "Odłóż",
+    "inboxRequestRestore": "Przywróć",
+    "inboxThreadMarkRead": "Oznacz jako przeczytane",
+    "inboxThreadMarkedRead": "Oznaczono jako przeczytane"
 }

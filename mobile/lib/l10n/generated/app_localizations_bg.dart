@@ -13932,4 +13932,25 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Запазено';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Отбележи всички като прочетени';
+
+  @override
+  String get inboxRequestsDismissed => 'Прибрани';
+
+  @override
+  String get inboxRequestsDismissedEmpty => 'Няма прибрани разговори';
+
+  @override
+  String get inboxRequestDismiss => 'Прибери';
+
+  @override
+  String get inboxRequestRestore => 'Възстанови';
+
+  @override
+  String get inboxThreadMarkRead => 'Отбележи като прочетено';
+
+  @override
+  String get inboxThreadMarkedRead => 'Отбелязано като прочетено';
 }

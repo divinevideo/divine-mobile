@@ -13742,4 +13742,26 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundRequestSaved => 'Đã lưu';
+
+  @override
+  String get inboxRequestsMarkAllReadShort => 'Đánh dấu tất cả đã đọc';
+
+  @override
+  String get inboxRequestsDismissed => 'Đã để sang bên';
+
+  @override
+  String get inboxRequestsDismissedEmpty =>
+      'Chưa có cuộc trò chuyện nào được để sang bên';
+
+  @override
+  String get inboxRequestDismiss => 'Để sang bên';
+
+  @override
+  String get inboxRequestRestore => 'Khôi phục';
+
+  @override
+  String get inboxThreadMarkRead => 'Đánh dấu đã đọc';
+
+  @override
+  String get inboxThreadMarkedRead => 'Đã đánh dấu đã đọc';
 }

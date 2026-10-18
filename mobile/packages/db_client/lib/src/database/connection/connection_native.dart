@@ -204,6 +204,8 @@ const _salvageSuffix = '.corruption_salvage';
 /// `removed_conversations` and `removed_message_ids` go together. Removing a
 /// conversation publishes nothing, so once the DM history is rebuilt from the
 /// relays these rows are all that keeps a removed conversation from returning.
+/// `conversation_dismissals` likewise has no relay copy: preserve its marker
+/// and known message IDs when re-draining the discarded conversation cache.
 ///
 /// `vanished_profiles` could be read from the server again, but until then a
 /// cached profile of an account that asked to be erased can be shown.
@@ -239,6 +241,7 @@ const salvageableLocalOnlyTables = <String>[
   'dm_message_reactions',
   'removed_conversations',
   'removed_message_ids',
+  'conversation_dismissals',
   'personal_events',
   'personal_reactions',
   'personal_reposts',
@@ -1347,6 +1350,14 @@ const _localOnlyDataQueries = [
     'SELECT 1 FROM direct_messages LIMIT 1',
   ),
   _LocalOnlyDataQuery('conversations', 'SELECT 1 FROM conversations LIMIT 1'),
+  _LocalOnlyDataQuery(
+    'conversation_dismissals',
+    'SELECT 1 FROM conversation_dismissals LIMIT 1',
+  ),
+  _LocalOnlyDataQuery(
+    'sound_request_states',
+    'SELECT 1 FROM sound_request_states LIMIT 1',
+  ),
 ];
 
 class _LocalOnlyDataQuery {
