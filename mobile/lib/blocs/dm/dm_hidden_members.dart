@@ -71,8 +71,9 @@ bool dmPreviewHidden({
 /// A row whose last message [dmPreviewHidden] hides takes its newest message by
 /// anyone else — preview, time and sender — and turns read unless someone the
 /// viewer still sees wrote after both the read cursor and the viewer's own
-/// newest message. A group nobody else wrote in keeps its stored, hidden
-/// preview and turns read. Read state only ever turns from unread to read.
+/// newest message. A group with no visible activity keeps its stored, hidden
+/// preview, turns read, and sorts at its stable creation time instead of the
+/// hidden sender's latest message. Read state only turns from unread to read.
 /// Every other row, and every row once its member is no longer hidden, is
 /// returned as stored without a query; so is the list itself when no row needs
 /// reading, which leaves a one-to-one inbox exactly as it was. Otherwise the
@@ -139,7 +140,14 @@ DmConversation _withVisibleActivity(
 ) {
   final isRead = conversation.isRead || !visible.hasUnread;
   final timestamp = visible.lastMessageTimestamp;
-  if (timestamp == null) return conversation.copyWith(isRead: isRead);
+  if (timestamp == null) {
+    return conversation.copyWith(
+      // A null timestamp identifies synthetic "no thread" rows in Blocked.
+      // Keep this real thread reachable while giving it a stable sort time.
+      lastMessageTimestamp: conversation.createdAt,
+      isRead: isRead,
+    );
+  }
   return conversation.copyWith(
     lastMessageContent: visible.lastMessageContent,
     lastMessageTimestamp: timestamp,

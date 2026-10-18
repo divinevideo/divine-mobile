@@ -2,13 +2,18 @@
 // ABOUTME: messages and inbox previews collapse, and who is left for a chat
 // ABOUTME: without them.
 
+import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
   const viewer =
@@ -321,7 +326,12 @@ void main() {
 
       final seen = await asSeen([room()]);
 
-      expect(seen.single, equals(room().copyWith(isRead: true)));
+      expect(
+        seen.single,
+        equals(
+          room().copyWith(lastMessageTimestamp: room().createdAt, isRead: true),
+        ),
+      );
     });
 
     test('sorts a read group by its newest visible message', () async {
@@ -335,6 +345,105 @@ void main() {
       final seen = await asSeen([room(), direct()]);
 
       expect(seen.map((c) => c.id), equals([directId, roomId]));
+    });
+
+    test(
+      'uses creation time when an accepted group has no visible activity',
+      () async {
+        answer((
+          lastMessageContent: null,
+          lastMessageTimestamp: null,
+          lastMessageSenderPubkey: null,
+          hasUnread: false,
+        ));
+        final stored = room().copyWith(currentUserHasSent: true);
+
+        final seen = await asSeen([stored, direct()]);
+
+        expect(seen.map((c) => c.id), equals([directId, roomId]));
+        final projected = seen.last;
+        expect(projected.effectiveTimestamp, stored.createdAt);
+        expect(projected.lastMessageContent, stored.lastMessageContent);
+        expect(projected.lastMessageSenderPubkey, hiddenMember);
+        expect(projected.currentUserHasSent, isTrue);
+        expect(projected.isRead, isTrue);
+      },
+    );
+
+    test('orders an accepted group with a retracted own message from real '
+        'stored visible activity', () async {
+      final db = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(db.close);
+      final repository = DmRepository(
+        nostrClient: _MockNostrClient(),
+        conversationsDao: db.conversationsDao,
+        directMessagesDao: db.directMessagesDao,
+        userPubkey: viewer,
+      );
+      await db.conversationsDao.upsertConversation(
+        id: roomId,
+        participantPubkeys: '["$viewer","$hiddenMember","$visibleMember"]',
+        isGroup: true,
+        createdAt: 1700000000,
+        lastMessageContent: 'hidden member activity',
+        lastMessageTimestamp: 1700000300,
+        lastMessageSenderPubkey: hiddenMember,
+        currentUserHasSent: true,
+        isRead: false,
+        ownerPubkey: viewer,
+      );
+      final ownId = '5' * 64;
+      await db.directMessagesDao.insertMessage(
+        id: ownId,
+        conversationId: roomId,
+        senderPubkey: viewer,
+        content: 'the viewer sent this before retracting it',
+        createdAt: 1700000100,
+        giftWrapId: '6' * 64,
+        ownerPubkey: viewer,
+      );
+      await db.directMessagesDao.markMessageDeleted(ownId, ownerPubkey: viewer);
+      await db.directMessagesDao.insertMessage(
+        id: '7' * 64,
+        conversationId: roomId,
+        senderPubkey: hiddenMember,
+        content: 'hidden member activity',
+        createdAt: 1700000300,
+        giftWrapId: '8' * 64,
+        ownerPubkey: viewer,
+      );
+      await db.conversationsDao.upsertConversation(
+        id: directId,
+        participantPubkeys: '["$viewer","$visibleMember"]',
+        isGroup: false,
+        createdAt: 1700000000,
+        lastMessageTimestamp: 1700000200,
+        ownerPubkey: viewer,
+      );
+      final stored = await repository.getConversations();
+      final accepted = stored.singleWhere((row) => row.id == roomId);
+      expect(accepted.currentUserHasSent, isTrue);
+      expect(accepted.lastMessageTimestamp, 1700000300);
+      final activity = await repository.visibleActivityExcluding({
+        roomId: {hiddenMember},
+      });
+      expect(activity[roomId]!.lastMessageTimestamp, isNull);
+
+      final seen = await dmConversationsAsSeen(
+        conversations: stored,
+        currentUserPubkey: viewer,
+        isHidden: (pubkey) => pubkey == hiddenMember,
+        isBlockedByUs: (pubkey) => pubkey == hiddenMember,
+        dmRepository: repository,
+      );
+
+      expect(seen.map((row) => row.id), [directId, roomId]);
+      expect(seen.last.effectiveTimestamp, accepted.createdAt);
+      expect(seen.last.lastMessageContent, 'hidden member activity');
+      expect(
+        (await repository.getConversation(roomId))!.lastMessageTimestamp,
+        1700000300,
+      );
     });
 
     test('keeps the stored order between rows that tie', () async {

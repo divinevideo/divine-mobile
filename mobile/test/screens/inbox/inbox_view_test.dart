@@ -17,6 +17,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation_actions/conversation_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
+import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
@@ -85,6 +86,8 @@ class _MockNotificationBadgeCubit extends MockCubit<int>
 
 class _MockContentReportingService extends Mock
     implements ContentReportingService {}
+
+class _MockDmRepositoryForProjection extends Mock implements DmRepository {}
 
 class _MockAuthService extends MockAuthService {
   _MockAuthService(this.pubkey) {
@@ -500,6 +503,73 @@ void main() {
         );
         expect(tile.onTap, isNotNull);
         expect(tile.subtitleOverride, isNull);
+      });
+
+      testWidgets('a projected hidden-only request group stays tappable in '
+          'Blocked', (tester) async {
+        const visiblePeer =
+            '4444444444444444444444444444444444444444444444444444444444444444';
+        const roomId =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        final repository = _MockDmRepositoryForProjection();
+        when(
+          () => repository.visibleActivityExcluding({
+            roomId: {otherPubkey},
+          }),
+        ).thenAnswer(
+          (_) async => {
+            roomId: (
+              lastMessageContent: null,
+              lastMessageTimestamp: null,
+              lastMessageSenderPubkey: null,
+              hasUnread: false,
+            ),
+          },
+        );
+        final projected = await dmConversationsAsSeen(
+          conversations: [
+            DmConversation(
+              id: roomId,
+              participantPubkeys: const [
+                currentPubkey,
+                otherPubkey,
+                visiblePeer,
+              ],
+              isGroup: true,
+              createdAt: nowUnix - 200,
+              lastMessageContent: 'from the blocked member',
+              lastMessageTimestamp: nowUnix,
+              lastMessageSenderPubkey: otherPubkey,
+            ),
+          ],
+          currentUserPubkey: currentPubkey,
+          isHidden: (pubkey) => pubkey == otherPubkey,
+          isBlockedByUs: (pubkey) => pubkey == otherPubkey,
+          dmRepository: repository,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationListState(
+              status: ConversationListStatus.loaded,
+              filter: InboxFilter.blocked,
+              visibleConversations: projected,
+              blockedConversations: projected,
+              hasMore: false,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Messages'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final tile = tester.widget<ConversationTile>(
+          find.byType(ConversationTile),
+        );
+        expect(tile.onTap, isNotNull);
+        expect(tile.onLongPress, isNotNull);
+        expect(tile.subtitleOverride, isNull);
+        expect(tile.conversation.effectiveTimestamp, nowUnix - 200);
       });
 
       testWidgets('renders $InboxFilterChips when loaded with conversations', (
