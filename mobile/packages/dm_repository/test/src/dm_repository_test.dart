@@ -24143,8 +24143,10 @@ void main() {
         controller.add(giftWrap());
         await pumpEventQueue();
 
-        // Unlike the one-to-one above, nothing recreates the room.
-        expect(ledger.recorded, contains(_giftWrapEventId));
+        // Unlike the one-to-one above, nothing recreates the room. The user
+        // has not written in it since, so the wrap is not ledgered: a replay
+        // after they rejoin must re-evaluate it.
+        expect(ledger.recorded, isNot(contains(_giftWrapEventId)));
         verifyNever(
           () => mockDirectMessagesDao.insertMessage(
             id: any(named: 'id'),

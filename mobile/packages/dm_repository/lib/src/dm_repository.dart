@@ -4184,6 +4184,7 @@ class DmRepository {
         var skippedByTransactionalGiftWrapDedup = false;
         var suppressedByRemovedConversation = false;
         var suppressedByLeftGroup = false;
+        int? rejoinedAt;
         int? removedAt;
         // A peer's reply only opens a room while receiving rooms is on, so
         // putting one back under its parent ships behind the same flag.
@@ -4220,15 +4221,16 @@ class DmRepository {
                 ownerPubkey: ownerPubkey,
                 at: persistedCreatedAt,
               );
-            } else if (_keptOutOfLeftGroup(
-              await _removedConversationsDao?.tombstoneFor(
+            } else {
+              final tombstone = await _removedConversationsDao?.tombstoneFor(
                 conversationId: conversationId,
                 ownerPubkey: ownerPubkey,
-              ),
-              persistedCreatedAt,
-            )) {
-              suppressedByLeftGroup = true;
-              return;
+              );
+              if (_keptOutOfLeftGroup(tombstone, persistedCreatedAt)) {
+                suppressedByLeftGroup = true;
+                rejoinedAt = tombstone?.rejoinedAt;
+                return;
+              }
             }
           }
 
@@ -4354,12 +4356,26 @@ class DmRepository {
           );
           return;
         }
+        if (suppressedByLeftGroup && rejoinedAt == null) {
+          // Not final, so not ledgered: the user's own copy of a message
+          // that rejoins the group may still be on its way (gift wraps are
+          // backdated up to two days), and a member message stamped after it
+          // has to get in on a later replay. The cost is a re-decrypt on each
+          // replay while the group stays left.
+          Log.debug(
+            'Kept NIP-17 DM ${rumor.id} out of group $conversationId the '
+            'user left at $removedAt and has not written in since; not '
+            'ledgered, so a replay after they rejoin re-evaluates it',
+            category: LogCategory.system,
+          );
+          return;
+        }
         if (suppressedByRemovedConversation || suppressedByLeftGroup) {
           // Terminal: record the wrap so replays skip it before decryption.
           // The tombstone is authoritative for the account's lifetime, so the
           // ledger is not racing a reopening that clears it. A message a
-          // member sent while the user was out of a group stays out after
-          // they rejoin, so that suppression is terminal too.
+          // member stamped before the user rejoined a group stays out, since
+          // only the first rejoin counts, so that suppression is terminal too.
           await _recordProcessedWrap(
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
@@ -4368,7 +4384,8 @@ class DmRepository {
             suppressedByLeftGroup
                 ? 'Suppressed NIP-17 DM ${rumor.id} in group $conversationId '
                       'the user left at $removedAt: createdAt '
-                      '$persistedCreatedAt is before they wrote in it again'
+                      '$persistedCreatedAt is before they wrote in it again '
+                      'at $rejoinedAt'
                 : 'Suppressed NIP-17 DM ${rumor.id} in removed conversation '
                       '$conversationId: removed with it, or createdAt '
                       '$persistedCreatedAt is at or before removal at '

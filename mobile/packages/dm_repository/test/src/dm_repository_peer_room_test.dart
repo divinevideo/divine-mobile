@@ -824,11 +824,42 @@ void main() {
         ownerPubkey: _owner,
       );
 
-      test('keeps a newer message from a member out', () async {
+      /// Delivers [rumor] like [deliver], for an outcome that writes nothing:
+      /// a message kept out of a group the user has not rejoined is neither
+      /// stored nor ledgered. Wraps are handled one at a time, so a wrap of an
+      /// unsupported kind delivered after it settles only once it has.
+      Future<Event> deliverLeavingNoTrace(
+        Event rumor, {
+        required String authorSecret,
+      }) async {
+        final wrap = await buildGiftWrapFromHex(
+          senderPrivateKeyHex: authorSecret,
+          rumorJson: rumor.toJson(),
+          receiverPublicKey: _owner,
+        );
+        relay.add(wrap!);
+        await deliver(
+          Event(_carol, EventKind.textNote, [
+            ['p', _owner],
+          ], 'handled after the wrap above'),
+          authorSecret: _carolSecret,
+        );
+        return wrap;
+      }
+
+      /// Feeds [wrap] to the live subscription again, as a relay replays it.
+      Future<void> replay(Event wrap) async {
+        relay.add(wrap);
+        await settled(wrap.id);
+      }
+
+      // Not ledgered, so a replay after the user rejoins re-evaluates it.
+      test('keeps a newer message from a member out without ledgering '
+          'it', () async {
         await joinTheRoom();
         await leave();
 
-        final wrap = await deliver(
+        final wrap = await deliverLeavingNoTrace(
           message(
             author: _bob,
             pTags: [_owner, _alice],
@@ -840,7 +871,37 @@ void main() {
 
         expect(await conversations(), isEmpty);
         expect(await messageIdsIn(_roomId), isEmpty);
-        expect(await ledgered(wrap), isTrue);
+        expect(await ledgered(wrap), isFalse);
+      });
+
+      // Gift wraps are backdated up to two days, so a member's reply can
+      // arrive before the user's own copy of the message that rejoined.
+      test('lets in a member message kept out before the copy of the message '
+          'the user wrote arrived, once it is replayed after it', () async {
+        await joinTheRoom();
+        await leave();
+        final reply = message(
+          author: _alice,
+          pTags: [_owner, _bob],
+          content: 'replied after the user came back',
+          createdAt: leftAt + 300,
+        );
+        final wrap = await deliverLeavingNoTrace(
+          reply,
+          authorSecret: _aliceSecret,
+        );
+        expect(await conversations(), isEmpty);
+
+        final own = message(
+          author: _owner,
+          pTags: [_alice, _bob],
+          content: 'back again',
+          createdAt: leftAt + 200,
+        );
+        await deliver(own, authorSecret: _ownerSecret);
+        await replay(wrap);
+
+        await expectOnlyTheRoomHolding([own.id, reply.id]);
       });
 
       test('keeps it out after a batch removal, as declining every '
@@ -852,7 +913,7 @@ void main() {
         );
         await backdateRemoval(leftAt);
 
-        await deliver(
+        await deliverLeavingNoTrace(
           message(
             author: _bob,
             pTags: [_owner, _alice],
@@ -937,7 +998,7 @@ void main() {
         expect((await tombstone())!.rejoinedAt, isNull);
         await backdateRemoval(leftAt + 300);
 
-        await deliver(
+        await deliverLeavingNoTrace(
           message(
             author: _alice,
             pTags: [_owner, _bob],
@@ -1081,7 +1142,7 @@ void main() {
         await expectOnlyTheRoomHolding([own.id]);
         await leave();
 
-        await deliver(
+        await deliverLeavingNoTrace(
           message(
             author: _alice,
             pTags: [_owner, _bob],
