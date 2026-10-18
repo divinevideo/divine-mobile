@@ -108,6 +108,8 @@ void main() {
       ).thenReturn(() {});
 
       publisher = _MockViewEventPublisher();
+      // Production builds the retry service for the account it signs as.
+      when(() => publisher.signerPubkey).thenReturn(_pubkey);
       when(() => publisher.appVersion).thenReturn('1.0.22');
       when(
         () => publisher.publishViewEvent(

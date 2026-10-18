@@ -142,6 +142,7 @@ void main() {
           appVersion: any(named: 'appVersion'),
         ),
       ).thenAnswer((_) async => true);
+      when(() => publisher.signerPubkey).thenReturn(userPubkey);
     });
 
     tearDown(() async {
@@ -342,6 +343,37 @@ void main() {
           expect(row?.status, equals(PendingViewEventStatus.pending));
         },
       );
+
+      test(
+        'does not publish while the signer belongs to another account',
+        () async {
+          // The queue is one account's; its rows must never go out under
+          // another account's key, whatever order a switch tears things down.
+          await dao.enqueue(makeEvent(id: 'view-a'));
+          when(() => publisher.signerPubkey).thenReturn(videoPubkey);
+          final service = makeService();
+
+          await service.sweep();
+
+          await verifyNeverPublished();
+          final row = await dao.getById('view-a');
+          expect(row?.status, equals(PendingViewEventStatus.pending));
+        },
+      );
+
+      test('stops when the signer changes account mid-sweep', () async {
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        dao = _MarkPublishingHookDao(
+          database,
+          onMarkedPublishing: () =>
+              when(() => publisher.signerPubkey).thenReturn(videoPubkey),
+        );
+        final service = makeService();
+
+        await service.sweep();
+
+        await verifyNeverPublished();
+      });
 
       test('a sweep started after dispose publishes nothing', () async {
         await dao.enqueue(makeEvent(id: 'view-a'));

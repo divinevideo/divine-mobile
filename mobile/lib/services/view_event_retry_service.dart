@@ -76,7 +76,13 @@ class ViewEventRetryService {
   /// the row for the account's next session (#10290).
   bool _isDisposed = false;
 
-  bool get _mayPublish => _publishingEnabled && !_isDisposed;
+  /// Also requires the publisher to sign as this queue's owner, so a row can
+  /// never go out under another account's key whatever order an account
+  /// change tears things down in.
+  bool get _mayPublish =>
+      _publishingEnabled &&
+      !_isDisposed &&
+      _viewEventPublisher.signerPubkey == _userPubkey;
 
   bool get isInitialized => _isInitialized;
 

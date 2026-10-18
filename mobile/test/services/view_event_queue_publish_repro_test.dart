@@ -34,6 +34,7 @@ const _videoPubkey =
 void _stubSigningAndPublishing(_MockAuthService auth, _MockNostrClient nostr) {
   when(() => auth.isAuthenticated).thenReturn(true);
   when(() => auth.canPublishNostrWritesNow).thenReturn(true);
+  when(() => auth.currentPublicKeyHex).thenReturn(_userPubkey);
   when(() => nostr.connectedRelays).thenReturn([]);
   when(
     () => auth.createAndSignEvent(
