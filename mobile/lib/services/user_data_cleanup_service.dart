@@ -70,18 +70,24 @@ class UserDataCleanupService {
   /// it deleted. Set by the provider layer which has access to DAOs.
   Future<int> Function(Set<String> keepOwnerPubkeys)? onConversationSweep;
 
-  /// Deletes the conversations kept for accounts this device no longer knows.
+  /// Optional callback that deletes queued kind 22236 view events, except
+  /// those owned by the given pubkeys, and returns how many it deleted. Only
+  /// the owning account can sign them, so they are useless once the device
+  /// no longer knows it (#10290). Set by the provider layer.
+  Future<int> Function(Set<String> keepOwnerPubkeys)? onQueuedViewSweep;
+
+  /// Deletes the rows kept for accounts this device no longer knows: DM
+  /// conversations and queued view events.
   ///
-  /// A switch or sign-out keeps the departing account's conversations for its
-  /// return (#10276), but an account can later leave the known-accounts list
-  /// without its own cleanup running: pruned as no longer restorable, or
+  /// A switch or sign-out keeps the departing account's rows for its return
+  /// (#10276, #10290), but an account can later leave the known-accounts
+  /// list without its own cleanup running: pruned as no longer restorable, or
   /// removed by a sign-out that failed part-way. Keeps the known accounts and
   /// the active one. Skipped when the list was never written or cannot be
   /// decoded, so an unreadable list never counts as "no accounts". Never
   /// throws.
-  Future<void> sweepConversationsOfUnknownAccounts() async {
-    final sweep = onConversationSweep;
-    if (sweep == null) return;
+  Future<void> sweepRowsOfUnknownAccounts() async {
+    if (onConversationSweep == null && onQueuedViewSweep == null) return;
     final Set<String> keep;
     try {
       final raw = _prefs.getString(kKnownAccountsKey);
@@ -95,25 +101,34 @@ class UserDataCleanupService {
       };
     } on Object catch (e) {
       Log.warning(
-        'Skipping the conversation sweep: known accounts unreadable: $e',
+        'Skipping the unknown-account sweep: known accounts unreadable: $e',
         name: 'UserDataCleanupService',
         category: LogCategory.auth,
       );
       return;
     }
+    await _sweepUnknownOwners(onConversationSweep, keep, 'conversations');
+    await _sweepUnknownOwners(onQueuedViewSweep, keep, 'queued view events');
+  }
+
+  Future<void> _sweepUnknownOwners(
+    Future<int> Function(Set<String> keepOwnerPubkeys)? sweep,
+    Set<String> keep,
+    String rows,
+  ) async {
+    if (sweep == null) return;
     try {
       final deleted = await sweep(keep);
       if (deleted > 0) {
         Log.info(
-          'Deleted $deleted conversations of accounts this device no longer '
-          'knows',
+          'Deleted $deleted $rows of accounts this device no longer knows',
           name: 'UserDataCleanupService',
           category: LogCategory.auth,
         );
       }
     } on Object catch (e, stackTrace) {
       Log.error(
-        'Conversation sweep failed: $e',
+        'Sweep of $rows failed: $e',
         name: 'UserDataCleanupService',
         category: LogCategory.auth,
         error: e,
@@ -322,7 +337,7 @@ class UserDataCleanupService {
       deleteUserData: true,
       preserveActiveSession: preserveActiveSession,
     );
-    await sweepConversationsOfUnknownAccounts();
+    await sweepRowsOfUnknownAccounts();
     return clearedCount;
   }
 
@@ -467,7 +482,7 @@ class UserDataCleanupService {
       }
     }
 
-    await sweepConversationsOfUnknownAccounts();
+    await sweepRowsOfUnknownAccounts();
 
     // Log detailed cleanup results for observability
     if (clearedCount > 0) {

@@ -1137,7 +1137,7 @@ void main() {
       });
     });
 
-    group('sweepConversationsOfUnknownAccounts (#10276)', () {
+    group('sweepRowsOfUnknownAccounts (#10276)', () {
       const knownPubkey =
           'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
       const activePubkey =
@@ -1170,7 +1170,7 @@ void main() {
         await rememberAccounts([knownPubkey]);
         await prefs.setString('current_user_pubkey_hex', activePubkey);
 
-        await service.sweepConversationsOfUnknownAccounts();
+        await service.sweepRowsOfUnknownAccounts();
 
         expect(sweeps, [
           {knownPubkey, activePubkey},
@@ -1181,7 +1181,7 @@ void main() {
         await prefs.setString(kKnownAccountsKey, '');
         await prefs.setString('current_user_pubkey_hex', activePubkey);
 
-        await service.sweepConversationsOfUnknownAccounts();
+        await service.sweepRowsOfUnknownAccounts();
 
         expect(sweeps, [
           {activePubkey},
@@ -1191,7 +1191,7 @@ void main() {
       test('skips the sweep when the registry was never written', () async {
         await prefs.setString('current_user_pubkey_hex', activePubkey);
 
-        await service.sweepConversationsOfUnknownAccounts();
+        await service.sweepRowsOfUnknownAccounts();
 
         expect(sweeps, isEmpty);
       });
@@ -1199,9 +1199,42 @@ void main() {
       test('skips the sweep when the registry cannot be read', () async {
         await prefs.setString(kKnownAccountsKey, 'not json');
 
-        await service.sweepConversationsOfUnknownAccounts();
+        await service.sweepRowsOfUnknownAccounts();
 
         expect(sweeps, isEmpty);
+      });
+
+      test('sweeps queued views with the same accounts kept', () async {
+        final viewSweeps = <Set<String>>[];
+        service.onQueuedViewSweep = (keep) async {
+          viewSweeps.add(keep);
+          return 0;
+        };
+        await rememberAccounts([knownPubkey]);
+        await prefs.setString('current_user_pubkey_hex', activePubkey);
+
+        await service.sweepRowsOfUnknownAccounts();
+
+        expect(viewSweeps, [
+          {knownPubkey, activePubkey},
+        ]);
+      });
+
+      test('a failing conversation sweep still sweeps queued views', () async {
+        final viewSweeps = <Set<String>>[];
+        service.onConversationSweep = (_) async =>
+            throw StateError('database unavailable');
+        service.onQueuedViewSweep = (keep) async {
+          viewSweeps.add(keep);
+          return 0;
+        };
+        await rememberAccounts([knownPubkey]);
+
+        await service.sweepRowsOfUnknownAccounts();
+
+        expect(viewSweeps, [
+          {knownPubkey},
+        ]);
       });
 
       test('a failing sweep does not fail the account cleanup', () async {

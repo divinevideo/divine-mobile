@@ -319,5 +319,35 @@ void main() {
         expect(await dao.getById('view-b'), isNotNull);
       });
     });
+
+    group('deleteForUsersNotIn', () {
+      test('removes the rows of every user not kept', () async {
+        // Only the owning account's next session sends a queued view, so the
+        // rows of an account the device no longer knows are dropped.
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        await dao.enqueue(
+          makeEvent(
+            id: 'view-b',
+            userPubkey: userB,
+            status: PendingViewEventStatus.failed,
+          ),
+        );
+
+        final deleted = await dao.deleteForUsersNotIn({userA});
+
+        expect(deleted, 1);
+        expect(await dao.getById('view-a'), isNotNull);
+        expect(await dao.getById('view-b'), isNull);
+      });
+
+      test('removes every row when no user is kept', () async {
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        await dao.enqueue(makeEvent(id: 'view-b', userPubkey: userB));
+
+        final deleted = await dao.deleteForUsersNotIn({});
+
+        expect(deleted, 2);
+      });
+    });
   });
 }

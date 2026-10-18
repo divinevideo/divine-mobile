@@ -89,6 +89,24 @@ Event _personalEvent(String pubkey, int createdAt) => Event(
   createdAt: createdAt,
 )..sig = 'f' * 128;
 
+/// A database whose queued-view delete fails, as a damaged table would.
+class _QueuedViewDeleteFailingDatabase extends AppDatabase {
+  _QueuedViewDeleteFailingDatabase(super.e) : super.test();
+
+  late final _failingDao = _DeleteFailingPendingViewEventsDao(this);
+
+  @override
+  PendingViewEventsDao get pendingViewEventsDao => _failingDao;
+}
+
+class _DeleteFailingPendingViewEventsDao extends PendingViewEventsDao {
+  _DeleteFailingPendingViewEventsDao(super.attachedDatabase);
+
+  @override
+  Future<int> deleteAllForUser(String userPubkey) =>
+      Future.error(StateError('database disk image is malformed'));
+}
+
 void main() {
   group(userDataCleanupServiceProvider, () {
     late AppDatabase db;
@@ -2436,6 +2454,147 @@ void main() {
             expect(await secondSession.watchUnreadCount().first, 1);
           },
         );
+      });
+    });
+
+    group('queued views of an account leaving the device (#10290)', () {
+      // A queued kind 22236 view is signed and published by its own account's
+      // next session. An account the device will never sign in as again can
+      // never send it, and a re-import of the same key would publish views
+      // the user meant to take off the device.
+      const forgottenPubkey =
+          'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
+
+      UserDataCleanupService readService() {
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        return subscription.read();
+      }
+
+      Future<void> queueViewFor(String pubkey) =>
+          db.pendingViewEventsDao.enqueue(
+            PendingViewEvent(
+              id: 'view_$pubkey',
+              videoId: _reactionIdA,
+              videoPubkey: _pubkeyB,
+              userPubkey: pubkey,
+              watchDurationMs: 1000,
+              trafficSource: 'feed',
+              status: PendingViewEventStatus.pending,
+              createdAt: DateTime.now(),
+            ),
+          );
+
+      Future<bool> hasQueuedView(String pubkey) async =>
+          await db.pendingViewEventsDao.getById('view_$pubkey') != null;
+
+      Future<void> rememberAccounts(List<String> pubkeys) => prefs.setString(
+        kKnownAccountsKey,
+        jsonEncode([
+          for (final pubkey in pubkeys)
+            KnownAccount(
+              pubkeyHex: pubkey,
+              authSource: AuthenticationSource.importedKeys,
+              addedAt: DateTime.utc(2026),
+              lastUsedAt: DateTime.utc(2026),
+            ).toJson(),
+        ]),
+      );
+
+      test('a plain switch keeps them for the account to send later', () async {
+        await queueViewFor(_pubkeyA);
+
+        await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        expect(await hasQueuedView(_pubkeyA), isTrue);
+      });
+
+      test('removing the account from the device deletes them', () async {
+        await queueViewFor(_pubkeyA);
+        await queueViewFor(_pubkeyB);
+
+        await readService().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          forgetAccount: true,
+        );
+
+        expect(await hasQueuedView(_pubkeyA), isFalse);
+        expect(await hasQueuedView(_pubkeyB), isTrue);
+      });
+
+      test(
+        'a failed delete does not skip the rest of the removal cleanup',
+        () async {
+          // Leftover rows are swept with the account later; the steps after
+          // this one clear device-wide stores and have no second chance.
+          final failingDb = _QueuedViewDeleteFailingDatabase(
+            NativeDatabase.memory(),
+          );
+          addTearDown(failingDb.close);
+          final failingContainer = ProviderContainer(
+            overrides: [
+              databaseProvider.overrideWithValue(failingDb),
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              dmRepositoryProvider.overrideWithValue(dmRepository),
+              openVineImageCacheClearProvider.overrideWithValue(() async {}),
+              uploadManagerProvider.overrideWithValue(uploadManager),
+            ],
+          );
+          addTearDown(failingContainer.dispose);
+          final subscription = failingContainer.listen(
+            userDataCleanupServiceProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await prefs.setInt('dm.newestSyncedAt.$_pubkeyA', 1700000000);
+          expect(DmSyncState(prefs).newestSyncedAt(_pubkeyA), isNotNull);
+
+          await subscription.read().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            forgetAccount: true,
+          );
+
+          expect(DmSyncState(prefs).newestSyncedAt(_pubkeyA), isNull);
+        },
+      );
+
+      test(
+        "an account cleanup deletes a forgotten account's queued views",
+        () async {
+          // Start the service first: its launch sweep finds no known list
+          // yet and skips, so only the cleanup's own sweep can delete below.
+          final service = readService();
+          await pumpEventQueue();
+          await queueViewFor(forgottenPubkey);
+          await queueViewFor(_pubkeyA);
+          await rememberAccounts([_pubkeyA, _pubkeyB]);
+
+          await service.clearUserSpecificData(
+            reason: 'explicit_logout',
+            userPubkey: _pubkeyB,
+          );
+
+          expect(await hasQueuedView(forgottenPubkey), isFalse);
+          expect(await hasQueuedView(_pubkeyA), isTrue);
+        },
+      );
+
+      test('the launch sweep deletes them too', () async {
+        await queueViewFor(forgottenPubkey);
+        await queueViewFor(_pubkeyA);
+        await rememberAccounts([_pubkeyA]);
+
+        readService();
+        for (var i = 0; i < 20; i++) {
+          if (!await hasQueuedView(forgottenPubkey)) break;
+          await pumpEventQueue();
+        }
+
+        expect(await hasQueuedView(forgottenPubkey), isFalse);
+        expect(await hasQueuedView(_pubkeyA), isTrue);
       });
     });
   });
