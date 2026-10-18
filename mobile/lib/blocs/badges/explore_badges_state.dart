@@ -21,6 +21,7 @@ class ExploreBadgesState extends Equatable {
   const ExploreBadgesState({
     this.status = ExploreBadgesStatus.initial,
     this.definitions = const [],
+    this.refreshFailures = 0,
   });
 
   /// Loading status of [definitions].
@@ -29,17 +30,22 @@ class ExploreBadgesState extends Equatable {
   /// Curated badge definitions, ordered by name.
   final List<Nip58BadgeDefinition> definitions;
 
+  /// Failed refresh attempts while retaining a loaded snapshot.
+  final int refreshFailures;
+
   /// Returns a copy with the given fields replaced.
   ExploreBadgesState copyWith({
     ExploreBadgesStatus? status,
     List<Nip58BadgeDefinition>? definitions,
+    int? refreshFailures,
   }) {
     return ExploreBadgesState(
       status: status ?? this.status,
       definitions: definitions ?? this.definitions,
+      refreshFailures: refreshFailures ?? this.refreshFailures,
     );
   }
 
   @override
-  List<Object?> get props => [status, definitions];
+  List<Object?> get props => [status, definitions, refreshFailures];
 }

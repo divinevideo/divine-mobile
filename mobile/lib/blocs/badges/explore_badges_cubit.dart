@@ -46,7 +46,11 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
       );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(state.copyWith(status: ExploreBadgesStatus.failure));
+      emitIfOpen(
+        state.status == ExploreBadgesStatus.loaded
+            ? state.copyWith(refreshFailures: state.refreshFailures + 1)
+            : state.copyWith(status: ExploreBadgesStatus.failure),
+      );
     }
   }
 }

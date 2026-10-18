@@ -40,12 +40,14 @@ void main() {
           when(
             () => repository.loadDefinitionsByIssuers(exploreBadgeIssuers),
           ).thenThrow(
-            StateError('Badge definitions could not be fully loaded'),
+            const BadgeReadIncompleteException(
+              'Badge definitions could not be fully loaded',
+            ),
           );
         },
         build: () => ExploreBadgesCubit(repository: repository),
         act: (cubit) => cubit.load(),
-        errors: () => [isA<StateError>()],
+        errors: () => [isA<BadgeReadIncompleteException>()],
         expect: () => const [
           ExploreBadgesState(status: ExploreBadgesStatus.loading),
           ExploreBadgesState(status: ExploreBadgesStatus.failure),
@@ -54,6 +56,28 @@ void main() {
     });
 
     group('refresh', () {
+      blocTest<ExploreBadgesCubit, ExploreBadgesState>(
+        'failed refresh retains previously loaded definitions',
+        setUp: () {
+          when(() => repository.loadDefinitionsByIssuers(exploreBadgeIssuers))
+              .thenThrow(const BadgeReadIncompleteException('incomplete read'));
+        },
+        seed: () => ExploreBadgesState(
+          status: ExploreBadgesStatus.loaded,
+          definitions: [_definition],
+        ),
+        build: () => ExploreBadgesCubit(repository: repository),
+        act: (cubit) => cubit.refresh(),
+        errors: () => [isA<BadgeReadIncompleteException>()],
+        expect: () => [
+          isA<ExploreBadgesState>()
+              .having((s) => s.status, 'status', ExploreBadgesStatus.loaded)
+              .having((s) => s.definitions, 'retained definitions', [
+                _definition,
+              ]),
+        ],
+      );
+
       blocTest<ExploreBadgesCubit, ExploreBadgesState>(
         'keeps the list on screen while reloading',
         setUp: () {

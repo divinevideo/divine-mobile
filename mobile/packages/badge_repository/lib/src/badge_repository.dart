@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:badge_repository/src/badge_coordinate.dart';
+import 'package:badge_repository/src/badge_read_incomplete_exception.dart';
 import 'package:badge_repository/src/nip58_badge_models.dart';
 import 'package:badge_repository/src/nip58_badge_parser.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -387,6 +388,8 @@ class BadgeRepository {
   static const _subscriptionsIdentifier = 'divine.badge_subscriptions';
 
   /// Definitions from the issuers selected for Explore.
+  ///
+  /// Throws [BadgeReadIncompleteException] when a relay walk is incomplete.
   Future<List<Nip58BadgeDefinition>> loadDefinitionsByIssuers(
     Iterable<String> issuerPubkeys,
   ) async {
@@ -398,7 +401,9 @@ class BadgeRepository {
         tempRelays: _definitionRelayUrl == null ? null : [_definitionRelayUrl],
       );
       if (!result.isComplete) {
-        throw StateError('Badge definitions could not be fully loaded');
+        throw const BadgeReadIncompleteException(
+          'Badge definitions could not be fully loaded',
+        );
       }
       // The relay filters on authors; only the issuer's own signature counts.
       final signed = result.events
@@ -415,7 +420,9 @@ class BadgeRepository {
   /// Every currently accepted holder with an issuer-signed award.
   ///
   /// An incomplete relay walk is an error: returning the partial set would
-  /// misrepresent a large badge as having no further holders.
+  /// misrepresent a large badge as having no further holders. Throws
+  /// [BadgeReadIncompleteException] when awards, revocations or profiles
+  /// cannot be completely read.
   Future<Set<String>> loadAcceptedHolders(BadgeCoordinate coordinate) async {
     final awardsPage = await _nostrClient.readAllEvents(
       Filter(
@@ -425,7 +432,9 @@ class BadgeRepository {
       ),
     );
     if (!awardsPage.isComplete) {
-      throw StateError('Badge holders could not be fully loaded');
+      throw const BadgeReadIncompleteException(
+        'Badge holders could not be fully loaded',
+      );
     }
     final awardIds = awardsPage.events.map((event) => event.id).toList();
     final revokedIds = <String>{};
@@ -438,7 +447,9 @@ class BadgeRepository {
         ),
       );
       if (!deletions.isComplete) {
-        throw StateError('Badge revocations could not be fully loaded');
+        throw const BadgeReadIncompleteException(
+          'Badge revocations could not be fully loaded',
+        );
       }
       // NIP-09 honors a deletion only from the original author.
       for (final deletion in deletions.events) {
@@ -487,7 +498,9 @@ class BadgeRepository {
   ///
   /// Empty when signed out or subscribed to nothing. Throws when the
   /// subscription list or a holder set cannot be fully loaded within [timeout].
-  /// At most two badge holder walks run concurrently.
+  /// At most two badge holder walks run concurrently. Throws
+  /// [BadgeReadIncompleteException] for incomplete reads and
+  /// [TimeoutException] when the overall budget expires.
   Future<Set<String>> loadSubscribedHolders({
     Duration timeout = const Duration(seconds: 10),
   }) async {
@@ -520,6 +533,9 @@ class BadgeRepository {
   }
 
   /// Public, account-synced badge subscriptions stored in a NIP-78 event.
+  ///
+  /// Throws [BadgeReadIncompleteException] when [requireComplete] is true
+  /// and the relays do not settle the subscription read.
   Future<Set<BadgeCoordinate>> loadSubscriptions({
     bool requireComplete = false,
   }) async {
@@ -539,7 +555,9 @@ class BadgeRepository {
         requireAllRelaysSettled: true,
       );
       if (result.timedOut || result.noRelays) {
-        throw StateError('Badge subscriptions could not be fully loaded');
+        throw const BadgeReadIncompleteException(
+          'Badge subscriptions could not be fully loaded',
+        );
       }
       events = result.events;
     } else {
@@ -584,6 +602,9 @@ class BadgeRepository {
   }
 
   /// Add or remove one badge subscription without following its holders.
+  ///
+  /// Throws [BadgeReadIncompleteException] when the current subscription
+  /// list cannot be completely read, leaving it unchanged.
   Future<Set<BadgeCoordinate>> setSubscription(
     BadgeCoordinate coordinate, {
     required bool subscribed,
@@ -1458,7 +1479,9 @@ class BadgeRepository {
         ),
       );
       if (!current.isComplete || !legacy.isComplete) {
-        throw StateError('Badge holder profiles could not be fully loaded');
+        throw const BadgeReadIncompleteException(
+          'Badge holder profiles could not be fully loaded',
+        );
       }
       final byPubkey = <String, List<Event>>{};
       for (final event in [...current.events, ...legacy.events]) {

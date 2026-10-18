@@ -50,41 +50,51 @@ class ExploreBadgesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<ExploreBadgesCubit>().state;
     final cubit = context.read<ExploreBadgesCubit>();
-    return switch (state.status) {
-      ExploreBadgesStatus.initial || ExploreBadgesStatus.loading =>
-        const Center(child: BrandedLoadingIndicator(size: 60)),
-      ExploreBadgesStatus.failure => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 16,
-          children: [
-            Text(
-              context.l10n.badgesLoadError,
-              textAlign: TextAlign.center,
-              style: VineTheme.titleSmallFont(
-                color: context.vineColors.primaryText,
+    return BlocListener<ExploreBadgesCubit, ExploreBadgesState>(
+      listenWhen: (previous, current) =>
+          current.refreshFailures > previous.refreshFailures,
+      listener: (context, _) => ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          context.l10n.badgesLoadError,
+          error: true,
+        ),
+      ),
+      child: switch (state.status) {
+        ExploreBadgesStatus.initial || ExploreBadgesStatus.loading =>
+          const Center(child: BrandedLoadingIndicator(size: 60)),
+        ExploreBadgesStatus.failure => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 16,
+            children: [
+              Text(
+                context.l10n.badgesLoadError,
+                textAlign: TextAlign.center,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.primaryText,
+                ),
               ),
-            ),
-            DivineButton(
-              onPressed: cubit.load,
-              label: context.l10n.commonRetry,
-            ),
-          ],
+              DivineButton(
+                onPressed: cubit.load,
+                label: context.l10n.commonRetry,
+              ),
+            ],
+          ),
         ),
-      ),
-      ExploreBadgesStatus.loaded => RefreshIndicator(
-        color: VineTheme.onPrimary,
-        backgroundColor: VineTheme.vineGreen,
-        onRefresh: cubit.refresh,
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: state.definitions.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) =>
-              _ExploreBadgeRow(definition: state.definitions[index]),
+        ExploreBadgesStatus.loaded => RefreshIndicator(
+          color: VineTheme.onPrimary,
+          backgroundColor: VineTheme.vineGreen,
+          onRefresh: cubit.refresh,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: state.definitions.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) =>
+                _ExploreBadgeRow(definition: state.definitions[index]),
+          ),
         ),
-      ),
-    };
+      },
+    );
   }
 }
 
