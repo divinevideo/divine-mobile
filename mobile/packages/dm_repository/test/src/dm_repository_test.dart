@@ -8332,7 +8332,8 @@ void main() {
         );
 
         test(
-          'reads a recipient kind-10050 conclusively before reporting absent',
+          'reads a recipient kind-10050 from relays only: no cache, full '
+          'relay settlement (#8528)',
           () async {
             stubOwnInbox(answeredList(const <Event>[]));
 
@@ -8345,6 +8346,7 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: captureAny(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: captureAny(
                   named: 'requireAllRelaysSettled',
                 ),
@@ -8362,7 +8364,7 @@ void main() {
                 continue;
               }
               sawRecipientRead = true;
-              expect(captured[i + 1], isTrue, reason: 'useCache');
+              expect(captured[i + 1], isFalse, reason: 'useCache');
               expect(
                 captured[i + 2],
                 isTrue,

@@ -378,7 +378,9 @@ typedef _Nip04Copy = ({
 /// delivery on it tells the sender a message arrived when it was written where
 /// the recipient does not look (#7317).
 enum DmInboxResolution {
-  /// The recipient advertises a kind-10050 and we read it.
+  /// The recipient advertises a kind-10050 naming at least one relay the
+  /// remote-relay URL policy admits, and a relay returned it during this
+  /// lookup. A copy held only in the local event cache never counts (#8528).
   found,
 
   /// Every relay asked answered — the pool, any indexer this build may
@@ -5141,10 +5143,11 @@ class DmRepository {
   /// how many hosts we dial nor whether any of them sit on the sender's own
   /// network (#6585).
   ///
-  /// The read is deliberately non-authoritative: it runs on every send,
-  /// degrades to the default pool whether the list is absent or unreadable,
-  /// and overwrites nothing — so it keeps the cache and the first answer it
-  /// gets rather than waiting for full relay settlement (#8212).
+  /// The read runs on every send, degrades to the default pool whether the
+  /// list is absent or unreadable, and overwrites nothing (#8212). It still
+  /// waits for every relay it asked before calling the list absent, and it
+  /// never answers from the local event cache, so `found` always means a relay
+  /// returned the list during this lookup (#8528).
   ///
   /// Callers that route a gift wrap need the relays; callers that also report
   /// delivery need the reason. A `null` list from [DmInboxResolution.absent]
@@ -5254,8 +5257,10 @@ class DmRepository {
   /// never fire — which is how a transient read replaced a real list (#8212).
   ///
   /// Resolving a COUNTERPARTY's inbox passes `false`: it runs on every send,
-  /// degrades to the default pool on either outcome, and overwrites nothing,
-  /// so it keeps the cache and the first answer it gets.
+  /// degrades to the default pool on either outcome, and overwrites nothing.
+  /// It still skips the local cache: a cached list is not a relay answer, and
+  /// a counterparty's `found` clears a nip04 latch for good (#8528). Only the
+  /// user's own memo reads the cache.
   Future<_OwnDmInboxRead> _queryOwnDmInbox(
     String pubkey, {
     required bool requireAuthoritative,
@@ -5321,7 +5326,8 @@ class DmRepository {
         _observedLeg(
           () => _nostrClient.queryEventsDetailed(
             filter,
-            useCache: !requireAuthoritative,
+            // A counterparty's `found` must come from a relay (#8528).
+            useCache: !requireAuthoritative && !isRecipient,
             requireAllRelaysSettled:
                 requireAuthoritative || source == _DmRelayListSource.remote,
             timeout: requireAuthoritative
@@ -9443,10 +9449,11 @@ class DmRepository {
   /// from the pre-latch upsert, not a designed guard), so a kind-10050 left
   /// behind by a client the peer has since abandoned can permanently cut a
   /// legacy-only reader off from the one copy they can read. Accepted:
-  /// #8519 weighs exactly this residual, the mirror cache-staleness case is
-  /// filed as #8528, and whether a later peer-authored kind-4 may re-latch
-  /// is a receive-path decision of the same "decide whether" family,
-  /// deliberately not taken here.
+  /// #8519 weighs exactly this residual, and whether a later peer-authored
+  /// kind-4 may re-latch is a receive-path decision of the same "decide
+  /// whether" family, deliberately not taken here. A stale list held only in
+  /// the local cache cannot clear the latch: a counterparty's lookup never
+  /// reads the cache (#8528).
   ///
   /// Best-effort. A failure leaves the thread latched and the next send
   /// presents the same evidence again, so it must never cost the message.
