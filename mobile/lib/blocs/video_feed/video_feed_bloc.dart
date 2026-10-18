@@ -312,6 +312,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       _followRepository.followingPubkeys,
     );
 
+    await _badgeSubscriptionsSubscription?.cancel();
+    _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
+      (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
+    );
+
     await _loadVideos(source, emit, feedLoad: feedLoad, revalidate: true);
     if (emit.isDone) return;
 
@@ -342,7 +347,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
-    await _badgeSubscriptionsSubscription?.cancel();
 
     // Subscribe to following list changes.
     //
@@ -374,11 +378,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         .listen((lists) {
           addIfOpen(VideoFeedCuratedListsChanged(lists));
         });
-
-    // Subscribe to this account's badge subscription changes.
-    _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
-      (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
-    );
   }
 
   @override
@@ -786,7 +785,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     Emitter<VideoFeedBlocState> emit,
   ) async {
     if (state.source.type != VideoFeedSourceType.following) return;
-    if (state.status == VideoFeedStatus.loading) return;
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
