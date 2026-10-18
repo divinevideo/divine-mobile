@@ -493,6 +493,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (emit.isDone || _isClosing) return;
     _followedPeopleListsSubscription = _watchFollowedPeopleLists();
     _refreshFollowedPeopleLists();
+    await _badgeSubscriptionsSubscription?.cancel();
+    if (emit.isDone || _isClosing) return;
+    _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
+      (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
+    );
     await _loadVideos(source, emit, feedLoad: feedLoad, revalidate: true);
     if (emit.isDone || _isClosing) return;
 
@@ -523,16 +528,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
-    await _badgeSubscriptionsSubscription?.cancel();
     if (emit.isDone || _isClosing) return;
 
     _followingSubscription = _watchFollowing(initialFollowingPubkeys);
 
     // Subscribe to curated list changes.
     _curatedListsSubscription = _watchCuratedLists();
-    _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
-      (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
-    );
   }
 
   /// A source chosen while startup reads storage still needs live feed updates.
@@ -1159,7 +1160,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) async {
     if (state.source.type != VideoFeedSourceType.following) return;
-    if (state.status == VideoFeedStatus.loading) return;
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,

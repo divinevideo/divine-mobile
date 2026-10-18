@@ -332,6 +332,8 @@ class BadgePublishException implements Exception {
 }
 
 class BadgeRepository {
+  /// Creates a badge repository. [sessionChanges] ends any cached subscription
+  /// absence proof, including a sign-out/sign-in to the same account.
   BadgeRepository({
     required NostrClient nostrClient,
     required SharedPreferences sharedPreferences,
@@ -342,6 +344,7 @@ class BadgeRepository {
     void Function(String owner, Future<void> Function() close)?
     onAccountCreated,
     String? definitionRelayUrl,
+    Stream<void>? sessionChanges,
   }) : _nostrClient = nostrClient,
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
@@ -352,7 +355,11 @@ class BadgeRepository {
          signer: signer,
          onAccountCreated: onAccountCreated,
        ),
-       _definitionRelayUrl = definitionRelayUrl;
+       _definitionRelayUrl = definitionRelayUrl {
+    _subscriptionSessionChanges = sessionChanges?.listen(
+      (_) => _resetSubscriptionSession(),
+    );
+  }
 
   final NostrClient _nostrClient;
   final BadgeCurrentPubkeyReader _currentPubkey;
@@ -393,6 +400,66 @@ class BadgeRepository {
   Event? _publishedSubscriptions;
   final StreamController<void> _subscriptionChanges =
       StreamController<void>.broadcast();
+
+  String? _subscriptionAccount;
+  int _subscriptionSession = 0;
+  int _subscriptionProof = 0;
+  int _subscriptionEdits = 0;
+  bool _verifiedEmptySubscriptions = false;
+  Future<void>? _subscriptionRevalidation;
+  StreamSubscription<void>? _subscriptionSessionChanges;
+  bool _disposed = false;
+
+  void _invalidateEmptySubscriptions() {
+    _verifiedEmptySubscriptions = false;
+    _subscriptionProof++;
+  }
+
+  void _resetSubscriptionSession() {
+    _subscriptionAccount = _currentPubkey();
+    _subscriptionSession++;
+    _subscriptionEdits = 0;
+    _invalidateEmptySubscriptions();
+    _subscriptionRevalidation = null;
+  }
+
+  String? _syncSubscriptionAccount() {
+    final pubkey = _currentPubkey();
+    if (pubkey != _subscriptionAccount) _resetSubscriptionSession();
+    return pubkey;
+  }
+
+  bool _isSubscriptionSessionCurrent(String pubkey, int session) =>
+      !_disposed &&
+      session == _subscriptionSession &&
+      pubkey == _subscriptionAccount &&
+      pubkey == _currentPubkey();
+
+  void _revalidateEmptySubscriptions(
+    String pubkey,
+    int session,
+    Duration timeout,
+  ) {
+    if (_subscriptionRevalidation != null) return;
+    final proof = _subscriptionProof;
+    late final Future<void> revalidation;
+    revalidation = (() async {
+      try {
+        await loadSubscriptions(requireComplete: true).timeout(timeout);
+      } on Object {
+        if (_isSubscriptionSessionCurrent(pubkey, session) &&
+            proof == _subscriptionProof) {
+          _invalidateEmptySubscriptions();
+        }
+      } finally {
+        if (identical(_subscriptionRevalidation, revalidation)) {
+          _subscriptionRevalidation = null;
+        }
+      }
+    })();
+    _subscriptionRevalidation = revalidation;
+    unawaited(revalidation);
+  }
 
   static const _subscriptionsIdentifier = 'divine.badge_subscriptions';
 
@@ -510,22 +577,51 @@ class BadgeRepository {
   /// At most two badge holder walks run concurrently. Throws
   /// [BadgeReadIncompleteException] for incomplete reads and
   /// [TimeoutException] when the overall budget expires.
+  ///
+  /// A completed empty subscription read is reused within this account's
+  /// session while one background read revalidates it. Failure revokes that
+  /// shortcut; an observed subscription notifies [subscriptionChanges].
   Future<Set<String>> loadSubscribedHolders({
     Duration timeout = const Duration(seconds: 10),
   }) async {
-    final pubkey = _currentPubkey();
+    final pubkey = _syncSubscriptionAccount();
     if (pubkey == null || pubkey.isEmpty) return const {};
+    final session = _subscriptionSession;
+    final proof = _subscriptionProof;
+    if (_verifiedEmptySubscriptions) {
+      _revalidateEmptySubscriptions(pubkey, session, timeout);
+      return const {};
+    }
     var expired = false;
     Future<Set<String>> load() async {
       final subscriptions = (await loadSubscriptions(
         requireComplete: true,
       )).toList();
+      if (expired || !_isSubscriptionSessionCurrent(pubkey, session)) {
+        throw const BadgeReadIncompleteException(
+          'Badge subscription read was superseded',
+        );
+      }
+      if (subscriptions.isEmpty) {
+        if (proof != _subscriptionProof) {
+          throw const BadgeReadIncompleteException(
+            'Badge subscriptions changed during the read',
+          );
+        }
+        if (_subscriptionEdits == 0) _verifiedEmptySubscriptions = true;
+        return const {};
+      }
       final holders = <String>{};
       // Leave the client's remaining query slots available for other screens.
       for (var offset = 0; offset < subscriptions.length; offset += 2) {
         if (expired) break;
         final batch = subscriptions.skip(offset).take(2);
         final results = await Future.wait(batch.map(loadAcceptedHolders));
+        if (!_isSubscriptionSessionCurrent(pubkey, session)) {
+          throw const BadgeReadIncompleteException(
+            'Badge holder read was superseded',
+          );
+        }
         results.forEach(holders.addAll);
       }
       return Set.unmodifiable(holders);
@@ -544,11 +640,15 @@ class BadgeRepository {
   /// Public, account-synced badge subscriptions stored in a NIP-78 event.
   ///
   /// Throws [BadgeReadIncompleteException] when [requireComplete] is true
-  /// and the relays do not settle the subscription read.
+  /// and the relays do not settle the subscription read, or when a session
+  /// change supersedes the read.
   Future<Set<BadgeCoordinate>> loadSubscriptions({
     bool requireComplete = false,
   }) async {
     final pubkey = _requireCurrentPubkey();
+    _syncSubscriptionAccount();
+    final session = _subscriptionSession;
+    final proof = _subscriptionProof;
     final filters = [
       Filter(
         authors: [pubkey],
@@ -571,6 +671,11 @@ class BadgeRepository {
       events = result.events;
     } else {
       events = await _nostrClient.queryEvents(filters);
+    }
+    if (!_isSubscriptionSessionCurrent(pubkey, session)) {
+      throw const BadgeReadIncompleteException(
+        'Badge subscription read was superseded',
+      );
     }
     final matching =
         events
@@ -607,6 +712,13 @@ class BadgeRepository {
       final coordinate = BadgeCoordinate.parse(tag[1]);
       if (coordinate != null) coordinates.add(coordinate);
     }
+    if (coordinates.isNotEmpty && proof == _subscriptionProof) {
+      final notify = _verifiedEmptySubscriptions;
+      _invalidateEmptySubscriptions();
+      if (notify && !_subscriptionChanges.isClosed) {
+        _subscriptionChanges.add(null);
+      }
+    }
     return Set.unmodifiable(coordinates);
   }
 
@@ -618,33 +730,52 @@ class BadgeRepository {
     BadgeCoordinate coordinate, {
     required bool subscribed,
   }) async {
-    final current = {...await loadSubscriptions(requireComplete: true)};
-    if (subscribed) {
-      current.add(coordinate);
-    } else {
-      current.remove(coordinate);
+    final pubkey = _requireCurrentPubkey();
+    _syncSubscriptionAccount();
+    _resetSubscriptionSession();
+    final session = _subscriptionSession;
+    _subscriptionEdits++;
+    try {
+      final current = {...await loadSubscriptions(requireComplete: true)};
+      if (subscribed) {
+        current.add(coordinate);
+      } else {
+        current.remove(coordinate);
+      }
+      final tags = [
+        ['d', _subscriptionsIdentifier],
+        for (final item
+            in current.toList()..sort((a, b) => a.value.compareTo(b.value)))
+          ['a', item.value],
+      ];
+      _publishedSubscriptions = await _signAndPublish(
+        kind: EventKind.appSpecificData,
+        label: 'badge subscriptions',
+        tags: tags,
+      );
+      if (_isSubscriptionSessionCurrent(pubkey, session)) {
+        _subscriptionChanges.add(null);
+      }
+      return Set.unmodifiable(current);
+    } finally {
+      if (session == _subscriptionSession) {
+        _subscriptionEdits--;
+        _invalidateEmptySubscriptions();
+      }
     }
-    final tags = [
-      ['d', _subscriptionsIdentifier],
-      for (final item
-          in current.toList()..sort((a, b) => a.value.compareTo(b.value)))
-        ['a', item.value],
-    ];
-    _publishedSubscriptions = await _signAndPublish(
-      kind: EventKind.appSpecificData,
-      label: 'badge subscriptions',
-      tags: tags,
-    );
-    if (!_subscriptionChanges.isClosed) _subscriptionChanges.add(null);
-    return Set.unmodifiable(current);
   }
 
-  /// Emits after this account saves a badge subscription change, so Following
-  /// can reload its merged authors without rebuilding other feeds.
+  /// Emits after this account saves a subscription change, or a read discovers
+  /// subscriptions after a verified empty snapshot, so Following can reload.
   Stream<void> get subscriptionChanges => _subscriptionChanges.stream;
 
   /// Closes [subscriptionChanges].
-  Future<void> dispose() => _subscriptionChanges.close();
+  Future<void> dispose() async {
+    _disposed = true;
+    _resetSubscriptionSession();
+    await _subscriptionSessionChanges?.cancel();
+    await _subscriptionChanges.close();
+  }
 
   Future<BadgeDashboardData> loadDashboard() async {
     final memo = _DashboardLookupMemo();
