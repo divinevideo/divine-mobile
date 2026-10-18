@@ -2237,6 +2237,27 @@ void main() {
         ownerPubkey: ownerPubkey ?? owner,
       );
 
+      /// A visible member's message at 150, retracted in the owner's copy,
+      /// with an unattributed legacy copy of it still live.
+      Future<void> retractedWithLegacyCopy() async {
+        await message('retracted', sender: visibleMember, createdAt: 150);
+        await message(
+          'retracted',
+          sender: visibleMember,
+          createdAt: 150,
+          ownerPubkey: '',
+        );
+        await database.directMessagesDao.markMessageDeleted(
+          'retracted',
+          ownerPubkey: owner,
+        );
+        final legacy = await database.directMessagesDao.getMessageById(
+          'retracted',
+          ownerPubkey: '',
+        );
+        expect(legacy?.isDeleted, isFalse);
+      }
+
       Future<ConversationVisibleActivity?> activity({
         Set<String>? excluded,
       }) async => (await dao.visibleActivityExcluding({
@@ -2297,6 +2318,18 @@ void main() {
 
           expect(seen?.content, equals('text of own'));
           expect(seen?.senderPubkey, equals(owner));
+        });
+
+        test('skips a legacy unowned copy of a message whose owned copy was '
+            'retracted', () async {
+          await seedRoom();
+          await message('kept', sender: visibleMember, createdAt: 100);
+          await retractedWithLegacyCopy();
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.content, equals('text of kept'));
         });
 
         test("ignores another account's copy of the same room", () async {
@@ -2429,6 +2462,18 @@ void main() {
           final seen = await activity();
 
           expect(seen?.senderPubkey, equals(owner.toUpperCase()));
+          expect(seen?.hasUnread, isFalse);
+        });
+
+        test('does not count a legacy unowned copy of a message whose owned '
+            'copy was retracted', () async {
+          await seedRoom(readCursor: 120);
+          await message('kept', sender: visibleMember, createdAt: 100);
+          await retractedWithLegacyCopy();
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
           expect(seen?.hasUnread, isFalse);
         });
 

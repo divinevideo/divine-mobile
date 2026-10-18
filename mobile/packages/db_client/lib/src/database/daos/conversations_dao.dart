@@ -648,8 +648,9 @@ END
   /// anyone outside that set other than [ownerPubkey] wrote after the read
   /// cursor (#10150).
   ///
-  /// Reads the messages the thread shows — confirmed retractions dropped, the
-  /// owner's own unconfirmed one kept, as
+  /// Reads the messages the thread shows — the owner's copy of a message over
+  /// an unattributed legacy one, confirmed retractions dropped, the owner's
+  /// own unconfirmed one kept, as
   /// [DirectMessagesDao.getMessagesForConversation] does — newest first by
   /// `created_at DESC, id DESC`, the order the stored preview is chosen in, and
   /// previews a file message as [backfillLatestMessagePreviews] does. A
@@ -694,10 +695,17 @@ END
     final notExcluded = excluded.isEmpty
         ? ''
         : 'AND lower(dm.sender_pubkey) NOT IN ($excludedPlaceholders)';
+    // A legacy unowned copy counts only while the owner has no copy of the
+    // same message, whose own state (a retraction, say) wins.
     final shown =
         '''
 dm.conversation_id = ?1
-  AND (dm.owner_pubkey = ?2 OR dm.owner_pubkey = '' OR dm.owner_pubkey IS NULL)
+  AND (dm.owner_pubkey = ?2
+       OR ((dm.owner_pubkey = '' OR dm.owner_pubkey IS NULL)
+           AND NOT EXISTS (
+             SELECT 1 FROM direct_messages owned
+             WHERE owned.id = dm.id AND owned.owner_pubkey = ?2
+           )))
   AND (dm.is_deleted = 0
        OR (dm.sender_pubkey = ?2 AND dm.deletion_publish_status IN (?3, ?4)))
   $notExcluded
