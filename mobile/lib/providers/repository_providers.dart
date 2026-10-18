@@ -84,6 +84,7 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
     onAccountCreated: (owner, close) {
       accountClosers.add(accountWrites.register(owner, close));
     },
+    sessionChanges: authService.authStateStream.map((_) {}),
     definitionRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
     // Read through the repository rather than a snapshot: the hide buckets
     // are mutated in place, so a block made after this provider was built

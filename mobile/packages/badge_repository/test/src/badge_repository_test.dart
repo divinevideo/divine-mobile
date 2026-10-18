@@ -7,6 +7,18 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+typedef _SubscriptionRead = ({
+  List<Event> events,
+  bool timedOut,
+  bool noRelays,
+});
+
+const _SubscriptionRead _emptySubscriptionRead = (
+  events: <Event>[],
+  timedOut: false,
+  noRelays: false,
+);
+
 class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
@@ -492,6 +504,542 @@ void main() {
     });
 
     group('loadSubscribedHolders', () {
+      group('verified empty session', () {
+        void deferRead(Completer<_SubscriptionRead> pending) {
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) => pending.future);
+        }
+
+        Event subscription() => _event(
+          id: _eventId(700),
+          pubkey: _pubkey(1),
+          kind: EventKind.appSpecificData,
+          tags: [
+            ['d', 'divine.badge_subscriptions'],
+            ['a', '30009:${_pubkey(2)}:daily'],
+          ],
+        );
+
+        test(
+          'returns verified empty immediately and deduplicates revalidation',
+          () async {
+            await repository.loadSubscribedHolders();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = 0;
+            final first = repository.loadSubscribedHolders().then(
+              (_) => completed++,
+            );
+            final second = repository.loadSubscribedHolders().then(
+              (_) => completed++,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await Future.wait([first, second]);
+            expect(completedBeforeRead, 2);
+            verify(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+              ),
+            ).called(2);
+          },
+        );
+
+        test('a partial read cannot seed the empty shortcut', () async {
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+          await expectLater(
+            repository.loadSubscribedHolders(),
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          final pending = Completer<_SubscriptionRead>();
+          deferRead(pending);
+          var completed = false;
+          final retry = repository.loadSubscribedHolders().then(
+            (_) => completed = true,
+          );
+          await pumpEventQueue();
+          final completedBeforeRead = completed;
+          pending.complete(_emptySubscriptionRead);
+          await retry;
+          expect(completedBeforeRead, isFalse);
+        });
+
+        test(
+          'background read failure revokes the shortcut without emitting a refresh',
+          () async {
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            await repository.loadSubscribedHolders();
+            final revalidation = Completer<_SubscriptionRead>();
+            deferRead(revalidation);
+            var completed = false;
+            final cached = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeFailure = completed;
+            revalidation.completeError(
+              const BadgeReadIncompleteException('relay unavailable'),
+            );
+            await cached;
+            await pumpEventQueue();
+            final retryRead = Completer<_SubscriptionRead>();
+            deferRead(retryRead);
+            var retried = false;
+            final retry = repository.loadSubscribedHolders().then(
+              (_) => retried = true,
+            );
+            await pumpEventQueue();
+            final retriedBeforeRead = retried;
+            retryRead.complete(_emptySubscriptionRead);
+            await retry;
+            expect(completedBeforeFailure, isTrue);
+            expect(retriedBeforeRead, isFalse);
+            expect(changes, isEmpty);
+          },
+        );
+
+        test(
+          'subscribed badges with zero holders are not an absence proof',
+          () async {
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  (events: [subscription()], timedOut: false, noRelays: false),
+            );
+            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            expect(await repository.loadSubscribedHolders(), isEmpty);
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+          },
+        );
+
+        test(
+          'newly observed subscriptions invalidate an empty proof and notify once',
+          () async {
+            await repository.loadSubscribedHolders();
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            expect(await repository.loadSubscriptions(), isNotEmpty);
+            expect(await repository.loadSubscriptions(), isNotEmpty);
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+            expect(changes, hasLength(1));
+          },
+        );
+
+        test(
+          'an older empty result cannot overwrite a newly observed subscription',
+          () async {
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            final oldRead = repository.loadSubscribedHolders();
+            final rejected = expectLater(
+              oldRead,
+              throwsA(isA<BadgeReadIncompleteException>()),
+            );
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            await repository.loadSubscriptions();
+            pending.complete(_emptySubscriptionRead);
+            await rejected;
+          },
+        );
+
+        test(
+          'an empty read after the caller deadline cannot seed a shortcut',
+          () async {
+            final late = Completer<_SubscriptionRead>();
+            deferRead(late);
+            await expectLater(
+              repository.loadSubscribedHolders(timeout: Duration.zero),
+              throwsA(isA<TimeoutException>()),
+            );
+            late.complete(_emptySubscriptionRead);
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final retry = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await retry;
+            expect(completedBeforeRead, isFalse);
+          },
+        );
+
+        test(
+          'local edits revoke the shortcut before publication completes',
+          () async {
+            await repository.loadSubscribedHolders();
+            final publishing = Completer<PublishOutcome>();
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) => publishing.future);
+            final edit = repository.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            );
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final load = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await load;
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var nextCompleted = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => nextCompleted = true,
+            );
+            await pumpEventQueue();
+            final completedDuringEdit = nextCompleted;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            publishing.complete(_acceptedPublishOutcome(lastSignedEvent()!));
+            await edit;
+            expect(completedBeforeRead, isFalse);
+            expect(completedDuringEdit, isFalse);
+          },
+        );
+
+        test(
+          'an old account read cannot warm or invalidate the successor',
+          () async {
+            var account = _pubkey(1);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              signEvent:
+                  ({required kind, required content, required tags}) async =>
+                      null,
+            );
+            addTearDown(scoped.dispose);
+            await scoped.loadSubscribedHolders();
+            final oldPending = Completer<_SubscriptionRead>();
+            deferRead(oldPending);
+            final oldCached = scoped.loadSubscribedHolders();
+            await pumpEventQueue();
+            account = _pubkey(3);
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+              ),
+            ).thenAnswer((_) async => _emptySubscriptionRead);
+            await scoped.loadSubscribedHolders();
+            oldPending.completeError(
+              const BadgeReadIncompleteException('old account unavailable'),
+            );
+            await oldCached;
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = scoped.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            expect(completedBeforeRead, isTrue);
+          },
+        );
+
+        test(
+          'an old account edit cannot revoke the successor empty proof',
+          () async {
+            var account = _pubkey(1);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              signEvent:
+                  ({required kind, required content, required tags}) async =>
+                      _event(
+                        id: _eventId(701),
+                        pubkey: account,
+                        kind: kind,
+                        tags: tags,
+                      ),
+            );
+            addTearDown(scoped.dispose);
+            await scoped.loadSubscribedHolders();
+            final publishing = Completer<PublishOutcome>();
+            Event? published;
+            when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+              call,
+            ) {
+              published = call.positionalArguments.single as Event;
+              return publishing.future;
+            });
+            final edit = scoped.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            );
+            await pumpEventQueue();
+            account = _pubkey(3);
+            await scoped.loadSubscribedHolders();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = scoped.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final beforeOldEdit = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            publishing.complete(_acceptedPublishOutcome(published!));
+            await edit;
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var nextCompleted = false;
+            final next = scoped.loadSubscribedHolders().then(
+              (_) => nextCompleted = true,
+            );
+            await pumpEventQueue();
+            final afterOldEdit = nextCompleted;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            expect(beforeOldEdit, isTrue);
+            expect(afterOldEdit, isTrue);
+          },
+        );
+
+        test(
+          'a session reset rejects an in-flight absence proof for the same account',
+          () async {
+            final resets = StreamController<void>.broadcast();
+            addTearDown(resets.close);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              sharedPreferences: preferences,
+              currentPubkey: () => _pubkey(1),
+              signEvent:
+                  ({required kind, required content, required tags}) async =>
+                      null,
+              sessionChanges: resets.stream,
+            );
+            addTearDown(scoped.dispose);
+            final oldRead = Completer<_SubscriptionRead>();
+            deferRead(oldRead);
+            final rejected = expectLater(
+              scoped.loadSubscribedHolders(),
+              throwsA(isA<BadgeReadIncompleteException>()),
+            );
+            resets.add(null);
+            await pumpEventQueue();
+            oldRead.complete(_emptySubscriptionRead);
+            await rejected;
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = scoped.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            expect(completedBeforeRead, isFalse);
+          },
+        );
+
+        test(
+          'late timed-out revalidation cannot invalidate a newer empty proof',
+          () async {
+            await repository.loadSubscribedHolders();
+            final late = Completer<_SubscriptionRead>();
+            deferRead(late);
+            await repository.loadSubscribedHolders(timeout: Duration.zero);
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            late.complete((
+              events: [subscription()],
+              timedOut: false,
+              noRelays: false,
+            ));
+            await pumpEventQueue();
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var nextCompleted = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => nextCompleted = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRevalidation = nextCompleted;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+            expect(completedBeforeRevalidation, isTrue);
+            expect(changes, isEmpty);
+          },
+        );
+
+        test(
+          'switching accounts during holder reads rejects the old holder result',
+          () async {
+            var account = _pubkey(1);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              signEvent:
+                  ({required kind, required content, required tags}) async =>
+                      null,
+            );
+            addTearDown(scoped.dispose);
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  (events: [subscription()], timedOut: false, noRelays: false),
+            );
+            final holders = Completer<PagedQueryResult>();
+            when(
+              () => nostrClient.readAllEvents(any()),
+            ).thenAnswer((_) => holders.future);
+            final rejected = expectLater(
+              scoped.loadSubscribedHolders(),
+              throwsA(isA<BadgeReadIncompleteException>()),
+            );
+            await pumpEventQueue();
+            account = _pubkey(3);
+            holders.complete(
+              const PagedQueryResult(events: [], isComplete: true, pages: 1),
+            );
+            await rejected;
+          },
+        );
+
+        test(
+          'an obsolete background failure cannot revoke a newer absence proof',
+          () async {
+            await repository.loadSubscribedHolders();
+            final obsolete = Completer<_SubscriptionRead>();
+            deferRead(obsolete);
+            await repository.loadSubscribedHolders();
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            await repository.loadSubscriptions();
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+              ),
+            ).thenAnswer((_) async => _emptySubscriptionRead);
+            await repository.loadSubscribedHolders();
+            obsolete.completeError(
+              const BadgeReadIncompleteException('obsolete failure'),
+            );
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final cached = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await cached;
+            expect(completedBeforeRead, isTrue);
+          },
+        );
+
+        test(
+          'disposing during revalidation observes late errors without notification',
+          () async {
+            await repository.loadSubscribedHolders();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            final cached = repository.loadSubscribedHolders();
+            await pumpEventQueue();
+            await repository.dispose();
+            pending.completeError(
+              const BadgeReadIncompleteException('disposed read'),
+            );
+            await cached;
+            await pumpEventQueue();
+          },
+        );
+      });
+
       test('is empty without a signed-in account', () async {
         final signedOut = BadgeRepository(
           nostrClient: nostrClient,

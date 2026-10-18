@@ -33,3 +33,11 @@ the accepted holder snapshot, and a late preview cannot replace that result.
 Incomplete badge reads are retryable exceptions, not programming errors.
 Backend deployment verification, signed-in end-to-end acceptance, and the
 existing fluent-language review remain rollout gates for the draft feature.
+
+Following waits for the first complete subscription read in each account/session.
+A verified empty subscription list then permits direct-feed first display while
+one background read revalidates it. Session changes and local edits invalidate
+the proof. A newly observed subscription triggers a merged-feed refresh; failed
+revalidation revokes the shortcut for the next load without discarding the
+current page. Empty holder results and incomplete reads are never absence proofs.
+The cache is in memory and stores no state across app restarts.
