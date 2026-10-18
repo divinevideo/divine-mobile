@@ -5332,7 +5332,7 @@
   "dmBlockedGroupMembersTitle": "{count, plural, one{Ai blocat {count} persoană aici} few{Ai blocat {count} persoane aici} other{Ai blocat {count} de persoane aici}}",
   "dmBlockedGroupThreadBody": "Mesajele rămân aici ca să le poți citi sau captura. Deblochează din profil pentru a răspunde.",
   "dmBlockedGroupMembersBannerBody": "{count, plural, one{Mesajele acestei persoane sunt ascunse aici. Încă poate vedea ce trimiți.} few{Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.} other{Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.}}",
-  "dmStartChatWithoutBlockedAction": "{count, plural, one{Discuție nouă fără această persoană} few{Discuție nouă fără aceste persoane} other{Discuție nouă fără aceste persoane}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{Conversație nouă fără această persoană} few{Conversație nouă fără aceste persoane} other{Conversație nouă fără aceste persoane}}",
   "dmHiddenMessageLabel": "Mesaj ascuns",
   "dmHiddenMessageShowAction": "Arată",
   "dmUnresolvedThreadTitle": "Această conversație nu a putut fi încărcată",
