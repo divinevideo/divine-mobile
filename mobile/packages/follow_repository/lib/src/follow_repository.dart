@@ -362,6 +362,10 @@ class FollowRepository {
   bool _isInitialized = false;
   final Completer<void> _initializedCompleter = Completer<void>();
 
+  // Set by [dispose]. An [initialize] still running stops at its next step,
+  // because its account's clients are torn down with it (#10291).
+  bool _isDisposed = false;
+
   // In-memory cache — my followers (populated after first fetch)
   List<String> _cachedMyFollowersPubkeys = [];
   List<String>? _myFollowersLookupSource;
@@ -389,7 +393,8 @@ class FollowRepository {
   /// seconds before the relay answers, and every derived source can lag or
   /// truncate (#6109); publishing from one destroys the follows it is
   /// missing. Never completes while the user has no keys, since
-  /// [initialize] returns early and stays retryable.
+  /// [initialize] returns early and stays retryable, nor if the repository
+  /// is disposed before [initialize] finishes.
   Future<void> get initialized => _initializedCompleter.future;
 
   /// Whether [followingPubkeys] reflects a contact list a relay returned (or
@@ -462,6 +467,7 @@ class FollowRepository {
 
   /// Dispose resources (idempotent — safe to call multiple times).
   Future<void> dispose() async {
+    _isDisposed = true;
     unawaited(_contactListSubscription?.cancel());
     if (_contactListSubscriptionId != null) {
       await _nostrClient.unsubscribe(_contactListSubscriptionId!);
@@ -2045,6 +2051,7 @@ class FollowRepository {
       if (_followingPubkeys.isEmpty &&
           (_funnelcakeApiClient?.isAvailable ?? false)) {
         await _loadFromRestApi();
+        if (_isDisposed) return;
       }
 
       // 4. Always query relays for the authoritative kind 3 event, even when
@@ -2055,6 +2062,7 @@ class FollowRepository {
       // missing (#6109).
       if (_nostrClient.hasKeys) {
         await _loadFromRelay();
+        if (_isDisposed) return;
       }
 
       // 5. Subscribe to contact list for real-time sync and cross-device
@@ -2450,7 +2458,7 @@ class FollowRepository {
       // silently receiving 100 is what let a truncated list become the base
       // for the next publish (#6109).
       final collected = <String>[];
-      while (collected.length < _restFollowingMaxPubkeys) {
+      while (!_isDisposed && collected.length < _restFollowingMaxPubkeys) {
         final page = await _funnelcakeApiClient.getFollowing(
           pubkey: currentUserPubkey,
           offset: collected.length,
@@ -2461,6 +2469,7 @@ class FollowRepository {
 
         if (!page.hasMore && collected.length >= page.total) break;
       }
+      if (_isDisposed) return;
 
       final pubkeys = _sanitizePubkeys(collected, source: 'REST API');
 
@@ -2480,6 +2489,16 @@ class FollowRepository {
         );
       }
     } catch (e) {
+      // Disposal closes the API client under a call still in flight, so the
+      // failure is expected and nothing will rely on the relay afterwards.
+      if (_isDisposed) {
+        Log.debug(
+          'REST following load ended by dispose: $e',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        return;
+      }
       Log.warning(
         'Failed to load following from REST API '
         '(will rely on relay): $e',
@@ -2550,6 +2569,8 @@ class FollowRepository {
         _loadContactListFromConnectedRelays(currentUserPubkey),
         _loadContactListFromIndexer(currentUserPubkey),
       ]);
+      // An indexer socket outlives the client's dispose and can still answer.
+      if (_isDisposed) return;
 
       // Use whichever returned a result, newest first (NIP-01).
       final connectedResult = results[0];
