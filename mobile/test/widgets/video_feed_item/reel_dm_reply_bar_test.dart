@@ -886,6 +886,61 @@ void main() {
       expect(reacted, isNull);
     });
 
+    // The player pauses the reel while the composer is focused, and only the
+    // bar can tell it the composer is gone.
+    testWidgets('tells the player the composer is no longer focused when '
+        'blocking the last member hides it mid-reply', (tester) async {
+      const otherPeer =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const groupContext = DmReplyContext(
+        conversationId: 'group-convo',
+        participantPubkeys: [_peer, otherPeer],
+        isGroup: true,
+        sharedReelMessageId: _reelId,
+        messageAuthorPubkey: otherPeer,
+        hintName: 'Bob',
+        isOwnMessage: false,
+      );
+      // One member blocked: the bar stays writable and discloses it.
+      when(() => blocklist.isBlocked(_peer)).thenReturn(true);
+      final focusReports = <bool>[];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            dmRepositoryProvider.overrideWithValue(dmRepo),
+            dmReactionsRepositoryProvider.overrideWithValue(reactionsRepo),
+            authServiceProvider.overrideWithValue(auth),
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ReelReplyBridge(
+                setComposerFocused: focusReports.add,
+                playReaction: (_) {},
+                child: const ReelDmReplyBarHost(dmReplyContext: groupContext),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      expect(focusReports, equals([true]));
+
+      when(() => blocklist.isBlocked(otherPeer)).thenReturn(true);
+      ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold)),
+      ).read(blocklistVersionProvider.notifier).increment();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(focusReports, equals([true, false]));
+    });
+
     testWidgets('retry action closes when the bar leaves the tree', (
       tester,
     ) async {

@@ -202,6 +202,10 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
   /// messenger is still alive without a lookup on a defunct element.
   ScaffoldMessengerState? _messenger;
 
+  /// The composer focus last reported to the player, which keeps the reel
+  /// paused while it is true.
+  bool _reportedComposerFocus = false;
+
   DmReplyContext get _ctx => widget.dmReplyContext;
 
   @override
@@ -226,6 +230,7 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
   void dispose() {
     _throttleTimer?.cancel();
     _closeRetrySnackBar(deferred: true);
+    _reportComposerUnfocusedOnDispose();
     _controller
       ..removeListener(_handleTextChanged)
       ..dispose();
@@ -241,7 +246,20 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
   }
 
   void _handleFocusChanged() {
-    widget.onComposerFocusChanged?.call(_focusNode.hasFocus);
+    _reportedComposerFocus = _focusNode.hasFocus;
+    widget.onComposerFocusChanged?.call(_reportedComposerFocus);
+  }
+
+  /// Tells the player the composer is gone when the bar leaves the tree with
+  /// it focused, as when blocking the group's last member makes the bar
+  /// read-only mid-reply. The focus change itself arrives after [dispose] has
+  /// removed the listener, so without this the reel stays paused. Deferred,
+  /// because the player rebuilds in response and the framework holds the
+  /// state lock while it unmounts us.
+  void _reportComposerUnfocusedOnDispose() {
+    final onFocusChanged = widget.onComposerFocusChanged;
+    if (!_reportedComposerFocus || onFocusChanged == null) return;
+    scheduleMicrotask(() => onFocusChanged(false));
   }
 
   void _handleSubmit() {
