@@ -25,6 +25,19 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
+/// Fails to record the unread part of a window with a broken invariant.
+class _BrokenDebtSyncState extends DmSyncState {
+  _BrokenDebtSyncState(super._prefs);
+
+  @override
+  Future<void> addCatchUpDebt(
+    String pubkey,
+    Iterable<DmCatchUpDebt> debts,
+  ) async {
+    throw StateError('a broken invariant');
+  }
+}
+
 /// A preferences store that refuses to save the catch-up debt while
 /// [refusesDebt], as a full disk does. [SharedPreferences] updates its own
 /// copy before it hears the refusal, so this session still reads the debt.
@@ -291,7 +304,11 @@ void main() {
     return client;
   }
 
-  DmRepository launch(_CappedRelay relay, {DmSyncState? syncState}) {
+  DmRepository launch(
+    _CappedRelay relay, {
+    DmSyncState? syncState,
+    DmRepositoryErrorReporter? errorReporter,
+  }) {
     final messagesDao = DirectMessagesDao(db);
     final conversationsDao = ConversationsDao(db);
     return DmRepository(
@@ -310,6 +327,7 @@ void main() {
       syncState: syncState ?? DmSyncState(prefs),
       userPubkey: _owner,
       signer: LocalNostrSigner(_ownerSecret),
+      errorReporter: errorReporter,
     );
   }
 
@@ -413,9 +431,14 @@ void main() {
     Future<DmRepository> listen(
       _CappedRelay relay, {
       DmSyncState? syncState,
+      DmRepositoryErrorReporter? errorReporter,
       List<Event> waitFor = const [],
     }) async {
-      final repository = launch(relay, syncState: syncState);
+      final repository = launch(
+        relay,
+        syncState: syncState,
+        errorReporter: errorReporter,
+      );
       await repository.startListening();
       for (final wrap in relay.sendBatch()) {
         await settled(wrap);
@@ -695,7 +718,11 @@ void main() {
         // The part is read no further this session, as when the app is
         // closed while reading it.
         final relay = _CappedRelay(stored, maxLimit: 3)..unsettledFromPage = 1;
-        final repository = await listen(relay);
+        final reported = <String>[];
+        final repository = await listen(
+          relay,
+          errorReporter: (_, _, {required site}) => reported.add(site),
+        );
         final live = await wrapAt(wire: now() - 60, content: 'live');
         relay.controller.add(live);
         await settled(live);
@@ -704,6 +731,9 @@ void main() {
         await until(() => store.refused >= 2);
         await pumpEventQueue();
         await repository.stopListening();
+
+        // A refusing store is expected, not a broken invariant.
+        expect(reported, isEmpty);
 
         // This session's copy shows the part the store never saved.
         expect(DmSyncState(prefs).catchUpDebt(_owner), isNotEmpty);
@@ -754,6 +784,29 @@ void main() {
           expect(next.newestWireSyncedAt(_owner), live.createdAt);
         },
       );
+    });
+
+    test('reports a broken invariant while recording the unread part, and '
+        'keeps the window where it was', () async {
+      final relay = _CappedRelay(stored, maxLimit: 3);
+      final reported = <String>[];
+      final repository = await listen(
+        relay,
+        syncState: _BrokenDebtSyncState(prefs),
+        errorReporter: (_, _, {required site}) => reported.add(site),
+      );
+      for (var i = 0; i < 100 && reported.isEmpty; i++) {
+        await pumpEventQueue();
+      }
+      await repository.stopListening();
+
+      // Each attempt to save reports it; every one names this site.
+      expect(reported, isNotEmpty);
+      expect(
+        reported,
+        everyElement(DmRepositoryReportableSites.catchUpDebtUnexpectedFailure),
+      );
+      expect(DmSyncState(prefs).newestWireSyncedAt(_owner), lastWire);
     });
 
     test('drops the stamps when the session ends while the unread part is '

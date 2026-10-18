@@ -3032,12 +3032,22 @@ class DmRepository {
           }
         }),
       ).catchError((Object error, StackTrace stackTrace) {
+        // A failure keeps every stamp held for the rest of the session, so a
+        // broken invariant is reported rather than only logged; a store that
+        // refuses the debt is expected, and the next save tries it again.
         Log.error(
           'Failed to save the DM catch-up boundary: $error',
           category: LogCategory.system,
           error: error,
           stackTrace: stackTrace,
         );
+        if (error is StateError || error is TypeError || error is RangeError) {
+          _errorReporter?.call(
+            error,
+            stackTrace,
+            site: DmRepositoryReportableSites.catchUpDebtUnexpectedFailure,
+          );
+        }
       }),
     );
   }

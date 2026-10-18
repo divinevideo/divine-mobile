@@ -78,8 +78,8 @@ abstract class DmRepositoryReportableSites {
   static const String historyDrainUnexpectedFailure =
       'historyDrain.unexpectedFailure';
 
-  /// The catch-up debt walk hit a programming invariant failure while
-  /// reading the part of a window a relay may have withheld at its cap.
+  /// The catch-up debt walk, or the save that records the debt before it
+  /// moves the window, hit a programming invariant failure.
   static const String catchUpDebtUnexpectedFailure =
       'catchUpDebt.unexpectedFailure';
 
