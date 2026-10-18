@@ -678,7 +678,8 @@ class NotificationRepository {
         limit: _pageSize,
         ownerPubkey: _userPubkey,
       );
-      if (rows.isEmpty) return;
+      // Closed while reading: an account switch tore this repository down.
+      if (_closed || rows.isEmpty) return;
       if (_snapshot.value.items.isNotEmpty) return;
       final items = rows
           .map(_rowToPlaceholder)
@@ -739,7 +740,7 @@ class NotificationRepository {
         videosFuture,
       ).wait;
 
-      if (generation != _allFeed.fetchGeneration) return;
+      if (_closed || generation != _allFeed.fetchGeneration) return;
 
       final current = _snapshot.value;
       if (!_sameNotificationIds(current.items, placeholders)) return;

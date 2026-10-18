@@ -4945,6 +4945,83 @@ void main() {
           );
         },
       );
+
+      // An in-place account switch closes the outgoing account's repository
+      // while its hydration can still be waiting on the network (#10291).
+      group('after close', () {
+        final cachedRow = NotificationRow(
+          id: 'cached_1',
+          type: 'like',
+          fromPubkey: 'cached_actor',
+          timestamp: 1700000000,
+          targetEventId: 'cached_event',
+          hasCommentTarget: false,
+          isRead: false,
+          cachedAt: DateTime(2026),
+        );
+
+        test(
+          'an enrichment that settles after close changes nothing',
+          () async {
+            when(
+              () => notificationsDao.getAllNotifications(
+                limit: any(named: 'limit'),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).thenAnswer((_) async => [cachedRow]);
+            final stats = Completer<VideoStats?>();
+            when(
+              () => funnelcakeApiClient.getVideoStats('cached_event'),
+            ).thenAnswer((_) => stats.future);
+
+            final hydrated = NotificationRepository(
+              funnelcakeApiClient: funnelcakeApiClient,
+              profileRepository: profileRepository,
+              notificationsDao: notificationsDao,
+              userPubkey: userPubkey,
+            );
+            await pumpEventQueue();
+            verify(
+              () => funnelcakeApiClient.getVideoStats('cached_event'),
+            ).called(1);
+
+            await hydrated.close();
+            // Resuming into the closed repository used to throw here, uncaught.
+            stats.complete(null);
+            await pumpEventQueue();
+          },
+        );
+
+        test('a cache read that returns after close changes nothing', () async {
+          final rows = Completer<List<NotificationRow>>();
+          when(
+            () => notificationsDao.getAllNotifications(
+              limit: any(named: 'limit'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) => rows.future);
+
+          final hydrated = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+          );
+          await pumpEventQueue();
+          verify(
+            () => notificationsDao.getAllNotifications(
+              limit: any(named: 'limit'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).called(1);
+
+          await hydrated.close();
+          rows.complete([cachedRow]);
+          await pumpEventQueue();
+
+          verifyNever(() => funnelcakeApiClient.getVideoStats(any()));
+        });
+      });
     });
 
     group('refresh', () {
