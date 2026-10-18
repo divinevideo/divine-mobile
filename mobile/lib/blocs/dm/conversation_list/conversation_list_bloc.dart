@@ -663,6 +663,11 @@ class ConversationListBloc
       ..sort((a, b) => b.effectiveTimestamp.compareTo(a.effectiveTimestamp));
   }
 
+  /// The viewer's own block and mute lists, the one predicate every row and
+  /// the search index hide a member by (#10150).
+  bool Function(String pubkey) get _isHiddenFromDms =>
+      _blocklistRepository?.shouldFilterFromDms ?? (_) => false;
+
   /// The member a row is named for, whose name search has to resolve to
   /// match what the row renders (#10151).
   String _namedParticipant(DmConversation conversation, String self) =>
@@ -670,6 +675,7 @@ class ConversationListBloc
         participantPubkeys: conversation.participantPubkeys,
         currentUserPubkey: self,
         moderationPresentation: _moderationPresentation,
+        isHidden: _isHiddenFromDms,
       ).pubkey;
 
   /// A synthetic pin carries no timestamp, so it needs a `createdAt` that is
@@ -833,15 +839,16 @@ class ConversationListBloc
     if (unreadOnly) result = result.where((c) => !c.isRead).toList();
     if (query.isEmpty) return result;
     final normalized = query.toLowerCase();
-    final isHidden = _blocklistRepository?.shouldFilterFromDms ?? (_) => false;
+    final isHidden = _isHiddenFromDms;
     final isBlockedByUs = _blocklistRepository?.isBlocked ?? (_) => false;
     return result.where((c) {
       // Named as the row names it, so a room is never matched by the name of
-      // the moderation account in it (#10151).
+      // the moderation account or a hidden member in it (#10151, #10150).
       final named = dmConversationNamedPeer(
         participantPubkeys: c.participantPubkeys,
         currentUserPubkey: userPubkey,
         moderationPresentation: _moderationPresentation,
+        isHidden: isHidden,
       );
       final peerName = _peerName(
         named.pubkey,
@@ -863,8 +870,11 @@ class ConversationListBloc
         groupFallbackName: peerName,
       ).toLowerCase();
       final hasSubject = c.isGroup && c.subject?.trim().isNotEmpty == true;
+      // A titled room is also found by its members' names, but never by a
+      // hidden one's: nothing on the row names them.
       final knownMemberNames = hasSubject
           ? c.participantPubkeys
+                .where((pubkey) => !isHidden(pubkey))
                 .map(
                   (pubkey) => (
                     pubkey: pubkey,

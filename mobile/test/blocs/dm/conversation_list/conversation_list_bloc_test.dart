@@ -2921,11 +2921,15 @@ void main() {
       ).thenAnswer((_) async => const {});
     }
 
-    ConversationListBloc createBloc({DmPeerLabels? withLabels}) {
+    ConversationListBloc createBloc({
+      DmPeerLabels? withLabels,
+      ContentBlocklistRepository? blocklist,
+    }) {
       final bloc = ConversationListBloc(
         dmRepository: mockDmRepository,
         followRepository: mockFollowRepository,
         profileRepository: mockProfileRepository,
+        contentBlocklistRepository: blocklist,
         recomputeDebounce: Duration.zero,
         moderationPresentation: moderationPresentationOf,
         retiredModerationAccount: isRetiredModerationAccount,
@@ -3329,6 +3333,137 @@ void main() {
         expect(state.visibleConversations.map((c) => c.id).toList(), [
           'room',
         ]);
+      });
+    });
+
+    // #10150. Blocking a member keeps the room, so the row stops naming them
+    // and the index must match the name the row now shows.
+    group('a room with a hidden member (#10150)', () {
+      setUp(stubPeerSearchDependencies);
+      setUp(() => stubVanished(const {}));
+
+      DmConversation room({String? subject}) => _createConversation(
+        id: 'room',
+        isGroup: true,
+        subject: subject,
+        participantPubkeys: const [_testPubkey1, _testPubkey2, _testPubkey3],
+      );
+
+      // Answers only for the pubkeys it is asked about, as the real batch
+      // fetch does, so which member the bloc resolves is observable.
+      void stubNames(Map<String, String> names) {
+        when(
+          () => mockProfileRepository.fetchBatchProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer((invocation) async {
+          final requested = invocation.namedArguments[#pubkeys] as List<String>;
+          return {
+            for (final pubkey in requested)
+              if (names.containsKey(pubkey))
+                pubkey: UserProfile(
+                  pubkey: pubkey,
+                  displayName: names[pubkey],
+                  rawData: const {},
+                  createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+                  eventId: _testConversationId1,
+                ),
+          };
+        });
+      }
+
+      Future<ContentBlocklistRepository> blocklistBlocking(
+        Iterable<String> pubkeys,
+      ) async {
+        final blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+        await blocklist.blockUsers(pubkeys, ourPubkey: _testPubkey1);
+        return blocklist;
+      }
+
+      Future<ConversationListState> load(ConversationListBloc bloc) async {
+        bloc.add(const ConversationListStarted());
+        return bloc.stream.firstWhere(
+          (s) => s.status == ConversationListStatus.loaded,
+        );
+      }
+
+      Future<ConversationListState> search(
+        ConversationListBloc bloc,
+        String query, {
+        required bool Function(ConversationListState) settled,
+      }) {
+        bloc.add(ConversationListSearchQueryChanged(query));
+        return firstMatch(bloc, (s) => s.searchQuery == query && settled(s));
+      }
+
+      test('an untitled room is found by the name of the member its row '
+          'now shows', () async {
+        final blocklist = await blocklistBlocking([_testPubkey2]);
+        stubNames({_testPubkey2: 'Alice', _testPubkey3: 'Bob'});
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels, blocklist: blocklist);
+        addTearDown(bloc.close);
+        await load(bloc);
+
+        final state = await search(
+          bloc,
+          'bob',
+          settled: (s) => s.visibleConversations.isNotEmpty,
+        );
+
+        expect(state.visibleConversations.map((c) => c.id), ['room']);
+      });
+
+      test('an untitled room is not found by the name of a blocked member '
+          'its row no longer shows', () async {
+        final blocklist = await blocklistBlocking([_testPubkey2]);
+        stubNames({_testPubkey2: 'Alice', _testPubkey3: 'Bob'});
+        _stubStreams(mockDmRepository, accepted: [room()]);
+        final bloc = createBloc(withLabels: labels, blocklist: blocklist);
+        addTearDown(bloc.close);
+        await load(bloc);
+
+        // Settled once Bob, the member the row shows, has been resolved: until
+        // then the index could miss for want of a name rather than a rule.
+        final state = await search(
+          bloc,
+          'alice',
+          settled: (s) => s.profileNames.containsKey(_testPubkey3),
+        );
+
+        expect(state.profileNames[_testPubkey3], 'Bob');
+        expect(state.visibleConversations, isEmpty);
+      });
+
+      test('a titled room stops being found by the name of a member once '
+          'they are blocked', () async {
+        final blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+        stubNames({_testPubkey2: 'Alice', _testPubkey3: 'Bob'});
+        _stubStreams(mockDmRepository, accepted: [room(subject: 'Book club')]);
+        final bloc = createBloc(withLabels: labels, blocklist: blocklist);
+        addTearDown(bloc.close);
+        await load(bloc);
+
+        // Positive control: with nobody blocked the room is named for Alice,
+        // her name is known, and a titled room is found by a member's name.
+        final before = await search(
+          bloc,
+          'alice',
+          settled: (s) => s.visibleConversations.isNotEmpty,
+        );
+        expect(before.profileNames[_testPubkey2], 'Alice');
+
+        await blocklist.blockUsers([_testPubkey2], ourPubkey: _testPubkey1);
+        final after = await search(
+          bloc,
+          'alic',
+          settled: (s) => s.searchQuery == 'alic',
+        );
+
+        expect(after.profileNames[_testPubkey2], 'Alice');
+        expect(after.visibleConversations, isEmpty);
       });
     });
 

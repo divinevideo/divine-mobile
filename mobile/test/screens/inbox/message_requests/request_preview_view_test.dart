@@ -3,6 +3,7 @@
 // ABOUTME: and navigation to profile view, conversation, and decline action.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -844,6 +845,61 @@ void main() {
           ),
           findsNothing,
         );
+      });
+
+      // #10150. Blocking a member keeps the room, so the card stops naming
+      // them while another member is visible.
+      testWidgets('a group is named for a member the viewer has not blocked', (
+        tester,
+      ) async {
+        const third =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        final blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+        await tester.runAsync(
+          () => blocklist.blockUsers([otherPubkey], ourPubkey: currentPubkey),
+        );
+        expect(blocklist.isBlocked(otherPubkey), isTrue);
+        final subject = buildModerationSubject(
+          otherPubkey,
+          profile: UserProfile(
+            pubkey: otherPubkey,
+            displayName: 'Alice',
+            rawData: const {},
+            createdAt: DateTime(2026),
+            eventId: 'c' * 64,
+          ),
+          extraOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            userProfileReactiveProvider(third).overrideWith(
+              (ref) => Stream.value(
+                UserProfile(
+                  pubkey: third,
+                  displayName: 'Bob',
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: 'd' * 64,
+                ),
+              ),
+            ),
+          ],
+        );
+        when(() => mockPreviewCubit.state).thenReturn(
+          const RequestPreviewState(
+            status: RequestPreviewStatus.loaded,
+            messageCount: 1,
+            participantPubkeys: [otherPubkey, third],
+          ),
+        );
+
+        await tester.pumpWidget(subject);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(l10n.inboxGroupConversationTitle('Bob', 1)),
+          findsWidgets,
+        );
+        expect(find.textContaining('Alice'), findsNothing);
       });
 
       testWidgets('an ordinary request keeps the overture framing', (

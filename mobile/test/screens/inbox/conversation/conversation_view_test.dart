@@ -2357,6 +2357,95 @@ void main() {
         expect(find.text(hiddenText), findsOneWidget);
         expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
       });
+
+      // The app bar names an untitled room for one of its members, so it must
+      // not keep naming the one the viewer hid while another is visible.
+      group('titles the app bar', () {
+        UserProfile namedProfile(String pubkey, String name) => UserProfile(
+          pubkey: pubkey,
+          displayName: name,
+          rawData: const {},
+          createdAt: now,
+          eventId: 'c' * 64,
+        );
+
+        // Alice is `otherPubkey`, the first counterparty; Bob follows her.
+        Widget aliceAndBob() => buildSubject(
+          counterparties: const [otherPubkey, bob],
+          otherProfile: namedProfile(otherPubkey, 'Alice'),
+          extraOverrides: [
+            fetchUserProfileProvider(
+              bob,
+            ).overrideWith((ref) async => namedProfile(bob, 'Bob')),
+            profileVanishedProvider(bob).overrideWith((ref) => false),
+            profileIdentityResolvingProvider(bob).overrideWithValue(false),
+          ],
+        );
+
+        Finder inAppBar(String text) => find.descendant(
+          of: find.byType(ConversationAppBar),
+          matching: find.text(text),
+        );
+
+        testWidgets('for a member the viewer has not hidden', (tester) async {
+          hidden = {otherPubkey};
+
+          await tester.pumpWidget(aliceAndBob());
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            inAppBar(l10n.inboxGroupConversationTitle('Bob', 1)),
+            findsOneWidget,
+          );
+          expect(find.textContaining('Alice'), findsNothing);
+        });
+
+        testWidgets('as it always has when every member is hidden', (
+          tester,
+        ) async {
+          hidden = {otherPubkey, bob};
+          when(() => mockBlocklist.isBlocked(any())).thenReturn(true);
+
+          await tester.pumpWidget(aliceAndBob());
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            inAppBar(l10n.inboxGroupConversationTitle('Alice', 1)),
+            findsOneWidget,
+          );
+          expect(find.textContaining('Bob and'), findsNothing);
+        });
+
+        testWidgets('for the first member again once they are unblocked', (
+          tester,
+        ) async {
+          hidden = {otherPubkey};
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+
+          await tester.pumpWidget(aliceAndBob());
+          await tester.pump();
+          await tester.pump();
+          expect(
+            inAppBar(l10n.inboxGroupConversationTitle('Bob', 1)),
+            findsOneWidget,
+          );
+
+          hidden = {};
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(false);
+          ProviderScope.containerOf(
+            tester.element(find.byType(ConversationView)),
+          ).read(blocklistVersionProvider.notifier).increment();
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            inAppBar(l10n.inboxGroupConversationTitle('Alice', 1)),
+            findsOneWidget,
+          );
+        });
+      });
     });
 
     // #6416. Nothing has read a retired moderation key since the rotation, so

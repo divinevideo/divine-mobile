@@ -350,15 +350,16 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       handle = '';
     } else {
       // The member the title names: the counterparty of a one-to-one, and a
-      // room's first member that is not a moderation key, without Divine's
-      // branding (#10151). Sends, blocking and the options sheet still act on
-      // `otherPubkey`.
+      // room's first visible member that is not a moderation key, without
+      // Divine's branding (#10151). Sends, blocking and the options sheet
+      // still act on `otherPubkey`.
       final named = dmConversationNamedPeer(
         participantPubkeys: widget.participantPubkeys,
         currentUserPubkey: currentPubkey,
         moderationPresentation: ref.watch(
           moderationPresentationResolverProvider,
         ),
+        isHidden: blockedReactors.contains,
       );
       final namedPubkey = named.pubkey;
       final profileAsync = ref.watch(fetchUserProfileProvider(namedPubkey));

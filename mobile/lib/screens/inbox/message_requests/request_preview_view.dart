@@ -104,13 +104,19 @@ class RequestPreviewView extends ConsumerWidget {
     final currentPubkey =
         ref.watch(authServiceProvider).currentPublicKeyHex ?? '';
 
+    // Rebuilds on any block, unblock or mute, so blocking a member from the
+    // profile this card links to stops that member naming the room.
+    ref.watch(blocklistVersionProvider);
+    final blocklist = ref.read(contentBlocklistRepositoryProvider);
+
     // The member the card describes and links to: the peer of a one-to-one,
-    // and a room's first member that is not a moderation key, without
+    // and a room's first visible member that is not a moderation key, without
     // Divine's branding (#10151).
     final named = dmConversationNamedPeer(
       participantPubkeys: participantPubkeys,
       currentUserPubkey: currentPubkey,
       moderationPresentation: ref.watch(moderationPresentationResolverProvider),
+      isHidden: blocklist.shouldFilterFromDms,
     );
     final namedPubkey = named.pubkey;
 

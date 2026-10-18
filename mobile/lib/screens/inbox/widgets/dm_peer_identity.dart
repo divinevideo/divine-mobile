@@ -56,9 +56,11 @@ DmPeerLabels dmPeerLabels(BuildContext context) => DmPeerLabels(
 /// (#8204).
 ///
 /// [peerName] is what [dmPeerDisplayName] resolved for the member
-/// [dmConversationNamedPeer] names the conversation for. It is passed in rather
-/// than resolved here because a 1:1 name needs a profile lookup this function
-/// has no business performing.
+/// [dmConversationNamedPeer] names the conversation for, which for an untitled
+/// group is a member the viewer has not hidden whenever one exists (#10150).
+/// It is passed in rather than resolved here because a 1:1 name needs a
+/// profile lookup this function has no business performing. The "N others"
+/// count still includes hidden members: they remain in the room.
 String dmConversationDisplayTitle(
   BuildContext context, {
   required List<String> participantPubkeys,

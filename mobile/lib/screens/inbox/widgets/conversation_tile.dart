@@ -68,13 +68,19 @@ class ConversationTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Rebuilds on any block, unblock or mute, so unblocking brings a hidden
+    // member's name and last message back without a reload (#7025).
+    ref.watch(blocklistVersionProvider);
+    final blocklist = ref.read(contentBlocklistRepositoryProvider);
+
     // The member the row is named and pictured for: the peer of a one-to-one,
-    // and a room's first member that is not a moderation key, without
+    // and a room's first visible member that is not a moderation key, without
     // Divine's branding (#10151).
     final named = dmConversationNamedPeer(
       participantPubkeys: conversation.participantPubkeys,
       currentUserPubkey: currentUserPubkey,
       moderationPresentation: ref.watch(moderationPresentationResolverProvider),
+      isHidden: blocklist.shouldFilterFromDms,
     );
     final namedPubkey = named.pubkey;
     final peers = dmConversationPeerPubkeys(
@@ -86,10 +92,6 @@ class ConversationTile extends ConsumerWidget {
     final isClosedThread = peers.any(isRetiredModerationAccount);
 
     // A hidden member's last message hides here as it does in the thread.
-    // Rebuilds on any block, unblock or mute, so unblocking brings the preview
-    // back without a reload (#7025).
-    ref.watch(blocklistVersionProvider);
-    final blocklist = ref.read(contentBlocklistRepositoryProvider);
     final previewHidden = dmPreviewHidden(
       conversation: conversation,
       currentUserPubkey: currentUserPubkey,
