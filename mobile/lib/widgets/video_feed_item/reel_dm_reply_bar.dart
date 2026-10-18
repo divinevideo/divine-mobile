@@ -61,6 +61,10 @@ class ReelDmReplyBarHost extends ConsumerWidget {
     if (writability != DmThreadWritability.writable) {
       return const SizedBox.shrink();
     }
+    final blockedCount = dmThreadBlockedParticipants(
+      participantPubkeys: dmReplyContext.participantPubkeys,
+      isBlockedByUs: blocklistRepository.isBlocked,
+    ).length;
 
     final dmRepository = ref.watch(dmRepositoryProvider);
     final reactionsRepository = ref.watch(dmReactionsRepositoryProvider);
@@ -101,6 +105,7 @@ class ReelDmReplyBarHost extends ConsumerWidget {
           return _ReelDmReplyBar(
             dmReplyContext: dmReplyContext,
             ownerPubkey: ownerPubkey,
+            blockedCount: blockedCount,
             screenAnalytics: ref.read(screenAnalyticsServiceProvider),
             // The player owns pausing + the full-screen reaction overlay; the
             // bar just emits the signals, staying decoupled from its State.
@@ -145,6 +150,7 @@ class _ReelDmReplyBar extends StatefulWidget {
   const _ReelDmReplyBar({
     required this.dmReplyContext,
     required this.ownerPubkey,
+    required this.blockedCount,
     required this.screenAnalytics,
     this.onComposerFocusChanged,
     this.onReaction,
@@ -152,6 +158,7 @@ class _ReelDmReplyBar extends StatefulWidget {
 
   final DmReplyContext dmReplyContext;
   final String ownerPubkey;
+  final int blockedCount;
 
   /// Shared screen-analytics service, resolved by the host so this plain
   /// [StatefulWidget] does not reach into Riverpod for its dependencies.
@@ -616,6 +623,17 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (widget.blockedCount > 0) ...[
+                  Text(
+                    context.l10n.dmBlockedGroupMembersBannerBody(
+                      widget.blockedCount,
+                    ),
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 _ComposerPill(
                   controller: _controller,
                   focusNode: _focusNode,

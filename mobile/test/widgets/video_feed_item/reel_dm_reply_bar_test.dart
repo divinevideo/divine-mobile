@@ -164,6 +164,46 @@ void main() {
       );
 
   group('renders', () {
+    testWidgets('discloses blocked recipients in a writable group', (
+      tester,
+    ) async {
+      const otherPeer =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const groupContext = DmReplyContext(
+        conversationId: 'group-convo',
+        participantPubkeys: [_peer, otherPeer],
+        isGroup: true,
+        sharedReelMessageId: _reelId,
+        messageAuthorPubkey: _peer,
+        hintName: 'Alice',
+        isOwnMessage: false,
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.pumpWidget(wrap(groupContext));
+      await tester.pump();
+      expect(find.text(l10n.dmBlockedGroupMembersBannerBody(1)), findsNothing);
+
+      when(() => blocklist.isBlocked(_peer)).thenReturn(true);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold)),
+      );
+      container.read(blocklistVersionProvider.notifier).increment();
+      await tester.pump();
+
+      expect(
+        find.text(l10n.dmBlockedGroupMembersBannerBody(1)),
+        findsOneWidget,
+      );
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('❤️'), findsOneWidget);
+
+      when(() => blocklist.isBlocked(otherPeer)).thenReturn(true);
+      container.read(blocklistVersionProvider.notifier).increment();
+      await tester.pump();
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('❤️'), findsNothing);
+    });
+
     testWidgets('does not render for a retired moderation thread', (
       tester,
     ) async {
