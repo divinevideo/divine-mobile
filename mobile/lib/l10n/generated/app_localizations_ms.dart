@@ -5870,10 +5870,6 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Ini mengalih keluar perbualan kumpulan daripada peti masuk anda. Jika sesiapa menghantar mesej lagi dalam kumpulan itu, perbualan baharu akan bermula.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Alih Keluar';
 
   @override
@@ -14158,6 +14154,22 @@ class AppLocalizationsMs extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Disiarkan $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Keluar kumpulan';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Keluar kumpulan?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Ia hilang daripada peti masuk anda, dan mesej baharu tidak akan membawanya kembali. Tulis dalam kumpulan itu lagi untuk menyertainya semula. Ahli lain tidak dimaklumkan.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Keluar';
+
+  @override
+  String get inboxLeftGroup => 'Anda telah keluar daripada kumpulan';
 
   @override
   String get listPrivateConversionTooLarge =>

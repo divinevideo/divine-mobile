@@ -2418,7 +2418,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "ይህ የቡድን ውይይቱን ከመልእክት ሳጥንዎ ያስወግዳል። ማንኛውም ሰው እንደገና ለቡድኑ መልእክት ከላከ አዲስ ውይይት ይጀምራል።",
   "inboxRemoveConfirmConfirm": "አስወግድ",
   "inboxCollabInviteCardTitle": "የተባባሪ ግብዣ",
   "@inboxCollabInviteCardTitle": {
@@ -5809,6 +5808,11 @@
     }
   },
   "userRowPosted": "የተለጠፈው {time}",
+  "inboxActionLeaveGroup": "ከቡድኑ መውጣት",
+  "inboxLeaveGroupConfirmTitle": "ከቡድኑ ይውጡ?",
+  "inboxLeaveGroupConfirmBody": "ከመልእክት ሳጥንዎ ይወገዳል፣ አዲስ መልእክቶችም አይመልሱትም። እንደገና ለመቀላቀል በውስጡ ይጻፉ። ሌሎቹ አይነገራቸውም።",
+  "inboxLeaveGroupConfirmConfirm": "ይውጡ",
+  "inboxLeftGroup": "ከቡድኑ ወጥተዋል",
 "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
 "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
 "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",

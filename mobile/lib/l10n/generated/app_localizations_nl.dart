@@ -5891,10 +5891,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Hiermee verwijder je het groepsgesprek uit je inbox. Als iemand weer een bericht naar de groep stuurt, begint er een nieuw gesprek.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Verwijderen';
 
   @override
@@ -14236,6 +14232,22 @@ class AppLocalizationsNl extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Geplaatst $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Groep verlaten';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Groep verlaten?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Hij verdwijnt uit je inbox en nieuwe berichten brengen hem niet terug. Schrijf er opnieuw in om weer mee te doen. De anderen krijgen geen melding.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Verlaten';
+
+  @override
+  String get inboxLeftGroup => 'Je hebt de groep verlaten';
 
   @override
   String get listPrivateConversionTooLarge =>

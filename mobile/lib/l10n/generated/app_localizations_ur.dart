@@ -5877,10 +5877,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'اس سے گروپ گفتگو آپ کے ان باکس سے ہٹ جائے گی۔ اگر کوئی گروپ میں دوبارہ پیغام بھیجے تو نئی گفتگو شروع ہو جائے گی۔';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'ہٹائیں';
 
   @override
@@ -14157,6 +14153,22 @@ class AppLocalizationsUr extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time پوسٹ کی گئی';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'گروپ چھوڑیں';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'گروپ چھوڑیں؟';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'یہ آپ کے ان باکس سے ہٹ جائے گا، اور نئے پیغامات اسے واپس نہیں لائیں گے۔ دوبارہ شامل ہونے کے لیے اس میں پھر سے لکھیں۔ دوسروں کو اطلاع نہیں دی جاتی۔';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'چھوڑیں';
+
+  @override
+  String get inboxLeftGroup => 'آپ نے گروپ چھوڑ دیا';
 
   @override
   String get listPrivateConversionTooLarge =>

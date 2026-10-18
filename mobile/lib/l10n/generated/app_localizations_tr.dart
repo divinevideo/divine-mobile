@@ -5805,10 +5805,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Bu, grup sohbetini gelen kutundan kaldırır. Biri gruba tekrar yazarsa yeni bir sohbet başlar.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Kaldır';
 
   @override
@@ -14087,6 +14083,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time paylaşıldı';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Gruptan çık';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Gruptan çıkılsın mı?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Gelen kutundan kalkar ve yeni mesajlar onu geri getirmez. Yeniden katılmak için gruba tekrar yaz. Diğerlerine haber verilmez.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Çık';
+
+  @override
+  String get inboxLeftGroup => 'Gruptan çıktın';
 
   @override
   String get listPrivateConversionTooLarge =>

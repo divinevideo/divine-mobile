@@ -5834,10 +5834,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Thao tác này xóa cuộc trò chuyện nhóm khỏi hộp thư đến. Nếu có ai nhắn tin vào nhóm lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Xóa';
 
   @override
@@ -14102,6 +14098,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Đã đăng $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Rời nhóm';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Rời nhóm?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Nhóm sẽ biến mất khỏi hộp thư đến và tin nhắn mới sẽ không đưa nhóm trở lại. Hãy viết lại vào nhóm để tham gia lại. Những người khác sẽ không được thông báo.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Rời';
+
+  @override
+  String get inboxLeftGroup => 'Đã rời nhóm';
 
   @override
   String get listPrivateConversionTooLarge =>

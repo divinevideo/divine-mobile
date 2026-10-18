@@ -5514,10 +5514,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      '这会从你的收件箱中移除这个群聊会话。如果有人再次在群里发消息，会开始一个新会话。';
-
-  @override
   String get inboxRemoveConfirmConfirm => '删除';
 
   @override
@@ -13309,6 +13305,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String userRowPosted(String time) {
     return '发布于$time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => '退出群聊';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => '退出群聊？';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      '它会从你的收件箱中移除，新消息也不会让它回来。在群里再发一条消息即可重新加入。其他人不会收到通知。';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => '退出';
+
+  @override
+  String get inboxLeftGroup => '已退出群聊';
 
   @override
   String get listPrivateConversionTooLarge =>

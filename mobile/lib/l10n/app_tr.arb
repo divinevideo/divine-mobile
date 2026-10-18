@@ -2049,7 +2049,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Bu, grup sohbetini gelen kutundan kaldırır. Biri gruba tekrar yazarsa yeni bir sohbet başlar.",
   "inboxRemoveConfirmConfirm": "Kaldır",
   "inboxRemoveConfirmTitle": "Sohbet kaldırılsın mı?",
   "inboxRemovedConversation": "Sohbet kaldırıldı",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "{time} paylaşıldı",
+  "inboxActionLeaveGroup": "Gruptan çık",
+  "inboxLeaveGroupConfirmTitle": "Gruptan çıkılsın mı?",
+  "inboxLeaveGroupConfirmBody": "Gelen kutundan kalkar ve yeni mesajlar onu geri getirmez. Yeniden katılmak için gruba tekrar yaz. Diğerlerine haber verilmez.",
+  "inboxLeaveGroupConfirmConfirm": "Çık",
+  "inboxLeftGroup": "Gruptan çıktın",
 "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
 "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
 "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",

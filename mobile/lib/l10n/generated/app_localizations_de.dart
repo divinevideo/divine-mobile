@@ -5948,10 +5948,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Dadurch wird die Gruppenunterhaltung aus deinem Posteingang entfernt. Wenn jemand wieder in die Gruppe schreibt, beginnt eine neue Unterhaltung.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Entfernen';
 
   @override
@@ -14331,6 +14327,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Gepostet $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Gruppe verlassen';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Gruppe verlassen?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Sie verschwindet aus deinem Posteingang, und neue Nachrichten holen sie nicht zurück. Schreib wieder in die Gruppe, um zurückzukommen. Die anderen erfahren nichts davon.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Verlassen';
+
+  @override
+  String get inboxLeftGroup => 'Du hast die Gruppe verlassen';
 
   @override
   String get listPrivateConversionTooLarge =>

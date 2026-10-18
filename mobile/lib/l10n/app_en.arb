@@ -3752,10 +3752,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "This removes the group conversation from your inbox. If anyone messages the group again, a new conversation starts.",
-  "@inboxRemoveConfirmBodyGroup": {
-    "description": "Body of the remove-conversation confirmation for a GROUP thread. Names nobody, because a group has no single counterparty — the 1:1 wording `inboxRemoveConfirmBody` says 'your conversation with {displayName}', which would read as a conversation with the room's title. Mirrors `inboxRemoveConfirmBodyVanishedAccount`, which is name-free for the same reason."
-  },
   "inboxRemoveConfirmConfirm": "Remove",
   "inboxCollabInviteCardTitle": "Collaborator invite",
   "@inboxCollabInviteCardTitle": {
@@ -10894,6 +10890,26 @@
     }
   },
   "userRowPosted": "Posted {time}",
+  "inboxActionLeaveGroup": "Leave group",
+  "@inboxActionLeaveGroup": {
+    "description": "Long-press action on a GROUP conversation in the inbox, in place of 'Remove conversation'. Leaves the group on this device only: it leaves the inbox, and the others' new messages do not bring it back until the user writes in it again. Nothing is sent to the other members."
+  },
+  "inboxLeaveGroupConfirmTitle": "Leave group?",
+  "@inboxLeaveGroupConfirmTitle": {
+    "description": "Title of the confirmation shown before leaving a group conversation."
+  },
+  "inboxLeaveGroupConfirmBody": "It leaves your inbox, and new messages won't bring it back. Write in it again to rejoin. The others aren't told.",
+  "@inboxLeaveGroupConfirmBody": {
+    "description": "Body of the leave-group confirmation. 'It' is the group. Leaving publishes nothing, so the other members are not notified. Writing in the group again, from any device or by starting a new chat with the same people, brings it back; what others sent in between stays hidden."
+  },
+  "inboxLeaveGroupConfirmConfirm": "Leave",
+  "@inboxLeaveGroupConfirmConfirm": {
+    "description": "Confirm button of the leave-group confirmation, and the button that leaves an open group conversation. Destructive."
+  },
+  "inboxLeftGroup": "Left group",
+  "@inboxLeftGroup": {
+    "description": "Snackbar after the user leaves a group conversation."
+  },
   "listPrivateConversionTooLarge": "This list is too large to make private. Remove some videos first. Your edits are kept here and haven't been saved.",
   "@listPrivateConversionTooLarge": {
     "description": "An oversized public list cannot become private; the open editor retains unsaved drafts."

@@ -5957,10 +5957,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'This removes the group conversation from your inbox. If anyone messages the group again, a new conversation starts.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Remove';
 
   @override
@@ -14254,6 +14250,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Posted $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Leave group';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Leave group?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'It leaves your inbox, and new messages won\'t bring it back. Write in it again to rejoin. The others aren\'t told.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Leave';
+
+  @override
+  String get inboxLeftGroup => 'Left group';
 
   @override
   String get listPrivateConversionTooLarge =>

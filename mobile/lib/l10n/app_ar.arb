@@ -2042,7 +2042,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "يؤدي هذا إلى إزالة محادثة المجموعة من صندوق الوارد. إذا راسل أي شخص المجموعة مرة أخرى، تبدأ محادثة جديدة.",
   "inboxRemoveConfirmConfirm": "إزالة",
   "inboxRemoveConfirmTitle": "إزالة المحادثة؟",
   "inboxRemovedConversation": "تمت إزالة المحادثة",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "نُشر {time}",
+  "inboxActionLeaveGroup": "مغادرة المجموعة",
+  "inboxLeaveGroupConfirmTitle": "مغادرة المجموعة؟",
+  "inboxLeaveGroupConfirmBody": "ستختفي من صندوق الوارد، ولن تعيدها الرسائل الجديدة. للانضمام مجددًا تكفي الكتابة فيها. لا يُرسَل أي إشعار.",
+  "inboxLeaveGroupConfirmConfirm": "مغادرة",
+  "inboxLeftGroup": "تمت مغادرة المجموعة",
 "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
 "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
 "listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",

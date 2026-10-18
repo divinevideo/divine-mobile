@@ -2800,8 +2800,12 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Ini mengalih keluar perbualan kumpulan daripada peti masuk anda. Jika sesiapa menghantar mesej lagi dalam kumpulan itu, perbualan baharu akan bermula.",
   "inboxRemoveConfirmConfirm": "Alih Keluar",
+  "inboxActionLeaveGroup": "Keluar kumpulan",
+  "inboxLeaveGroupConfirmTitle": "Keluar kumpulan?",
+  "inboxLeaveGroupConfirmBody": "Ia hilang daripada peti masuk anda, dan mesej baharu tidak akan membawanya kembali. Tulis dalam kumpulan itu lagi untuk menyertainya semula. Ahli lain tidak dimaklumkan.",
+  "inboxLeaveGroupConfirmConfirm": "Keluar",
+  "inboxLeftGroup": "Anda telah keluar daripada kumpulan",
   "inboxCollabInviteCardTitle": "Jemputan kolaborator",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

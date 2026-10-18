@@ -5849,10 +5849,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'يؤدي هذا إلى إزالة محادثة المجموعة من صندوق الوارد. إذا راسل أي شخص المجموعة مرة أخرى، تبدأ محادثة جديدة.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'إزالة';
 
   @override
@@ -14162,6 +14158,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String userRowPosted(String time) {
     return 'نُشر $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'مغادرة المجموعة';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'مغادرة المجموعة؟';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'ستختفي من صندوق الوارد، ولن تعيدها الرسائل الجديدة. للانضمام مجددًا تكفي الكتابة فيها. لا يُرسَل أي إشعار.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'مغادرة';
+
+  @override
+  String get inboxLeftGroup => 'تمت مغادرة المجموعة';
 
   @override
   String get listPrivateConversionTooLarge =>

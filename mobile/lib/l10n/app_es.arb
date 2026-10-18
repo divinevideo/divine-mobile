@@ -2056,7 +2056,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Esto quita la conversación grupal de tu bandeja de entrada. Si alguien vuelve a escribir en el grupo, se inicia una conversación nueva.",
   "inboxRemoveConfirmConfirm": "Eliminar",
   "inboxRemoveConfirmTitle": "¿Eliminar conversación?",
   "inboxRemovedConversation": "Conversación eliminada",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "Publicado {time}",
+  "inboxActionLeaveGroup": "Salir del grupo",
+  "inboxLeaveGroupConfirmTitle": "¿Salir del grupo?",
+  "inboxLeaveGroupConfirmBody": "Desaparece de tu bandeja de entrada y los mensajes nuevos no lo van a traer de vuelta. Escribí de nuevo en el grupo para volver. Nadie más se entera.",
+  "inboxLeaveGroupConfirmConfirm": "Salir",
+  "inboxLeftGroup": "Saliste del grupo",
 "listsDiscoveryEmpty": "Esta vez no apareció ninguna lista. Deslizá para actualizar.",
 "listsDiscoveryLoadingLabel": "Cargando listas",
 "listSearchPeopleUnavailable": "Las listas de personas no están disponibles ahora.",

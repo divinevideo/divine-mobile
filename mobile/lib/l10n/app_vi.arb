@@ -2800,8 +2800,12 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Thao tác này xóa cuộc trò chuyện nhóm khỏi hộp thư đến. Nếu có ai nhắn tin vào nhóm lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.",
   "inboxRemoveConfirmConfirm": "Xóa",
+  "inboxActionLeaveGroup": "Rời nhóm",
+  "inboxLeaveGroupConfirmTitle": "Rời nhóm?",
+  "inboxLeaveGroupConfirmBody": "Nhóm sẽ biến mất khỏi hộp thư đến và tin nhắn mới sẽ không đưa nhóm trở lại. Hãy viết lại vào nhóm để tham gia lại. Những người khác sẽ không được thông báo.",
+  "inboxLeaveGroupConfirmConfirm": "Rời",
+  "inboxLeftGroup": "Đã rời nhóm",
   "inboxCollabInviteCardTitle": "Lời mời cộng tác",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

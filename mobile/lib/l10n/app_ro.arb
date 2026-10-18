@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Astfel, conversația de grup este eliminată din inbox. Dacă cineva scrie din nou în grup, începe o conversație nouă.",
   "inboxRemoveConfirmConfirm": "Elimină",
   "inboxRemoveConfirmTitle": "Elimini conversația?",
   "inboxRemovedConversation": "Conversație eliminată",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "Publicat {time}",
+  "inboxActionLeaveGroup": "Părăsește grupul",
+  "inboxLeaveGroupConfirmTitle": "Părăsești grupul?",
+  "inboxLeaveGroupConfirmBody": "Dispare din inbox, iar mesajele noi nu îl mai aduc înapoi. Scrie din nou în grup ca să revii. Nu se trimite nicio notificare.",
+  "inboxLeaveGroupConfirmConfirm": "Părăsește",
+  "inboxLeftGroup": "Ai părăsit grupul",
 "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
 "listsDiscoveryLoadingLabel": "Se încarcă listele",
 "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",

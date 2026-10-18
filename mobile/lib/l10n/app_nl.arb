@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Hiermee verwijder je het groepsgesprek uit je inbox. Als iemand weer een bericht naar de groep stuurt, begint er een nieuw gesprek.",
   "inboxRemoveConfirmConfirm": "Verwijderen",
   "inboxRemoveConfirmTitle": "Gesprek verwijderen?",
   "inboxRemovedConversation": "Gesprek verwijderd",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "Geplaatst {time}",
+  "inboxActionLeaveGroup": "Groep verlaten",
+  "inboxLeaveGroupConfirmTitle": "Groep verlaten?",
+  "inboxLeaveGroupConfirmBody": "Hij verdwijnt uit je inbox en nieuwe berichten brengen hem niet terug. Schrijf er opnieuw in om weer mee te doen. De anderen krijgen geen melding.",
+  "inboxLeaveGroupConfirmConfirm": "Verlaten",
+  "inboxLeftGroup": "Je hebt de groep verlaten",
 "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
 "listsDiscoveryLoadingLabel": "Lijsten laden",
 "listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",

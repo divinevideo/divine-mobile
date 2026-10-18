@@ -1588,7 +1588,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "이 그룹 대화가 받은 편지함에서 삭제돼요. 누군가 그룹에 다시 메시지를 보내면 새 대화가 시작돼요.",
   "inboxRemoveConfirmConfirm": "삭제",
   "inboxRemoveConfirmTitle": "대화를 삭제할까요?",
   "inboxRemovedConversation": "대화를 삭제했어요",
@@ -5302,6 +5301,11 @@
     }
   },
   "userRowPosted": "{time} 게시",
+  "inboxActionLeaveGroup": "그룹 나가기",
+  "inboxLeaveGroupConfirmTitle": "그룹에서 나갈까요?",
+  "inboxLeaveGroupConfirmBody": "받은 편지함에서 사라지고, 새 메시지가 와도 다시 나타나지 않아요. 다시 들어가려면 그룹에 메시지를 보내세요. 다른 멤버에게는 알리지 않아요.",
+  "inboxLeaveGroupConfirmConfirm": "나가기",
+  "inboxLeftGroup": "그룹에서 나갔어요",
 "listsDiscoveryEmpty": "이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.",
 "listsDiscoveryLoadingLabel": "목록 불러오는 중",
 "listSearchPeopleUnavailable": "지금은 사용자 목록을 이용할 수 없어요.",

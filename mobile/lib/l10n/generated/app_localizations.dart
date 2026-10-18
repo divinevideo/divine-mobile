@@ -10015,12 +10015,6 @@ abstract class AppLocalizations {
   /// **'This removes your conversation with {displayName} from your inbox. If they message you again, a new conversation starts.'**
   String inboxRemoveConfirmBody(String displayName);
 
-  /// Body of the remove-conversation confirmation for a GROUP thread. Names nobody, because a group has no single counterparty — the 1:1 wording `inboxRemoveConfirmBody` says 'your conversation with {displayName}', which would read as a conversation with the room's title. Mirrors `inboxRemoveConfirmBodyVanishedAccount`, which is name-free for the same reason.
-  ///
-  /// In en, this message translates to:
-  /// **'This removes the group conversation from your inbox. If anyone messages the group again, a new conversation starts.'**
-  String get inboxRemoveConfirmBodyGroup;
-
   /// No description provided for @inboxRemoveConfirmConfirm.
   ///
   /// In en, this message translates to:
@@ -23612,6 +23606,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Posted {time}'**
   String userRowPosted(String time);
+
+  /// Long-press action on a GROUP conversation in the inbox, in place of 'Remove conversation'. Leaves the group on this device only: it leaves the inbox, and the others' new messages do not bring it back until the user writes in it again. Nothing is sent to the other members.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group'**
+  String get inboxActionLeaveGroup;
+
+  /// Title of the confirmation shown before leaving a group conversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group?'**
+  String get inboxLeaveGroupConfirmTitle;
+
+  /// Body of the leave-group confirmation. 'It' is the group. Leaving publishes nothing, so the other members are not notified. Writing in the group again, from any device or by starting a new chat with the same people, brings it back; what others sent in between stays hidden.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves your inbox, and new messages won\'t bring it back. Write in it again to rejoin. The others aren\'t told.'**
+  String get inboxLeaveGroupConfirmBody;
+
+  /// Confirm button of the leave-group confirmation, and the button that leaves an open group conversation. Destructive.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get inboxLeaveGroupConfirmConfirm;
+
+  /// Snackbar after the user leaves a group conversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Left group'**
+  String get inboxLeftGroup;
 
   /// An oversized public list cannot become private; the open editor retains unsaved drafts.
   ///

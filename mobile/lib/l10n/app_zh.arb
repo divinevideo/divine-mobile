@@ -2800,8 +2800,12 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "这会从你的收件箱中移除这个群聊会话。如果有人再次在群里发消息，会开始一个新会话。",
   "inboxRemoveConfirmConfirm": "删除",
+  "inboxActionLeaveGroup": "退出群聊",
+  "inboxLeaveGroupConfirmTitle": "退出群聊？",
+  "inboxLeaveGroupConfirmBody": "它会从你的收件箱中移除，新消息也不会让它回来。在群里再发一条消息即可重新加入。其他人不会收到通知。",
+  "inboxLeaveGroupConfirmConfirm": "退出",
+  "inboxLeftGroup": "已退出群聊",
   "inboxCollabInviteCardTitle": "合作邀请",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

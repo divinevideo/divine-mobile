@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "To usuwa rozmowę grupową z Twojej skrzynki odbiorczej. Jeśli ktoś znów napisze w grupie, rozpocznie się nowa rozmowa.",
   "inboxRemoveConfirmConfirm": "Usuń",
   "inboxRemoveConfirmTitle": "Usunąć rozmowę?",
   "inboxRemovedConversation": "Usunięto rozmowę",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "Opublikowano {time}",
+  "inboxActionLeaveGroup": "Opuść grupę",
+  "inboxLeaveGroupConfirmTitle": "Opuścić grupę?",
+  "inboxLeaveGroupConfirmBody": "Zniknie z Twojej skrzynki odbiorczej, a nowe wiadomości jej nie przywrócą. Napisz w niej ponownie, aby wrócić. Pozostali nie dostaną powiadomienia.",
+  "inboxLeaveGroupConfirmConfirm": "Opuść",
+  "inboxLeftGroup": "Opuszczono grupę",
 "listsDiscoveryEmpty": "Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.",
 "listsDiscoveryLoadingLabel": "Wczytywanie list",
 "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",

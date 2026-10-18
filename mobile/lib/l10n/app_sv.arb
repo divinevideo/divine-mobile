@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Det här tar bort gruppkonversationen från din inkorg. Om någon skriver i gruppen igen startar en ny konversation.",
   "inboxRemoveConfirmConfirm": "Ta bort",
   "inboxRemoveConfirmTitle": "Ta bort konversation?",
   "inboxRemovedConversation": "Konversation borttagen",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "Publicerat {time}",
+  "inboxActionLeaveGroup": "Lämna gruppen",
+  "inboxLeaveGroupConfirmTitle": "Lämna gruppen?",
+  "inboxLeaveGroupConfirmBody": "Den försvinner från din inkorg och nya meddelanden tar inte tillbaka den. Skriv i den igen för att gå med på nytt. De andra får inget besked.",
+  "inboxLeaveGroupConfirmConfirm": "Lämna",
+  "inboxLeftGroup": "Du lämnade gruppen",
 "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
 "listsDiscoveryLoadingLabel": "Läser in listor",
 "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",

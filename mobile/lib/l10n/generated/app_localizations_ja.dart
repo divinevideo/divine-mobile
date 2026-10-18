@@ -5543,10 +5543,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'このグループの会話が受信トレイから削除されます。誰かがまたグループにメッセージを送ると、新しい会話が始まります。';
-
-  @override
   String get inboxRemoveConfirmConfirm => '削除';
 
   @override
@@ -13469,6 +13465,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String userRowPosted(String time) {
     return '$timeに投稿';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'グループから退出';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'グループから退出しますか？';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      '受信トレイから消え、新しいメッセージが届いても戻りません。もう一度書き込むと再参加できます。ほかのメンバーには通知されません。';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => '退出';
+
+  @override
+  String get inboxLeftGroup => 'グループから退出しました';
 
   @override
   String get listPrivateConversionTooLarge =>

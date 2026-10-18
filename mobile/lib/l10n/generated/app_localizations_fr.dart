@@ -5953,10 +5953,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Cela retire la conversation de groupe de ta boîte de réception. Si quelqu\'un écrit à nouveau dans le groupe, une nouvelle conversation commence.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Supprimer';
 
   @override
@@ -14385,6 +14381,22 @@ class AppLocalizationsFr extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publié $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Quitter le groupe';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Quitter le groupe ?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Il disparaît de ta boîte de réception, et les nouveaux messages ne le feront pas revenir. Écris-y à nouveau pour le rejoindre. Les autres n\'en savent rien.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Quitter';
+
+  @override
+  String get inboxLeftGroup => 'Tu as quitté le groupe';
 
   @override
   String get listPrivateConversionTooLarge =>

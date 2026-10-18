@@ -5906,10 +5906,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Aalisin nito sa iyong inbox ang group chat. Kung may magme-message ulit sa group, magsisimula ng bagong usapan.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Alisin';
 
   @override
@@ -14285,6 +14281,22 @@ class AppLocalizationsFil extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Na-post $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Umalis sa group';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Umalis sa group?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Mawawala ito sa inbox mo, at hindi na ito ibabalik ng mga bagong message. Mag-message ulit dito para bumalik. Hindi malalaman ng iba.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Umalis';
+
+  @override
+  String get inboxLeftGroup => 'Umalis ka sa group';
 
   @override
   String get listPrivateConversionTooLarge =>

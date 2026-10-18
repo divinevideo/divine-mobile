@@ -5926,10 +5926,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Esto quita la conversación grupal de tu bandeja de entrada. Si alguien vuelve a escribir en el grupo, se inicia una conversación nueva.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Eliminar';
 
   @override
@@ -14327,6 +14323,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicado $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Salir del grupo';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => '¿Salir del grupo?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Desaparece de tu bandeja de entrada y los mensajes nuevos no lo van a traer de vuelta. Escribí de nuevo en el grupo para volver. Nadie más se entera.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Salir';
+
+  @override
+  String get inboxLeftGroup => 'Saliste del grupo';
 
   @override
   String get listPrivateConversionTooLarge =>

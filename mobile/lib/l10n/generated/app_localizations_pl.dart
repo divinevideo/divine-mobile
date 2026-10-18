@@ -6023,10 +6023,6 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'To usuwa rozmowę grupową z Twojej skrzynki odbiorczej. Jeśli ktoś znów napisze w grupie, rozpocznie się nowa rozmowa.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Usuń';
 
   @override
@@ -14460,6 +14456,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Opublikowano $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Opuść grupę';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Opuścić grupę?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Zniknie z Twojej skrzynki odbiorczej, a nowe wiadomości jej nie przywrócą. Napisz w niej ponownie, aby wrócić. Pozostali nie dostaną powiadomienia.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Opuść';
+
+  @override
+  String get inboxLeftGroup => 'Opuszczono grupę';
 
   @override
   String get listPrivateConversionTooLarge =>

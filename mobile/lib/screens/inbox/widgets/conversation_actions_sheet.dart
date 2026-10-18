@@ -1,5 +1,6 @@
 // ABOUTME: Bottom sheet with long-press actions for DM conversations.
-// ABOUTME: Provides read, dismiss/restore, Report, Block, and Remove actions.
+// ABOUTME: Provides read, dismiss/restore, Report, Block, and Remove (Leave
+// ABOUTME: for a group) actions.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -19,7 +20,8 @@ enum ConversationAction {
   /// Block the other participant.
   block,
 
-  /// Remove (delete) the conversation locally.
+  /// Remove (delete) the conversation locally. For a group this is Leave: it
+  /// stays out of the inbox until the user writes in it again.
   remove,
 }
 
@@ -120,8 +122,10 @@ class ConversationActionsSheet {
                   result: action,
                 ),
                 ConversationAction.remove => _ActionTile(
-                  icon: DivineIconName.trash,
-                  label: context.l10n.inboxActionRemove,
+                  icon: isGroup ? DivineIconName.signOut : DivineIconName.trash,
+                  label: isGroup
+                      ? context.l10n.inboxActionLeaveGroup
+                      : context.l10n.inboxActionRemove,
                   isDestructive: true,
                   showDivider: action != actions.last,
                   result: action,

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart' show DmRepository;
 import 'package:flutter/rendering.dart';
@@ -2367,8 +2368,9 @@ void main() {
           final l10n = lookupAppLocalizations(const Locale('en'));
           await openSheet(tester, groupConversation(subject: 'Weekend trip'));
 
-          // The conversation-scoped action stays: it means what it says here.
-          expect(find.text(l10n.inboxActionRemove), findsOneWidget);
+          // The conversation-scoped action stays, as Leave: it means what it
+          // says here.
+          expect(find.text(l10n.inboxActionLeaveGroup), findsOneWidget);
           // Account-scoped ones do not, in any of their label variants.
           expect(
             find.text(l10n.inboxActionReport('Weekend trip')),
@@ -2463,22 +2465,132 @@ void main() {
           expect(find.text(l10n.inboxActionBlock(name)), findsOneWidget);
         });
 
-        // "This removes your conversation with Weekend trip from your inbox"
-        // reads as a conversation with the room, not with the people in it.
-        testWidgets('removes without claiming a conversation with the room', (
+        // Removing a group leaves it until the user writes in it again
+        // (#10150), so the sheet and its confirmation say Leave and that it
+        // sticks, and never "a conversation with" the room.
+        testWidgets('leaves the group and says that it sticks', (
           tester,
         ) async {
           final l10n = lookupAppLocalizations(const Locale('en'));
           await openSheet(tester, groupConversation(subject: 'Weekend trip'));
+          expect(find.text(l10n.inboxActionRemove), findsNothing);
 
-          await tester.tap(find.text(l10n.inboxActionRemove));
+          await tester.tap(find.text(l10n.inboxActionLeaveGroup));
           await tester.pumpAndSettle();
 
-          expect(find.text(l10n.inboxRemoveConfirmBodyGroup), findsOneWidget);
+          expect(find.text(l10n.inboxLeaveGroupConfirmTitle), findsOneWidget);
+          expect(find.text(l10n.inboxLeaveGroupConfirmBody), findsOneWidget);
+          expect(
+            find.text(l10n.inboxLeaveGroupConfirmConfirm),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.inboxRemoveConfirmTitle), findsNothing);
           expect(
             find.text(l10n.inboxRemoveConfirmBody('Weekend trip')),
             findsNothing,
           );
+          expect(find.text(l10n.inboxRemoveConfirmConfirm), findsNothing);
+        });
+
+        testWidgets('says Left group once the group is left', (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final actionsCubit = _MockConversationActionsCubit();
+          final conversation = groupConversation(subject: 'Weekend trip');
+          when(
+            () => actionsCubit.removeConversation(any()),
+          ).thenAnswer((_) async => RemoveConversationOutcome.removed);
+          await tester.pumpWidget(
+            buildSubject(
+              actionsCubit: actionsCubit,
+              wrapInScaffold: true,
+              state: ConversationListState(
+                status: ConversationListStatus.loaded,
+                conversations: [conversation],
+                visibleConversations: [conversation],
+                hasMore: false,
+              ),
+            ),
+          );
+          await openMessages(tester);
+          await tester.longPress(find.byType(ConversationTile));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.inboxActionLeaveGroup));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.inboxLeaveGroupConfirmConfirm));
+          await tester.pumpAndSettle();
+
+          verify(
+            () => actionsCubit.removeConversation(conversation.id),
+          ).called(1);
+          expect(find.text(l10n.inboxLeftGroup), findsOneWidget);
+          expect(find.text(l10n.inboxRemovedConversation), findsNothing);
+        });
+
+        // The sheet resolves the room the way its row names it, so it cannot
+        // look up a member the viewer blocked while the row names another
+        // (#10150). A group's title appears in none of its actions, so the
+        // member whose identity the sheet resolves is what shows it.
+        testWidgets('resolves an untitled group for a member the viewer has '
+            'not blocked', (tester) async {
+          final blocklist = ContentBlocklistRepository();
+          addTearDown(blocklist.dispose);
+          await tester.runAsync(
+            () => blocklist.blockUsers([peerA], ourPubkey: currentPubkey),
+          );
+          expect(blocklist.shouldFilterFromDms(peerA), isTrue);
+          final resolved = <String>[];
+          final conversation = groupConversation();
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationListState(
+                status: ConversationListStatus.loaded,
+                conversations: [conversation],
+                visibleConversations: [conversation],
+                hasMore: false,
+              ),
+              additionalOverrides: [
+                contentBlocklistRepositoryProvider.overrideWithValue(
+                  blocklist,
+                ),
+                for (final member in [peerA, peerB])
+                  profileVanishedSnapshotProvider(member).overrideWith((ref) {
+                    resolved.add(member);
+                    return false;
+                  }),
+              ],
+            ),
+          );
+          await openMessages(tester);
+          expect(resolved, isEmpty);
+
+          await tester.longPress(find.byType(ConversationTile));
+          await tester.pumpAndSettle();
+
+          expect(resolved, equals([peerB]));
+        });
+
+        testWidgets('a 1:1 still removes with its own copy', (tester) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final oneToOne = DmConversation(
+            id: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+            participantPubkeys: const [currentPubkey, peerA],
+            isGroup: false,
+            createdAt: nowUnix,
+            lastMessageContent: 'Hey',
+            lastMessageTimestamp: nowUnix,
+          );
+          await openSheet(tester, oneToOne);
+          expect(find.text(l10n.inboxActionLeaveGroup), findsNothing);
+
+          await tester.tap(find.text(l10n.inboxActionRemove));
+          await tester.pumpAndSettle();
+
+          final name = UserProfile.defaultDisplayNameFor(peerA);
+          expect(find.text(l10n.inboxRemoveConfirmTitle), findsOneWidget);
+          expect(find.text(l10n.inboxRemoveConfirmBody(name)), findsOneWidget);
+          expect(find.text(l10n.inboxRemoveConfirmConfirm), findsOneWidget);
+          expect(find.text(l10n.inboxLeaveGroupConfirmBody), findsNothing);
         });
       });
 

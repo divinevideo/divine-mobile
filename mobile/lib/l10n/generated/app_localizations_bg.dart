@@ -5925,10 +5925,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Това премахва груповия разговор от входящата ти кутия. Ако някой пише отново в групата, започва нов разговор.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Премахни';
 
   @override
@@ -14298,6 +14294,22 @@ class AppLocalizationsBg extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Публикувано $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Напусни групата';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Да напуснеш групата?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Изчезва от входящата ти кутия и новите съобщения няма да я върнат. Пиши в нея отново, за да се присъединиш. Другите не получават известие.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Напусни';
+
+  @override
+  String get inboxLeftGroup => 'Вече не си в групата';
 
   @override
   String get listPrivateConversionTooLarge =>

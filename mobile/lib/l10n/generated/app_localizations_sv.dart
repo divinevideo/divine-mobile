@@ -5861,10 +5861,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Det här tar bort gruppkonversationen från din inkorg. Om någon skriver i gruppen igen startar en ny konversation.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Ta bort';
 
   @override
@@ -14170,6 +14166,22 @@ class AppLocalizationsSv extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicerat $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Lämna gruppen';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Lämna gruppen?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Den försvinner från din inkorg och nya meddelanden tar inte tillbaka den. Skriv i den igen för att gå med på nytt. De andra får inget besked.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Lämna';
+
+  @override
+  String get inboxLeftGroup => 'Du lämnade gruppen';
 
   @override
   String get listPrivateConversionTooLarge =>

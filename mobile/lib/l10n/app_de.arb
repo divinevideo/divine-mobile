@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Dadurch wird die Gruppenunterhaltung aus deinem Posteingang entfernt. Wenn jemand wieder in die Gruppe schreibt, beginnt eine neue Unterhaltung.",
   "inboxRemoveConfirmConfirm": "Entfernen",
   "inboxRemoveConfirmTitle": "Unterhaltung entfernen?",
   "inboxRemovedConversation": "Unterhaltung entfernt",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "Gepostet {time}",
+  "inboxActionLeaveGroup": "Gruppe verlassen",
+  "inboxLeaveGroupConfirmTitle": "Gruppe verlassen?",
+  "inboxLeaveGroupConfirmBody": "Sie verschwindet aus deinem Posteingang, und neue Nachrichten holen sie nicht zurück. Schreib wieder in die Gruppe, um zurückzukommen. Die anderen erfahren nichts davon.",
+  "inboxLeaveGroupConfirmConfirm": "Verlassen",
+  "inboxLeftGroup": "Du hast die Gruppe verlassen",
 "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
 "listsDiscoveryLoadingLabel": "Listen werden geladen",
 "listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",

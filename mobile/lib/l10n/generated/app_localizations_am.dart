@@ -5733,10 +5733,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'ይህ የቡድን ውይይቱን ከመልእክት ሳጥንዎ ያስወግዳል። ማንኛውም ሰው እንደገና ለቡድኑ መልእክት ከላከ አዲስ ውይይት ይጀምራል።';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'አስወግድ';
 
   @override
@@ -13813,6 +13809,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String userRowPosted(String time) {
     return 'የተለጠፈው $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'ከቡድኑ መውጣት';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'ከቡድኑ ይውጡ?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'ከመልእክት ሳጥንዎ ይወገዳል፣ አዲስ መልእክቶችም አይመልሱትም። እንደገና ለመቀላቀል በውስጡ ይጻፉ። ሌሎቹ አይነገራቸውም።';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'ይውጡ';
+
+  @override
+  String get inboxLeftGroup => 'ከቡድኑ ወጥተዋል';
 
   @override
   String get listPrivateConversionTooLarge =>

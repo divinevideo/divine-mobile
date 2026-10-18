@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Questo rimuove la conversazione di gruppo dalla tua posta in arrivo. Se qualcuno scrive di nuovo nel gruppo, inizia una nuova conversazione.",
   "inboxRemoveConfirmConfirm": "Rimuovi",
   "inboxRemoveConfirmTitle": "Rimuovere la conversazione?",
   "inboxRemovedConversation": "Conversazione rimossa",
@@ -5756,6 +5755,11 @@
     }
   },
   "userRowPosted": "Pubblicato {time}",
+  "inboxActionLeaveGroup": "Esci dal gruppo",
+  "inboxLeaveGroupConfirmTitle": "Uscire dal gruppo?",
+  "inboxLeaveGroupConfirmBody": "Sparisce dalla tua posta in arrivo e i nuovi messaggi non lo riportano indietro. Scrivi di nuovo nel gruppo per rientrare. Nessun altro viene avvisato.",
+  "inboxLeaveGroupConfirmConfirm": "Esci",
+  "inboxLeftGroup": "Hai lasciato il gruppo",
 "listsDiscoveryEmpty": "Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.",
 "listsDiscoveryLoadingLabel": "Caricamento liste",
 "listSearchPeopleUnavailable": "Le liste di persone non sono disponibili al momento.",

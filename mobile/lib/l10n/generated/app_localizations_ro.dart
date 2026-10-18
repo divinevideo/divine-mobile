@@ -6031,10 +6031,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Astfel, conversația de grup este eliminată din inbox. Dacă cineva scrie din nou în grup, începe o conversație nouă.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Elimină';
 
   @override
@@ -14454,6 +14450,22 @@ class AppLocalizationsRo extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicat $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Părăsește grupul';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Părăsești grupul?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Dispare din inbox, iar mesajele noi nu îl mai aduc înapoi. Scrie din nou în grup ca să revii. Nu se trimite nicio notificare.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Părăsește';
+
+  @override
+  String get inboxLeftGroup => 'Ai părăsit grupul';
 
   @override
   String get listPrivateConversionTooLarge =>

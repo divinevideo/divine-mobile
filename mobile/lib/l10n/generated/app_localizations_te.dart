@@ -6057,10 +6057,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'ఇది మీ ఇన్‌బాక్స్ నుండి సమూహ సంభాషణను తీసివేస్తుంది. ఎవరైనా గ్రూప్‌కి మళ్లీ మెసేజ్ చేస్తే, కొత్త సంభాషణ ప్రారంభమవుతుంది.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'తీసివేయి';
 
   @override
@@ -14518,6 +14514,22 @@ class AppLocalizationsTe extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time పోస్ట్ చేయబడింది';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'గ్రూప్ నుండి నిష్క్రమించండి';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'గ్రూప్ నుండి నిష్క్రమించాలా?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'ఇది మీ ఇన్‌బాక్స్ నుండి తొలగిపోతుంది, కొత్త మెసేజ్‌లు దీన్ని తిరిగి తీసుకురావు. మళ్లీ చేరడానికి ఇందులో మళ్లీ రాయండి. ఇతరులకు తెలియజేయబడదు.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'నిష్క్రమించు';
+
+  @override
+  String get inboxLeftGroup => 'గ్రూప్ నుండి నిష్క్రమించారు';
 
   @override
   String get listPrivateConversionTooLarge =>

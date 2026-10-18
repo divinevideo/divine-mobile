@@ -5794,10 +5794,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Ini menghapus percakapan grup dari kotak masukmu. Jika ada yang mengirim pesan lagi ke grup, percakapan baru dimulai.';
-
-  @override
   String get inboxRemoveConfirmConfirm => 'Hapus';
 
   @override
@@ -14058,6 +14054,22 @@ class AppLocalizationsId extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Diposting $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Keluar dari grup';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Keluar dari grup?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Grup ini hilang dari kotak masukmu, dan pesan baru tidak akan memunculkannya lagi. Tulis lagi di grup untuk bergabung kembali. Anggota lain tidak diberi tahu.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Keluar';
+
+  @override
+  String get inboxLeftGroup => 'Kamu keluar dari grup';
 
   @override
   String get listPrivateConversionTooLarge =>
