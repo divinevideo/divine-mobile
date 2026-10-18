@@ -10,17 +10,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
-  test('incomplete reads use a diagnostic exception instead of an Error', () {
-    const failure = BadgeReadIncompleteException(
-      'badge definitions incomplete',
-    );
-    expect(failure, isA<Exception>());
-    expect(failure, isNot(isA<Error>()));
-    expect(failure.message, 'badge definitions incomplete');
-    expect(
-      failure.toString(),
-      'BadgeReadIncompleteException: badge definitions incomplete',
-    );
+  group(BadgeReadIncompleteException, () {
+    test('incomplete reads use a diagnostic exception instead of an Error', () {
+      const failure = BadgeReadIncompleteException(
+        'badge definitions incomplete',
+      );
+      expect(failure, isA<Exception>());
+      expect(failure, isNot(isA<Error>()));
+      expect(failure.message, 'badge definitions incomplete');
+      expect(
+        failure.toString(),
+        'BadgeReadIncompleteException: badge definitions incomplete',
+      );
+    });
   });
 
   group('BadgeRepository', () {

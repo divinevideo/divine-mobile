@@ -7,12 +7,6 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 
 void main() {
-  test('incomplete badge reads remain local network failures', () {
-    const error = BadgeReadIncompleteException('badge read incomplete');
-    expect(asReportableError(error, context: 'badge load'), isNull);
-    expect(error.toString(), contains('badge read incomplete'));
-  });
-
   group(Reportable, () {
     test('is an Exception', () {
       final wrapped = Reportable(StateError('boom'));
@@ -103,6 +97,12 @@ void main() {
   });
 
   group('asReportableError', () {
+    test('incomplete badge reads remain local network failures', () {
+      const error = BadgeReadIncompleteException('badge read incomplete');
+      expect(asReportableError(error, context: 'badge load'), isNull);
+      expect(error.toString(), contains('badge read incomplete'));
+    });
+
     test('preserves explicitly reportable errors', () {
       final error = Reportable(Exception('invariant'), context: 'test');
 
