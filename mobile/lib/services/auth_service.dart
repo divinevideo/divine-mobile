@@ -3097,6 +3097,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           reason: 'explicit_logout',
           userPubkey: currentPubkey,
           deleteUserData: deleteLocalUserData,
+          forgetAccount: deleteKeys,
         );
       } catch (e) {
         userDataCleanupError = e;

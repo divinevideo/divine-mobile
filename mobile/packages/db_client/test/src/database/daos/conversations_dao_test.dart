@@ -628,6 +628,8 @@ void main() {
             'last_message_content',
             'last_message_timestamp',
             'last_message_sender_pubkey',
+            'last_message_created_at',
+            'retained_message_ids',
             'subject',
             'is_read',
             'is_dismissed',
@@ -1009,6 +1011,272 @@ void main() {
 
         final result = await dao.getConversation('conv_1');
         expect(result!.lastReadTimestamp, isNull);
+      });
+    });
+
+    group('pinReadCursorsToLatestMessage (#10276)', () {
+      const now = 1800000000;
+
+      Future<void> seed({
+        required String id,
+        required int lastMessageAt,
+        required bool isRead,
+        String? owner = 'owner_a',
+      }) => dao.upsertConversation(
+        id: id,
+        participantPubkeys: '["a","b"]',
+        isGroup: false,
+        createdAt: 1700000000,
+        lastMessageTimestamp: lastMessageAt,
+        lastMessageSenderPubkey: 'b',
+        isRead: isRead,
+        ownerPubkey: owner,
+      );
+
+      test(
+        'pins a read conversation without a cursor to its latest message',
+        () async {
+          // Read because the user sent the last message: no cursor was ever
+          // written, so nothing records the read state once the row's preview
+          // columns are rebuilt.
+          await seed(id: 'conv_1', lastMessageAt: 1700000400, isRead: true);
+          expect(
+            (await dao.getConversation('conv_1'))!.lastReadTimestamp,
+            isNull,
+          );
+
+          final pinned = await dao.pinReadCursorsToLatestMessage(
+            'owner_a',
+            nowSeconds: now,
+          );
+
+          expect(pinned, 1);
+          final result = await dao.getConversation('conv_1');
+          expect(result!.isRead, isTrue);
+          expect(result.lastReadTimestamp, 1700000400);
+        },
+      );
+
+      test(
+        'leaves an unread conversation and its cursor as they were',
+        () async {
+          await seed(id: 'conv_1', lastMessageAt: 1700000500, isRead: false);
+          await dao.applyReadCursor(
+            'conv_1',
+            1700000100,
+            ownerPubkey: 'owner_a',
+          );
+
+          final pinned = await dao.pinReadCursorsToLatestMessage(
+            'owner_a',
+            nowSeconds: now,
+          );
+
+          expect(pinned, 0);
+          final result = await dao.getConversation('conv_1');
+          expect(result!.isRead, isFalse);
+          expect(result.lastReadTimestamp, 1700000100);
+        },
+      );
+
+      test(
+        'never lowers a cursor that is already past the latest message',
+        () async {
+          await seed(id: 'conv_1', lastMessageAt: 1700000300, isRead: true);
+          await dao.applyReadCursor(
+            'conv_1',
+            1700000500,
+            ownerPubkey: 'owner_a',
+          );
+
+          final pinned = await dao.pinReadCursorsToLatestMessage(
+            'owner_a',
+            nowSeconds: now,
+          );
+
+          expect(pinned, 0);
+          final result = await dao.getConversation('conv_1');
+          expect(result!.lastReadTimestamp, 1700000500);
+        },
+      );
+
+      test('pins only the named owner', () async {
+        await seed(id: 'conv_a', lastMessageAt: 1700000400, isRead: true);
+        await seed(
+          id: 'conv_b',
+          lastMessageAt: 1700000400,
+          isRead: true,
+          owner: 'owner_b',
+        );
+        await seed(
+          id: 'conv_legacy',
+          lastMessageAt: 1700000400,
+          isRead: true,
+          owner: '',
+        );
+
+        final pinned = await dao.pinReadCursorsToLatestMessage(
+          'owner_a',
+          nowSeconds: now,
+        );
+
+        expect(pinned, 1);
+        final b = await dao.getConversation('conv_b', ownerPubkey: 'owner_b');
+        expect(b!.lastReadTimestamp, isNull);
+        final legacy = (await dao.getAllConversations()).singleWhere(
+          (row) => row.id == 'conv_legacy',
+        );
+        expect(legacy.lastReadTimestamp, isNull);
+      });
+    });
+
+    group('pinReadCursorsToLatestMessage with a clock-bounded stamp', () {
+      // A sender whose clock ran ahead: the message's created_at is 1000, but
+      // ingest at local time 999 stored 999.
+      Future<void> seedBounded() async {
+        await dao.upsertConversation(
+          id: 'conv_1',
+          participantPubkeys: '["a","b"]',
+          isGroup: false,
+          createdAt: 1700000000,
+          lastMessageTimestamp: 1700000999,
+          lastMessageCreatedAt: 1700001000,
+          ownerPubkey: 'owner_a',
+        );
+        await dao.markAsRead('conv_1', ownerPubkey: 'owner_a');
+      }
+
+      test('covers the message the bounded stamp stood for', () async {
+        await seedBounded();
+
+        await dao.pinReadCursorsToLatestMessage(
+          'owner_a',
+          nowSeconds: 1700005000,
+        );
+
+        final row = await dao.getConversation('conv_1', ownerPubkey: 'owner_a');
+        expect(row!.lastReadTimestamp, 1700001000);
+        // The re-downloaded copy, stored unbounded now, stays read.
+        await dao.upsertConversation(
+          id: 'conv_1',
+          participantPubkeys: '["a","b"]',
+          isGroup: false,
+          createdAt: 1700000000,
+          lastMessageTimestamp: 1700001000,
+          lastMessageCreatedAt: 1700001000,
+          isRead: false,
+          ownerPubkey: 'owner_a',
+        );
+        final after = await dao.getConversation(
+          'conv_1',
+          ownerPubkey: 'owner_a',
+        );
+        expect(after!.isRead, isTrue);
+      });
+
+      test('never pins past the given time', () async {
+        await seedBounded();
+
+        await dao.pinReadCursorsToLatestMessage(
+          'owner_a',
+          nowSeconds: 1700000999,
+        );
+
+        final row = await dao.getConversation('conv_1', ownerPubkey: 'owner_a');
+        expect(row!.lastReadTimestamp, 1700000999);
+      });
+    });
+
+    group('lastMessageCreatedAt', () {
+      Future<void> upsert({required int at, int? createdAt}) =>
+          dao.upsertConversation(
+            id: 'conv_1',
+            participantPubkeys: '["a","b"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageTimestamp: at,
+            lastMessageCreatedAt: createdAt,
+            ownerPubkey: 'owner_a',
+          );
+
+      Future<int?> stored() async => (await dao.getConversation(
+        'conv_1',
+        ownerPubkey: 'owner_a',
+      ))!.lastMessageCreatedAt;
+
+      test('follows the message in the preview', () async {
+        await upsert(at: 1700000200, createdAt: 1700000205);
+        await upsert(at: 1700000100, createdAt: 1700000101);
+        expect(await stored(), 1700000205);
+
+        await upsert(at: 1700000300, createdAt: 1700000300);
+        expect(await stored(), 1700000300);
+      });
+
+      test('is cleared when the preview is rebuilt from messages', () async {
+        await upsert(at: 1700000200, createdAt: 1700000205);
+        await database.directMessagesDao.insertMessage(
+          id: 'msg_1',
+          conversationId: 'conv_1',
+          senderPubkey: 'b',
+          content: 'newer',
+          createdAt: 1700000300,
+          giftWrapId: 'gw_1',
+          ownerPubkey: 'owner_a',
+        );
+
+        await dao.backfillLatestMessagePreviews(ownerPubkey: 'owner_a');
+
+        expect(await stored(), isNull);
+      });
+    });
+
+    group('deleteForOwnersNotIn (#10276)', () {
+      Future<void> seed(String id, String? owner) => dao.upsertConversation(
+        id: id,
+        participantPubkeys: '["a","b"]',
+        isGroup: false,
+        createdAt: 1700000000,
+        lastMessageTimestamp: 1700000100,
+        ownerPubkey: owner,
+      );
+
+      Future<List<String>> remainingIds() async =>
+          (await dao.getAllConversations()).map((row) => row.id).toList()
+            ..sort();
+
+      test('deletes the conversations of owners outside the set', () async {
+        await seed('conv_known', 'owner_known');
+        await seed('conv_active', 'owner_active');
+        await seed('conv_forgotten', 'owner_forgotten');
+
+        final deleted = await dao.deleteForOwnersNotIn({
+          'owner_known',
+          'owner_active',
+        });
+
+        expect(deleted, 1);
+        expect(await remainingIds(), ['conv_active', 'conv_known']);
+      });
+
+      test('leaves unattributed legacy rows alone', () async {
+        await seed('conv_empty_owner', '');
+        await seed('conv_null_owner', null);
+
+        final deleted = await dao.deleteForOwnersNotIn({'owner_known'});
+
+        expect(deleted, 0);
+        expect(await remainingIds(), ['conv_empty_owner', 'conv_null_owner']);
+      });
+
+      test('an empty set deletes every attributed conversation', () async {
+        await seed('conv_a', 'owner_a');
+        await seed('conv_legacy', '');
+
+        final deleted = await dao.deleteForOwnersNotIn(const {});
+
+        expect(deleted, 1);
+        expect(await remainingIds(), ['conv_legacy']);
       });
     });
 
@@ -1684,6 +1952,39 @@ void main() {
           expect(conv!.lastMessageContent, isNull);
           expect(conv.lastMessageTimestamp, isNull);
           expect(conv.lastMessageSenderPubkey, isNull);
+        },
+      );
+
+      test(
+        'leaves a conversation whose messages are not on the device as it is',
+        () async {
+          // An account boundary keeps a returning account's conversations and
+          // deletes its messages (#10276). Clearing the stamp here would let a
+          // re-downloaded older message mark an unread chat read.
+          await dao.upsertConversation(
+            id: 'conv_kept',
+            participantPubkeys: '["$userA","$userB"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageContent: 'kept preview',
+            lastMessageTimestamp: 1700000500,
+            lastMessageSenderPubkey: userB,
+            isRead: false,
+            ownerPubkey: userA,
+          );
+
+          final updated = await dao.backfillLatestMessagePreviews(
+            ownerPubkey: userA,
+          );
+
+          expect(updated, equals(0));
+          final conv = await dao.getConversation(
+            'conv_kept',
+            ownerPubkey: userA,
+          );
+          expect(conv!.lastMessageContent, 'kept preview');
+          expect(conv.lastMessageTimestamp, 1700000500);
+          expect(conv.lastMessageSenderPubkey, userB);
         },
       );
 

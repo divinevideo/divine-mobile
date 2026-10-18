@@ -188,12 +188,10 @@ void main() {
       /// Persists an unread, already-accepted conversation owned by [owner] —
       /// the row shape the DM ingest path writes.
       ///
-      /// Seeding two owners at once is a test convenience, not a picture of
-      /// production: every identity change wipes the departing account's DM
-      /// rows (`auth_service.dart` `clearUserSpecificData(reason:
-      /// 'identity_change')` -> `ConversationsDao.clearForAccountSwitch`), so
-      /// at most one account's rows exist on a device. Keeping both here
-      /// proves the badge counts by owner rather than by row count.
+      /// Two owners' conversations coexist in production: an account switch
+      /// keeps the departing account's conversation rows for its return
+      /// (#10276). Seeding both proves the badge counts by owner rather than
+      /// by row count.
       Future<void> seedUnreadConversation({
         required String id,
         required String owner,

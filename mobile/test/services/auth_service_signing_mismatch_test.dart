@@ -110,6 +110,7 @@ void main() {
         isIdentityChange: any(named: 'isIdentityChange'),
         userPubkey: any(named: 'userPubkey'),
         deleteUserData: any(named: 'deleteUserData'),
+        forgetAccount: any(named: 'forgetAccount'),
       ),
     ).thenAnswer((_) async => 0);
     when(

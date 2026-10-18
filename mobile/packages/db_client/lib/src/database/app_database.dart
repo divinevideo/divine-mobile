@@ -146,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -303,6 +303,43 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE conversations DROP COLUMN is_dismissed',
         );
       }
+      if (from < 26 && to >= 26) {
+        // Upgrades skip beforeOpen recovery. Preserve v25's repair behavior
+        // when its cached column or independent dismissal store was lost.
+        await _addColumnIfMissing(
+          'conversations',
+          'is_dismissed',
+          'INTEGER NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1))',
+        );
+        await _repairConversationDismissals();
+        await _addColumnIfMissing(
+          'conversations',
+          'last_message_created_at',
+          'INTEGER NULL',
+        );
+        await _addColumnIfMissing(
+          'conversations',
+          'retained_message_ids',
+          'TEXT NULL',
+        );
+      }
+      // The same holds for the v26 column.
+      if (to < 26 &&
+          (await _columnNames(
+            'conversations',
+          )).contains('last_message_created_at')) {
+        await customStatement(
+          'ALTER TABLE conversations DROP COLUMN last_message_created_at',
+        );
+      }
+      if (to < 26 &&
+          (await _columnNames('conversations')).contains(
+            'retained_message_ids',
+          )) {
+        await customStatement(
+          'ALTER TABLE conversations DROP COLUMN retained_message_ids',
+        );
+      }
     },
     beforeOpen: (details) async {
       // v1 databases are normalized by onUpgrade. This guarded path remains
@@ -390,12 +427,17 @@ class AppDatabase extends _$AppDatabase {
     );
 
     await m.alterTable(TableMigration(directMessages));
+    final conversationColumns = await _columnNames('conversations');
     await m.alterTable(
       TableMigration(
         conversations,
         newColumns: [
-          if (!(await _columnNames('conversations')).contains('is_dismissed'))
+          if (!conversationColumns.contains('is_dismissed'))
             conversations.isDismissed,
+          if (!conversationColumns.contains('last_message_created_at'))
+            conversations.lastMessageCreatedAt,
+          if (!conversationColumns.contains('retained_message_ids'))
+            conversations.retainedMessageIds,
         ],
       ),
     );
@@ -1686,6 +1728,8 @@ class AppDatabase extends _$AppDatabase {
         'dm_protocol',
         'last_read_timestamp',
         'is_dismissed',
+        'last_message_created_at',
+        'retained_message_ids',
       ],
       'pending_product_events': ['owner_pubkey'],
       'dm_message_reactions': ['recipient_pubkeys'],

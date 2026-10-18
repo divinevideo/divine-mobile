@@ -1,12 +1,15 @@
 // ABOUTME: Service to clear user-specific cached data when identity changes
 // ABOUTME: Prevents data leakage between different Nostr accounts after reinstall
 
+import 'dart:convert';
+
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
+import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -52,12 +55,72 @@ class UserDataCleanupService {
   ///   False on non-destructive sign-out (account switch) to preserve data.
   /// - [preserveActiveSession]: skips device-wide teardown while deleting a
   ///   different account from the device.
+  /// - [forgetAccount]: the account's keys are being removed from this device,
+  ///   so data kept for a returning account goes too.
   Future<void> Function({
     String? userPubkey,
     bool deleteUserData,
     bool preserveActiveSession,
+    bool forgetAccount,
   })?
   onDatabaseCleanup;
+
+  /// Optional callback that deletes the DM conversations kept for returning
+  /// accounts, except those owned by the given pubkeys, and returns how many
+  /// it deleted. Set by the provider layer which has access to DAOs.
+  Future<int> Function(Set<String> keepOwnerPubkeys)? onConversationSweep;
+
+  /// Deletes the conversations kept for accounts this device no longer knows.
+  ///
+  /// A switch or sign-out keeps the departing account's conversations for its
+  /// return (#10276), but an account can later leave the known-accounts list
+  /// without its own cleanup running: pruned as no longer restorable, or
+  /// removed by a sign-out that failed part-way. Keeps the known accounts and
+  /// the active one. Skipped when the list was never written or cannot be
+  /// decoded, so an unreadable list never counts as "no accounts". Never
+  /// throws.
+  Future<void> sweepConversationsOfUnknownAccounts() async {
+    final sweep = onConversationSweep;
+    if (sweep == null) return;
+    final Set<String> keep;
+    try {
+      final raw = _prefs.getString(kKnownAccountsKey);
+      if (raw == null) return;
+      final active = _prefs.getString('current_user_pubkey_hex');
+      keep = {
+        if (raw.isNotEmpty)
+          for (final entry in jsonDecode(raw) as List<dynamic>)
+            KnownAccount.fromJson(entry as Map<String, dynamic>).pubkeyHex,
+        if (active != null && active.isNotEmpty) active,
+      };
+    } on Object catch (e) {
+      Log.warning(
+        'Skipping the conversation sweep: known accounts unreadable: $e',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+      );
+      return;
+    }
+    try {
+      final deleted = await sweep(keep);
+      if (deleted > 0) {
+        Log.info(
+          'Deleted $deleted conversations of accounts this device no longer '
+          'knows',
+          name: 'UserDataCleanupService',
+          category: LogCategory.auth,
+        );
+      }
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Conversation sweep failed: $e',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   /// Optional callback invoked during session setup to claim legacy
   /// database rows (NULL ownerPubkey) for the current user.
@@ -259,6 +322,7 @@ class UserDataCleanupService {
       deleteUserData: true,
       preserveActiveSession: preserveActiveSession,
     );
+    await sweepConversationsOfUnknownAccounts();
     return clearedCount;
   }
 
@@ -278,12 +342,14 @@ class UserDataCleanupService {
     bool isIdentityChange = false,
     String? userPubkey,
     bool deleteUserData = false,
+    bool forgetAccount = false,
   }) async {
     final cleanupReason = reason ?? 'unspecified';
     Log.info(
       'Starting user data cleanup (reason: $cleanupReason, '
       'identityChange: $isIdentityChange, '
       'deleteUserData: $deleteUserData, '
+      'forgetAccount: $forgetAccount, '
       'userPubkey: ${pubkeyForLogs(userPubkey, whenNull: "null")}, '
       'checking ${userSpecificKeys.length} keys)',
       name: 'UserDataCleanupService',
@@ -378,6 +444,7 @@ class UserDataCleanupService {
           userPubkey: userPubkey,
           deleteUserData: deleteUserData,
           preserveActiveSession: false,
+          forgetAccount: forgetAccount,
         );
         Log.info(
           'Database cleanup complete',
@@ -399,6 +466,8 @@ class UserDataCleanupService {
         }
       }
     }
+
+    await sweepConversationsOfUnknownAccounts();
 
     // Log detailed cleanup results for observability
     if (clearedCount > 0) {

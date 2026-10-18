@@ -99,6 +99,7 @@ END
     required int createdAt,
     String? lastMessageContent,
     int? lastMessageTimestamp,
+    int? lastMessageCreatedAt,
     String? lastMessageSenderPubkey,
     String? subject,
     bool isRead = true,
@@ -157,6 +158,7 @@ END
       createdAt: createdAt,
       lastMessageContent: Value(lastMessageContent),
       lastMessageTimestamp: Value(lastMessageTimestamp),
+      lastMessageCreatedAt: Value(lastMessageCreatedAt),
       lastMessageSenderPubkey: Value(lastMessageSenderPubkey),
       subject: Value(subject),
       isRead: Value(keepDismissed || (!restoredByIncoming && isRead)),
@@ -192,6 +194,16 @@ END
         final previewCondition = forceUpdateLastMessage
             ? const Constant<bool>(true)
             : advancesAttention;
+        final previewBoundaryChanges =
+            previewCondition &
+            coalesce([
+                  excl.lastMessageTimestamp,
+                  const Constant(-1),
+                ])
+                .equalsExp(
+                  coalesce([old.lastMessageTimestamp, const Constant(-1)]),
+                )
+                .not();
         final readCursor = coalesce([
           old.lastReadTimestamp,
           const Constant(0),
@@ -241,6 +253,14 @@ END
           lastMessageSenderPubkey: excl.lastMessageSenderPubkey.iif(
             previewCondition,
             old.lastMessageSenderPubkey,
+          ),
+          lastMessageCreatedAt: excl.lastMessageCreatedAt.iif(
+            previewCondition,
+            old.lastMessageCreatedAt,
+          ),
+          retainedMessageIds: const Constant<String>(null).iif(
+            previewBoundaryChanges,
+            old.retainedMessageIds,
           ),
         );
       }),
@@ -431,7 +451,14 @@ END
           ownerPubkey: ownerPubkey,
           boundaryTimestamp: boundary,
           knownMessageIds: Value(
-            jsonEncode(messages.map((m) => m.id).toList()),
+            jsonEncode(
+              {
+                if (row.retainedMessageIds != null)
+                  ...(jsonDecode(row.retainedMessageIds!) as List)
+                      .cast<String>(),
+                ...messages.map((m) => m.id),
+              }.toList(),
+            ),
           ),
         ),
       );
@@ -506,6 +533,81 @@ END
       updateKind: UpdateKind.update,
     );
     return rows > 0;
+  }
+
+  /// Advances the read cursor of every read conversation [ownerPubkey] owns to
+  /// its latest message, the rule [markAsRead] applies to one row.
+  ///
+  /// The latest message's own `created_at` counts too, bounded by
+  /// [nowSeconds]: ingest stores the timestamp bounded by the clock at the
+  /// time, so a message from a sender whose clock ran ahead comes back from a
+  /// later re-download with a larger timestamp than the one read. The bound
+  /// stops a far-future `created_at` from marking later messages read.
+  ///
+  /// A conversation can be read with no cursor because the user sent its last
+  /// message. The pin makes that read state durable when a clock-bounded
+  /// timestamp grows on re-download or a deletion refresh lowers the preview.
+  /// Matches the exact owner, never legacy rows. Returns the number of
+  /// conversations whose cursor moved (#10276).
+  Future<int> pinReadCursorsToLatestMessage(
+    String ownerPubkey, {
+    required int nowSeconds,
+  }) {
+    const latest =
+        'MAX(COALESCE(last_message_timestamp, 0), '
+        'MIN(COALESCE(last_message_created_at, 0), ?))';
+    return customUpdate(
+      'UPDATE conversations SET last_read_timestamp = $latest '
+      'WHERE owner_pubkey = ? AND is_read = 1 '
+      'AND COALESCE(last_read_timestamp, 0) < $latest',
+      variables: [
+        Variable(nowSeconds),
+        Variable(ownerPubkey),
+        Variable(nowSeconds),
+      ],
+      updates: {attachedDatabase.conversations},
+      updateKind: UpdateKind.update,
+    );
+  }
+
+  /// Captures replay IDs before account cleanup removes the message rows.
+  /// Existing IDs survive another switch with incomplete restored history.
+  /// The preview write paths clear them when its boundary timestamp changes.
+  Future<int> retainMessageIdsForAccountSwitch(String ownerPubkey) =>
+      customUpdate(
+        '''
+        UPDATE conversations AS c SET retained_message_ids = (
+          SELECT json_group_array(id) FROM (
+            SELECT value AS id
+            FROM json_each(COALESCE(c.retained_message_ids, '[]'))
+            UNION
+            SELECT dm.id FROM direct_messages dm
+            WHERE dm.conversation_id = c.id
+              AND (dm.owner_pubkey = c.owner_pubkey OR dm.owner_pubkey = ''
+                   OR dm.owner_pubkey IS NULL)
+              AND dm.created_at >= COALESCE(c.last_message_timestamp, 0)
+          )
+        ) WHERE c.owner_pubkey = ?
+        ''',
+        variables: [Variable(ownerPubkey)],
+        updates: {attachedDatabase.conversations},
+        updateKind: UpdateKind.update,
+      );
+
+  /// Deletes every conversation whose owner is not in [keepOwnerPubkeys].
+  ///
+  /// Collects the conversations kept for a returning account once that
+  /// account is no longer known on the device (#10276). Unattributed legacy
+  /// rows (`''` or `NULL` owner) are left to the account-boundary cleanup.
+  /// Returns the number of conversations deleted.
+  Future<int> deleteForOwnersNotIn(Set<String> keepOwnerPubkeys) {
+    return (delete(conversations)..where(
+          (row) =>
+              row.ownerPubkey.isNotNull() &
+              row.ownerPubkey.equals('').not() &
+              row.ownerPubkey.isNotIn(keepOwnerPubkeys),
+        ))
+        .go();
   }
 
   /// Owner filter for raw SQL retained by legacy repair queries: empty when
@@ -690,7 +792,15 @@ END
   /// Fixes stale conversation previews written by app versions prior to the
   /// write-path timestamp guard in [upsertConversation]. Idempotent: once a
   /// conversation row matches the newest non-deleted message (or correctly has
-  /// no preview because no messages remain), subsequent runs are no-ops.
+  /// no preview because every message was deleted), subsequent runs are
+  /// no-ops.
+  ///
+  /// A conversation ahead of its locally stored messages is left alone: an
+  /// account boundary may have deleted its messages, and a later download may
+  /// only have restored older wraps. Its kept stamp prevents those older wraps
+  /// from marking an unread chat read, including across restarts (#10276).
+  /// Deleted rows still count as restored history so a deleted latest message
+  /// can have its preview cleared or replaced.
   ///
   /// Returns the number of conversations updated.
   Future<int> backfillLatestMessagePreviews({String? ownerPubkey}) {
@@ -740,8 +850,18 @@ LIMIT 1
       UPDATE conversations AS c
       SET last_message_content = ($latestPreviewContentSubquery),
           last_message_timestamp = ($latestTimestampSubquery),
-          last_message_sender_pubkey = ($latestSenderSubquery)
+          last_message_sender_pubkey = ($latestSenderSubquery),
+          last_message_created_at = NULL,
+          retained_message_ids = CASE
+            WHEN c.last_message_timestamp IS ($latestTimestampSubquery)
+            THEN c.retained_message_ids ELSE NULL END
       WHERE $scopedConversationFilter
+        AND EXISTS (
+          SELECT 1 FROM direct_messages dm
+          WHERE dm.conversation_id = c.id AND $latestMessageOwnerFilter
+            AND (c.last_message_timestamp IS NULL
+                 OR dm.created_at >= c.last_message_timestamp)
+        )
         AND (
           COALESCE(c.last_message_content, '') !=
               COALESCE(($latestPreviewContentSubquery), '') OR
@@ -753,13 +873,7 @@ LIMIT 1
       ''',
       variables: [
         if (ownerPubkey != null) ...[
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
-          Variable(ownerPubkey),
+          for (var i = 0; i < 9; i++) Variable(ownerPubkey),
         ],
       ],
       updates: {attachedDatabase.conversations},

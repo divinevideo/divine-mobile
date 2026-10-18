@@ -517,7 +517,10 @@ class DmMessageDeletionRetryTarget {
 /// Nothing here expires. No DM table is pruned by age or size: rows leave only
 /// when the user removes a conversation, when an account is switched or signed
 /// out, or when the account's data is deleted. `pending_gift_wraps` is the one
-/// exception, bounded by its decrypt-attempt cap.
+/// exception, bounded by its decrypt-attempt cap. A switch or sign-out keeps
+/// the account's `conversations` rows, which hold its read state, until the
+/// account is removed from the device or the device no longer knows it
+/// (#10276).
 ///
 /// That makes the **relay** the binding constraint on how long a message
 /// survives, not this repository. NIP-59 makes storing a `kind:1059` optional
@@ -4181,6 +4184,9 @@ class DmRepository {
             createdAt: existing?.createdAt ?? persistedCreatedAt,
             lastMessageContent: previewContent,
             lastMessageTimestamp: persistedCreatedAt,
+            // Unbounded on purpose: only the read-cursor pin reads it, and it
+            // bounds the value by the clock itself (#10276).
+            lastMessageCreatedAt: rumor.createdAt,
             lastMessageSenderPubkey: rumor.pubkey,
             subject: subject,
             isRead: isSentByMe,
@@ -5027,6 +5033,9 @@ class DmRepository {
           createdAt: existing?.createdAt ?? persistedCreatedAt,
           lastMessageContent: plaintext,
           lastMessageTimestamp: persistedCreatedAt,
+          // Unbounded on purpose: only the read-cursor pin reads it, and it
+          // bounds the value by the clock itself (#10276).
+          lastMessageCreatedAt: nip04Event.createdAt,
           lastMessageSenderPubkey: senderPubkey,
           isRead: isSentByMe,
           isNewMessage: existing?.isDismissed ?? false,

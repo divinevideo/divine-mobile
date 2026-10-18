@@ -995,9 +995,10 @@ class DmMessageReactions extends Table {
   /// reaction's recipients.
   ///
   /// A retry or a removal replays this set instead of re-reading
-  /// `conversations`, whose rows an account switch deletes while the queued
-  /// rows here are kept, set included (#7880). A self-wrap echo that re-files
-  /// the row under another conversation leaves the set as it is.
+  /// `conversations`, whose rows removing the account from the device deletes
+  /// while the queued rows here are kept, set included (#7880). A self-wrap
+  /// echo that re-files the row under another conversation leaves the set as
+  /// it is.
   ///
   /// NULL means the set is not established: a received reaction, a row
   /// queued before schema v20, a row queued while its recipients could not
@@ -1047,6 +1048,12 @@ class DmMessageReactions extends Table {
 ///
 /// Each row represents a unique chat room defined by the set of participant
 /// pubkeys. Updated whenever a new message arrives in the conversation.
+///
+/// Retention: one row per room per account, kept while the account is known
+/// on this device. A switch or plain sign-out keeps the departing account's
+/// rows, which carry its read state, and deletes its messages; removing the
+/// account from the device or deleting it deletes them (the `DM tables` step
+/// of `userDataCleanupService` in the app, #10276).
 @DataClassName('ConversationRow')
 class Conversations extends Table {
   @override
@@ -1083,7 +1090,8 @@ class Conversations extends Table {
       boolean().withDefault(const Constant(true)).named('is_read')();
 
   /// Cached dismissal projection. [ConversationDismissals] retains the state
-  /// when sign-out or account switching clears these conversation rows.
+  /// when these conversation rows are deleted, as removing the account from
+  /// the device does; sign-out and account switching keep them (#10276).
   BoolColumn get isDismissed =>
       boolean().withDefault(const Constant(false)).named('is_dismissed')();
 
@@ -1091,10 +1099,27 @@ class Conversations extends Table {
   /// sync (#4977). Monotonic high-water mark of the newest message the user
   /// has read; published encrypted-to-self over Nostr and restored on
   /// reinstall. NULL until the conversation is first read. Ingest never writes
-  /// it — only `ConversationsDao.markAsRead` / `applyReadCursor` advance it,
-  /// and only ever forward (`max`).
+  /// it — only `ConversationsDao.markAsRead`, `applyReadCursor` and
+  /// `pinReadCursorsToLatestMessage` advance it, and only ever forward (`max`).
   IntColumn get lastReadTimestamp =>
       integer().nullable().named('last_read_timestamp')();
+
+  /// The rumor's own `created_at` for the message in the preview, before
+  /// ingest bounds [lastMessageTimestamp] by the local clock.
+  ///
+  /// The two differ when the sender's clock runs ahead. A re-download after
+  /// the local clock has passed `created_at` stores the larger value, so a
+  /// read cursor taken from the bounded one would leave the chat unread
+  /// (#10276). NULL when the preview was rebuilt from stored messages.
+  IntColumn get lastMessageCreatedAt =>
+      integer().nullable().named('last_message_created_at')();
+
+  /// Known message IDs at the kept preview's boundary, captured before an
+  /// account switch clears local history. Dismissing the kept row can then
+  /// distinguish replay from a genuinely new message in the same second.
+  /// Cleared when its timestamp changes; owned and deleted with this row.
+  TextColumn get retainedMessageIds =>
+      text().nullable().named('retained_message_ids')();
 
   /// Whether the current user has sent a message in this conversation.
   BoolColumn get currentUserHasSent => boolean()

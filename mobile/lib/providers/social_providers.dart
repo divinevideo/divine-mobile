@@ -732,6 +732,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
         String? userPubkey,
         bool deleteUserData = false,
         bool preserveActiveSession = false,
+        bool forgetAccount = false,
       }) async {
         Future<void> safeCleanup(
           String name,
@@ -793,8 +794,24 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
                 await db.directMessagesDao.deleteAllForOwner(userPubkey);
                 await db.conversationsDao.deleteAllForOwner(userPubkey);
               } else {
+                if (!deleteUserData && !forgetAccount) {
+                  await db.conversationsDao.retainMessageIdsForAccountSwitch(
+                    userPubkey,
+                  );
+                }
                 await db.directMessagesDao.clearForAccountSwitch(userPubkey);
-                await db.conversationsDao.clearForAccountSwitch(userPubkey);
+                if (deleteUserData || forgetAccount) {
+                  await db.conversationsDao.clearForAccountSwitch(userPubkey);
+                } else {
+                  // An account that can come back keeps its conversations:
+                  // they hold its read state, which re-downloaded messages
+                  // cannot restore before the history drain (#10276).
+                  await db.conversationsDao.pinReadCursorsToLatestMessage(
+                    userPubkey,
+                    nowSeconds: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                  );
+                  await db.conversationsDao.clearUnowned();
+                }
               }
               // Raw failed-decrypt wraps and their terminal dedup ledger must
               // never outlive the decrypted DM data they accompany.
@@ -1051,6 +1068,16 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
     // upgrade rather than leaving them visible to every account.
     await db.notificationsDao.claimLegacyRows(userPubkey);
   };
+
+  service.onConversationSweep = db.conversationsDao.deleteForOwnersNotIn;
+  // A kept conversation outlives its account when the account leaves the
+  // known-accounts list without its own cleanup; collect those once per launch
+  // as well as after every account cleanup (#10276).
+  runProviderDetached(
+    service.sweepConversationsOfUnknownAccounts(),
+    'sweep conversations of accounts no longer on this device',
+    logName: 'UserDataCleanup',
+  );
 
   return service;
 }

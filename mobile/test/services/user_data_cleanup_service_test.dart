@@ -1,10 +1,14 @@
 // ABOUTME: Tests for UserDataCleanupService identity change detection and cleanup
 // ABOUTME: Validates that user-specific data is cleared when switching accounts
 
+import 'dart:convert';
+
 import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
+import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -716,6 +720,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 receivedPubkey = userPubkey;
                 receivedDeleteUserData = deleteUserData;
@@ -741,6 +746,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 receivedDeleteUserData = deleteUserData;
               };
@@ -759,6 +765,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 throw StateError('cleanup failed');
               };
@@ -773,6 +780,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               throw StateError('cleanup failed');
             };
@@ -789,6 +797,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               throw StateError('cleanup failed');
             };
@@ -1016,6 +1025,7 @@ void main() {
               userPubkey,
               deleteUserData = false,
               preserveActiveSession = false,
+              forgetAccount = false,
             }) async {
               preservedActiveSession = preserveActiveSession;
               throw StateError('database unavailable');
@@ -1124,6 +1134,104 @@ void main() {
         // Static keys should not be in prefix list
         expect(prefixes, isNot(contains('curated_lists')));
         expect(prefixes, isNot(contains('seen_video_ids')));
+      });
+    });
+
+    group('sweepConversationsOfUnknownAccounts (#10276)', () {
+      const knownPubkey =
+          'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
+      const activePubkey =
+          'c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3';
+
+      late List<Set<String>> sweeps;
+
+      setUp(() {
+        sweeps = [];
+        service.onConversationSweep = (keep) async {
+          sweeps.add(keep);
+          return 0;
+        };
+      });
+
+      Future<void> rememberAccounts(List<String> pubkeys) => prefs.setString(
+        kKnownAccountsKey,
+        jsonEncode([
+          for (final pubkey in pubkeys)
+            KnownAccount(
+              pubkeyHex: pubkey,
+              authSource: AuthenticationSource.importedKeys,
+              addedAt: DateTime.utc(2026),
+              lastUsedAt: DateTime.utc(2026),
+            ).toJson(),
+        ]),
+      );
+
+      test('keeps the known accounts and the active one', () async {
+        await rememberAccounts([knownPubkey]);
+        await prefs.setString('current_user_pubkey_hex', activePubkey);
+
+        await service.sweepConversationsOfUnknownAccounts();
+
+        expect(sweeps, [
+          {knownPubkey, activePubkey},
+        ]);
+      });
+
+      test('an emptied registry keeps only the active account', () async {
+        await prefs.setString(kKnownAccountsKey, '');
+        await prefs.setString('current_user_pubkey_hex', activePubkey);
+
+        await service.sweepConversationsOfUnknownAccounts();
+
+        expect(sweeps, [
+          {activePubkey},
+        ]);
+      });
+
+      test('skips the sweep when the registry was never written', () async {
+        await prefs.setString('current_user_pubkey_hex', activePubkey);
+
+        await service.sweepConversationsOfUnknownAccounts();
+
+        expect(sweeps, isEmpty);
+      });
+
+      test('skips the sweep when the registry cannot be read', () async {
+        await prefs.setString(kKnownAccountsKey, 'not json');
+
+        await service.sweepConversationsOfUnknownAccounts();
+
+        expect(sweeps, isEmpty);
+      });
+
+      test('a failing sweep does not fail the account cleanup', () async {
+        await rememberAccounts([knownPubkey]);
+        service.onConversationSweep = (_) async =>
+            throw StateError('database unavailable');
+
+        await expectLater(
+          service.clearUserSpecificData(
+            reason: 'explicit_logout',
+            userPubkey: knownPubkey,
+          ),
+          completes,
+        );
+      });
+
+      test('every account cleanup ends with a sweep', () async {
+        await rememberAccounts([knownPubkey]);
+
+        await service.clearUserSpecificData(
+          reason: 'explicit_logout',
+          userPubkey: knownPubkey,
+        );
+        await service.deleteAccountData(
+          knownPubkey,
+          userNpub: 'npub1unused',
+          preserveActiveSession: false,
+        );
+
+        expect(sweeps, hasLength(2));
       });
     });
   });

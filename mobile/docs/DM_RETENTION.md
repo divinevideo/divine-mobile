@@ -12,7 +12,8 @@ Trust & Safety; see [The open decision](#the-open-decision).
 
 | Store | Owner | Holds | Lifetime |
 |---|---|---|---|
-| `direct_messages`, `conversations` (Drift) | the device | decrypted rumors | until the user removes the thread, or the account is switched or signed out |
+| `direct_messages` (Drift) | the device | decrypted rumors | until the user removes the thread, or the account is switched or signed out |
+| `conversations` (Drift) | the device | one row per chat: participants, latest preview, read state | until the user removes the thread, the account is removed from the device or deleted, or the device no longer knows the account |
 | `removed_conversations` (Drift) | the device | tombstones | the account's lifetime; cleared only on a full data delete |
 | `removed_message_ids` (Drift) | the device | ids of messages and reactions removed with a conversation | the account's lifetime; cleared only on a full data delete |
 | `processed_gift_wraps` (Drift) | the device | wrap-id dedup ledger | unbounded — see [Client tables](#client-tables) |
@@ -36,8 +37,9 @@ recipient `p` tag and hard-deletes them. So when a user exercises the
 account-deletion flow this app ships, **every gift wrap addressed to them is
 destroyed**, an enforcement notice among them.
 
-The local copy is no safer. An account switch or sign-out clears the DM tables
-for the departing account, and a reinstall takes the whole database. Recovery
+The local copy is no safer. An account switch or sign-out clears the departing
+account's messages (its conversation list and read state stay until the account
+is removed from the device), and a reinstall takes the whole database. Recovery
 after any of those is by re-reading wraps from relays — and after a vanish there
 is nothing left to re-read.
 
@@ -57,7 +59,7 @@ Every DM table on the device, and what bounds it. Only one is bounded by code.
 | Table | Bounded | By what |
 |---|---|---|
 | `direct_messages` | no | user removal or account teardown only. A NIP-09 "delete for everyone" is a **soft** delete: the row and its content stay so gift-wrap dedup keeps working |
-| `conversations` | no | same |
+| `conversations` | no | user removal, removing the account from the device, account deletion, or the sweep that deletes the conversations of accounts the device no longer knows. A switch or plain sign-out keeps a known account's rows so its chats come back with their read state (#10276) |
 | `removed_conversations` | no | deliberately. The tombstone must outlive relay replay, so it is kept for the account's lifetime and cleared only when the user deletes their data |
 | `removed_message_ids` | no | deliberately. A rumor id is exact evidence that a message is gone for good, so a later NIP-09 retraction naming it can be settled and a replay of it is not stored again. Kept for the account's lifetime and cleared only when the user deletes their data. Ids and a timestamp only, no content |
 | `outgoing_dms` | partly | deleted on successful send or user cancel; a permanently failed row is marked `failed` and kept for manual retry; a delivery the sender stopped for a member of a stored group message is kept as `cancelled` (the record behind "Not sent to everyone") until that member's wrap lands after all, the message's retraction is confirmed, the conversation is removed or the account is cleared. The exception is a one-to-one row addressed to its own sender, which is deleted when a retry reaches it and at the next sign-in (#8363) |
