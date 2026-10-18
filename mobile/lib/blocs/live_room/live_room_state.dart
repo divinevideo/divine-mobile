@@ -58,12 +58,17 @@ class LiveRoomState extends Equatable {
   bool get canPublish => role?.canPublish ?? false;
 
   List<LivePresence> get visiblePresence {
-    if (hiddenParticipantPubkeys.isEmpty) {
-      return presence;
-    }
-
     return presence
         .where((member) => !hiddenParticipantPubkeys.contains(member.pubkey))
+        .map(
+          (member) => member.copyWith(
+            role: member.pubkey == room?.hostPubkey
+                ? LiveRole.host
+                : canonicalSpeakerPubkeys.contains(member.pubkey)
+                ? LiveRole.speaker
+                : LiveRole.audience,
+          ),
+        )
         .toList(growable: false);
   }
 
@@ -77,41 +82,34 @@ class LiveRoomState extends Equatable {
     return '30313:${currentRoom.hostPubkey}:${currentSession.id}';
   }
 
-  List<String> get speakerPubkeys {
-    final stageSpeakerPubkeys = this.stageSpeakerPubkeys;
-    if (stageSpeakerPubkeys != null) {
-      return stageSpeakerPubkeys
-          .where((pubkey) => !hiddenParticipantPubkeys.contains(pubkey))
-          .toList(growable: false);
-    }
-
-    final speakers = <String>{};
+  /// The host-approved roster, including participants hidden only in this view.
+  List<String> get canonicalSpeakerPubkeys {
     final currentSession = session;
-    if (currentSession != null) {
-      speakers.addAll(currentSession.speakerPubkeys);
-    }
-    speakers.removeAll(hiddenParticipantPubkeys);
-    for (final member in visiblePresence) {
-      if (member.role.canPublish) {
-        speakers.add(member.pubkey);
-      }
-    }
-    return speakers.toList(growable: false);
+    if (currentSession == null) return const [];
+    final host = room?.hostPubkey ?? currentSession.hostPubkey;
+    return {
+      if (currentSession.isLive && host != null && host.isNotEmpty) host,
+      ...stageSpeakerPubkeys ?? currentSession.speakerPubkeys,
+    }.toList(growable: false);
   }
+
+  List<String> get speakerPubkeys => canonicalSpeakerPubkeys
+      .where((pubkey) => !hiddenParticipantPubkeys.contains(pubkey))
+      .toList(growable: false);
 
   List<LivePresence> get raisedHands {
     return visiblePresence
         .where(
           (member) =>
               member.handRaised &&
-              !speakerPubkeys.contains(member.pubkey) &&
+              !canonicalSpeakerPubkeys.contains(member.pubkey) &&
               !dismissedHandPubkeys.contains(member.pubkey),
         )
         .toList(growable: false);
   }
 
   bool get speakerCapacityReached =>
-      speakerPubkeys.length >= maxActiveVideoSpeakers;
+      canonicalSpeakerPubkeys.length >= maxActiveVideoSpeakers;
 
   LiveRoomState copyWith({
     LiveRoomStatus? status,

@@ -127,7 +127,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       state.copyWith(
         status: LiveRoomStatus.loading,
         room: event.room,
-        role: event.role,
+        role: _resolveRole(room: event.room, session: null),
         clearSession: true,
         presence: const <LivePresence>[],
         mediaState: const LiveMediaState(),
@@ -162,13 +162,11 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     final currentRole = state.role;
     final currentSession = state.session;
     final sessionChanged = currentSession?.id != nextSession?.id;
-    final nextRole = currentRoom == null || currentRole == null
+    final nextRole = currentRoom == null
         ? currentRole
         : _resolveRole(
             room: currentRoom,
             session: nextSession,
-            presence: state.presence,
-            fallbackRole: currentRole,
           );
     emit(
       state.copyWith(
@@ -180,7 +178,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
             ? const <LivePresence>[]
             : state.presence,
         clearError: true,
-        clearStageSpeakerPubkeys: nextSession == null || sessionChanged,
+        clearStageSpeakerPubkeys: true,
         clearDismissedHandPubkeys: nextSession == null || sessionChanged,
         clearHiddenChatParticipantPubkeys:
             nextSession == null || sessionChanged,
@@ -223,43 +221,16 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
     }
   }
 
-  Future<void> _onPresenceUpdated(
+  void _onPresenceUpdated(
     LiveRoomPresenceUpdated event,
     Emitter<LiveRoomState> emit,
-  ) async {
-    final currentRoom = state.room;
-    final currentSession = state.session;
-    final currentRole = state.role;
-    final nextRole = currentRoom == null || currentRole == null
-        ? currentRole
-        : _resolveRole(
-            room: currentRoom,
-            session: currentSession,
-            presence: event.presence,
-            fallbackRole: currentRole,
-          );
+  ) {
     emit(
       state.copyWith(
-        role: nextRole,
         presence: event.presence,
         clearError: true,
         currentUserHandRaised: _isCurrentUserHandRaised(event.presence),
       ),
-    );
-
-    if (currentRoom == null ||
-        currentSession == null ||
-        nextRole == null ||
-        !currentSession.isLive ||
-        nextRole == currentRole) {
-      return;
-    }
-
-    await _connectToLiveSession(
-      room: currentRoom,
-      session: currentSession,
-      role: nextRole,
-      emit: emit,
     );
   }
 
@@ -821,26 +792,13 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
   LiveRole _resolveRole({
     required LiveRoom room,
     required LiveSession? session,
-    required List<LivePresence> presence,
-    required LiveRole fallbackRole,
   }) {
     if (_currentUserPubkey.isEmpty) {
-      return fallbackRole;
+      return LiveRole.audience;
     }
 
     if (room.hostPubkey == _currentUserPubkey) {
       return LiveRole.host;
-    }
-
-    for (final member in presence) {
-      if (member.pubkey == _currentUserPubkey) {
-        if (member.role.canModerate) {
-          return member.role;
-        }
-        if (member.role.canPublish) {
-          return LiveRole.speaker;
-        }
-      }
     }
 
     if (session?.speakerPubkeys.contains(_currentUserPubkey) ?? false) {
@@ -875,7 +833,7 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       return;
     }
 
-    final nextSpeakerPubkeys = List<String>.from(state.speakerPubkeys);
+    final nextSpeakerPubkeys = List<String>.from(state.canonicalSpeakerPubkeys);
     if (shouldPromote) {
       if (nextSpeakerPubkeys.contains(pubkey)) {
         return;
@@ -927,13 +885,15 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       return;
     }
 
-    if (shouldApprove && !state.speakerPubkeys.contains(pubkey)) {
+    if (shouldApprove && !state.canonicalSpeakerPubkeys.contains(pubkey)) {
       await _updateSpeakerRoster(
         emit: emit,
         pubkey: pubkey,
         shouldPromote: true,
       );
-    } else if (!shouldApprove && state.speakerPubkeys.contains(pubkey)) {
+      if (!state.canonicalSpeakerPubkeys.contains(pubkey)) return;
+    } else if (!shouldApprove &&
+        state.canonicalSpeakerPubkeys.contains(pubkey)) {
       await _updateSpeakerRoster(
         emit: emit,
         pubkey: pubkey,

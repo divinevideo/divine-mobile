@@ -89,9 +89,11 @@ class LiveRepository {
     String? sessionId,
     int limit = 50,
   }) async {
+    final roomHost = roomAddress?.split(':').elementAtOrNull(1);
     final events = await _nostrClient.queryEvents([
       Filter(
         kinds: const <int>[30313],
+        authors: roomHost == null ? null : [roomHost],
         a: roomAddress == null ? null : <String>[roomAddress],
         d: sessionId == null ? null : [sessionId],
         limit: limit,
@@ -101,7 +103,11 @@ class LiveRepository {
     final sessions = <String, LiveSession>{};
     final versions = <String, Event>{};
     for (final event in events) {
-      final session = _tryParseSession(event);
+      final session = _tryParseSession(
+        event,
+        roomAddress: roomAddress,
+        sessionId: sessionId,
+      );
       if (session != null &&
           _acceptVersion(versions, session.addressKey, event)) {
         sessions[session.addressKey] = session;
@@ -116,9 +122,11 @@ class LiveRepository {
     String? sessionId,
     int limit = 50,
   }) {
+    final roomHost = roomAddress?.split(':').elementAtOrNull(1);
     final filters = <Filter>[
       Filter(
         kinds: const <int>[30313],
+        authors: roomHost == null ? null : [roomHost],
         a: roomAddress == null ? null : <String>[roomAddress],
         d: sessionId == null ? null : [sessionId],
         limit: limit,
@@ -128,7 +136,11 @@ class LiveRepository {
     return _watchCollection<LiveSession>(
       queryFilters: filters,
       subscribeFilters: filters,
-      parse: _tryParseSession,
+      parse: (event) => _tryParseSession(
+        event,
+        roomAddress: roomAddress,
+        sessionId: sessionId,
+      ),
       keyOf: (session) => session.addressKey,
       sort: _sortedSessions,
       subscriptionPrefix: 'live_sessions',
@@ -150,7 +162,7 @@ class LiveRepository {
     return _watchCollection<LivePresence>(
       queryFilters: filters,
       subscribeFilters: filters,
-      parse: _tryParsePresence,
+      parse: (event) => _tryParsePresence(event, sessionAddress),
       keyOf: (presence) => '${presence.sessionAddressKey}:${presence.pubkey}',
       sort: _sortedPresence,
       subscriptionPrefix: 'live_presence',
@@ -311,17 +323,27 @@ class LiveRepository {
     }
   }
 
-  LiveSession? _tryParseSession(Event event) {
+  LiveSession? _tryParseSession(
+    Event event, {
+    String? roomAddress,
+    String? sessionId,
+  }) {
     try {
-      return _codec.parseSession(event);
+      final session = _codec.parseSession(event);
+      if ((roomAddress != null && session.roomAddress != roomAddress) ||
+          (sessionId != null && session.id != sessionId)) {
+        return null;
+      }
+      return session;
     } on FormatException {
       return null;
     }
   }
 
-  LivePresence? _tryParsePresence(Event event) {
+  LivePresence? _tryParsePresence(Event event, String sessionAddress) {
     try {
-      return _codec.parsePresence(event);
+      final presence = _codec.parsePresence(event);
+      return presence.sessionAddress == sessionAddress ? presence : null;
     } on FormatException {
       return null;
     }

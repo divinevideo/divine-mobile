@@ -13,6 +13,179 @@ void main() {
       codec = const LiveNostrCodec();
     });
 
+    group('signed session boundaries', () {
+      const host =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const other =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      Event session({
+        String author = host,
+        String address = '30312:$host:room:with:colons',
+        List<List<String>> extra = const [],
+        int createdAt = 1700000000,
+      }) => Event(
+        author,
+        30313,
+        [
+          ['d', 'session:with:colons'],
+          ['a', address],
+          ...extra,
+        ],
+        '',
+        createdAt: createdAt,
+      );
+
+      test('rejects a session signed by another room author', () {
+        expect(
+          () => codec.parseSession(session(author: other)),
+          throwsFormatException,
+        );
+      });
+
+      test('cannot publish a session for another room author', () async {
+        final signer = LocalNostrSigner(_privateKeyFor('a'));
+        final signerPubkey = (await signer.getPublicKey())!;
+        await expectLater(
+          codec.buildSessionEvent(
+            session: LiveSession(
+              id: 'session',
+              roomId: 'room',
+              status: LiveSessionStatus.live,
+              startedAt: DateTime.utc(2026),
+              endedAt: null,
+              speakerPubkeys: [signerPubkey],
+              audienceCount: 0,
+            ),
+            roomAddress: '30312:$other:room',
+            hostPubkey: signerPubkey,
+            signer: signer,
+          ),
+          throwsFormatException,
+        );
+      });
+
+      test('retains colons in room and session identifiers', () {
+        final parsed = codec.parseSession(session());
+        expect(parsed.roomAddress, '30312:$host:room:with:colons');
+        expect(parsed.address, '30313:$host:session:with:colons');
+      });
+
+      for (final seconds in [-8640000000000, 8640000000000]) {
+        test('accepts the timestamp boundary $seconds', () {
+          final parsed = codec.parseSession(
+            session(
+              extra: [
+                ['starts', '$seconds'],
+                ['ends', '$seconds'],
+              ],
+            ),
+          );
+          expect(parsed.startedAt.millisecondsSinceEpoch, seconds * 1000);
+          expect(parsed.endedAt!.millisecondsSinceEpoch, seconds * 1000);
+        });
+      }
+      for (final raw in [
+        '8640000000001',
+        '-8640000000001',
+        '9223372036854775807',
+        '-9223372036854775808',
+        '9999999999999999999999999999',
+      ]) {
+        for (final tag in ['starts', 'ends']) {
+          test('rejects out-of-range $tag $raw as malformed data', () {
+            expect(
+              () => codec.parseSession(
+                session(
+                  extra: [
+                    [tag, raw],
+                  ],
+                ),
+              ),
+              throwsFormatException,
+            );
+          });
+        }
+      }
+      test(
+        'missing and nonnumeric dates retain their established fallbacks',
+        () {
+          for (final extra in [
+            <List<String>>[],
+            [
+              ['starts', 'unknown'],
+              ['ends', 'unknown'],
+            ],
+          ]) {
+            final parsed = codec.parseSession(session(extra: extra));
+            expect(parsed.startedAt.millisecondsSinceEpoch, 1700000000000);
+            expect(parsed.endedAt, isNull);
+          }
+        },
+      );
+      for (final timestamp in [
+        8640000000001,
+        -8640000000001,
+        9223372036854775807,
+        -9223372036854775808,
+      ]) {
+        test(
+          'rejects overflowing event timestamp $timestamp for every consumer',
+          () {
+            expect(
+              () => codec.parseSession(session(createdAt: timestamp)),
+              throwsFormatException,
+            );
+            for (final kind in [10312, 1311]) {
+              final event = Event(
+                other,
+                kind,
+                [
+                  ['a', '30313:$host:session'],
+                ],
+                '',
+                createdAt: timestamp,
+              );
+              expect(
+                () => kind == 10312
+                    ? codec.parsePresence(event)
+                    : codec.parseChatMessage(event),
+                throwsFormatException,
+              );
+            }
+          },
+        );
+      }
+      test('presence cannot self-assign a publishing or moderation role', () {
+        for (final role in ['host', 'moderator', 'speaker']) {
+          final parsed = codec.parsePresence(
+            Event(
+              other,
+              10312,
+              [
+                ['a', '30313:$host:session'],
+                ['role', role],
+                ['hand', '1'],
+              ],
+              '',
+              createdAt: 1700000000,
+            ),
+          );
+          expect(parsed.role, LiveRole.audience);
+          expect(parsed.handRaised, isTrue);
+        }
+      });
+      test('presence publications contain no authority claim', () async {
+        final event = await codec.buildPresenceEvent(
+          sessionAddress: '30313:$host:session',
+          role: LiveRole.host,
+          handRaised: true,
+          signer: LocalNostrSigner(_privateKeyFor('a')),
+        );
+        expect(event.tags.where((tag) => tag.first == 'role'), isEmpty);
+        expect(_tagValue(event.tags, 'hand'), '1');
+      });
+    });
+
     test('parses a live room event from kind 30312', () async {
       final hostPubkey = await _pubkeyFor('a');
       final event = Event(
@@ -205,7 +378,7 @@ void main() {
       expect(presence.sessionHostPubkey, hostPubkey);
       expect(presence.sessionAddress, '30313:$hostPubkey:session-abc');
       expect(presence.pubkey, speakerPubkey);
-      expect(presence.role, LiveRole.speaker);
+      expect(presence.role, LiveRole.audience);
       expect(presence.handRaised, isTrue);
       expect(presence.updatedAt, _dateTimeFromSeconds(1700000200));
     });

@@ -81,6 +81,7 @@ class LiveNostrCodec {
     if (pubkey != hostPubkey) {
       throw StateError('Signer pubkey does not match the session host pubkey');
     }
+    _requireRoomAuthor(roomAddress, pubkey);
 
     final tags = <List<String>>[
       ['d', session.id],
@@ -130,7 +131,6 @@ class LiveNostrCodec {
       kind: 10312,
       tags: <List<String>>[
         ['a', sessionAddress],
-        ['role', role.name],
         ['hand', handValue],
       ],
       content: '',
@@ -173,6 +173,7 @@ class LiveNostrCodec {
     _requireKind(event, 30313, 'session');
     final sessionId = _requiredTagValue(event.tags, 'd', 'session id');
     final roomAddress = _requiredAddressForKind(event.tags, 30312, 'room');
+    _requireRoomAuthor(roomAddress, event.pubkey);
     final speakerPubkeys = <String>[];
 
     for (final tag in event.tags.where(
@@ -219,7 +220,9 @@ class LiveNostrCodec {
       sessionId: _dTagFromAddress(sessionAddress),
       sessionHostPubkey: _authorFromAddress(sessionAddress),
       pubkey: event.pubkey,
-      role: LiveRole.fromNostrRole(_firstTagValue(event.tags, 'role')),
+      role: event.pubkey == _authorFromAddress(sessionAddress)
+          ? LiveRole.host
+          : LiveRole.audience,
       handRaised: _isRaisedHand(_firstTagValue(event.tags, 'hand')),
       updatedAt: _eventTimestamp(event),
     );
@@ -294,18 +297,37 @@ class LiveNostrCodec {
   }
 
   DateTime? _parseDateTime(String? unixSeconds) {
-    final seconds = _parseInt(unixSeconds);
+    final seconds = BigInt.tryParse(unixSeconds ?? '');
     if (seconds == null) {
       return null;
     }
-    return DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+    return _dateTimeFromSeconds(seconds);
   }
 
-  DateTime _eventTimestamp(Event event) {
+  DateTime _eventTimestamp(Event event) =>
+      _dateTimeFromSeconds(BigInt.from(event.createdAt));
+
+  DateTime _dateTimeFromSeconds(BigInt seconds) {
+    // Validate before multiplying: native integer overflow can wrap into range.
+    if (seconds.abs() > BigInt.from(8640000000000)) {
+      throw const FormatException(
+        'Live timestamp is outside the DateTime range',
+      );
+    }
     return DateTime.fromMillisecondsSinceEpoch(
-      event.createdAt * 1000,
+      seconds.toInt() * 1000,
       isUtc: true,
     );
+  }
+
+  void _requireRoomAuthor(String address, String pubkey) {
+    if (!address.startsWith('30312:') ||
+        _authorFromAddress(address) != pubkey ||
+        _dTagFromAddress(address).isEmpty) {
+      throw const FormatException(
+        'Live session must be signed by its room author',
+      );
+    }
   }
 
   int? _parseInt(String? rawValue) => int.tryParse(rawValue ?? '');

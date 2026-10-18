@@ -237,6 +237,301 @@ void main() {
       await mediaController.close();
     });
 
+    group('host-signed authority', () {
+      for (final claimedRole in [
+        LiveRole.host,
+        LiveRole.moderator,
+        LiveRole.speaker,
+      ]) {
+        test(
+          'a presence claim of ${claimedRole.name} cannot grant privileges',
+          () async {
+            final bloc = LiveRoomBloc(
+              liveRepository: mockRepository,
+              liveApiService: mockApiService,
+              liveKitRoomService: mockMediaService,
+              currentUserPubkey: audiencePubkey,
+            );
+            addTearDown(bloc.close);
+            bloc.add(
+              const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+            );
+            await pumpEventQueue();
+            sessionsController.add([liveSession]);
+            await pumpEventQueue();
+            presenceController.add([
+              raisedHandPresence.copyWith(role: claimedRole),
+            ]);
+            await pumpEventQueue();
+            expect(bloc.state.role, LiveRole.audience);
+            expect(bloc.state.canPublish, isFalse);
+            expect(bloc.state.canModerate, isFalse);
+            expect(bloc.state.speakerPubkeys, [hostPubkey, speakerPubkey]);
+            expect(bloc.state.visiblePresence.single.role, LiveRole.audience);
+            expect(bloc.state.raisedHands.single.pubkey, audiencePubkey);
+            bloc.add(const PromoteSpeakerRequested(audiencePubkey));
+            await pumpEventQueue();
+            verifyNever(
+              () => mockApiService.setParticipantRole(
+                roomId: room.id,
+                pubkey: any(named: 'pubkey'),
+                role: any(named: 'role'),
+              ),
+            );
+          },
+        );
+      }
+      test(
+        'a requested host role without an identified host grants no privileges',
+        () async {
+          final bloc = LiveRoomBloc(
+            liveRepository: mockRepository,
+            liveApiService: mockApiService,
+            liveKitRoomService: mockMediaService,
+          );
+          addTearDown(bloc.close);
+          bloc.add(
+            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.canModerate, isFalse);
+          sessionsController.add([liveSession]);
+          await pumpEventQueue();
+          expect(bloc.state.role, LiveRole.audience);
+          verifyNever(
+            () => mockApiService.fetchJoinToken(
+              roomId: room.id,
+              role: LiveRole.host,
+            ),
+          );
+        },
+      );
+      test(
+        'hidden speakers still occupy the full publisher capacity',
+        () async {
+          final bloc = LiveRoomBloc(
+            liveRepository: mockRepository,
+            liveApiService: mockApiService,
+            liveKitRoomService: mockMediaService,
+            currentUserPubkey: hostPubkey,
+          );
+          addTearDown(bloc.close);
+          bloc.add(
+            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+          );
+          await pumpEventQueue();
+          sessionsController.add([
+            liveSession.copyWith(
+              speakerPubkeys: [
+                hostPubkey,
+                speakerPubkey,
+                audiencePubkey,
+                audienceTwoPubkey,
+              ],
+            ),
+          ]);
+          await pumpEventQueue();
+          bloc.add(const HideParticipantLocallyRequested(speakerPubkey));
+          await pumpEventQueue();
+          expect(bloc.state.speakerPubkeys, isNot(contains(speakerPubkey)));
+          expect(bloc.state.speakerCapacityReached, isTrue);
+          bloc.add(const PromoteSpeakerRequested(audienceThreePubkey));
+          await pumpEventQueue();
+          expect(bloc.state.error, LiveRoomError.speakerCapacityReached);
+          verifyNever(
+            () => mockApiService.setParticipantRole(
+              roomId: room.id,
+              pubkey: audienceThreePubkey,
+              role: any(named: 'role'),
+            ),
+          );
+        },
+      );
+      for (final action in ['promote', 'demote', 'approve', 'deny']) {
+        test(
+          '$action preserves unrelated hidden speakers in the signed roster',
+          () async {
+            final adding = action == 'promote' || action == 'approve';
+            final bloc = LiveRoomBloc(
+              liveRepository: mockRepository,
+              liveApiService: mockApiService,
+              liveKitRoomService: mockMediaService,
+              currentUserPubkey: hostPubkey,
+            );
+            addTearDown(bloc.close);
+            bloc.add(
+              const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+            );
+            await pumpEventQueue();
+            sessionsController.add([
+              liveSession.copyWith(
+                speakerPubkeys: [
+                  hostPubkey,
+                  speakerPubkey,
+                  if (!adding) audiencePubkey,
+                ],
+              ),
+            ]);
+            await pumpEventQueue();
+            bloc.add(const HideParticipantLocallyRequested(speakerPubkey));
+            await pumpEventQueue();
+            bloc.add(switch (action) {
+              'promote' => const PromoteSpeakerRequested(audiencePubkey),
+              'demote' => const DemoteSpeakerRequested(audiencePubkey),
+              'approve' => const ApproveRaisedHandRequested(audiencePubkey),
+              _ => const DenyRaisedHandRequested(audiencePubkey),
+            });
+            await pumpEventQueue();
+            final published =
+                verify(
+                      () => mockRepository.publishSession(
+                        session: captureAny(named: 'session'),
+                        roomAddress: room.address,
+                        hostPubkey: hostPubkey,
+                      ),
+                    ).captured.single
+                    as LiveSession;
+            expect(published.speakerPubkeys, [
+              hostPubkey,
+              speakerPubkey,
+              if (adding) audiencePubkey,
+            ]);
+            expect(
+              bloc.state.session!.speakerPubkeys,
+              published.speakerPubkeys,
+            );
+            expect(bloc.state.speakerPubkeys, isNot(contains(speakerPubkey)));
+            expect(
+              bloc.state.hiddenParticipantPubkeys,
+              contains(speakerPubkey),
+            );
+          },
+        );
+      }
+      test(
+        'an accepted host roster replaces the local stage prediction',
+        () async {
+          final bloc = LiveRoomBloc(
+            liveRepository: mockRepository,
+            liveApiService: mockApiService,
+            liveKitRoomService: mockMediaService,
+            currentUserPubkey: hostPubkey,
+          );
+          addTearDown(bloc.close);
+          bloc.add(
+            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+          );
+          await pumpEventQueue();
+          sessionsController.add([liveSession]);
+          await pumpEventQueue();
+          bloc.add(const PromoteSpeakerRequested(audiencePubkey));
+          await pumpEventQueue();
+          expect(bloc.state.speakerPubkeys, contains(audiencePubkey));
+          sessionsController.add([liveSession]);
+          await pumpEventQueue();
+          expect(bloc.state.speakerPubkeys, [hostPubkey, speakerPubkey]);
+        },
+      );
+      test(
+        'approval at capacity retains its error and hidden roster',
+        () async {
+          final bloc = LiveRoomBloc(
+            liveRepository: mockRepository,
+            liveApiService: mockApiService,
+            liveKitRoomService: mockMediaService,
+            currentUserPubkey: hostPubkey,
+          );
+          addTearDown(bloc.close);
+          bloc.add(
+            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+          );
+          await pumpEventQueue();
+          sessionsController.add([
+            liveSession.copyWith(
+              speakerPubkeys: [
+                hostPubkey,
+                speakerPubkey,
+                audiencePubkey,
+                audienceTwoPubkey,
+              ],
+            ),
+          ]);
+          await pumpEventQueue();
+          bloc.add(const HideParticipantLocallyRequested(speakerPubkey));
+          await pumpEventQueue();
+          bloc.add(const ApproveRaisedHandRequested(audienceThreePubkey));
+          await pumpEventQueue();
+          expect(bloc.state.error, LiveRoomError.speakerCapacityReached);
+          expect(bloc.state.session!.speakerPubkeys, [
+            hostPubkey,
+            speakerPubkey,
+            audiencePubkey,
+            audienceTwoPubkey,
+          ]);
+          verifyNever(
+            () => mockApiService.setParticipantRole(
+              roomId: room.id,
+              pubkey: audienceThreePubkey,
+              role: any(named: 'role'),
+            ),
+          );
+        },
+      );
+      test(
+        'the host occupies capacity even without a redundant speaker tag',
+        () {
+          final state = LiveRoomState(
+            room: room,
+            session: liveSession.copyWith(
+              speakerPubkeys: [
+                speakerPubkey,
+                audiencePubkey,
+                audienceTwoPubkey,
+              ],
+            ),
+          );
+          expect(state.speakerPubkeys, [
+            hostPubkey,
+            speakerPubkey,
+            audiencePubkey,
+            audienceTwoPubkey,
+          ]);
+          expect(state.speakerCapacityReached, isTrue);
+        },
+      );
+
+      test(
+        'denying a hidden speaker still removes their signed role',
+        () async {
+          final bloc = LiveRoomBloc(
+            liveRepository: mockRepository,
+            liveApiService: mockApiService,
+            liveKitRoomService: mockMediaService,
+            currentUserPubkey: hostPubkey,
+          );
+          addTearDown(bloc.close);
+          bloc.add(
+            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+          );
+          await pumpEventQueue();
+          sessionsController.add([liveSession]);
+          await pumpEventQueue();
+          bloc.add(const HideParticipantLocallyRequested(speakerPubkey));
+          await pumpEventQueue();
+          bloc.add(const DenyRaisedHandRequested(speakerPubkey));
+          await pumpEventQueue();
+          expect(bloc.state.session!.speakerPubkeys, [hostPubkey]);
+          verify(
+            () => mockApiService.setParticipantRole(
+              roomId: room.id,
+              pubkey: speakerPubkey,
+              role: LiveRole.audience,
+            ),
+          ).called(1);
+        },
+      );
+    });
+
     test('a session deep link never joins another live session', () async {
       when(
         () => mockRepository.watchSessions(
@@ -287,6 +582,7 @@ void main() {
               .thenAnswer((_) => connected.future);
         }
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -314,6 +610,7 @@ void main() {
       'join request watches room state, fetches a token, and exposes host speaker state',
       () async {
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -364,6 +661,7 @@ void main() {
       'host join does not auto-publish local tracks on room entry',
       () async {
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -404,6 +702,7 @@ void main() {
       ).thenThrow(Exception('token failed'));
 
       final bloc = LiveRoomBloc(
+        currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
         liveApiService: mockApiService,
         liveKitRoomService: mockMediaService,
@@ -424,6 +723,7 @@ void main() {
 
     test('publish control events delegate to the media service', () async {
       final bloc = LiveRoomBloc(
+        currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
         liveApiService: mockApiService,
         liveKitRoomService: mockMediaService,
@@ -457,6 +757,7 @@ void main() {
       'camera toggle follows requested state while local publish is still in flight',
       () async {
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -509,6 +810,7 @@ void main() {
           () => mockMediaService.setCameraEnabled(false),
         ).thenAnswer((_) => cameraCompleter.future);
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -541,6 +843,7 @@ void main() {
       'microphone toggle follows requested state while local publish is still in flight',
       () async {
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -610,6 +913,7 @@ void main() {
         ).thenAnswer((_) async => PermissionStatus.granted);
 
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -662,6 +966,7 @@ void main() {
         ).thenAnswer((_) async => NativeCameraPermissionStatus.promptBlocked);
 
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -729,6 +1034,7 @@ void main() {
         ).thenAnswer((_) async => PermissionStatus.canRequest);
 
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -791,6 +1097,7 @@ void main() {
         ).thenAnswer((_) async => NativeCameraPermissionStatus.denied);
 
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -850,6 +1157,7 @@ void main() {
         ).thenAnswer((_) async => NativeCameraPermissionStatus.promptBlocked);
 
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -912,6 +1220,7 @@ void main() {
         ).thenAnswer((_) async => PermissionStatus.granted);
 
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -1003,6 +1312,7 @@ void main() {
       'host can promote and demote speakers while enforcing the publisher cap',
       () async {
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -1343,6 +1653,7 @@ void main() {
 
     test('host can end the live session', () async {
       final bloc = LiveRoomBloc(
+        currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
         liveApiService: mockApiService,
         liveKitRoomService: mockMediaService,
@@ -1374,6 +1685,7 @@ void main() {
 
     test('host can publish room metadata updates', () async {
       final bloc = LiveRoomBloc(
+        currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
         liveApiService: mockApiService,
         liveKitRoomService: mockMediaService,
@@ -1417,6 +1729,7 @@ void main() {
 
     test('host can approve and deny raised hands locally', () async {
       final bloc = LiveRoomBloc(
+        currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
         liveApiService: mockApiService,
         liveKitRoomService: mockMediaService,
@@ -1492,6 +1805,7 @@ void main() {
       'host can hide participants locally without changing their room role',
       () async {
         final bloc = LiveRoomBloc(
+          currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
@@ -1530,6 +1844,7 @@ void main() {
 
     test('hosts stay connected when the app backgrounds', () async {
       final bloc = LiveRoomBloc(
+        currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
         liveApiService: mockApiService,
         liveKitRoomService: mockMediaService,

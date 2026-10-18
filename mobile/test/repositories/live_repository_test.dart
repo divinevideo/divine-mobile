@@ -57,6 +57,7 @@ void main() {
         LiveSession(
           id: sessionId,
           roomId: roomId,
+          hostPubkey: hostPubkey,
           status: LiveSessionStatus.live,
           startedAt: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
           endedAt: null,
@@ -122,6 +123,187 @@ void main() {
         nostrClient: mockNostrClient,
         codec: mockCodec,
         liveApiService: mockLiveApiService,
+      );
+    });
+
+    group('protocol boundaries', () {
+      Event sessionEvent({
+        String author = hostPubkey,
+        String room = roomAddress,
+        String session = sessionId,
+        String idChar = '1',
+        String? starts,
+      }) => Event.fromJson(
+        _eventJson(
+          kind: 30313,
+          pubkey: author,
+          idChar: idChar,
+          tags: [
+            ['d', session],
+            ['a', room],
+            if (starts != null) ['starts', starts],
+          ],
+        ),
+      );
+      Event presenceEvent({
+        String address = sessionAddress,
+        String idChar = '1',
+        int createdAt = 1700000000,
+      }) => Event.fromJson(
+        _eventJson(
+          kind: 10312,
+          pubkey: speakerPubkey,
+          idChar: idChar,
+          createdAt: createdAt,
+          tags: [
+            ['a', address],
+            ['role', 'host'],
+            ['hand', '1'],
+          ],
+        ),
+      );
+      setUp(() {
+        repository = LiveRepository(
+          nostrClient: mockNostrClient,
+          codec: const LiveNostrCodec(),
+        );
+      });
+      test(
+        'scoped fetch asks the host and rejects foreign rooms and sessions',
+        () async {
+          final valid = sessionEvent();
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              sessionEvent(author: speakerPubkey),
+              sessionEvent(
+                author: speakerPubkey,
+                room: '30312:$speakerPubkey:$roomId',
+              ),
+              sessionEvent(room: '30312:$hostPubkey:another-room'),
+              sessionEvent(session: 'another-session'),
+              valid,
+            ],
+          );
+          final result = await repository.fetchSessions(
+            roomAddress: roomAddress,
+            sessionId: sessionId,
+          );
+          expect(result.map((session) => session.address), [sessionAddress]);
+          final filter =
+              (verify(() => mockNostrClient.queryEvents(captureAny()))
+                          .captured
+                          .single
+                      as List<Filter>)
+                  .single;
+          expect(filter.authors, [hostPubkey]);
+          expect(filter.a, [roomAddress]);
+          expect(filter.d, [sessionId]);
+        },
+      );
+      test(
+        'discovery skips a malformed timestamp before a valid session',
+        () async {
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              sessionEvent(starts: '9223372036854775807'),
+              sessionEvent(idChar: '2'),
+            ],
+          );
+          expect(
+            (await repository.fetchSessions()).map(
+              (session) => session.address,
+            ),
+            [sessionAddress],
+          );
+        },
+      );
+      test(
+        'scoped watch ignores off-scope and malformed events without ending',
+        () async {
+          final events = StreamController<Event>();
+          addTearDown(events.close);
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          ).thenAnswer((_) => events.stream);
+          final queue = StreamQueue(
+            repository.watchSessions(
+              roomAddress: roomAddress,
+              sessionId: sessionId,
+            ),
+          );
+          addTearDown(queue.cancel);
+          expect(await queue.next, isEmpty);
+          final query =
+              (verify(
+                        () => mockNostrClient.queryEvents(
+                          captureAny(),
+                          subscriptionId: any(named: 'subscriptionId'),
+                        ),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          final live =
+              (verify(
+                        () => mockNostrClient.subscribe(
+                          captureAny(),
+                          subscriptionId: any(named: 'subscriptionId'),
+                        ),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(query.authors, [hostPubkey]);
+          expect(live.authors, [hostPubkey]);
+          events
+            ..add(sessionEvent(author: speakerPubkey))
+            ..add(sessionEvent(room: '30312:$hostPubkey:other'))
+            ..add(sessionEvent(session: 'other'))
+            ..add(sessionEvent(starts: '8640000000001'))
+            ..add(sessionEvent(idChar: '2'));
+          final result = await queue.next;
+          expect(result.map((session) => session.address), [sessionAddress]);
+          expect(result.single.roomAddress, roomAddress);
+        },
+      );
+      test(
+        'presence watch ignores foreign coordinates and malformed timestamps',
+        () async {
+          final events = StreamController<Event>();
+          addTearDown(events.close);
+          when(
+            () => mockNostrClient.queryEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              presenceEvent(address: '30313:$hostPubkey:other'),
+              presenceEvent(address: '30313:$speakerPubkey:$sessionId'),
+            ],
+          );
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          ).thenAnswer((_) => events.stream);
+          final queue = StreamQueue(
+            repository.watchPresence(sessionAddress: sessionAddress),
+          );
+          addTearDown(queue.cancel);
+          expect(await queue.next, isEmpty);
+          events
+            ..add(presenceEvent(address: '30313:$speakerPubkey:$sessionId'))
+            ..add(presenceEvent(address: '30313:$hostPubkey:other'))
+            ..add(presenceEvent(createdAt: 9223372036854775807))
+            ..add(presenceEvent(idChar: '2'));
+          final result = await queue.next;
+          expect(result.single.sessionAddress, sessionAddress);
+          expect(result.single.pubkey, speakerPubkey);
+          expect(result.single.role, LiveRole.audience);
+        },
       );
     });
 
@@ -292,6 +474,7 @@ void main() {
           LiveSession(
             id: sessionId,
             roomId: roomId,
+            hostPubkey: hostPubkey,
             status: LiveSessionStatus.live,
             startedAt: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
             endedAt: null,
@@ -303,6 +486,7 @@ void main() {
           LiveSession(
             id: sessionId,
             roomId: roomId,
+            hostPubkey: hostPubkey,
             status: LiveSessionStatus.ended,
             startedAt: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
             endedAt: DateTime.fromMillisecondsSinceEpoch(1700003600 * 1000),
@@ -698,6 +882,7 @@ void main() {
         final session = LiveSession(
           id: sessionId,
           roomId: roomId,
+          hostPubkey: hostPubkey,
           status: LiveSessionStatus.live,
           startedAt: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
           endedAt: null,
