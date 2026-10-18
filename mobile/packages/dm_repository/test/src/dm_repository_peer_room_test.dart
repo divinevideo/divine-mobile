@@ -950,14 +950,15 @@ void main() {
         expect(await conversations(), isEmpty);
       });
 
-      test('brings the room back when the user sends to it from this '
-          'device', () async {
-        await joinTheRoom();
-        await leave();
-        // A send needs the message service the receiving fixture does not
-        // wire. Its relays confirm every wrap.
+      /// A repository that can send, sharing the receiving fixture's
+      /// database. The relays confirm every wrap; [onRecipientWrap] runs
+      /// before the first confirm, while the send is still in flight.
+      DmRepository sendingRepository({
+        Future<void> Function()? onRecipientWrap,
+      }) {
         when(() => nostrClient.configuredRelays).thenReturn(const [_pool]);
         when(() => nostrClient.isRelayAllowed(any())).thenReturn(true);
+        var confirms = 0;
         when(
           () => nostrClient.publishEventAwaitOk(
             any(),
@@ -966,6 +967,7 @@ void main() {
             diagnosticTag: any(named: 'diagnosticTag'),
           ),
         ).thenAnswer((invocation) async {
+          if (confirms++ == 0) await onRecipientWrap?.call();
           final event = invocation.positionalArguments.first as Event;
           return PublishOutcome(
             eventId: event.id,
@@ -985,7 +987,7 @@ void main() {
           ),
         );
         final signer = LocalNostrSigner(_ownerSecret);
-        final sender = DmRepository(
+        return DmRepository(
           nostrClient: nostrClient,
           messageService: NIP17MessageService(
             signer: signer,
@@ -998,23 +1000,73 @@ void main() {
           userPubkey: _owner,
           signer: signer,
         );
+      }
+
+      int wallClockSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      test('brings the room back from the time of the message the user sends '
+          'to it from this device', () async {
+        await joinTheRoom();
+        await leave();
+        int? rejoinedWhilePublishing;
+        final sender = sendingRepository(
+          onRecipientWrap: () async =>
+              rejoinedWhilePublishing = (await tombstone())!.rejoinedAt,
+        );
 
         final results = await sender.sendGroupMessage(
           recipientPubkeys: [_alice, _bob],
           content: 'back again',
         );
         expect(results.every((result) => result.success), isTrue);
+        final sent = await messagesDao.getMessageById(
+          results.first.rumorEventId!,
+          ownerPubkey: _owner,
+        );
+        expect(sent, isNotNull);
+        // Recorded before the first wrap is confirmed, at the message's own
+        // created_at rather than at confirm time.
+        expect(rejoinedWhilePublishing, sent!.createdAt);
+        expect((await tombstone())!.rejoinedAt, sent.createdAt);
 
         final later = message(
           author: _alice,
           pTags: [_owner, _bob],
           content: 'welcome back',
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: wallClockSeconds(),
         );
         await deliver(later, authorSecret: _aliceSecret);
 
         expect(await messageIdsIn(_roomId), contains(later.id));
-        expect((await tombstone())!.rejoinedAt, isNotNull);
+      });
+
+      test('lets in a member reply that lands while the send is still being '
+          'confirmed', () async {
+        await joinTheRoom();
+        await leave();
+        late final Event reply;
+        final sender = sendingRepository(
+          onRecipientWrap: () async {
+            reply = message(
+              author: _alice,
+              pTags: [_owner, _bob],
+              content: 'replied before the send confirmed',
+              createdAt: wallClockSeconds(),
+            );
+            await deliver(reply, authorSecret: _aliceSecret);
+          },
+        );
+
+        final results = await sender.sendGroupMessage(
+          recipientPubkeys: [_alice, _bob],
+          content: 'back again',
+        );
+
+        expect(results.every((result) => result.success), isTrue);
+        expect(
+          await messageIdsIn(_roomId),
+          unorderedEquals([results.first.rumorEventId, reply.id]),
+        );
       });
 
       test('does not carry a member message into the one-to-one while '

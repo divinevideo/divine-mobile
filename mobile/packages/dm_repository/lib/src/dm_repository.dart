@@ -6134,15 +6134,6 @@ class DmRepository {
       dmProtocol: dmProtocol,
     );
     await _conversationsDao.markAsRead(id, ownerPubkey: ownerPubkey);
-    // Writing in a group the user left, or starting a new chat with the same
-    // people, brings it back (#10150).
-    if (isGroup && ownerPubkey != null) {
-      await _removedConversationsDao?.markRejoined(
-        conversationId: id,
-        ownerPubkey: ownerPubkey,
-        at: lastMessageTimestamp,
-      );
-    }
   }
 
   /// Make a conversation whose FIRST send did not deliver visible in the
@@ -8616,6 +8607,17 @@ class DmRepository {
     for (final recipient in recipientPubkeys) {
       queueIds.add(_groupQueueId(groupRumor.id, recipient));
     }
+
+    // Writing in a group the user left, or starting a new chat with the same
+    // people, brings it back from this message's own time (#10150). Recorded
+    // before anything is queued or published: the confirms below run one
+    // recipient at a time, and a member's reply that lands meanwhile must not
+    // be kept out. A send that later fails still counts; the user wrote.
+    await _removedConversationsDao?.markRejoined(
+      conversationId: conversationId,
+      ownerPubkey: _userPubkey,
+      at: batchCreatedAt,
+    );
 
     // Enqueue every sibling before publish so an app crash mid-send leaves a
     // recoverable trace per recipient, and all N optimistic bubbles' rows
