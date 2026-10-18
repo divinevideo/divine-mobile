@@ -1170,6 +1170,62 @@ void main() {
 
       int wallClockSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
+      for (final withQueue in [false, true]) {
+        test('keeps Leave while an earlier send awaits relay discovery '
+            '(queue: $withQueue)', () async {
+          await joinTheRoom();
+          final discoveryStarted = Completer<void>();
+          final resumeDiscovery = Completer<void>();
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async {
+            if (!discoveryStarted.isCompleted) discoveryStarted.complete();
+            await resumeDiscovery.future;
+            return (events: const <Event>[], timedOut: false, noRelays: false);
+          });
+          final sender = sendingRepository(
+            outgoingDmsDao: withQueue ? OutgoingDmsDao(db) : null,
+          );
+          final sending = sender.sendGroupMessage(
+            recipientPubkeys: [_alice, _bob],
+            content: 'started before Leave',
+          );
+          await discoveryStarted.future;
+          expect(
+            await sender.removeConversation(_roomId),
+            ConversationRemovalOutcome.removed,
+          );
+          expect(await conversations(), isEmpty);
+          expect((await tombstone())!.rejoinedAt, isNull);
+
+          resumeDiscovery.complete();
+          final results = await sending;
+
+          expect(results.any((result) => result.success), isFalse);
+          verifyNever(
+            () => nostrClient.publishEventAwaitOk(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+              diagnosticTag: any(named: 'diagnosticTag'),
+            ),
+          );
+          expect(await conversations(), isEmpty);
+          expect(await messageIdsIn(_roomId), isEmpty);
+          expect((await tombstone())!.rejoinedAt, isNull);
+        });
+      }
+
       test('receives newer peer messages after a local send in the removal '
           'second', () async {
         await joinTheRoom();

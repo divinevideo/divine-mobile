@@ -8554,33 +8554,6 @@ class DmRepository {
     final conversationId = computeConversationId(participants);
     final outgoingDao = _outgoingDmsDao;
 
-    // Resolve every recipient's kind-10050 DM inbox concurrently BEFORE the
-    // per-recipient send loop. Each wrap must route to its own recipient's
-    // inbox (NIP-17), and OK-confirm below is only meaningful against that
-    // inbox. Doing this up front (rather than one await per loop iteration)
-    // keeps N sequential ~5s inbox queries from stacking and delaying the
-    // visible group bubble. Resolution never throws (it degrades to null →
-    // default pool), so a failed lookup just falls back.
-    //
-    // Resolved through the DETAILED reader: routing only needs the relays, but
-    // this fan-out also REPORTS delivery, and `absent` and `unreadable` both
-    // route to the pool while meaning opposite things (#8434). Kept per
-    // recipient rather than collapsed to one batch verdict because NIP-17
-    // states the rule per recipient — "the relays listed in the recipient's
-    // kind 10050 event" (17.md:77) — and the queue already holds one row per
-    // member, so a readable sibling stays genuinely delivered.
-    final inboxByRecipient = <String, DmInboxLookup>{};
-    await Future.wait([
-      for (final pubkey in recipientPubkeys)
-        resolveDmInboxRelaysDetailed(
-          pubkey,
-        ).then((inbox) => inboxByRecipient[pubkey] = inbox),
-    ]);
-
-    // One destination for every self-copy in the batch — it is addressed to
-    // the sender, not to a recipient, so it does not vary per wrap.
-    final selfWrapRelays = await _selfWrapTargetRelays();
-
     // Per-recipient durable handle for the queue row. The wire rumor is shared
     // across the batch, so the rumor id alone can no longer key a row: the
     // queue tracks per-recipient delivery, and `enqueue` is `insertOrIgnore`,
@@ -8668,9 +8641,9 @@ class DmRepository {
         conversationId: conversationId,
         ownerPubkey: _userPubkey,
         at: batchCreatedAt,
-        // Any removal found here came first, so this send rejoins even when
-        // it is stamped in the leave's second, or before it by a clock set
-        // back since.
+        // Establish the local rejoin before relay discovery can suspend us.
+        // A Leave completed during discovery must remain left, not be
+        // mistaken for the removal this send intended to rejoin.
         isLocalSend: true,
       );
     }
@@ -8755,6 +8728,22 @@ class DmRepository {
         }
       }
     }
+
+    // Resolve relays only after the local rejoin and queue writes. Leave can
+    // then cancel this send while discovery is pending; the pre-publish
+    // checks below observe its tombstone and deleted queue rows.
+    // Resolve every recipient concurrently so discovery does not stack one
+    // timeout per member. The detailed reader distinguishes an absent inbox
+    // from an unreadable one even though both route to the pool (#8434).
+    final inboxByRecipient = <String, DmInboxLookup>{};
+    await Future.wait([
+      for (final pubkey in recipientPubkeys)
+        resolveDmInboxRelaysDetailed(
+          pubkey,
+        ).then((inbox) => inboxByRecipient[pubkey] = inbox),
+    ]);
+    // Every self-copy is addressed to the same sender.
+    final selfWrapRelays = await _selfWrapTargetRelays();
 
     // Delivery below is per-recipient and NOT atomic: a mid-loop publish
     // failure can leave the group partially delivered. That is a reliability/UX
