@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/services/schedule_api_client.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockScheduleApiClient extends Mock implements ScheduleApiClient {}
 
@@ -566,6 +567,64 @@ void main() {
 
         expect((await repository.syncFromServer()).failed, hasLength(1));
         expect((await repository.syncFromServer()).failed, isEmpty);
+      });
+
+      // An account switch disposes the repository and closes its client
+      // while the outgoing account's list request is in flight (#10291).
+      test(
+        'a list that fails after dispose is not logged as a warning',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          final listing = Completer<ScheduleListResult>();
+          when(() => client.list()).thenAnswer((_) => listing.future);
+
+          final syncing = repository.syncFromServer();
+          await pumpEventQueue();
+          verify(() => client.list()).called(1);
+          repository.dispose();
+          listing.complete(
+            const ScheduleListFailure('Client is already closed'),
+          );
+
+          expect((await syncing).succeeded, isFalse);
+          final logs = LogCaptureService().getRecentLogs();
+          expect(
+            logs.where(
+              (entry) =>
+                  entry.level == LogLevel.warning &&
+                  entry.message.contains('Scheduled-post sync failed'),
+            ),
+            isEmpty,
+          );
+          expect(
+            logs.where(
+              (entry) =>
+                  entry.level == LogLevel.debug &&
+                  entry.message.contains(
+                    'Scheduled-post sync ended after dispose',
+                  ),
+            ),
+            hasLength(1),
+          );
+        },
+      );
+
+      test('a list that fails while the repository is live is logged as a '
+          'warning', () async {
+        await LogCaptureService().clearAllLogs();
+        when(
+          () => client.list(),
+        ).thenAnswer((_) async => const ScheduleListFailure('timeout'));
+
+        expect((await repository.syncFromServer()).succeeded, isFalse);
+        expect(
+          LogCaptureService().getRecentLogs().where(
+            (entry) =>
+                entry.level == LogLevel.warning &&
+                entry.message.contains('Scheduled-post sync failed: timeout'),
+          ),
+          hasLength(1),
+        );
       });
     });
 
