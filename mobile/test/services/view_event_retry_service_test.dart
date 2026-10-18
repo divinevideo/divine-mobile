@@ -17,13 +17,30 @@ class _MockViewEventPublisher extends Mock implements ViewEventPublisher {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
-class _ConsentWithdrawingPendingViewEventsDao extends PendingViewEventsDao {
-  _ConsentWithdrawingPendingViewEventsDao(
+class _MarkPublishingHookDao extends PendingViewEventsDao {
+  _MarkPublishingHookDao(
     super.attachedDatabase, {
-    required this.onMarkedPublishing,
+    this.onMarkedPublishing = _noop,
+    this.onReadRetryable = _noop,
   });
 
+  static void _noop() {}
+
   final void Function() onMarkedPublishing;
+  final void Function() onReadRetryable;
+
+  @override
+  Future<List<PendingViewEvent>> getRetryableForUser({
+    required String userPubkey,
+    int? limit,
+  }) async {
+    final rows = await super.getRetryableForUser(
+      userPubkey: userPubkey,
+      limit: limit,
+    );
+    onReadRetryable();
+    return rows;
+  }
 
   @override
   Future<bool> markPublishing(String id) async {
@@ -125,6 +142,7 @@ void main() {
           appVersion: any(named: 'appVersion'),
         ),
       ).thenAnswer((_) async => true);
+      when(() => publisher.signerPubkey).thenReturn(userPubkey);
     });
 
     tearDown(() async {
@@ -216,7 +234,7 @@ void main() {
         () async {
           await dao.enqueue(makeEvent(id: 'view-a'));
           late final ViewEventRetryService service;
-          dao = _ConsentWithdrawingPendingViewEventsDao(
+          dao = _MarkPublishingHookDao(
             database,
             onMarkedPublishing: () => service.setPublishingEnabled(false),
           );
@@ -238,6 +256,136 @@ void main() {
           );
         },
       );
+    });
+
+    group('dispose', () {
+      // An account switch disposes the outgoing container while a sweep it
+      // started is still awaiting the database. Its signer is gone by then,
+      // so the sweep must stop and leave the row for that account's next
+      // session instead of signing with a disposed key (#10290).
+      Future<void> verifyNeverPublished() async {
+        verifyNever(
+          () => publisher.publishViewEvent(
+            video: any(named: 'video'),
+            startSeconds: any(named: 'startSeconds'),
+            endSeconds: any(named: 'endSeconds'),
+            source: any(named: 'source'),
+            sourceDetail: any(named: 'sourceDetail'),
+            loopCount: any(named: 'loopCount'),
+            phase: any(named: 'phase'),
+            appVersion: any(named: 'appVersion'),
+          ),
+        );
+      }
+
+      test('does not publish a row when disposed during a sweep', () async {
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        late final ViewEventRetryService service;
+        dao = _MarkPublishingHookDao(
+          database,
+          onMarkedPublishing: () => unawaited(service.dispose()),
+        );
+        service = makeService();
+
+        await service.sweep();
+
+        await verifyNeverPublished();
+        final row = await dao.getById('view-a');
+        expect(row, isNotNull);
+        expect(row!.status, isNot(PendingViewEventStatus.failed));
+        expect(row.retryCount, equals(0));
+      });
+
+      test(
+        "the account's next session publishes a row a disposal interrupted",
+        () async {
+          await dao.enqueue(makeEvent(id: 'view-a'));
+          late final ViewEventRetryService outgoing;
+          dao = _MarkPublishingHookDao(
+            database,
+            onMarkedPublishing: () => unawaited(outgoing.dispose()),
+          );
+          outgoing = makeService();
+          await outgoing.sweep();
+          expect(await dao.getById('view-a'), isNotNull);
+
+          // markPublishing stamps the attempt with the real clock, and the
+          // next session runs later than that.
+          now = DateTime.now().add(const Duration(minutes: 1));
+          dao = database.pendingViewEventsDao;
+          final next = makeService();
+          await next.initialize();
+          addTearDown(next.dispose);
+          await next.sweep();
+
+          expect(await dao.getById('view-a'), isNull);
+        },
+      );
+
+      test(
+        'does not claim a row when disposed while reading the queue',
+        () async {
+          // A claimed row is left `publishing`, which only a fresh initialize
+          // resets; a same-account rebuild can initialize before this sweep
+          // claims it and so never see it.
+          await dao.enqueue(makeEvent(id: 'view-a'));
+          late final ViewEventRetryService service;
+          dao = _MarkPublishingHookDao(
+            database,
+            onReadRetryable: () => unawaited(service.dispose()),
+          );
+          service = makeService();
+
+          await service.sweep();
+
+          await verifyNeverPublished();
+          final row = await dao.getById('view-a');
+          expect(row?.status, equals(PendingViewEventStatus.pending));
+        },
+      );
+
+      test(
+        'does not publish while the signer belongs to another account',
+        () async {
+          // The queue is one account's; its rows must never go out under
+          // another account's key, whatever order a switch tears things down.
+          await dao.enqueue(makeEvent(id: 'view-a'));
+          when(() => publisher.signerPubkey).thenReturn(videoPubkey);
+          final service = makeService();
+
+          await service.sweep();
+
+          await verifyNeverPublished();
+          final row = await dao.getById('view-a');
+          expect(row?.status, equals(PendingViewEventStatus.pending));
+        },
+      );
+
+      test('stops when the signer changes account mid-sweep', () async {
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        dao = _MarkPublishingHookDao(
+          database,
+          onMarkedPublishing: () =>
+              when(() => publisher.signerPubkey).thenReturn(videoPubkey),
+        );
+        final service = makeService();
+
+        await service.sweep();
+
+        await verifyNeverPublished();
+      });
+
+      test('a sweep started after dispose publishes nothing', () async {
+        await dao.enqueue(makeEvent(id: 'view-a'));
+        final service = makeService();
+        await service.dispose();
+
+        await service.sweep();
+
+        await verifyNeverPublished();
+        final row = await dao.getById('view-a');
+        expect(row?.status, equals(PendingViewEventStatus.pending));
+      });
     });
 
     test('publishes retryable view and deletes it after success', () async {

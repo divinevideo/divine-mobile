@@ -846,6 +846,18 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             () => db.removedMessageIdsDao.clearAllForUser(userPubkey),
           );
         }
+        // Queued kind 22236 views wait for their account's next session to
+        // sign them. Once its keys leave the device that session never comes,
+        // and a re-import would publish views the user took off the device
+        // (#10290). deleteUserData removes them with the other per-user rows.
+        // Not required: rows a failed delete leaves are swept once the account
+        // is off the known list, while the steps below get no second chance.
+        if (forgetAccount && !deleteUserData && userPubkey != null) {
+          await safeCleanup(
+            'pendingViewEvents',
+            () => db.pendingViewEventsDao.deleteAllForUser(userPubkey),
+          );
+        }
         // Reaction rows keep decrypted rumor payloads (rumor_event_json). Most
         // are re-fetchable DM data and should be wiped with direct_messages,
         // but retryable own rows are also the outgoing queue for unpublished
@@ -1069,13 +1081,15 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
     await db.notificationsDao.claimLegacyRows(userPubkey);
   };
 
-  service.onConversationSweep = db.conversationsDao.deleteForOwnersNotIn;
-  // A kept conversation outlives its account when the account leaves the
-  // known-accounts list without its own cleanup; collect those once per launch
-  // as well as after every account cleanup (#10276).
+  service
+    ..onConversationSweep = db.conversationsDao.deleteForOwnersNotIn
+    ..onQueuedViewSweep = db.pendingViewEventsDao.deleteForUsersNotIn;
+  // Kept conversations and queued views outlive their account when it leaves
+  // the known-accounts list without its own cleanup; collect those once per
+  // launch as well as after every account cleanup (#10276, #10290).
   runProviderDetached(
-    service.sweepConversationsOfUnknownAccounts(),
-    'sweep conversations of accounts no longer on this device',
+    service.sweepRowsOfUnknownAccounts(),
+    'sweep rows of accounts no longer on this device',
     logName: 'UserDataCleanup',
   );
 

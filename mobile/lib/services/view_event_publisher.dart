@@ -78,6 +78,10 @@ class ViewEventPublisher {
   /// app update can name the build that recorded the view (#9077).
   String get appVersion => _appVersion;
 
+  /// The account this publisher signs as right now: its auth service's
+  /// current identity, which is also the identity that signs the event.
+  String? get signerPubkey => _authService.currentPublicKeyHex;
+
   /// Records a dropped view event and returns `false` for the caller.
   ///
   /// Every early return in this class routes through here, so a new skip

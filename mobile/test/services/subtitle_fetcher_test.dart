@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/services/subtitle_fetcher.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _FakeClient extends http.BaseClient {
   _FakeClient(this.handler);
@@ -442,5 +443,100 @@ void main() {
         expect(result.cues.first.text, equals('hello'));
       },
     );
+
+    group('cancellation (#10290)', () {
+      // The owner of the HTTP client cancels by going away: an account switch
+      // disposes the container mid-fetch and closes its client.
+      test('tries no further ref once cancelled', () async {
+        var cancelled = false;
+        final requests = <Uri>[];
+        await fetchSubtitleCues(
+          httpClient: _FakeClient((request) async {
+            requests.add(request.url);
+            cancelled = true;
+            return http.Response('missing', 404);
+          }),
+          nostrClient: null,
+          delay: (_) async {},
+          textTrackRefs: [
+            'https://example.com/first.vtt',
+            'https://example.com/second.vtt',
+          ],
+          isCancelled: () => cancelled,
+        );
+
+        expect(requests, [Uri.parse('https://example.com/first.vtt')]);
+      });
+
+      test('does not fall through to Blossom once cancelled', () async {
+        var cancelled = false;
+        final requests = <Uri>[];
+        await fetchSubtitleCues(
+          httpClient: _FakeClient((request) async {
+            requests.add(request.url);
+            cancelled = true;
+            return http.Response('missing', 404);
+          }),
+          nostrClient: null,
+          delay: (_) async {},
+          textTrackRefs: ['https://example.com/only.vtt'],
+          sha256: 'a' * 64,
+          isCancelled: () => cancelled,
+        );
+
+        expect(requests, [Uri.parse('https://example.com/only.vtt')]);
+      });
+
+      test(
+        'records a failure its cancellation caused at debug, not as a warning',
+        () async {
+          // Support still sees it in an exported log; it just does not read as
+          // a subtitle outage.
+          var cancelled = false;
+          await LogCaptureService().clearAllLogs();
+
+          await fetchSubtitleCues(
+            httpClient: _FakeClient((request) async {
+              cancelled = true;
+              throw http.ClientException('Client is already closed.');
+            }),
+            nostrClient: null,
+            delay: (_) async {},
+            textTrackRefs: ['https://example.com/only.vtt'],
+            isCancelled: () => cancelled,
+          );
+
+          final failures = LogCaptureService().getRecentLogs().where(
+            (entry) => entry.message.contains('VTT fetch failed'),
+          );
+          expect(failures, isNotEmpty);
+          expect(
+            failures.map((entry) => entry.level),
+            everyElement(LogLevel.debug),
+          );
+        },
+      );
+
+      test('stops polling Blossom once cancelled', () async {
+        var cancelled = false;
+        var requests = 0;
+        await fetchSubtitleCues(
+          httpClient: _FakeClient((request) async {
+            requests++;
+            return http.Response(
+              '{"status":"processing"}',
+              202,
+              headers: {'retry-after': '1'},
+            );
+          }),
+          nostrClient: null,
+          delay: (_) async => cancelled = true,
+          sha256: 'a' * 64,
+          isCancelled: () => cancelled,
+        );
+
+        expect(requests, equals(1));
+      });
+    });
   });
 }

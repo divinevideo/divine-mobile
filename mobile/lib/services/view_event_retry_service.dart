@@ -70,6 +70,20 @@ class ViewEventRetryService {
   /// publish before the owner has loaded and pushed the stored decision.
   bool _publishingEnabled = false;
 
+  /// Set synchronously by [dispose]. An account switch disposes the outgoing
+  /// container — and its signer — while a sweep it started is still awaiting
+  /// the database, so the sweep re-checks this before it publishes and leaves
+  /// the row for the account's next session (#10290).
+  bool _isDisposed = false;
+
+  /// Also requires the publisher to sign as this queue's owner, so a row can
+  /// never go out under another account's key whatever order an account
+  /// change tears things down in.
+  bool get _mayPublish =>
+      _publishingEnabled &&
+      !_isDisposed &&
+      _viewEventPublisher.signerPubkey == _userPubkey;
+
   bool get isInitialized => _isInitialized;
 
   /// Applies the analytics consent decision to every later publish attempt.
@@ -94,6 +108,7 @@ class ViewEventRetryService {
   }
 
   Future<void> dispose() async {
+    _isDisposed = true;
     await _foregroundSubscription?.cancel();
     _foregroundSubscription = null;
     _isInitialized = false;
@@ -105,7 +120,7 @@ class ViewEventRetryService {
     // foreground sweep can race that deletion, and rows written by a build
     // that predates the switch have never been offered a consent decision at
     // all. Publishing is the irreversible half, so it is what gets gated.
-    if (!_publishingEnabled) return;
+    if (!_mayPublish) return;
 
     if (_isSweeping) return;
     _isSweeping = true;
@@ -117,6 +132,10 @@ class ViewEventRetryService {
       );
 
       for (final row in retryable) {
+        // Checked before a row is claimed, too: a claimed row stays
+        // `publishing` until the next initialize, which a same-account
+        // rebuild may already have run.
+        if (!_mayPublish) return;
         // View = playback start per spec: any watch is valid, no ≥1s gate.
         final lastAttempt = row.lastAttemptAt;
         if (lastAttempt != null) {
@@ -127,11 +146,13 @@ class ViewEventRetryService {
         final marked = await _dao.markPublishing(row.id);
         if (!marked) continue;
 
-        // Consent may be withdrawn while the database awaits above are in
-        // flight. Check again after the final await before publication; the
-        // publisher call begins synchronously, so no other event-loop turn can
-        // change consent between this check and that irreversible operation.
-        if (!_publishingEnabled) return;
+        // Consent may be withdrawn, or this service disposed, while the
+        // database awaits above are in flight. Check again after the final
+        // await before publication; the publisher call begins synchronously,
+        // so no other event-loop turn can change either between this check
+        // and that irreversible operation. A row left `publishing` here is
+        // reset to pending by the account's next [initialize].
+        if (!_mayPublish) return;
 
         try {
           final video = _toVideoEvent(row);

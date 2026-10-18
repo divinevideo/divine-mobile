@@ -253,6 +253,18 @@ class PendingViewEventsDao extends DatabaseAccessor<AppDatabase>
     )..where((t) => t.userPubkey.equals(userPubkey))).go();
   }
 
+  /// Deletes every queued view event whose owner is not in
+  /// [keepUserPubkeys], returning how many rows were removed.
+  ///
+  /// Only the owning account's next session signs its queued events, so
+  /// rows of an account this device no longer knows are never sent — and must
+  /// not be, should the same key be imported again later.
+  Future<int> deleteForUsersNotIn(Set<String> keepUserPubkeys) {
+    return (delete(
+      pendingViewEvents,
+    )..where((t) => t.userPubkey.isNotIn(keepUserPubkeys))).go();
+  }
+
   Future<PendingViewEvent?> getById(String id) async {
     final row = await (select(
       pendingViewEvents,

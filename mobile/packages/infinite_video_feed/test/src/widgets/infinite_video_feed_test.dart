@@ -40,6 +40,10 @@ class _NativePlayerHarness {
   final List<Map<Object?, Object?>> setClipsArguments =
       <Map<Object?, Object?>>[];
   final Map<int, Completer<void>> setClipsDelays = <int, Completer<void>>{};
+
+  /// Holds the next call of `method` on a player until completed, keyed
+  /// `player_<id>:<method>`.
+  final Map<String, Completer<void>> callDelays = <String, Completer<void>>{};
   final Map<int, int> failSetClipsAfter = <int, int>{};
   final Map<int, List<Exception>> setClipsFailures = <int, List<Exception>>{};
   final Set<int> _installedPlayerIds = <int>{};
@@ -69,6 +73,8 @@ class _NativePlayerHarness {
         playerChannel,
         (call) async {
           methodCalls.add('player_$playerId:${call.method}');
+          final callDelay = callDelays['player_$playerId:${call.method}'];
+          if (callDelay != null) await callDelay.future;
           if (call.method == 'setClips') {
             setClipsArguments.add(
               (call.arguments as Map).cast<Object?, Object?>(),
@@ -1939,6 +1945,115 @@ void main() {
           await tester.pump();
           await harness.dispose();
         }
+      });
+
+      group('source failover that outlives the feed (#10290)', () {
+        // An account switch unmounts the feed while a failover is awaiting a
+        // native call. Resuming then reached the host's autoplay gate, which
+        // reads state the unmounted host no longer owns, and could arm timers
+        // on a disposed feed.
+        const divineUrl =
+            'https://media.divine.video/'
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/'
+            '720p.mp4';
+
+        late _NativePlayerHarness harness;
+        late bool feedMounted;
+        late List<String> gateCallsAfterUnmount;
+        late List<int> stallsAfterUnmount;
+
+        Future<void> mountFeedAndFailOver(
+          WidgetTester tester, {
+          required String heldCall,
+        }) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const <int>[0]);
+          feedMounted = true;
+          gateCallsAfterUnmount = <String>[];
+          stallsAfterUnmount = <int>[];
+          addTearDown(harness.dispose);
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('failover_unmount', videoUrl: divineUrl)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+                canAutoPlay: (video) {
+                  if (!feedMounted) gateCallsAfterUnmount.add(video.id);
+                  return true;
+                },
+                onVideoStalled: (index) {
+                  if (!feedMounted) stallsAfterUnmount.add(index);
+                },
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(harness.countCalls('play'), greaterThanOrEqualTo(1));
+
+          harness.callDelays['player_0:$heldCall'] = Completer<void>();
+          await harness.sendEvent(0, const <Object?, Object?>{
+            'status': 'error',
+            'errorCode': 'parse_error',
+            'errorMessage': 'parse failed',
+          });
+          await tester.pump();
+          expect(harness.methodCalls.last, equals('player_0:$heldCall'));
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          feedMounted = false;
+        }
+
+        Future<void> release(WidgetTester tester, String heldCall) async {
+          harness.callDelays.remove('player_0:$heldCall')?.complete();
+          await tester.pump();
+          await tester.pump();
+        }
+
+        testWidgets('does not consult the host once the new source opens', (
+          tester,
+        ) async {
+          await mountFeedAndFailOver(tester, heldCall: 'setClips');
+          final playsAtUnmount = harness.countCalls('play');
+
+          await release(tester, 'setClips');
+
+          expect(gateCallsAfterUnmount, isEmpty);
+          expect(harness.countCalls('play'), equals(playsAtUnmount));
+        });
+
+        testWidgets('does not report a stall when the new source fails', (
+          tester,
+        ) async {
+          await mountFeedAndFailOver(tester, heldCall: 'setClips');
+          harness.setClipsFailures[0] = <Exception>[
+            PlatformException(code: 'COMPOSITION_ERROR', message: 'gone'),
+          ];
+
+          await release(tester, 'setClips');
+
+          expect(stallsAfterUnmount, isEmpty);
+        });
+
+        testWidgets('does not arm the load watchdog once playing', (
+          tester,
+        ) async {
+          // A watchdog armed after dispose is a timer nothing cancels; the
+          // test binding fails the test on a timer left pending.
+          await mountFeedAndFailOver(tester, heldCall: 'play');
+
+          await release(tester, 'play');
+
+          expect(
+            harness.countCalls('play'),
+            greaterThanOrEqualTo(2),
+            reason: 'the failover reached play before the feed went away',
+          );
+        });
       });
 
       testWidgets('player init failure log includes the failing source', (

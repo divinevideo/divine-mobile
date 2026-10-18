@@ -96,6 +96,7 @@ Future<SubtitleFetchResult> subtitleTrack(
     textTrackRefs: refs,
     sha256: sha256,
     lang: lang,
+    isCancelled: () => !ref.mounted,
   );
 }
 

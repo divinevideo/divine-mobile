@@ -76,6 +76,14 @@ void main() {
       );
     });
 
+    group('signerPubkey', () {
+      test("names the account the publisher's signer belongs to", () {
+        expect(publisher.signerPubkey, equals(viewerPubkey));
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(creatorPubkey);
+        expect(publisher.signerPubkey, equals(creatorPubkey));
+      });
+    });
+
     group('publishViewEvent', () {
       test('returns false when not authenticated', () async {
         when(() => mockAuth.isAuthenticated).thenReturn(false);
