@@ -1,12 +1,14 @@
 // ABOUTME: Keeps an unread conversation across a partial history restore.
 // ABOUTME: Startup repair preserves its known latest-message stamp.
 
+import 'dart:convert';
+
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('backfillLatestMessagePreviews with partially restored history', () {
+  group('retained conversation previews', () {
     late AppDatabase db;
 
     setUp(() {
@@ -15,6 +17,92 @@ void main() {
 
     tearDown(() async {
       await db.close();
+    });
+
+    test('keeps only visible boundary IDs until the preview changes', () async {
+      final dao = db.conversationsDao;
+      for (final owner in ['owner_a', 'owner_b']) {
+        await dao.upsertConversation(
+          id: 'chat',
+          participantPubkeys: '["owner_a","owner_b"]',
+          isGroup: false,
+          createdAt: 100,
+          lastMessageTimestamp: 200,
+          ownerPubkey: owner,
+        );
+      }
+      for (final entry in {'1': 'owner_a', '2': 'owner_b', '3': ''}.entries) {
+        await db.directMessagesDao.insertMessage(
+          id: entry.key * 64,
+          conversationId: 'chat',
+          senderPubkey: 'peer',
+          content: 'boundary',
+          createdAt: 200,
+          giftWrapId: 'a${entry.key}' * 32,
+          ownerPubkey: entry.value,
+        );
+      }
+
+      await dao.retainMessageIdsForAccountSwitch('owner_a');
+      await db.directMessagesDao.clearForAccountSwitch('owner_a');
+      await dao.retainMessageIdsForAccountSwitch('owner_a');
+      final row = (await dao.getConversation('chat', ownerPubkey: 'owner_a'))!;
+      expect(
+        (jsonDecode(row.retainedMessageIds!) as List).toSet(),
+        {'1' * 64, '3' * 64},
+      );
+      expect(
+        (await dao.getConversation(
+          'chat',
+          ownerPubkey: 'owner_b',
+        ))!.retainedMessageIds,
+        isNull,
+      );
+
+      await dao.upsertConversation(
+        id: 'chat',
+        participantPubkeys: '["owner_a","owner_b"]',
+        isGroup: false,
+        createdAt: 100,
+        lastMessageTimestamp: 200,
+        lastMessageContent: 'same-second preview refresh',
+        forceUpdateLastMessage: true,
+        ownerPubkey: 'owner_a',
+      );
+      await db.directMessagesDao.insertMessage(
+        id: '1' * 64,
+        conversationId: 'chat',
+        senderPubkey: 'peer',
+        content: 'partial history at the boundary',
+        createdAt: 200,
+        giftWrapId: 'a1' * 32,
+        ownerPubkey: 'owner_a',
+      );
+      await dao.backfillLatestMessagePreviews(ownerPubkey: 'owner_a');
+      final refreshed = (await dao.getConversation(
+        'chat',
+        ownerPubkey: 'owner_a',
+      ))!;
+      expect(
+        (jsonDecode(refreshed.retainedMessageIds!) as List).toSet(),
+        {'1' * 64, '3' * 64},
+      );
+
+      await dao.upsertConversation(
+        id: 'chat',
+        participantPubkeys: '["owner_a","owner_b"]',
+        isGroup: false,
+        createdAt: 100,
+        lastMessageTimestamp: 300,
+        ownerPubkey: 'owner_a',
+      );
+      expect(
+        (await dao.getConversation(
+          'chat',
+          ownerPubkey: 'owner_a',
+        ))!.retainedMessageIds,
+        isNull,
+      );
     });
 
     test('keeps the unread preview ahead of downloaded messages', () async {

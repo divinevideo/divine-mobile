@@ -629,6 +629,7 @@ void main() {
             'last_message_timestamp',
             'last_message_sender_pubkey',
             'last_message_created_at',
+            'retained_message_ids',
             'subject',
             'is_read',
             'is_dismissed',

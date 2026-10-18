@@ -9471,6 +9471,15 @@ class Conversations extends Table
     requiredDuringInsert: false,
     $customConstraints: 'NULL',
   );
+  late final GeneratedColumn<String> retainedMessageIds =
+      GeneratedColumn<String>(
+        'retained_message_ids',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: 'NULL',
+      );
   late final GeneratedColumn<int> currentUserHasSent = GeneratedColumn<int>(
     'current_user_has_sent',
     aliasedName,
@@ -9519,6 +9528,7 @@ class Conversations extends Table
     isDismissed,
     lastReadTimestamp,
     lastMessageCreatedAt,
+    retainedMessageIds,
     currentUserHasSent,
     createdAt,
     ownerPubkey,
@@ -9579,6 +9589,10 @@ class Conversations extends Table
         DriftSqlType.int,
         data['${effectivePrefix}last_message_created_at'],
       ),
+      retainedMessageIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}retained_message_ids'],
+      ),
       currentUserHasSent: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}current_user_has_sent'],
@@ -9622,6 +9636,7 @@ class ConversationsData extends DataClass
   final int isDismissed;
   final int? lastReadTimestamp;
   final int? lastMessageCreatedAt;
+  final String? retainedMessageIds;
   final int currentUserHasSent;
   final int createdAt;
   final String ownerPubkey;
@@ -9638,6 +9653,7 @@ class ConversationsData extends DataClass
     required this.isDismissed,
     this.lastReadTimestamp,
     this.lastMessageCreatedAt,
+    this.retainedMessageIds,
     required this.currentUserHasSent,
     required this.createdAt,
     required this.ownerPubkey,
@@ -9670,6 +9686,9 @@ class ConversationsData extends DataClass
     }
     if (!nullToAbsent || lastMessageCreatedAt != null) {
       map['last_message_created_at'] = Variable<int>(lastMessageCreatedAt);
+    }
+    if (!nullToAbsent || retainedMessageIds != null) {
+      map['retained_message_ids'] = Variable<String>(retainedMessageIds);
     }
     map['current_user_has_sent'] = Variable<int>(currentUserHasSent);
     map['created_at'] = Variable<int>(createdAt);
@@ -9705,6 +9724,9 @@ class ConversationsData extends DataClass
       lastMessageCreatedAt: lastMessageCreatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastMessageCreatedAt),
+      retainedMessageIds: retainedMessageIds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retainedMessageIds),
       currentUserHasSent: Value(currentUserHasSent),
       createdAt: Value(createdAt),
       ownerPubkey: Value(ownerPubkey),
@@ -9741,6 +9763,9 @@ class ConversationsData extends DataClass
       lastMessageCreatedAt: serializer.fromJson<int?>(
         json['lastMessageCreatedAt'],
       ),
+      retainedMessageIds: serializer.fromJson<String?>(
+        json['retainedMessageIds'],
+      ),
       currentUserHasSent: serializer.fromJson<int>(json['currentUserHasSent']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
@@ -9764,6 +9789,7 @@ class ConversationsData extends DataClass
       'isDismissed': serializer.toJson<int>(isDismissed),
       'lastReadTimestamp': serializer.toJson<int?>(lastReadTimestamp),
       'lastMessageCreatedAt': serializer.toJson<int?>(lastMessageCreatedAt),
+      'retainedMessageIds': serializer.toJson<String?>(retainedMessageIds),
       'currentUserHasSent': serializer.toJson<int>(currentUserHasSent),
       'createdAt': serializer.toJson<int>(createdAt),
       'ownerPubkey': serializer.toJson<String>(ownerPubkey),
@@ -9783,6 +9809,7 @@ class ConversationsData extends DataClass
     int? isDismissed,
     Value<int?> lastReadTimestamp = const Value.absent(),
     Value<int?> lastMessageCreatedAt = const Value.absent(),
+    Value<String?> retainedMessageIds = const Value.absent(),
     int? currentUserHasSent,
     int? createdAt,
     String? ownerPubkey,
@@ -9809,6 +9836,9 @@ class ConversationsData extends DataClass
     lastMessageCreatedAt: lastMessageCreatedAt.present
         ? lastMessageCreatedAt.value
         : this.lastMessageCreatedAt,
+    retainedMessageIds: retainedMessageIds.present
+        ? retainedMessageIds.value
+        : this.retainedMessageIds,
     currentUserHasSent: currentUserHasSent ?? this.currentUserHasSent,
     createdAt: createdAt ?? this.createdAt,
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
@@ -9841,6 +9871,9 @@ class ConversationsData extends DataClass
       lastMessageCreatedAt: data.lastMessageCreatedAt.present
           ? data.lastMessageCreatedAt.value
           : this.lastMessageCreatedAt,
+      retainedMessageIds: data.retainedMessageIds.present
+          ? data.retainedMessageIds.value
+          : this.retainedMessageIds,
       currentUserHasSent: data.currentUserHasSent.present
           ? data.currentUserHasSent.value
           : this.currentUserHasSent,
@@ -9868,6 +9901,7 @@ class ConversationsData extends DataClass
           ..write('isDismissed: $isDismissed, ')
           ..write('lastReadTimestamp: $lastReadTimestamp, ')
           ..write('lastMessageCreatedAt: $lastMessageCreatedAt, ')
+          ..write('retainedMessageIds: $retainedMessageIds, ')
           ..write('currentUserHasSent: $currentUserHasSent, ')
           ..write('createdAt: $createdAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
@@ -9889,6 +9923,7 @@ class ConversationsData extends DataClass
     isDismissed,
     lastReadTimestamp,
     lastMessageCreatedAt,
+    retainedMessageIds,
     currentUserHasSent,
     createdAt,
     ownerPubkey,
@@ -9909,6 +9944,7 @@ class ConversationsData extends DataClass
           other.isDismissed == this.isDismissed &&
           other.lastReadTimestamp == this.lastReadTimestamp &&
           other.lastMessageCreatedAt == this.lastMessageCreatedAt &&
+          other.retainedMessageIds == this.retainedMessageIds &&
           other.currentUserHasSent == this.currentUserHasSent &&
           other.createdAt == this.createdAt &&
           other.ownerPubkey == this.ownerPubkey &&
@@ -9927,6 +9963,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
   final Value<int> isDismissed;
   final Value<int?> lastReadTimestamp;
   final Value<int?> lastMessageCreatedAt;
+  final Value<String?> retainedMessageIds;
   final Value<int> currentUserHasSent;
   final Value<int> createdAt;
   final Value<String> ownerPubkey;
@@ -9944,6 +9981,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
     this.isDismissed = const Value.absent(),
     this.lastReadTimestamp = const Value.absent(),
     this.lastMessageCreatedAt = const Value.absent(),
+    this.retainedMessageIds = const Value.absent(),
     this.currentUserHasSent = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.ownerPubkey = const Value.absent(),
@@ -9962,6 +10000,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
     this.isDismissed = const Value.absent(),
     this.lastReadTimestamp = const Value.absent(),
     this.lastMessageCreatedAt = const Value.absent(),
+    this.retainedMessageIds = const Value.absent(),
     this.currentUserHasSent = const Value.absent(),
     required int createdAt,
     this.ownerPubkey = const Value.absent(),
@@ -9982,6 +10021,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
     Expression<int>? isDismissed,
     Expression<int>? lastReadTimestamp,
     Expression<int>? lastMessageCreatedAt,
+    Expression<String>? retainedMessageIds,
     Expression<int>? currentUserHasSent,
     Expression<int>? createdAt,
     Expression<String>? ownerPubkey,
@@ -10004,6 +10044,8 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
       if (lastReadTimestamp != null) 'last_read_timestamp': lastReadTimestamp,
       if (lastMessageCreatedAt != null)
         'last_message_created_at': lastMessageCreatedAt,
+      if (retainedMessageIds != null)
+        'retained_message_ids': retainedMessageIds,
       if (currentUserHasSent != null)
         'current_user_has_sent': currentUserHasSent,
       if (createdAt != null) 'created_at': createdAt,
@@ -10025,6 +10067,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
     Value<int>? isDismissed,
     Value<int?>? lastReadTimestamp,
     Value<int?>? lastMessageCreatedAt,
+    Value<String?>? retainedMessageIds,
     Value<int>? currentUserHasSent,
     Value<int>? createdAt,
     Value<String>? ownerPubkey,
@@ -10044,6 +10087,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
       isDismissed: isDismissed ?? this.isDismissed,
       lastReadTimestamp: lastReadTimestamp ?? this.lastReadTimestamp,
       lastMessageCreatedAt: lastMessageCreatedAt ?? this.lastMessageCreatedAt,
+      retainedMessageIds: retainedMessageIds ?? this.retainedMessageIds,
       currentUserHasSent: currentUserHasSent ?? this.currentUserHasSent,
       createdAt: createdAt ?? this.createdAt,
       ownerPubkey: ownerPubkey ?? this.ownerPubkey,
@@ -10092,6 +10136,9 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
         lastMessageCreatedAt.value,
       );
     }
+    if (retainedMessageIds.present) {
+      map['retained_message_ids'] = Variable<String>(retainedMessageIds.value);
+    }
     if (currentUserHasSent.present) {
       map['current_user_has_sent'] = Variable<int>(currentUserHasSent.value);
     }
@@ -10124,6 +10171,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationsData> {
           ..write('isDismissed: $isDismissed, ')
           ..write('lastReadTimestamp: $lastReadTimestamp, ')
           ..write('lastMessageCreatedAt: $lastMessageCreatedAt, ')
+          ..write('retainedMessageIds: $retainedMessageIds, ')
           ..write('currentUserHasSent: $currentUserHasSent, ')
           ..write('createdAt: $createdAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')

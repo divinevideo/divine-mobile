@@ -20416,6 +20416,7 @@ final class Schema26 extends i0.VersionedSchema {
         _column_213,
         _column_134,
         _column_216,
+        _column_217,
         _column_135,
         _column_2,
         _column_183,
@@ -20849,6 +20850,8 @@ class Shape48 extends i0.VersionedTable {
       columnsByName['last_read_timestamp']! as i1.GeneratedColumn<int>;
   i1.GeneratedColumn<int> get lastMessageCreatedAt =>
       columnsByName['last_message_created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get retainedMessageIds =>
+      columnsByName['retained_message_ids']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<int> get currentUserHasSent =>
       columnsByName['current_user_has_sent']! as i1.GeneratedColumn<int>;
   i1.GeneratedColumn<int> get createdAt =>
@@ -20865,6 +20868,14 @@ i1.GeneratedColumn<int> _column_216(String aliasedName) =>
       aliasedName,
       true,
       type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_217(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'retained_message_ids',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
       $customConstraints: 'NULL',
     );
 i0.MigrationStepWithVersion migrationSteps({

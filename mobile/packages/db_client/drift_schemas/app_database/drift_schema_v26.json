@@ -2263,6 +2263,16 @@
             "dsl_features": []
           },
           {
+            "name": "retained_message_ids",
+            "getter_name": "retainedMessageIds",
+            "moor_type": "string",
+            "nullable": true,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
             "name": "current_user_has_sent",
             "getter_name": "currentUserHasSent",
             "moor_type": "bool",
@@ -4438,7 +4448,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"conversations\" (\"id\" TEXT NOT NULL, \"participant_pubkeys\" TEXT NOT NULL, \"is_group\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_group\" IN (0, 1)), \"last_message_content\" TEXT NULL, \"last_message_timestamp\" INTEGER NULL, \"last_message_sender_pubkey\" TEXT NULL, \"subject\" TEXT NULL, \"is_read\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_read\" IN (0, 1)), \"is_dismissed\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_dismissed\" IN (0, 1)), \"last_read_timestamp\" INTEGER NULL, \"last_message_created_at\" INTEGER NULL, \"current_user_has_sent\" INTEGER NOT NULL DEFAULT 0 CHECK (\"current_user_has_sent\" IN (0, 1)), \"created_at\" INTEGER NOT NULL, \"owner_pubkey\" TEXT NOT NULL DEFAULT '', \"dm_protocol\" TEXT NULL, PRIMARY KEY (\"id\", \"owner_pubkey\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"conversations\" (\"id\" TEXT NOT NULL, \"participant_pubkeys\" TEXT NOT NULL, \"is_group\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_group\" IN (0, 1)), \"last_message_content\" TEXT NULL, \"last_message_timestamp\" INTEGER NULL, \"last_message_sender_pubkey\" TEXT NULL, \"subject\" TEXT NULL, \"is_read\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_read\" IN (0, 1)), \"is_dismissed\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_dismissed\" IN (0, 1)), \"last_read_timestamp\" INTEGER NULL, \"last_message_created_at\" INTEGER NULL, \"retained_message_ids\" TEXT NULL, \"current_user_has_sent\" INTEGER NOT NULL DEFAULT 0 CHECK (\"current_user_has_sent\" IN (0, 1)), \"created_at\" INTEGER NOT NULL, \"owner_pubkey\" TEXT NOT NULL DEFAULT '', \"dm_protocol\" TEXT NULL, PRIMARY KEY (\"id\", \"owner_pubkey\"));"
         }
       ]
     },

@@ -118,6 +118,7 @@ void main() {
         expect(dismissed.isRead, isTrue);
         expect(dismissed.lastReadTimestamp, 200);
         expect(dismissed.lastMessageCreatedAt, isNull);
+        expect(dismissed.retainedMessageIds, isNull);
         final open = (await db.conversationsDao.getConversation(
           openId,
           ownerPubkey: owner,
@@ -158,6 +159,19 @@ void main() {
           ownerPubkey: owner,
         ))!;
         expect(written.lastMessageCreatedAt, 195);
+        final retainedIds = '["${'f' * 64}"]';
+        await db.customStatement(
+          'UPDATE conversations SET retained_message_ids = ? '
+          'WHERE id = ? AND owner_pubkey = ?',
+          [retainedIds, openId, owner],
+        );
+        expect(
+          (await db.conversationsDao.getConversation(
+            openId,
+            ownerPubkey: owner,
+          ))!.retainedMessageIds,
+          retainedIds,
+        );
       },
     );
 

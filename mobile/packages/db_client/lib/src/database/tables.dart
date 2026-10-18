@@ -1114,6 +1114,13 @@ class Conversations extends Table {
   IntColumn get lastMessageCreatedAt =>
       integer().nullable().named('last_message_created_at')();
 
+  /// Known message IDs at the kept preview's boundary, captured before an
+  /// account switch clears local history. Dismissing the kept row can then
+  /// distinguish replay from a genuinely new message in the same second.
+  /// Cleared when its timestamp changes; owned and deleted with this row.
+  TextColumn get retainedMessageIds =>
+      text().nullable().named('retained_message_ids')();
+
   /// Whether the current user has sent a message in this conversation.
   BoolColumn get currentUserHasSent => boolean()
       .withDefault(const Constant(false))

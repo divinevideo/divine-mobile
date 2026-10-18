@@ -194,6 +194,16 @@ END
         final previewCondition = forceUpdateLastMessage
             ? const Constant<bool>(true)
             : advancesAttention;
+        final previewBoundaryChanges =
+            previewCondition &
+            coalesce([
+                  excl.lastMessageTimestamp,
+                  const Constant(-1),
+                ])
+                .equalsExp(
+                  coalesce([old.lastMessageTimestamp, const Constant(-1)]),
+                )
+                .not();
         final readCursor = coalesce([
           old.lastReadTimestamp,
           const Constant(0),
@@ -247,6 +257,10 @@ END
           lastMessageCreatedAt: excl.lastMessageCreatedAt.iif(
             previewCondition,
             old.lastMessageCreatedAt,
+          ),
+          retainedMessageIds: const Constant<String>(null).iif(
+            previewBoundaryChanges,
+            old.retainedMessageIds,
           ),
         );
       }),
@@ -437,7 +451,14 @@ END
           ownerPubkey: ownerPubkey,
           boundaryTimestamp: boundary,
           knownMessageIds: Value(
-            jsonEncode(messages.map((m) => m.id).toList()),
+            jsonEncode(
+              {
+                if (row.retainedMessageIds != null)
+                  ...(jsonDecode(row.retainedMessageIds!) as List)
+                      .cast<String>(),
+                ...messages.map((m) => m.id),
+              }.toList(),
+            ),
           ),
         ),
       );
@@ -523,13 +544,11 @@ END
   /// later re-download with a larger timestamp than the one read. The bound
   /// stops a far-future `created_at` from marking later messages read.
   ///
-  /// A conversation can be read with no cursor at all, because the user sent
-  /// its last message. Called when the account is left with its conversations
-  /// kept and its messages deleted: preview backfill then clears
-  /// `last_message_timestamp`, and from there only the cursor tells
-  /// [upsertConversation] that a re-downloaded message was already read
-  /// (#10276). Matches the exact owner, never legacy rows. Returns the number
-  /// of conversations whose cursor moved.
+  /// A conversation can be read with no cursor because the user sent its last
+  /// message. The pin makes that read state durable when a clock-bounded
+  /// timestamp grows on re-download or a deletion refresh lowers the preview.
+  /// Matches the exact owner, never legacy rows. Returns the number of
+  /// conversations whose cursor moved (#10276).
   Future<int> pinReadCursorsToLatestMessage(
     String ownerPubkey, {
     required int nowSeconds,
@@ -550,6 +569,30 @@ END
       updateKind: UpdateKind.update,
     );
   }
+
+  /// Captures replay IDs before account cleanup removes the message rows.
+  /// Existing IDs survive another switch with incomplete restored history.
+  /// The preview write paths clear them when its boundary timestamp changes.
+  Future<int> retainMessageIdsForAccountSwitch(String ownerPubkey) =>
+      customUpdate(
+        '''
+        UPDATE conversations AS c SET retained_message_ids = (
+          SELECT json_group_array(id) FROM (
+            SELECT value AS id
+            FROM json_each(COALESCE(c.retained_message_ids, '[]'))
+            UNION
+            SELECT dm.id FROM direct_messages dm
+            WHERE dm.conversation_id = c.id
+              AND (dm.owner_pubkey = c.owner_pubkey OR dm.owner_pubkey = ''
+                   OR dm.owner_pubkey IS NULL)
+              AND dm.created_at >= COALESCE(c.last_message_timestamp, 0)
+          )
+        ) WHERE c.owner_pubkey = ?
+        ''',
+        variables: [Variable(ownerPubkey)],
+        updates: {attachedDatabase.conversations},
+        updateKind: UpdateKind.update,
+      );
 
   /// Deletes every conversation whose owner is not in [keepOwnerPubkeys].
   ///
@@ -808,7 +851,10 @@ LIMIT 1
       SET last_message_content = ($latestPreviewContentSubquery),
           last_message_timestamp = ($latestTimestampSubquery),
           last_message_sender_pubkey = ($latestSenderSubquery),
-          last_message_created_at = NULL
+          last_message_created_at = NULL,
+          retained_message_ids = CASE
+            WHEN c.last_message_timestamp IS ($latestTimestampSubquery)
+            THEN c.retained_message_ids ELSE NULL END
       WHERE $scopedConversationFilter
         AND EXISTS (
           SELECT 1 FROM direct_messages dm
@@ -827,7 +873,7 @@ LIMIT 1
       ''',
       variables: [
         if (ownerPubkey != null) ...[
-          for (var i = 0; i < 8; i++) Variable(ownerPubkey),
+          for (var i = 0; i < 9; i++) Variable(ownerPubkey),
         ],
       ],
       updates: {attachedDatabase.conversations},

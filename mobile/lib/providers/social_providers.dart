@@ -794,6 +794,11 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
                 await db.directMessagesDao.deleteAllForOwner(userPubkey);
                 await db.conversationsDao.deleteAllForOwner(userPubkey);
               } else {
+                if (!deleteUserData && !forgetAccount) {
+                  await db.conversationsDao.retainMessageIdsForAccountSwitch(
+                    userPubkey,
+                  );
+                }
                 await db.directMessagesDao.clearForAccountSwitch(userPubkey);
                 if (deleteUserData || forgetAccount) {
                   await db.conversationsDao.clearForAccountSwitch(userPubkey);

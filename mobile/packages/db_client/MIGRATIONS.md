@@ -235,6 +235,16 @@ migration test that stops below v26 drops it again. The repair probe lists it.
 Existing rows keep NULL until their preview next changes. The v25 snapshot is
 unchanged.
 
+Version 26 also adds nullable `retained_message_ids` on the same conversation
+row. Account cleanup captures known IDs at its preview boundary before deleting
+local messages. Dismissing a kept row before history returns includes those IDs,
+so replay stays dismissed while a genuinely new ID in the same second still
+restores unread. IDs survive partial history and same-boundary preview refresh,
+clear when the timestamp changes, and are deleted with their owning row.
+The v26 upgrade repeats v25's idempotent dismissal repair because upgrades skip
+the guarded `beforeOpen` recovery. Current-version recovery also probes and
+restores both new columns without losing the other kept account state.
+
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
 for startup cleanup and guarded recovery of damaged local databases.

@@ -317,6 +317,11 @@ class AppDatabase extends _$AppDatabase {
           'last_message_created_at',
           'INTEGER NULL',
         );
+        await _addColumnIfMissing(
+          'conversations',
+          'retained_message_ids',
+          'TEXT NULL',
+        );
       }
       // The same holds for the v26 column.
       if (to < 26 &&
@@ -325,6 +330,14 @@ class AppDatabase extends _$AppDatabase {
           )).contains('last_message_created_at')) {
         await customStatement(
           'ALTER TABLE conversations DROP COLUMN last_message_created_at',
+        );
+      }
+      if (to < 26 &&
+          (await _columnNames('conversations')).contains(
+            'retained_message_ids',
+          )) {
+        await customStatement(
+          'ALTER TABLE conversations DROP COLUMN retained_message_ids',
         );
       }
     },
@@ -423,6 +436,8 @@ class AppDatabase extends _$AppDatabase {
             conversations.isDismissed,
           if (!conversationColumns.contains('last_message_created_at'))
             conversations.lastMessageCreatedAt,
+          if (!conversationColumns.contains('retained_message_ids'))
+            conversations.retainedMessageIds,
         ],
       ),
     );
@@ -1714,6 +1729,7 @@ class AppDatabase extends _$AppDatabase {
         'last_read_timestamp',
         'is_dismissed',
         'last_message_created_at',
+        'retained_message_ids',
       ],
       'pending_product_events': ['owner_pubkey'],
       'dm_message_reactions': ['recipient_pubkeys'],

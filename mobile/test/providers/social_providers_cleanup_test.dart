@@ -2320,6 +2320,75 @@ void main() {
         );
 
         test(
+          'dismissing a retained chat recognizes replay at its boundary',
+          () async {
+            final withB = DmRepository.computeConversationId([
+              _pubkeyA,
+              _pubkeyB,
+            ]);
+            final (firstSession, firstRelay) = await startSessionForA();
+            for (final suffix in ['b', 'c']) {
+              await deliver(
+                firstRelay,
+                wrapId: suffix * 64,
+                rumorId: 'a$suffix' * 32,
+                sender: _pubkeyB,
+                recipient: _pubkeyA,
+                at: 1700000300,
+              );
+            }
+            await firstSession.stopListening();
+            await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+            expect(
+              await db.directMessagesDao.getMessagesForConversation(
+                withB,
+                ownerPubkey: _pubkeyA,
+              ),
+              isEmpty,
+            );
+
+            final (secondSession, _) = await startSessionForA();
+            await secondSession.getConversations();
+            await db.conversationsDao.setDismissed(
+              withB,
+              ownerPubkey: _pubkeyA,
+              dismissed: true,
+            );
+            // A second leave before any history returns must retain the IDs.
+            await secondSession.stopListening();
+            await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+            final (thirdSession, thirdRelay) = await startSessionForA();
+            await thirdSession.getConversations();
+            for (final suffix in ['b', 'c']) {
+              await deliver(
+                thirdRelay,
+                wrapId: suffix * 64,
+                rumorId: 'a$suffix' * 32,
+                sender: _pubkeyB,
+                recipient: _pubkeyA,
+                at: 1700000300,
+              );
+              final row = await conversationOf(withB, _pubkeyA);
+              expect(row.isDismissed, isTrue);
+              expect(row.isRead, isTrue);
+            }
+
+            // A genuinely new ID in that same second still restores unread.
+            await deliver(
+              thirdRelay,
+              wrapId: 'd' * 64,
+              rumorId: 'ad' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000300,
+            );
+            final restored = await conversationOf(withB, _pubkeyA);
+            expect(restored.isDismissed, isFalse);
+            expect(restored.isRead, isFalse);
+          },
+        );
+
+        test(
           'a chat that was unread when A left is still unread when an older '
           'message is re-downloaded first',
           () async {
