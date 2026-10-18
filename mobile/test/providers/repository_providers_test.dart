@@ -18,6 +18,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -31,15 +32,14 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
-
-import 'package:openvine/providers/video_providers.dart';
-import 'package:openvine/services/personal_event_cache_service.dart';
 
 class _MockMyFollowersDao extends Mock implements MyFollowersDao {}
 
