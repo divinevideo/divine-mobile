@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -91,6 +93,28 @@ void main() {
         await tester.tap(find.text(l10n.commonRetry));
 
         verify(() => cubit.load()).called(1);
+      });
+
+      testWidgets('refresh reset does not repeat a pagination error', (
+        tester,
+      ) async {
+        final states = StreamController<BadgeVideosState>();
+        addTearDown(states.close);
+        const loaded = BadgeVideosState(status: BadgeVideosStatus.loaded);
+        whenListen(cubit, states.stream, initialState: loaded);
+        await tester.pumpWidget(buildSubject());
+        states.add(loaded.copyWith(loadMoreFailures: 1));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
+        ScaffoldMessenger.of(tester.element(find.byType(BadgeVideosView)))
+            .removeCurrentSnackBar();
+        await tester.pumpAndSettle();
+        states.add(loaded);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.feedFailedToLoadVideos), findsNothing);
+        states.add(loaded.copyWith(loadMoreFailures: 1));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
       });
 
       testWidgets('reports a page that failed to load', (tester) async {

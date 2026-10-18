@@ -275,6 +275,97 @@ void main() {
       expect(pager.hasMore, isFalse);
     });
 
+    test('refills a filtered page using the server item count', () async {
+      final client = _Client();
+      final offsets = <int>[];
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((invocation) async {
+        final offset = invocation.namedArguments[#offset]! as int;
+        offsets.add(offset);
+        return RecentVideosResponse(
+          videos: offset == 0 ? [_video(1, 300)] : [_video(2, 200)],
+          serverItemCount: offset == 0 ? 3 : 1,
+          hasMore: offset == 0,
+        );
+      });
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: ['a' * 64],
+        transform: (stats) => stats
+            .where((v) => v.id != _video(1, 0).id)
+            .map((v) => v.toVideoEvent())
+            .toList(),
+      );
+      expect((await pager.loadMore()).map((v) => v.id), [_video(2, 0).id]);
+      expect(offsets, [0, 3]);
+      expect(pager.hasMore, isFalse);
+    });
+
+    test(
+      'empty server page exhausts a contradictory hasMore response',
+      () async {
+        final client = _Client();
+        var calls = 0;
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async {
+          if (calls++ > 0) throw StateError('empty page was requested twice');
+          return const RecentVideosResponse(
+            videos: [],
+            serverItemCount: 0,
+            hasMore: true,
+          );
+        });
+        final pager = BadgeVideoPager(
+          client: client,
+          authors: ['a' * 64],
+          transform: (stats) => stats.map((v) => v.toVideoEvent()).toList(),
+        );
+        expect(await pager.loadMore(), isEmpty);
+        expect(pager.hasMore, isFalse);
+        expect(calls, 1);
+      },
+    );
+
+    test('a failed page does not poison the next retry', () async {
+      final client = _Client();
+      var calls = 0;
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        if (calls++ == 0) throw const FunnelcakeException('temporary failure');
+        return RecentVideosResponse(
+          videos: [_video(1, 300)],
+          serverItemCount: 1,
+          hasMore: false,
+        );
+      });
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: ['a' * 64],
+        transform: (stats) => stats.map((v) => v.toVideoEvent()).toList(),
+      );
+      await expectLater(pager.loadMore(), throwsA(isA<FunnelcakeException>()));
+      expect((await pager.loadMore()).map((v) => v.id), [_video(1, 0).id]);
+      expect(calls, 2);
+    });
+
     test('reports a failure that yields no videos', () async {
       final client = _Client();
       when(

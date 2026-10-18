@@ -50,6 +50,25 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('failed refresh keeps badges and shows feedback', (
+        tester,
+      ) async {
+        final loaded = ExploreBadgesState(
+          status: ExploreBadgesStatus.loaded,
+          definitions: [_definition],
+        );
+        whenListen(
+          cubit,
+          Stream.value(loaded.copyWith(refreshFailures: 1)),
+          initialState: loaded,
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        expect(find.text('Diviner of the Day'), findsOneWidget);
+        expect(find.text(l10n.badgesLoadError), findsOneWidget);
+        expect(find.text(l10n.commonRetry), findsNothing);
+      });
+
       testWidgets('retries a failed load', (tester) async {
         when(() => cubit.state).thenReturn(
           const ExploreBadgesState(status: ExploreBadgesStatus.failure),

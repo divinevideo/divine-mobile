@@ -80,6 +80,35 @@ void main() {
         expect(cubit.state.holders, containsAll(['indexed', 'federated']));
       });
 
+      test(
+        'late indexed preview cannot replace completed relay holders',
+        () async {
+          final preview = Completer<List<String>>();
+          final relay = Completer<Set<String>>();
+          when(() => repository.loadAcceptedHolders(_coordinate))
+              .thenAnswer((_) => relay.future);
+          when(() => repository.withoutHiddenPubkeys(['indexed']))
+              .thenReturn(['indexed']);
+          final cubit = BadgeHoldersCubit(
+            repository: repository,
+            coordinate: _coordinate,
+            canSubscribe: false,
+            loadIndexedPreview: (_) => preview.future,
+          );
+          addTearDown(cubit.close);
+          final loading = cubit.load();
+          final complete = cubit.stream.firstWhere(
+            (s) => s.holdersStatus == BadgeHoldersStatus.loaded,
+          );
+          relay.complete({'relay'});
+          await complete;
+          preview.complete(['indexed']);
+          await loading;
+          expect(cubit.state.holdersStatus, BadgeHoldersStatus.loaded);
+          expect(cubit.state.holders, ['relay']);
+        },
+      );
+
       test('uses the relay result when the index is unavailable', () async {
         when(
           () => repository.loadAcceptedHolders(_coordinate),
@@ -88,7 +117,8 @@ void main() {
           repository: repository,
           coordinate: _coordinate,
           canSubscribe: false,
-          loadIndexedPreview: (_) async => throw StateError('404'),
+          loadIndexedPreview: (_) async =>
+              throw const BadgeReadIncompleteException('404'),
         );
         addTearDown(cubit.close);
 
@@ -143,14 +173,21 @@ void main() {
         setUp: () {
           when(
             () => repository.loadAcceptedHolders(_coordinate),
-          ).thenThrow(StateError('Badge holders could not be fully loaded'));
+          ).thenThrow(
+            const BadgeReadIncompleteException(
+              'Badge holders could not be fully loaded',
+            ),
+          );
           when(
             () => repository.loadSubscriptions(),
-          ).thenThrow(StateError('relay unavailable'));
+          ).thenThrow(const BadgeReadIncompleteException('relay unavailable'));
         },
         build: buildCubit,
         act: (cubit) => cubit.load(),
-        errors: () => [isA<StateError>(), isA<StateError>()],
+        errors: () => [
+          isA<BadgeReadIncompleteException>(),
+          isA<BadgeReadIncompleteException>(),
+        ],
         verify: (cubit) {
           expect(cubit.state.holdersStatus, BadgeHoldersStatus.failure);
           expect(
@@ -163,7 +200,7 @@ void main() {
 
     group('toggleSubscription', () {
       blocTest<BadgeHoldersCubit, BadgeHoldersState>(
-        'publishes the change and bumps the subscription revision',
+        'publishes the change and updates subscription state',
         setUp: () {
           when(
             () => repository.setSubscription(_coordinate, subscribed: true),

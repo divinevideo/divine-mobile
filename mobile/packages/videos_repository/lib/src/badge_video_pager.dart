@@ -7,15 +7,19 @@ import 'package:models/models.dart';
 /// after Funnelcake's 200-author request limit.
 class BadgeVideoPager {
   /// Creates a pager for a snapshot of [authors].
+  ///
+  /// [orderPage] may reorder each delivered batch without changing offsets.
   BadgeVideoPager({
     required FunnelcakeApiClient client,
     required List<String> authors,
     required List<VideoEvent> Function(List<VideoStats>) transform,
     bool Function(VideoEvent)? isVisible,
+    Future<List<VideoEvent>> Function(List<VideoEvent>)? orderPage,
     int? before,
   }) : _client = client,
        _transform = transform,
        _isVisible = isVisible,
+       _orderPage = orderPage,
        _before =
            before ?? DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000 + 1,
        _chunks = [
@@ -30,6 +34,7 @@ class BadgeVideoPager {
   /// fetch time, and a chunk buffers up to 100 videos, so an author blocked
   /// after the fetch would otherwise come back on a later page.
   final bool Function(VideoEvent)? _isVisible;
+  final Future<List<VideoEvent>> Function(List<VideoEvent>)? _orderPage;
   final int _before;
   final List<_AuthorChunk> _chunks;
   final Set<String> _seen = {};
@@ -39,14 +44,20 @@ class BadgeVideoPager {
   bool get hasMore =>
       _chunks.any((chunk) => chunk.buffer.isNotEmpty || !chunk.exhausted);
 
-  /// Returns the next [limit] public, visible videos in recency order.
+  /// Returns the next [limit] public, visible videos.
+  ///
+  /// Videos merge in recency order before any optional page ordering.
   ///
   /// Calls are served one at a time. Following can ask for a page while a
   /// refresh is still loading the first one, and two walks over the same
   /// chunk would read one offset twice and skip the next one.
   Future<List<VideoEvent>> loadMore({int limit = 25}) {
     if (limit < 1) throw ArgumentError.value(limit, 'limit');
-    final page = _tail.then((_) => _loadPage(limit));
+    final page = _tail.then((_) async {
+      final videos = await _loadPage(limit);
+      final orderPage = _orderPage;
+      return orderPage == null ? videos : await orderPage(videos);
+    });
     _tail = page.then<void>((_) {}, onError: (Object _) {});
     return page;
   }

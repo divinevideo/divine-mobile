@@ -180,6 +180,51 @@ void main() {
         );
       });
 
+      test('Following badge pages retain recently seen demotion', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        final seen = _createVideoStats(
+          id: '1' * 64,
+          pubkey: 'a' * 64,
+          dTag: 'seen',
+          videoUrl: 'https://example.com/seen.mp4',
+          createdAt: 200,
+        );
+        final fresh = _createVideoStats(
+          id: '2' * 64,
+          pubkey: 'a' * 64,
+          dTag: 'fresh',
+          videoUrl: 'https://example.com/fresh.mp4',
+          createdAt: 100,
+        );
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => RecentVideosResponse(
+            videos: [seen, fresh],
+            serverItemCount: 2,
+            hasMore: false,
+          ),
+        );
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id == seen.id,
+          ),
+        );
+        final pager = repo.createBadgeVideoPager([
+          'a' * 64,
+        ], prioritizeUnseen: true);
+        expect((await pager.loadMore()).map((v) => v.id), [fresh.id, seen.id]);
+      });
+
       test('sorts unique authors and transforms the returned video', () async {
         final client = MockFunnelcakeApiClient();
         when(() => client.isAvailable).thenReturn(true);

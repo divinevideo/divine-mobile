@@ -1,11 +1,18 @@
 // ABOUTME: Tests for ReportableError marker, Reportable<T> wrapper, and the
 // ABOUTME: npub/nsec sanitizer that runs over both halves of that toString().
 
+import 'package:badge_repository/badge_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 
 void main() {
+  test('incomplete badge reads remain local network failures', () {
+    const error = BadgeReadIncompleteException('badge read incomplete');
+    expect(asReportableError(error, context: 'badge load'), isNull);
+    expect(error.toString(), contains('badge read incomplete'));
+  });
+
   group(Reportable, () {
     test('is an Exception', () {
       final wrapped = Reportable(StateError('boom'));

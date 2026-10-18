@@ -1272,9 +1272,12 @@ void main() {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
           final pager = _MockBadgeVideoPager();
           when(
-            () => mockVideosRepository.createBadgeVideoPager(any()),
+            () => mockVideosRepository.createBadgeVideoPager(
+              any(),
+              prioritizeUnseen: true,
+            ),
           ).thenReturn(pager);
-          when(() => pager.loadMore(limit: 5)).thenAnswer(
+          when(pager.loadMore).thenAnswer(
             (_) async => [createTestVideo('badge')],
           );
           when(() => pager.hasMore).thenReturn(false);
@@ -1295,7 +1298,9 @@ void main() {
               .having((s) => s.error, 'error', isNull),
         ],
         verify: (_) => verify(
-          () => mockVideosRepository.createBadgeVideoPager(['badge-holder']),
+          () => mockVideosRepository.createBadgeVideoPager([
+            'badge-holder',
+          ], prioritizeUnseen: true),
         ).called(1),
       );
 
@@ -1305,9 +1310,12 @@ void main() {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
           final pager = _MockBadgeVideoPager();
           when(
-            () => mockVideosRepository.createBadgeVideoPager(any()),
+            () => mockVideosRepository.createBadgeVideoPager(
+              any(),
+              prioritizeUnseen: true,
+            ),
           ).thenReturn(pager);
-          when(() => pager.loadMore(limit: 5)).thenAnswer(
+          when(pager.loadMore).thenAnswer(
             (_) async => [createTestVideo('badge')],
           );
           when(() => pager.hasMore).thenReturn(false);
@@ -1340,7 +1348,9 @@ void main() {
         verify: (_) {
           expect(badgeAuthorLoads, 2);
           verify(
-            () => mockVideosRepository.createBadgeVideoPager(['badge-holder']),
+            () => mockVideosRepository.createBadgeVideoPager([
+              'badge-holder',
+            ], prioritizeUnseen: true),
           ).called(2);
         },
       );
@@ -1354,10 +1364,13 @@ void main() {
           ]);
           final pager = _MockBadgeVideoPager();
           when(
-            () => mockVideosRepository.createBadgeVideoPager(any()),
+            () => mockVideosRepository.createBadgeVideoPager(
+              any(),
+              prioritizeUnseen: true,
+            ),
           ).thenReturn(pager);
           var pages = 0;
-          when(() => pager.loadMore(limit: 5)).thenAnswer((_) async {
+          when(pager.loadMore).thenAnswer((_) async {
             pages++;
             return [
               createTestVideo(
@@ -1405,13 +1418,171 @@ void main() {
               'direct-follow',
               'direct-follow',
               'badge-holder',
-            ]),
+            ], prioritizeUnseen: true),
           ).called(1);
-          verifyNever(
+          verify(
             () => mockVideosRepository.getHomeFeedVideos(
               authors: any(named: 'authors'),
+              userPubkey: any(named: 'userPubkey'),
+              cursor: any(named: 'cursor'),
             ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'starts direct-follow loading before badge resolution completes',
+        () async {
+          final holders = Completer<List<String>>();
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn(['direct']);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: ['direct'],
+              userPubkey: any(named: 'userPubkey'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [createTestVideo('direct')]),
           );
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            badgeAuthors: () => holders.future,
+          );
+          addTearDown(() async {
+            if (!holders.isCompleted) holders.complete([]);
+            await bloc.close();
+          });
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          verify(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: ['direct'],
+              userPubkey: any(named: 'userPubkey'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).called(1);
+          final loaded = bloc.stream.firstWhere(
+            (s) => s.status == VideoFeedStatus.success,
+          );
+          holders.complete([]);
+          expect((await loaded).videos.single.id, 'direct');
+        },
+      );
+
+      test(
+        'badge subscriptions survive removal of the last direct follow',
+        () async {
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn(['direct']);
+          final pager = _MockBadgeVideoPager();
+          when(
+            () => mockVideosRepository.createBadgeVideoPager(
+              any(),
+              prioritizeUnseen: true,
+            ),
+          ).thenReturn(pager);
+          when(pager.loadMore)
+              .thenAnswer((_) async => [createTestVideo('badge')]);
+          when(() => pager.hasMore).thenReturn(false);
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            badgeAuthors: () async => ['holder'],
+          );
+          addTearDown(bloc.close);
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          expect(bloc.state.videos.single.id, 'badge');
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+          bloc.add(const VideoFeedFollowingListChanged([]));
+          await pumpEventQueue();
+          expect(bloc.state.error, isNull);
+          expect(bloc.state.videos.single.id, 'badge');
+          verify(
+            () => mockVideosRepository.createBadgeVideoPager([
+              'holder',
+            ], prioritizeUnseen: true),
+          ).called(1);
+        },
+      );
+
+      test(
+        'an unused direct-follow failure is observed while badges load',
+        () async {
+          final holders = Completer<List<String>>();
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn(['direct']);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: ['direct'],
+              userPubkey: any(named: 'userPubkey'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer(
+            (_) async => throw Exception('unused direct request failed'),
+          );
+          final pager = _MockBadgeVideoPager();
+          when(
+            () => mockVideosRepository.createBadgeVideoPager(
+              any(),
+              prioritizeUnseen: true,
+            ),
+          ).thenReturn(pager);
+          when(pager.loadMore)
+              .thenAnswer((_) async => [createTestVideo('badge')]);
+          when(() => pager.hasMore).thenReturn(false);
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            badgeAuthors: () => holders.future,
+          );
+          addTearDown(bloc.close);
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          final success = bloc.stream.firstWhere(
+            (s) => s.status == VideoFeedStatus.success,
+          );
+          holders.complete(['holder']);
+          expect((await success).videos.single.id, 'badge');
+        },
+      );
+
+      test(
+        'successful empty badge lookup retains server startup fast path',
+        () async {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: <String>[],
+              userPubkey: '2' * 64,
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [createTestVideo('startup')]),
+          );
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            userPubkey: '2' * 64,
+            badgeAuthors: () async => [],
+          );
+          addTearDown(bloc.close);
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          verify(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: <String>[],
+              userPubkey: '2' * 64,
+              cursor: any(named: 'cursor'),
+            ),
+          ).called(1);
+          expect(bloc.state.videos.single.id, 'startup');
         },
       );
 
@@ -1421,11 +1592,24 @@ void main() {
           '${failVideos ? 'badge videos' : 'badge holders'} fail',
           setUp: () {
             when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+            when(
+              () => mockVideosRepository.getHomeFeedVideos(
+                authors: any(named: 'authors'),
+                userPubkey: any(named: 'userPubkey'),
+                cursor: any(named: 'cursor'),
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  HomeFeedResult(videos: [createTestVideo('wrong-fallback')]),
+            );
             final pager = _MockBadgeVideoPager();
-            when(() => mockVideosRepository.createBadgeVideoPager(any()))
-                .thenReturn(pager);
-            when(() => pager.loadMore(limit: 5))
-                .thenThrow(StateError('unavailable'));
+            when(
+              () => mockVideosRepository.createBadgeVideoPager(
+                any(),
+                prioritizeUnseen: true,
+              ),
+            ).thenReturn(pager);
+            when(pager.loadMore).thenThrow(StateError('unavailable'));
           },
           build: () => VideoFeedBloc(
             videosRepository: mockVideosRepository,
@@ -1448,6 +1632,13 @@ void main() {
               VideoFeedStatus.failure,
             ),
           ],
+          verify: (_) => verifyNever(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+              userPubkey: any(named: 'userPubkey'),
+              cursor: any(named: 'cursor'),
+            ),
+          ),
         );
       }
 
@@ -1487,7 +1678,10 @@ void main() {
               ]),
         ],
         verify: (_) => verifyNever(
-          () => mockVideosRepository.createBadgeVideoPager(any()),
+          () => mockVideosRepository.createBadgeVideoPager(
+            any(),
+            prioritizeUnseen: true,
+          ),
         ),
       );
 
@@ -1510,11 +1704,12 @@ void main() {
           );
           final pager = _MockBadgeVideoPager();
           when(
-            () => mockVideosRepository.createBadgeVideoPager(any()),
+            () => mockVideosRepository.createBadgeVideoPager(
+              any(),
+              prioritizeUnseen: true,
+            ),
           ).thenReturn(pager);
-          when(
-            () => pager.loadMore(limit: 5),
-          ).thenThrow(Exception('by-authors unavailable'));
+          when(pager.loadMore).thenThrow(Exception('by-authors unavailable'));
         },
         build: () => VideoFeedBloc(
           videosRepository: mockVideosRepository,
@@ -1564,6 +1759,67 @@ void main() {
           badgeAuthors: () async {
             holderLoads++;
             throw Exception('controlled holder read failure');
+          },
+        );
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+        await pumpEventQueue();
+        expect(bloc.state.paginationCursor, '1791995000');
+        expect(bloc.state.hasMore, isTrue);
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(bloc.state.videos.map((video) => video.id), [
+          'first-follow',
+          'next-follow',
+        ]);
+        expect(bloc.state.hasMore, isFalse);
+        expect(holderLoads, 1);
+        verify(
+          () => mockVideosRepository.getHomeFeedVideos(
+            authors: [follow],
+            cursor: '1791995000',
+          ),
+        ).called(1);
+      });
+
+      test('keeps direct-follow pagination after the badge pager fails', () async {
+        const follow =
+            '1111111111111111111111111111111111111111111111111111111111111111';
+        when(() => mockFollowRepository.followingPubkeys).thenReturn([follow]);
+        when(
+          () => mockVideosRepository.getHomeFeedVideos(
+            authors: [follow],
+            videoRefs: any(named: 'videoRefs'),
+            userPubkey: any(named: 'userPubkey'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          final cursor = invocation.namedArguments[#cursor] as String?;
+          return HomeFeedResult(
+            videos: [
+              createTestVideo(cursor == null ? 'first-follow' : 'next-follow'),
+            ],
+            paginationCursor: cursor == null ? '1791995000' : null,
+            hasMore: cursor == null,
+          );
+        });
+        final pager = _MockBadgeVideoPager();
+        when(
+          () => mockVideosRepository.createBadgeVideoPager(
+            any(),
+            prioritizeUnseen: true,
+          ),
+        ).thenReturn(pager);
+        when(pager.loadMore).thenThrow(Exception('badge page failed'));
+        var holderLoads = 0;
+        final bloc = VideoFeedBloc(
+          videosRepository: mockVideosRepository,
+          followRepository: mockFollowRepository,
+          curatedListRepository: mockCuratedListRepository,
+          badgeAuthors: () async {
+            holderLoads++;
+            return ['badge-holder'];
           },
         );
         addTearDown(bloc.close);

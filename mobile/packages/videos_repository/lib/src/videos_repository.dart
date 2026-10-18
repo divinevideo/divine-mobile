@@ -307,7 +307,12 @@ class VideosRepository {
   }
 
   /// A snapshot pager for videos by all currently accepted badge holders.
-  BadgeVideoPager createBadgeVideoPager(Iterable<String> authors) {
+  /// [prioritizeUnseen] applies Following's existing seen-freshness ordering
+  /// to each delivered page without changing the underlying snapshot cursor.
+  BadgeVideoPager createBadgeVideoPager(
+    Iterable<String> authors, {
+    bool prioritizeUnseen = false,
+  }) {
     final client = _funnelcakeApiClient;
     if (client == null || !client.isAvailable) {
       throw const FunnelcakeNotConfiguredException();
@@ -316,6 +321,7 @@ class VideosRepository {
     return BadgeVideoPager(
       client: client,
       authors: unique,
+      orderPage: prioritizeUnseen ? _orderBySeenFreshness : null,
       transform: (stats) => _transformVideoStats(stats, sortByCreatedAt: false),
       isVisible: (video) =>
           !(_blockFilter?.call(video.pubkey) ?? false) &&

@@ -81,7 +81,7 @@ class BadgeVideosView extends ConsumerWidget {
     final cubit = context.read<BadgeVideosCubit>();
     return BlocListener<BadgeVideosCubit, BadgeVideosState>(
       listenWhen: (previous, current) =>
-          previous.loadMoreFailures != current.loadMoreFailures,
+          current.loadMoreFailures > previous.loadMoreFailures,
       listener: (context, _) => ScaffoldMessenger.of(context).showSnackBar(
         DivineSnackbarContainer.snackBar(
           context.l10n.feedFailedToLoadVideos,
