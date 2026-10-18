@@ -1,15 +1,19 @@
 // ABOUTME: Multipart contract tests for ApiService's parent-consent upload
-// ABOUTME: Pins URL, email field, video part, payload-free NIP-98 token, timeout
+// ABOUTME: Pins URL, email/video parts, binary NIP-98 body binding, and timeout.
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 /// Placeholder author for the fake signed event; [Event] only requires a
@@ -17,8 +21,9 @@ import 'package:openvine/services/nip98_auth_service.dart';
 const _placeholderPubkey =
     '0000000000000000000000000000000000000000000000000000000000000000';
 
-/// Records how [ApiService] asks for a NIP-98 token, so the payload omission
-/// ruling can be asserted without constructing a signing [Nip98AuthService].
+class _MockAuthService extends Mock implements AuthService {}
+
+/// Records how [ApiService] asks for a NIP-98 token.
 class _RecordingNip98AuthService implements Nip98AuthService {
   _RecordingNip98AuthService()
     : token = Nip98Token(
@@ -38,18 +43,23 @@ class _RecordingNip98AuthService implements Nip98AuthService {
   String? capturedUrl;
   HttpMethod? capturedMethod;
   String? capturedPayload;
+  String? capturedPayloadHash;
+  bool? capturedReuseCached;
 
   @override
   Future<Nip98Token?> createAuthToken({
     required String url,
     required HttpMethod method,
     String? payload,
+    String? payloadHash,
     bool reuseCached = true,
   }) async {
     createCalled = true;
     capturedUrl = url;
     capturedMethod = method;
     capturedPayload = payload;
+    capturedPayloadHash = payloadHash;
+    capturedReuseCached = reuseCached;
     return token;
   }
 
@@ -91,6 +101,69 @@ void main() {
   });
 
   group('ApiService.submitMinorAccountReviewParentConsent', () {
+    test(
+      'signs the exact binary multipart snapshot sent to the server',
+      () async {
+        final originalVideo = [0, 128, 255, 13, 10, 1];
+        clip.writeAsBytesSync(originalVideo);
+        const syntheticKey =
+            '0000000000000000000000000000000000000000000000000000000000000001';
+        final pubkey = getPublicKey(syntheticKey);
+        final signer = _MockAuthService();
+        when(() => signer.isAuthenticated).thenReturn(true);
+        when(() => signer.currentPublicKeyHex).thenReturn(pubkey);
+        when(
+          () => signer.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer((call) async {
+          // A remote signer can yield long enough for the source to change.
+          // The upload must still send the already-hashed snapshot.
+          clip.writeAsBytesSync([9, 9, 9]);
+          return Event(
+            pubkey,
+            27235,
+            call.namedArguments[#tags]! as List<List<String>>,
+            '',
+            createdAt: call.namedArguments[#createdAt] as int?,
+          )..sign(syntheticKey);
+        });
+        final auth = Nip98AuthService(authService: signer);
+        addTearDown(auth.dispose);
+        http.Request? sent;
+        final api = ApiService(
+          relayManagerBaseUrl: 'https://api.test',
+          appVersion: 'test',
+          authService: auth,
+          client: MockClient((request) async {
+            sent = request;
+            return http.Response('', 201);
+          }),
+        );
+        await api.submitMinorAccountReviewParentConsent(
+          caseId: 'case-123',
+          email: 'parent@example.com',
+          videoPath: clip.path,
+        );
+        final request = sent!;
+        final event = jsonDecode(
+          utf8.decode(
+            base64Decode(request.headers['Authorization']!.substring(6)),
+          ),
+        ) as Map<String, dynamic>;
+        final tags = event['tags'] as List<dynamic>;
+        expect(Event.fromJson(event).isSigned, isTrue);
+        expect(
+          tags.singleWhere((dynamic tag) => tag[0] == 'payload')[1],
+          sha256.convert(request.bodyBytes).toString(),
+        );
+        expect(request.bodyBytes, containsAllInOrder(originalVideo));
+      },
+    );
+
     test('posts multipart with the email field and video file part', () async {
       http.Request? captured;
       final client = MockClient((request) async {
@@ -164,31 +237,43 @@ void main() {
       expect(partHeaders, contains('content-type: video/mp4'));
     });
 
-    test('creates the NIP-98 token without a payload', () async {
-      final client = MockClient((request) async => http.Response('', 201));
-      final auth = _RecordingNip98AuthService();
-      final api = ApiService(
-        client: client,
-        authService: auth,
-        relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
-        appVersion: '1.0.20',
-      );
+    test(
+      'creates fresh NIP-98 auth bound to the entire multipart body',
+      () async {
+        http.Request? sent;
+        final client = MockClient((request) async {
+          sent = request;
+          return http.Response('', 201);
+        });
+        final auth = _RecordingNip98AuthService();
+        final api = ApiService(
+          client: client,
+          authService: auth,
+          relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
+          appVersion: '1.0.20',
+        );
 
-      await api.submitMinorAccountReviewParentConsent(
-        caseId: 'case-123',
-        email: 'parent@example.com',
-        videoPath: clip.path,
-      );
+        await api.submitMinorAccountReviewParentConsent(
+          caseId: 'case-123',
+          email: 'parent@example.com',
+          videoPath: clip.path,
+        );
 
-      expect(auth.createCalled, isTrue);
-      expect(auth.capturedMethod, HttpMethod.post);
-      expect(
-        auth.capturedUrl,
-        'https://api-relay-prod.divine.video/v1/minor-review-cases/'
-        'case-123/parent-consent',
-      );
-      expect(auth.capturedPayload, isNull);
-    });
+        expect(auth.createCalled, isTrue);
+        expect(auth.capturedMethod, HttpMethod.post);
+        expect(
+          auth.capturedUrl,
+          'https://api-relay-prod.divine.video/v1/minor-review-cases/'
+          'case-123/parent-consent',
+        );
+        expect(auth.capturedPayload, isNull);
+        expect(
+          auth.capturedPayloadHash,
+          sha256.convert(sent!.bodyBytes).toString(),
+        );
+        expect(auth.capturedReuseCached, isFalse);
+      },
+    );
 
     test('upload path uses the longer multipart timeout', () async {
       final timers = <Timer>[];
@@ -209,6 +294,7 @@ void main() {
       });
       final api = ApiService(
         client: client,
+        authService: _RecordingNip98AuthService(),
         relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
         appVersion: 'test',
         requestTimeout: const Duration(milliseconds: 20),
