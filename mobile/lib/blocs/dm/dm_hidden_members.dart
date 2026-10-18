@@ -70,14 +70,14 @@ bool dmPreviewHidden({
 ///
 /// A row whose last message [dmPreviewHidden] hides takes its newest message by
 /// anyone else — preview, time and sender — and turns read unless someone the
-/// viewer still sees wrote after the read cursor. A group nobody else wrote in
-/// keeps its stored, hidden preview and turns read. Read state only ever turns
-/// from unread to read. Every other row, and every row once its member is no
-/// longer hidden, is returned as stored without a query; so is the list itself
-/// when no row needs reading, which leaves a one-to-one inbox exactly as it
-/// was. Otherwise the result is sorted newest first, as
-/// [DmRepository.mergeAndSort] sorts, keeping the stored order between rows
-/// that tie.
+/// viewer still sees wrote after both the read cursor and the viewer's own
+/// newest message. A group nobody else wrote in keeps its stored, hidden
+/// preview and turns read. Read state only ever turns from unread to read.
+/// Every other row, and every row once its member is no longer hidden, is
+/// returned as stored without a query; so is the list itself when no row needs
+/// reading, which leaves a one-to-one inbox exactly as it was. Otherwise the
+/// result is sorted newest first, as [DmRepository.mergeAndSort] sorts,
+/// keeping the stored order between rows that tie.
 ///
 /// The Messages list and its badge both read through this, so they cannot
 /// disagree about which groups are unread. [isHidden] and [isBlockedByUs] must

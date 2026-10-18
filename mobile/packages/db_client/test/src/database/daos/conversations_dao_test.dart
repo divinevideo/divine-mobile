@@ -2442,6 +2442,31 @@ void main() {
           },
         );
 
+        // Writing marks a group read without moving its read cursor.
+        test('is false when the viewer wrote after every visible member, '
+            'though the read cursor lags', () async {
+          await seedRoom(readCursor: 50);
+          await message('visible', sender: visibleMember, createdAt: 100);
+          await message('own', sender: owner, createdAt: 150);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.hasUnread, isFalse);
+        });
+
+        test("is true when a visible member wrote after the viewer's own "
+            'newest message', () async {
+          await seedRoom(readCursor: 50);
+          await message('own', sender: owner, createdAt: 100);
+          await message('visible', sender: visibleMember, createdAt: 150);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.hasUnread, isTrue);
+        });
+
         test("never counts the viewer's own messages", () async {
           await seedRoom();
           await message('own', sender: owner, createdAt: 100);

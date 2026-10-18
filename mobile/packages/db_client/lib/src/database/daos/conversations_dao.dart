@@ -645,8 +645,9 @@ END
 
   /// For each conversation in [excludedSendersByConversation], the newest
   /// message none of that conversation's excluded senders wrote, and whether
-  /// anyone outside that set other than [ownerPubkey] wrote after the read
-  /// cursor (#10150).
+  /// anyone outside that set other than [ownerPubkey] wrote after both the
+  /// read cursor and the owner's own newest message there, which a lagging
+  /// cursor does not see (#10150).
   ///
   /// Reads the messages the thread shows — the owner's copy of a message over
   /// an unattributed legacy one, confirmed retractions dropped, the owner's
@@ -686,7 +687,7 @@ END
     final excluded = {
       for (final pubkey in excludedSenders) pubkey.toLowerCase(),
     }.toList();
-    // Numbered so both subqueries bind the same values: ?1 conversation,
+    // Numbered so every subquery binds the same values: ?1 conversation,
     // ?2 owner, ?3 and ?4 the retraction states the owner still sees, ?5 the
     // read cursor, then one per excluded sender.
     final excludedPlaceholders = [
@@ -695,21 +696,23 @@ END
     final notExcluded = excluded.isEmpty
         ? ''
         : 'AND lower(dm.sender_pubkey) NOT IN ($excludedPlaceholders)';
-    // A legacy unowned copy counts only while the owner has no copy of the
-    // same message, whose own state (a retraction, say) wins.
-    final shown =
+    // What the thread shows of [table]'s rows. A legacy unowned copy counts
+    // only while the owner has no copy of the same message, whose own state
+    // (a retraction, say) wins.
+    String shownIn(String table) =>
         '''
-dm.conversation_id = ?1
-  AND (dm.owner_pubkey = ?2
-       OR ((dm.owner_pubkey = '' OR dm.owner_pubkey IS NULL)
+$table.conversation_id = ?1
+  AND ($table.owner_pubkey = ?2
+       OR (($table.owner_pubkey = '' OR $table.owner_pubkey IS NULL)
            AND NOT EXISTS (
              SELECT 1 FROM direct_messages owned
-             WHERE owned.id = dm.id AND owned.owner_pubkey = ?2
+             WHERE owned.id = $table.id AND owned.owner_pubkey = ?2
            )))
-  AND (dm.is_deleted = 0
-       OR (dm.sender_pubkey = ?2 AND dm.deletion_publish_status IN (?3, ?4)))
-  $notExcluded
+  AND ($table.is_deleted = 0
+       OR ($table.sender_pubkey = ?2
+           AND $table.deletion_publish_status IN (?3, ?4)))
 ''';
+    final shown = '${shownIn('dm')}  $notExcluded';
     final row = await customSelect(
       '''
 SELECT newest.content AS content,
@@ -718,7 +721,11 @@ SELECT newest.content AS content,
        EXISTS (
          SELECT 1 FROM direct_messages dm
          WHERE $shown
-           AND dm.created_at > ?5
+           AND dm.created_at > MAX(?5, COALESCE((
+             SELECT MAX(own.created_at) FROM direct_messages own
+             WHERE ${shownIn('own')}
+               AND lower(own.sender_pubkey) = lower(?2)
+           ), 0))
            AND lower(dm.sender_pubkey) != lower(?2)
        ) AS has_unread
 FROM (SELECT 1) AS anchor
@@ -1008,7 +1015,8 @@ LIMIT 1
 
 /// What [ConversationsDao.visibleActivityExcluding] reads for one
 /// conversation: the newest message by a sender outside the excluded set, and
-/// whether one of them other than the owner wrote after the read cursor.
+/// whether one of them other than the owner wrote after both the read cursor
+/// and the owner's own newest message.
 ///
 /// `content`, `createdAt` and `senderPubkey` are all null when no such message
 /// is stored.

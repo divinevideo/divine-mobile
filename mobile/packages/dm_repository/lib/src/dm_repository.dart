@@ -413,7 +413,8 @@ typedef DmInboxLookup = ({List<String>? relays, DmInboxResolution state});
 /// The three `lastMessage` fields describe the newest message someone outside
 /// the excluded set wrote, the viewer included, and are all null when no such
 /// message is stored. `hasUnread` is whether someone outside that set other
-/// than the viewer wrote after the conversation's read cursor.
+/// than the viewer wrote after both the conversation's read cursor and the
+/// viewer's own newest message.
 typedef DmVisibleActivity = ({
   String? lastMessageContent,
   int? lastMessageTimestamp,
