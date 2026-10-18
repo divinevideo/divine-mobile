@@ -76,6 +76,200 @@ void main() {
       );
     });
 
+    group('tombstoneFor', () {
+      test('returns the removal and the rejoin', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        final tombstone = await dao.tombstoneFor(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+        );
+
+        expect(tombstone, isNotNull);
+        expect(tombstone!.removedAt, 100);
+        expect(tombstone.rejoinedAt, 150);
+      });
+
+      test('is null for a conversation that was never removed', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+
+        expect(
+          await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerB,
+          ),
+          isNull,
+        );
+      });
+    });
+
+    group('markRejoined', () {
+      test('fills a rejoin the removal left empty', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        expect(marked, isTrue);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          150,
+        );
+      });
+
+      test('keeps the first rejoin', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 300,
+        );
+
+        expect(marked, isFalse);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          150,
+        );
+      });
+
+      test(
+        'records nothing for a conversation that was never removed',
+        () async {
+          final marked = await dao.markRejoined(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+            at: 150,
+          );
+
+          expect(marked, isFalse);
+          expect(
+            await dao.tombstoneFor(
+              conversationId: conversationA,
+              ownerPubkey: ownerA,
+            ),
+            isNull,
+          );
+        },
+      );
+
+      test("leaves another owner's removal untouched", () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerB,
+          removedAt: 100,
+        );
+
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerB,
+          ))!.rejoinedAt,
+          isNull,
+        );
+      });
+    });
+
+    group('removing again', () {
+      test('record clears an earlier rejoin', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 200,
+        );
+
+        final tombstone = await dao.tombstoneFor(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+        );
+        expect(tombstone!.removedAt, 200);
+        expect(tombstone.rejoinedAt, isNull);
+      });
+
+      test('recordAll clears an earlier rejoin', () async {
+        await dao.recordAll(
+          conversationIds: [conversationA, conversationB],
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        await dao.recordAll(
+          conversationIds: [conversationA],
+          ownerPubkey: ownerA,
+          removedAt: 200,
+        );
+
+        final tombstone = await dao.tombstoneFor(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+        );
+        expect(tombstone!.removedAt, 200);
+        expect(tombstone.rejoinedAt, isNull);
+      });
+    });
+
     test('transaction rollback does not leave a tombstone', () async {
       await expectLater(
         database.transaction(() async {

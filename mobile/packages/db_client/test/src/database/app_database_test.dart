@@ -261,6 +261,69 @@ void main() {
       );
     });
 
+    group('removed conversation rejoin schema recovery', () {
+      const conversationId =
+          'abababababababababababababababab'
+          'abababababababababababababababab';
+
+      test(
+        'restores rejoined_at on a current-version database that lacks it, '
+        'keeping the removal',
+        () async {
+          await database.removedConversationsDao.record(
+            conversationId: conversationId,
+            ownerPubkey: testPubkey,
+            removedAt: 1700000000,
+          );
+          await database.customStatement(
+            'ALTER TABLE removed_conversations DROP COLUMN rejoined_at',
+          );
+          await database.close();
+
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+
+          // A read cannot tell a restored nullable column from a missing one;
+          // the write names it, so it throws unless recovery re-added it.
+          final marked = await database.removedConversationsDao.markRejoined(
+            conversationId: conversationId,
+            ownerPubkey: testPubkey,
+            at: 1700000100,
+          );
+          final tombstone = await database.removedConversationsDao.tombstoneFor(
+            conversationId: conversationId,
+            ownerPubkey: testPubkey,
+          );
+          expect(marked, isTrue);
+          expect(tombstone!.removedAt, 1700000000);
+          expect(tombstone.rejoinedAt, 1700000100);
+        },
+      );
+
+      test(
+        'recreates the table when a current-version database lacks it',
+        () async {
+          await database.customStatement('DROP TABLE removed_conversations');
+          await database.close();
+
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+
+          await database.removedConversationsDao.record(
+            conversationId: conversationId,
+            ownerPubkey: testPubkey,
+            removedAt: 1700000000,
+          );
+          expect(
+            await database.removedConversationsDao.markRejoined(
+              conversationId: conversationId,
+              ownerPubkey: testPubkey,
+              at: 1700000100,
+            ),
+            isTrue,
+          );
+        },
+      );
+    });
+
     group('DM reaction recipient schema recovery', () {
       test(
         'restores recipient_pubkeys without losing a queued reaction, and the '

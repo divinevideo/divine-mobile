@@ -260,6 +260,20 @@ the missing dismissal and retained-conversation columns and table without
 recreating the follower table or losing follower timestamps. Upgrade tests exercise canonical v25/v26 and ranking-preview v24/v25/v26 shapes, replay after
 account cleanup, and owner isolation.
 
+Version 27 adds the nullable `removed_conversations.rejoined_at` (#10150): the
+time the user first wrote in a group again after leaving it. Leaving a group
+keeps it out of the inbox until then, and other members' messages stamped
+before it stay suppressed; a one-to-one still reopens on any newer message.
+Removing the conversation again clears it. A tombstone whose conversation is
+on disk again (a newer message reopened it under the earlier rule) is stamped
+rejoined at its removal, so a group the user can see keeps receiving; any other
+stays NULL, so a group removed before v27 stays left until the user writes in
+it. The step adds the column only when it is missing and checks `to` as well as
+`from`, like the v20 and v22 steps. The `from < 9` step creates the table
+from the current definition, so a migration test that stops below v27 drops the
+column again. The repair probe lists the column, and the guarded recovery adds
+it, or recreates the table when it is missing. The v26 snapshot is unchanged.
+
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
 for startup cleanup and guarded recovery of damaged local databases.

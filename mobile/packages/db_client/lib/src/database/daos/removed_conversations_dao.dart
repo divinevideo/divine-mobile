@@ -11,6 +11,10 @@ class RemovedConversationsDao extends DatabaseAccessor<AppDatabase>
     with _$RemovedConversationsDaoMixin {
   RemovedConversationsDao(super.attachedDatabase);
 
+  /// Records a removal at [removedAt], replacing an earlier one.
+  ///
+  /// Clears any rejoin, so leaving a group again keeps it out until the user
+  /// writes in it once more.
   Future<void> record({
     required String conversationId,
     required String ownerPubkey,
@@ -21,10 +25,12 @@ class RemovedConversationsDao extends DatabaseAccessor<AppDatabase>
         conversationId: conversationId,
         ownerPubkey: ownerPubkey,
         removedAt: removedAt,
+        rejoinedAt: const Value(null),
       ),
     );
   }
 
+  /// [record] for each of [conversationIds] in one batch.
   Future<void> recordAll({
     required Iterable<String> conversationIds,
     required String ownerPubkey,
@@ -39,6 +45,7 @@ class RemovedConversationsDao extends DatabaseAccessor<AppDatabase>
               conversationId: conversationId,
               ownerPubkey: ownerPubkey,
               removedAt: removedAt,
+              rejoinedAt: const Value(null),
             ),
         ],
       );
@@ -49,14 +56,46 @@ class RemovedConversationsDao extends DatabaseAccessor<AppDatabase>
     required String conversationId,
     required String ownerPubkey,
   }) async {
-    final row =
-        await (select(removedConversations)..where(
+    final row = await tombstoneFor(
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+    );
+    return row?.removedAt;
+  }
+
+  /// The removal of [conversationId] for [ownerPubkey], with its rejoin, or
+  /// null when it was never removed.
+  Future<RemovedConversation?> tombstoneFor({
+    required String conversationId,
+    required String ownerPubkey,
+  }) {
+    return (select(removedConversations)..where(
+          (t) =>
+              t.conversationId.equals(conversationId) &
+              t.ownerPubkey.equals(ownerPubkey),
+        ))
+        .getSingleOrNull();
+  }
+
+  /// Records that the user wrote in a removed conversation again at [at].
+  ///
+  /// Only the first rejoin after a removal counts, so a later one never moves
+  /// the instant forward. Returns whether a rejoin was recorded; false when the
+  /// conversation was never removed or is already rejoined.
+  Future<bool> markRejoined({
+    required String conversationId,
+    required String ownerPubkey,
+    required int at,
+  }) async {
+    final updated =
+        await (update(removedConversations)..where(
               (t) =>
                   t.conversationId.equals(conversationId) &
-                  t.ownerPubkey.equals(ownerPubkey),
+                  t.ownerPubkey.equals(ownerPubkey) &
+                  t.rejoinedAt.isNull(),
             ))
-            .getSingleOrNull();
-    return row?.removedAt;
+            .write(RemovedConversationsCompanion(rejoinedAt: Value(at)));
+    return updated > 0;
   }
 
   Future<int> clearAllForUser(String ownerPubkey) {

@@ -1837,7 +1837,8 @@ class ConversationDismissals extends Table {
 /// Relay history is replayable, so deleting the conversation and message rows
 /// alone would make old NIP-17 and NIP-04 events eligible for ingestion again.
 /// The timestamp suppresses history through the removal instant while still
-/// allowing a genuinely newer message to reopen the conversation.
+/// allowing a genuinely newer message to reopen a one-to-one. A group the user
+/// left stays out until they write in it again ([rejoinedAt]).
 class RemovedConversations extends Table {
   @override
   String get tableName => 'removed_conversations';
@@ -1848,6 +1849,13 @@ class RemovedConversations extends Table {
 
   /// Unix timestamp when the user removed the conversation.
   IntColumn get removedAt => integer().named('removed_at')();
+
+  /// Unix timestamp of the user's first message in a left group after
+  /// [removedAt], or null while they have not written in it again.
+  ///
+  /// Other members' messages stamped before it stay suppressed. Removing the
+  /// conversation again clears it.
+  IntColumn get rejoinedAt => integer().nullable().named('rejoined_at')();
 
   @override
   Set<Column> get primaryKey => {conversationId, ownerPubkey};
