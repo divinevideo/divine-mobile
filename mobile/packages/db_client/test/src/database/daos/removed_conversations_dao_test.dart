@@ -401,6 +401,48 @@ void main() {
         },
       );
 
+      // A local send's rejoin is hand-written SQL, so its owner scoping is
+      // pinned on its own, in both directions.
+      for (final (writer, other) in [(ownerA, ownerB), (ownerB, ownerA)]) {
+        test("leaves another owner's removal of the same conversation "
+            'untouched by a local send '
+            '(${writer == ownerA ? 'A' : 'B'} writes)', () async {
+          await dao.record(
+            conversationId: conversationA,
+            ownerPubkey: writer,
+            removedAt: 100,
+          );
+          await dao.record(
+            conversationId: conversationA,
+            ownerPubkey: other,
+            removedAt: 100,
+          );
+
+          final marked = await dao.markRejoined(
+            conversationId: conversationA,
+            ownerPubkey: writer,
+            at: 150,
+            isLocalSend: true,
+          );
+
+          expect(marked, isTrue);
+          expect(
+            (await dao.tombstoneFor(
+              conversationId: conversationA,
+              ownerPubkey: writer,
+            ))!.rejoinedAt,
+            150,
+          );
+          expect(
+            (await dao.tombstoneFor(
+              conversationId: conversationA,
+              ownerPubkey: other,
+            ))!.rejoinedAt,
+            isNull,
+          );
+        });
+      }
+
       test("leaves another owner's removal untouched", () async {
         await dao.record(
           conversationId: conversationA,

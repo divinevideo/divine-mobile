@@ -1850,7 +1850,7 @@ class RemovedConversations extends Table {
   /// Unix timestamp when the user removed the conversation.
   IntColumn get removedAt => integer().named('removed_at')();
 
-  /// Unix timestamp of the user's first message in a left group after
+  /// Unix timestamp the user wrote in a left group again from, never before
   /// [removedAt], or null while they have not written in it again.
   ///
   /// Other members' messages stamped before it stay suppressed. Removing the
