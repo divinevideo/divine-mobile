@@ -11,7 +11,11 @@ import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 
 /// How a DM participant is named right now.
 class DmPeerNameResolution {
-  const DmPeerNameResolution({required this.name, required this.visualName});
+  const DmPeerNameResolution({
+    required this.name,
+    required this.visualName,
+    required this.isVanished,
+  });
 
   /// The name every DM surface agrees on, empty while the identity resolves.
   ///
@@ -23,6 +27,10 @@ class DmPeerNameResolution {
   ///
   /// Only for sizing a skeleton; it must not be shown as the person's name.
   final String visualName;
+
+  /// Whether the account was deleted, so [name] is the deleted-account label
+  /// rather than anything the person chose.
+  final bool isVanished;
 
   bool get isResolving => name.isEmpty;
 }
@@ -53,6 +61,7 @@ DmPeerNameResolution watchDmPeerName(
   return DmPeerNameResolution(
     name: name,
     visualName: name.isEmpty ? UserProfile.defaultDisplayNameFor(pubkey) : name,
+    isVanished: isVanished,
   );
 }
 

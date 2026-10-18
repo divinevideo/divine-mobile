@@ -493,6 +493,85 @@ void main() {
       });
     });
 
+    // The sheet and a group message's long-press share one block path, so the
+    // one-to-one behavior is pinned here: a block closes the thread, an
+    // unblock leaves it.
+    group('options sheet block', () {
+      const counterpartyName = 'Alice';
+      late MockGoRouter goRouter;
+
+      setUp(() {
+        goRouter = MockGoRouter();
+        when(goRouter.pop).thenReturn(null);
+        when(
+          () => mockBlocklist.blockUser(
+            any(),
+            ourPubkey: any(named: 'ourPubkey'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockBlocklist.unblockUser(any()),
+        ).thenAnswer((_) async => true);
+      });
+
+      Future<void> openOptions(WidgetTester tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            goRouter: goRouter,
+            otherProfile: UserProfile(
+              pubkey: otherPubkey,
+              displayName: counterpartyName,
+              rawData: const {},
+              createdAt: now,
+              eventId: 'c' * 64,
+            ),
+            state: const ConversationState(status: ConversationStatus.loaded),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('blocks the counterparty and closes the thread', (
+        tester,
+      ) async {
+        await openOptions(tester);
+        await tester.tap(
+          find.text(l10n.profileBlockDisplayName(counterpartyName)),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(l10n.profileBlockConfirmButton(counterpartyName)),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockBlocklist.blockUser(otherPubkey, ourPubkey: currentPubkey),
+        ).called(1);
+        verify(goRouter.pop).called(1);
+      });
+
+      testWidgets('unblocks the counterparty and leaves the thread open', (
+        tester,
+      ) async {
+        when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+
+        await openOptions(tester);
+        await tester.tap(
+          find.text(l10n.profileUnblockDisplayName(counterpartyName)),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.profileUnblockButton));
+        await tester.pumpAndSettle();
+
+        verify(() => mockBlocklist.unblockUser(otherPubkey)).called(1);
+        verifyNever(goRouter.pop);
+      });
+    });
+
     // A group thread is titled for the room, so nothing beside the title may
     // describe whichever counterparty sorted first: no identity line under
     // it, no profile behind a tap on it, and no member card while the thread
@@ -2356,6 +2435,279 @@ void main() {
 
         expect(find.text(hiddenText), findsOneWidget);
         expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      // Block and Unblock sit on another member's message, beside Report, so a
+      // member is dealt with from the words that prompted it. The thread stays
+      // open: blocking one member keeps the group.
+      group('blocking from a message', () {
+        const aliceName = 'Alice';
+        const bobName = 'Bob';
+        const ownText = 'my own words';
+
+        late MockGoRouter goRouter;
+
+        setUp(() {
+          goRouter = MockGoRouter();
+          when(goRouter.pop).thenReturn(null);
+          when(
+            () => mockBlocklist.blockUser(
+              any(),
+              ourPubkey: any(named: 'ourPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(() => mockBlocklist.unblockUser(any())).thenAnswer(
+            (_) async => true,
+          );
+        });
+
+        UserProfile profileNamed(String pubkey, String name) => UserProfile(
+          pubkey: pubkey,
+          displayName: name,
+          rawData: const {},
+          createdAt: now,
+          eventId: 'c' * 64,
+        );
+
+        // Newest first, the order the bloc hands the view.
+        Widget namedGroupThread({
+          bool bobVanished = false,
+          bool bobResolving = false,
+        }) => buildSubject(
+          counterparties: const [otherPubkey, bob],
+          otherProfile: profileNamed(otherPubkey, aliceName),
+          goRouter: goRouter,
+          state: ConversationState(
+            status: ConversationStatus.loaded,
+            messages: [
+              messageFrom(currentPubkey, ownText, 3),
+              messageFrom(otherPubkey, visibleText, 2),
+              messageFrom(bob, hiddenText, 1),
+            ],
+          ),
+          extraOverrides: [
+            fetchUserProfileProvider(bob).overrideWith(
+              (ref) async => bobResolving ? null : profileNamed(bob, bobName),
+            ),
+            profileVanishedProvider(bob).overrideWith((ref) => bobVanished),
+            profileIdentityResolvingProvider(
+              bob,
+            ).overrideWithValue(bobResolving),
+          ],
+        );
+
+        // The confirmation sheet is taller than the default 600 px surface.
+        void useTallSurface(WidgetTester tester) {
+          tester.view.physicalSize = const Size(800, 1400);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+        }
+
+        Future<void> longPress(WidgetTester tester, String text) async {
+          await tester.longPress(find.text(text));
+          await tester.pumpAndSettle();
+        }
+
+        Future<void> revealHiddenMessage(WidgetTester tester) async {
+          await tester.tap(find.text(l10n.dmHiddenMessageShowAction));
+          await tester.pumpAndSettle();
+        }
+
+        Finder blockRows() => find.textContaining(l10n.inboxActionBlock(''));
+        Finder unblockRows() =>
+            find.textContaining(l10n.inboxActionUnblock(''));
+
+        testWidgets("offers Block <name> on another member's message", (
+          tester,
+        ) async {
+          await tester.pumpWidget(namedGroupThread());
+          await tester.pumpAndSettle();
+
+          await longPress(tester, visibleText);
+
+          expect(
+            find.text(l10n.inboxActionBlock(aliceName)),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.dmMessageActionReport), findsOneWidget);
+          expect(unblockRows(), findsNothing);
+        });
+
+        testWidgets("offers no Block on the viewer's own message", (
+          tester,
+        ) async {
+          await tester.pumpWidget(namedGroupThread());
+          await tester.pumpAndSettle();
+
+          await longPress(tester, ownText);
+
+          // The overlay is up, so the absence is the row's, not the sheet's.
+          expect(find.text(l10n.dmMessageActionCopyText), findsOneWidget);
+          expect(blockRows(), findsNothing);
+          expect(unblockRows(), findsNothing);
+        });
+
+        testWidgets('offers no Block in a one-to-one thread', (tester) async {
+          await tester.pumpWidget(
+            buildSubject(
+              goRouter: goRouter,
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [messageFrom(otherPubkey, visibleText, 1)],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await longPress(tester, visibleText);
+
+          expect(find.text(l10n.dmMessageActionReport), findsOneWidget);
+          expect(blockRows(), findsNothing);
+          expect(unblockRows(), findsNothing);
+        });
+
+        testWidgets('blocks the member once confirmed and keeps the thread '
+            'open', (tester) async {
+          useTallSurface(tester);
+          await tester.pumpWidget(namedGroupThread());
+          await tester.pumpAndSettle();
+
+          await longPress(tester, visibleText);
+          await tester.tap(find.text(l10n.inboxActionBlock(aliceName)));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.profileBlockTitle(aliceName)), findsOneWidget);
+
+          await tester.tap(
+            find.text(l10n.profileBlockConfirmButton(aliceName)),
+          );
+          await tester.pumpAndSettle();
+
+          verify(
+            () => mockBlocklist.blockUser(
+              otherPubkey,
+              ourPubkey: currentPubkey,
+            ),
+          ).called(1);
+          verifyNever(goRouter.pop);
+          expect(find.byType(ConversationView), findsOneWidget);
+          expect(find.text(visibleText), findsOneWidget);
+          expect(find.text(l10n.inboxBlockedUser(aliceName)), findsOneWidget);
+        });
+
+        testWidgets('blocks nobody when the confirmation is cancelled', (
+          tester,
+        ) async {
+          useTallSurface(tester);
+          await tester.pumpWidget(namedGroupThread());
+          await tester.pumpAndSettle();
+
+          await longPress(tester, visibleText);
+          await tester.tap(find.text(l10n.inboxActionBlock(aliceName)));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.profileCancelButton));
+          await tester.pumpAndSettle();
+
+          verifyNever(
+            () => mockBlocklist.blockUser(
+              any(),
+              ourPubkey: any(named: 'ourPubkey'),
+            ),
+          );
+          expect(find.text(l10n.inboxBlockedUser(aliceName)), findsNothing);
+        });
+
+        testWidgets('offers Unblock on a revealed blocked member and '
+            'unblocks once confirmed', (tester) async {
+          useTallSurface(tester);
+          when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
+
+          await tester.pumpWidget(namedGroupThread());
+          await tester.pumpAndSettle();
+          await revealHiddenMessage(tester);
+
+          await longPress(tester, hiddenText);
+          expect(find.text(l10n.inboxActionUnblock(bobName)), findsOneWidget);
+          expect(blockRows(), findsNothing);
+
+          await tester.tap(find.text(l10n.inboxActionUnblock(bobName)));
+          await tester.pumpAndSettle();
+          verifyNever(() => mockBlocklist.unblockUser(any()));
+
+          await tester.tap(find.text(l10n.profileUnblockButton));
+          await tester.pumpAndSettle();
+
+          verify(() => mockBlocklist.unblockUser(bob)).called(1);
+          verifyNever(goRouter.pop);
+          expect(find.text(l10n.inboxUnblockedUser(bobName)), findsOneWidget);
+        });
+
+        // A mute from another client hides a member without blocking them, so
+        // the row blocks rather than pretending there is something to undo.
+        testWidgets('offers Block, not Unblock, on a member who is only '
+            'muted', (tester) async {
+          await tester.pumpWidget(namedGroupThread());
+          await tester.pumpAndSettle();
+          await revealHiddenMessage(tester);
+
+          await longPress(tester, hiddenText);
+
+          expect(find.text(l10n.inboxActionBlock(bobName)), findsOneWidget);
+          expect(unblockRows(), findsNothing);
+        });
+
+        testWidgets('says "this account" for a deleted account', (
+          tester,
+        ) async {
+          useTallSurface(tester);
+          hidden = {};
+
+          await tester.pumpWidget(namedGroupThread(bobVanished: true));
+          await tester.pumpAndSettle();
+          await longPress(tester, hiddenText);
+
+          expect(
+            find.text(l10n.inboxActionBlockVanishedAccount),
+            findsOneWidget,
+          );
+          // The caption over the bubble still reads "Deleted account"; the
+          // action rows must not.
+          expect(
+            find.descendant(
+              of: find.byType(ListTile),
+              matching: find.textContaining(l10n.profileDeletedAccountName),
+            ),
+            findsNothing,
+          );
+
+          await tester.tap(find.text(l10n.inboxActionBlockVanishedAccount));
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.text(
+              l10n.profileBlockConfirmButton(l10n.profileDeletedAccountName),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.inboxBlockedVanishedAccount),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('falls back to "user" while the member is still '
+            'resolving', (tester) async {
+          hidden = {};
+
+          await tester.pumpWidget(namedGroupThread(bobResolving: true));
+          await tester.pump();
+          await tester.pump();
+          await longPress(tester, hiddenText);
+
+          expect(
+            find.text(l10n.inboxActionBlock(l10n.profileUserFallback)),
+            findsOneWidget,
+          );
+        });
       });
 
       // The app bar names an untitled room for one of its members, so it must

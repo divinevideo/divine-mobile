@@ -241,13 +241,10 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
             userPubkey: otherPubkey,
           );
         case MoreSheetResult.blockConfirmed:
-          await blocklistRepository.blockUser(
-            otherPubkey,
-            ourPubkey: ref.read(authServiceProvider).currentPublicKeyHex ?? '',
-          );
+          await _setBlocked(otherPubkey, blocked: true);
           if (mounted) context.pop();
         case MoreSheetResult.unblockConfirmed:
-          await blocklistRepository.unblockUser(otherPubkey);
+          await _setBlocked(otherPubkey, blocked: false);
         case MoreSheetResult.addToList:
           // addToList is not surfaced from this caller (showAddToList defaults
           // to false on MoreSheetContent here), so this branch is unreachable.
@@ -258,6 +255,70 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       }
     } finally {
       _isOpeningOptions = false;
+    }
+  }
+
+  /// Blocks or unblocks [pubkey] for the viewer. The options sheet and a group
+  /// message's long-press both go through here.
+  Future<void> _setBlocked(String pubkey, {required bool blocked}) async {
+    final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
+    if (blocked) {
+      await blocklistRepository.blockUser(
+        pubkey,
+        ourPubkey: ref.read(authServiceProvider).currentPublicKeyHex ?? '',
+      );
+    } else {
+      await blocklistRepository.unblockUser(pubkey);
+    }
+  }
+
+  /// Confirms, then blocks or unblocks the member who sent a group message.
+  ///
+  /// The thread stays open: blocking one member keeps the group and collapses
+  /// that member's messages, where blocking a one-to-one's peer closes it
+  /// (#10150).
+  Future<void> _onSenderBlockAction(
+    String pubkey,
+    SenderBlockOption sender,
+  ) async {
+    final result = await VineBottomSheet.show<MoreSheetResult>(
+      context: context,
+      scrollable: false,
+      body: MoreSheetContent(
+        userIdHex: pubkey,
+        displayName: sender.displayName,
+        isFollowing: false,
+        isBlocked: sender.isBlocked,
+        initialMode: sender.isBlocked
+            ? MoreSheetMode.unblockConfirmation
+            : MoreSheetMode.blockConfirmation,
+      ),
+      children: const [],
+    );
+    if (!mounted) return;
+
+    final l10n = context.l10n;
+    switch (result) {
+      case MoreSheetResult.blockConfirmed:
+        await _setBlocked(pubkey, blocked: true);
+        if (!mounted) return;
+        _showSnackbar(
+          sender.isVanished
+              ? l10n.inboxBlockedVanishedAccount
+              : l10n.inboxBlockedUser(sender.displayName),
+          error: false,
+        );
+      case MoreSheetResult.unblockConfirmed:
+        await _setBlocked(pubkey, blocked: false);
+        if (!mounted) return;
+        _showSnackbar(
+          sender.isVanished
+              ? l10n.inboxUnblockedVanishedAccount
+              : l10n.inboxUnblockedUser(sender.displayName),
+          error: false,
+        );
+      case _:
+        return;
     }
   }
 
@@ -639,6 +700,8 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   everyMemberBlocked:
                                       threadWritability ==
                                       DmThreadWritability.blockedByUs,
+                                  isBlockedByUs: blocklistRepository.isBlocked,
+                                  onBlockSender: _onSenderBlockAction,
                                   imageUrl: isDeleted ? null : profile?.picture,
                                   nip05: claimedNip05,
                                   onViewProfile: otherPubkey.isNotEmpty
@@ -1536,6 +1599,8 @@ class _ConversationContent extends StatelessWidget {
     required this.retractionsEnabled,
     required this.sendRecoveryEnabled,
     required this.everyMemberBlocked,
+    required this.isBlockedByUs,
+    required this.onBlockSender,
     this.imageUrl,
     this.nip05,
     this.onViewProfile,
@@ -1579,6 +1644,13 @@ class _ConversationContent extends StatelessWidget {
   /// Whether the viewer blocked every member, which shows a group's messages
   /// in full like a blocked one-to-one (#10150).
   final bool everyMemberBlocked;
+
+  /// Whether the viewer explicitly blocked a pubkey; a mute alone does not.
+  final bool Function(String pubkey) isBlockedByUs;
+
+  /// Blocks or unblocks the member who sent a group message, once confirmed.
+  final Future<void> Function(String pubkey, SenderBlockOption sender)
+  onBlockSender;
   final String? imageUrl;
   final String? nip05;
   final VoidCallback? onViewProfile;
@@ -1638,6 +1710,8 @@ class _ConversationContent extends StatelessWidget {
                     retractionsEnabled: retractionsEnabled,
                     sendRecoveryEnabled: sendRecoveryEnabled,
                     everyMemberBlocked: everyMemberBlocked,
+                    isBlockedByUs: isBlockedByUs,
+                    onBlockSender: onBlockSender,
                   ),
         };
       },
@@ -1687,6 +1761,8 @@ class _MessageList extends StatelessWidget {
     required this.retractionsEnabled,
     required this.sendRecoveryEnabled,
     required this.everyMemberBlocked,
+    required this.isBlockedByUs,
+    required this.onBlockSender,
   });
 
   final List<DmMessage> messages;
@@ -1752,6 +1828,32 @@ class _MessageList extends StatelessWidget {
   /// like a blocked one-to-one, so nothing collapses (#10150, #7025).
   final bool everyMemberBlocked;
 
+  /// Whether the viewer explicitly blocked a pubkey; a mute alone does not.
+  final bool Function(String pubkey) isBlockedByUs;
+
+  /// Blocks or unblocks the member who sent a group message, once confirmed.
+  final Future<void> Function(String pubkey, SenderBlockOption sender)
+  onBlockSender;
+
+  /// The block row a received group message offers for its sender.
+  ///
+  /// Null without an [author], which [build] resolves only for a received
+  /// message in a group.
+  SenderBlockOption? _senderBlockFor(
+    BuildContext context,
+    DmMessage message,
+    DmPeerNameResolution? author,
+  ) {
+    if (author == null) return null;
+    return SenderBlockOption(
+      displayName: author.name.isEmpty
+          ? context.l10n.profileUserFallback
+          : author.name,
+      isBlocked: isBlockedByUs(message.senderPubkey),
+      isVanished: author.isVanished,
+    );
+  }
+
   Future<void> _onMessageLongPress(
     BuildContext context,
     DmMessage message,
@@ -1759,6 +1861,7 @@ class _MessageList extends StatelessWidget {
     DmDeliveryStatus deliveryStatus,
     DmRetractionStatus retractionStatus,
     bool isPersisted,
+    DmPeerNameResolution? author,
   ) async {
     final videoTarget = resolveDmVideoTarget(
       content: StringUtils.sanitizeUtf16(message.content),
@@ -1781,12 +1884,14 @@ class _MessageList extends StatelessWidget {
         !isSent &&
         message.fileMetadata?.isVideo == true &&
         ClipProvenanceVerifier.isSupportedPlatform;
+    final senderBlock = _senderBlockFor(context, message, author);
     final result = await ReactionPickerOverlay.show(
       context: context,
       isSent: isSent,
       isVideoShare: videoTarget != null,
       isEncryptedVideo: message.fileMetadata?.isVideo == true,
       canAddToClips: canAddToClips,
+      senderBlock: senderBlock,
       showPicker: showPicker,
       showDelete:
           (retractionsEnabled || !isPersisted) &&
@@ -1859,6 +1964,11 @@ class _MessageList extends StatelessWidget {
           messageId: message.id,
           senderPubkey: message.senderPubkey,
         );
+      case MessageAction.blockSender:
+      case MessageAction.unblockSender:
+        // Only returned by a row built from [senderBlock].
+        if (senderBlock == null) return;
+        await onBlockSender(message.senderPubkey, senderBlock);
     }
   }
 
@@ -2181,6 +2291,7 @@ class _MessageList extends StatelessWidget {
               context.read<ConversationBloc>().state.messages.any(
                 (persisted) => persisted.id == message.id,
               ),
+              author,
             ),
             // A single tap on a failed own bubble opens the resend/stop-trying
             // recovery bottom sheet; every other bubble keeps its default tap.

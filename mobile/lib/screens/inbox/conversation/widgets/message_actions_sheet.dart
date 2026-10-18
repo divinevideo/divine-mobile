@@ -24,4 +24,10 @@ enum MessageAction {
 
   /// Report the message.
   report,
+
+  /// Block the group member who sent the message.
+  blockSender,
+
+  /// Unblock the group member who sent the message.
+  unblockSender,
 }

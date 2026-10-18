@@ -22,6 +22,7 @@ void main() {
     bool showPicker = true,
     bool isVideoShare = false,
     bool isEncryptedVideo = false,
+    SenderBlockOption? senderBlock,
   }) async {
     await tester.pumpWidget(
       testMaterialApp(
@@ -37,6 +38,7 @@ void main() {
                       showPicker: showPicker,
                       isVideoShare: isVideoShare,
                       isEncryptedVideo: isEncryptedVideo,
+                      senderBlock: senderBlock,
                     ),
                   );
                 },
@@ -227,6 +229,157 @@ void main() {
       );
       expect(plusIcon.size, 18);
       expect(plusIcon.color, VineTheme.onSurfaceMuted);
+    });
+
+    group('sender block row', () {
+      const alice = SenderBlockOption(displayName: 'Alice', isBlocked: false);
+      const blockedAlice = SenderBlockOption(
+        displayName: 'Alice',
+        isBlocked: true,
+      );
+
+      Finder blockRows() => find.textContaining(l10n.inboxActionBlock(''));
+      Finder unblockRows() => find.textContaining(l10n.inboxActionUnblock(''));
+
+      DivineIconName iconOf(WidgetTester tester, String label) => tester
+          .widget<DivineIcon>(
+            find.descendant(
+              of: find.ancestor(
+                of: find.text(label),
+                matching: find.byType(ListTile),
+              ),
+              matching: find.byType(DivineIcon),
+            ),
+          )
+          .icon;
+
+      Future<ReactionPickerResult?> tapRow(
+        WidgetTester tester,
+        SenderBlockOption option,
+        String label,
+      ) async {
+        ReactionPickerResult? result;
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: TextButton(
+                    onPressed: () async {
+                      result = await ReactionPickerOverlay.show(
+                        context: context,
+                        isSent: false,
+                        senderBlock: option,
+                      );
+                    },
+                    child: const Text('open'),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        return result;
+      }
+
+      testWidgets('is absent unless a sender is passed', (tester) async {
+        await openOverlay(tester);
+
+        // Report is on screen, so the list rendered and Block is not merely
+        // hidden behind a missing sheet.
+        expect(find.text(l10n.dmMessageActionReport), findsOneWidget);
+        expect(blockRows(), findsNothing);
+        expect(unblockRows(), findsNothing);
+      });
+
+      testWidgets('offers Block <name> beside Report', (tester) async {
+        await openOverlay(tester, senderBlock: alice);
+
+        expect(find.text(l10n.inboxActionBlock('Alice')), findsOneWidget);
+        expect(find.text(l10n.dmMessageActionReport), findsOneWidget);
+        expect(unblockRows(), findsNothing);
+        expect(
+          iconOf(tester, l10n.inboxActionBlock('Alice')),
+          DivineIconName.prohibit,
+        );
+      });
+
+      testWidgets('offers Unblock <name> for an already blocked member', (
+        tester,
+      ) async {
+        await openOverlay(tester, senderBlock: blockedAlice);
+
+        expect(find.text(l10n.inboxActionUnblock('Alice')), findsOneWidget);
+        expect(blockRows(), findsNothing);
+        expect(
+          iconOf(tester, l10n.inboxActionUnblock('Alice')),
+          DivineIconName.prohibitInset,
+        );
+      });
+
+      testWidgets('does not name a deleted account by its stand-in label', (
+        tester,
+      ) async {
+        final deletedName = l10n.profileDeletedAccountName;
+        await openOverlay(
+          tester,
+          senderBlock: SenderBlockOption(
+            displayName: deletedName,
+            isBlocked: false,
+            isVanished: true,
+          ),
+        );
+
+        expect(
+          find.text(l10n.inboxActionBlockVanishedAccount),
+          findsOneWidget,
+        );
+        expect(find.textContaining(deletedName), findsNothing);
+      });
+
+      testWidgets('offers Unblock this account for a blocked deleted account', (
+        tester,
+      ) async {
+        await openOverlay(
+          tester,
+          senderBlock: SenderBlockOption(
+            displayName: l10n.profileDeletedAccountName,
+            isBlocked: true,
+            isVanished: true,
+          ),
+        );
+
+        expect(
+          find.text(l10n.inboxActionUnblockVanishedAccount),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('returns blockSender after selecting Block', (tester) async {
+        final result = await tapRow(
+          tester,
+          alice,
+          l10n.inboxActionBlock('Alice'),
+        );
+
+        expect(result?.action, MessageAction.blockSender);
+      });
+
+      testWidgets('returns unblockSender after selecting Unblock', (
+        tester,
+      ) async {
+        final result = await tapRow(
+          tester,
+          blockedAlice,
+          l10n.inboxActionUnblock('Alice'),
+        );
+
+        expect(result?.action, MessageAction.unblockSender);
+      });
     });
 
     testWidgets('omits picker row when showPicker is false', (tester) async {
