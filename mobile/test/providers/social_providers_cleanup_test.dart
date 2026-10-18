@@ -1341,7 +1341,8 @@ void main() {
           ))!.isDismissed;
 
       test(
-        'sign-out and switch cleanup retain dismissal through history recovery',
+        'sign-out, switch and removal from the device retain dismissal '
+        'through history recovery',
         () async {
           await rebuild(_pubkeyA);
           await db.conversationsDao.setDismissed(
@@ -1356,9 +1357,21 @@ void main() {
           addTearDown(subscription.close);
           final cleanup = subscription.read().onDatabaseCleanup!;
 
-          // This is the callback invoked by ordinary sign-out: cached message
-          // and conversation rows go away, account-lifetime state stays.
+          // Ordinary sign-out keeps the conversation row, dismissed and read
+          // (#10276), and replayed history leaves it dismissed.
           await cleanup(userPubkey: _pubkeyA);
+          final kept = (await db.conversationsDao.getConversation(
+            conversationId,
+            ownerPubkey: _pubkeyA,
+          ))!;
+          expect(kept.isDismissed, isTrue);
+          expect(kept.isRead, isTrue);
+          await rebuild(_pubkeyA);
+          expect(await dismissed(_pubkeyA), isTrue);
+
+          // Removing the account from the device deletes the cached row;
+          // the account-lifetime marker restores dismissal on replay.
+          await cleanup(userPubkey: _pubkeyA, forgetAccount: true);
           expect(
             await db.conversationsDao.getConversation(
               conversationId,
@@ -2247,6 +2260,62 @@ void main() {
               at: 1700000600,
             );
             expect((await conversationOf(withB, _pubkeyA)).isRead, isFalse);
+          },
+        );
+
+        test(
+          'a chat A dismissed stays dismissed when its history is '
+          're-downloaded, and a newer message brings it back unread',
+          () async {
+            final withB = DmRepository.computeConversationId([
+              _pubkeyA,
+              _pubkeyB,
+            ]);
+            final (firstSession, firstRelay) = await startSessionForA();
+            await deliver(
+              firstRelay,
+              wrapId: 'b' * 64,
+              rumorId: 'ab' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000300,
+            );
+            await firstSession.setConversationDismissed(
+              withB,
+              dismissed: true,
+            );
+            await firstSession.stopListening();
+
+            await readService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+            final (secondSession, secondRelay) = await startSessionForA();
+            await secondSession.getConversations();
+            // The kept row is dismissed, so this replay is ingested as a
+            // possibly-new message; the dismissal's known ids keep it set.
+            await deliver(
+              secondRelay,
+              wrapId: 'b' * 64,
+              rumorId: 'ab' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000300,
+            );
+            final replayed = await conversationOf(withB, _pubkeyA);
+            expect(replayed.isDismissed, isTrue);
+            expect(replayed.isRead, isTrue);
+            expect(await secondSession.watchUnreadCount().first, 0);
+
+            await deliver(
+              secondRelay,
+              wrapId: 'e' * 64,
+              rumorId: 'ae' * 32,
+              sender: _pubkeyB,
+              recipient: _pubkeyA,
+              at: 1700000600,
+            );
+            final restored = await conversationOf(withB, _pubkeyA);
+            expect(restored.isDismissed, isFalse);
+            expect(restored.isRead, isFalse);
           },
         );
 
