@@ -2026,7 +2026,7 @@ class FollowRepository {
 
   /// Initialize the repository - load from local cache, then sync with network
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isInitialized || _isDisposed) return;
 
     // Guard: Skip initialization if user is not authenticated.
     // Don't set _isInitialized = true so we can retry when keys are available.
@@ -2046,6 +2046,8 @@ class FollowRepository {
 
       // 2. Load from PersonalEventCache if available
       await _loadFromPersonalEventCache();
+      // A returning account skips REST, so this guards the relay step too.
+      if (_isDisposed) return;
 
       // 3. If still empty, try REST API (funnelcake) for fast bootstrap
       if (_followingPubkeys.isEmpty &&

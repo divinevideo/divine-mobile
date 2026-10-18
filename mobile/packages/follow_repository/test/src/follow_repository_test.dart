@@ -1705,6 +1705,49 @@ void main() {
           );
         }
 
+        // A returning account has cached follows, so the REST step is
+        // skipped and the relay step comes straight after the cache reads.
+        test(
+          'dispose while the cache loads stops before the relay',
+          () async {
+            SharedPreferences.setMockInitialValues({
+              'following_list_$testCurrentUserPubkey': '["$testTargetPubkey"]',
+            });
+            repository = FollowRepository(
+              nostrClient: mockNostrClient,
+              isCacheInitialized: () => cacheIsInitialized,
+              getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+              cacheUserEvent: cachedUserEvents.add,
+              indexerRelayUrls: const [],
+            );
+
+            final initializing = repository.initialize();
+            await repository.dispose();
+            await initializing;
+
+            verifyNever(subscribeToRelays);
+          },
+        );
+
+        test('initialize after dispose does nothing', () async {
+          SharedPreferences.setMockInitialValues({
+            'following_list_$testCurrentUserPubkey': '["$testTargetPubkey"]',
+          });
+          repository = FollowRepository(
+            nostrClient: mockNostrClient,
+            isCacheInitialized: () => cacheIsInitialized,
+            getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+            cacheUserEvent: cachedUserEvents.add,
+            indexerRelayUrls: const [],
+          );
+
+          await repository.dispose();
+          await repository.initialize();
+
+          expect(repository.followingPubkeys, isEmpty);
+          verifyNever(subscribeToRelays);
+        });
+
         test('dispose before the REST step sends no request', () async {
           useRepositoryWithRestPending();
           final initializing = repository.initialize();
