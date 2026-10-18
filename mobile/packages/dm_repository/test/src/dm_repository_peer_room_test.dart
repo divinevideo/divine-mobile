@@ -62,10 +62,12 @@ class _QueueWithHook extends OutgoingDmsDao {
   _QueueWithHook(super.attachedDatabase);
 
   Future<void> Function()? afterFirstEnqueue;
+  final enqueued = <OutgoingDm>[];
 
   @override
   Future<void> enqueue(OutgoingDm dm) async {
     await super.enqueue(dm);
+    enqueued.add(dm);
     final hook = afterFirstEnqueue;
     afterFirstEnqueue = null;
     await hook?.call();
@@ -1489,35 +1491,53 @@ void main() {
           );
         }
 
-        test('keeps the room out when a later copy goes out', () async {
-          await joinTheRoom();
+        test(
+          'cancels every later copy before publishing after Leave',
+          () async {
+            await joinTheRoom();
 
-          final results = await sendLeavingMidQueue();
+            final results = await sendLeavingMidQueue();
 
-          expect(
-            results.where((result) => result.success),
-            hasLength(1),
-            reason: 'the copy queued after the leave still went out',
-          );
-          expect(await conversations(), isEmpty);
-          expect(await messageIdsIn(_roomId), isEmpty);
-          expect(await queuedIds(), isEmpty);
-          expect((await tombstone())!.rejoinedAt, isNull);
-        });
+            expect(results.any((result) => result.success), isFalse);
+            verifyNever(
+              () => nostrClient.publishEventAwaitOk(
+                any(),
+                targetRelays: any(named: 'targetRelays'),
+                timeout: any(named: 'timeout'),
+                diagnosticTag: any(named: 'diagnosticTag'),
+              ),
+            );
+            expect(await conversations(), isEmpty);
+            expect(await messageIdsIn(_roomId), isEmpty);
+            expect(await queuedIds(), isEmpty);
+            expect((await tombstone())!.rejoinedAt, isNull);
+          },
+        );
 
-        test('keeps the room out when a later copy is refused and then '
-            'resent', () async {
+        test('cancels a legacy escaped queue row before recovery publishes '
+            'it', () async {
           await joinTheRoom();
           final results = await sendLeavingMidQueue(relaysRefuse: true);
           expect(results.any((result) => result.success), isFalse);
-          final escaped = await queuedIds();
-          expect(escaped, hasLength(1));
+          expect(await queuedIds(), isEmpty);
+          // An older build could leave this later-enqueued copy behind.
+          // Restore that exact real row to exercise recovery independently.
+          final escaped = queue.enqueued.last;
+          await queue.enqueue(escaped);
 
           final resent = await sendingRepository(
             outgoingDmsDao: queue,
-          ).recoverFullSend(rumorId: escaped.single);
+          ).recoverFullSend(rumorId: escaped.id);
 
-          expect(resent.success, isTrue);
+          expect(resent.success, isFalse);
+          verifyNever(
+            () => nostrClient.publishEventAwaitOk(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+              diagnosticTag: any(named: 'diagnosticTag'),
+            ),
+          );
           expect(await conversations(), isEmpty);
           expect(await messageIdsIn(_roomId), isEmpty);
           expect(await queuedIds(), isEmpty);

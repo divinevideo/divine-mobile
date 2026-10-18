@@ -7384,6 +7384,18 @@ class DmRepository {
     // `WHERE dm_protocol = 'nip04'` matches nothing.
     await _clearLatchOnAdvertisedInbox(row.conversationId, inbox.state);
 
+    // Recovered group rows share the group's conversationId rather than the
+    // pair id, even when no conversation row survives. A row queued after
+    // Leave may have escaped its queue deletion: cancel it before sending,
+    // not only before local persistence on a successful send.
+    final pairParticipants = [_userPubkey, row.recipientPubkey]..sort();
+    final isGroupRow =
+        row.conversationId != computeConversationId(pairParticipants);
+    if (isGroupRow && await _isLeftConversation(row.conversationId)) {
+      await dao.deleteById(rumorId);
+      return const NIP17SendResult.failure('group send cancelled by Leave');
+    }
+
     final publishResult = await _sendRumorWithTimeout(
       rumor: rumor,
       recipientPubkey: row.recipientPubkey,
@@ -7412,14 +7424,6 @@ class DmRepository {
       // retry row.
       try {
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-        // Recovered rows may belong to a GROUP send (one queue row per
-        // recipient, all sharing the group conversationId). Derive the
-        // topology instead of hardcoding 1:1: the pair id differing from the
-        // row's conversationId proves a group row, and the rumor's p-tags
-        // carry the other members when no conversation row survives.
-        final pairParticipants = [_userPubkey, row.recipientPubkey]..sort();
-        final isGroupRow =
-            row.conversationId != computeConversationId(pairParticipants);
         var persistedLocally = false;
         String? protocol;
         await _conversationsDao.runInTransaction(() async {
@@ -8774,6 +8778,17 @@ class DmRepository {
     final joinedRecovery = <int>{};
     for (var i = 0; i < recipientPubkeys.length; i++) {
       final pubkey = recipientPubkeys[i];
+      // Leave can delete only the siblings already queued when it runs.
+      // Copies queued afterwards must also be cancelled before publication.
+      if (participants.length > 2 &&
+          await _isLeftConversation(conversationId)) {
+        await outgoingDao?.deleteById(queueIds[i]);
+        cancelledBeforePublish.add(i);
+        results.add(
+          const NIP17SendResult.failure('group send cancelled by Leave'),
+        );
+        continue;
+      }
       // Cancel interlock, mirroring _recoverFullSendLocked's pre-publish row
       // re-read: each publish can take up to the OK-confirm timeout, a long
       // window in which the user may delete the whole batch. Re-read the
