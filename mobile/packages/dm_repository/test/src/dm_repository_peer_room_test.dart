@@ -1101,6 +1101,35 @@ void main() {
         expect(await messageIdsIn(_roomId), contains(later.id));
       });
 
+      test('leaves a one-to-one removal without a rejoin when a group send '
+          'names one recipient', () async {
+        final oneToOneId = DmRepository.computeConversationId([
+          _owner,
+          _alice,
+        ]);
+        await deliver(
+          message(author: _alice, pTags: [_owner]),
+          authorSecret: _aliceSecret,
+        );
+        expect(
+          await repository.removeConversation(oneToOneId),
+          ConversationRemovalOutcome.removed,
+        );
+
+        final results = await sendingRepository().sendGroupMessage(
+          recipientPubkeys: [_alice],
+          content: 'just you',
+        );
+
+        expect(results, hasLength(1));
+        final removal = await RemovedConversationsDao(db).tombstoneFor(
+          conversationId: oneToOneId,
+          ownerPubkey: _owner,
+        );
+        expect(removal, isNotNull);
+        expect(removal!.rejoinedAt, isNull);
+      });
+
       test('lets in a member reply that lands while the send is still being '
           'confirmed', () async {
         await joinTheRoom();

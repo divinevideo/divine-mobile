@@ -8630,11 +8630,14 @@ class DmRepository {
     // before anything is queued or published: the confirms below run one
     // recipient at a time, and a member's reply that lands meanwhile must not
     // be kept out. A send that later fails still counts; the user wrote.
-    await _removedConversationsDao?.markRejoined(
-      conversationId: conversationId,
-      ownerPubkey: _userPubkey,
-      at: batchCreatedAt,
-    );
+    // One recipient makes a one-to-one, which reopens without a rejoin.
+    if (participants.length > 2) {
+      await _removedConversationsDao?.markRejoined(
+        conversationId: conversationId,
+        ownerPubkey: _userPubkey,
+        at: batchCreatedAt,
+      );
+    }
 
     // Enqueue every sibling before publish so an app crash mid-send leaves a
     // recoverable trace per recipient, and all N optimistic bubbles' rows
