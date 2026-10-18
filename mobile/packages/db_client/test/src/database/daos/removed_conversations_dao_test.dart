@@ -117,6 +117,31 @@ void main() {
     });
 
     group('markRejoined', () {
+      test('records an explicit local send in the removal second', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+
+        expect(
+          await dao.markRejoined(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+            at: 100,
+            isLocalSend: true,
+          ),
+          isTrue,
+        );
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          100,
+        );
+      });
+
       test('fills a rejoin the removal left empty', () async {
         await dao.record(
           conversationId: conversationA,

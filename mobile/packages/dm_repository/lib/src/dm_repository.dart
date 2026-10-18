@@ -8636,6 +8636,7 @@ class DmRepository {
         conversationId: conversationId,
         ownerPubkey: _userPubkey,
         at: batchCreatedAt,
+        isLocalSend: true,
       );
     }
 

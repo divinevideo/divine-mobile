@@ -23,6 +23,32 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
+/// Pins the removal to the send's second without relying on wall-clock timing.
+/// All storage, signing, and receive behavior remains real.
+class _SameSecondRemovalDao extends RemovedConversationsDao {
+  _SameSecondRemovalDao(super.attachedDatabase);
+
+  @override
+  Future<bool> markRejoined({
+    required String conversationId,
+    required String ownerPubkey,
+    required int at,
+    bool isLocalSend = false,
+  }) async {
+    await record(
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+      removedAt: at,
+    );
+    return super.markRejoined(
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+      at: at,
+      isLocalSend: isLocalSend,
+    );
+  }
+}
+
 // Real key pairs: every gift wrap below is sealed, signed and decrypted for
 // real, so each pubkey has to belong to its secret.
 final String _ownerSecret = '1' * 64;
@@ -1062,6 +1088,7 @@ void main() {
       /// before the first confirm, while the send is still in flight.
       DmRepository sendingRepository({
         Future<void> Function()? onRecipientWrap,
+        RemovedConversationsDao? removalDao,
       }) {
         when(() => nostrClient.configuredRelays).thenReturn(const [_pool]);
         when(() => nostrClient.isRelayAllowed(any())).thenReturn(true);
@@ -1103,13 +1130,48 @@ void main() {
           ),
           directMessagesDao: messagesDao,
           conversationsDao: conversationsDao,
-          removedConversationsDao: RemovedConversationsDao(db),
+          removedConversationsDao: removalDao ?? RemovedConversationsDao(db),
           userPubkey: _owner,
           signer: signer,
         );
       }
 
       int wallClockSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      test('receives newer peer messages after a local send in the removal '
+          'second', () async {
+        await joinTheRoom();
+        await leave();
+        final sender = sendingRepository(removalDao: _SameSecondRemovalDao(db));
+        final results = await sender.sendGroupMessage(
+          recipientPubkeys: [_alice, _bob],
+          content: 'back in the removal second',
+        );
+        expect(results.every((result) => result.success), isTrue);
+        final sent = await messagesDao.getMessageById(
+          results.first.rumorEventId!,
+          ownerPubkey: _owner,
+        );
+        expect(sent, isNotNull);
+        final removal = (await tombstone())!;
+        expect(removal.removedAt, sent!.createdAt);
+        expect(removal.rejoinedAt, sent.createdAt);
+
+        // Backdate both boundaries together so a newer peer message is not
+        // clamped back onto the removal by the receive path's future guard.
+        await db.customStatement(
+          'UPDATE removed_conversations '
+          'SET removed_at = removed_at - 1, rejoined_at = rejoined_at - 1',
+        );
+        final reply = message(
+          author: _alice,
+          pTags: [_owner, _bob],
+          content: 'welcome back after same-second send',
+          createdAt: sent.createdAt,
+        );
+        await deliver(reply, authorSecret: _aliceSecret);
+        expect(await messageIdsIn(_roomId), contains(reply.id));
+      });
 
       test('brings the room back from the time of the message the user sends '
           'to it from this device', () async {
