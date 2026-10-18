@@ -140,7 +140,7 @@ void main() {
         );
       });
 
-      test('keeps the first rejoin', () async {
+      test('keeps an earlier rejoin when a later one arrives', () async {
         await dao.record(
           conversationId: conversationA,
           ownerPubkey: ownerA,
@@ -165,6 +165,90 @@ void main() {
             ownerPubkey: ownerA,
           ))!.rejoinedAt,
           150,
+        );
+      });
+
+      // The user's own copies arrive out of order, so the one processed
+      // second can be the one written first.
+      test('moves the rejoin back to an earlier one that arrives '
+          'later', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 300,
+        );
+
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        expect(marked, isTrue);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          150,
+        );
+      });
+
+      for (final at in [50, 100]) {
+        test('ignores a write at $at, not after the removal at 100', () async {
+          await dao.record(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+            removedAt: 100,
+          );
+
+          final marked = await dao.markRejoined(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+            at: at,
+          );
+
+          expect(marked, isFalse);
+          expect(
+            (await dao.tombstoneFor(
+              conversationId: conversationA,
+              ownerPubkey: ownerA,
+            ))!.rejoinedAt,
+            isNull,
+          );
+        });
+      }
+
+      test('does not move a rejoin back to or before the removal', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 300,
+        );
+
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 100,
+        );
+
+        expect(marked, isFalse);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          300,
         );
       });
 
@@ -241,6 +325,46 @@ void main() {
         );
         expect(tombstone!.removedAt, 200);
         expect(tombstone.rejoinedAt, isNull);
+      });
+
+      test('counts only a rejoin after the latest removal', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 200,
+        );
+
+        // A late copy of the write that rejoined after the first removal.
+        final stale = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+        final fresh = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 250,
+        );
+
+        expect(stale, isFalse);
+        expect(fresh, isTrue);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          250,
+        );
       });
 
       test('recordAll clears an earlier rejoin', () async {

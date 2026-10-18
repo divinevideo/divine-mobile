@@ -79,9 +79,12 @@ class RemovedConversationsDao extends DatabaseAccessor<AppDatabase>
 
   /// Records that the user wrote in a removed conversation again at [at].
   ///
-  /// Only the first rejoin after a removal counts, so a later one never moves
-  /// the instant forward. Returns whether a rejoin was recorded; false when the
-  /// conversation was never removed or is already rejoined.
+  /// Keeps the earliest write after the removal. The user's own copies arrive
+  /// out of order (NIP-59 backdates wraps, history pages newest first), so a
+  /// copy processed later can move the rejoin back, never forward. A write at
+  /// or before the removal is not a rejoin. Returns whether the rejoin moved;
+  /// false when the conversation was never removed, [at] is not after the
+  /// removal, or the rejoin recorded is already at or before [at].
   Future<bool> markRejoined({
     required String conversationId,
     required String ownerPubkey,
@@ -92,7 +95,8 @@ class RemovedConversationsDao extends DatabaseAccessor<AppDatabase>
               (t) =>
                   t.conversationId.equals(conversationId) &
                   t.ownerPubkey.equals(ownerPubkey) &
-                  t.rejoinedAt.isNull(),
+                  t.removedAt.isSmallerThanValue(at) &
+                  (t.rejoinedAt.isNull() | t.rejoinedAt.isBiggerThanValue(at)),
             ))
             .write(RemovedConversationsCompanion(rejoinedAt: Value(at)));
     return updated > 0;

@@ -951,6 +951,8 @@ void main() {
         expect((await tombstone())!.rejoinedAt, leftAt + 200);
       });
 
+      // Kept out, but not ledgered: an earlier copy of the user's own may
+      // still move the rejoin back before it.
       test('keeps out what a member sent while the user was away, even when '
           'it arrives after they rejoined', () async {
         await joinTheRoom();
@@ -964,7 +966,7 @@ void main() {
         await deliver(own, authorSecret: _ownerSecret);
         await expectOnlyTheRoomHolding([own.id]);
 
-        final whileAway = await deliver(
+        final whileAway = await deliverLeavingNoTrace(
           message(
             author: _bob,
             pTags: [_owner, _alice],
@@ -975,8 +977,52 @@ void main() {
         );
 
         await expectOnlyTheRoomHolding([own.id]);
-        expect(await ledgered(whileAway), isTrue);
+        expect(await ledgered(whileAway), isFalse);
       });
+
+      // The user wrote twice after leaving, from another device, and this one
+      // receives the later copy first.
+      test(
+        'lets in a member reply between two messages the user wrote once '
+        'the earlier copy arrives, when the later one arrived first',
+        () async {
+          await joinTheRoom();
+          await leave();
+          final second = message(
+            author: _owner,
+            pTags: [_alice, _bob],
+            content: 'second',
+            createdAt: leftAt + 300,
+          );
+          await deliver(second, authorSecret: _ownerSecret);
+          await expectOnlyTheRoomHolding([second.id]);
+
+          final reply = message(
+            author: _alice,
+            pTags: [_owner, _bob],
+            content: 'answered the first',
+            createdAt: leftAt + 200,
+          );
+          final wrap = await deliverLeavingNoTrace(
+            reply,
+            authorSecret: _aliceSecret,
+          );
+          expect(await messageIdsIn(_roomId), equals([second.id]));
+          expect(await ledgered(wrap), isFalse);
+
+          final first = message(
+            author: _owner,
+            pTags: [_alice, _bob],
+            content: 'first',
+            createdAt: leftAt + 100,
+          );
+          await deliver(first, authorSecret: _ownerSecret);
+          expect((await tombstone())!.rejoinedAt, leftAt + 100);
+          await replay(wrap);
+
+          await expectOnlyTheRoomHolding([first.id, reply.id, second.id]);
+        },
+      );
 
       test('keeps the room out again after the user leaves a second '
           'time', () async {

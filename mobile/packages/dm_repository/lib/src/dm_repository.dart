@@ -4212,8 +4212,9 @@ class DmRepository {
             return;
           }
           // A group the user left stays left until they write in it again,
-          // here or on another device (#10150). A one-to-one reopens on any
-          // newer message, as before.
+          // here or on another device (#10150), and comes back from the
+          // earliest such message: the user's own copies arrive out of order.
+          // A one-to-one reopens on any newer message, as before.
           if (isGroup && removedAt != null) {
             if (isSentByMe) {
               await _removedConversationsDao?.markRejoined(
@@ -4356,40 +4357,38 @@ class DmRepository {
           );
           return;
         }
-        if (suppressedByLeftGroup && rejoinedAt == null) {
-          // Not final, so not ledgered: the user's own copy of a message
-          // that rejoins the group may still be on its way (gift wraps are
-          // backdated up to two days), and a member message stamped after it
-          // has to get in on a later replay. The cost is a re-decrypt on each
-          // replay while the group stays left.
+        if (suppressedByLeftGroup) {
+          // Never final, so never ledgered, rejoined or not: the user's own
+          // copy of an earlier message in the group may still be on its way
+          // (gift wraps are backdated up to two days, history pages newest
+          // first), and it moves the rejoin back, so a member message stamped
+          // after it has to get in on a later replay. The cost is a
+          // re-decrypt on each replay of every member message kept out after
+          // the removal.
+          final keptOutBecause = rejoinedAt == null
+              ? 'they have not written in it since'
+              : 'createdAt $persistedCreatedAt is before they wrote in it '
+                    'again at $rejoinedAt';
           Log.debug(
             'Kept NIP-17 DM ${rumor.id} out of group $conversationId the '
-            'user left at $removedAt and has not written in since; not '
-            'ledgered, so a replay after they rejoin re-evaluates it',
+            'user left at $removedAt: $keptOutBecause; not ledgered, so a '
+            'replay after an earlier rejoin re-evaluates it',
             category: LogCategory.system,
           );
           return;
         }
-        if (suppressedByRemovedConversation || suppressedByLeftGroup) {
+        if (suppressedByRemovedConversation) {
           // Terminal: record the wrap so replays skip it before decryption.
           // The tombstone is authoritative for the account's lifetime, so the
-          // ledger is not racing a reopening that clears it. A message a
-          // member stamped before the user rejoined a group stays out, since
-          // only the first rejoin counts, so that suppression is terminal too.
+          // ledger is not racing a reopening that clears it.
           await _recordProcessedWrap(
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
           );
           Log.debug(
-            suppressedByLeftGroup
-                ? 'Suppressed NIP-17 DM ${rumor.id} in group $conversationId '
-                      'the user left at $removedAt: createdAt '
-                      '$persistedCreatedAt is before they wrote in it again '
-                      'at $rejoinedAt'
-                : 'Suppressed NIP-17 DM ${rumor.id} in removed conversation '
-                      '$conversationId: removed with it, or createdAt '
-                      '$persistedCreatedAt is at or before removal at '
-                      '$removedAt',
+            'Suppressed NIP-17 DM ${rumor.id} in removed conversation '
+            '$conversationId: removed with it, or createdAt '
+            '$persistedCreatedAt is at or before removal at $removedAt',
             category: LogCategory.system,
           );
           return;
