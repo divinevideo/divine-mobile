@@ -1,6 +1,7 @@
 // ABOUTME: #8528 — a kind-10050 held only in the local event cache must not
 // ABOUTME: clear a chat's nip04 latch or let history restore record itself
-// ABOUTME: complete, and history restore must still find a list kept off-pool.
+// ABOUTME: complete; history restore must still find a list kept off-pool,
+// ABOUTME: and each unanswered lookup is logged as the caller it is.
 
 import 'dart:async';
 
@@ -14,6 +15,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockRelayManager extends Mock implements RelayManager {}
 
@@ -290,6 +292,16 @@ Future<void> _seedCachedInbox(
   expect(read.events.map((e) => e.id), contains(cached.id));
 }
 
+/// Unanswered kind-10050 lookups logged for [pubkey] since the last clear.
+/// Scoped by pubkey and wording: the package suite shares one isolate.
+List<String> _inconclusiveLookups(String pubkey) => LogCaptureService()
+    .getRecentLogs()
+    .map((entry) => entry.message)
+    .where((message) => message.contains(pubkey))
+    .where((message) => message.contains('kind-10050 lookup'))
+    .where((message) => message.contains('was inconclusive'))
+    .toList();
+
 bool _isKind4Event(List<dynamic> frame) =>
     frame.length > 1 &&
     frame[0] == 'EVENT' &&
@@ -379,6 +391,30 @@ void main() {
         expect(stored?.dmProtocol, 'nip04');
         expect(kind4Sent, isTrue);
         expect(h.sendRumorCalls.single[#targetRelays], isNull);
+      },
+      timeout: const Timeout(Duration(seconds: 90)),
+    );
+
+    test(
+      "logs an unanswered own inbox lookup as the user's own, not a "
+      "contact's",
+      () async {
+        unawaited(LogCaptureService().clearAllLogs());
+
+        final _ = await h.repository.sendMessage(
+          recipientPubkey: _peer,
+          content: 'hi',
+        );
+
+        final lines = _inconclusiveLookups(_owner);
+        expect(lines, hasLength(1));
+        expect(
+          lines.single,
+          allOf(
+            contains('live subscription and self-copy use the default pool'),
+            isNot(contains('NOT scoring the publish as delivered')),
+          ),
+        );
       },
       timeout: const Timeout(Duration(seconds: 90)),
     );
@@ -581,6 +617,35 @@ void main() {
         expect(_asked(divine, EventKind.dmRelaysList), isTrue);
         expect(_asked(divine, EventKind.giftWrap), isTrue);
         expect(syncState.drainCoveredOwnInbox(_owner), isTrue);
+      },
+      timeout: const Timeout(Duration(seconds: 90)),
+    );
+
+    test(
+      "logs history restore's unanswered read as its own, not the "
+      "inbox-list publish's",
+      () async {
+        final h = await _harness(
+          syncState: syncState,
+          script: (_) => (
+            answersPages: true,
+            inboxReads: _InboxReads.silent,
+            list: null,
+          ),
+        );
+        unawaited(LogCaptureService().clearAllLogs());
+
+        await h.repository.backfillHistoryIfNeeded();
+
+        final lines = _inconclusiveLookups(_owner);
+        expect(
+          lines.where((l) => l.contains('history restore will not treat')),
+          hasLength(1),
+        );
+        expect(
+          lines.where((l) => l.contains('not publishing over a list')),
+          isEmpty,
+        );
       },
       timeout: const Timeout(Duration(seconds: 90)),
     );

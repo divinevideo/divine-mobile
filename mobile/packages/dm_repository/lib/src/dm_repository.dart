@@ -5458,20 +5458,34 @@ class DmRepository {
         absentOrFailed = _OwnDmInboxState.absent;
       }
 
-      // Both callers reach this, and they act on it differently, so the line
+      // Four callers reach this, and they act on it differently, so the line
       // has to say which one is speaking: RC3 is about to replace the list it
-      // read, the send path is about to route a gift wrap by it.
+      // read, history restore is about to record what it covered, the send
+      // path is about to route a gift wrap by it, and the own memo routes the
+      // live subscription and the self-copy by it. Only RC3 passes
+      // [advertisedRelay].
       void logInconclusiveRead() {
         final reason = inconclusiveReason;
         if (reason == null) return;
+        final who = isRecipient ? 'Recipient' : 'Own';
+        final consequence = switch ((
+          requireAuthoritative,
+          isRecipient,
+          advertisedRelay != null,
+        )) {
+          (true, _, true) =>
+            'not publishing over a list we could not read; will retry',
+          (true, _, false) =>
+            'history restore will not treat the inbox as read; will retry',
+          (false, true, _) =>
+            'routing to the default pool, and NOT scoring the publish as '
+                'delivered (#7317)',
+          (false, false, _) =>
+            'the live subscription and self-copy use the default pool for now',
+        };
         Log.warning(
-          requireAuthoritative
-              ? 'Own kind-10050 lookup for ${pubkeyForLogs(pubkey)} was '
-                    'inconclusive ($reason) — not publishing over a list we '
-                    'could not read; will retry'
-              : 'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} was '
-                    'inconclusive ($reason) — routing to the default pool, and '
-                    'NOT scoring the publish as delivered (#7317)',
+          '$who kind-10050 lookup for ${pubkeyForLogs(pubkey)} was '
+          'inconclusive ($reason) — $consequence',
           category: LogCategory.system,
         );
       }
