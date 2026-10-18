@@ -238,6 +238,14 @@ void main() {
         );
         expect(attempts, equals(0));
       });
+
+      test('reports that it was disposed', () {
+        expect(client.isDisposed, isFalse);
+
+        client.dispose();
+
+        expect(client.isDisposed, isTrue);
+      });
     });
   });
 }

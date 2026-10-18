@@ -148,6 +148,10 @@ class FunnelcakeApiClient {
   /// Whether the API is available (has a non-empty base URL).
   bool get isAvailable => _baseUrl.isNotEmpty;
 
+  /// Whether [dispose] has been called. Every request fails after that, so a
+  /// caller can tell a failure caused by its owner's teardown from a real one.
+  bool get isDisposed => _isDisposed;
+
   /// The base URL for the API.
   @visibleForTesting
   String get baseUrl => _baseUrl;
