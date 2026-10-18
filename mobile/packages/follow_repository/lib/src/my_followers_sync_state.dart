@@ -2,11 +2,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Account-scoped checkpoints for durable follower sync.
 class MyFollowersSyncState {
+  static const _watermarkPrefix = 'my_followers_watermark_';
   static const _fullPrefix = 'my_followers_full_sync_';
   static const _incrementalPrefix = 'my_followers_incremental_sync_';
   static const _attemptPrefix = 'my_followers_sync_attempt_';
   static const _fullAttemptPrefix = 'my_followers_full_attempt_';
   static const List<String> _prefixes = [
+    _watermarkPrefix,
     _fullPrefix,
     _incrementalPrefix,
     _attemptPrefix,
@@ -24,6 +26,15 @@ class MyFollowersSyncState {
       attempt: prefs.getInt('$_attemptPrefix$owner'),
       fullAttempt: prefs.getInt('$_fullAttemptPrefix$owner'),
     );
+  }
+
+  /// The latest event time covered by a complete, uncapped read.
+  ///
+  /// Old installations have no checkpoint. Restarting at zero is necessary:
+  /// persisted observations may have come from an incomplete full read.
+  Future<int> readWatermark(String owner) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('$_watermarkPrefix$owner') ?? 0;
   }
 
   /// Records an attempt before I/O, bounding retries after partial failures.
@@ -59,15 +70,22 @@ class MyFollowersSyncState {
   }
 
   /// A full query also satisfies the incremental interval.
-  Future<void> stampFull(String owner, int seconds) async {
+  Future<void> stampFull(String owner, int seconds, {int? watermark}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('$_fullPrefix$owner', seconds);
-    await stampIncremental(owner, seconds);
+    await stampIncremental(owner, seconds, watermark: watermark);
   }
 
   /// Records the last completed incremental query.
-  Future<void> stampIncremental(String owner, int seconds) async {
+  Future<void> stampIncremental(
+    String owner,
+    int seconds, {
+    int? watermark,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
+    if (watermark != null) {
+      await prefs.setInt('$_watermarkPrefix$owner', watermark);
+    }
     await prefs.setInt('$_incrementalPrefix$owner', seconds);
   }
 }

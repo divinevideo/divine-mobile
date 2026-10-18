@@ -729,7 +729,14 @@ class FollowRepository {
       await _withFollowerPersistence(owner, () async {
         await _persistMyFollowers(owner, refs, replace: complete);
         if (complete && _isCurrentFollowerOwner(owner)) {
-          await _myFollowersSyncState.stampFull(owner, _nowSeconds());
+          await _myFollowersSyncState.stampFull(
+            owner,
+            _nowSeconds(),
+            watermark: refs.fold<int>(
+              0,
+              (latest, ref) => max(latest, ref.followedAt ?? 0),
+            ),
+          );
         }
       });
     } catch (error) {
@@ -777,7 +784,6 @@ class FollowRepository {
       stamp == null || stamp > now || now - stamp > interval.inSeconds;
 
   Future<void> _syncMyFollowers(String owner) async {
-    final dao = _myFollowersDao!;
     final state = await _myFollowersSyncState.read(owner);
     if (!_isCurrentFollowerOwner(owner)) return;
     final now = _nowSeconds();
@@ -808,28 +814,44 @@ class FollowRepository {
         owner,
         () => _myFollowersSyncState.stampAttempt(owner, now),
       );
-      final highWater = min(await dao.newestFollowedAt(owner) ?? 0, now);
+      final highWater = min(
+        await _myFollowersSyncState.readWatermark(owner),
+        now,
+      );
       if (!_isCurrentFollowerOwner(owner)) return;
-      final events = await _nostrClient
-          .queryEvents([
+      final result = await _nostrClient
+          .readEvents([
             Filter(
               kinds: const [EventKind.contactList],
               p: [owner],
               since: max(0, highWater - myFollowersSinceSkew.inSeconds),
+              limit: 5000,
             ),
-          ])
+          ], requireAllRelaysSettled: true)
           .timeout(_fetchFollowersTimeout);
       if (!_isCurrentFollowerOwner(owner)) return;
+      final refs = [
+        for (final event in result.events)
+          (
+            pubkey: event.pubkey,
+            followedAt: _datableFollowedAt(event.createdAt),
+          ),
+      ];
       await _withFollowerPersistence(owner, () async {
-        await _persistMyFollowers(owner, [
-          for (final event in events)
-            (
-              pubkey: event.pubkey,
-              followedAt: _datableFollowedAt(event.createdAt),
-            ),
-        ], replace: false);
+        await _persistMyFollowers(owner, refs, replace: false);
         if (!_isCurrentFollowerOwner(owner)) return;
-        await _myFollowersSyncState.stampIncremental(owner, now);
+        // Observations remain useful after an early/capped read, but cannot
+        // move the next window past matching events that were not returned.
+        if (result.isComplete && !result.possiblyCapped) {
+          await _myFollowersSyncState.stampIncremental(
+            owner,
+            now,
+            watermark: refs.fold<int>(
+              highWater,
+              (latest, ref) => max(latest, ref.followedAt ?? 0),
+            ),
+          );
+        }
       });
     }
   }

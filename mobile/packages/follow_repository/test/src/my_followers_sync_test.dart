@@ -320,6 +320,10 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('my_followers_full_sync_$owner', full ?? now);
       await prefs.setInt(
+        'my_followers_watermark_$owner',
+        await dao.newestFollowedAt(owner) ?? 0,
+      );
+      await prefs.setInt(
         'my_followers_incremental_sync_$owner',
         incremental ?? now,
       );
@@ -504,7 +508,9 @@ void main() {
         ).called(1);
         now += 901;
         await repository.syncMyFollowers();
-        verify(() => client.queryEvents(any())).called(1);
+        verify(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).called(1);
         expect(dao.replacements, 0);
         expect(dao.rows[owner], {first: 100});
         now += 86400;
@@ -620,22 +626,32 @@ void main() {
           final response = Completer<QueryResult>();
           when(
             () => client.readEvents(any(), requireAllRelaysSettled: true),
-          ).thenAnswer((_) {
+          ).thenAnswer((call) async {
+            final filter =
+                (call.positionalArguments.single as List<Filter>).single;
+            if (filter.since != null) {
+              return QueryResult(
+                events: [contact(second, now)],
+                endedBy: QueryEnd.complete,
+              );
+            }
             started.complete();
             return response.future;
           });
-          when(
-            () => client.queryEvents(any()),
-          ).thenAnswer((_) async => [contact(second, now)]);
           final full = fullPath == 'get'
               ? repository.getMyFollowers()
               : repository.streamMyFollowers().toList();
           await started.future;
+          verify(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          ).called(1);
           now += 901;
           final incremental = repository.syncMyFollowers();
           await pumpEventQueue();
           // The incremental fetch must not overlap an older full snapshot.
-          verifyNever(() => client.queryEvents(any()));
+          verifyNever(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          );
           response.complete(
             QueryResult(
               events: [contact(first, 100)],
@@ -644,7 +660,9 @@ void main() {
           );
           await full;
           await incremental;
-          verify(() => client.queryEvents(any())).called(1);
+          verify(
+            () => client.readEvents(any(), requireAllRelaysSettled: true),
+          ).called(1);
           expect(dao.rows[owner], {first: 100, second: now});
           expect(
             (await SharedPreferences.getInstance()).getInt(
@@ -744,6 +762,92 @@ void main() {
       expect(dao.replacements, 0);
       expect(repository.relationshipTo(stale), FollowRelationship.followsYou);
     });
+    for (final outcome in [
+      (end: QueryEnd.deadline, capped: false),
+      (end: QueryEnd.complete, capped: true),
+    ]) {
+      test('incomplete incremental ${outcome.end} capped=${outcome.capped} '
+          'retains its window for the next attempt', () async {
+        final oldWatermark = now - 4000;
+        final missedAt = now - 2000;
+        dao.rows[owner] = {stale: oldWatermark};
+        await stamp(incremental: now - 901);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('my_followers_watermark_$owner', oldWatermark);
+        final filters = <Filter>[];
+        Future<List<Event>> respond(List<Filter> request) async {
+          filters.add(request.single);
+          return [
+            contact(first, now - 100),
+            if (filters.length > 1 && request.single.since! <= missedAt)
+              contact(second, missedAt),
+          ];
+        }
+
+        when(() => client.queryEvents(any())).thenAnswer(
+          (call) => respond(call.positionalArguments.single as List<Filter>),
+        );
+        when(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        ).thenAnswer((call) async {
+          final events = await respond(
+            call.positionalArguments.single as List<Filter>,
+          );
+          return QueryResult(
+            events: events,
+            endedBy: filters.length == 1 ? outcome.end : QueryEnd.complete,
+            possiblyCapped: filters.length == 1 && outcome.capped,
+          );
+        });
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner]![first], now - 100);
+        final incompleteStamp = prefs.getInt(
+          'my_followers_incremental_sync_$owner',
+        );
+        now += 901;
+        await repository.syncMyFollowers();
+        expect(dao.rows[owner]![second], missedAt);
+        expect(filters[1].since, oldWatermark - 600);
+        expect(filters[1].limit, 5000);
+        expect(incompleteStamp, now - 901 - 901);
+        expect(prefs.getInt('my_followers_watermark_$owner'), now - 100);
+      });
+    }
+
+    test('partial full seed cannot move the next incremental window', () async {
+      final missedAt = now - 2000;
+      final filters = <Filter>[];
+      Future<List<Event>> respond(List<Filter> request) async {
+        filters.add(request.single);
+        return [
+          contact(first, now - 100),
+          if (request.single.since != null && request.single.since! <= missedAt)
+            contact(second, missedAt),
+        ];
+      }
+
+      when(() => client.queryEvents(any())).thenAnswer(
+        (call) => respond(call.positionalArguments.single as List<Filter>),
+      );
+      when(
+        () => client.readEvents(any(), requireAllRelaysSettled: true),
+      ).thenAnswer((call) async {
+        final events = await respond(
+          call.positionalArguments.single as List<Filter>,
+        );
+        return QueryResult(
+          events: events,
+          endedBy: filters.length == 1 ? QueryEnd.deadline : QueryEnd.complete,
+        );
+      });
+      await repository.syncMyFollowers();
+      now += 901;
+      await repository.syncMyFollowers();
+      expect(filters[1].since, 0);
+      expect(dao.rows[owner]![second], missedAt);
+      expect((await MyFollowersSyncState().read(owner)).full, isNull);
+    });
+
     test('incremental query uses since = high-water mark minus 600', () async {
       dao.rows[owner] = {first: now - 100};
       await stamp(incremental: now - 901);
