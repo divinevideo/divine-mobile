@@ -32,11 +32,18 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
 
   /// Resolves the holders and loads the first page.
   Future<void> load() async {
-    emit(state.copyWith(status: BadgeVideosStatus.loading));
+    if (isClosed) return;
+    final generation = ++_loadGeneration;
+    _pager = null;
+    emit(
+      state.copyWith(status: BadgeVideosStatus.loading, isLoadingMore: false),
+    );
     try {
       final holders = await _badgeRepository.loadAcceptedHolders(_coordinate);
-      await loadForHolders(holders);
+      if (isClosed || generation != _loadGeneration) return;
+      await _loadForHolders(holders, generation);
     } catch (error, stackTrace) {
+      if (isClosed || generation != _loadGeneration) return;
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: BadgeVideosStatus.failure));
     }
@@ -49,7 +56,14 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
   Future<void> loadForHolders(Set<String> holders) async {
     if (isClosed) return;
     final generation = ++_loadGeneration;
-    emit(state.copyWith(status: BadgeVideosStatus.loading));
+    _pager = null;
+    emit(
+      state.copyWith(status: BadgeVideosStatus.loading, isLoadingMore: false),
+    );
+    await _loadForHolders(holders, generation);
+  }
+
+  Future<void> _loadForHolders(Set<String> holders, int generation) async {
     if (holders.isEmpty) {
       _pager = null;
       emitIfOpen(const BadgeVideosState(status: BadgeVideosStatus.loaded));
@@ -68,7 +82,7 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
         ),
       );
     } catch (error, stackTrace) {
-      if (generation != _loadGeneration) return;
+      if (isClosed || generation != _loadGeneration) return;
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: BadgeVideosStatus.failure));
     }
@@ -82,7 +96,11 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
     emit(state.copyWith(isLoadingMore: true));
     try {
       final videos = await pager.loadMore();
-      if (generation != _loadGeneration || !identical(pager, _pager)) return;
+      if (isClosed ||
+          generation != _loadGeneration ||
+          !identical(pager, _pager)) {
+        return;
+      }
       emitIfOpen(
         state.copyWith(
           videos: [...state.videos, ...videos],
@@ -91,7 +109,11 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
         ),
       );
     } catch (error, stackTrace) {
-      if (generation != _loadGeneration || !identical(pager, _pager)) return;
+      if (isClosed ||
+          generation != _loadGeneration ||
+          !identical(pager, _pager)) {
+        return;
+      }
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(

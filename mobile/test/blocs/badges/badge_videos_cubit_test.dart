@@ -39,6 +39,88 @@ void main() {
     );
 
     group('load', () {
+      test(
+        'holder refresh invalidates an old page before the read completes',
+        () async {
+          final page = Completer<List<VideoEvent>>();
+          final holders = Completer<Set<String>>();
+          var pages = 0;
+          when(pager.loadMore).thenAnswer((_) async {
+            if (pages++ == 0) return [_video('old')];
+            return page.future;
+          });
+          when(() => pager.hasMore).thenReturn(true);
+          when(
+            () => badgeRepository.loadAcceptedHolders(_coordinate),
+          ).thenAnswer((_) => holders.future);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          await cubit.loadForHolders({'holder'});
+          final paging = cubit.loadMore();
+          final refresh = cubit.load();
+          page.completeError(Exception('obsolete page failed'));
+          await paging;
+          final duringRead = cubit.state;
+          holders.complete({});
+          await refresh;
+          expect(duringRead.status, BadgeVideosStatus.loading);
+          expect(duringRead.loadMoreFailures, 0);
+        },
+      );
+
+      test(
+        'newer holder read wins when overlapping reads finish out of order',
+        () async {
+          final oldRead = Completer<Set<String>>();
+          final newRead = Completer<Set<String>>();
+          var reads = 0;
+          when(
+            () => badgeRepository.loadAcceptedHolders(_coordinate),
+          ).thenAnswer((_) => reads++ == 0 ? oldRead.future : newRead.future);
+          when(pager.loadMore).thenAnswer((_) async => [_video('old')]);
+          when(() => pager.hasMore).thenReturn(false);
+          final freshPager = _MockBadgeVideoPager();
+          when(freshPager.loadMore).thenAnswer((_) async => [_video('fresh')]);
+          when(() => freshPager.hasMore).thenReturn(false);
+          when(
+            () => videosRepository.createBadgeVideoPager({'fresh-holder'}),
+          ).thenReturn(freshPager);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          final oldLoad = cubit.load();
+          final newLoad = cubit.load();
+          newRead.complete({'fresh-holder'});
+          await newLoad;
+          oldRead.complete({'holder'});
+          await oldLoad;
+          expect(cubit.state.videos.map((v) => v.id), ['fresh']);
+          verifyNever(() => videosRepository.createBadgeVideoPager({'holder'}));
+        },
+      );
+
+      test(
+        'obsolete holder read failure cannot replace a newer loaded page',
+        () async {
+          final oldRead = Completer<Set<String>>();
+          var reads = 0;
+          when(
+            () => badgeRepository.loadAcceptedHolders(_coordinate),
+          ).thenAnswer((_) async => reads++ == 0 ? oldRead.future : {'holder'});
+          when(pager.loadMore).thenAnswer((_) async => [_video('fresh')]);
+          when(() => pager.hasMore).thenReturn(false);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          final oldLoad = cubit.load();
+          await cubit.load();
+          oldRead.completeError(
+            const BadgeReadIncompleteException('obsolete read'),
+          );
+          await oldLoad;
+          expect(cubit.state.status, BadgeVideosStatus.loaded);
+          expect(cubit.state.videos.map((v) => v.id), ['fresh']);
+        },
+      );
+
       test('ignores a stale preview page after final holders load', () async {
         final previewPager = _MockBadgeVideoPager();
         final finalPager = _MockBadgeVideoPager();
@@ -138,8 +220,9 @@ void main() {
         final replacement = _MockBadgeVideoPager();
         when(replacement.loadMore).thenAnswer((_) async => [_video('new')]);
         when(() => replacement.hasMore).thenReturn(false);
-        when(() => videosRepository.createBadgeVideoPager({'new-holder'}))
-            .thenReturn(replacement);
+        when(
+          () => videosRepository.createBadgeVideoPager({'new-holder'}),
+        ).thenReturn(replacement);
         final cubit = buildCubit();
         addTearDown(cubit.close);
         await cubit.loadForHolders({'holder'});
