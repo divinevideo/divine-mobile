@@ -4,6 +4,19 @@
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+/// A preferences store that refuses every write, as a full disk does.
+class _RefusingStore extends InMemorySharedPreferencesStore {
+  _RefusingStore.withData(super.data) : super.withData();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      false;
+
+  @override
+  Future<bool> remove(String key) async => false;
+}
 
 void main() {
   group(DmSyncState, () {
@@ -765,6 +778,251 @@ void main() {
 
         expect(state.newestWireSyncedAt(pkA), isNull);
         expect(state.newestWireSyncedAt(pkB), isNull);
+      });
+    });
+
+    group('catch-up debt', () {
+      const relayA = 'wss://a.example';
+      const relayB = 'wss://b.example';
+
+      test('is empty when nothing was recorded', () {
+        expect(state.catchUpDebt(pkA), isEmpty);
+      });
+
+      test('records each relay with its floor and top', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest),
+        ]);
+
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest),
+        ]);
+        expect(state.catchUpDebt(pkB), isEmpty);
+      });
+
+      test(
+        'merges a relay recorded again into one range covering both',
+        () async {
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsMid, until: tsNewer),
+          ]);
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          ]);
+
+          expect(state.catchUpDebt(pkA), const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+        },
+      );
+
+      test('an unbounded top wins a merge', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+        ]);
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsMid),
+        ]);
+
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+      });
+
+      test("moves a relay's top down as it is read", () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+
+        final moved = await state.replaceCatchUpDebt(
+          pkA,
+          const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+        );
+
+        expect(moved, isTrue);
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+      });
+
+      test(
+        "keeps a relay's top that was recorded again after it was read",
+        () async {
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+          ]);
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+
+          final moved = await state.replaceCatchUpDebt(
+            pkA,
+            const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+            const DmCatchUpDebt(
+              relay: relayA,
+              floor: tsOldest,
+              until: tsOldest + 1,
+            ),
+          );
+
+          expect(moved, isFalse);
+          expect(state.catchUpDebt(pkA), const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+        },
+      );
+
+      test('forgets one relay once it is read', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+
+        final cleared = await state.clearCatchUpDebt(
+          pkA,
+          const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+        );
+
+        expect(cleared, isTrue);
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayB, floor: tsOldest, until: tsNewer),
+        ]);
+      });
+
+      test('keeps a relay recorded again after it was read', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsMid, until: tsNewer),
+        ]);
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+        ]);
+
+        final cleared = await state.clearCatchUpDebt(
+          pkA,
+          const DmCatchUpDebt(relay: relayA, floor: tsMid, until: tsNewer),
+        );
+
+        expect(cleared, isFalse);
+        expect(state.catchUpDebt(pkA), const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+        ]);
+      });
+
+      test('bounds a recorded top to the clock skew it tolerates', () async {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        await state.addCatchUpDebt(pkA, [
+          DmCatchUpDebt(
+            relay: relayA,
+            floor: tsOldest,
+            until: now + 365 * 86400,
+          ),
+        ]);
+
+        expect(
+          state.catchUpDebt(pkA).single.until,
+          inInclusiveRange(
+            now + DmSyncState.maxFutureSkewSeconds,
+            now + DmSyncState.maxFutureSkewSeconds + 5,
+          ),
+        );
+      });
+
+      test('clear removes it for the given pubkey only', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+        await state.addCatchUpDebt(pkB, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+
+        await state.clear(pkA);
+
+        expect(state.catchUpDebt(pkA), isEmpty);
+        expect(state.catchUpDebt(pkB), hasLength(1));
+      });
+
+      test('clearAll removes it for every pubkey', () async {
+        await state.addCatchUpDebt(pkA, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+        await state.addCatchUpDebt(pkB, const [
+          DmCatchUpDebt(relay: relayA, floor: tsOldest),
+        ]);
+
+        await state.clearAll();
+
+        expect(state.catchUpDebt(pkA), isEmpty);
+        expect(state.catchUpDebt(pkB), isEmpty);
+      });
+
+      test('reads a malformed record as empty', () async {
+        await prefs.setString('dm.catchUpDebt.$pkA', 'not json');
+
+        expect(state.catchUpDebt(pkA), isEmpty);
+      });
+
+      group('when the store refuses the write', () {
+        late SharedPreferencesStorePlatform originalStore;
+
+        setUp(() async {
+          await state.addCatchUpDebt(pkA, const [
+            DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsNewer),
+          ]);
+          originalStore = SharedPreferencesStorePlatform.instance;
+          SharedPreferencesStorePlatform.instance = _RefusingStore.withData(
+            await originalStore.getAll(),
+          );
+          SharedPreferences.resetStatic();
+          state = DmSyncState(await SharedPreferences.getInstance());
+        });
+
+        tearDown(() {
+          SharedPreferencesStorePlatform.instance = originalStore;
+          SharedPreferences.resetStatic();
+        });
+
+        test('recording throws', () async {
+          await expectLater(
+            state.addCatchUpDebt(pkA, const [
+              DmCatchUpDebt(relay: relayB, floor: tsOldest),
+            ]),
+            throwsA(isA<DmCatchUpDebtNotSavedException>()),
+          );
+        });
+
+        test('moving a top throws', () async {
+          await expectLater(
+            state.replaceCatchUpDebt(
+              pkA,
+              const DmCatchUpDebt(
+                relay: relayA,
+                floor: tsOldest,
+                until: tsNewer,
+              ),
+              const DmCatchUpDebt(relay: relayA, floor: tsOldest, until: tsMid),
+            ),
+            throwsA(isA<DmCatchUpDebtNotSavedException>()),
+          );
+        });
+
+        test('forgetting the last relay throws', () async {
+          await expectLater(
+            state.clearCatchUpDebt(
+              pkA,
+              const DmCatchUpDebt(
+                relay: relayA,
+                floor: tsOldest,
+                until: tsNewer,
+              ),
+            ),
+            throwsA(isA<DmCatchUpDebtNotSavedException>()),
+          );
+        });
       });
     });
   });

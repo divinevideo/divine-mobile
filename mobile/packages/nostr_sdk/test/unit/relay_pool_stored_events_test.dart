@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 
 const _signerKey =
     '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
@@ -87,6 +88,16 @@ class _Relay extends Relay {
   }
 }
 
+/// Hides every event whose content is [hidden], as a block list does.
+class _HidingFilter implements EventFilter {
+  _HidingFilter(this.hidden);
+
+  final String hidden;
+
+  @override
+  bool check(Event e) => e.content == hidden;
+}
+
 /// Holds every signature check until the test releases it.
 class _HeldVerifyWorker implements EventVerifyWorker {
   final Completer<void> release = Completer<void>();
@@ -119,12 +130,14 @@ void main() {
     late Nostr nostr;
     late List<String> delivered;
     late List<int> ends;
+    late List<Map<String, int?>> capped;
     late int starts;
 
     setUp(() {
       nostr = Nostr(LocalNostrSigner(_signerKey), [], tempRelay);
       delivered = [];
       ends = [];
+      capped = [];
       starts = 0;
     });
 
@@ -136,7 +149,10 @@ void main() {
       ],
       (Event event) => delivered.add(event.content),
       onStoredEventsStart: () => starts++,
-      onStoredEventsEnd: ends.add,
+      onStoredEventsEnd: (end) {
+        ends.add(end.deliveredEventCount);
+        capped.add(end.possiblyCappedRelays);
+      },
     );
 
     test('ends once every connected relay has answered, ignoring a relay '
@@ -355,7 +371,7 @@ void main() {
         ],
         (Event event) {},
         tempRelays: [inbox.url],
-        onStoredEventsEnd: ends.add,
+        onStoredEventsEnd: (end) => ends.add(end.deliveredEventCount),
       );
       await pumpEventQueue();
 
@@ -624,7 +640,7 @@ void main() {
           ],
           (Event event) {},
           tempRelays: ['wss://inbox.example'],
-          onStoredEventsEnd: ends.add,
+          onStoredEventsEnd: (end) => ends.add(end.deliveredEventCount),
         );
         await pumpEventQueue();
         await first.deliver(['EVENT', subId, _event(1700000030)]);
@@ -657,7 +673,7 @@ void main() {
           ],
           (Event event) {},
           tempRelays: ['wss://inbox.example'],
-          onStoredEventsEnd: ends.add,
+          onStoredEventsEnd: (end) => ends.add(end.deliveredEventCount),
         );
         await pumpEventQueue();
         await inbox.deliver(['EVENT', subId, _event(1700000030)]);
@@ -840,6 +856,370 @@ void main() {
       dead.drop();
 
       expect(ends, isEmpty);
+    });
+
+    group('possibly capped batches', () {
+      RelayInfo infoWithMaxLimit(int maxLimit) =>
+          RelayInfo('', '', '', '', const [], '', '', maxLimit: maxLimit);
+
+      test('reports a relay whose batch reached its max_limit, with the '
+          'oldest stamp it sent', () async {
+        final relay = _Relay('wss://capped.example')
+          ..info = infoWithMaxLimit(2);
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+
+        await relay.deliver(['EVENT', subId, _event(1700000002)]);
+        await relay.deliver(['EVENT', subId, _event(1700000001)]);
+        await relay.deliver(['EOSE', subId]);
+
+        expect(capped, [
+          {'wss://capped.example': 1700000001},
+        ]);
+      });
+
+      test('does not report a batch below the relay max_limit', () async {
+        final relay = _Relay('wss://roomy.example')..info = infoWithMaxLimit(3);
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+
+        await relay.deliver(['EVENT', subId, _event(1700000002)]);
+        await relay.deliver(['EVENT', subId, _event(1700000001)]);
+        await relay.deliver(['EOSE', subId]);
+
+        expect(ends, [2]);
+        expect(capped, [<String, int?>{}]);
+      });
+
+      test(
+        'with no max_limit, reports a relay that sent any stored event',
+        () async {
+          final sending = _Relay('wss://sending.example');
+          final empty = _Relay('wss://empty.example');
+          await nostr.relayPool.add(sending);
+          await nostr.relayPool.add(empty);
+          final subId = subscribe();
+          await pumpEventQueue();
+
+          await sending.deliver(['EVENT', subId, _event(1700000004)]);
+          await sending.deliver(['EOSE', subId]);
+          await empty.deliver(['EOSE', subId]);
+
+          expect(capped, [
+            {'wss://sending.example': 1700000004},
+          ]);
+        },
+      );
+
+      test('a NIP-67 finish hint marks the batch complete', () async {
+        final relay = _Relay('wss://finished.example');
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+
+        await relay.deliver(['EVENT', subId, _event(1700000004)]);
+        await relay.deliver([
+          'EOSE',
+          subId,
+          ['finish'],
+        ]);
+
+        expect(capped, [<String, int?>{}]);
+      });
+
+      test('a NIP-67 more hint marks the batch capped', () async {
+        final relay = _Relay('wss://more.example')..info = infoWithMaxLimit(10);
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+
+        await relay.deliver(['EVENT', subId, _event(1700000004)]);
+        await relay.deliver([
+          'EOSE',
+          subId,
+          ['more'],
+        ]);
+
+        expect(capped, [
+          {'wss://more.example': 1700000004},
+        ]);
+      });
+
+      test(
+        'a capped batch with no event to page by reports no stamp',
+        () async {
+          final relay = _Relay('wss://silent-more.example');
+          await nostr.relayPool.add(relay);
+          final subId = subscribe();
+          await pumpEventQueue();
+
+          await relay.deliver([
+            'EOSE',
+            subId,
+            ['more'],
+          ]);
+
+          expect(capped, [
+            {'wss://silent-more.example': null},
+          ]);
+        },
+      );
+
+      test('an event outside the filter counts against the batch', () async {
+        final relay = _Relay('wss://off-filter.example')
+          ..info = infoWithMaxLimit(10);
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+
+        final note = Event(
+          getPublicKey(_signerKey),
+          1,
+          [],
+          'not a wrap',
+          createdAt: 1700000005,
+        )..sign(_signerKey);
+        await relay.deliver(['EVENT', subId, _event(1700000004)]);
+        await relay.deliver(['EVENT', subId, note.toJson()]);
+        await relay.deliver(['EOSE', subId]);
+
+        expect(capped, [
+          {'wss://off-filter.example': 1700000004},
+        ]);
+      });
+
+      test('an event the pool rejected counts against the batch', () async {
+        final relay = _Relay('wss://rejected.example')
+          ..info = infoWithMaxLimit(10);
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+
+        final forged = _event(1700000006)..['content'] = 'tampered';
+        await relay.deliver(['EVENT', subId, _event(1700000004)]);
+        await relay.deliver(['EVENT', subId, forged]);
+        await relay.deliver(['EOSE', subId]);
+
+        expect(capped, [
+          {'wss://rejected.example': 1700000004},
+        ]);
+      });
+
+      test('an event the block list hides counts against the batch', () async {
+        nostr = Nostr(LocalNostrSigner(_signerKey), [
+          _HidingFilter('stored 1700000003'),
+        ], tempRelay);
+        final relay = _Relay('wss://blocked.example')
+          ..info = infoWithMaxLimit(2);
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+
+        await relay.deliver(['EVENT', subId, _event(1700000004)]);
+        await relay.deliver(['EVENT', subId, _event(1700000003)]);
+        await relay.deliver(['EOSE', subId]);
+
+        expect(delivered, ['stored 1700000004']);
+        expect(capped, [
+          {'wss://blocked.example': 1700000003},
+        ]);
+      });
+
+      test('judges a replayed batch on its own events', () async {
+        final relay = _Relay('wss://replay.example')
+          ..info = infoWithMaxLimit(2);
+        await nostr.relayPool.add(relay);
+        final subId = subscribe();
+        await pumpEventQueue();
+        await relay.deliver(['EVENT', subId, _event(1700000003)]);
+        await relay.deliver(['EOSE', subId]);
+
+        relay.drop();
+        await relay.reconnect();
+        await relay.deliver(['EVENT', subId, _event(1700000004)]);
+        await relay.deliver(['EVENT', subId, _event(1700000003)]);
+        await relay.deliver(['EOSE', subId]);
+
+        expect(ends, [1, 3]);
+        expect(capped, [
+          <String, int?>{},
+          {'wss://replay.example': 1700000003},
+        ]);
+      });
+
+      test(
+        'a batch cut off by a drop is not counted into its replay',
+        () async {
+          final relay = _Relay('wss://dropped.example')
+            ..info = infoWithMaxLimit(2);
+          await nostr.relayPool.add(relay);
+          final subId = subscribe();
+          await pumpEventQueue();
+          await relay.deliver(['EVENT', subId, _event(1700000004)]);
+          relay.drop();
+
+          await relay.reconnect();
+          await relay.deliver(['EVENT', subId, _event(1700000004)]);
+          await relay.deliver(['EOSE', subId]);
+
+          expect(capped, [<String, int?>{}]);
+        },
+      );
+
+      test(
+        'keeps the higher stamp when one relay caps twice in a phase',
+        () async {
+          // The replay may withhold what was published while the relay was
+          // gone, backdated below its oldest stamp but above the first
+          // batch's.
+          final capping = _Relay('wss://capping.example')
+            ..info = infoWithMaxLimit(1);
+          final holding = _Relay('wss://holding.example');
+          await nostr.relayPool.add(capping);
+          await nostr.relayPool.add(holding);
+          final subId = subscribe();
+          await pumpEventQueue();
+          await capping.deliver(['EVENT', subId, _event(1700000005)]);
+          await capping.deliver(['EOSE', subId]);
+
+          capping.drop();
+          await capping.reconnect();
+          await capping.deliver(['EVENT', subId, _event(1700000006)]);
+          await capping.deliver(['EOSE', subId]);
+          await holding.deliver(['EOSE', subId]);
+
+          expect(capped, [
+            {'wss://capping.example': 1700000006},
+          ]);
+        },
+      );
+
+      test('a capped batch with no stamp leaves the relay unbounded', () async {
+        final capping = _Relay('wss://capping.example')
+          ..info = infoWithMaxLimit(1);
+        final holding = _Relay('wss://holding.example');
+        await nostr.relayPool.add(capping);
+        await nostr.relayPool.add(holding);
+        final subId = subscribe();
+        await pumpEventQueue();
+        await capping.deliver([
+          'EOSE',
+          subId,
+          ['more'],
+        ]);
+
+        capping.drop();
+        await capping.reconnect();
+        await capping.deliver(['EVENT', subId, _event(1700000006)]);
+        await capping.deliver(['EOSE', subId]);
+        await holding.deliver(['EOSE', subId]);
+
+        expect(capped, [
+          {'wss://capping.example': null},
+        ]);
+      });
+
+      test(
+        'an EOSE repeated for an answered REQ is not judged again',
+        () async {
+          final repeating = _Relay('wss://repeating.example')
+            ..info = infoWithMaxLimit(10);
+          final holding = _Relay('wss://holding.example');
+          await nostr.relayPool.add(repeating);
+          await nostr.relayPool.add(holding);
+          final subId = subscribe();
+          await pumpEventQueue();
+          await repeating.deliver(['EVENT', subId, _event(1700000004)]);
+          await repeating.deliver(['EOSE', subId]);
+
+          await repeating.deliver([
+            'EOSE',
+            subId,
+            ['more'],
+          ]);
+          await holding.deliver(['EOSE', subId]);
+
+          expect(capped, [<String, int?>{}]);
+        },
+      );
+
+      test(
+        'ignores an EOSE from a relay that was never sent the REQ',
+        () async {
+          final serving = _Relay('wss://serving.example');
+          await nostr.relayPool.add(serving);
+          final subId = subscribe();
+          await pumpEventQueue();
+          final stranger = _Relay('wss://stranger.example');
+          await nostr.relayPool.add(stranger);
+          expect(stranger.hasSubscriptionById(subId), isFalse);
+
+          await stranger.deliver([
+            'EOSE',
+            subId,
+            ['more'],
+          ]);
+          await serving.deliver(['EOSE', subId]);
+
+          expect(capped, [<String, int?>{}]);
+        },
+      );
+
+      test(
+        'tells the capped batches judged so far without ending the phase',
+        () async {
+          final capping = _Relay('wss://capping.example')
+            ..info = infoWithMaxLimit(1);
+          final slow = _Relay('wss://slow.example');
+          await nostr.relayPool.add(capping);
+          await nostr.relayPool.add(slow);
+          final subId = subscribe();
+          await pumpEventQueue();
+          await capping.deliver(['EVENT', subId, _event(1700000003)]);
+          await capping.deliver(['EOSE', subId]);
+
+          expect(nostr.relayPool.storedEventsPossiblyCapped(subId), {
+            'wss://capping.example': 1700000003,
+          });
+          expect(ends, isEmpty);
+
+          await slow.deliver(['EOSE', subId]);
+          expect(capped, [
+            {'wss://capping.example': 1700000003},
+          ]);
+        },
+      );
+
+      test('tells nothing for a subscription it does not know', () {
+        expect(nostr.relayPool.storedEventsPossiblyCapped('unknown'), isEmpty);
+      });
+
+      test('reports a capped batch in one end only', () async {
+        final capping = _Relay('wss://capping.example')
+          ..info = infoWithMaxLimit(1);
+        final roomy = _Relay('wss://roomy.example')
+          ..info = infoWithMaxLimit(10);
+        await nostr.relayPool.add(capping);
+        await nostr.relayPool.add(roomy);
+        final subId = subscribe();
+        await pumpEventQueue();
+        await capping.deliver(['EVENT', subId, _event(1700000003)]);
+        await capping.deliver(['EOSE', subId]);
+        await roomy.deliver(['EOSE', subId]);
+
+        roomy.drop();
+        await roomy.reconnect();
+        await roomy.deliver(['EVENT', subId, _event(1700000002)]);
+        await roomy.deliver(['EOSE', subId]);
+
+        expect(ends, [1, 2]);
+        expect(capped, [
+          {'wss://capping.example': 1700000003},
+          <String, int?>{},
+        ]);
+      });
     });
   });
 }

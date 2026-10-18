@@ -721,6 +721,15 @@ class DmRepository {
   /// not listening. See [_LiveCatchUp].
   _LiveCatchUp? _liveCatchUp;
 
+  /// Whether a walk of the account's catch-up debt is running. See
+  /// [_readCatchUpDebt].
+  bool _readingCatchUpDebt = false;
+
+  /// How far below the newest processed wire stamp the live subscription's
+  /// `since:` starts, so a gift wrap backdated by up to NIP-17's two days is
+  /// still asked for.
+  static const int _sinceOverlapSeconds = 2 * 86400;
+
   /// How long a catch-up may hold wire stamps back before the newest one
   /// handled is saved anyway.
   ///
@@ -728,6 +737,10 @@ class DmRepository {
   /// the window from moving for the whole session, and each launch would ask
   /// for a longer window. Saving at the limit is the behaviour from before
   /// the hold (#10191), so it is never worse than that.
+  ///
+  /// A relay that already sent a batch that may have stopped at its result
+  /// cap is recorded as catch-up debt before the limit saves, so the part it
+  /// withheld is still read afterwards (#10192).
   static const _storedEventsHoldLimit = Duration(minutes: 2);
   Timer? _reconnectTimer;
 
@@ -1381,7 +1394,9 @@ class DmRepository {
         ],
         p: [_userPubkey],
         limit: isFirstOpen ? 50 : null,
-        since: newest == null ? null : (newestWire ?? newest) - 2 * 86400,
+        since: newest == null
+            ? null
+            : (newestWire ?? newest) - _sinceOverlapSeconds,
       );
 
       Log.info(
@@ -1423,28 +1438,47 @@ class DmRepository {
         return;
       }
 
-      _subscriptionId = dmInboxSubscriptionId(_userPubkey);
-      final catchUp = _LiveCatchUp(_userPubkey, _resetGeneration);
-      void limitHold() => catchUp.startHoldLimit(
-        _storedEventsHoldLimit,
-        () => _maybeCommitCatchUp(catchUp),
+      final subscriptionId = dmInboxSubscriptionId(_userPubkey);
+      _subscriptionId = subscriptionId;
+      final catchUp = _LiveCatchUp(
+        _userPubkey,
+        _resetGeneration,
+        since: filter.since,
+        inboxRelays: {
+          for (final url in ownInbox ?? const <String>[])
+            normalizeRelayUrl(url) ?? url,
+        },
       );
+      void limitHold() => catchUp.startHoldLimit(_storedEventsHoldLimit, () {
+        // A slow relay can hold the stored events open past the limit after
+        // another sent a batch that may be capped: that one is recorded
+        // before the limit saves anything.
+        catchUp.markCapped(
+          _nostrClient.storedEventsPossiblyCapped(subscriptionId),
+        );
+        _maybeCommitCatchUp(catchUp);
+      });
       final stream = _nostrClient.subscribe(
         [filter],
-        subscriptionId: _subscriptionId,
+        subscriptionId: subscriptionId,
         tempRelays: ownInbox,
         onStoredEventsStart: () {
           if (!identical(_liveCatchUp, catchUp)) return;
           catchUp.reopen();
           limitHold();
         },
-        onStoredEventsEnd: (delivered) {
-          catchUp.endAfter(delivered);
+        onStoredEventsEnd: (end) {
+          catchUp
+            ..endAfter(end.deliveredEventCount)
+            ..markCapped(end.possiblyCappedRelays);
           _maybeCommitCatchUp(catchUp);
+          _readCatchUpDebt(catchUp);
         },
       );
       _liveCatchUp = catchUp;
       limitHold();
+      // Debt an earlier launch recorded is read from here on.
+      _readCatchUpDebt(catchUp);
 
       _giftWrapSubscription = stream.listen(
         (event) => _handleLiveEvent(catchUp, event),
@@ -1664,13 +1698,21 @@ class DmRepository {
   /// the REQ, a relay refused it with `CLOSED`, the client was disposed, or
   /// only some relays answered. An empty page is proof of exhaustion only when
   /// it is authoritative; see the guard in [_runHistoryDrain]. See #8209.
-  Future<({List<Event> events, bool authoritative})?> _fetchHistoryPage({
+  ///
+  /// [since] bounds the page from below. [onlyRelay] asks that one relay
+  /// alone, on its pooled connection when the pool has one, instead of the
+  /// pool and [tempRelays].
+  Future<({List<Event> events, bool authoritative, bool possiblyCapped})?>
+  _fetchHistoryPage({
     required int until,
     required int limit,
     required String subscriptionId,
     required String pubkey,
     required int generation,
+    int? since,
+    String? onlyRelay,
     List<String>? tempRelays,
+    _LiveCatchUp? holdFor,
   }) async {
     final filter = nostr_filter.Filter(
       kinds: [
@@ -1679,6 +1721,7 @@ class DmRepository {
         EventKind.eventDeletion,
       ],
       p: [pubkey],
+      since: since,
       until: until,
       limit: limit,
     );
@@ -1693,15 +1736,37 @@ class DmRepository {
     // and the drain reads it as exhaustion. `requireAllRelaysSettled` is what
     // makes a relay's `CLOSED` refusal and a partial fan-out surface as
     // `timedOut` rather than completing on whichever relays did answer. #8209.
-    final result = await _nostrClient.queryEventsDetailed(
-      [filter],
-      subscriptionId: subscriptionId,
-      useCache: false,
-      tempRelays: tempRelays,
-      requireAllRelaysSettled: true,
-    );
-    final events = result.events;
-    final authoritative = !result.noRelays && !result.timedOut;
+    final List<Event> events;
+    final bool authoritative;
+    final bool possiblyCapped;
+    if (onlyRelay == null) {
+      final result = await _nostrClient.queryEventsDetailed(
+        [filter],
+        subscriptionId: subscriptionId,
+        useCache: false,
+        tempRelays: tempRelays,
+        requireAllRelaysSettled: true,
+      );
+      events = result.events;
+      authoritative = !result.noRelays && !result.timedOut;
+      // The drain judges its pages by their size; this read keeps no cap
+      // evidence, so a cap is never ruled out.
+      possiblyCapped = true;
+    } else {
+      // The debt walk keeps the pool's judgement of whether the relay may
+      // have stopped at its limit: a settled page can still be incomplete.
+      final result = await _nostrClient.readEvents(
+        [filter],
+        subscriptionId: subscriptionId,
+        useCache: false,
+        tempRelays: [onlyRelay],
+        relayTypes: const [RelayType.temp],
+        requireAllRelaysSettled: true,
+      );
+      events = result.events;
+      authoritative = result.isComplete;
+      possiblyCapped = result.possiblyCapped;
+    }
     if (_ingestSessionEnded(pubkey, generation)) return null;
 
     // Pass 1 (off the _eventLock): batch-decrypt this page's gift wraps in one
@@ -1724,18 +1789,43 @@ class DmRepository {
         : events;
     for (var i = 0; i < ordered.length; i++) {
       if (_ingestSessionEnded(pubkey, generation)) return null;
+      // A walk whose subscription failed stops before saving anything: its
+      // catch-up was dropped with the stamps it held, and the next
+      // subscription asks for that window, and reads this page, again.
+      if (holdFor != null && !identical(_liveCatchUp, holdFor)) return null;
       final event = ordered[i];
       final rumor = preDecrypted[event.id];
-      if (rumor != null) {
-        await _withEventLock(
-          () => _persistDecryptedGiftWrap(event, rumor, ownerPubkey: pubkey),
-        );
-      } else {
-        await _handleIncomingEvent(event);
+      // An event read while [holdFor] still holds a stored batch's stamps is
+      // held with them, or saving its stamp could move the window past that
+      // batch's unhandled events (#10191).
+      final hold = holdFor != null && holdFor.holdsStamps ? holdFor : null;
+      hold?.beginHandling();
+      try {
+        if (rumor != null) {
+          await _withEventLock(
+            () => _persistDecryptedGiftWrap(
+              event,
+              rumor,
+              ownerPubkey: pubkey,
+              deferWireTo: hold,
+            ),
+          );
+        } else {
+          await _handleIncomingEvent(event, deferWireTo: hold);
+        }
+      } finally {
+        if (hold != null) {
+          hold.endHandling();
+          _maybeCommitCatchUp(hold);
+        }
       }
       await _maybeYieldDuringDrain(i);
     }
-    return (events: events, authoritative: authoritative);
+    return (
+      events: events,
+      authoritative: authoritative,
+      possiblyCapped: possiblyCapped,
+    );
   }
 
   /// [events] with the gift wraps decrypted in [rumors] rearranged among
@@ -2895,24 +2985,41 @@ class DmRepository {
   }
 
   /// Saves the stamps [catchUp] holds once the stored batch has fully
-  /// arrived and every held-back event has been handled.
+  /// arrived and every held-back event has been handled, after recording any
+  /// relay that may have withheld part of the window at its result cap.
   ///
   /// A relay sends a stored batch newest first, so saving each stamp as it is
   /// handled would move the next launch's `since:` past the rest of the batch
   /// before it is handled; if the app stops in between, those events are
-  /// never asked for again (#10191).
+  /// never asked for again (#10191). A relay that stopped at its result cap
+  /// never sends the rest at all, so the part it withheld is recorded as
+  /// catch-up debt before the window moves past it (#10192).
   void _maybeCommitCatchUp(_LiveCatchUp catchUp) {
     if (!identical(_liveCatchUp, catchUp)) {
       catchUp.cancelHoldLimit();
       return;
     }
-    if (!catchUp.holdsStamps) catchUp.cancelHoldLimit();
-    if (!catchUp.readyToSave) return;
+    if (!catchUp.holdsBatch) catchUp.cancelHoldLimit();
+    if (!catchUp.readyToSave && !catchUp.hasCappedRelays) return;
     unawaited(
       _withGiftWrapProcessingLock(
         () => _withEventLock(() async {
-          // A reconnect may have reopened the batch while this waited.
-          if (!catchUp.readyToSave ||
+          if (_disposed ||
+              _resetGeneration != catchUp.generation ||
+              _userPubkey != catchUp.owner) {
+            return;
+          }
+          // A record that fails leaves the relays held, and with them every
+          // stamp, so no later save moves the window past what they withheld.
+          final capped = catchUp.cappedRelaysToRecord();
+          final recorded = await _recordCatchUpDebt(catchUp, capped);
+          catchUp.settleCappedRelays(capped);
+          if (recorded) _readCatchUpDebt(catchUp);
+          // A reconnect may have reopened the batch or reported more capped
+          // debt while this waited. Keep the stamps until that debt is saved
+          // by the next commit attempt too.
+          if (catchUp.hasCappedRelays ||
+              !catchUp.readyToSave ||
               _disposed ||
               _resetGeneration != catchUp.generation ||
               _userPubkey != catchUp.owner) {
@@ -2930,14 +3037,265 @@ class DmRepository {
           }
         }),
       ).catchError((Object error, StackTrace stackTrace) {
+        // A failure keeps every stamp held for the rest of the session, so a
+        // broken invariant is reported rather than only logged; a store that
+        // refuses the debt is expected, and the next save tries it again.
         Log.error(
           'Failed to save the DM catch-up boundary: $error',
           category: LogCategory.system,
           error: error,
           stackTrace: stackTrace,
         );
+        if (error is StateError || error is TypeError || error is RangeError) {
+          _errorReporter?.call(
+            error,
+            stackTrace,
+            site: DmRepositoryReportableSites.catchUpDebtUnexpectedFailure,
+          );
+        }
       }),
     );
+  }
+
+  /// Whether a URL is a relay [catchUp]'s subscription reads: one of the
+  /// pool's configured relays or the account's own inbox relays it was sent
+  /// to. The debt walk sends the account's DM filter, which a relay the
+  /// subscription was never sent to must not get.
+  bool Function(String url) _relaysReadBy(_LiveCatchUp catchUp) {
+    final pool = {
+      for (final url in _nostrClient.configuredRelays)
+        normalizeRelayUrl(url) ?? url,
+    };
+    return (url) {
+      final normalized = normalizeRelayUrl(url) ?? url;
+      return pool.contains(normalized) ||
+          catchUp.inboxRelays.contains(normalized);
+    };
+  }
+
+  /// Durably records, for each of [capped], the part of the window it may
+  /// have withheld at its result cap: from the `since:` [catchUp]'s
+  /// subscription asked from up to the oldest stamp it sent. Returns whether
+  /// anything was recorded.
+  ///
+  /// Every REQ of the subscription, a reconnect's replay included, asks from
+  /// that `since:`. A relay that sent its first batch only after a save moved
+  /// the window, because it connected late or was still sending at the hold
+  /// limit, may have withheld any of it.
+  ///
+  /// The cost falls on a relay that caps again on a reconnect's replay after
+  /// it already sent a batch: its whole range is recorded and read again,
+  /// most of it already handled, at most [DmHistoryDrainConfig.maxPages]
+  /// pages per walk, each wrap skipped by the dedup check before decrypting.
+  Future<bool> _recordCatchUpDebt(
+    _LiveCatchUp catchUp,
+    Map<String, int?> capped,
+  ) async {
+    final syncState = _syncState;
+    final floor = catchUp.since;
+    if (capped.isEmpty || syncState == null || floor == null) return false;
+    final reads = _relaysReadBy(catchUp);
+    final debts = [
+      for (final MapEntry(key: url, value: oldest) in capped.entries)
+        if (reads(url) && (oldest == null || oldest >= floor))
+          DmCatchUpDebt(
+            relay: normalizeRelayUrl(url) ?? url,
+            floor: floor,
+            until: oldest,
+          ),
+    ];
+    if (debts.isEmpty) return false;
+    await syncState.addCatchUpDebt(catchUp.owner, debts);
+    return true;
+  }
+
+  /// Starts reading the catch-up debt recorded for [catchUp]'s account,
+  /// unless a walk is already running or there is none.
+  void _readCatchUpDebt(_LiveCatchUp catchUp) {
+    final syncState = _syncState;
+    if (_readingCatchUpDebt ||
+        syncState == null ||
+        !identical(_liveCatchUp, catchUp) ||
+        syncState.catchUpDebt(catchUp.owner).isEmpty) {
+      return;
+    }
+    _readingCatchUpDebt = true;
+    unawaited(
+      _walkCatchUpDebt(catchUp, syncState)
+          .catchError((Object error, StackTrace stackTrace) {
+            // Relay and storage failures are expected and leave the debt for
+            // the next walk; a broken invariant is reported.
+            Log.error(
+              'Failed to read the DM catch-up debt: $error',
+              category: LogCategory.system,
+              error: error,
+              stackTrace: stackTrace,
+            );
+            if (error is StateError ||
+                error is TypeError ||
+                error is RangeError) {
+              _errorReporter?.call(
+                error,
+                stackTrace,
+                site: DmRepositoryReportableSites.catchUpDebtUnexpectedFailure,
+              );
+            }
+          })
+          .whenComplete(() {
+            _readingCatchUpDebt = false;
+            // A session that started while this walk was reading found it
+            // busy, so its debt is read from here.
+            final live = _liveCatchUp;
+            if (live != null && !identical(live, catchUp)) {
+              _readCatchUpDebt(live);
+            }
+          }),
+    );
+  }
+
+  /// Reads the catch-up debt, relay by relay: each newest first from where
+  /// its last walk stopped down to its floor, a page at a time, saving the
+  /// position after every page so a later walk resumes there.
+  ///
+  /// A relay's debt is forgotten once a page comes back empty and not capped,
+  /// or reaches below its floor. A relay this session does not read, or
+  /// stops reading mid-walk, keeps its debt for a later one: its inbox lookup
+  /// may have failed, or relay discovery may not have added it yet. The walk
+  /// stops on a page the relay does not settle, when its subscription ends,
+  /// and after [DmHistoryDrainConfig.maxPages] pages; the next end of stored
+  /// events, the next subscription or the next launch resumes it.
+  ///
+  /// A filter cannot page within one second, so a capped page whose events
+  /// all share its top may have left more of that second unsent. The walk
+  /// reads on below it, but keeps its saved position at the highest such
+  /// second, and at the floor keeps those seconds as the relay's debt rather
+  /// than forgetting it. A settled page that is empty but may be capped, from
+  /// a NIP-67 `more` or frames the pool dropped, proves nothing read and
+  /// leaves the debt for a later walk.
+  ///
+  /// Each write names the debt it read. A catch-up can record more of a
+  /// relay's debt between two pages, and a write from the old range would
+  /// lose it, so the write is refused and the walk reads the debt again,
+  /// from its new top.
+  Future<void> _walkCatchUpDebt(
+    _LiveCatchUp catchUp,
+    DmSyncState syncState,
+  ) async {
+    final owner = catchUp.owner;
+    // Relays this walk read as far as it can, which a later pass skips.
+    final leftForLater = <String>{};
+    var pages = 0;
+    walk:
+    while (true) {
+      final reads = _relaysReadBy(catchUp);
+      final debts = [
+        for (final debt in syncState.catchUpDebt(owner))
+          if (reads(debt.relay) && !leftForLater.contains(debt.relay)) debt,
+      ];
+      if (debts.isEmpty) return;
+      for (final recorded in debts) {
+        var debt = recorded;
+        var until = debt.until;
+        if (until == null) {
+          // Bound the top before reading, so a record that leaves it
+          // unbounded again is told apart from this one.
+          until = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final bounded = DmCatchUpDebt(
+            relay: debt.relay,
+            floor: debt.floor,
+            until: until,
+          );
+          if (!await syncState.replaceCatchUpDebt(owner, debt, bounded)) {
+            continue walk;
+          }
+          debt = bounded;
+        }
+        int? unresolvedTop;
+        int? unresolvedBottom;
+        while (true) {
+          if (pages >= DmHistoryDrainConfig.maxPages) return;
+          if (_ingestSessionEnded(owner, catchUp.generation)) return;
+          // A relay the user removes while it is read is not asked again.
+          if (!_relaysReadBy(catchUp)(debt.relay)) break;
+          pages++;
+          final page = await _fetchHistoryPage(
+            until: until!,
+            since: debt.floor,
+            limit: DmHistoryDrainConfig.pageSize,
+            subscriptionId: dmCatchUpDebtSubscriptionId(owner, pages),
+            pubkey: owner,
+            generation: catchUp.generation,
+            onlyRelay: debt.relay,
+            holdFor: catchUp,
+          );
+          if (page == null) return;
+          if (!page.authoritative) {
+            Log.warning(
+              'DM catch-up debt walk for ${pubkeyForLogs(owner)} stopped at '
+              '$until: ${debt.relay} did not settle the page; resuming at the '
+              'next end of stored events.',
+              category: LogCategory.system,
+            );
+            return;
+          }
+          final stamps = page.events.map((event) => event.createdAt);
+          final oldest = stamps.isEmpty ? null : stamps.reduce(min);
+          if (oldest == null && page.possiblyCapped) {
+            Log.warning(
+              'DM catch-up debt walk for ${pubkeyForLogs(owner)} kept '
+              '${debt.relay} at $until: it settled an empty page that may '
+              'have more.',
+              category: LogCategory.system,
+            );
+            leftForLater.add(debt.relay);
+            break;
+          }
+          int? next;
+          if (oldest != null && oldest < until) {
+            // `until` is inclusive, so the oldest second is read again: the
+            // page may not have held all of it.
+            next = oldest;
+          } else if (oldest != null) {
+            if (page.possiblyCapped) {
+              unresolvedTop ??= until;
+              unresolvedBottom = until;
+            }
+            next = until - 1;
+          }
+          if (next == null || next < debt.floor) {
+            if (unresolvedTop == null) {
+              // Kept if a catch-up recorded more of it meanwhile, which the
+              // next pass reads.
+              await syncState.clearCatchUpDebt(owner, debt);
+              break;
+            }
+            final unresolved = DmCatchUpDebt(
+              relay: debt.relay,
+              floor: unresolvedBottom!,
+              until: unresolvedTop,
+            );
+            // Refused if a catch-up recorded more of it meanwhile, which a
+            // later walk reads.
+            await syncState.replaceCatchUpDebt(owner, debt, unresolved);
+            leftForLater.add(debt.relay);
+            break;
+          }
+          until = next;
+          // Past an unresolved second the saved position stays at it, so a
+          // walk that stops early reads that second again.
+          if (unresolvedTop != null) continue;
+          final moved = DmCatchUpDebt(
+            relay: debt.relay,
+            floor: debt.floor,
+            until: next,
+          );
+          if (!await syncState.replaceCatchUpDebt(owner, debt, moved)) {
+            continue walk;
+          }
+          debt = moved;
+        }
+      }
+    }
   }
 
   /// Records [createdAt] as a processed rumor timestamp for [owner], or holds
@@ -11477,9 +11835,16 @@ class DmRepository {
 /// events are still coming, or while earlier held-back events are still
 /// being handled, are held here instead of being saved. They are saved
 /// together once the pool has reported the end of stored events, that many
-/// events have arrived, and every held-back event has been handled.
+/// events have arrived, and every held-back event has been handled. Relays
+/// whose stored batch may have stopped at their result cap are held here
+/// too, until they are recorded as catch-up debt ahead of that save.
 class _LiveCatchUp {
-  _LiveCatchUp(this.owner, this.generation);
+  _LiveCatchUp(
+    this.owner,
+    this.generation, {
+    required this.since,
+    required this.inboxRelays,
+  });
 
   /// The account the subscription belongs to.
   final String owner;
@@ -11487,6 +11852,81 @@ class _LiveCatchUp {
   /// The repository's reset generation when the subscription opened, so a
   /// save queued before a teardown or account switch is dropped.
   final int generation;
+
+  /// The `since:` the subscription asked from, or null for a first open,
+  /// whose older history the history drain reads.
+  final int? since;
+
+  /// The account's own inbox relays the subscription was sent to, as
+  /// normalized URLs.
+  final Set<String> inboxRelays;
+
+  /// Relay url -> the oldest stamp it sent in a stored batch that may have
+  /// stopped at its result cap, or null when nothing bounds what it may have
+  /// withheld; reported and not yet recorded as catch-up debt. See #10192.
+  final Map<String, int?> _cappedRelays = {};
+
+  /// Relay url -> the highest top recorded as catch-up debt for it in the
+  /// current stored phase, or null when that top was unbounded. A top whose
+  /// record failed counts too: that relay stays in [_cappedRelays], which
+  /// covers every report this skips.
+  final Map<String, int?> _recordedThisPhase = {};
+
+  /// Whether relays reported as possibly capped wait to be recorded.
+  bool get hasCappedRelays => _cappedRelays.isNotEmpty;
+
+  /// Holds [relays] whose stored batch may have stopped at their result cap.
+  /// A first open holds none: the history drain reads below its window.
+  ///
+  /// A relay the hold limit already recorded is reported again when its
+  /// phase ends, for the same batch; a part of the window already recorded
+  /// in this phase is not held again, or the walk would read it twice.
+  void markCapped(Map<String, int?> relays) {
+    if (since == null) return;
+    relays.forEach((url, oldest) {
+      if (_recordedThisPhase.containsKey(url)) {
+        final recorded = _recordedThisPhase[url];
+        if (recorded == null || (oldest != null && oldest <= recorded)) return;
+      }
+      if (!_cappedRelays.containsKey(url)) {
+        _cappedRelays[url] = oldest;
+        return;
+      }
+      // The higher stamp bounds what either report withheld, as the pool
+      // reports it for two batches in one phase.
+      final previous = _cappedRelays[url];
+      _cappedRelays[url] = previous == null || oldest == null
+          ? null
+          : max(previous, oldest);
+    });
+  }
+
+  /// The relays held as possibly capped, counted as recorded in this phase.
+  /// They stay held until [settleCappedRelays] is told they were recorded.
+  Map<String, int?> cappedRelaysToRecord() {
+    _cappedRelays.forEach((url, oldest) {
+      if (!_recordedThisPhase.containsKey(url)) {
+        _recordedThisPhase[url] = oldest;
+        return;
+      }
+      final recorded = _recordedThisPhase[url];
+      _recordedThisPhase[url] = recorded == null || oldest == null
+          ? null
+          : max(recorded, oldest);
+    });
+    return Map<String, int?>.of(_cappedRelays);
+  }
+
+  /// Stops holding [recorded], from [cappedRelaysToRecord], now that it is
+  /// recorded. A relay reported again meanwhile with a higher stamp, or none,
+  /// stays held for the next save to record.
+  void settleCappedRelays(Map<String, int?> recorded) {
+    recorded.forEach((url, oldest) {
+      if (_cappedRelays.containsKey(url) && _cappedRelays[url] == oldest) {
+        _cappedRelays.remove(url);
+      }
+    });
+  }
 
   /// Whether arriving events may belong to a stored batch. True from the
   /// subscription's start, and again from a reconnect's replay.
@@ -11506,12 +11946,17 @@ class _LiveCatchUp {
 
   Timer? _holdLimit;
 
-  /// Whether the hold limit passed: stamps are saved as events are handled
-  /// until a reconnect reopens the stored events.
+  /// Whether the hold limit passed: stamps are saved as events are handled,
+  /// unless relays wait to be recorded, until a reconnect reopens the stored
+  /// events.
   bool _released = false;
 
-  /// Whether the next arriving event's stamp must be held back.
-  bool get holdsStamps => !_released && (_storedOpen || _handling > 0);
+  /// Whether a stored batch, or the handling of its events, is under way.
+  bool get holdsBatch => !_released && (_storedOpen || _handling > 0);
+
+  /// Whether the next arriving event's stamp must be held back: while a
+  /// batch is under way, or while relays wait to be recorded.
+  bool get holdsStamps => holdsBatch || hasCappedRelays;
 
   int? _oldestHeldRumor;
 
@@ -11560,6 +12005,7 @@ class _LiveCatchUp {
   void reopen() {
     _storedOpen = true;
     _endsAfter = null;
+    _recordedThisPhase.clear();
   }
 
   void _closeIfArrived() {

@@ -11,6 +11,11 @@ String dmInboxSubscriptionId(String pubkey) =>
 String dmHistoryDrainSubscriptionId(String pubkey, int page) =>
     '${scopedSubscriptionId('dm_drain', pubkey)}_$page';
 
+/// Subscription id for page [page] of a walk of [pubkey]'s catch-up debt:
+/// the part of a catch-up window a relay may have withheld at its result cap.
+String dmCatchUpDebtSubscriptionId(String pubkey, int page) =>
+    '${scopedSubscriptionId('dm_catchup', pubkey)}_$page';
+
 /// Subscription id for page [page] of the NIP-04 history drain of [pubkey].
 String dmNip04DrainSubscriptionId(String pubkey, int page) =>
     '${scopedSubscriptionId('dm_drain_nip04', pubkey)}_$page';

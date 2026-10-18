@@ -78,6 +78,11 @@ abstract class DmRepositoryReportableSites {
   static const String historyDrainUnexpectedFailure =
       'historyDrain.unexpectedFailure';
 
+  /// The catch-up debt walk, or the save that records the debt before it
+  /// moves the window, hit a programming invariant failure.
+  static const String catchUpDebtUnexpectedFailure =
+      'catchUpDebt.unexpectedFailure';
+
   /// `retryPendingDecryptions`: a queued gift wrap's stored JSON failed to
   /// parse. We wrote that JSON ourselves, so this is an invariant violation,
   /// and it costs the user an inbound message.

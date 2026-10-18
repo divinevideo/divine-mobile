@@ -14,6 +14,7 @@ import '../event_kind.dart';
 import '../filter.dart';
 import '../nostr.dart';
 import '../src/relay/query_outcome_tracker.dart';
+import '../src/relay/relay_answer_tally.dart';
 import '../subscription.dart';
 import '../utils/string_util.dart';
 import 'client_connected.dart';
@@ -1731,12 +1732,17 @@ class RelayPool {
   /// `CLOSED` after part of a batch leaves the rest of it owed, so the relay
   /// keeps holding the phase open until a rebuilt connection replays it or
   /// the subscriber stops waiting.
+  ///
+  /// The EOSE that answers a relay's last REQ ends its batch, which is then
+  /// judged, with the NIP-67 hints in [eoseFrame], for whether it may have
+  /// stopped at the relay's result-size limit.
   void _storedEventsPhaseAnswered(
     Relay relay,
     String subId,
     int generation, {
     required bool completesBatch,
     bool dropsRequest = false,
+    List<dynamic>? eoseFrame,
   }) {
     final phase = _storedEventsPhases[subId];
     if (phase == null) return;
@@ -1744,11 +1750,97 @@ class RelayPool {
     if (dropsRequest) phase.refused.add(relay.url);
     final round = phase.roundFor(relay.url, generation);
     if (round == null) return;
-    if (!round.answered) round.answers++;
+    final wasAnswered = round.answered;
+    if (!wasAnswered) round.answers++;
     if (completesBatch && round.answered) {
       phase.sendingStored.remove(relay.url);
+      // A relay that was never sent this REQ can still name its id, which a
+      // public pubkey derives, so only a relay holding it is judged.
+      if (!wasAnswered && relay.hasSubscriptionById(subId)) {
+        _judgeStoredBatch(phase, relay, subId, (
+          generation,
+          round.resends,
+        ), eoseFrame);
+      }
     }
     _maybeEndStoredEventsPhase(subId);
+  }
+
+  /// Records [relay]'s stored [batch] for [subId] as possibly capped when
+  /// what it sent says it may have stopped at its result-size limit, judged
+  /// as a one-shot read's relays are.
+  void _judgeStoredBatch(
+    _StoredEventsPhase phase,
+    Relay relay,
+    String subId,
+    (int, int) batch,
+    List<dynamic>? eoseFrame,
+  ) {
+    final filters = _subscriptions[subId]?.parsedFilters;
+    if (filters == null) return;
+    final tally = phase.tallyFor(relay.url, batch, filters.length);
+    phase.batchTallies.remove(relay.url);
+    if (eoseFrame != null) tally.recordEoseHints(eoseFrame);
+    if (tally.mayBeCapped(relay, filters)) {
+      phase.recordPossiblyCapped(relay.url, tally.oldestCreatedAt);
+    }
+  }
+
+  /// Counts [relay]'s [event] for [subId] toward whether its stored batch
+  /// may have stopped at its result-size limit, when the event belongs to a
+  /// stored batch at all.
+  void _storedEventsPhaseCountEvent(
+    Relay relay,
+    String subId,
+    int generation,
+    Event event,
+  ) {
+    final filters = _subscriptions[subId]?.parsedFilters;
+    if (filters == null) return;
+    _storedBatchTally(
+      relay,
+      subId,
+      generation,
+      filters.length,
+    )?.recordEvent(event, filters);
+  }
+
+  /// Records that [relay] sent [subId] an `EVENT` frame the pool dropped
+  /// during its stored batch: one outside the filters, or [rejected] as
+  /// malformed or not validly signed. Either may have taken a slot of the
+  /// relay's result-size limit, so the batch may have stopped short of it.
+  void _storedEventsPhaseUnusableFrame(
+    Relay relay,
+    String subId,
+    int generation, {
+    required bool rejected,
+  }) {
+    final filters = _subscriptions[subId]?.parsedFilters;
+    if (filters == null) return;
+    final tally = _storedBatchTally(relay, subId, generation, filters.length);
+    if (tally == null) return;
+    if (rejected) {
+      tally.rejected += 1;
+    } else {
+      tally.outsideFilter += 1;
+    }
+  }
+
+  /// The tally of the batch a frame from [relay] on the connection of
+  /// [generation] belongs to, or null when it belongs to none: the phase is
+  /// gone, the relay was never sent the REQ, or the frame came from an older
+  /// connection.
+  RelayAnswerTally? _storedBatchTally(
+    Relay relay,
+    String subId,
+    int generation,
+    int filterCount,
+  ) {
+    final phase = _storedEventsPhases[subId];
+    if (phase == null || !relay.hasSubscriptionById(subId)) return null;
+    final batch = phase.storedBatchOf(relay.url, generation);
+    if (batch == null) return null;
+    return phase.tallyFor(relay.url, batch, filterCount);
   }
 
   /// Records that the pool re-sent [subId]'s REQ to [relay] on its current
@@ -1821,8 +1913,27 @@ class RelayPool {
     }
     if (!answered) return;
     phase.open = false;
-    subscription.onStoredEventsEnd?.call(phase.delivered);
+    final possiblyCapped = Map<String, int?>.unmodifiable(phase.possiblyCapped);
+    phase.possiblyCapped.clear();
+    subscription.onStoredEventsEnd?.call(
+      StoredEventsEnd(
+        deliveredEventCount: phase.delivered,
+        possiblyCappedRelays: possiblyCapped,
+      ),
+    );
   }
+
+  /// The relays whose stored batch for live subscription [subId] has been
+  /// judged possibly capped since its stored-events phase last ended, as
+  /// [Subscription.onStoredEventsEnd] will report them, without ending the
+  /// phase or clearing them. Empty for a subscription with no such phase.
+  ///
+  /// A subscriber that stops waiting for the phase to end, because a slow
+  /// relay holds it open, reads this before acting on what has arrived.
+  Map<String, int?> storedEventsPossiblyCapped(String subId) =>
+      Map<String, int?>.unmodifiable(
+        _storedEventsPhases[subId]?.possiblyCapped ?? const <String, int?>{},
+      );
 
   /// Re-checks the stored-events phases [relay] takes part in after its
   /// connection state or AUTH gate changed: a relay that dropped before
@@ -1846,12 +1957,16 @@ class RelayPool {
     }
   }
 
-  /// Records that [relay] sent one-shot query [subId] an `EVENT` frame the
-  /// pool rejected. The frame may have taken a slot of the relay's `limit`,
-  /// so the query's outcome treats the relay as possibly capped, as it does
-  /// one that answered outside the filter.
-  void _recordRejectedQueryEvent(Relay relay, String subId) {
-    if (_subscriptions[subId] != null) return;
+  /// Records that [relay] sent [subId] an `EVENT` frame the pool rejected,
+  /// on the connection of [generation]. The frame may have taken a slot of
+  /// the relay's `limit`, so a one-shot query's outcome treats the relay as
+  /// possibly capped, as it does one that answered outside the filter, and
+  /// so does a live subscription's stored batch.
+  void _recordRejectedEvent(Relay relay, String subId, int generation) {
+    if (_subscriptions[subId] != null) {
+      _storedEventsPhaseUnusableFrame(relay, subId, generation, rejected: true);
+      return;
+    }
     if (relay.getRequestSubscription(subId) == null) return;
     _queryOutcomes[subId]?.recordRejectedEvent(relay);
   }
@@ -1879,7 +1994,7 @@ class RelayPool {
 
         final eventJson = _mapAt(relay, json, 2, 'EVENT payload');
         if (eventJson == null) {
-          _recordRejectedQueryEvent(relay, subId);
+          _recordRejectedEvent(relay, subId, receivedOnGeneration);
           return;
         }
 
@@ -1888,7 +2003,7 @@ class RelayPool {
           event = Event.fromJson(eventJson);
         } catch (err) {
           log('Dropping malformed relay event from ${relay.url}: $err');
-          _recordRejectedQueryEvent(relay, subId);
+          _recordRejectedEvent(relay, subId, receivedOnGeneration);
           return;
         }
 
@@ -1900,7 +2015,7 @@ class RelayPool {
             'Dropping relay event with invalid id '
             'from ${relay.url}: eventId=${event.id}',
           );
-          _recordRejectedQueryEvent(relay, subId);
+          _recordRejectedEvent(relay, subId, receivedOnGeneration);
           return;
         }
 
@@ -1919,7 +2034,7 @@ class RelayPool {
             'Dropping relay event with empty signature '
             'from ${relay.url}: eventId=${event.id}',
           );
-          _recordRejectedQueryEvent(relay, subId);
+          _recordRejectedEvent(relay, subId, receivedOnGeneration);
           return;
         }
 
@@ -1940,7 +2055,7 @@ class RelayPool {
             // Decided after an await, off the main isolate when a verify
             // worker is wired; the query may have ended meanwhile, and then
             // there is no outcome left to record on.
-            _recordRejectedQueryEvent(relay, subId);
+            _recordRejectedEvent(relay, subId, receivedOnGeneration);
             return;
           }
         } else {
@@ -1977,6 +2092,13 @@ class RelayPool {
             // A relay that does not honour the filter may have spent its
             // limit on events the query never asked for.
             _queryOutcomes[subId]?.recordOffFilterEvent(relay);
+          } else {
+            _storedEventsPhaseUnusableFrame(
+              relay,
+              subId,
+              receivedOnGeneration,
+              rejected: false,
+            );
           }
           return;
         }
@@ -1994,6 +2116,18 @@ class RelayPool {
             event["sources"] = [relay.url];
             _broadcaseToCache(event);
           }
+        }
+
+        if (poolSubscription != null) {
+          // Counted before the block list, as a query's events are: an event
+          // hidden from the subscriber still took a slot in the relay's
+          // limit.
+          _storedEventsPhaseCountEvent(
+            relay,
+            subId,
+            receivedOnGeneration,
+            event,
+          );
         }
 
         // check block pubkey
@@ -2055,6 +2189,7 @@ class RelayPool {
           subId,
           receivedOnGeneration,
           completesBatch: true,
+          eoseFrame: json,
         );
         // Handle EOSE for long-running subscriptions
         final subscription = _subscriptions[subId];
@@ -2461,7 +2596,7 @@ class RelayPool {
     void Function()? onEose,
     void Function(String reason)? onClosed,
     void Function()? onStoredEventsStart,
-    void Function(int deliveredEventCount)? onStoredEventsEnd,
+    void Function(StoredEventsEnd end)? onStoredEventsEnd,
   }) {
     if (filters.isEmpty) {
       throw ArgumentError("No filters given", "filters");
@@ -4048,6 +4183,58 @@ class _StoredEventsPhase {
   /// URLs of relays that ended this REQ with `CLOSED` and dropped it. Their
   /// own reconnect does not send it again.
   final Set<String> refused = {};
+
+  /// Relay URL -> what it has sent in its current stored batch, with the
+  /// (generation, resends) of that batch.
+  final Map<String, ({(int, int) batch, RelayAnswerTally tally})> batchTallies =
+      {};
+
+  /// Relay URL -> the oldest stamp of a batch that may have stopped at the
+  /// relay's result-size limit since the phase last ended; see
+  /// [StoredEventsEnd.possiblyCappedRelays].
+  final Map<String, int?> possiblyCapped = {};
+
+  /// The (generation, resends) of the batch a frame from [url] on the
+  /// connection of [generation] belongs to, or null for a frame from an
+  /// older connection than the newest seen. Unlike [roundFor], it starts no
+  /// round, so counting a frame never changes whether the relay took part.
+  ///
+  /// A live frame after the relay answered lands on the batch it answered,
+  /// which has already been judged, so it is counted but never judged.
+  (int, int)? storedBatchOf(String url, int generation) {
+    final round = rounds[url];
+    if (round == null || round.generation < generation) return (generation, 0);
+    if (round.generation > generation) return null;
+    return (generation, round.resends);
+  }
+
+  /// [url]'s tally for [batch], starting a new one when it last counted
+  /// another batch.
+  RelayAnswerTally tallyFor(String url, (int, int) batch, int filterCount) {
+    final current = batchTallies[url];
+    if (current != null && current.batch == batch) return current.tally;
+    final tally = RelayAnswerTally(filterCount);
+    batchTallies[url] = (batch: batch, tally: tally);
+    return tally;
+  }
+
+  /// Records that a batch from [url] whose oldest stamp was [oldest] may have
+  /// stopped at the relay's limit. A batch with no stamp leaves the relay
+  /// unbounded however many others it sent.
+  ///
+  /// Of two batches the relay capped in one phase, the higher oldest stamp
+  /// is kept: the later batch may have withheld what was published between
+  /// them, backdated below its own oldest stamp but above the earlier one.
+  void recordPossiblyCapped(String url, int? oldest) {
+    if (!possiblyCapped.containsKey(url)) {
+      possiblyCapped[url] = oldest;
+      return;
+    }
+    final previous = possiblyCapped[url];
+    possiblyCapped[url] = previous == null || oldest == null
+        ? null
+        : (oldest > previous ? oldest : previous);
+  }
 
   /// [url]'s round for a frame from [generation], or null for a frame from
   /// an older connection than the newest one seen.

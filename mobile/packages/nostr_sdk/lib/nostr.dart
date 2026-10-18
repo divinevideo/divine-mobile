@@ -18,6 +18,7 @@ import 'relay/signature_verification_policy.dart';
 import 'relay/web_socket_connection_manager.dart';
 import 'signer/nostr_signer.dart';
 import 'src/relay/paged_read_cursor.dart';
+import 'subscription.dart';
 import 'utils/string_util.dart';
 
 class Nostr {
@@ -323,7 +324,7 @@ class Nostr {
     void Function()? onEose,
     void Function(String reason)? onClosed,
     void Function()? onStoredEventsStart,
-    void Function(int deliveredEventCount)? onStoredEventsEnd,
+    void Function(StoredEventsEnd end)? onStoredEventsEnd,
   }) {
     return _pool.subscribe(
       filters,
@@ -339,6 +340,12 @@ class Nostr {
       onStoredEventsEnd: onStoredEventsEnd,
     );
   }
+
+  /// The relays whose stored batch for live subscription [id] has been
+  /// judged possibly capped so far; see
+  /// [RelayPool.storedEventsPossiblyCapped].
+  Map<String, int?> storedEventsPossiblyCapped(String id) =>
+      _pool.storedEventsPossiblyCapped(id);
 
   void unsubscribe(String id) {
     _pool.unsubscribe(id);

@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/subscription.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -44,7 +45,7 @@ class MockNostrServiceWithHeldEose implements NostrClient {
     bool closeOnEose = false,
     bool handleDeletionRequests = true,
     void Function()? onStoredEventsStart,
-    void Function(int deliveredEventCount)? onStoredEventsEnd,
+    void Function(StoredEventsEnd end)? onStoredEventsEnd,
   }) {
     // The test releases EOSE after observing cache delivery.
     if (onEose != null) _pendingEose.add(onEose);
