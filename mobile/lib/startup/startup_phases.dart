@@ -11,13 +11,14 @@ import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/live_account_container.dart';
+import 'package:openvine/providers/native_proofmode_hooks.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/c2pa_debris_janitor.dart';
 import 'package:openvine/services/classic_viner_seed_preload_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/hive_storage_service.dart';
-import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:openvine/services/seed_data_preload_service.dart';
@@ -28,7 +29,6 @@ import 'package:openvine/startup/timed_startup_task.dart';
 import 'package:openvine/utils/library_audio_migration.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -72,17 +72,10 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
   );
 
   // Static signing utility: its creator-binding, recording-hash and late-proof
-  // seams need the container, so they are assigned here rather than with the
-  // reporter seams in bootstrap. The clip library is read per call: it
-  // follows the signed-in account.
-  NativeProofModeService.creatorBindingFactory = container
-      .read(c2paCreatorBindingFactoryProvider)
-      .create;
-  NativeProofModeService.recordingHashLookup = () =>
-      container.read(clipLibraryServiceProvider).recordingHashesByFileName();
-  NativeProofModeService.lateProofRecorder = (path, proof) => container
-      .read(clipLibraryServiceProvider)
-      .recordLateProof(fileName: p.basename(path), proof: proof);
+  // seams need a container, so they are assigned here rather than with the
+  // reporter seams in bootstrap. They resolve the live account container per
+  // call, because an account switch disposes this one.
+  bindNativeProofModeHooks(liveAccountContainer(container));
 
   await restorePendingEmailVerificationOnStartup(container);
 
