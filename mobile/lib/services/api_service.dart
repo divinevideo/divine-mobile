@@ -6,6 +6,7 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:openvine/platform_io.dart';
+import 'package:openvine/services/consent_upload.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -165,13 +166,9 @@ class ApiService {
   /// Submit a recorded parental consent video plus parent email for an open
   /// minor-account review case. The video is uploaded as multipart/form-data.
   ///
-  /// The signed NIP-98 event authenticates the account, URL and method, not
-  /// the multipart email or video bytes. The shared auth helper adds the hash
-  /// of an empty string when no payload is supplied. That tag stays for
-  /// compatibility with the current helper; this route checks case ownership
-  /// without validating that tag against the streamed multipart body. Enabling
-  /// payload verification on the server requires a coordinated client change
-  /// to hash the exact multipart bytes before sending them.
+  /// The NIP-98 payload tag binds the exact multipart body, including the email
+  /// and video. Freeze the body before signing and send that same snapshot.
+  /// The server verifies its streamed hash before completing the private video.
   Future<void> submitMinorAccountReviewParentConsent({
     required String caseId,
     required String email,
@@ -200,7 +197,7 @@ class ApiService {
       // relay-manager rejects a video part that is not labelled video/* with
       // a 415, and http defaults file parts to application/octet-stream. The
       // camera writes MP4 on both platforms.
-      final request = http.MultipartRequest('POST', uri)
+      final multipart = http.MultipartRequest('POST', uri)
         ..fields['email'] = email
         ..files.add(
           await http.MultipartFile.fromPath(
@@ -210,20 +207,42 @@ class ApiService {
           ),
         );
 
-      final token = await _authService?.createAuthToken(
-        url: uri.toString(),
-        method: HttpMethod.post,
-      );
-      request.headers.addAll({
-        'Accept': 'application/json',
-        ...buildDivineClientHeaders(appVersion: _appVersion),
-        if (token != null) 'Authorization': token.authorizationHeader,
-      });
-
-      final response = await _request(
-        () async => _client.send(request).then(http.Response.fromStream),
-        timeout: _uploadTimeout,
-      );
+      final upload = await ConsentUpload.prepare(multipart);
+      // A timeout does not cancel the underlying request. Its own finally
+      // retains the snapshot until the transport finishes reading it.
+      var transportOwnsSnapshot = false;
+      final http.Response response;
+      try {
+        final token = await _authService?.createAuthToken(
+          url: uri.toString(),
+          method: HttpMethod.post,
+          payloadHash: upload.payloadHash,
+          reuseCached: false,
+        );
+        if (token == null) {
+          throw const ApiException('Could not authenticate consent upload');
+        }
+        upload.request.headers.addAll({
+          'Accept': 'application/json',
+          ...buildDivineClientHeaders(appVersion: _appVersion),
+          'Authorization': token.authorizationHeader,
+        });
+        transportOwnsSnapshot = true;
+        response = await _request(
+          () async {
+            try {
+              return await _client
+                  .send(upload.request)
+                  .then(http.Response.fromStream);
+            } finally {
+              await upload.dispose();
+            }
+          },
+          timeout: _uploadTimeout,
+        );
+      } finally {
+        if (!transportOwnsSnapshot) await upload.dispose();
+      }
 
       if (response.statusCode == 200 ||
           response.statusCode == 201 ||
