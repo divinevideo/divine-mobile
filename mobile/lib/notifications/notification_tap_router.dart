@@ -22,7 +22,7 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/firebase_initialization.dart';
 import 'package:openvine/services/notification_helpers.dart'
-    show NotificationWireValues, localNotificationTapPayload;
+    show NotificationWireValues, localNotificationTapPayload, parseFcmPayload;
 import 'package:openvine/services/notification_target_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -275,6 +275,36 @@ Future<void> routeNotificationTap({
         );
       }
   }
+}
+
+/// Routes a push the user tapped while the app was in the background.
+///
+/// [liveContainer] is resolved when the tap arrives, not when the listener
+/// was registered: the listener lives for the whole process, while an
+/// in-place account switch replaces and disposes the container the app
+/// started with (#9764). A payload with no tap target is ignored.
+Future<void> routeBackgroundPushTap(
+  Map<String, dynamic> data, {
+  required ProviderContainer Function() liveContainer,
+}) async {
+  final parsed = parseFcmPayload(data);
+  if (parsed == null) return;
+  Log.info(
+    'Push notification tapped (background) (type: '
+    '${parsed.notificationType})',
+    name: 'main',
+    category: LogCategory.system,
+  );
+  await routeNotificationTap(
+    referencedAddress: parsed.referencedAddress,
+    referencedEventId: parsed.referencedEventId,
+    eventId: parsed.eventId,
+    notificationType: parsed.notificationType,
+    senderPubkey: parsed.senderPubkey,
+    tapTargetType: parsed.tapTargetType,
+    tapTargetValue: parsed.tapTargetValue,
+    container: liveContainer(),
+  );
 }
 
 /// Resolves [targetEventId] to a root video and pushes a video [DeepLink].
