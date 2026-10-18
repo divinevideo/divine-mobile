@@ -78,10 +78,11 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
   Future<void> loadMore() async {
     final pager = _pager;
     if (pager == null || state.isLoadingMore || !state.hasMore) return;
+    final generation = _loadGeneration;
     emit(state.copyWith(isLoadingMore: true));
     try {
       final videos = await pager.loadMore();
-      if (!identical(pager, _pager)) return;
+      if (generation != _loadGeneration || !identical(pager, _pager)) return;
       emitIfOpen(
         state.copyWith(
           videos: [...state.videos, ...videos],
@@ -90,6 +91,7 @@ class BadgeVideosCubit extends Cubit<BadgeVideosState>
         ),
       );
     } catch (error, stackTrace) {
+      if (generation != _loadGeneration || !identical(pager, _pager)) return;
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(

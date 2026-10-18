@@ -506,7 +506,7 @@ void main() {
       expect(find.text(l10n.badgeDetailMissing), findsOneWidget);
     });
 
-    testWidgets('lists accepted holders with a follow control', (
+    testWidgets('lists accepted holders with a holder tile', (
       tester,
     ) async {
       when(() => repository.loadBadgeDetail(any())).thenAnswer(

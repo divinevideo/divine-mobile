@@ -1934,6 +1934,23 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   }
 
   Future<HomeFeedResult> _fetchFollowingWithBadges({String? cursor}) async {
+    final directAuthors = List<String>.of(_followRepository.followingPubkeys);
+    Future<HomeFeedResult> loadDirect() => _videosRepository.getHomeFeedVideos(
+      authors: directAuthors,
+      userPubkey: _userPubkey,
+      cursor: cursor,
+    );
+    if (_badgeAuthors == null) return loadDirect();
+    // Observe both outcomes immediately; the badge page may supersede this read.
+    final directPage = cursor == null && directAuthors.isNotEmpty
+        ? Future<HomeFeedResult>.sync(
+            loadDirect,
+          ).then<({HomeFeedResult? value, Object? error, StackTrace? stack})>(
+            (value) => (value: value, error: null, stack: null),
+            onError: (Object error, StackTrace stack) =>
+                (value: null, error: error, stack: stack),
+          )
+        : null;
     final badgeAuthors = cursor != null && _cachedBadgeAuthors != null
         ? _cachedBadgeAuthors!
         : await _loadBadgeAuthors();
@@ -1945,10 +1962,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           _badgeVideoPager = _videosRepository.createBadgeVideoPager([
             ..._followRepository.followingPubkeys,
             ...badgeAuthors,
-          ]);
+          ], prioritizeUnseen: true);
         }
         final pager = _badgeVideoPager!;
-        final videos = await pager.loadMore(limit: 5);
+        final videos = await pager.loadMore();
         return HomeFeedResult(
           videos: videos,
           hasMore: pager.hasMore,
@@ -1973,11 +1990,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       }
     }
     _badgeVideoPager = null;
-    return _videosRepository.getHomeFeedVideos(
-      authors: _followRepository.followingPubkeys,
-      userPubkey: _userPubkey,
-      cursor: cursor,
-    );
+    if (directPage == null) return loadDirect();
+    final page = await directPage;
+    if (page.error case final error?) {
+      Error.throwWithStackTrace(error, page.stack!);
+    }
+    return page.value!;
   }
 
   /// Subscribed badge holders, falling back only when direct follows exist.

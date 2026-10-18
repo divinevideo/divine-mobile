@@ -110,11 +110,15 @@ void main() {
         setUp: () {
           when(
             () => badgeRepository.loadAcceptedHolders(_coordinate),
-          ).thenThrow(StateError('Badge holders could not be fully loaded'));
+          ).thenThrow(
+            const BadgeReadIncompleteException(
+              'Badge holders could not be fully loaded',
+            ),
+          );
         },
         build: buildCubit,
         act: (cubit) => cubit.load(),
-        errors: () => [isA<StateError>()],
+        errors: () => [isA<BadgeReadIncompleteException>()],
         expect: () => const [
           BadgeVideosState(status: BadgeVideosStatus.loading),
           BadgeVideosState(status: BadgeVideosStatus.failure),
@@ -123,6 +127,30 @@ void main() {
     });
 
     group('loadMore', () {
+      test('replacement ignores an obsolete pager failure', () async {
+        final pending = Completer<List<VideoEvent>>();
+        var loads = 0;
+        when(pager.loadMore).thenAnswer((_) async {
+          if (loads++ == 0) return [_video('old')];
+          return pending.future;
+        });
+        when(() => pager.hasMore).thenReturn(true);
+        final replacement = _MockBadgeVideoPager();
+        when(replacement.loadMore).thenAnswer((_) async => [_video('new')]);
+        when(() => replacement.hasMore).thenReturn(false);
+        when(() => videosRepository.createBadgeVideoPager({'new-holder'}))
+            .thenReturn(replacement);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        await cubit.loadForHolders({'holder'});
+        final loadMore = cubit.loadMore();
+        await cubit.loadForHolders({'new-holder'});
+        pending.completeError(Exception('old request failed'));
+        await loadMore;
+        expect(cubit.state.videos.map((v) => v.id), ['new']);
+        expect(cubit.state.loadMoreFailures, 0);
+      });
+
       blocTest<BadgeVideosCubit, BadgeVideosState>(
         'appends the next page',
         setUp: () {
