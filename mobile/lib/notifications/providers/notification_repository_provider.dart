@@ -46,6 +46,8 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
     httpClient: httpClient,
     appVersion: ref.watch(appVersionProvider),
   );
+  // The close aborts any request in flight; disposing stops it retrying.
+  ref.onDispose(funnelcakeApiClient.dispose);
   final db = ref.watch(databaseProvider);
   final authService = ref.watch(authServiceProvider);
   final userPubkey = authService.currentPublicKeyHex ?? '';
