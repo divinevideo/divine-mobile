@@ -304,6 +304,14 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 26 && to >= 26) {
+        // Upgrades skip beforeOpen recovery. Preserve v25's repair behavior
+        // when its cached column or independent dismissal store was lost.
+        await _addColumnIfMissing(
+          'conversations',
+          'is_dismissed',
+          'INTEGER NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1))',
+        );
+        await _repairConversationDismissals();
         await _addColumnIfMissing(
           'conversations',
           'last_message_created_at',

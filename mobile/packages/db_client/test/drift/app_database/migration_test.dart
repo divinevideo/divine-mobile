@@ -161,6 +161,35 @@ void main() {
       },
     );
 
+    test('v25 repairs a missing dismissal store during its upgrade', () async {
+      final schema = await verifier.schemaAt(25);
+      final owner = 'a' * 64;
+      final conversationId = 'c' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+        'last_message_timestamp, owner_pubkey, is_read, is_dismissed) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [conversationId, '["$owner"]', 100, 200, owner, 1, 1],
+      );
+      schema.rawDatabase.execute('DROP TABLE conversation_dismissals');
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 26);
+
+      final marker = await db.select(db.conversationDismissals).getSingle();
+      expect(marker.ownerPubkey, owner);
+      expect(marker.conversationId, conversationId);
+      expect(marker.boundaryTimestamp, 200);
+      expect(
+        (await db.conversationsDao.getConversation(
+          conversationId,
+          ownerPubkey: owner,
+        ))!.isDismissed,
+        isTrue,
+      );
+    });
+
     test('v23 gains account-scoped sound request workflow state', () async {
       final schema = await verifier.schemaAt(23);
       final db = AppDatabase(schema.newConnection());

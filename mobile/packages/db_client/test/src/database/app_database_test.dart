@@ -104,6 +104,61 @@ void main() {
     });
 
     group('conversation dismissal schema recovery', () {
+      test('repairs the v26 preview column without losing dismissal', () async {
+        final id = '8' * 64;
+        await database.conversationsDao.upsertConversation(
+          id: id,
+          participantPubkeys: '["$testPubkey","$testPubkey2"]',
+          isGroup: false,
+          createdAt: 100,
+          lastMessageTimestamp: 200,
+          ownerPubkey: testPubkey,
+        );
+        await database.conversationsDao.setDismissed(
+          id,
+          ownerPubkey: testPubkey,
+          dismissed: true,
+        );
+        await database.soundRequestStateDao.writeAccount(testPubkey, {
+          'jobs': {'pending': '{}'},
+        });
+        await database.customStatement(
+          'ALTER TABLE conversations DROP COLUMN last_message_created_at',
+        );
+        await database.close();
+        database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+
+        final row = (await database.conversationsDao.getConversation(
+          id,
+          ownerPubkey: testPubkey,
+        ))!;
+        expect(row.isDismissed, isTrue);
+        expect(row.isRead, isTrue);
+        expect(row.lastReadTimestamp, 200);
+        expect(row.lastMessageCreatedAt, isNull);
+        final marker = await database
+            .select(database.conversationDismissals)
+            .getSingle();
+        expect(marker.ownerPubkey, testPubkey);
+        expect(marker.boundaryTimestamp, 200);
+        expect(
+          await database.soundRequestStateDao.readAccount(testPubkey),
+          hasLength(1),
+        );
+        await database.customStatement(
+          'UPDATE conversations SET last_message_created_at = 205 '
+          'WHERE id = ?',
+          [id],
+        );
+        expect(
+          (await database.conversationsDao.getConversation(
+            id,
+            ownerPubkey: testPubkey,
+          ))!.lastMessageCreatedAt,
+          205,
+        );
+      });
+
       test(
         'backfills retained state when an earlier v24 lacks its table',
         () async {
