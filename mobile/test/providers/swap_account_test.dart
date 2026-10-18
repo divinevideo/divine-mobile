@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
@@ -41,6 +43,20 @@ class _MockPushNotificationSessionCoordinator extends Mock
     implements PushNotificationSessionCoordinator {}
 
 class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockCuratedListService extends Mock implements CuratedListService {}
+
+class _FakeCuratedListsState extends CuratedListsState {
+  _FakeCuratedListsState(this._fakeService);
+
+  final CuratedListService _fakeService;
+
+  @override
+  CuratedListService? get service => _fakeService;
+
+  @override
+  Future<List<CuratedList>> build() async => const [];
+}
 
 bool _isDisposed(ProviderContainer c) {
   try {
@@ -968,6 +984,75 @@ void main() {
       // A rollback that cannot restore the keys still owes the user the DMs it
       // took away, so the resume cannot sit behind a restore that throws.
       expect(events, equals(['stop dm ingest', 'resume dm ingest']));
+    });
+  });
+
+  // The incoming sign-in clears the device-wide curated_lists key, and the
+  // leaving container is disposed only after the swap commits — after push
+  // deregistration, which can take seconds. The leaving account's list service
+  // must not save into the cleared key in between. See #10288.
+  group('outgoing curated lists (#10288)', () {
+    late _MockCuratedListService listService;
+    late List<String> events;
+
+    setUp(() {
+      listService = _MockCuratedListService();
+      events = <String>[];
+      when(listService.suspend).thenAnswer((_) => events.add('suspend lists'));
+      when(listService.resume).thenAnswer((_) => events.add('resume lists'));
+    });
+
+    Future<void> pumpLeavingHost(WidgetTester tester) async {
+      final leaving = await pumpHost(
+        tester,
+        accountOverrides: [
+          curatedListsStateProvider.overrideWith(
+            () => _FakeCuratedListsState(listService),
+          ),
+        ],
+      );
+      // Mounted by the home feed in production.
+      leaving.listen(curatedListsStateProvider, (_, _) {});
+      await tester.pump();
+    }
+
+    testWidgets('suspends the leaving account lists before signing the '
+        'target in', (tester) async {
+      await pumpLeavingHost(tester);
+
+      await swapAccount(
+        deviceScope: deviceScope,
+        controller: controller,
+        currentAuthService: currentAuthService,
+        account: account,
+        // Stands in for AuthService._setupUserSession, whose
+        // clearUserSpecificData clears the shared curated_lists key.
+        signIn: (_, _) async => events.add('sign in target'),
+      );
+      await tester.pump();
+
+      expect(events, equals(['suspend lists', 'sign in target']));
+    });
+
+    testWidgets('resumes the lists when the target sign-in fails', (
+      tester,
+    ) async {
+      await pumpLeavingHost(tester);
+
+      await expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => throw _FakeSignInException(),
+        ),
+        throwsA(isA<_FakeSignInException>()),
+      );
+      await tester.pump();
+
+      // The leaving account stays signed in on a rollback.
+      expect(events, equals(['suspend lists', 'resume lists']));
     });
   });
 }

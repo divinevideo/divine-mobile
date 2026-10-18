@@ -15,7 +15,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -92,6 +91,19 @@ class CuratedListService extends ChangeNotifier {
   // Track relay sync status
   bool _hasSyncedWithRelays = false;
 
+  /// Set by [dispose]. The service belongs to one account's container, and an
+  /// account switch disposes that container while its work is still in flight.
+  bool _isDisposed = false;
+
+  /// Set by [suspend] while another account signs in on this device.
+  bool _isSuspended = false;
+
+  /// Nothing this service reads or holds may be saved or published.
+  bool get _isStopped => _isDisposed || _isSuspended;
+
+  /// One per relay sync in progress; completing it ends that sync.
+  final Set<Completer<void>> _relaySyncCancels = {};
+
   // Mutations to one addressable list must publish in the same order they are
   // applied locally. In particular, an item add cannot overtake a public to
   // private transition and put the new item back into plaintext relay tags.
@@ -115,6 +127,44 @@ class CuratedListService extends ChangeNotifier {
         final _ = _listOperationTails.remove(listId);
       }
     }
+  }
+
+  /// Abandons a relay sync still in flight.
+  ///
+  /// Disposing the account's `NostrClient` closes the sync's subscription, and
+  /// a closed stream reads as a completed sync. By then the next account's
+  /// sign-in has cleared the lists key, so finishing the sync would save this
+  /// account's lists into it and back up lists with a disposed signer (#10288).
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _cancelRelaySyncs();
+    super.dispose();
+  }
+
+  /// Stops saving and publishing while another account signs in.
+  ///
+  /// That sign-in clears the device-wide lists key before this account's
+  /// container is disposed, so anything saved in between would hand this
+  /// account's lists to the next one. [resume] undoes it if the switch fails.
+  void suspend() {
+    _isSuspended = true;
+    _cancelRelaySyncs();
+  }
+
+  void resume() => _isSuspended = false;
+
+  void _cancelRelaySyncs() {
+    for (final cancel in _relaySyncCancels) {
+      if (!cancel.isCompleted) cancel.complete();
+    }
+  }
+
+  /// Work that finishes after [dispose] has no listeners left to tell.
+  @override
+  void notifyListeners() {
+    if (_isDisposed) return;
+    super.notifyListeners();
   }
 
   // Getters
@@ -759,7 +809,7 @@ class CuratedListService extends ChangeNotifier {
       // the local list so relay sync never sees an unprotected absence.
       await _recordListDeletion(list.pubkey!, listId);
       await _removeListAndSubscription(listId);
-      if (listId == defaultListId) {
+      if (listId == defaultListId && !_isStopped) {
         await _prefs.setBool(defaultListDeletedStorageKey, true);
       }
 
@@ -1224,6 +1274,7 @@ class CuratedListService extends ChangeNotifier {
     CuratedList list, {
     bool confirmed = false,
   }) async {
+    if (_isStopped) return false;
     try {
       if (!_authService.isAuthenticated) {
         Log.warning(
@@ -1385,6 +1436,9 @@ class CuratedListService extends ChangeNotifier {
 
   /// Save lists to local storage
   Future<void> _saveLists() async {
+    // The lists key is shared by every account on the device; a stopped
+    // service's lists belong to the account that is leaving.
+    if (_isStopped) return;
     try {
       notifyListeners();
       final listsJson = _lists.map((list) => list.toJson()).toList();
@@ -1400,6 +1454,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Save subscribed list IDs to local storage
   Future<void> _saveSubscribedListIds() async {
+    if (_isStopped) return;
     try {
       notifyListeners();
       final subscribedJson = _subscribedListIds.toList();
@@ -1427,6 +1482,7 @@ class CuratedListService extends ChangeNotifier {
   /// pull-to-refresh passes: without it a list created on another device only
   /// appears after the app restarts.
   Future<void> fetchUserListsFromRelays({bool force = false}) async {
+    if (_isStopped) return;
     if (!_authService.isAuthenticated) {
       Log.warning(
         'Cannot fetch lists from relays - user not authenticated',
@@ -1454,73 +1510,15 @@ class CuratedListService extends ChangeNotifier {
       category: LogCategory.system,
     );
 
-    StreamSubscription<Event>? relaySubscription;
-    Timer? timeoutTimer;
+    final cancel = Completer<void>();
+    _relaySyncCancels.add(cancel);
     try {
-      final completer = Completer<bool>();
-      final receivedEvents = <Event>[];
-
-      // Subscribe to user's own Kind 30005 events (NIP-51 curated lists)
-      final filter = Filter(
-        authors: [userPubkey],
-        kinds: [30005], // NIP-51 curated lists
-      );
-      Log.debug(
-        '📋 Subscribing with filter: authors=[${pubkeyForLogs(userPubkey)}], kinds=[30005]',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-      final subscription = _nostrService.subscribe([filter]);
-
-      // Set a timeout for the subscription
-      timeoutTimer = Timer(_relaySyncTimeout, () {
-        Log.debug(
-          'Relay sync timeout reached, processing received events',
-          name: 'CuratedListService',
-          category: LogCategory.system,
-        );
-        if (!completer.isCompleted) {
-          final activeSubscription = relaySubscription;
-          relaySubscription = null;
-          unawaited(activeSubscription?.cancel());
-          completer.complete(false);
-        }
-      });
-
-      relaySubscription = subscription.listen(
-        (event) {
-          receivedEvents.add(event);
-          Log.debug(
-            'Received list event from relay: ${event.id}',
-            name: 'CuratedListService',
-            category: LogCategory.system,
+      final (events: receivedEvents, :completedNormally) = await _relayGateway
+          .readOwnedLists(
+            userPubkey,
+            timeout: _relaySyncTimeout,
+            cancelled: cancel.future,
           );
-        },
-        onDone: () {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(true);
-          }
-        },
-        onError: (error) {
-          Log.error(
-            'Error fetching lists from relay: $error',
-            name: 'CuratedListService',
-            category: LogCategory.system,
-          );
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(false);
-          }
-        },
-        cancelOnError: true,
-      );
-
-      final completedNormally = await completer.future;
-      timeoutTimer.cancel();
-      final activeSubscription = relaySubscription;
-      relaySubscription = null;
-      await activeSubscription?.cancel();
 
       Log.info(
         '📋 Received ${receivedEvents.length} raw list events from relays',
@@ -1560,8 +1558,7 @@ class CuratedListService extends ChangeNotifier {
         category: LogCategory.system,
       );
     } finally {
-      timeoutTimer?.cancel();
-      await relaySubscription?.cancel();
+      _relaySyncCancels.remove(cancel);
     }
   }
 
@@ -1590,6 +1587,7 @@ class CuratedListService extends ChangeNotifier {
 
     // Process each unique list
     for (final event in eventsByDTag.values) {
+      if (_isStopped) return;
       await _processListEvent(event);
     }
 

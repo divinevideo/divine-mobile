@@ -14,6 +14,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -68,6 +69,19 @@ Future<void> _resumeOutgoingDmIngest(ProviderContainer? outgoing) async {
       name: 'swapAccount',
     );
   }
+}
+
+/// Stops the outgoing account's curated lists from saving before the incoming
+/// sign-in clears the device-wide lists key.
+///
+/// The outgoing container is disposed only after the swap commits, behind push
+/// deregistration, so its list sync can still finish in between and save this
+/// account's lists into the key the next account reads (#10288).
+CuratedListService? _suspendOutgoingCuratedLists(ProviderContainer? outgoing) {
+  if (outgoing == null || !outgoing.exists(curatedListsStateProvider)) {
+    return null;
+  }
+  return outgoing.read(curatedListsStateProvider.notifier).service?..suspend();
 }
 
 Future<void> _defaultSignIn(
@@ -222,11 +236,13 @@ Future<void> swapAccount({
     final keyStorage = container.read(secureKeyStorageProvider);
     SecureKeyContainer? previousPrimary;
     var outgoingDmIngestQuiesced = false;
+    CuratedListService? suspendedOutgoingLists;
     try {
       previousPrimary = await keyStorage.getKeyContainer();
       // Before sign-in, because sign-in is what runs the identity-change
       // cleanup that wipes the shared DM tables. See #7318.
       outgoingDmIngestQuiesced = await _quiesceOutgoingDmIngest(current);
+      suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
       await signIn(container, account);
       await controller.swapTo(
         container,
@@ -274,6 +290,7 @@ Future<void> swapAccount({
       if (outgoingDmIngestQuiesced) {
         await _resumeOutgoingDmIngest(current);
       }
+      suspendedOutgoingLists?.resume();
       try {
         await currentAuthService.restoreSignerInfoForCurrentAccount();
         await keyStorage.restorePrimaryKeyContainer(previousPrimary);

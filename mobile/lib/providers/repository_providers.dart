@@ -586,14 +586,18 @@ class CuratedListsState extends _$CuratedListsState {
     final authService = ref.watch(authServiceProvider);
     final prefs = ref.watch(sharedPreferencesProvider);
 
-    _service = CuratedListService(
+    final service = _service = CuratedListService(
       nostrService: nostrService,
       authService: authService,
       prefs: prefs,
     );
 
     // Register dispose callback BEFORE async gap to avoid "ref already disposed" error
-    ref.onDispose(() => _service?.removeListener(_onServiceChanged));
+    ref.onDispose(
+      () => service
+        ..removeListener(_onServiceChanged)
+        ..dispose(),
+    );
 
     // Initialize the service to create default list and sync with relays
     await _service!.initialize();

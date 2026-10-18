@@ -1,14 +1,17 @@
 // ABOUTME: Unit tests for CuratedListRelayGateway, the curated-list relay edge
-// ABOUTME: Covers NIP-44 sealing guards, unseal classification, and redaction
+// ABOUTME: Covers owned-list reads, NIP-44 sealing, unsealing, and redaction
 
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
 
@@ -70,6 +73,78 @@ void main() {
         nostrService: mockNostr,
         authService: mockAuth,
       );
+    });
+
+    group('readOwnedLists', () {
+      setUpAll(() => registerFallbackValue(<Filter>[]));
+
+      test('completes normally with the events received when the relay '
+          'stream closes', () async {
+        final relay = StreamController<Event>();
+        when(() => mockNostr.subscribe(any())).thenAnswer((_) => relay.stream);
+        final event = _event(content: '', pubkey: _ownerPubkey);
+
+        final read = gateway.readOwnedLists(
+          _ownerPubkey,
+          timeout: const Duration(hours: 1),
+          cancelled: Completer<void>().future,
+        );
+        relay.add(event);
+        await relay.close();
+
+        final result = await read;
+        expect(result.completedNormally, isTrue);
+        expect(result.events, [same(event)]);
+      });
+
+      test('reports an incomplete read and stops listening when the '
+          'timeout fires first', () {
+        fakeAsync((async) {
+          final relay = StreamController<Event>();
+          when(
+            () => mockNostr.subscribe(any()),
+          ).thenAnswer((_) => relay.stream);
+          final event = _event(content: '', pubkey: _ownerPubkey);
+          ({List<Event> events, bool completedNormally})? result;
+
+          unawaited(
+            gateway
+                .readOwnedLists(
+                  _ownerPubkey,
+                  timeout: const Duration(seconds: 10),
+                  cancelled: Completer<void>().future,
+                )
+                .then((r) => result = r),
+          );
+          async.flushMicrotasks();
+          relay.add(event);
+          async
+            ..elapse(const Duration(seconds: 10))
+            ..flushMicrotasks();
+
+          expect(result?.completedNormally, isFalse);
+          expect(result?.events, [same(event)]);
+          expect(relay.hasListener, isFalse);
+        });
+      });
+
+      test('ends as incomplete as soon as it is cancelled', () async {
+        final relay = StreamController<Event>();
+        when(() => mockNostr.subscribe(any())).thenAnswer((_) => relay.stream);
+        final cancel = Completer<void>();
+
+        final read = gateway.readOwnedLists(
+          _ownerPubkey,
+          timeout: const Duration(hours: 1),
+          cancelled: cancel.future,
+        );
+        await pumpEventQueue();
+        cancel.complete();
+
+        final result = await read;
+        expect(result.completedNormally, isFalse);
+        expect(relay.hasListener, isFalse);
+      });
     });
 
     group('sealItemTags', () {
