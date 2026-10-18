@@ -13626,10 +13626,13 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, Peribadi, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Peribadi, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 
