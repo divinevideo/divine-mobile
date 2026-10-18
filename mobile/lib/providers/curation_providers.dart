@@ -33,11 +33,14 @@ FunnelcakeApiClient funnelcakeApiClient(Ref ref) {
   // its own dispose() would have done has to happen here instead.
   final httpClient = ref.watch(instrumentedHttpClientFactoryProvider)();
   ref.onDispose(httpClient.close);
-  return FunnelcakeApiClient(
+  final client = FunnelcakeApiClient(
     baseUrl: baseUrl,
     httpClient: httpClient,
     appVersion: ref.watch(appVersionProvider),
   );
+  // The close aborts any request in flight; disposing stops it retrying.
+  ref.onDispose(client.dispose);
+  return client;
 }
 
 /// Single source of truth for Funnelcake REST API availability.

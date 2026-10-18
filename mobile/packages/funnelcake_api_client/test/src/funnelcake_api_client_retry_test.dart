@@ -182,5 +182,62 @@ void main() {
       expect(await bounded.getVideoEvent(eventId), isNotNull);
       expect(attempts, equals(2));
     });
+
+    // The app closes the injected client when the client's owner is torn
+    // down, which aborts the request in flight (#10291).
+    group('after dispose', () {
+      late int attempts;
+      late Completer<http.Response> firstAttempt;
+
+      setUp(() {
+        attempts = 0;
+        firstAttempt = Completer<http.Response>();
+        when(
+          () => httpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) {
+          attempts++;
+          if (attempts == 1) return firstAttempt.future;
+          // What a closed IOClient throws, before any I/O.
+          throw http.ClientException(
+            'HTTP request failed. Client is already closed.',
+          );
+        });
+      });
+
+      test('does not re-send a GET that dispose cut off', () async {
+        final fetching = client.getVideoEvent(eventId);
+        await pumpEventQueue();
+        expect(attempts, equals(1));
+
+        client.dispose();
+        firstAttempt.completeError(
+          http.ClientException('Connection closed while receiving data'),
+        );
+
+        // The caller sees why the request really ended, not a retry's
+        // complaint about the closed client.
+        await expectLater(
+          fetching,
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.message,
+              'message',
+              contains('Connection closed while receiving data'),
+            ),
+          ),
+        );
+        expect(attempts, equals(1));
+      });
+
+      test('does not send a GET started after dispose', () async {
+        client.dispose();
+
+        await expectLater(
+          client.getVideoEvent(eventId),
+          throwsA(isA<FunnelcakeException>()),
+        );
+        expect(attempts, equals(0));
+      });
+    });
   });
 }

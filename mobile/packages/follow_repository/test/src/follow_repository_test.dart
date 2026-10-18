@@ -15,6 +15,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../../../cache_sync/test/fake_cache_dao.dart';
 
@@ -1666,6 +1667,256 @@ void main() {
           () => repository.followingStream.listen((_) {}),
           returnsNormally,
         );
+      });
+
+      // An in-place account switch disposes the outgoing account's
+      // repository while its first-load REST call is still out (#10291).
+      group('while initialize is still running', () {
+        late Completer<PaginatedPubkeys> restResponse;
+        late _MockFunnelcakeApiClient funnelcakeClient;
+
+        Stream<Event> subscribeToRelays() => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          tempRelays: any(named: 'tempRelays'),
+          targetRelays: any(named: 'targetRelays'),
+          relayTypes: any(named: 'relayTypes'),
+          sendAfterAuth: any(named: 'sendAfterAuth'),
+          onEose: any(named: 'onEose'),
+        );
+
+        void useRepositoryWithRestPending() {
+          restResponse = Completer<PaginatedPubkeys>();
+          funnelcakeClient = _MockFunnelcakeApiClient();
+          when(() => funnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => funnelcakeClient.getFollowing(
+              pubkey: any(named: 'pubkey'),
+              offset: any(named: 'offset'),
+            ),
+          ).thenAnswer((_) => restResponse.future);
+          repository = FollowRepository(
+            nostrClient: mockNostrClient,
+            isCacheInitialized: () => cacheIsInitialized,
+            getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+            cacheUserEvent: cachedUserEvents.add,
+            funnelcakeApiClient: funnelcakeClient,
+            indexerRelayUrls: const [],
+          );
+        }
+
+        // A returning account has cached follows, so the REST step is
+        // skipped and the relay step comes straight after the cache reads.
+        test(
+          'dispose while the cache loads stops before the relay',
+          () async {
+            SharedPreferences.setMockInitialValues({
+              'following_list_$testCurrentUserPubkey': '["$testTargetPubkey"]',
+            });
+            repository = FollowRepository(
+              nostrClient: mockNostrClient,
+              isCacheInitialized: () => cacheIsInitialized,
+              getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+              cacheUserEvent: cachedUserEvents.add,
+              indexerRelayUrls: const [],
+            );
+
+            final initializing = repository.initialize();
+            await repository.dispose();
+            await initializing;
+
+            verifyNever(subscribeToRelays);
+          },
+        );
+
+        test('initialize after dispose does nothing', () async {
+          SharedPreferences.setMockInitialValues({
+            'following_list_$testCurrentUserPubkey': '["$testTargetPubkey"]',
+          });
+          repository = FollowRepository(
+            nostrClient: mockNostrClient,
+            isCacheInitialized: () => cacheIsInitialized,
+            getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+            cacheUserEvent: cachedUserEvents.add,
+            indexerRelayUrls: const [],
+          );
+
+          await repository.dispose();
+          await repository.initialize();
+
+          expect(repository.followingPubkeys, isEmpty);
+          verifyNever(subscribeToRelays);
+        });
+
+        test('dispose before the REST step sends no request', () async {
+          useRepositoryWithRestPending();
+          final initializing = repository.initialize();
+          await repository.dispose();
+          await initializing;
+
+          verifyNever(
+            () => funnelcakeClient.getFollowing(
+              pubkey: any(named: 'pubkey'),
+              offset: any(named: 'offset'),
+            ),
+          );
+        });
+
+        test('dispose between REST pages stops the paging', () async {
+          useRepositoryWithRestPending();
+          final initializing = repository.initialize();
+          await pumpEventQueue();
+
+          await repository.dispose();
+          restResponse.complete(
+            const PaginatedPubkeys(
+              pubkeys: [testTargetPubkey],
+              total: 2,
+              hasMore: true,
+            ),
+          );
+          await initializing;
+
+          verify(
+            () => funnelcakeClient.getFollowing(
+              pubkey: any(named: 'pubkey'),
+              offset: any(named: 'offset'),
+            ),
+          ).called(1);
+        });
+
+        test('a REST failure after dispose stops before the relay', () async {
+          await LogCaptureService().clearAllLogs();
+          useRepositoryWithRestPending();
+          final initializing = repository.initialize();
+          await pumpEventQueue();
+          verify(
+            () => funnelcakeClient.getFollowing(
+              pubkey: any(named: 'pubkey'),
+              offset: any(named: 'offset'),
+            ),
+          ).called(1);
+
+          await repository.dispose();
+          restResponse.completeError(
+            const FunnelcakeException(
+              'Failed to fetch following: ClientException: HTTP request '
+              'failed. Client is already closed.',
+            ),
+          );
+          await initializing;
+
+          verifyNever(subscribeToRelays);
+          expect(
+            LogCaptureService().getRecentLogs().where(
+              (entry) =>
+                  entry.level == LogLevel.warning &&
+                  entry.message.startsWith('Failed to load following'),
+            ),
+            isEmpty,
+          );
+        });
+
+        test(
+          'a REST answer after dispose is neither adopted nor saved',
+          () async {
+            useRepositoryWithRestPending();
+            final initializing = repository.initialize();
+            await pumpEventQueue();
+            verify(
+              () => funnelcakeClient.getFollowing(
+                pubkey: any(named: 'pubkey'),
+                offset: any(named: 'offset'),
+              ),
+            ).called(1);
+
+            await repository.dispose();
+            restResponse.complete(
+              const PaginatedPubkeys(pubkeys: [testTargetPubkey]),
+            );
+            await initializing;
+
+            expect(repository.followingPubkeys, isEmpty);
+            final prefs = await SharedPreferences.getInstance();
+            expect(
+              prefs.getString('following_list_$testCurrentUserPubkey'),
+              isNull,
+            );
+          },
+        );
+
+        test(
+          'a relay answer after dispose is neither adopted nor saved',
+          () async {
+            final relayResponse = Completer<Event?>();
+            repository = FollowRepository(
+              nostrClient: mockNostrClient,
+              isCacheInitialized: () => cacheIsInitialized,
+              getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+              cacheUserEvent: cachedUserEvents.add,
+              indexerRelayUrls: const [],
+              queryContactList:
+                  ({
+                    required eventStream,
+                    required pubkey,
+                    fallbackTimeoutSeconds = 10,
+                  }) => relayResponse.future,
+            );
+            final initializing = repository.initialize();
+            await pumpEventQueue();
+            // The relay query is out; nothing after it has run yet.
+            verify(subscribeToRelays).called(1);
+
+            await repository.dispose();
+            relayResponse.complete(
+              Event(
+                testCurrentUserPubkey,
+                3,
+                [
+                  ['p', testTargetPubkey],
+                ],
+                '',
+                createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              ),
+            );
+            await initializing;
+            await pumpEventQueue();
+
+            expect(repository.followingPubkeys, isEmpty);
+            final prefs = await SharedPreferences.getInstance();
+            expect(
+              prefs.getString('following_list_$testCurrentUserPubkey'),
+              isNull,
+            );
+          },
+        );
+
+        test('a relay answer after dispose opens no subscription', () async {
+          final relayResponse = Completer<Event?>();
+          repository = FollowRepository(
+            nostrClient: mockNostrClient,
+            isCacheInitialized: () => cacheIsInitialized,
+            getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+            cacheUserEvent: cachedUserEvents.add,
+            indexerRelayUrls: const [],
+            queryContactList:
+                ({
+                  required eventStream,
+                  required pubkey,
+                  fallbackTimeoutSeconds = 10,
+                }) => relayResponse.future,
+          );
+          final initializing = repository.initialize();
+          await pumpEventQueue();
+          // The relay query is out; nothing after it has run yet.
+          verify(subscribeToRelays).called(1);
+
+          await repository.dispose();
+          relayResponse.complete(null);
+          await initializing;
+
+          verifyNever(subscribeToRelays);
+        });
       });
     });
 

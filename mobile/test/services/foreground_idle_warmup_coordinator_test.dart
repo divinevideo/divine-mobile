@@ -492,6 +492,67 @@ void main() {
 
       expect(calls, ['forYou']);
     });
+
+    group('dispose', () {
+      // In the app the gates read through the owning provider's Ref, which
+      // throws once that provider is disposed; these gates do the same.
+      late bool ownerDisposed;
+
+      ForegroundIdleWarmupCoordinator disposableCoordinatorWith(
+        List<ForegroundIdleWarmupTask> tasks,
+      ) {
+        ownerDisposed = false;
+        bool readGate(bool value) {
+          if (ownerDisposed) throw StateError('owner disposed');
+          return value;
+        }
+
+        return ForegroundIdleWarmupCoordinator(
+          tasks: tasks,
+          isForeground: () => readGate(isForeground),
+          isIdle: () => readGate(isIdle),
+          now: () => now,
+        );
+      }
+
+      void disposeOwner(ForegroundIdleWarmupCoordinator coordinator) {
+        ownerDisposed = true;
+        coordinator.dispose();
+      }
+
+      test('ends a pass whose task fails after dispose', () async {
+        final forYou = Completer<void>();
+        final coordinator = disposableCoordinatorWith([
+          task(ForegroundIdleWarmupTaskId.forYou, run: () => forYou.future),
+          task(ForegroundIdleWarmupTaskId.popular),
+        ]);
+
+        final pass = coordinator.requestWarmup(
+          trigger: ForegroundIdleWarmupTrigger.startupSettled,
+        );
+        disposeOwner(coordinator);
+        forYou.completeError(StateError('owner disposed'));
+
+        await expectLater(
+          pass.timeout(const Duration(seconds: 5)),
+          completes,
+        );
+        expect(calls, isEmpty);
+      });
+
+      test('ignores requests made after dispose', () async {
+        final coordinator = disposableCoordinatorWith([
+          task(ForegroundIdleWarmupTaskId.forYou),
+        ]);
+        disposeOwner(coordinator);
+
+        await coordinator.requestWarmup(
+          trigger: ForegroundIdleWarmupTrigger.periodicIdleCheck,
+        );
+
+        expect(calls, isEmpty);
+      });
+    });
   });
 
   group('ForegroundIdleWarmupScheduler', () {

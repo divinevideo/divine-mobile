@@ -143,6 +143,7 @@ class FunnelcakeApiClient {
   final Duration _retryBaseDelay;
   final String _moderationProfile;
   final math.Random _retryJitter = math.Random();
+  bool _isDisposed = false;
 
   /// Whether the API is available (has a non-empty base URL).
   bool get isAvailable => _baseUrl.isNotEmpty;
@@ -174,6 +175,14 @@ class FunnelcakeApiClient {
 
     var attempt = 0;
     while (true) {
+      // An injected client is closed by its owner, not by [dispose], so
+      // refuse here rather than send on a client that may already be closed.
+      if (_isDisposed) {
+        throw http.ClientException(
+          'HTTP request failed. FunnelcakeApiClient was disposed.',
+          uri,
+        );
+      }
       attempt++;
       try {
         final response = await _httpClient
@@ -210,8 +219,11 @@ class FunnelcakeApiClient {
 
   /// Whether another GET attempt is allowed after [attempt] failed, with
   /// [remaining] left of the call's timeout budget.
+  ///
+  /// Never after [dispose]: closing the client aborts the attempt in flight,
+  /// and that failure is not a flaky link worth retrying (#10291).
   bool _canRetry(int attempt, Duration remaining) =>
-      attempt < maxGetAttempts && remaining > Duration.zero;
+      !_isDisposed && attempt < maxGetAttempts && remaining > Duration.zero;
 
   /// Whether [statusCode] represents a failure the server may recover from.
   bool _isRetryableStatus(int statusCode) =>
@@ -3040,8 +3052,12 @@ class FunnelcakeApiClient {
     }
   }
 
-  /// Disposes of the HTTP client if it was created internally.
+  /// Stops all further GET attempts, and closes the HTTP client if it was
+  /// created internally.
+  ///
+  /// The owner of an injected client still closes that client itself.
   void dispose() {
+    _isDisposed = true;
     if (_ownsHttpClient) {
       _httpClient.close();
     }

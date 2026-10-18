@@ -160,6 +160,17 @@ class ForegroundIdleWarmupCoordinator {
   final Map<ForegroundIdleWarmupTaskId, DateTime> _lastSuccessAt = {};
   Future<void>? _inFlight;
   Future<void>? _abandonedTaskRun;
+  bool _isDisposed = false;
+
+  /// Stops this coordinator for good.
+  ///
+  /// A pass still waiting on a task ends when that task settles or times out,
+  /// without consulting the gates again: they and the tasks read through the
+  /// owning provider's Ref, which throws once that provider is disposed
+  /// (#10291).
+  void dispose() {
+    _isDisposed = true;
+  }
 
   /// Requests a best-effort warmup pass.
   ///
@@ -173,6 +184,8 @@ class ForegroundIdleWarmupCoordinator {
   /// instead of starting an overlapping pass, so warmups can never contend
   /// with each other.
   Future<void> requestWarmup({required ForegroundIdleWarmupTrigger trigger}) {
+    if (_isDisposed) return Future<void>.value();
+
     final inFlight = _inFlight;
     if (inFlight != null) {
       Log.debug(
@@ -211,7 +224,9 @@ class ForegroundIdleWarmupCoordinator {
     return future;
   }
 
-  bool get _canRun => _isForeground() && _isIdle();
+  // Checked first: a gate event queued before dispose can still arrive, and
+  // the gates read through the owning provider's Ref, which then throws.
+  bool get _canRun => !_isDisposed && _isForeground() && _isIdle();
 
   Future<void> _run(ForegroundIdleWarmupTrigger trigger) async {
     Log.debug(
@@ -254,6 +269,10 @@ class ForegroundIdleWarmupCoordinator {
           category: LogCategory.system,
         );
         final (outcome, run) = await _runTask(task);
+        if (_isDisposed) {
+          _logAbandonedAfterDispose(task, trigger);
+          return;
+        }
         switch (outcome) {
           case _ForegroundIdleWarmupTaskOutcome.completed:
             _lastSuccessAt[task.id] = _now();
@@ -283,6 +302,10 @@ class ForegroundIdleWarmupCoordinator {
             return;
         }
       } catch (error) {
+        if (_isDisposed) {
+          _logAbandonedAfterDispose(task, trigger);
+          return;
+        }
         Log.warning(
           'Foreground idle warmup failed '
           '(${task.id.name}, ${trigger.name}): $error',
@@ -325,6 +348,18 @@ class ForegroundIdleWarmupCoordinator {
     } finally {
       await gateSubscription?.cancel();
     }
+  }
+
+  void _logAbandonedAfterDispose(
+    ForegroundIdleWarmupTask task,
+    ForegroundIdleWarmupTrigger trigger,
+  ) {
+    Log.debug(
+      'Foreground idle warmup abandoned after ${task.id.name} '
+      '(${trigger.name}): coordinator disposed',
+      name: 'ForegroundIdleWarmupCoordinator',
+      category: LogCategory.system,
+    );
   }
 
   /// Keeps a still-running task accounted for after its pass stopped waiting

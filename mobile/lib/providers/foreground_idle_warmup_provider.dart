@@ -69,7 +69,7 @@ final foregroundFeedActivityGateProvider = Provider<ForegroundFeedActivityGate>(
 final foregroundIdleWarmupCoordinatorProvider =
     Provider<ForegroundIdleWarmupCoordinator>((ref) {
       final activityGate = ref.watch(foregroundFeedActivityGateProvider);
-      return ForegroundIdleWarmupCoordinator(
+      final coordinator = ForegroundIdleWarmupCoordinator(
         isForeground: () => ref.read(appForegroundProvider),
         isIdle: () => activityGate.isIdle,
         gateChanges: activityGate.changes,
@@ -113,6 +113,8 @@ final foregroundIdleWarmupCoordinatorProvider =
           ),
         ],
       );
+      ref.onDispose(coordinator.dispose);
+      return coordinator;
     });
 
 /// Starts the foreground-idle warmup schedule for the app shell.
