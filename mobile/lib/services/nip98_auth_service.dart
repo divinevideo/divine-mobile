@@ -155,10 +155,13 @@ class Nip98AuthService {
   /// Before learning server time, slow clocks can expire tokens and fast
   /// clocks can exceed the server's future-skew allowance. The HTTP transport
   /// corrects either rejection and passes `reuseCached: false` on its retry.
+  /// [payloadHash] accepts a precomputed SHA-256 of a binary/streamed body.
+  /// Supply either [payload] or [payloadHash], never both.
   Future<Nip98Token?> createAuthToken({
     required String url,
     required HttpMethod method,
     String? payload,
+    String? payloadHash,
     bool reuseCached = true,
   }) async {
     if (!_authService.isAuthenticated) {
@@ -171,6 +174,16 @@ class Nip98AuthService {
     }
 
     try {
+      if (payloadHash != null &&
+          (payload != null ||
+              !RegExp(r'^[0-9a-f]{64}$').hasMatch(payloadHash) ||
+              (method != HttpMethod.post &&
+                  method != HttpMethod.put &&
+                  method != HttpMethod.patch))) {
+        throw const Nip98AuthException('Invalid precomputed payload hash');
+      }
+      final bodyHash =
+          payloadHash ?? sha256.convert(utf8.encode(payload ?? '')).toString();
       _invalidateOffsetsAfterClockJump();
       final owner = _authService.currentPublicKeyHex;
       if (_cacheOwner != owner) {
@@ -187,7 +200,7 @@ class Nip98AuthService {
       }
       final origin = uri.origin;
       // Create cache key for this request
-      final cacheKey = _createCacheKey(url, method, payload);
+      final cacheKey = _createCacheKey(url, method, bodyHash);
 
       // Check cache first
       final cachedToken = reuseCached && !_disposed
@@ -224,7 +237,7 @@ class Nip98AuthService {
         authEvent = await _createAuthEvent(
           url: normalizedUrl,
           method: method,
-          payload: payload,
+          payloadHash: bodyHash,
         );
         _invalidateOffsetsAfterClockJump();
         if (!_authService.isAuthenticated ||
@@ -287,7 +300,7 @@ class Nip98AuthService {
   Future<Event?> _createAuthEvent({
     required String url,
     required HttpMethod method,
-    String? payload,
+    required String payloadHash,
   }) async {
     try {
       final timestamp = _timestamp(url);
@@ -304,9 +317,7 @@ class Nip98AuthService {
       if (method == HttpMethod.post ||
           method == HttpMethod.put ||
           method == HttpMethod.patch) {
-        final payloadBytes = utf8.encode(payload ?? '');
-        final payloadHash = sha256.convert(payloadBytes);
-        tags.add(['payload', payloadHash.toString()]);
+        tags.add(['payload', payloadHash]);
       }
 
       // Create the event

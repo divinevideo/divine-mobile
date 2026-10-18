@@ -16,8 +16,13 @@
 >   relay-manager route and its request-signing contract ship.
 > - Submission runs in `MinorConsentSubmitCubit`; the widget only renders its
 >   state.
-> - The upload sends no body digest. The NIP-98 token signs the URL and method,
->   and its `payload` tag is the hash of an empty body.
+> - The upload freezes and hashes the exact multipart bytes before signing.
+>   `Nip98AuthService.createAuthToken(payloadHash: ...)` signs the precomputed
+>   digest without hashing its text again. Relay-manager verifies the complete
+>   stream before completing the private object. This supersedes the original
+>   upload sketch below, which hashed only the video and then its hash text.
+> - A controlled device walkthrough of submission, private reviewer playback,
+>   and approval restoring access remains a prerequisite for approval.
 > - The only cap is the 60-second length. There is no client size cap. At the
 >   camera's default 1080p and 8 Mbps, a full clip is about 60 MB, so
 >   "oversize cannot occur" does not hold.
