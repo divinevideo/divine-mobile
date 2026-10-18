@@ -494,9 +494,35 @@ void main() {
     });
 
     group('dispose', () {
+      // In the app the gates read through the owning provider's Ref, which
+      // throws once that provider is disposed; these gates do the same.
+      late bool ownerDisposed;
+
+      ForegroundIdleWarmupCoordinator disposableCoordinatorWith(
+        List<ForegroundIdleWarmupTask> tasks,
+      ) {
+        ownerDisposed = false;
+        bool readGate(bool value) {
+          if (ownerDisposed) throw StateError('owner disposed');
+          return value;
+        }
+
+        return ForegroundIdleWarmupCoordinator(
+          tasks: tasks,
+          isForeground: () => readGate(isForeground),
+          isIdle: () => readGate(isIdle),
+          now: () => now,
+        );
+      }
+
+      void disposeOwner(ForegroundIdleWarmupCoordinator coordinator) {
+        ownerDisposed = true;
+        coordinator.dispose();
+      }
+
       test('ends a pass whose task fails after dispose', () async {
         final forYou = Completer<void>();
-        final coordinator = coordinatorWith([
+        final coordinator = disposableCoordinatorWith([
           task(ForegroundIdleWarmupTaskId.forYou, run: () => forYou.future),
           task(ForegroundIdleWarmupTaskId.popular),
         ]);
@@ -504,7 +530,7 @@ void main() {
         final pass = coordinator.requestWarmup(
           trigger: ForegroundIdleWarmupTrigger.startupSettled,
         );
-        coordinator.dispose();
+        disposeOwner(coordinator);
         forYou.completeError(StateError('owner disposed'));
 
         await expectLater(
@@ -515,9 +541,10 @@ void main() {
       });
 
       test('ignores requests made after dispose', () async {
-        final coordinator = coordinatorWith([
+        final coordinator = disposableCoordinatorWith([
           task(ForegroundIdleWarmupTaskId.forYou),
-        ])..dispose();
+        ]);
+        disposeOwner(coordinator);
 
         await coordinator.requestWarmup(
           trigger: ForegroundIdleWarmupTrigger.periodicIdleCheck,

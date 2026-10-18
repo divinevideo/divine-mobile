@@ -149,6 +149,34 @@ void main() {
       },
     );
 
+    test(
+      'an activity event queued before disposal does not read the provider',
+      () async {
+        _newVideosBuildGate = Completer<void>();
+        final container = createContainer(newVideosGated: true);
+        await container.read(funnelcakeAvailableProvider.future);
+
+        final pass = container
+            .read(foregroundIdleWarmupCoordinatorProvider)
+            .requestWarmup(trigger: ForegroundIdleWarmupTrigger.startupSettled);
+        await pumpEventQueue();
+        expect(_feedBuilds, ['forYou', 'newVideos']);
+
+        // The gate's stream delivers asynchronously, so this event reaches
+        // the pass's gate listener only after the container is gone.
+        container.read(foregroundFeedActivityGateProvider).markActive();
+        container.dispose();
+        await pumpEventQueue();
+        _newVideosBuildGate!.complete();
+
+        await expectLater(
+          pass.timeout(const Duration(seconds: 5)),
+          completes,
+        );
+        expect(_feedBuilds, ['forYou', 'newVideos']);
+      },
+    );
+
     test('foreground=false gates all warmup work', () async {
       final container = createContainer();
       container.read(appForegroundProvider.notifier).setForeground(false);

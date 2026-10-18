@@ -224,7 +224,9 @@ class ForegroundIdleWarmupCoordinator {
     return future;
   }
 
-  bool get _canRun => _isForeground() && _isIdle();
+  // Checked first: a gate event queued before dispose can still arrive, and
+  // the gates read through the owning provider's Ref, which then throws.
+  bool get _canRun => !_isDisposed && _isForeground() && _isIdle();
 
   Future<void> _run(ForegroundIdleWarmupTrigger trigger) async {
     Log.debug(
