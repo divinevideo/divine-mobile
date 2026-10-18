@@ -70,6 +70,64 @@ void main() {
     );
 
     group('dispose', () {
+      test(
+        'does not sign after disposal during private-list sealing',
+        () async {
+          final sealed = Completer<String?>();
+          when(
+            () => signer.nip44Encrypt(any(), any()),
+          ).thenAnswer((_) => sealed.future);
+          final service = buildService();
+          final sync = service.fetchUserListsFromRelays();
+          await pumpEventQueue();
+          await relay.close();
+          await pumpEventQueue();
+          verify(() => signer.nip44Encrypt(any(), any())).called(1);
+
+          service.dispose();
+          sealed.complete(sealForTest('[]'));
+          await sync;
+
+          verifyNever(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          );
+          verifyNever(() => client.publishEventAwaitOk(any()));
+        },
+      );
+
+      test('does not publish after disposal during signing', () async {
+        final signed = Completer<Event?>();
+        when(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) => signed.future);
+        final service = buildService();
+        final sync = service.fetchUserListsFromRelays();
+        await pumpEventQueue();
+        await relay.close();
+        await pumpEventQueue();
+        verify(
+          () => auth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).called(1);
+
+        service.dispose();
+        signed.complete(Event(_owner, 30005, const [], sealForTest('[]')));
+        await sync;
+
+        verifyNever(() => client.publishEventAwaitOk(any()));
+      });
+
       test('does not back up lists when the relay stream closes after '
           'the service is disposed', () async {
         final service = buildService();

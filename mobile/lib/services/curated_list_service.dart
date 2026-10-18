@@ -1297,7 +1297,7 @@ class CuratedListService extends ChangeNotifier {
         tags = CuratedListConverter.toEventTags(list);
       } else {
         final sealed = await _relayGateway.sealItemTags(list);
-        if (sealed == null) return false;
+        if (sealed == null || _isStopped) return false;
         content = sealed;
         tags = CuratedListConverter.toPrivateMetadataTags(list);
       }
@@ -1308,6 +1308,7 @@ class CuratedListService extends ChangeNotifier {
         tags: tags,
       );
 
+      if (_isStopped) return false;
       if (event == null) {
         Log.warning(
           'Failed to sign curated list event: ${list.name} (${list.id})',
