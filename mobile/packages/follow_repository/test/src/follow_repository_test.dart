@@ -4130,6 +4130,90 @@ void main() {
       });
     });
 
+    // At cold start the provider calls initialize() on creation and again
+    // when the session becomes ready, while the first load is still running.
+    group('initialize called again (#10291)', () {
+      late _MockFunnelcakeApiClient funnelcake;
+      late Completer<PaginatedPubkeys> page;
+      late int relayQueries;
+
+      setUp(() {
+        funnelcake = _MockFunnelcakeApiClient();
+        page = Completer<PaginatedPubkeys>();
+        relayQueries = 0;
+        when(() => funnelcake.isAvailable).thenReturn(true);
+        when(
+          () => funnelcake.getFollowing(
+            pubkey: any(named: 'pubkey'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) => page.future);
+        repository = FollowRepository(
+          nostrClient: mockNostrClient,
+          isCacheInitialized: () => cacheIsInitialized,
+          getCachedEventsByKind: (kind) => getCachedEventsByKind(kind),
+          cacheUserEvent: cachedUserEvents.add,
+          funnelcakeApiClient: funnelcake,
+          indexerRelayUrls: const [],
+          queryContactList:
+              ({
+                required eventStream,
+                required pubkey,
+                fallbackTimeoutSeconds = 10,
+              }) async {
+                relayQueries++;
+                return null;
+              },
+        );
+      });
+
+      test('while the first is loading waits for it instead of loading '
+          'everything a second time', () async {
+        final first = repository.initialize();
+        await pumpEventQueue();
+        var secondDone = false;
+        final second = repository.initialize().then((_) => secondDone = true);
+        await pumpEventQueue();
+        expect(secondDone, isFalse);
+
+        page.complete(const PaginatedPubkeys(pubkeys: [testTargetPubkey]));
+        await second;
+        expect(repository.isInitialized, isTrue);
+        await first;
+
+        verify(
+          () => funnelcake.getFollowing(pubkey: testCurrentUserPubkey),
+        ).called(1);
+        expect(relayQueries, 1);
+        verify(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(
+              named: 'subscriptionId',
+              that: startsWith('follow_repo_contact_list'),
+            ),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).called(1);
+      });
+
+      test('after one that skipped for missing keys loads', () async {
+        when(() => mockNostrClient.hasKeys).thenReturn(false);
+        await repository.initialize();
+        expect(repository.isInitialized, isFalse);
+
+        when(() => mockNostrClient.hasKeys).thenReturn(true);
+        page.complete(PaginatedPubkeys.empty);
+        await repository.initialize();
+
+        expect(repository.isInitialized, isTrue);
+      });
+    });
+
     group('initialization - loads from PersonalEventCache', () {
       test('loads following from PersonalEventCache', () async {
         cacheIsInitialized = true;
