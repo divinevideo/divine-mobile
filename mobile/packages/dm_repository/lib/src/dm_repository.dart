@@ -7454,6 +7454,19 @@ class DmRepository {
             );
             return;
           }
+          // A group row queued just after the user left escaped the leave,
+          // which takes queued sends with it. It goes now, and the group stays
+          // out rather than coming back unable to hear its members (#10150).
+          if (isGroupRow && await _isLeftConversation(row.conversationId)) {
+            await dao.deleteById(rumorId);
+            Log.info(
+              'Recovered publish for $rumorId landed in group '
+              '${row.conversationId}, which the user left; dropped its row '
+              'and skipped the local persist.',
+              category: LogCategory.system,
+            );
+            return;
+          }
 
           // Sibling dedup: a group send persists ONE local message for the
           // whole batch (keyed to the first confirmed sibling). When a later
@@ -8858,6 +8871,25 @@ class DmRepository {
       ];
 
       await _conversationsDao.runInTransaction(() async {
+        // A Leave that landed after the rejoin above found nothing to rejoin,
+        // but before every sibling was queued, took only the rows queued
+        // before it. The leave wins: the rest go too, and the group stays out
+        // rather than coming back unable to hear its members (#10150).
+        if (participants.length > 2 &&
+            await _isLeftConversation(conversationId)) {
+          if (outgoingDao != null) {
+            for (final queueId in queueIds) {
+              await outgoingDao.deleteById(queueId);
+            }
+          }
+          Log.info(
+            'Group publish landed after the user left conversation '
+            '$conversationId; dropped the batch and skipped the local persist.',
+            category: LogCategory.system,
+          );
+          return;
+        }
+
         // Cancel interlock (mirrors _recoverFullSendLocked, per successful
         // sibling): the user may have deleted the whole batch
         // (cancelOutgoingBatch) while the sequential per-recipient publishes

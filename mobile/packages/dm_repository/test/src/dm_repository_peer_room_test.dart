@@ -11,6 +11,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show NIP17SendResult;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
@@ -52,6 +53,22 @@ class _RemovalPinnedToSendDao extends RemovedConversationsDao {
       at: at,
       isLocalSend: isLocalSend,
     );
+  }
+}
+
+/// A send queue that runs [afterFirstEnqueue] once, right after it queues the
+/// first member's copy of a send, before the next copy is queued.
+class _QueueWithHook extends OutgoingDmsDao {
+  _QueueWithHook(super.attachedDatabase);
+
+  Future<void> Function()? afterFirstEnqueue;
+
+  @override
+  Future<void> enqueue(OutgoingDm dm) async {
+    await super.enqueue(dm);
+    final hook = afterFirstEnqueue;
+    afterFirstEnqueue = null;
+    await hook?.call();
   }
 }
 
@@ -1437,6 +1454,75 @@ void main() {
           equals([_roomId]),
         );
         expect((await tombstone())!.rejoinedAt, isNotNull);
+      });
+
+      // Leave can land after the send found nothing to rejoin and before it
+      // queued every member's copy, so the leave takes only the copies queued
+      // before it. The ones queued after must not bring the group back.
+      group('when the user leaves it while a message they wrote before is '
+          'being queued', () {
+        late _QueueWithHook queue;
+
+        /// The ids of every queued send.
+        Future<List<String>> queuedIds() async => [
+          for (final row in await db.select(db.outgoingDms).get()) row.id,
+        ];
+
+        /// Sends to the room from a repository whose queue leaves the room
+        /// right after the first member's copy is queued.
+        Future<List<NIP17SendResult>> sendLeavingMidQueue({
+          bool relaysRefuse = false,
+        }) {
+          queue = _QueueWithHook(db);
+          late final DmRepository sender;
+          sender = sendingRepository(
+            relaysRefuse: relaysRefuse,
+            outgoingDmsDao: queue,
+          );
+          queue.afterFirstEnqueue = () async => expect(
+            await sender.removeConversation(_roomId),
+            ConversationRemovalOutcome.removed,
+          );
+          return sender.sendGroupMessage(
+            recipientPubkeys: [_alice, _bob],
+            content: 'written before leaving',
+          );
+        }
+
+        test('keeps the room out when a later copy goes out', () async {
+          await joinTheRoom();
+
+          final results = await sendLeavingMidQueue();
+
+          expect(
+            results.where((result) => result.success),
+            hasLength(1),
+            reason: 'the copy queued after the leave still went out',
+          );
+          expect(await conversations(), isEmpty);
+          expect(await messageIdsIn(_roomId), isEmpty);
+          expect(await queuedIds(), isEmpty);
+          expect((await tombstone())!.rejoinedAt, isNull);
+        });
+
+        test('keeps the room out when a later copy is refused and then '
+            'resent', () async {
+          await joinTheRoom();
+          final results = await sendLeavingMidQueue(relaysRefuse: true);
+          expect(results.any((result) => result.success), isFalse);
+          final escaped = await queuedIds();
+          expect(escaped, hasLength(1));
+
+          final resent = await sendingRepository(
+            outgoingDmsDao: queue,
+          ).recoverFullSend(rumorId: escaped.single);
+
+          expect(resent.success, isTrue);
+          expect(await conversations(), isEmpty);
+          expect(await messageIdsIn(_roomId), isEmpty);
+          expect(await queuedIds(), isEmpty);
+          expect((await tombstone())!.rejoinedAt, isNull);
+        });
       });
 
       test('does not carry a member message into the one-to-one while '
