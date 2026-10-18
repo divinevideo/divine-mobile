@@ -3012,9 +3012,11 @@ class DmRepository {
           final recorded = await _recordCatchUpDebt(catchUp, capped);
           catchUp.settleCappedRelays(capped);
           if (recorded) _readCatchUpDebt(catchUp);
-          // A reconnect may have reopened the batch, or the session ended,
-          // while this waited.
-          if (!catchUp.readyToSave ||
+          // A reconnect may have reopened the batch or reported more capped
+          // debt while this waited. Keep the stamps until that debt is saved
+          // by the next commit attempt too.
+          if (catchUp.hasCappedRelays ||
+              !catchUp.readyToSave ||
               _disposed ||
               _resetGeneration != catchUp.generation ||
               _userPubkey != catchUp.owner) {

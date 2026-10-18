@@ -71,14 +71,20 @@ class _GatedDebtSyncState extends DmSyncState {
 
   final Completer<void> reached = Completer<void>();
   final Completer<void> release = Completer<void>();
+  bool refusesLaterWrites = false;
+  int writes = 0;
 
   @override
   Future<void> addCatchUpDebt(
     String pubkey,
     Iterable<DmCatchUpDebt> debts,
   ) async {
+    final write = ++writes;
     if (!reached.isCompleted) reached.complete();
     await release.future;
+    if (write > 1 && refusesLaterWrites) {
+      throw const DmCatchUpDebtNotSavedException();
+    }
     return super.addCatchUpDebt(pubkey, debts);
   }
 }
@@ -119,6 +125,7 @@ class _CappedRelay {
   final List<nostr_filter.Filter> reqFilters = [];
   final StreamController<Event> controller =
       StreamController<Event>.broadcast();
+  void Function()? onStart;
   void Function(StoredEventsEnd)? onEnd;
   int handedOver = 0;
 
@@ -293,12 +300,15 @@ void main() {
         onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
       ),
     ).thenAnswer((invocation) {
-      relay.reqFilters.addAll(
-        invocation.positionalArguments.first as List<nostr_filter.Filter>,
-      );
-      relay.onEnd =
-          invocation.namedArguments[#onStoredEventsEnd]
-              as void Function(StoredEventsEnd)?;
+      relay
+        ..reqFilters.addAll(
+          invocation.positionalArguments.first as List<nostr_filter.Filter>,
+        )
+        ..onStart =
+            invocation.namedArguments[#onStoredEventsStart] as void Function()?
+        ..onEnd =
+            invocation.namedArguments[#onStoredEventsEnd]
+                as void Function(StoredEventsEnd)?;
       return relay.controller.stream;
     });
     return client;
@@ -678,6 +688,48 @@ void main() {
 
       syncState.release.complete();
       await pumpEventQueue();
+      expect(DmSyncState(prefs).newestWireSyncedAt(_owner), newest.createdAt);
+      await repository.stopListening();
+    });
+
+    test('keeps the window held when a larger capped range arrives during '
+        'a debt write', () async {
+      final relay = _CappedRelay(stored, maxLimit: 3)..unsettledFromPage = 1;
+      final syncState = _GatedDebtSyncState(prefs)..refusesLaterWrites = true;
+      final repository = await listen(relay, syncState: syncState);
+      await syncState.reached.future.timeout(_settleTimeout);
+
+      // A later batch reports a higher top while the first record waits.
+      // Its range has not been saved when the first record succeeds.
+      void reportLargerRange() => relay.onEnd!(
+        StoredEventsEnd(
+          deliveredEventCount: relay.handedOver,
+          possiblyCappedRelays: {_relayUrl: newest.createdAt},
+        ),
+      );
+      relay.onStart!();
+      reportLargerRange();
+      syncState.release.complete();
+      for (var i = 0; i < 100 && syncState.writes < 2; i++) {
+        await pumpEventQueue();
+      }
+      await pumpEventQueue();
+      expect(syncState.writes, greaterThanOrEqualTo(2));
+      expect(
+        DmSyncState(prefs).catchUpDebt(_owner).single.until,
+        third.createdAt,
+      );
+      expect(DmSyncState(prefs).newestWireSyncedAt(_owner), lastWire);
+
+      // A later successful retry must record the larger range before
+      // releasing the stamps held by the first batch.
+      syncState.refusesLaterWrites = false;
+      reportLargerRange();
+      await pumpEventQueue();
+      expect(
+        DmSyncState(prefs).catchUpDebt(_owner).single.until,
+        newest.createdAt,
+      );
       expect(DmSyncState(prefs).newestWireSyncedAt(_owner), newest.createdAt);
       await repository.stopListening();
     });
