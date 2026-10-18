@@ -2547,6 +2547,29 @@ void main() {
           expect(unblockRows(), findsNothing);
         });
 
+        testWidgets('offers no Block on a group message with no sender', (
+          tester,
+        ) async {
+          const unsignedText = 'no sender on record';
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [otherPubkey, bob],
+              goRouter: goRouter,
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [messageFrom('', unsignedText, 1)],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await longPress(tester, unsignedText);
+
+          expect(find.text(l10n.dmMessageActionCopyText), findsOneWidget);
+          expect(blockRows(), findsNothing);
+          expect(unblockRows(), findsNothing);
+        });
+
         testWidgets('offers no Block in a one-to-one thread', (tester) async {
           await tester.pumpWidget(
             buildSubject(

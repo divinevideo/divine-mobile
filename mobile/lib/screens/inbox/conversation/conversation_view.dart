@@ -1835,22 +1835,26 @@ class _MessageList extends StatelessWidget {
   final Future<void> Function(String pubkey, SenderBlockOption sender)
   onBlockSender;
 
+  // participantPubkeys excludes self, so a length > 1 is a group.
+  bool get _isGroup => participantPubkeys.length > 1;
+
   /// The block row a received group message offers for its sender.
   ///
-  /// Null without an [author], which [build] resolves only for a received
-  /// message in a group.
+  /// Null in a one-to-one, which a block closes as a whole, on the viewer's
+  /// own message, and on a message with no sender. [author] names the sender;
+  /// [build] resolves it for every other message.
   SenderBlockOption? _senderBlockFor(
     BuildContext context,
-    DmMessage message,
-    DmPeerNameResolution? author,
-  ) {
-    if (author == null) return null;
+    DmMessage message, {
+    required bool isSent,
+    required DmPeerNameResolution? author,
+  }) {
+    if (!_isGroup || isSent || message.senderPubkey.isEmpty) return null;
+    final name = author?.name ?? '';
     return SenderBlockOption(
-      displayName: author.name.isEmpty
-          ? context.l10n.profileUserFallback
-          : author.name,
+      displayName: name.isEmpty ? context.l10n.profileUserFallback : name,
       isBlocked: isBlockedByUs(message.senderPubkey),
-      isVanished: author.isVanished,
+      isVanished: author?.isVanished ?? false,
     );
   }
 
@@ -1884,7 +1888,12 @@ class _MessageList extends StatelessWidget {
         !isSent &&
         message.fileMetadata?.isVideo == true &&
         ClipProvenanceVerifier.isSupportedPlatform;
-    final senderBlock = _senderBlockFor(context, message, author);
+    final senderBlock = _senderBlockFor(
+      context,
+      message,
+      isSent: isSent,
+      author: author,
+    );
     final result = await ReactionPickerOverlay.show(
       context: context,
       isSent: isSent,
@@ -2110,8 +2119,7 @@ class _MessageList extends StatelessWidget {
       for (var index = 0; index < messages.length; index++)
         messages[index].id: index,
     };
-    // participantPubkeys excludes self, so a length > 1 is a group.
-    final isGroup = participantPubkeys.length > 1;
+    final isGroup = _isGroup;
 
     // A 1:1 thread's title is the author, so [senderDisplayName] names them.
     // A group's title names the room, so a message from someone else resolves
