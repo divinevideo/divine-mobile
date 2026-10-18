@@ -23,10 +23,16 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
-/// Pins the removal to the send's second without relying on wall-clock timing.
-/// All storage, signing, and receive behavior remains real.
-class _SameSecondRemovalDao extends RemovedConversationsDao {
-  _SameSecondRemovalDao(super.attachedDatabase);
+/// Pins the removal to the send's second, moved by [offset] seconds, without
+/// relying on wall-clock timing. A negative [offset] puts the leave before the
+/// send; a positive one puts it after the send's stamp, as a clock set back
+/// between the two does. All storage, signing, and receive behavior remains
+/// real.
+class _RemovalPinnedToSendDao extends RemovedConversationsDao {
+  _RemovalPinnedToSendDao(super.attachedDatabase, {this.offset = 0});
+
+  /// Seconds from the send's stamp to the removal.
+  final int offset;
 
   @override
   Future<bool> markRejoined({
@@ -38,7 +44,7 @@ class _SameSecondRemovalDao extends RemovedConversationsDao {
     await record(
       conversationId: conversationId,
       ownerPubkey: ownerPubkey,
-      removedAt: at,
+      removedAt: at + offset,
     );
     return super.markRejoined(
       conversationId: conversationId,
@@ -1142,7 +1148,9 @@ void main() {
           'second', () async {
         await joinTheRoom();
         await leave();
-        final sender = sendingRepository(removalDao: _SameSecondRemovalDao(db));
+        final sender = sendingRepository(
+          removalDao: _RemovalPinnedToSendDao(db),
+        );
         final results = await sender.sendGroupMessage(
           recipientPubkeys: [_alice, _bob],
           content: 'back in the removal second',
@@ -1171,6 +1179,80 @@ void main() {
         );
         await deliver(reply, authorSecret: _aliceSecret);
         expect(await messageIdsIn(_roomId), contains(reply.id));
+      });
+
+      // The control for the same-second case above: a leave the second before
+      // the send rejoins from the send's own time, as it always has.
+      test('rejoins from the send when the user left the second before '
+          'it', () async {
+        await joinTheRoom();
+        await leave();
+        final sender = sendingRepository(
+          removalDao: _RemovalPinnedToSendDao(db, offset: -1),
+        );
+        final results = await sender.sendGroupMessage(
+          recipientPubkeys: [_alice, _bob],
+          content: 'back the second after leaving',
+        );
+        expect(results.every((result) => result.success), isTrue);
+        final sentId = results.first.rumorEventId!;
+        final sent = await messagesDao.getMessageById(
+          sentId,
+          ownerPubkey: _owner,
+        );
+        expect(sent, isNotNull);
+        final removal = (await tombstone())!;
+        expect(removal.removedAt, sent!.createdAt - 1);
+        expect(removal.rejoinedAt, sent.createdAt);
+
+        final reply = message(
+          author: _alice,
+          pTags: [_owner, _bob],
+          content: 'welcome back',
+          createdAt: sent.createdAt,
+        );
+        await deliver(reply, authorSecret: _aliceSecret);
+        await expectOnlyTheRoomHolding([sentId, reply.id]);
+      });
+
+      // The send started after the leave, so it rejoins whatever its stamp
+      // says: from the leave, keeping its own copy.
+      test('rejoins from the leave when a clock set back since stamps the '
+          'send before it', () async {
+        await joinTheRoom();
+        await leave();
+        final sender = sendingRepository(
+          removalDao: _RemovalPinnedToSendDao(db, offset: 1),
+        );
+        final results = await sender.sendGroupMessage(
+          recipientPubkeys: [_alice, _bob],
+          content: 'back after the clock went back',
+        );
+        expect(results.every((result) => result.success), isTrue);
+        final sentId = results.first.rumorEventId!;
+        final sent = await messagesDao.getMessageById(
+          sentId,
+          ownerPubkey: _owner,
+        );
+        expect(sent, isNotNull, reason: 'the copy the members got is kept');
+        final removal = (await tombstone())!;
+        expect(removal.removedAt, sent!.createdAt + 1);
+        expect(removal.rejoinedAt, removal.removedAt);
+
+        // Backdate both boundaries together so a newer peer message is not
+        // clamped back onto the removal by the receive path's future guard.
+        await db.customStatement(
+          'UPDATE removed_conversations '
+          'SET removed_at = removed_at - 2, rejoined_at = rejoined_at - 2',
+        );
+        final reply = message(
+          author: _alice,
+          pTags: [_owner, _bob],
+          content: 'welcome back',
+          createdAt: sent.createdAt,
+        );
+        await deliver(reply, authorSecret: _aliceSecret);
+        await expectOnlyTheRoomHolding([sentId, reply.id]);
       });
 
       test('brings the room back from the time of the message the user sends '

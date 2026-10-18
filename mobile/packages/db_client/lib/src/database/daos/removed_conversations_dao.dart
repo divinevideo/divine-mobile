@@ -82,26 +82,44 @@ class RemovedConversationsDao extends DatabaseAccessor<AppDatabase>
   /// Keeps the earliest write after the removal. The user's own copies arrive
   /// out of order (NIP-59 backdates wraps, history pages newest first), so a
   /// copy processed later can move the rejoin back, never forward. A replay at
-  /// or before the removal is not a rejoin. An explicit [isLocalSend] can
-  /// rejoin in the removal second: both timestamps have second precision, but
-  /// the local action establishes that this send follows the removal.
-  /// Returns whether the rejoin moved;
-  /// false when the conversation was never removed, [at] precedes the removal
-  /// (or equals it for a replay), or the recorded rejoin is at or before [at].
+  /// or before the removal is not a rejoin.
+  ///
+  /// An explicit [isLocalSend] is a rejoin whatever its stamp says: the local
+  /// action establishes that this send follows the removal. Both timestamps
+  /// have second precision, so it can share the removal's second, and a clock
+  /// set back since the removal can stamp it earlier; then the rejoin is
+  /// recorded at the removal rather than refused.
+  ///
+  /// Returns whether the rejoin moved; false when the conversation was never
+  /// removed, a replay's [at] is not after the removal, or the recorded rejoin
+  /// is already at or before the time this write would record.
   Future<bool> markRejoined({
     required String conversationId,
     required String ownerPubkey,
     required int at,
     bool isLocalSend = false,
   }) async {
+    if (isLocalSend) {
+      final updated = await customUpdate(
+        'UPDATE removed_conversations SET rejoined_at = MAX(?1, removed_at) '
+        'WHERE conversation_id = ?2 AND owner_pubkey = ?3 '
+        'AND (rejoined_at IS NULL OR rejoined_at > MAX(?1, removed_at))',
+        variables: [
+          Variable.withInt(at),
+          Variable.withString(conversationId),
+          Variable.withString(ownerPubkey),
+        ],
+        updates: {removedConversations},
+        updateKind: UpdateKind.update,
+      );
+      return updated > 0;
+    }
     final updated =
         await (update(removedConversations)..where(
               (t) =>
                   t.conversationId.equals(conversationId) &
                   t.ownerPubkey.equals(ownerPubkey) &
-                  (isLocalSend
-                      ? t.removedAt.isSmallerOrEqualValue(at)
-                      : t.removedAt.isSmallerThanValue(at)) &
+                  t.removedAt.isSmallerThanValue(at) &
                   (t.rejoinedAt.isNull() | t.rejoinedAt.isBiggerThanValue(at)),
             ))
             .write(RemovedConversationsCompanion(rejoinedAt: Value(at)));

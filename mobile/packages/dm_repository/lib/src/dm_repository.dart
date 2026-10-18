@@ -8636,6 +8636,9 @@ class DmRepository {
         conversationId: conversationId,
         ownerPubkey: _userPubkey,
         at: batchCreatedAt,
+        // Any removal found here came first, so this send rejoins even when
+        // it is stamped in the leave's second, or before it by a clock set
+        // back since.
         isLocalSend: true,
       );
     }

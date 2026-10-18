@@ -142,6 +142,110 @@ void main() {
         );
       });
 
+      // The clock went back between the removal and the send.
+      test('records a local send stamped before the removal at the '
+          'removal', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 40,
+          isLocalSend: true,
+        );
+
+        expect(marked, isTrue);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          100,
+        );
+      });
+
+      test('moves a later rejoin back to the removal for a local send '
+          'stamped before it', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 300,
+        );
+
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 40,
+          isLocalSend: true,
+        );
+
+        expect(marked, isTrue);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          100,
+        );
+      });
+
+      test('keeps an earlier rejoin when a later local send arrives', () async {
+        await dao.record(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          removedAt: 100,
+        );
+        await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 150,
+        );
+
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 300,
+          isLocalSend: true,
+        );
+
+        expect(marked, isFalse);
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ))!.rejoinedAt,
+          150,
+        );
+      });
+
+      test('records nothing for a local send in a conversation that was '
+          'never removed', () async {
+        final marked = await dao.markRejoined(
+          conversationId: conversationA,
+          ownerPubkey: ownerA,
+          at: 40,
+          isLocalSend: true,
+        );
+
+        expect(marked, isFalse);
+        expect(
+          await dao.tombstoneFor(
+            conversationId: conversationA,
+            ownerPubkey: ownerA,
+          ),
+          isNull,
+        );
+      });
+
       test('fills a rejoin the removal left empty', () async {
         await dao.record(
           conversationId: conversationA,
