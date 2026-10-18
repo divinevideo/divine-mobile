@@ -127,6 +127,7 @@ void _testWithFakeAsync(
 void main() {
   setUpAll(() {
     registerFallbackValue(<DmConversation>[]);
+    registerFallbackValue(<String, Set<String>>{});
   });
 
   group(DmUnreadCountCubit, () {
@@ -547,6 +548,117 @@ void main() {
         expect(cubit.state, equals(1));
         _close(fake, cubit);
         blocklist.dispose();
+      });
+
+      group("when the blocked member's message is the room's newest", () {
+        // The middle member wrote the room's newest message and is blocked.
+        DmConversation roomWrittenByBlockedMember() => room().copyWith(
+          lastMessageContent: 'from the blocked member',
+          lastMessageSenderPubkey: _bob,
+        );
+
+        // An unread one-to-one with a member nobody blocked, so a pass that
+        // failed instead of counting cannot read as a correct zero.
+        final direct = _convo(
+          'direct',
+          peer: _carol,
+          isRead: false,
+          currentUserHasSent: true,
+        );
+
+        /// The room's newest message by anyone else is the first member's,
+        /// and [hasUnread] says whether anyone else wrote after the cursor.
+        void stubVisibleActivity({required bool hasUnread}) {
+          when(
+            () => dmRepository.visibleActivityExcluding(any()),
+          ).thenAnswer(
+            (_) async => {
+              'room': (
+                lastMessageContent: 'from the first member',
+                lastMessageTimestamp: 1699999000,
+                lastMessageSenderPubkey: _alice,
+                hasUnread: hasUnread,
+              ),
+            },
+          );
+        }
+
+        Future<ContentBlocklistRepository> blocklistBlockingBob() async {
+          final blocklist = ContentBlocklistRepository();
+          addTearDown(blocklist.dispose);
+          await blocklist.blockUser(_bob, ourPubkey: _me);
+          return blocklist;
+        }
+
+        test('no longer counts the group when only the blocked member wrote '
+            'after the read cursor', () async {
+          stubVisibleActivity(hasUnread: false);
+          final blocklist = await blocklistBlockingBob();
+
+          fakeAsync((fake) {
+            final cubit = buildCubit(contentBlocklistRepository: blocklist);
+            acceptedController.add([roomWrittenByBlockedMember(), direct]);
+            potentialController.add(const []);
+            _settle(fake);
+
+            expect(cubit.state, equals(1));
+            _close(fake, cubit);
+          });
+        });
+
+        test('still counts the group when a visible member wrote after the '
+            'read cursor', () async {
+          stubVisibleActivity(hasUnread: true);
+          final blocklist = await blocklistBlockingBob();
+
+          fakeAsync((fake) {
+            final cubit = buildCubit(contentBlocklistRepository: blocklist);
+            acceptedController.add([roomWrittenByBlockedMember(), direct]);
+            potentialController.add(const []);
+            _settle(fake);
+
+            expect(cubit.state, equals(2));
+            _close(fake, cubit);
+          });
+        });
+
+        test('reads a followed group the viewer never wrote in the same '
+            'way', () async {
+          stubVisibleActivity(hasUnread: false);
+          followed.addAll({_alice, _bob, _carol});
+          final blocklist = await blocklistBlockingBob();
+
+          fakeAsync((fake) {
+            final cubit = buildCubit(contentBlocklistRepository: blocklist);
+            acceptedController.add([direct]);
+            potentialController.add([
+              roomWrittenByBlockedMember().copyWith(currentUserHasSent: false),
+            ]);
+            _settle(fake);
+
+            expect(cubit.state, equals(1));
+            _close(fake, cubit);
+          });
+        });
+
+        test('counts the group again once the member is unblocked', () async {
+          stubVisibleActivity(hasUnread: false);
+          final blocklist = await blocklistBlockingBob();
+
+          fakeAsync((fake) {
+            final cubit = buildCubit(contentBlocklistRepository: blocklist);
+            acceptedController.add([roomWrittenByBlockedMember(), direct]);
+            potentialController.add(const []);
+            _settle(fake);
+            expect(cubit.state, equals(1));
+
+            unawaited(blocklist.unblockUser(_bob));
+            _settle(fake);
+
+            expect(cubit.state, equals(2));
+            _close(fake, cubit);
+          });
+        });
       });
     });
 

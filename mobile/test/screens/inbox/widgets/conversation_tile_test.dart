@@ -3,12 +3,14 @@
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -24,6 +26,8 @@ import '../../../helpers/test_provider_overrides.dart';
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockDmRepository extends Mock implements DmRepository {}
 
 void main() {
   const currentPubkey =
@@ -1859,6 +1863,111 @@ void main() {
 
         expect(find.text('${prefixFor('Bob')}$lastMessage'), findsOneWidget);
         expect(find.text(l10n.dmHiddenMessageLabel), findsNothing);
+      });
+
+      group('read as the inbox reads it', () {
+        const visibleMessage = 'running late';
+
+        // The unread dot is the tile's only 8x8 box.
+        final unreadDot = find.byWidgetPredicate(
+          (widget) =>
+              widget is Container &&
+              widget.constraints?.maxWidth == 8 &&
+              widget.constraints?.maxHeight == 8,
+        );
+
+        /// The stored row — unread, last written by the blocked member — read
+        /// through the pass the Messages list and its badge share, with the
+        /// repository answering what the members the viewer sees last wrote.
+        Future<DmConversation> rowAsSeen({
+          required ContentBlocklistRepository blocklist,
+          required DmVisibleActivity visibleActivity,
+        }) async {
+          final stored = conversationWith(
+            lastSender: memberPubkey,
+          ).copyWith(isRead: false);
+          final dmRepository = _MockDmRepository();
+          when(
+            () => dmRepository.visibleActivityExcluding({
+              stored.id: {memberPubkey},
+            }),
+          ).thenAnswer((_) async => {stored.id: visibleActivity});
+          final seen = await dmConversationsAsSeen(
+            conversations: [stored],
+            currentUserPubkey: currentPubkey,
+            isHidden: blocklist.shouldFilterFromDms,
+            isBlockedByUs: blocklist.isBlocked,
+            dmRepository: dmRepository,
+          );
+          return seen.single;
+        }
+
+        testWidgets('shows no unread dot or emphasis when only the blocked '
+            'member wrote after the read cursor', (tester) async {
+          final blocklist = await blocklistBlocking(tester, [memberPubkey]);
+          final row = await rowAsSeen(
+            blocklist: blocklist,
+            visibleActivity: (
+              lastMessageContent: visibleMessage,
+              lastMessageTimestamp: nowUnix - 60,
+              lastMessageSenderPubkey: otherPubkey,
+              hasUnread: false,
+            ),
+          );
+
+          await pumpRow(tester, row, blocklist: blocklist);
+
+          expect(unreadDot, findsNothing);
+          final preview = tester.widget<Text>(
+            find.text('${prefixFor('Alice')}$visibleMessage'),
+          );
+          expect(preview.style?.fontWeight, equals(FontWeight.w400));
+          expect(find.textContaining(lastMessage), findsNothing);
+        });
+
+        testWidgets('keeps the unread dot when a visible member wrote after '
+            'the read cursor', (tester) async {
+          final blocklist = await blocklistBlocking(tester, [memberPubkey]);
+          final row = await rowAsSeen(
+            blocklist: blocklist,
+            visibleActivity: (
+              lastMessageContent: visibleMessage,
+              lastMessageTimestamp: nowUnix - 60,
+              lastMessageSenderPubkey: otherPubkey,
+              hasUnread: true,
+            ),
+          );
+
+          await pumpRow(tester, row, blocklist: blocklist);
+
+          expect(unreadDot, findsOneWidget);
+          final preview = tester.widget<Text>(
+            find.text('${prefixFor('Alice')}$visibleMessage'),
+          );
+          expect(preview.style?.fontWeight, equals(FontWeight.w600));
+        });
+
+        testWidgets('shows Hidden message without a dot or emphasis when '
+            'nobody else wrote in the room', (tester) async {
+          final blocklist = await blocklistBlocking(tester, [memberPubkey]);
+          final row = await rowAsSeen(
+            blocklist: blocklist,
+            visibleActivity: (
+              lastMessageContent: null,
+              lastMessageTimestamp: null,
+              lastMessageSenderPubkey: null,
+              hasUnread: false,
+            ),
+          );
+
+          await pumpRow(tester, row, blocklist: blocklist);
+
+          expect(unreadDot, findsNothing);
+          final preview = tester.widget<Text>(
+            find.text(l10n.dmHiddenMessageLabel),
+          );
+          expect(preview.style?.fontWeight, equals(FontWeight.w400));
+        });
       });
 
       testWidgets('shows the last message again once the member is unblocked', (

@@ -11,6 +11,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
+import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// Cubit that tracks the number of unread DM conversations shown in the
@@ -25,9 +26,10 @@ import 'package:rxdart/rxdart.dart';
 ///
 /// Parity with the list is structural: this reuses the same static
 /// [DmRepository.classifyPotentialRequests] / [DmRepository.mergeAndSort] /
-/// [DmRepository.extractPinnedSupport] helpers and
-/// [ContentBlocklistRepository.filterBlockedConversations] that
-/// [ConversationListBloc] uses, so the count cannot drift from the list. It
+/// [DmRepository.extractPinnedSupport] helpers,
+/// [ContentBlocklistRepository.filterBlockedConversations] and
+/// [dmConversationsAsSeen] that [ConversationListBloc] uses, so the count
+/// cannot drift from the list. It
 /// intentionally does NOT replicate one list-only concern:
 ///
 /// * **Pagination** — the list renders one page; the badge counts the full
@@ -176,10 +178,12 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
     // The combiner stays cheap — it only packages the inputs into a record so
     // the debounce sees one value per source tick. The expensive recompute
     // (`_countUnread`: classify + mergeAndSort + filter) runs AFTER the debounce
-    // in `map`, so a burst of writes triggers a single pass, not one per write.
-    // Following/blocklist ticks carry no value into the record — they only need
-    // to trigger a recompute, and `_countUnread` reads the live follow/block
-    // state, so the debounced `map` picks up their latest values.
+    // in `asyncMap`, so a burst of writes triggers a single pass, not one per
+    // write. Following/blocklist ticks carry no value into the record — they
+    // only need to trigger a recompute, and `_countUnread` reads the live
+    // follow/block state, so the debounced pass picks up their latest values.
+    // `asyncMap` keeps emissions in order while a pass reads what hidden group
+    // members' messages leave unread (#10150).
     _subscription =
         Rx.combineLatest6<
               List<DmConversation>,
@@ -207,13 +211,22 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
               ),
             )
             .debounceTime(_recomputeDebounce)
-            .map(
-              (inputs) => _countUnread(
-                accepted: inputs.$1,
-                potentialRequests: inputs.$2,
-                userPubkey: inputs.$3,
-              ),
-            )
+            .asyncMap((inputs) async {
+              final (accepted, potentialRequests, userPubkey) = inputs;
+              Future<List<DmConversation>> asSeen(
+                List<DmConversation> conversations,
+              ) => _asSeenByViewer(
+                conversations,
+                userPubkey: userPubkey,
+                dmRepository: dmRepository,
+                contentBlocklistRepository: contentBlocklistRepository,
+              );
+              return _countUnread(
+                accepted: await asSeen(accepted),
+                potentialRequests: await asSeen(potentialRequests),
+                userPubkey: userPubkey,
+              );
+            })
             .listen(
               (count) {
                 if (_subscriptionGeneration == generation) emitIfOpen(count);
@@ -224,6 +237,32 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
                 }
               },
             );
+  }
+
+  /// [conversations] read as the viewer sees them, through the same pass the
+  /// Messages list runs over the same two lists, so a group whose only unread
+  /// messages are from members the viewer hides is not counted (#10150).
+  ///
+  /// Takes the repositories the current subscription was built with, so a
+  /// pass still in flight across [setRepositories] reads the identity it was
+  /// counting for; the generation guard then drops its result.
+  Future<List<DmConversation>> _asSeenByViewer(
+    List<DmConversation> conversations, {
+    required String userPubkey,
+    required DmRepository dmRepository,
+    required ContentBlocklistRepository? contentBlocklistRepository,
+  }) async {
+    // The empty pre-auth identity is held in `_countUnread`; nothing to read.
+    if (userPubkey.isEmpty || contentBlocklistRepository == null) {
+      return conversations;
+    }
+    return dmConversationsAsSeen(
+      conversations: conversations,
+      currentUserPubkey: userPubkey,
+      isHidden: contentBlocklistRepository.shouldFilterFromDms,
+      isBlockedByUs: contentBlocklistRepository.isBlocked,
+      dmRepository: dmRepository,
+    );
   }
 
   /// Composes the visible Messages list (accepted ∪ followed-but-unreplied,

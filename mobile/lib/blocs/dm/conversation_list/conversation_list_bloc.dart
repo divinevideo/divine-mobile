@@ -25,6 +25,14 @@ import 'package:rxdart/rxdart.dart';
 part 'conversation_list_event.dart';
 part 'conversation_list_state.dart';
 
+/// What the inbox is composed from on each recompute.
+typedef _ConversationListInputs = ({
+  List<DmConversation> accepted,
+  List<DmConversation> potentialRequests,
+  bool isRestoring,
+  String userPubkey,
+});
+
 /// The permissive default: no peer is a moderation key, so a caller with no
 /// policy to inject (notably a test fixture) names every peer as before.
 ModerationPresentation _ordinaryModerationPresentation(String _) =>
@@ -214,7 +222,7 @@ class ConversationListBloc
           isRestoring: isRestoring,
           userPubkey: userPubkey,
         ),
-      ).debounceTime(_recomputeDebounce),
+      ).debounceTime(_recomputeDebounce).asyncMap(_asSeenByViewer),
       onData: (data) {
         // Without an authenticated identity, the pubkey is empty and self cannot be
         // filtered out of a conversation's participants — classifying now would
@@ -668,6 +676,37 @@ class ConversationListBloc
   bool Function(String pubkey) get _isHiddenFromDms =>
       _blocklistRepository?.shouldFilterFromDms ?? (_) => false;
 
+  /// The viewer's own block list, which alone decides that every member of a
+  /// group is blocked (#7345).
+  bool Function(String pubkey) get _isBlockedByUs =>
+      _blocklistRepository?.isBlocked ?? (_) => false;
+
+  /// [data] with every row read as the viewer sees it, so a hidden member's
+  /// messages neither mark a group unread nor move it up (#10150).
+  ///
+  /// The same pass [DmUnreadCountCubit] runs over the same two lists, so the
+  /// badge counts exactly the unread rows the list renders.
+  Future<_ConversationListInputs> _asSeenByViewer(
+    _ConversationListInputs data,
+  ) async {
+    final userPubkey = data.userPubkey;
+    if (userPubkey.isEmpty) return data;
+    Future<List<DmConversation>> asSeen(List<DmConversation> conversations) =>
+        dmConversationsAsSeen(
+          conversations: conversations,
+          currentUserPubkey: userPubkey,
+          isHidden: _isHiddenFromDms,
+          isBlockedByUs: _isBlockedByUs,
+          dmRepository: _dmRepository,
+        );
+    return (
+      accepted: await asSeen(data.accepted),
+      potentialRequests: await asSeen(data.potentialRequests),
+      isRestoring: data.isRestoring,
+      userPubkey: userPubkey,
+    );
+  }
+
   /// The member a row is named for, whose name search has to resolve to
   /// match what the row renders (#10151).
   String _namedParticipant(DmConversation conversation, String self) =>
@@ -840,7 +879,7 @@ class ConversationListBloc
     if (query.isEmpty) return result;
     final normalized = query.toLowerCase();
     final isHidden = _isHiddenFromDms;
-    final isBlockedByUs = _blocklistRepository?.isBlocked ?? (_) => false;
+    final isBlockedByUs = _isBlockedByUs;
     return result.where((c) {
       // Named as the row names it, so a room is never matched by the name of
       // the moderation account or a hidden member in it (#10151, #10150).

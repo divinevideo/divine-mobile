@@ -1,7 +1,9 @@
 // ABOUTME: Which group members the viewer's own lists hide: whose messages
-// ABOUTME: and inbox previews collapse, and who is left for a chat without
-// ABOUTME: them (#10150).
+// ABOUTME: and inbox previews collapse, how a group's inbox row reads without
+// ABOUTME: them, and who is left for a chat without them (#10150).
 
+import 'package:collection/collection.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 
@@ -61,6 +63,90 @@ bool dmPreviewHidden({
   currentUserPubkey: currentUserPubkey,
   isHidden: isHidden,
 );
+
+/// [conversations] as the viewer's inbox reads them once the members they hide
+/// are set aside, so a hidden member's messages neither mark a group unread nor
+/// move it up (#10150).
+///
+/// A row whose last message [dmPreviewHidden] hides takes its newest message by
+/// anyone else — preview, time and sender — and turns read unless someone the
+/// viewer still sees wrote after the read cursor. A group nobody else wrote in
+/// keeps its stored, hidden preview and turns read. Read state only ever turns
+/// from unread to read. Every other row, and every row once its member is no
+/// longer hidden, is returned as stored without a query; so is the list itself
+/// when no row needs reading, which leaves a one-to-one inbox exactly as it
+/// was. Otherwise the result is sorted newest first, as
+/// [DmRepository.mergeAndSort] sorts, keeping the stored order between rows
+/// that tie.
+///
+/// The Messages list and its badge both read through this, so they cannot
+/// disagree about which groups are unread. [isHidden] and [isBlockedByUs] must
+/// answer from the viewer's own lists only (#7345).
+Future<List<DmConversation>> dmConversationsAsSeen({
+  required List<DmConversation> conversations,
+  required String currentUserPubkey,
+  required bool Function(String pubkey) isHidden,
+  required bool Function(String pubkey) isBlockedByUs,
+  required DmRepository dmRepository,
+}) async {
+  // [dmPreviewHidden], asking whether every member is blocked last: a
+  // one-to-one, or a group the viewer or a visible member wrote last, is
+  // settled without walking its members.
+  bool previewHidden(DmConversation conversation) =>
+      dmPreviewHidden(
+        conversation: conversation,
+        currentUserPubkey: currentUserPubkey,
+        everyMemberBlocked: false,
+        isHidden: isHidden,
+      ) &&
+      !dmEveryPeerBlocked(
+        participantPubkeys: conversation.participantPubkeys,
+        currentUserPubkey: currentUserPubkey,
+        isBlockedByUs: isBlockedByUs,
+      );
+
+  final excludedSenders = <String, Set<String>>{
+    for (final conversation in conversations)
+      if (previewHidden(conversation))
+        conversation.id: {
+          for (final pubkey in conversation.participantPubkeys)
+            if (!pubkeysEqual(pubkey, currentUserPubkey) && isHidden(pubkey))
+              pubkey,
+        },
+  };
+  if (excludedSenders.isEmpty) return conversations;
+
+  final activity = await dmRepository.visibleActivityExcluding(
+    excludedSenders,
+  );
+  final seen = [
+    for (final conversation in conversations)
+      switch (activity[conversation.id]) {
+        null => conversation,
+        final visible => _withVisibleActivity(conversation, visible),
+      },
+  ];
+  mergeSort(
+    seen,
+    compare: (a, b) => b.effectiveTimestamp.compareTo(a.effectiveTimestamp),
+  );
+  return seen;
+}
+
+DmConversation _withVisibleActivity(
+  DmConversation conversation,
+  DmVisibleActivity visible,
+) {
+  final isRead = conversation.isRead || !visible.hasUnread;
+  final timestamp = visible.lastMessageTimestamp;
+  if (timestamp == null) return conversation.copyWith(isRead: isRead);
+  return conversation.copyWith(
+    lastMessageContent: visible.lastMessageContent,
+    lastMessageTimestamp: timestamp,
+    lastMessageSenderPubkey: visible.lastMessageSenderPubkey,
+    isRead: isRead,
+  );
+}
 
 /// The counterparties the viewer has not blocked, sorted.
 ///

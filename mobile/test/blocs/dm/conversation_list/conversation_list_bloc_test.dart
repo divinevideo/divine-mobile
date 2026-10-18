@@ -566,6 +566,24 @@ void main() {
             lastMessageSenderPubkey: _testPubkey3,
           );
 
+          // Nobody but the middle member has written in the room, so hiding
+          // them leaves its stored, hidden preview as the one to search.
+          setUp(() {
+            registerFallbackValue(<String, Set<String>>{});
+            when(
+              () => mockDmRepository.visibleActivityExcluding(any()),
+            ).thenAnswer(
+              (_) async => {
+                _testConversationId2: (
+                  lastMessageContent: null,
+                  lastMessageTimestamp: null,
+                  lastMessageSenderPubkey: null,
+                  hasUnread: false,
+                ),
+              },
+            );
+          });
+
           Future<ConversationListState> search(
             ConversationListBloc bloc,
             String query,
@@ -681,6 +699,179 @@ void main() {
               equals([_testConversationId2]),
             );
           });
+        });
+
+        group("unread state and order ignore a blocked member's messages", () {
+          const visibleMessageAt = 1700000100;
+          const directMessageAt = 1700000200;
+          const blockedMessageAt = 1700000300;
+
+          // An unread room whose newest message, the reason it is unread and
+          // first, is the blocked middle member's.
+          DmConversation roomWrittenByBlockedMember() => room().copyWith(
+            lastMessageContent: 'from the blocked member',
+            lastMessageTimestamp: blockedMessageAt,
+            lastMessageSenderPubkey: _testPubkey3,
+            isRead: false,
+          );
+
+          // An unread one-to-one between the room's two messages.
+          final direct = _createConversation(
+            id: _testConversationId1,
+            isRead: false,
+            currentUserHasSent: true,
+            lastMessageTimestamp: directMessageAt,
+          );
+
+          /// The room's newest message by anyone else is the first member's,
+          /// and [hasUnread] says whether anyone else wrote after the cursor.
+          void stubVisibleActivity({required bool hasUnread}) {
+            registerFallbackValue(<String, Set<String>>{});
+            when(
+              () => mockDmRepository.visibleActivityExcluding(any()),
+            ).thenAnswer(
+              (_) async => {
+                _testConversationId2: (
+                  lastMessageContent: 'from the first member',
+                  lastMessageTimestamp: visibleMessageAt,
+                  lastMessageSenderPubkey: _testPubkey2,
+                  hasUnread: hasUnread,
+                ),
+              },
+            );
+          }
+
+          Future<ConversationListState> filterUnread(
+            ConversationListBloc bloc,
+          ) {
+            bloc.add(const ConversationListFilterChanged(InboxFilter.unread));
+            return bloc.stream.firstWhere(
+              (s) => s.filter == InboxFilter.unread,
+            );
+          }
+
+          test('sorts the group by its newest visible message', () async {
+            stubVisibleActivity(hasUnread: false);
+            final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByBlockedMember(), direct],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+
+            final state = await load(bloc);
+
+            expect(
+              state.conversations.map((c) => c.id),
+              equals([_testConversationId1, _testConversationId2]),
+            );
+            final shown = state.conversations.last;
+            expect(shown.lastMessageTimestamp, equals(visibleMessageAt));
+            expect(shown.lastMessageSenderPubkey, equals(_testPubkey2));
+            expect(shown.lastMessageContent, equals('from the first member'));
+          });
+
+          test('keeps the group out of the Unread filter when only the '
+              'blocked member wrote after the read cursor', () async {
+            stubVisibleActivity(hasUnread: false);
+            final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByBlockedMember(), direct],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+
+            final state = await filterUnread(bloc);
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId1]),
+            );
+          });
+
+          test('keeps the group in the Unread filter when a visible member '
+              'wrote after the read cursor', () async {
+            stubVisibleActivity(hasUnread: true);
+            final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [roomWrittenByBlockedMember(), direct],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            await load(bloc);
+
+            final state = await filterUnread(bloc);
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId1, _testConversationId2]),
+            );
+          });
+
+          test('reads a followed group the viewer never wrote in the same '
+              'way', () async {
+            // Every member is followed (the group-level default), so the room
+            // reaches the inbox from the potential requests.
+            stubVisibleActivity(hasUnread: false);
+            final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+            _stubStreams(
+              mockDmRepository,
+              accepted: [direct],
+              potentialRequests: [
+                roomWrittenByBlockedMember().copyWith(
+                  currentUserHasSent: false,
+                ),
+              ],
+            );
+            final bloc = createBlocWith(blocklist);
+            addTearDown(bloc.close);
+            final loaded = await load(bloc);
+            expect(
+              loaded.conversations.map((c) => c.id),
+              equals([_testConversationId1, _testConversationId2]),
+            );
+
+            final state = await filterUnread(bloc);
+
+            expect(
+              state.visibleConversations.map((c) => c.id),
+              equals([_testConversationId1]),
+            );
+          });
+
+          test(
+            'restores the stored row once the member is unblocked',
+            () async {
+              stubVisibleActivity(hasUnread: false);
+              final blocklist = await blocklistBlockingMembers([_testPubkey3]);
+              _stubStreams(
+                mockDmRepository,
+                accepted: [roomWrittenByBlockedMember(), direct],
+              );
+              final bloc = createBlocWith(blocklist);
+              addTearDown(bloc.close);
+              final blocked = await load(bloc);
+              expect(
+                blocked.conversations.last.lastMessageTimestamp,
+                equals(visibleMessageAt),
+              );
+
+              await blocklist.unblockUser(_testPubkey3);
+              bloc.add(const ConversationListBlocklistChanged());
+              final state = await bloc.stream.firstWhere(
+                (s) => s.conversations.first.id == _testConversationId2,
+              );
+
+              expect(
+                state.conversations,
+                equals([roomWrittenByBlockedMember(), direct]),
+              );
+            },
+          );
         });
 
         group('as a message request', () {

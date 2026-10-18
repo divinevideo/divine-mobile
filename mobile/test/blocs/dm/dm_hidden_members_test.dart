@@ -2,9 +2,13 @@
 // ABOUTME: messages and inbox previews collapse, and who is left for a chat
 // ABOUTME: without them.
 
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_hidden_members.dart';
+
+class _MockDmRepository extends Mock implements DmRepository {}
 
 void main() {
   const viewer =
@@ -140,6 +144,218 @@ void main() {
 
     test('does not hide a preview with an empty sender', () {
       expect(previewHidden(lastSender: '', hidden: const {''}), isFalse);
+    });
+  });
+
+  group('dmConversationsAsSeen', () {
+    const roomId =
+        '1111111111111111111111111111111111111111111111111111111111111111';
+    const directId =
+        '2222222222222222222222222222222222222222222222222222222222222222';
+    late _MockDmRepository dmRepository;
+
+    setUpAll(() {
+      registerFallbackValue(<String, Set<String>>{});
+    });
+
+    setUp(() {
+      dmRepository = _MockDmRepository();
+    });
+
+    DmConversation room({
+      String lastSender = hiddenMember,
+      int timestamp = 1700000300,
+      bool isRead = false,
+    }) => DmConversation(
+      id: roomId,
+      participantPubkeys: const [viewer, hiddenMember, visibleMember],
+      isGroup: true,
+      createdAt: 1700000000,
+      lastMessageContent: 'from $lastSender',
+      lastMessageTimestamp: timestamp,
+      lastMessageSenderPubkey: lastSender,
+      isRead: isRead,
+    );
+
+    DmConversation direct({int timestamp = 1700000200}) => DmConversation(
+      id: directId,
+      participantPubkeys: const [viewer, hiddenMember],
+      isGroup: false,
+      createdAt: 1700000000,
+      lastMessageContent: 'from the hidden peer',
+      lastMessageTimestamp: timestamp,
+      lastMessageSenderPubkey: hiddenMember,
+      isRead: false,
+    );
+
+    void answer(DmVisibleActivity activity) {
+      when(
+        () => dmRepository.visibleActivityExcluding(any()),
+      ).thenAnswer((_) async => {roomId: activity});
+    }
+
+    Future<List<DmConversation>> asSeen(
+      List<DmConversation> conversations, {
+      Set<String> hidden = const {hiddenMember},
+      Set<String> blocked = const {hiddenMember},
+    }) => dmConversationsAsSeen(
+      conversations: conversations,
+      currentUserPubkey: viewer,
+      isHidden: hidden.contains,
+      isBlockedByUs: blocked.contains,
+      dmRepository: dmRepository,
+    );
+
+    test('returns the list as stored, asking nothing, when no row hides its '
+        'last message', () async {
+      final conversations = [
+        direct(),
+        room(lastSender: visibleMember),
+        room(lastSender: viewer),
+      ];
+
+      final seen = await asSeen(conversations);
+
+      expect(seen, same(conversations));
+      verifyNever(() => dmRepository.visibleActivityExcluding(any()));
+    });
+
+    test('leaves a group where every member is blocked as stored', () async {
+      final conversations = [room()];
+
+      final seen = await asSeen(
+        conversations,
+        hidden: const {hiddenMember, visibleMember},
+        blocked: const {hiddenMember, visibleMember},
+      );
+
+      expect(seen, same(conversations));
+      verifyNever(() => dmRepository.visibleActivityExcluding(any()));
+    });
+
+    test(
+      "reads a hidden member's group from its newest visible message",
+      () async {
+        answer((
+          lastMessageContent: 'from the visible member',
+          lastMessageTimestamp: 1700000100,
+          lastMessageSenderPubkey: visibleMember,
+          hasUnread: false,
+        ));
+
+        final seen = await asSeen([room()]);
+
+        expect(
+          seen.single,
+          equals(
+            room().copyWith(
+              lastMessageContent: 'from the visible member',
+              lastMessageTimestamp: 1700000100,
+              lastMessageSenderPubkey: visibleMember,
+              isRead: true,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      "sets aside only that group's hidden members, never the viewer",
+      () async {
+        answer((
+          lastMessageContent: null,
+          lastMessageTimestamp: null,
+          lastMessageSenderPubkey: null,
+          hasUnread: false,
+        ));
+
+        await asSeen([room()], hidden: const {hiddenMember, viewer});
+
+        final asked = verify(
+          () => dmRepository.visibleActivityExcluding(captureAny()),
+        ).captured.single;
+        expect(
+          asked,
+          equals({
+            roomId: {hiddenMember},
+          }),
+        );
+      },
+    );
+
+    test('keeps a group unread when a visible member wrote after the read '
+        'cursor', () async {
+      answer((
+        lastMessageContent: 'from the visible member',
+        lastMessageTimestamp: 1700000100,
+        lastMessageSenderPubkey: visibleMember,
+        hasUnread: true,
+      ));
+
+      final seen = await asSeen([room()]);
+
+      expect(seen.single.isRead, isFalse);
+    });
+
+    test('never turns a read group unread', () async {
+      answer((
+        lastMessageContent: 'from the visible member',
+        lastMessageTimestamp: 1700000100,
+        lastMessageSenderPubkey: visibleMember,
+        hasUnread: true,
+      ));
+
+      final seen = await asSeen([room(isRead: true)]);
+
+      expect(seen.single.isRead, isTrue);
+    });
+
+    test('keeps the stored, hidden preview of a group nobody visible wrote '
+        'in, and reads it as read', () async {
+      answer((
+        lastMessageContent: null,
+        lastMessageTimestamp: null,
+        lastMessageSenderPubkey: null,
+        hasUnread: false,
+      ));
+
+      final seen = await asSeen([room()]);
+
+      expect(seen.single, equals(room().copyWith(isRead: true)));
+    });
+
+    test('sorts a read group by its newest visible message', () async {
+      answer((
+        lastMessageContent: 'from the visible member',
+        lastMessageTimestamp: 1700000100,
+        lastMessageSenderPubkey: visibleMember,
+        hasUnread: false,
+      ));
+
+      final seen = await asSeen([room(), direct()]);
+
+      expect(seen.map((c) => c.id), equals([directId, roomId]));
+    });
+
+    test('keeps the stored order between rows that tie', () async {
+      answer((
+        lastMessageContent: 'from the visible member',
+        lastMessageTimestamp: 1700000100,
+        lastMessageSenderPubkey: visibleMember,
+        hasUnread: false,
+      ));
+      // Long enough that an unstable sort reorders equal rows.
+      final tied = [
+        for (var i = 0; i < 40; i++)
+          direct().copyWith(id: i.toRadixString(16).padLeft(64, '0')),
+      ];
+
+      final seen = await asSeen([room(), ...tied]);
+
+      expect(
+        seen.map((c) => c.id),
+        equals([...tied.map((c) => c.id), roomId]),
+      );
     });
   });
 
