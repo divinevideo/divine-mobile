@@ -1565,6 +1565,21 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final controller = _controllers[index];
     if (controller == null) return;
 
+    // The feed can be unmounted, or the index re-inited, while a step below
+    // is awaiting — an account switch tears the feed down mid-failover. Past
+    // that point the rest of the failover, including its failure handling,
+    // would run on behalf of a host that is gone (#10290). A native call on
+    // the released controller throws, so the checks sit before the steps
+    // that reach the host or arm a timer, and in the catch.
+    bool ownsFailover([Object? error]) {
+      if (mounted && identical(_controllers[index], controller)) return true;
+      _log(
+        'Abort stale source failover at index $index'
+        '${error == null ? '' : ' after: $error'}',
+      );
+      return false;
+    }
+
     _failoverInFlight.add(index);
     try {
       await controller.stop();
@@ -1576,15 +1591,18 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           trimToCommonTrackEnd: true,
         ),
       );
+      if (!ownsFailover()) return;
       if (index == _currentIndex && _isActive && _canAutoPlayAt(index)) {
         await controller.setVolume(_volume);
         await controller.play();
+        if (!ownsFailover()) return;
         if (index == _currentIndex && _isActive) {
           _watchdog.start(index, controller);
           _staleDetector.resetGrace();
         }
       }
     } on Object catch (e, stackTrace) {
+      if (!ownsFailover(e)) return;
       _log('Source failover failed index $index source=$nextSource: $e');
       logPlaybackFailure(
         'Source failover failed',
