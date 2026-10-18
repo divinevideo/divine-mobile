@@ -16,9 +16,12 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
+import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _FakeEvent extends Fake implements Event {}
 
 // Real key pairs: every gift wrap below is sealed, signed and decrypted for
 // real, so each pubkey has to belong to its secret.
@@ -38,6 +41,9 @@ final String _roomId = DmRepository.computeConversationId([
 ]);
 
 const _sentAt = 1700000000;
+
+/// The relay that confirms the wraps of a send from this device.
+const _pool = 'wss://relay.divine.video';
 
 /// The receive path's room cap, the size above which NIP-17 advises another
 /// messaging scheme. Restated rather than read from the repository so a
@@ -186,7 +192,7 @@ void main() {
     /// Seals [rumor] with [authorSecret] and gift-wraps it to the owner, the
     /// way the author's client publishes the owner's copy, then feeds it to
     /// the live subscription and waits for it to settle.
-    Future<void> deliver(Event rumor, {required String authorSecret}) async {
+    Future<Event> deliver(Event rumor, {required String authorSecret}) async {
       final wrap = await buildGiftWrapFromHex(
         senderPrivateKeyHex: authorSecret,
         rumorJson: rumor.toJson(),
@@ -194,6 +200,7 @@ void main() {
       );
       relay.add(wrap!);
       await settled(wrap.id);
+      return wrap;
     }
 
     Future<List<ConversationRow>> conversations() =>
@@ -771,6 +778,302 @@ void main() {
           reason: 'the removal is keyed by the room id the message resolves to',
         );
         expect(await messageIdsIn(_roomId), isEmpty);
+      });
+    });
+
+    // Leaving a group sticks until the user writes in it again (#10150).
+    group('that names a room the user left', () {
+      const leftAt = _sentAt + 100;
+
+      // A send from this device publishes through `any()` Event matchers.
+      setUpAll(() => registerFallbackValue(_FakeEvent()));
+
+      Future<RemovedConversation?> tombstone() =>
+          RemovedConversationsDao(db).tombstoneFor(
+            conversationId: _roomId,
+            ownerPubkey: _owner,
+          );
+
+      /// Moves the removal of the room to [at]. `removeConversation` stamps
+      /// the wall clock, and the receive path clamps a rumor stamped after
+      /// now to now, so no rumor could otherwise be newer than the removal.
+      Future<void> backdateRemoval(int at) => db.customStatement(
+        'UPDATE removed_conversations SET removed_at = ? '
+        'WHERE conversation_id = ? AND owner_pubkey = ?',
+        [at, _roomId, _owner],
+      );
+
+      /// Leaves the room, as the inbox's Leave does, at [at].
+      Future<void> leave({int at = leftAt}) async {
+        expect(
+          await repository.removeConversation(_roomId),
+          ConversationRemovalOutcome.removed,
+        );
+        await backdateRemoval(at);
+      }
+
+      /// The room as Alice opened it, before the user left.
+      Future<void> joinTheRoom() async {
+        final first = message(author: _alice, pTags: [_owner, _bob]);
+        await deliver(first, authorSecret: _aliceSecret);
+        await expectOnlyTheRoomHolding([first.id]);
+      }
+
+      Future<bool> ledgered(Event wrap) => processedDao.hasGiftWrapForOwner(
+        giftWrapId: wrap.id,
+        ownerPubkey: _owner,
+      );
+
+      test('keeps a newer message from a member out', () async {
+        await joinTheRoom();
+        await leave();
+
+        final wrap = await deliver(
+          message(
+            author: _bob,
+            pTags: [_owner, _alice],
+            content: 'sent after the user left',
+            createdAt: leftAt + 100,
+          ),
+          authorSecret: _bobSecret,
+        );
+
+        expect(await conversations(), isEmpty);
+        expect(await messageIdsIn(_roomId), isEmpty);
+        expect(await ledgered(wrap), isTrue);
+      });
+
+      test('keeps it out after a batch removal, as declining every '
+          'request does', () async {
+        await joinTheRoom();
+        expect(
+          await repository.removeConversations([_roomId]),
+          (removed: 1, refused: 0),
+        );
+        await backdateRemoval(leftAt);
+
+        await deliver(
+          message(
+            author: _bob,
+            pTags: [_owner, _alice],
+            createdAt: leftAt + 100,
+          ),
+          authorSecret: _bobSecret,
+        );
+
+        expect(await conversations(), isEmpty);
+      });
+
+      test('brings the room back when the user writes in it from another '
+          'device, and lets later member messages in', () async {
+        await joinTheRoom();
+        await leave();
+
+        final own = message(
+          author: _owner,
+          pTags: [_alice, _bob],
+          content: 'back again',
+          createdAt: leftAt + 200,
+        );
+        await deliver(own, authorSecret: _ownerSecret);
+        await expectOnlyTheRoomHolding([own.id]);
+
+        final later = message(
+          author: _alice,
+          pTags: [_owner, _bob],
+          content: 'welcome back',
+          createdAt: leftAt + 300,
+        );
+        await deliver(later, authorSecret: _aliceSecret);
+
+        await expectOnlyTheRoomHolding([own.id, later.id]);
+        expect((await tombstone())!.rejoinedAt, leftAt + 200);
+      });
+
+      test('keeps out what a member sent while the user was away, even when '
+          'it arrives after they rejoined', () async {
+        await joinTheRoom();
+        await leave();
+        final own = message(
+          author: _owner,
+          pTags: [_alice, _bob],
+          content: 'back again',
+          createdAt: leftAt + 200,
+        );
+        await deliver(own, authorSecret: _ownerSecret);
+        await expectOnlyTheRoomHolding([own.id]);
+
+        final whileAway = await deliver(
+          message(
+            author: _bob,
+            pTags: [_owner, _alice],
+            content: 'sent while the user was away',
+            createdAt: leftAt + 100,
+          ),
+          authorSecret: _bobSecret,
+        );
+
+        await expectOnlyTheRoomHolding([own.id]);
+        expect(await ledgered(whileAway), isTrue);
+      });
+
+      test('keeps the room out again after the user leaves a second '
+          'time', () async {
+        await joinTheRoom();
+        await leave();
+        final own = message(
+          author: _owner,
+          pTags: [_alice, _bob],
+          content: 'back again',
+          createdAt: leftAt + 200,
+        );
+        await deliver(own, authorSecret: _ownerSecret);
+        await expectOnlyTheRoomHolding([own.id]);
+
+        expect(
+          await repository.removeConversation(_roomId),
+          ConversationRemovalOutcome.removed,
+        );
+        expect((await tombstone())!.rejoinedAt, isNull);
+        await backdateRemoval(leftAt + 300);
+
+        await deliver(
+          message(
+            author: _alice,
+            pTags: [_owner, _bob],
+            content: 'sent after the second leave',
+            createdAt: leftAt + 400,
+          ),
+          authorSecret: _aliceSecret,
+        );
+
+        expect(await conversations(), isEmpty);
+      });
+
+      test('brings the room back when the user sends to it from this '
+          'device', () async {
+        await joinTheRoom();
+        await leave();
+        // A send needs the message service the receiving fixture does not
+        // wire. Its relays confirm every wrap.
+        when(() => nostrClient.configuredRelays).thenReturn(const [_pool]);
+        when(() => nostrClient.isRelayAllowed(any())).thenReturn(true);
+        when(
+          () => nostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+            diagnosticTag: any(named: 'diagnosticTag'),
+          ),
+        ).thenAnswer((invocation) async {
+          final event = invocation.positionalArguments.first as Event;
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const [_pool],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          );
+        });
+        when(
+          () => nostrClient.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer(
+          (invocation) async => PublishSuccess(
+            event: invocation.positionalArguments.first as Event,
+          ),
+        );
+        final signer = LocalNostrSigner(_ownerSecret);
+        final sender = DmRepository(
+          nostrClient: nostrClient,
+          messageService: NIP17MessageService(
+            signer: signer,
+            senderPublicKey: _owner,
+            nostrService: nostrClient,
+          ),
+          directMessagesDao: messagesDao,
+          conversationsDao: conversationsDao,
+          removedConversationsDao: RemovedConversationsDao(db),
+          userPubkey: _owner,
+          signer: signer,
+        );
+
+        final results = await sender.sendGroupMessage(
+          recipientPubkeys: [_alice, _bob],
+          content: 'back again',
+        );
+        expect(results.every((result) => result.success), isTrue);
+
+        final later = message(
+          author: _alice,
+          pTags: [_owner, _bob],
+          content: 'welcome back',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        await deliver(later, authorSecret: _aliceSecret);
+
+        expect(await messageIdsIn(_roomId), contains(later.id));
+        expect((await tombstone())!.rejoinedAt, isNotNull);
+      });
+
+      test('does not carry a member message into the one-to-one while '
+          'receiving rooms is switched off', () async {
+        receivesPeerRooms = false;
+        final own = message(
+          author: _owner,
+          pTags: [_alice, _bob],
+          content: 'the user opened the room',
+        );
+        await deliver(own, authorSecret: _ownerSecret);
+        await expectOnlyTheRoomHolding([own.id]);
+        await leave();
+
+        await deliver(
+          message(
+            author: _alice,
+            pTags: [_owner, _bob],
+            content: 'sent after the user left',
+            createdAt: leftAt + 100,
+          ),
+          authorSecret: _aliceSecret,
+        );
+
+        expect(
+          await conversations(),
+          isEmpty,
+          reason: 'neither the room nor the one-to-one with its sender',
+        );
+      });
+
+      test('leaves a one-to-one reopening on a newer message', () async {
+        final oneToOneId = DmRepository.computeConversationId([
+          _owner,
+          _alice,
+        ]);
+        await deliver(
+          message(author: _alice, pTags: [_owner]),
+          authorSecret: _aliceSecret,
+        );
+        expect(
+          await repository.removeConversation(oneToOneId),
+          ConversationRemovalOutcome.removed,
+        );
+        await db.customStatement(
+          'UPDATE removed_conversations SET removed_at = ? '
+          'WHERE conversation_id = ? AND owner_pubkey = ?',
+          [leftAt, oneToOneId, _owner],
+        );
+
+        final newer = message(
+          author: _alice,
+          pTags: [_owner],
+          content: 'a newer message',
+          createdAt: leftAt + 100,
+        );
+        await deliver(newer, authorSecret: _aliceSecret);
+
+        await expectOnlyTheOneToOneHolding(_alice, [newer.id]);
       });
     });
   });

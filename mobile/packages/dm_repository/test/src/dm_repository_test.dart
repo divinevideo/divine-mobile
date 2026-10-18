@@ -24088,6 +24088,110 @@ void main() {
         await repository.stopListening();
       });
 
+      test('a newer NIP-17 message from a member keeps a left group '
+          'removed (#10150)', () async {
+        const newMessageAt = 1700000001;
+        final roomId = DmRepository.computeConversationId(const [
+          _validPubkeyA,
+          _validPubkeyB,
+          _validPubkeyC,
+        ]);
+        final removedConversationsDao = _MockRemovedConversationsDao();
+        when(
+          () => removedConversationsDao.removedAtFor(
+            conversationId: roomId,
+            ownerPubkey: _validPubkeyA,
+          ),
+        ).thenAnswer((_) async => 1700000000);
+        when(
+          () => removedConversationsDao.tombstoneFor(
+            conversationId: roomId,
+            ownerPubkey: _validPubkeyA,
+          ),
+        ).thenAnswer(
+          (_) async => RemovedConversation(
+            conversationId: roomId,
+            ownerPubkey: _validPubkeyA,
+            removedAt: 1700000000,
+          ),
+        );
+        when(
+          () => mockConversationsDao.getConversation(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final repository = createRepository(
+          processedGiftWrapsDao: ledger,
+          removedConversationsDao: removedConversationsDao,
+          rumorDecryptor: (_, _) async => Event.fromJson({
+            'id': _rumorEventId,
+            'pubkey': _validPubkeyB,
+            'created_at': newMessageAt,
+            'kind': EventKind.privateDirectMessage,
+            'tags': [
+              ['p', _validPubkeyA],
+              ['p', _validPubkeyC],
+            ],
+            'content': 'Retried peer message',
+            'sig': '',
+          }),
+        );
+        await repository.startListening();
+
+        controller.add(giftWrap());
+        await pumpEventQueue();
+
+        // Unlike the one-to-one above, nothing recreates the room.
+        expect(ledger.recorded, contains(_giftWrapEventId));
+        verifyNever(
+          () => mockDirectMessagesDao.insertMessage(
+            id: any(named: 'id'),
+            conversationId: any(named: 'conversationId'),
+            senderPubkey: any(named: 'senderPubkey'),
+            content: any(named: 'content'),
+            createdAt: any(named: 'createdAt'),
+            giftWrapId: any(named: 'giftWrapId'),
+            messageKind: any(named: 'messageKind'),
+            replyToId: any(named: 'replyToId'),
+            subject: any(named: 'subject'),
+            fileType: any(named: 'fileType'),
+            encryptionAlgorithm: any(named: 'encryptionAlgorithm'),
+            decryptionKey: any(named: 'decryptionKey'),
+            decryptionNonce: any(named: 'decryptionNonce'),
+            fileHash: any(named: 'fileHash'),
+            originalFileHash: any(named: 'originalFileHash'),
+            fileSize: any(named: 'fileSize'),
+            dimensions: any(named: 'dimensions'),
+            blurhash: any(named: 'blurhash'),
+            thumbnailUrl: any(named: 'thumbnailUrl'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            tagsJson: any(named: 'tagsJson'),
+            sendBatchId: any(named: 'sendBatchId'),
+          ),
+        );
+        verifyNever(
+          () => mockConversationsDao.upsertConversation(
+            id: any(named: 'id'),
+            participantPubkeys: any(named: 'participantPubkeys'),
+            isGroup: any(named: 'isGroup'),
+            createdAt: any(named: 'createdAt'),
+            lastMessageContent: any(named: 'lastMessageContent'),
+            lastMessageTimestamp: any(named: 'lastMessageTimestamp'),
+            lastMessageSenderPubkey: any(named: 'lastMessageSenderPubkey'),
+            subject: any(named: 'subject'),
+            isRead: any(named: 'isRead'),
+            currentUserHasSent: any(named: 'currentUserHasSent'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            dmProtocol: any(named: 'dmProtocol'),
+          ),
+        );
+
+        await controller.close();
+        await repository.stopListening();
+      });
+
       test(
         'a reopened removed conversation keeps suppressing replayed '
         'pre-removal history',

@@ -3571,6 +3571,20 @@ class DmRepository {
         false;
   }
 
+  /// Whether another member's message stamped [createdAt] stays out of a
+  /// group the user left ([tombstone]).
+  ///
+  /// It is let back in only once the user has written in the group again,
+  /// and what members sent while the user was out stays out (#10150).
+  static bool _keptOutOfLeftGroup(
+    RemovedConversation? tombstone,
+    int createdAt,
+  ) {
+    if (tombstone == null) return false;
+    final rejoinedAt = tombstone.rejoinedAt;
+    return rejoinedAt == null || createdAt < rejoinedAt;
+  }
+
   /// Whether [tags] carries a `['k', <kind>]` hint naming [kind].
   static bool _hasKindHint(List<List<String>> tags, int kind) {
     final wanted = kind.toString();
@@ -4169,6 +4183,7 @@ class DmRepository {
         var inserted = false;
         var skippedByTransactionalGiftWrapDedup = false;
         var suppressedByRemovedConversation = false;
+        var suppressedByLeftGroup = false;
         int? removedAt;
         // A peer's reply only opens a room while receiving rooms is on, so
         // putting one back under its parent ships behind the same flag.
@@ -4194,6 +4209,27 @@ class DmRepository {
               await _wasRemovedWithConversation(rumor.id, ownerPubkey)) {
             suppressedByRemovedConversation = true;
             return;
+          }
+          // A group the user left stays left until they write in it again,
+          // here or on another device (#10150). A one-to-one reopens on any
+          // newer message, as before.
+          if (isGroup && removedAt != null) {
+            if (isSentByMe) {
+              await _removedConversationsDao?.markRejoined(
+                conversationId: conversationId,
+                ownerPubkey: ownerPubkey,
+                at: persistedCreatedAt,
+              );
+            } else if (_keptOutOfLeftGroup(
+              await _removedConversationsDao?.tombstoneFor(
+                conversationId: conversationId,
+                ownerPubkey: ownerPubkey,
+              ),
+              persistedCreatedAt,
+            )) {
+              suppressedByLeftGroup = true;
+              return;
+            }
           }
 
           inserted = await _directMessagesDao.insertMessage(
@@ -4257,10 +4293,10 @@ class DmRepository {
             conversationId,
             ownerPubkey: ownerPubkey,
           );
-          // A newer message reopens a removed conversation: the row is
-          // recreated above, while the tombstone is deliberately kept so
-          // replayed history stamped at or before the removal stays
-          // suppressed. #7804.
+          // A newer message reopens a removed one-to-one, and the user's own
+          // reopens a left group: the row is recreated above, while the
+          // tombstone is deliberately kept so replayed history stamped at or
+          // before the removal stays suppressed. #7804.
 
           // An early reaction is filed under the 1:1 of its reactor and the
           // target's author. For a one-to-one message that is this
@@ -4318,18 +4354,25 @@ class DmRepository {
           );
           return;
         }
-        if (suppressedByRemovedConversation) {
+        if (suppressedByRemovedConversation || suppressedByLeftGroup) {
           // Terminal: record the wrap so replays skip it before decryption.
           // The tombstone is authoritative for the account's lifetime, so the
-          // ledger is not racing a reopening that clears it.
+          // ledger is not racing a reopening that clears it. A message a
+          // member sent while the user was out of a group stays out after
+          // they rejoin, so that suppression is terminal too.
           await _recordProcessedWrap(
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
           );
           Log.debug(
-            'Suppressed NIP-17 DM ${rumor.id} in removed conversation '
-            '$conversationId: removed with it, or createdAt '
-            '$persistedCreatedAt is at or before removal at $removedAt',
+            suppressedByLeftGroup
+                ? 'Suppressed NIP-17 DM ${rumor.id} in group $conversationId '
+                      'the user left at $removedAt: createdAt '
+                      '$persistedCreatedAt is before they wrote in it again'
+                : 'Suppressed NIP-17 DM ${rumor.id} in removed conversation '
+                      '$conversationId: removed with it, or createdAt '
+                      '$persistedCreatedAt is at or before removal at '
+                      '$removedAt',
             category: LogCategory.system,
           );
           return;
@@ -6091,6 +6134,15 @@ class DmRepository {
       dmProtocol: dmProtocol,
     );
     await _conversationsDao.markAsRead(id, ownerPubkey: ownerPubkey);
+    // Writing in a group the user left, or starting a new chat with the same
+    // people, brings it back (#10150).
+    if (isGroup && ownerPubkey != null) {
+      await _removedConversationsDao?.markRejoined(
+        conversationId: id,
+        ownerPubkey: ownerPubkey,
+        at: lastMessageTimestamp,
+      );
+    }
   }
 
   /// Make a conversation whose FIRST send did not deliver visible in the
@@ -10753,8 +10805,10 @@ class DmRepository {
   ///
   /// Records an owner-scoped tombstone first so relay replay cannot restore
   /// history at or before the removal time. The marker is kept for the
-  /// account's lifetime: a newer message recreates the conversation while
-  /// earlier history stays suppressed.
+  /// account's lifetime: a newer message recreates a one-to-one while earlier
+  /// history stays suppressed. Removing a group leaves it: other members'
+  /// messages stay out until the user writes in it again, and what they sent
+  /// in between stays out after that (#10150).
   ///
   /// The tombstone is written **only for a conversation that is on disk**. It
   /// is a record of what this device removed, not of what it was asked to
@@ -11631,7 +11685,9 @@ class DmRepository {
   /// * a p tag is not a pubkey. Nobody can be addressed by it, so a room
   ///   holding it could never be replied to.
   /// * its p tags omit the current user, so it is not a room we are in.
-  /// * receiving rooms is switched off ([receivesPeerRooms]).
+  /// * receiving rooms is switched off ([receivesPeerRooms]), unless the
+  ///   user left the room and has not written in it since: it then resolves
+  ///   to the room, which the receive path keeps out (#10150).
   ///
   /// A mention is filed under the conversation it answers instead: a reply
   /// ([replyToId]) to a stored message in a strictly smaller conversation that
@@ -11693,7 +11749,19 @@ class DmRepository {
         return _homeOfMention(answered, senderPubkey).participants;
       }
     }
-    return _receivesPeerRooms() ? room : canonical1to1;
+    if (_receivesPeerRooms()) return room;
+    // Not the one-to-one with its sender: that would carry a left room's
+    // message into a conversation the user still has.
+    final owner = _ownerPubkey;
+    final tombstone = owner == null
+        ? null
+        : await _removedConversationsDao?.tombstoneFor(
+            conversationId: computeConversationId(room),
+            ownerPubkey: owner,
+          );
+    return tombstone != null && tombstone.rejoinedAt == null
+        ? room
+        : canonical1to1;
   }
 
   /// Where a mention from [senderPubkey] of the conversation [answered]
