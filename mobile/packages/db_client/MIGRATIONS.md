@@ -254,9 +254,10 @@ clears that owner's follower rows.
 Canonical v1–v26 snapshots stay unchanged. The
 v27 step preserves queued sound jobs, conversation dismissal flags, independent
 markers and their known replay IDs. It also accepts the earlier ranking-preview
-v25 shape, which already has `my_followers` but lacks dismissal storage: it adds
+v24 shape (main v23 plus followers, without sound jobs), the v25 shape
+(without dismissal storage), and v26 (without retained-conversation storage). It adds
 the missing dismissal and retained-conversation columns and table without
-recreating the follower table or losing follower timestamps. Upgrade tests exercise canonical v25/v26 and ranking-preview v25/v26 shapes, replay after
+recreating the follower table or losing follower timestamps. Upgrade tests exercise canonical v25/v26 and ranking-preview v24/v25/v26 shapes, replay after
 account cleanup, and owner isolation.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new

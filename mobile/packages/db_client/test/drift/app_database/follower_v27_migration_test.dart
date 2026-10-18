@@ -174,14 +174,16 @@ void main() {
       expect(await db.myFollowersDao.followersOf(otherOwner), isEmpty);
     });
 
-    for (final version in [25, 26]) {
+    for (final version in [24, 25, 26]) {
       test(
         'ranking preview v$version retains followers and gains landed storage',
         () async {
-          // Ranking v25 preceded dismissal; ranking v26 preceded retained chats.
+          // Ranking v24 preceded sound jobs, v25 dismissal, v26 retained chats.
           // Reproduce each preview without modifying canonical snapshots.
           final schema = await verifier.schemaAt(version);
-          if (version == 25) {
+          if (version == 24) {
+            schema.rawDatabase.execute('DROP TABLE sound_request_states');
+          } else if (version == 25) {
             schema.rawDatabase.execute('DROP TABLE conversation_dismissals');
             schema.rawDatabase.execute(
               'ALTER TABLE conversations DROP COLUMN is_dismissed',
@@ -208,11 +210,13 @@ void main() {
               [account, follower, if (account == owner) 90 else null, 100],
             );
           }
-          schema.rawDatabase.execute(
-            'INSERT INTO sound_request_states '
-            '(owner_pubkey, section, record_key, value) VALUES (?, ?, ?, ?)',
-            [owner, 'jobs', 'pending', 'queued workflow'],
-          );
+          if (version >= 25) {
+            schema.rawDatabase.execute(
+              'INSERT INTO sound_request_states '
+              '(owner_pubkey, section, record_key, value) VALUES (?, ?, ?, ?)',
+              [owner, 'jobs', 'pending', 'queued workflow'],
+            );
+          }
           schema.rawDatabase.execute(
             'INSERT INTO conversations (id, participant_pubkeys, created_at, '
             'last_message_timestamp, owner_pubkey) VALUES (?, ?, ?, ?, ?)',
@@ -228,6 +232,13 @@ void main() {
           final db = AppDatabase(schema.newConnection());
           addTearDown(db.close);
           await verifier.migrateAndValidate(db, 27);
+          if (version == 24) {
+            // The historical preview has no sound store to preserve. Confirm
+            // the repaired store accepts account-owned jobs after upgrading.
+            await db.soundRequestStateDao.writeAccount(owner, {
+              'jobs': {'pending': 'queued workflow'},
+            });
+          }
 
           expect(await db.myFollowersDao.followersOf(owner), [
             (pubkey: follower, followedAt: 90),
