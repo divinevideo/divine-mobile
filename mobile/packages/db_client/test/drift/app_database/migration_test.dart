@@ -28,6 +28,29 @@ void main() {
   });
 
   group('schema validation', () {
+    for (final version in [1, 11]) {
+      test('v$version schema migrates directly to v26', () async {
+        final schema = await verifier.schemaAt(version);
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 26);
+        await db.conversationsDao.upsertConversation(
+          id: 'upgraded',
+          participantPubkeys: '["a","b"]',
+          isGroup: false,
+          createdAt: 1700000000,
+          lastMessageCreatedAt: 1700000105,
+          ownerPubkey: 'a' * 64,
+        );
+        final row = await db.conversationsDao.getConversation(
+          'upgraded',
+          ownerPubkey: 'a' * 64,
+        );
+        expect(row!.lastMessageCreatedAt, 1700000105);
+      });
+    }
+
     test('current schema version is 26', () {
       expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 26);
     });
