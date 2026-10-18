@@ -8733,17 +8733,20 @@ class DmRepository {
     // then cancel this send while discovery is pending; the pre-publish
     // checks below observe its tombstone and deleted queue rows.
     // Resolve every recipient concurrently so discovery does not stack one
-    // timeout per member. The detailed reader distinguishes an absent inbox
-    // from an unreadable one even though both route to the pool (#8434).
+    // timeout per member. Resolve the self-copy's destination in the same
+    // stage so the post-enqueue interval stays within one inbox budget, as
+    // the interrupted-send retry guard assumes. The detailed reader
+    // distinguishes an absent inbox from an unreadable one (#8434).
     final inboxByRecipient = <String, DmInboxLookup>{};
-    await Future.wait([
-      for (final pubkey in recipientPubkeys)
-        resolveDmInboxRelaysDetailed(
-          pubkey,
-        ).then((inbox) => inboxByRecipient[pubkey] = inbox),
-    ]);
-    // Every self-copy is addressed to the same sender.
-    final selfWrapRelays = await _selfWrapTargetRelays();
+    final (_, selfWrapRelays) = await (
+      Future.wait([
+        for (final pubkey in recipientPubkeys)
+          resolveDmInboxRelaysDetailed(
+            pubkey,
+          ).then((inbox) => inboxByRecipient[pubkey] = inbox),
+      ]),
+      _selfWrapTargetRelays(),
+    ).wait;
 
     // Delivery below is per-recipient and NOT atomic: a mid-loop publish
     // failure can leave the group partially delivered. That is a reliability/UX

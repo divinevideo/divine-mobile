@@ -16,6 +16,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
@@ -1176,6 +1177,7 @@ void main() {
           await joinTheRoom();
           final discoveryStarted = Completer<void>();
           final resumeDiscovery = Completer<void>();
+          final queriedAuthors = <String>{};
           when(
             () => nostrClient.queryEventsDetailed(
               any(),
@@ -1188,7 +1190,13 @@ void main() {
               ),
               timeout: any(named: 'timeout'),
             ),
-          ).thenAnswer((_) async {
+          ).thenAnswer((invocation) async {
+            final filters =
+                invocation.positionalArguments.first
+                    as List<nostr_filter.Filter>;
+            queriedAuthors.addAll([
+              for (final filter in filters) ...?filter.authors,
+            ]);
             if (!discoveryStarted.isCompleted) discoveryStarted.complete();
             await resumeDiscovery.future;
             return (events: const <Event>[], timedOut: false, noRelays: false);
@@ -1201,6 +1209,10 @@ void main() {
             content: 'started before Leave',
           );
           await discoveryStarted.future;
+          await pumpEventQueue();
+          // Own and recipient lookups share one discovery budget after
+          // enqueue, rather than serially consuming two retry-guard budgets.
+          final ownDiscoveryStarted = queriedAuthors.contains(_owner);
           expect(
             await sender.removeConversation(_roomId),
             ConversationRemovalOutcome.removed,
@@ -1223,6 +1235,7 @@ void main() {
           expect(await conversations(), isEmpty);
           expect(await messageIdsIn(_roomId), isEmpty);
           expect((await tombstone())!.rejoinedAt, isNull);
+          expect(ownDiscoveryStarted, isTrue);
         });
       }
 
