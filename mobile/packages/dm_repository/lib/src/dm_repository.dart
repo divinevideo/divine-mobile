@@ -407,6 +407,20 @@ enum DmInboxResolution {
 /// delivery tell the two apart (#7317, #8443).
 typedef DmInboxLookup = ({List<String>? relays, DmInboxResolution state});
 
+/// What a group's inbox row shows once the senders a viewer hides are set
+/// aside (#10150), as [DmRepository.visibleActivityExcluding] reads it.
+///
+/// The three `lastMessage` fields describe the newest message someone outside
+/// the excluded set wrote, the viewer included, and are all null when no such
+/// message is stored. `hasUnread` is whether someone outside that set other
+/// than the viewer wrote after the conversation's read cursor.
+typedef DmVisibleActivity = ({
+  String? lastMessageContent,
+  int? lastMessageTimestamp,
+  String? lastMessageSenderPubkey,
+  bool hasUnread,
+});
+
 /// Re-classifies a publish that a relay confirmed but which was routed to the
 /// default pool because the recipient's inbox could not be read.
 ///
@@ -10116,6 +10130,37 @@ class DmRepository {
       ownerPubkey: owner,
     );
     return rows.map(_conversationFromRow).toList();
+  }
+
+  /// For each conversation in [excludedSendersByConversation], what its inbox
+  /// row shows once that conversation's excluded senders are set aside
+  /// (#10150).
+  ///
+  /// Takes plain data: the caller decides whom to exclude, so this never
+  /// consults a block or mute list. Give each conversation only its own
+  /// members. A conversation the viewer has no row for is left out, and so is
+  /// every conversation while no owner is known. Only reads, so the stored row
+  /// and its read state stay as they are, and dropping a sender from the set
+  /// restores what the row showed before.
+  Future<Map<String, DmVisibleActivity>> visibleActivityExcluding(
+    Map<String, Set<String>> excludedSendersByConversation,
+  ) async {
+    final owner = _ownerPubkey;
+    if (owner == null || excludedSendersByConversation.isEmpty) return const {};
+    await _awaitInitialConversationMaintenance();
+    final rows = await _conversationsDao.visibleActivityExcluding(
+      excludedSendersByConversation,
+      ownerPubkey: owner,
+    );
+    return {
+      for (final MapEntry(key: id, value: row) in rows.entries)
+        id: (
+          lastMessageContent: row.content,
+          lastMessageTimestamp: row.createdAt,
+          lastMessageSenderPubkey: row.senderPubkey,
+          hasUnread: row.hasUnread,
+        ),
+    };
   }
 
   /// Watch conversations where the user has sent at least one message.

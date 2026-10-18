@@ -2186,5 +2186,334 @@ void main() {
         },
       );
     });
+
+    group('visibleActivityExcluding (#10150)', () {
+      final owner = 'a' * 64;
+      final visibleMember = 'b' * 64;
+      final hiddenMember = 'c' * 64;
+      final otherOwner = 'd' * 64;
+      final room = 'e' * 64;
+
+      Future<void> seedRoom({
+        String? id,
+        int? readCursor,
+        String? ownerPubkey,
+      }) async {
+        final roomId = id ?? room;
+        await dao.upsertConversation(
+          id: roomId,
+          participantPubkeys: '["$owner","$visibleMember","$hiddenMember"]',
+          isGroup: true,
+          createdAt: 1700000000,
+          isRead: false,
+          ownerPubkey: ownerPubkey ?? owner,
+        );
+        if (readCursor != null) {
+          await dao.applyReadCursor(
+            roomId,
+            readCursor,
+            ownerPubkey: ownerPubkey ?? owner,
+          );
+        }
+      }
+
+      Future<void> message(
+        String id, {
+        required String sender,
+        required int createdAt,
+        String? conversationId,
+        String? ownerPubkey,
+        int messageKind = EventKind.privateDirectMessage,
+        String? fileType,
+      }) => database.directMessagesDao.insertMessage(
+        id: id,
+        conversationId: conversationId ?? room,
+        senderPubkey: sender,
+        content: 'text of $id',
+        createdAt: createdAt,
+        giftWrapId: 'wrap-$id-${ownerPubkey ?? owner}',
+        messageKind: messageKind,
+        fileType: fileType,
+        ownerPubkey: ownerPubkey ?? owner,
+      );
+
+      Future<ConversationVisibleActivity?> activity({
+        Set<String>? excluded,
+      }) async => (await dao.visibleActivityExcluding({
+        room: excluded ?? {hiddenMember},
+      }, ownerPubkey: owner))[room];
+
+      group('the newest message', () {
+        test('skips a message from an excluded sender', () async {
+          await seedRoom();
+          await message('visible', sender: visibleMember, createdAt: 100);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.content, equals('text of visible'));
+          expect(seen?.createdAt, equals(100));
+          expect(seen?.senderPubkey, equals(visibleMember));
+        });
+
+        test('excludes a sender whose key differs in case', () async {
+          await seedRoom();
+          await message('visible', sender: visibleMember, createdAt: 100);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity(excluded: {hiddenMember.toUpperCase()});
+
+          expect(seen?.senderPubkey, equals(visibleMember));
+        });
+
+        test('skips a retraction every recipient confirmed', () async {
+          await seedRoom();
+          await message('kept', sender: visibleMember, createdAt: 100);
+          await message('retracted', sender: visibleMember, createdAt: 150);
+          await database.directMessagesDao.markMessageDeleted(
+            'retracted',
+            ownerPubkey: owner,
+          );
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.content, equals('text of kept'));
+        });
+
+        test("keeps the owner's own unconfirmed retraction, as the thread "
+            'does', () async {
+          await seedRoom();
+          await message('visible', sender: visibleMember, createdAt: 100);
+          await message('own', sender: owner, createdAt: 150);
+          await database.directMessagesDao.markMessageDeletionPending(
+            'own',
+            deletionRumorJson: '{}',
+            ownerPubkey: owner,
+          );
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.content, equals('text of own'));
+          expect(seen?.senderPubkey, equals(owner));
+        });
+
+        test("ignores another account's copy of the same room", () async {
+          await seedRoom();
+          await message('visible', sender: visibleMember, createdAt: 100);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+          await message(
+            'for-other',
+            sender: visibleMember,
+            createdAt: 300,
+            ownerPubkey: otherOwner,
+          );
+
+          final seen = await activity();
+
+          expect(seen?.content, equals('text of visible'));
+        });
+
+        test('previews a file message as the stored preview does', () async {
+          await seedRoom();
+          await message(
+            'photo',
+            sender: visibleMember,
+            createdAt: 100,
+            messageKind: EventKind.fileMessage,
+            fileType: 'image/jpeg',
+          );
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.content, equals('Sent a photo'));
+        });
+
+        test(
+          'breaks a same-second tie by id, as the stored preview does',
+          () async {
+            await seedRoom();
+            await message('msg-a', sender: visibleMember, createdAt: 100);
+            await message('msg-b', sender: visibleMember, createdAt: 100);
+            await message('hidden', sender: hiddenMember, createdAt: 200);
+
+            final seen = await activity();
+
+            expect(seen?.content, equals('text of msg-b'));
+          },
+        );
+
+        test('is empty when only excluded senders wrote', () async {
+          await seedRoom();
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen, isNotNull);
+          expect(seen?.content, isNull);
+          expect(seen?.createdAt, isNull);
+          expect(seen?.senderPubkey, isNull);
+          expect(seen?.hasUnread, isFalse);
+        });
+      });
+
+      group('hasUnread', () {
+        test('is false when only excluded senders wrote after the read '
+            'cursor', () async {
+          await seedRoom(readCursor: 150);
+          await message('visible', sender: visibleMember, createdAt: 100);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.hasUnread, isFalse);
+        });
+
+        test(
+          'is true when a visible member wrote after the read cursor',
+          () async {
+            await seedRoom(readCursor: 150);
+            await message('visible', sender: visibleMember, createdAt: 200);
+            await message('hidden', sender: hiddenMember, createdAt: 300);
+
+            final seen = await activity();
+
+            expect(seen?.hasUnread, isTrue);
+          },
+        );
+
+        test('is false for a message at the read cursor itself', () async {
+          await seedRoom(readCursor: 150);
+          await message('visible', sender: visibleMember, createdAt: 150);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.hasUnread, isFalse);
+        });
+
+        test(
+          'counts every visible message when the room was never read',
+          () async {
+            await seedRoom();
+            final row = await dao.getConversation(room, ownerPubkey: owner);
+            expect(row?.lastReadTimestamp, isNull);
+            await message('visible', sender: visibleMember, createdAt: 100);
+            await message('hidden', sender: hiddenMember, createdAt: 200);
+
+            final seen = await activity();
+
+            expect(seen?.hasUnread, isTrue);
+          },
+        );
+
+        test("never counts the viewer's own messages", () async {
+          await seedRoom();
+          await message('own', sender: owner, createdAt: 100);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.senderPubkey, equals(owner));
+          expect(seen?.hasUnread, isFalse);
+        });
+
+        test("never counts the viewer's own messages stored in another "
+            'case', () async {
+          await seedRoom();
+          await message('own', sender: owner.toUpperCase(), createdAt: 100);
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.senderPubkey, equals(owner.toUpperCase()));
+          expect(seen?.hasUnread, isFalse);
+        });
+
+        test('does not count a retraction every recipient confirmed', () async {
+          await seedRoom();
+          await message('retracted', sender: visibleMember, createdAt: 100);
+          await database.directMessagesDao.markMessageDeleted(
+            'retracted',
+            ownerPubkey: owner,
+          );
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.hasUnread, isFalse);
+        });
+      });
+
+      test('reads each conversation against its own excluded set', () async {
+        final secondRoom = 'f' * 64;
+        await seedRoom();
+        await seedRoom(id: secondRoom);
+        for (final id in [room, secondRoom]) {
+          await message(
+            '$id-visible',
+            sender: visibleMember,
+            createdAt: 100,
+            conversationId: id,
+          );
+          await message(
+            '$id-hidden',
+            sender: hiddenMember,
+            createdAt: 200,
+            conversationId: id,
+          );
+        }
+
+        final seen = await dao.visibleActivityExcluding({
+          room: {hiddenMember},
+          secondRoom: {visibleMember},
+        }, ownerPubkey: owner);
+
+        expect(seen[room]?.senderPubkey, equals(visibleMember));
+        expect(seen[secondRoom]?.senderPubkey, equals(hiddenMember));
+      });
+
+      test('leaves out a conversation the owner has no row for', () async {
+        await seedRoom(ownerPubkey: otherOwner);
+        await message(
+          'visible',
+          sender: visibleMember,
+          createdAt: 100,
+          ownerPubkey: otherOwner,
+        );
+
+        final seen = await dao.visibleActivityExcluding({
+          room: {hiddenMember},
+        }, ownerPubkey: owner);
+
+        expect(seen, isEmpty);
+      });
+
+      test('writes nothing to the conversation row', () async {
+        await seedRoom(readCursor: 150);
+        await message('visible', sender: visibleMember, createdAt: 100);
+        await message('hidden', sender: hiddenMember, createdAt: 200);
+        await dao.upsertConversation(
+          id: room,
+          participantPubkeys: '["$owner","$visibleMember","$hiddenMember"]',
+          isGroup: true,
+          createdAt: 1700000000,
+          lastMessageContent: 'text of hidden',
+          lastMessageTimestamp: 200,
+          lastMessageSenderPubkey: hiddenMember,
+          isRead: false,
+          ownerPubkey: owner,
+        );
+        final before = await dao.getConversation(room, ownerPubkey: owner);
+        expect(before?.lastMessageSenderPubkey, equals(hiddenMember));
+
+        await activity();
+
+        final after = await dao.getConversation(room, ownerPubkey: owner);
+        expect(after, equals(before));
+      });
+    });
   });
 }

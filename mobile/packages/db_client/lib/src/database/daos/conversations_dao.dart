@@ -643,6 +643,104 @@ END
     };
   }
 
+  /// For each conversation in [excludedSendersByConversation], the newest
+  /// message none of that conversation's excluded senders wrote, and whether
+  /// anyone outside that set other than [ownerPubkey] wrote after the read
+  /// cursor (#10150).
+  ///
+  /// Reads the messages the thread shows — confirmed retractions dropped, the
+  /// owner's own unconfirmed one kept, as
+  /// [DirectMessagesDao.getMessagesForConversation] does — newest first by
+  /// `created_at DESC, id DESC`, the order the stored preview is chosen in, and
+  /// previews a file message as [backfillLatestMessagePreviews] does. A
+  /// conversation with no such message gets null content, timestamp and
+  /// sender; one [ownerPubkey] has no row for is left out. Senders compare
+  /// without regard to case. Give each conversation only its own members, so
+  /// no statement nears SQLite's variable limit. Never writes.
+  Future<Map<String, ConversationVisibleActivity>> visibleActivityExcluding(
+    Map<String, Set<String>> excludedSendersByConversation, {
+    required String ownerPubkey,
+  }) async {
+    final activity = <String, ConversationVisibleActivity>{};
+    for (final MapEntry(key: id, value: excludedSenders)
+        in excludedSendersByConversation.entries) {
+      final conversation = await getConversation(id, ownerPubkey: ownerPubkey);
+      if (conversation == null) continue;
+      activity[id] = await _visibleActivity(
+        id,
+        excludedSenders: excludedSenders,
+        ownerPubkey: ownerPubkey,
+        readCursor: conversation.lastReadTimestamp ?? 0,
+      );
+    }
+    return activity;
+  }
+
+  Future<ConversationVisibleActivity> _visibleActivity(
+    String conversationId, {
+    required Set<String> excludedSenders,
+    required String ownerPubkey,
+    required int readCursor,
+  }) async {
+    final excluded = {
+      for (final pubkey in excludedSenders) pubkey.toLowerCase(),
+    }.toList();
+    // Numbered so both subqueries bind the same values: ?1 conversation,
+    // ?2 owner, ?3 and ?4 the retraction states the owner still sees, ?5 the
+    // read cursor, then one per excluded sender.
+    final excludedPlaceholders = [
+      for (var i = 0; i < excluded.length; i++) '?${i + 6}',
+    ].join(', ');
+    final notExcluded = excluded.isEmpty
+        ? ''
+        : 'AND lower(dm.sender_pubkey) NOT IN ($excludedPlaceholders)';
+    final shown =
+        '''
+dm.conversation_id = ?1
+  AND (dm.owner_pubkey = ?2 OR dm.owner_pubkey = '' OR dm.owner_pubkey IS NULL)
+  AND (dm.is_deleted = 0
+       OR (dm.sender_pubkey = ?2 AND dm.deletion_publish_status IN (?3, ?4)))
+  $notExcluded
+''';
+    final row = await customSelect(
+      '''
+SELECT newest.content AS content,
+       newest.created_at AS created_at,
+       newest.sender_pubkey AS sender_pubkey,
+       EXISTS (
+         SELECT 1 FROM direct_messages dm
+         WHERE $shown
+           AND dm.created_at > ?5
+           AND lower(dm.sender_pubkey) != lower(?2)
+       ) AS has_unread
+FROM (SELECT 1) AS anchor
+LEFT JOIN (
+  SELECT $_latestMessagePreviewCase AS content,
+         dm.created_at AS created_at,
+         dm.sender_pubkey AS sender_pubkey
+  FROM direct_messages dm
+  WHERE $shown
+  ORDER BY dm.created_at DESC, dm.id DESC
+  LIMIT 1
+) AS newest
+''',
+      variables: [
+        Variable(conversationId),
+        Variable(ownerPubkey),
+        const Variable(DirectMessagesDao.deletionPending),
+        const Variable(DirectMessagesDao.deletionBlocked),
+        Variable(readCursor),
+        for (final pubkey in excluded) Variable(pubkey),
+      ],
+    ).getSingle();
+    return (
+      content: row.readNullable<String>('content'),
+      createdAt: row.readNullable<int>('created_at'),
+      senderPubkey: row.readNullable<String>('sender_pubkey'),
+      hasUnread: row.read<bool>('has_unread'),
+    );
+  }
+
   /// Get unread conversation count.
   Future<int> getUnreadCount({String? ownerPubkey}) async {
     final query = selectOnly(conversations)
@@ -899,3 +997,16 @@ LIMIT 1
     );
   }
 }
+
+/// What [ConversationsDao.visibleActivityExcluding] reads for one
+/// conversation: the newest message by a sender outside the excluded set, and
+/// whether one of them other than the owner wrote after the read cursor.
+///
+/// `content`, `createdAt` and `senderPubkey` are all null when no such message
+/// is stored.
+typedef ConversationVisibleActivity = ({
+  String? content,
+  int? createdAt,
+  String? senderPubkey,
+  bool hasUnread,
+});
