@@ -36,6 +36,17 @@ DivineVideoClip _clip(
 
 void main() {
   group('loopPointSearchFor', () {
+    test(
+      'does not score a hard cut when a loop-restart transition blends it',
+      () {
+        final clip = _clip('a', duration: _s * 3).copyWith(
+          transition: const ClipTransition(type: ClipTransitionType.dissolve),
+        );
+
+        expect(loopPointSearchFor([clip]), isNull);
+      },
+    );
+
     test('searches the last half of a single clip up to its end', () {
       final clip = _clip('a', duration: _s * 6);
 

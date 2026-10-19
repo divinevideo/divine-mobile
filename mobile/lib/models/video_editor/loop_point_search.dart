@@ -78,6 +78,9 @@ LoopPointSearch? loopPointSearchFor(List<DivineVideoClip> clips) {
   final startVideo = first.video;
   if (endVideo == null || startVideo == null) return null;
   if (last.isFreezeFrame || last.isPlaceholder) return null;
+  // A wrap transition blends the restart instead of making the hard cut
+  // compared by this helper. Its rendered seam needs a different analysis.
+  if (last.transition != null) return null;
 
   final output = TransitionTimelineMap.fromClips(clips).outputDuration;
   final visibleStart = last.trimStart;
