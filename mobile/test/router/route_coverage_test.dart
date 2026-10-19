@@ -598,8 +598,9 @@ void main() {
 
   group('Route normalization round-trip', () {
     // buildRoute(parseRoute(path)) must equal path for all routes.
-    // This is exactly the check routeNormalizationProvider performs;
-    // a mismatch causes an unwanted redirect (see /video/:id bug).
+    // routeNormalizationProvider rewrites a location to that canonical form
+    // whenever it still fits the route GoRouter matched, so a mismatch on
+    // the same route is an unwanted redirect (see /video/:id bug).
     final roundTripCases = {
       'video detail': VideoDetailScreen.pathForId(
         'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
