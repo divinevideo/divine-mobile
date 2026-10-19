@@ -6091,6 +6091,11 @@ class AppLocalizationsSv extends AppLocalizations {
       'Reaktionen misslyckades, dubbeltryck för att försöka igen';
 
   @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'Din reaktion $emoji kunde inte skickas. Dubbeltryck för att försöka igen';
+  }
+
+  @override
   String get dmReactionChipRetryAnnouncement => 'Försöker med reaktionen igen';
 
   @override

@@ -3069,6 +3069,7 @@
     }
   },
   "dmReactionChipFailedA11yLabel": "ردعمل ناکام، دوبارہ کوشش کے لیے ڈبل ٹیپ کریں",
+  "dmReactionChipUnconfirmedA11yLabel": "آپ کا {emoji} ردعمل نہیں بھیجا جا سکا۔ دوبارہ کوشش کے لیے ڈبل ٹیپ کریں",
   "@dmReactionChipFailedA11yLabel": {
     "description": "Screen-reader label for a reaction chip whose publish failed."
   },

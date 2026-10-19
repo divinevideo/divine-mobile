@@ -6023,6 +6023,11 @@ class AppLocalizationsId extends AppLocalizations {
       'Reaksi gagal, ketuk dua kali untuk mencoba lagi';
 
   @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'Reaksi $emoji kamu tidak dapat dikirim. Ketuk dua kali untuk mencoba lagi';
+  }
+
+  @override
   String get dmReactionChipRetryAnnouncement => 'Mencoba reaksi lagi';
 
   @override

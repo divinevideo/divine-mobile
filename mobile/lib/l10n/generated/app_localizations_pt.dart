@@ -6144,6 +6144,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'A reação falhou, toque duas vezes para tentar de novo';
 
   @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'Não foi possível enviar sua reação $emoji. Toque duas vezes para tentar de novo';
+  }
+
+  @override
   String get dmReactionChipRetryAnnouncement => 'Tentando a reação de novo';
 
   @override

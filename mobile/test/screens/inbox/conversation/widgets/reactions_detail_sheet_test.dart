@@ -301,6 +301,64 @@ void main() {
       ).called(1);
     });
 
+    testWidgets('tapping own unconfirmed row dispatches a retry request '
+        '(#8516)', (tester) async {
+      primeState([
+        makeReaction(
+          id: 'own1',
+          reactorPubkey: ownerPubkey,
+          emoji: '🔥',
+          publishStatus: DmReactionPublishStatus.unconfirmed,
+        ),
+      ]);
+
+      await open(tester);
+      expect(find.text(l10n.dmReactionRetryAction), findsOneWidget);
+      expect(find.text(l10n.dmReactionRemoveAction), findsNothing);
+
+      await tester.tap(find.text(l10n.dmReactionRetryAction));
+      await tester.pump();
+
+      verify(
+        () => cubit.add(
+          const ConversationReactionRetryRequested(
+            rumorId: 'own1',
+            messageId: messageId,
+            messageAuthorPubkey: otherPubkey,
+            emoji: '🔥',
+          ),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('own unconfirmed row says it could not be sent (#8516)', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      primeState([
+        makeReaction(
+          id: 'own1',
+          reactorPubkey: ownerPubkey,
+          emoji: '🔥',
+          publishStatus: DmReactionPublishStatus.unconfirmed,
+        ),
+      ]);
+
+      await open(tester);
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label ==
+                  l10n.dmReactionChipUnconfirmedA11yLabel('🔥'),
+        ),
+        findsOneWidget,
+      );
+
+      semantics.dispose();
+    });
+
     testWidgets('a refused removal offers a confirmed kind-5 retry', (
       tester,
     ) async {

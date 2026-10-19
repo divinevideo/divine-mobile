@@ -3069,6 +3069,7 @@
     }
   },
   "dmReactionChipFailedA11yLabel": "回应失败，双击重试",
+  "dmReactionChipUnconfirmedA11yLabel": "无法发送你的 {emoji} 回应，双击重试",
   "@dmReactionChipFailedA11yLabel": {
     "description": "Screen-reader label for a reaction chip whose publish failed."
   },

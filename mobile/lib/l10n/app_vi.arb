@@ -3069,6 +3069,7 @@
     }
   },
   "dmReactionChipFailedA11yLabel": "Cảm xúc thất bại, chạm hai lần để thử lại",
+  "dmReactionChipUnconfirmedA11yLabel": "Không gửi được cảm xúc {emoji} của bạn. Chạm hai lần để thử lại",
   "@dmReactionChipFailedA11yLabel": {
     "description": "Screen-reader label for a reaction chip whose publish failed."
   },

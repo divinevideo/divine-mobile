@@ -3943,6 +3943,7 @@
     "dmReactionChipOtherA11yLabel": "{name} zareagował(a) emoji {emoji}",
     "dmReactionChipPendingA11yLabel": "Wysyłanie reakcji: {emoji}",
     "dmReactionChipFailedA11yLabel": "Reakcja się nie powiodła, dotknij dwukrotnie, aby ponowić",
+    "dmReactionChipUnconfirmedA11yLabel": "Nie udało się wysłać twojej reakcji {emoji}. Dotknij dwukrotnie, aby ponowić",
     "dmReactionChipRetryAnnouncement": "Ponawianie reakcji",
     "dmFormatBold": "Pogrubienie",
     "dmFormatItalic": "Kursywa",

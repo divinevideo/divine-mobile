@@ -5958,6 +5958,11 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmReactionChipFailedA11yLabel => 'ምላሹ አልተሳካም፣ እንደገና ለመሞከር ሁለቴ ንካ';
 
   @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'የ$emoji ምላሽዎ አልተላከም። እንደገና ለመሞከር ሁለቴ ይንኩ';
+  }
+
+  @override
   String get dmReactionChipRetryAnnouncement => 'ምላሹን እንደገና በመሞከር ላይ';
 
   @override

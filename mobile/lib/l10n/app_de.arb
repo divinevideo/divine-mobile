@@ -3943,6 +3943,7 @@
     "dmReactionChipOtherA11yLabel": "{name} hat mit {emoji} reagiert",
     "dmReactionChipPendingA11yLabel": "Reaktion wird gesendet: {emoji}",
     "dmReactionChipFailedA11yLabel": "Reaktion fehlgeschlagen, doppelt tippen zum Wiederholen",
+    "dmReactionChipUnconfirmedA11yLabel": "Deine Reaktion {emoji} konnte nicht gesendet werden. Doppelt tippen zum Wiederholen",
     "dmReactionChipRetryAnnouncement": "Reaktion wird wiederholt",
     "dmFormatBold": "Fett",
     "dmFormatItalic": "Kursiv",
