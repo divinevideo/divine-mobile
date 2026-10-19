@@ -81,6 +81,33 @@ final routeObserver = RouteObserver<ModalRoute<dynamic>>();
 /// welcome-entry redirect flow remains unchanged.
 final routerInitialLocationProvider = Provider<String?>((_) => null);
 
+/// Every route the app registers, in matching order.
+///
+/// go_router matches same-segment-count routes top-to-bottom, so spread
+/// order below is load-bearing whenever two routes share a literal first
+/// path segment. It's match-safe today because every module's
+/// parameterized routes (`:id`, `:listId`, etc.) sit under a first segment
+/// no other module uses. The people-list same-prefix case is contained in
+/// `lists_routes.dart`; `/following/new` intentionally spans shell and
+/// profile modules, so `shellRoutes()` must precede `profileRoutes()`.
+/// Both constraints have route-order regression tests. If you add another
+/// shared first segment, place it deliberately and guard the ordering.
+List<RouteBase> appRoutes(Ref ref) => [
+  ...videoRoutes(),
+  ...shellRoutes(),
+  ...searchRoutes(),
+  ...messagingRoutes(),
+  ...chatRoutes(ref),
+  ...accountDeletionRecoveryRoutes(),
+  ...minorAccountReviewRoutes(),
+  ...listsRoutes(ref),
+  ...authRoutes(ref),
+  ...appsRoutes(ref),
+  ...settingsRoutes(ref),
+  ...profileRoutes(),
+  ...libraryRoutes(),
+];
+
 final goRouterProvider = Provider<GoRouter>((ref) {
   // Use ref.read to avoid recreating the router on auth state changes
   final authService = ref.read(authServiceProvider);
@@ -160,30 +187,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) =>
         RouteErrorScreen(message: context.l10n.routeUnknownPath),
     redirect: (context, state) => appRouterRedirect(ref, state),
-    // go_router matches same-segment-count routes top-to-bottom, so spread
-    // order below is load-bearing whenever two routes share a literal first
-    // path segment. It's match-safe today because every module's
-    // parameterized routes (`:id`, `:listId`, etc.) sit under a first segment
-    // no other module uses. The people-list same-prefix case is contained in
-    // `lists_routes.dart`; `/following/new` intentionally spans shell and
-    // profile modules, so `shellRoutes()` must precede `profileRoutes()`.
-    // Both constraints have route-order regression tests. If you add another
-    // shared first segment, place it deliberately and guard the ordering.
-    routes: [
-      ...videoRoutes(),
-      ...shellRoutes(),
-      ...searchRoutes(),
-      ...messagingRoutes(),
-      ...chatRoutes(ref),
-      ...accountDeletionRecoveryRoutes(),
-      ...minorAccountReviewRoutes(),
-      ...listsRoutes(ref),
-      ...authRoutes(ref),
-      ...appsRoutes(ref),
-      ...settingsRoutes(ref),
-      ...profileRoutes(),
-      ...libraryRoutes(),
-    ],
+    routes: appRoutes(ref),
   );
 
   ref.onDispose(router.dispose);

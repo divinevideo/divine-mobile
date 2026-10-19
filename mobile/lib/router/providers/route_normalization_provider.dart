@@ -59,6 +59,28 @@ bool shouldSkipRouteNormalization(String loc) {
   return deepLinkType != DeepLinkType.unknown;
 }
 
+/// The canonical path [location] should be rewritten to, or null to leave it.
+@visibleForTesting
+String? normalizedPathFor(Uri location) {
+  final loc = location.toString();
+  if (shouldSkipRouteNormalization(loc)) {
+    Log.info(
+      '🔄 RouteNormalizationProvider: skipping normalization for $loc',
+      name: 'RouteNormalizationProvider',
+    );
+    return null;
+  }
+
+  // Parse and rebuild to get canonical form. Unknown or incomplete routes
+  // are left to GoRouter instead of being rewritten to home.
+  // Only the *path* is normalized; query parameters are route input
+  // (e.g. the library's ?type= clip filter) and must survive untouched.
+  final parsed = parseKnownRoute(location.path);
+  if (parsed == null) return null;
+  final canonicalPath = buildRoute(parsed);
+  return canonicalPath == location.path ? null : canonicalPath;
+}
+
 /// Watches router location changes and redirects to canonical URLs when needed.
 /// Safe to watch at app root; contains guards to avoid loops.
 final routeNormalizationProvider = Provider<void>((ref) {
@@ -68,26 +90,10 @@ final routeNormalizationProvider = Provider<void>((ref) {
   void listener() {
     final uri = router.routeInformationProvider.value.uri;
     final loc = uri.toString();
-    if (shouldSkipRouteNormalization(loc)) {
-      Log.info(
-        '🔄 RouteNormalizationProvider: skipping normalization for $loc',
-        name: 'RouteNormalizationProvider',
-      );
-      return;
-    }
-
-    // Parse and rebuild to get canonical form. Unknown or incomplete routes
-    // are left to GoRouter instead of being rewritten to home.
-    // Only the *path* is normalized; query parameters are route input
-    // (e.g. the library's ?type= clip filter) and must survive untouched.
-    final parsed = parseKnownRoute(uri.path);
-    if (parsed == null) {
-      return;
-    }
-    final canonicalPath = buildRoute(parsed);
+    final canonicalPath = normalizedPathFor(uri);
 
     // If not canonical, schedule post-frame redirect
-    if (canonicalPath != uri.path) {
+    if (canonicalPath != null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         // Re-check before redirecting: skip when navigation moved on in the
         // meantime (redirecting then would yank the user off the new route)

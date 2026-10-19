@@ -1,7 +1,9 @@
 // ABOUTME: Tests for route normalization skip logic
 // ABOUTME: Prevents universal links from being rewritten by internal canonicalization
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
@@ -211,4 +213,102 @@ void main() {
       }
     });
   });
+
+  group('normalizedPathFor over the registered route tree', () {
+    late List<String> templates;
+
+    setUp(() {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      templates = _templatesOf(container.read(_appRoutesProvider));
+    });
+
+    test('leaves every registered route where it is', () {
+      expect(
+        templates,
+        containsAll([
+          '/video/:eventId/likers',
+          '/profile/:npub/:index',
+          '/welcome/login-options/reset-password',
+        ]),
+        reason: 'the walk must reach shell branches and nested children',
+      );
+      for (final template in templates) {
+        final location = Uri.parse(_sampleLocation(template));
+        expect(
+          normalizedPathFor(location),
+          isNull,
+          reason: 'registered route $template was rewritten from $location',
+        );
+      }
+    });
+
+    test('canonicalizes a negative index on its own route', () {
+      final routes = {
+        '/home/-3': '/home/0',
+        '/notifications/-2': '/notifications/0',
+        '/profile/$pubkey/-1': '/profile/$pubkey/0',
+      };
+
+      for (final entry in routes.entries) {
+        expect(
+          normalizedPathFor(Uri.parse(entry.key)),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    });
+
+    test('rescues a retired alias GoRouter no longer registers', () {
+      final routes = {
+        '/video-feed': '/pooled-video-feed',
+        '/clips-no-sound': '/clips-only',
+      };
+
+      for (final entry in routes.entries) {
+        expect(
+          normalizedPathFor(Uri.parse(entry.key)),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    });
+
+    test('leaves an unregistered trailing segment to GoRouter', () {
+      for (final route in [
+        '/video/$videoId/bogus',
+        '/home/0/extra',
+        '/profile/$pubkey/0/extra',
+      ]) {
+        expect(normalizedPathFor(Uri.parse(route)), isNull, reason: route);
+      }
+    });
+  });
 }
+
+final _appRoutesProvider = Provider<List<RouteBase>>(appRoutes);
+
+/// Full path templates of [routes] and their descendants, shell routes
+/// included, in registration order.
+List<String> _templatesOf(List<RouteBase> routes, [String parent = '']) => [
+  for (final route in routes)
+    if (route is GoRoute) ...[
+      _joinPath(parent, route.path),
+      ..._templatesOf(route.routes, _joinPath(parent, route.path)),
+    ] else if (route is ShellRouteBase)
+      ..._templatesOf(route.routes, parent),
+];
+
+String _joinPath(String parent, String child) {
+  if (child.startsWith('/')) return child;
+  return parent.endsWith('/') ? '$parent$child' : '$parent/$child';
+}
+
+/// A concrete location for [template]: an index for index parameters, a full
+/// 64-hex value (valid as an event id, pubkey, list id or slug) for the rest.
+String _sampleLocation(String template) => template.replaceAllMapped(
+  RegExp(r':(\w+)'),
+  (match) => match[1] == 'index' || match[1]!.endsWith('Index')
+      ? '2'
+      : '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+);
