@@ -52,16 +52,18 @@ void main() {
 
   group('configureImageCacheBudget', () {
     test('sets the budget the reported RAM calls for', () async {
+      // Neither the fallback nor a clamp bound, so ignoring the reading fails.
+      const expected = 8 * _gib ~/ 48;
       final cache = ImageCache();
-      expect(cache.maximumSizeBytes, isNot(equals(128 * _mib)));
+      expect(cache.maximumSizeBytes, isNot(equals(expected)));
 
       final budget = await configureImageCacheBudget(
         cache: cache,
-        readPhysicalMemoryBytes: () async => (5.6 * _gib).round(),
+        readPhysicalMemoryBytes: () async => (7.4 * _gib).round(),
       );
 
-      expect(budget, equals(128 * _mib));
-      expect(cache.maximumSizeBytes, equals(128 * _mib));
+      expect(budget, equals(expected));
+      expect(cache.maximumSizeBytes, equals(expected));
     });
 
     test('sets the fallback budget when RAM cannot be read', () async {
