@@ -167,7 +167,8 @@ abstract final class RoutePaths {
 
   static String profileUnavailablePinsForNpub(String npub) =>
       '$profile/$npub/unavailable-pins';
-  static String soundDetailForId(String id) => '$soundDetailBase/$id';
+  static String soundDetailForId(String id) =>
+      '$soundDetailBase/${Uri.encodeComponent(id)}';
   static String subtitleEditorFor(String videoId) =>
       '$subtitleEditor/${Uri.encodeComponent(videoId)}';
   static String videoDetailForId(String id) =>
