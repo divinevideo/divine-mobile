@@ -10,8 +10,10 @@ import 'package:analytics/analytics.dart';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:cache_sync/cache_sync.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -20,8 +22,15 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr;
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/auth_service.dart'
+    show AuthService, AuthState;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +40,10 @@ import 'package:videos_repository/videos_repository.dart';
 import '../../helpers/feed_bloc_test_helper.dart';
 
 class _MockBadgeNostrClient extends Mock implements NostrClient {}
+
+class _MockBadgeAuthService extends Mock implements AuthService {}
+
+class _MockBadgeBlocklist extends Mock implements ContentBlocklistRepository {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -1642,13 +1655,15 @@ void main() {
           );
         }
 
-        VideoFeedBloc badgeBloc() => VideoFeedBloc(
+        VideoFeedBloc badgeBloc({
+          Duration timeout = const Duration(seconds: 10),
+        }) => VideoFeedBloc(
           videosRepository: mockVideosRepository,
           followRepository: mockFollowRepository,
           curatedListRepository: mockCuratedListRepository,
           userPubkey: '2' * 64,
           badgeAuthors: () async =>
-              (await badges.loadSubscribedHolders()).toList(),
+              (await badges.loadSubscribedHolders(timeout: timeout)).toList(),
           badgeSubscriptionChanges: badges.subscriptionChanges,
         );
 
@@ -1722,124 +1737,173 @@ void main() {
             expect(afterVerification.videos.single.id, 'direct');
           },
         );
-        for (final beforeHomeCompletes in [false, true]) {
-          test('new subscription replaces direct content when observed '
-              'during startup $beforeHomeCompletes', () async {
-            stubEmptySubscriptions();
-            await badges.loadSubscribedHolders();
-            when(() => mockFollowRepository.followingPubkeys)
-                .thenReturn(['1' * 64]);
-            final home = Completer<HomeFeedResult>();
-            when(
-              () => mockVideosRepository.getHomeFeedVideos(
-                authors: any(named: 'authors'),
-                userPubkey: any(named: 'userPubkey'),
-                cursor: any(named: 'cursor'),
-              ),
-            ).thenAnswer((_) => home.future);
-            final coordinate = '30009:${'3' * 64}:daily';
-            nostr.Event event(
-              String id,
-              String author,
-              int kind,
-              List<List<String>> tags,
-            ) => nostr.Event.fromJson({
-              'id': id,
-              'pubkey': author,
-              'kind': kind,
-              'created_at': 1000,
-              'content': '',
-              'tags': tags,
-              'sig': '',
-            });
-            final subscription = event(
-              '4' * 64,
-              '2' * 64,
-              nostr.EventKind.appSpecificData,
-              [
-                ['d', 'divine.badge_subscriptions'],
-                ['a', coordinate],
-              ],
-            );
-            final pending =
-                Completer<
-                  ({List<nostr.Event> events, bool timedOut, bool noRelays})
-                >();
-            var queries = 0;
-            when(
-              () => client.queryEventsDetailed(
-                any(),
-                requireAllRelaysSettled: true,
-              ),
-            ).thenAnswer(
-              (_) => queries++ == 0
-                  ? pending.future
-                  : Future.value((
-                      events: [subscription],
-                      timedOut: false,
-                      noRelays: false,
-                    )),
-            );
-            when(() => client.readAllEvents(any())).thenAnswer((call) async {
-              final filter = call.positionalArguments.single as nostr.Filter;
-              return nostr.PagedQueryResult(
-                events: switch (filter.kinds?.single) {
-                  nostr.EventKind.badgeAward => [
-                    event('5' * 64, '3' * 64, nostr.EventKind.badgeAward, [
-                      ['a', coordinate],
-                      ['p', '6' * 64],
-                    ]),
+        for (final (beforeHomeCompletes, timedOut, authNudge) in [
+          (false, false, false),
+          (true, false, false),
+          (false, true, false),
+          (false, false, true),
+        ]) {
+          test(
+            'new subscription appears during startup: pending home '
+            '$beforeHomeCompletes, timed-out revalidation $timedOut, auth nudge $authNudge',
+            () async {
+              StreamController<AuthState>? authChanges;
+              if (authNudge) {
+                authChanges = StreamController<AuthState>.broadcast();
+                addTearDown(authChanges.close);
+                final auth = _MockBadgeAuthService();
+                when(() => auth.currentPublicKeyHex).thenReturn('2' * 64);
+                when(() => auth.authStateStream)
+                    .thenAnswer((_) => authChanges!.stream);
+                final blocklist = _MockBadgeBlocklist();
+                when(() => blocklist.shouldFilterFromFeeds(any()))
+                    .thenReturn(false);
+                final container = ProviderContainer(
+                  overrides: [
+                    authServiceProvider.overrideWithValue(auth),
+                    nostrServiceProvider.overrideWithValue(client),
+                    contentBlocklistRepositoryProvider.overrideWithValue(
+                      blocklist,
+                    ),
+                    currentEnvironmentProvider.overrideWithValue(
+                      EnvironmentConfig.production,
+                    ),
+                    sharedPreferencesProvider.overrideWithValue(
+                      await SharedPreferences.getInstance(),
+                    ),
                   ],
-                  nostr.EventKind.profileBadges => [
-                    event('7' * 64, '6' * 64, nostr.EventKind.profileBadges, [
-                      ['a', coordinate],
-                      ['e', '5' * 64],
-                    ]),
-                  ],
-                  _ => <nostr.Event>[],
-                },
-                isComplete: true,
-                pages: 1,
+                );
+                addTearDown(container.dispose);
+                await badges.dispose();
+                badges = container.read(badgeRepositoryProvider);
+              }
+              stubEmptySubscriptions();
+              if (!authNudge) await badges.loadSubscribedHolders();
+              when(() => mockFollowRepository.followingPubkeys)
+                  .thenReturn(['1' * 64]);
+              final home = Completer<HomeFeedResult>();
+              when(
+                () => mockVideosRepository.getHomeFeedVideos(
+                  authors: any(named: 'authors'),
+                  userPubkey: any(named: 'userPubkey'),
+                  cursor: any(named: 'cursor'),
+                ),
+              ).thenAnswer((_) => home.future);
+              final coordinate = '30009:${'3' * 64}:daily';
+              nostr.Event event(
+                String id,
+                String author,
+                int kind,
+                List<List<String>> tags,
+              ) => nostr.Event.fromJson({
+                'id': id,
+                'pubkey': author,
+                'kind': kind,
+                'created_at': 1000,
+                'content': '',
+                'tags': tags,
+                'sig': '',
+              });
+              final subscription = event(
+                '4' * 64,
+                '2' * 64,
+                nostr.EventKind.appSpecificData,
+                [
+                  ['d', 'divine.badge_subscriptions'],
+                  ['a', coordinate],
+                ],
               );
-            });
-            final pager = _MockBadgeVideoPager();
-            when(
-              () => mockVideosRepository.createBadgeVideoPager(
-                any(),
-                prioritizeUnseen: true,
-              ),
-            ).thenReturn(pager);
-            when(pager.loadMore)
-                .thenAnswer((_) async => [createTestVideo('badge')]);
-            when(() => pager.hasMore).thenReturn(false);
-            final bloc = badgeBloc();
-            bloc.add(const VideoFeedStarted(mode: FeedMode.following));
-            await pumpEventQueue();
-            if (!beforeHomeCompletes) {
-              home.complete(
-                HomeFeedResult(videos: [createTestVideo('direct')]),
+              final pending =
+                  Completer<
+                    ({List<nostr.Event> events, bool timedOut, bool noRelays})
+                  >();
+              var queries = 0;
+              when(
+                () => client.queryEventsDetailed(
+                  any(),
+                  requireAllRelaysSettled: true,
+                ),
+              ).thenAnswer(
+                (_) => queries++ == 0
+                    ? pending.future
+                    : Future.value((
+                        events: timedOut ? <nostr.Event>[] : [subscription],
+                        timedOut: false,
+                        noRelays: false,
+                      )),
               );
+              when(() => client.readAllEvents(any())).thenAnswer((call) async {
+                final filter = call.positionalArguments.single as nostr.Filter;
+                return nostr.PagedQueryResult(
+                  events: switch (filter.kinds?.single) {
+                    nostr.EventKind.badgeAward => [
+                      event('5' * 64, '3' * 64, nostr.EventKind.badgeAward, [
+                        ['a', coordinate],
+                        ['p', '6' * 64],
+                      ]),
+                    ],
+                    nostr.EventKind.profileBadges => [
+                      event('7' * 64, '6' * 64, nostr.EventKind.profileBadges, [
+                        ['a', coordinate],
+                        ['e', '5' * 64],
+                      ]),
+                    ],
+                    _ => <nostr.Event>[],
+                  },
+                  isComplete: true,
+                  pages: 1,
+                );
+              });
+              final pager = _MockBadgeVideoPager();
+              when(
+                () => mockVideosRepository.createBadgeVideoPager(
+                  any(),
+                  prioritizeUnseen: true,
+                ),
+              ).thenReturn(pager);
+              when(pager.loadMore)
+                  .thenAnswer((_) async => [createTestVideo('badge')]);
+              when(() => pager.hasMore).thenReturn(false);
+              final bloc = badgeBloc(
+                timeout: timedOut ? Duration.zero : const Duration(seconds: 10),
+              );
+              bloc.add(const VideoFeedStarted(mode: FeedMode.following));
               await pumpEventQueue();
-              expect(bloc.state.videos.single.id, 'direct');
-            }
-            pending.complete((
-              events: [subscription],
-              timedOut: false,
-              noRelays: false,
-            ));
-            await pumpEventQueue();
-            if (beforeHomeCompletes) {
-              home.complete(
-                HomeFeedResult(videos: [createTestVideo('obsolete-direct')]),
-              );
+              if (authNudge) {
+                authChanges!.add(AuthState.authenticated);
+                await pumpEventQueue();
+              }
+              if (!beforeHomeCompletes) {
+                home.complete(
+                  HomeFeedResult(videos: [createTestVideo('direct')]),
+                );
+                await pumpEventQueue();
+                if (authNudge) {
+                  expect(bloc.state.isLoading, isTrue);
+                  expect(bloc.state.videos, isEmpty);
+                } else {
+                  expect(bloc.state.videos.single.id, 'direct');
+                }
+              }
+              pending.complete((
+                events: [subscription],
+                timedOut: false,
+                noRelays: false,
+              ));
               await pumpEventQueue();
-            }
-            final finalState = bloc.state;
-            await bloc.close();
-            expect(finalState.status, VideoFeedStatus.success);
-            expect(finalState.videos.map((v) => v.id), ['badge']);
-            expect(queries, 2);
-          });
+              if (beforeHomeCompletes) {
+                home.complete(
+                  HomeFeedResult(videos: [createTestVideo('obsolete-direct')]),
+                );
+                await pumpEventQueue();
+              }
+              final finalState = bloc.state;
+              await bloc.close();
+              expect(finalState.status, VideoFeedStatus.success);
+              expect(finalState.videos.map((v) => v.id), ['badge']);
+              expect(queries, authNudge ? 1 : 2);
+            },
+          );
         }
 
         test('failed revalidation retains content but a fresh no-follow load fails closed', () async {

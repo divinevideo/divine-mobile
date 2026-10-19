@@ -24,6 +24,125 @@ class _MockBlocklist extends Mock implements ContentBlocklistRepository {}
 
 void main() {
   group('badgeRepositoryProvider', () {
+    test('authenticated nudges preserve a verified empty session', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final authChanges = StreamController<AuthState>.broadcast();
+      addTearDown(authChanges.close);
+      final auth = _MockAuthService();
+      when(() => auth.currentPublicKeyHex).thenReturn('1' * 64);
+      when(() => auth.authStateStream).thenAnswer((_) => authChanges.stream);
+      final client = _MockNostrClient();
+      when(
+        () => client.queryEventsDetailed(any(), requireAllRelaysSettled: true),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(auth),
+          nostrServiceProvider.overrideWithValue(client),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            _MockBlocklist(),
+          ),
+          currentEnvironmentProvider.overrideWithValue(
+            EnvironmentConfig.production,
+          ),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
+      addTearDown(container.dispose);
+      final repository = container.read(badgeRepositoryProvider);
+      await repository.loadSubscribedHolders();
+      // Upgrade/resume re-emits authenticated while account and session stay put.
+      authChanges.add(AuthState.authenticated);
+      authChanges.add(AuthState.authenticated);
+      await pumpEventQueue();
+      final pending =
+          Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+      when(
+        () => client.queryEventsDetailed(any(), requireAllRelaysSettled: true),
+      ).thenAnswer((_) => pending.future);
+      var completed = false;
+      final next = repository.loadSubscribedHolders().then(
+        (_) => completed = true,
+      );
+      await pumpEventQueue();
+      final completedBeforeRead = completed;
+      pending.complete((events: <Event>[], timedOut: false, noRelays: false));
+      await next;
+      expect(completedBeforeRead, isTrue);
+    });
+
+    for (final queuedSignOut in [false, true]) {
+      test(
+        'queued account transition cannot cancel the successor first read: $queuedSignOut',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final authChanges = StreamController<AuthState>.broadcast();
+          addTearDown(authChanges.close);
+          var account = '1' * 64;
+          final auth = _MockAuthService();
+          when(() => auth.currentPublicKeyHex).thenAnswer((_) => account);
+          when(() => auth.authStateStream)
+              .thenAnswer((_) => authChanges.stream);
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+          final container = ProviderContainer(
+            overrides: [
+              authServiceProvider.overrideWithValue(auth),
+              nostrServiceProvider.overrideWithValue(client),
+              contentBlocklistRepositoryProvider.overrideWithValue(
+                _MockBlocklist(),
+              ),
+              currentEnvironmentProvider.overrideWithValue(
+                EnvironmentConfig.production,
+              ),
+              sharedPreferencesProvider.overrideWithValue(prefs),
+            ],
+          );
+          addTearDown(container.dispose);
+          final repository = container.read(badgeRepositoryProvider);
+          await repository.loadSubscribedHolders();
+          if (queuedSignOut) {
+            account = '';
+            authChanges.add(AuthState.unauthenticated);
+          }
+          account = '2' * 64;
+          authChanges.add(AuthState.authenticated);
+          final pending =
+              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) => pending.future);
+          var completed = false;
+          final next = repository.loadSubscribedHolders().then(
+            (_) => completed = true,
+          );
+          await pumpEventQueue();
+          final completedBeforeRead = completed;
+          pending.complete((
+            events: <Event>[],
+            timedOut: false,
+            noRelays: false,
+          ));
+          await next;
+          expect(completedBeforeRead, isFalse);
+        },
+      );
+    }
+
     test(
       'signing out and back into the same account requires a new empty read',
       () async {

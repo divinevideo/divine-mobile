@@ -406,6 +406,8 @@ class BadgeRepository {
   int _subscriptionProof = 0;
   int _subscriptionEdits = 0;
   bool _verifiedEmptySubscriptions = false;
+  bool _subscriptionDiscoveryPending = false;
+  Event? _observedSubscriptions;
   Future<void>? _subscriptionRevalidation;
   StreamSubscription<void>? _subscriptionSessionChanges;
   bool _disposed = false;
@@ -415,10 +417,15 @@ class BadgeRepository {
     _subscriptionProof++;
   }
 
-  void _resetSubscriptionSession() {
-    _subscriptionAccount = _currentPubkey();
+  void _resetSubscriptionSession({bool preserveObservedSubscriptions = false}) {
+    final pubkey = _currentPubkey();
+    if (!preserveObservedSubscriptions || pubkey != _subscriptionAccount) {
+      _observedSubscriptions = null;
+    }
+    _subscriptionAccount = pubkey;
     _subscriptionSession++;
     _subscriptionEdits = 0;
+    _subscriptionDiscoveryPending = false;
     _invalidateEmptySubscriptions();
     _subscriptionRevalidation = null;
   }
@@ -608,7 +615,10 @@ class BadgeRepository {
             'Badge subscriptions changed during the read',
           );
         }
-        if (_subscriptionEdits == 0) _verifiedEmptySubscriptions = true;
+        if (_subscriptionEdits == 0) {
+          _verifiedEmptySubscriptions = true;
+          _subscriptionDiscoveryPending = true;
+        }
         return const {};
       }
       final holders = <String>{};
@@ -648,7 +658,6 @@ class BadgeRepository {
     final pubkey = _requireCurrentPubkey();
     _syncSubscriptionAccount();
     final session = _subscriptionSession;
-    final proof = _subscriptionProof;
     final filters = [
       Filter(
         authors: [pubkey],
@@ -690,21 +699,19 @@ class BadgeRepository {
                   ),
             )
             .toList()
-          ..sort((a, b) {
-            final byTime = b.createdAt.compareTo(a.createdAt);
-            return byTime != 0 ? byTime : a.id.compareTo(b.id);
-          });
-    final published = _publishedSubscriptions;
-    final latest = matching.isEmpty ? null : matching.first;
-    final event =
-        published != null &&
-            published.pubkey == pubkey &&
-            (latest == null ||
-                published.createdAt > latest.createdAt ||
-                (published.createdAt == latest.createdAt &&
-                    published.id.compareTo(latest.id) < 0))
-        ? published
-        : latest;
+          ..sort(_compareSubscriptionEvents);
+    var event = matching.isEmpty ? null : matching.first;
+    // A missing relay result cannot erase signed state already observed in
+    // this session. Only a newer replaceable event (including an empty list)
+    // can supersede it; query completion order is not event freshness.
+    for (final known in [_publishedSubscriptions, _observedSubscriptions]) {
+      if (known != null &&
+          known.pubkey == pubkey &&
+          (event == null || _compareSubscriptionEvents(known, event) < 0)) {
+        event = known;
+      }
+    }
+    _observedSubscriptions = event;
     if (event == null) return const {};
     final coordinates = <BadgeCoordinate>{};
     for (final tag in event.tags) {
@@ -712,14 +719,22 @@ class BadgeRepository {
       final coordinate = BadgeCoordinate.parse(tag[1]);
       if (coordinate != null) coordinates.add(coordinate);
     }
-    if (coordinates.isNotEmpty && proof == _subscriptionProof) {
-      final notify = _verifiedEmptySubscriptions;
+    if (coordinates.isNotEmpty) {
+      // A caller deadline revokes the shortcut, not a late same-session
+      // discovery. Keep its refresh pending until signed state settles it.
+      final notify = _subscriptionDiscoveryPending;
+      _subscriptionDiscoveryPending = false;
       _invalidateEmptySubscriptions();
       if (notify && !_subscriptionChanges.isClosed) {
         _subscriptionChanges.add(null);
       }
     }
     return Set.unmodifiable(coordinates);
+  }
+
+  static int _compareSubscriptionEvents(Event a, Event b) {
+    final byTime = b.createdAt.compareTo(a.createdAt);
+    return byTime != 0 ? byTime : a.id.compareTo(b.id);
   }
 
   /// Add or remove one badge subscription without following its holders.
@@ -732,7 +747,7 @@ class BadgeRepository {
   }) async {
     final pubkey = _requireCurrentPubkey();
     _syncSubscriptionAccount();
-    _resetSubscriptionSession();
+    _resetSubscriptionSession(preserveObservedSubscriptions: true);
     final session = _subscriptionSession;
     _subscriptionEdits++;
     try {
@@ -752,6 +767,9 @@ class BadgeRepository {
         kind: EventKind.appSpecificData,
         label: 'badge subscriptions',
         tags: tags,
+        canPublish: (event) =>
+            event.pubkey == pubkey &&
+            _isSubscriptionSessionCurrent(pubkey, session),
       );
       if (_isSubscriptionSessionCurrent(pubkey, session)) {
         _subscriptionChanges.add(null);
@@ -1966,15 +1984,23 @@ class BadgeRepository {
   /// Signs and publishes an empty-content event, returning the signed event.
   ///
   /// Throws [StateError] when signing fails and [BadgePublishException] when
-  /// no relay confirms the publish.
+  /// no relay confirms the publish. [canPublish] guards subscription ownership
+  /// after asynchronous signing; a superseded edit fails before publication.
   Future<Event> _signAndPublish({
     required int kind,
     required String label,
     required List<List<String>> tags,
+    bool Function(Event event)? canPublish,
   }) async {
     final event = await _signEvent(kind: kind, content: '', tags: tags);
     if (event == null) {
       throw StateError('Could not sign $label event');
+    }
+
+    if (canPublish != null && !canPublish(event)) {
+      throw const BadgeReadIncompleteException(
+        'Badge subscription edit was superseded',
+      );
     }
 
     final outcome = await _nostrClient.publishEventAwaitOk(event);

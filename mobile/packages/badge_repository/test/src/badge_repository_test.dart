@@ -256,6 +256,142 @@ void main() {
       },
     );
 
+    group('subscription signing ownership', () {
+      test(
+        'a queued account switch cannot publish a completed subscription read',
+        () async {
+          var account = _pubkey(1);
+          var signerCalls = 0;
+          final pending = Completer<_SubscriptionRead>();
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) => pending.future);
+          final scoped = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: preferences,
+            currentPubkey: () => account,
+            signEvent:
+                ({required kind, required content, required tags}) async {
+                  signerCalls++;
+                  return _event(
+                    id: _eventId(705),
+                    pubkey: account,
+                    kind: kind,
+                    tags: tags,
+                  );
+                },
+          );
+          addTearDown(scoped.dispose);
+          final saving = scoped.setSubscription(
+            BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+            subscribed: true,
+          );
+          final rejected = expectLater(
+            saving,
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          // The read and signer start for A. The queued account change runs
+          // before the asynchronous signer result reaches the publisher.
+          final switching = pending.future.then((_) => account = _pubkey(3));
+          pending.complete(_emptySubscriptionRead);
+          await switching;
+          await rejected;
+          expect(signerCalls, 1);
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'a signer returning a different author cannot publish the snapshot',
+        () async {
+          final scoped = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: preferences,
+            currentPubkey: () => _pubkey(1),
+            signEvent:
+                ({required kind, required content, required tags}) async =>
+                    _event(
+                      id: _eventId(706),
+                      pubkey: _pubkey(3),
+                      kind: kind,
+                      tags: tags,
+                    ),
+          );
+          addTearDown(scoped.dispose);
+          await expectLater(
+            scoped.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            ),
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      for (final boundary in [
+        'account switch',
+        'same account new session',
+        'dispose',
+      ]) {
+        test(
+          'does not begin publication after $boundary while signing',
+          () async {
+            var account = _pubkey(1);
+            final sessions = StreamController<void>.broadcast();
+            addTearDown(sessions.close);
+            final signing = Completer<void>();
+            final signed = Completer<Event?>();
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              sessionChanges: sessions.stream,
+              signEvent: ({required kind, required content, required tags}) {
+                signing.complete();
+                return signed.future;
+              },
+            );
+            final saving = scoped.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            );
+            final rejected = expectLater(
+              saving,
+              throwsA(isA<BadgeReadIncompleteException>()),
+            );
+            await signing.future;
+            switch (boundary) {
+              case 'account switch':
+                account = _pubkey(3);
+              case 'same account new session':
+                sessions.add(null);
+                await pumpEventQueue();
+              case 'dispose':
+                await scoped.dispose();
+            }
+            signed.complete(
+              _event(
+                id: _eventId(704),
+                pubkey: _pubkey(1),
+                kind: EventKind.appSpecificData,
+                tags: [
+                  ['d', 'divine.badge_subscriptions'],
+                  ['a', '30009:${_pubkey(2)}:daily'],
+                ],
+              ),
+            );
+            await rejected;
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+            if (boundary != 'dispose') await scoped.dispose();
+          },
+        );
+      }
+    });
+
     test('dispose closes the subscription change stream', () async {
       final done = repository.subscriptionChanges.isEmpty;
 
@@ -660,6 +796,13 @@ void main() {
             expect(await repository.loadSubscriptions(), isNotEmpty);
             expect(await repository.loadSubscriptions(), isNotEmpty);
             await pumpEventQueue();
+            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
             final pending = Completer<_SubscriptionRead>();
             deferRead(pending);
             var completed = false;
@@ -676,21 +819,90 @@ void main() {
         );
 
         test(
+          'eventless reads cannot forget a known signed subscription',
+          () async {
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            await repository.loadSubscriptions();
+            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            expect(await repository.loadSubscribedHolders(), isEmpty);
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+            verify(() => nostrClient.readAllEvents(any())).called(2);
+          },
+        );
+
+        test('local edits preserve the newest observed signed list', () async {
+          when(
+            () => nostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [subscription()]);
+          await repository.loadSubscriptions();
+          final added = BadgeCoordinate(
+            pubkey: _pubkey(3),
+            identifier: 'weekly',
+          );
+          final saved = await repository.setSubscription(
+            added,
+            subscribed: true,
+          );
+          expect(saved, {
+            BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+            added,
+          });
+          expect(
+            lastSignedEvent()!.tags,
+            contains(equals(['a', '30009:${_pubkey(2)}:daily'])),
+          );
+          expect(lastSignedEvent()!.tags, contains(equals(['a', added.value])));
+        });
+
+        test(
           'an older empty result cannot overwrite a newly observed subscription',
           () async {
             final pending = Completer<_SubscriptionRead>();
             deferRead(pending);
             final oldRead = repository.loadSubscribedHolders();
-            final rejected = expectLater(
-              oldRead,
-              throwsA(isA<BadgeReadIncompleteException>()),
+            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
             );
             when(
               () => nostrClient.queryEvents(any()),
             ).thenAnswer((_) async => [subscription()]);
             await repository.loadSubscriptions();
             pending.complete(_emptySubscriptionRead);
-            await rejected;
+            expect(await oldRead, isEmpty);
+            verify(() => nostrClient.readAllEvents(any())).called(1);
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
           },
         );
 
@@ -905,7 +1117,7 @@ void main() {
         );
 
         test(
-          'late timed-out revalidation cannot invalidate a newer empty proof',
+          'late timed-out discovery revokes a newer eventless empty proof',
           () async {
             await repository.loadSubscribedHolders();
             final late = Completer<_SubscriptionRead>();
@@ -931,6 +1143,13 @@ void main() {
               noRelays: false,
             ));
             await pumpEventQueue();
+            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
             final nextRead = Completer<_SubscriptionRead>();
             deferRead(nextRead);
             var nextCompleted = false;
@@ -942,10 +1161,76 @@ void main() {
             nextRead.complete(_emptySubscriptionRead);
             await next;
             expect(completedBeforeRead, isFalse);
-            expect(completedBeforeRevalidation, isTrue);
-            expect(changes, isEmpty);
+            expect(completedBeforeRevalidation, isFalse);
+            expect(changes, hasLength(1));
+            final laterRead = Completer<_SubscriptionRead>();
+            deferRead(laterRead);
+            var laterCompleted = false;
+            final later = repository.loadSubscribedHolders().then(
+              (_) => laterCompleted = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeLaterRead = laterCompleted;
+            laterRead.complete(_emptySubscriptionRead);
+            await later;
+            expect(completedBeforeLaterRead, isFalse);
           },
         );
+
+        for (final (emptyCreatedAt, emptyId) in [(2000, 702), (1000, 699)]) {
+          test(
+            'a newer signed empty list supersedes a late old subscription: $emptyCreatedAt/$emptyId',
+            () async {
+              await repository.loadSubscribedHolders();
+              final late = Completer<_SubscriptionRead>();
+              deferRead(late);
+              await repository.loadSubscribedHolders(timeout: Duration.zero);
+              await pumpEventQueue();
+              final empty = _event(
+                id: _eventId(emptyId),
+                pubkey: _pubkey(1),
+                kind: EventKind.appSpecificData,
+                createdAt: emptyCreatedAt,
+                tags: [
+                  ['d', 'divine.badge_subscriptions'],
+                ],
+              );
+              when(
+                () => nostrClient.queryEventsDetailed(
+                  any(),
+                  requireAllRelaysSettled: true,
+                ),
+              ).thenAnswer(
+                (_) async =>
+                    (events: [empty], timedOut: false, noRelays: false),
+              );
+              await repository.loadSubscribedHolders();
+              final changes = <void>[];
+              final listener = repository.subscriptionChanges.listen(
+                changes.add,
+              );
+              addTearDown(listener.cancel);
+              late.complete((
+                events: [subscription()],
+                timedOut: false,
+                noRelays: false,
+              ));
+              await pumpEventQueue();
+              final pending = Completer<_SubscriptionRead>();
+              deferRead(pending);
+              var completed = false;
+              final next = repository.loadSubscribedHolders().then(
+                (_) => completed = true,
+              );
+              await pumpEventQueue();
+              final completedBeforeRead = completed;
+              pending.complete(_emptySubscriptionRead);
+              await next;
+              expect(completedBeforeRead, isTrue);
+              expect(changes, isEmpty);
+            },
+          );
+        }
 
         test(
           'switching accounts during holder reads rejects the old holder result',
@@ -1002,7 +1287,23 @@ void main() {
                 any(),
                 requireAllRelaysSettled: true,
               ),
-            ).thenAnswer((_) async => _emptySubscriptionRead);
+            ).thenAnswer(
+              (_) async => (
+                events: [
+                  _event(
+                    id: _eventId(703),
+                    pubkey: _pubkey(1),
+                    kind: EventKind.appSpecificData,
+                    createdAt: 2000,
+                    tags: [
+                      ['d', 'divine.badge_subscriptions'],
+                    ],
+                  ),
+                ],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
             await repository.loadSubscribedHolders();
             obsolete.completeError(
               const BadgeReadIncompleteException('obsolete failure'),
