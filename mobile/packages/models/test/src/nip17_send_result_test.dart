@@ -140,6 +140,32 @@ void main() {
         expect(success.queuedRumorId, isNull);
         expect(blocked.queuedRumorId, isNull);
       });
+
+      test('reports a send that reached no relay, so a retry sweep can '
+          'leave it uncounted (#8516)', () {
+        const unreached = NIP17SendResult.failure(
+          'Reaction not sent: no relay reached',
+          reachedNoRelay: true,
+        );
+        const rejected = NIP17SendResult.failure('rejected by relay');
+
+        expect(unreached.reachedNoRelay, isTrue);
+        expect(rejected.reachedNoRelay, isFalse);
+      });
+
+      test('success, blocked and tooLong never report reaching no relay', () {
+        final success = NIP17SendResult.success(
+          rumorEventId: rumorEventId,
+          messageEventId: messageEventId,
+          recipientPubkey: recipientPubkey,
+        );
+        const blocked = NIP17SendResult.blocked('policy');
+        const tooLong = NIP17SendResult.tooLong('too long');
+
+        expect(success.reachedNoRelay, isFalse);
+        expect(blocked.reachedNoRelay, isFalse);
+        expect(tooLong.reachedNoRelay, isFalse);
+      });
     });
 
     group('blocked factory', () {
@@ -320,6 +346,15 @@ void main() {
 
         expect(hard, isNot(equals(soft)));
         expect(hard.hashCode, isNot(equals(soft.hashCode)));
+      });
+
+      test('value equality: differing reachedNoRelay breaks equality', () {
+        const reached = NIP17SendFailure('boom');
+        const unreached = NIP17SendFailure('boom', reachedNoRelay: true);
+
+        expect(reached, isNot(equals(unreached)));
+        expect(reached.hashCode, isNot(equals(unreached.hashCode)));
+        expect(unreached.toString(), contains('reachedNoRelay: true'));
       });
 
       test('value equality: differing queuedRumorId breaks equality — two '

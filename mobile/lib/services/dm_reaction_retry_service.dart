@@ -85,7 +85,15 @@ class DmReactionRetryConfig {
   }
 }
 
-enum _RetryAttemptOutcome { recovered, refused, failed }
+enum _RetryAttemptOutcome {
+  recovered,
+  refused,
+  failed,
+
+  /// The attempt reached no relay. It is not counted, and a relay connecting
+  /// wakes the sweep for it rather than the follow-up heartbeat (#8516).
+  notSent,
+}
 
 /// Re-drives undelivered own DM reactions and removals, closing the
 /// reliability gap that leaves a reaction lost when its recipient gift wrap
@@ -152,11 +160,9 @@ class DmReactionRetryService {
 
   /// Connectivity probe (same contract as `NIP17MessageService`'s). When it
   /// reports offline the pass is skipped entirely: every dispatch would
-  /// deterministically hit the send path's own offline fail-fast, and
-  /// [_driveTargets] charges a target's budget on any non-success result. So
-  /// five foreground transitions in airplane mode would otherwise exhaust a
-  /// pending removal, after which the sweep skips it for the rest of the
-  /// process and reports a removal failure that was only ever an outage.
+  /// deterministically hit the send path's own offline fail-fast. That
+  /// attempt reaches no relay and is not charged either (#8516), but skipping
+  /// the pass saves the doomed sends.
   /// [_retryTriggerStream] re-fires the sweep when the network returns.
   /// Mirrors `OutgoingDmRetryService`. #7319.
   final OfflineProbe? _isOffline;
@@ -262,10 +268,9 @@ class DmReactionRetryService {
 
     try {
       // Offline: every dispatch would deterministically hit the send path's
-      // own offline fail-fast, and _driveTargets charges the budget on any
-      // non-success result. Gate the whole pass rather than the dispatch, so
-      // no target is charged for a network outage. _retryTriggerStream
-      // re-fires the sweep when connectivity returns. #7319.
+      // own offline fail-fast. Gate the whole pass rather than the dispatch,
+      // so no target is charged for a network outage (#7319) and no doomed
+      // send is made. _retryTriggerStream re-fires the sweep afterwards.
       if (await _isOfflineSafely()) {
         Log.debug(
           'device offline; skipping sweep without charging retry budgets',
@@ -289,13 +294,16 @@ class DmReactionRetryService {
         reactionTargets,
         phase: _addPhase,
         applyPendingMinAge: true,
-        driver: (t) async =>
-            (await _repository.retry(
-              rumorId: t.rumorId,
-              targetMessageAuthor: t.targetMessageAuthor,
-            )).success
-            ? _RetryAttemptOutcome.recovered
-            : _RetryAttemptOutcome.failed,
+        driver: (t) async => switch (await _repository.retry(
+          rumorId: t.rumorId,
+          targetMessageAuthor: t.targetMessageAuthor,
+        )) {
+          DmReactionPublishResult(success: true) =>
+            _RetryAttemptOutcome.recovered,
+          DmReactionPublishResult(reachedNoRelay: true) =>
+            _RetryAttemptOutcome.notSent,
+          _ => _RetryAttemptOutcome.failed,
+        },
       );
       final d = await _driveTargets(
         deletionTargets,
@@ -307,6 +315,7 @@ class DmReactionRetryService {
         )) {
           DmReactionDeletionOutcome.sent => _RetryAttemptOutcome.recovered,
           DmReactionDeletionOutcome.refused => _RetryAttemptOutcome.refused,
+          DmReactionDeletionOutcome.notSent => _RetryAttemptOutcome.notSent,
           DmReactionDeletionOutcome.unconfirmed ||
           DmReactionDeletionOutcome.unavailable => _RetryAttemptOutcome.failed,
         },
@@ -316,13 +325,13 @@ class DmReactionRetryService {
       Log.info(
         'sweep complete: '
         'reactions(recovered=${r.recovered} failed=${r.failed} '
-        'refused=${r.refused} '
+        'refused=${r.refused} not-sent=${r.notSent} '
         'skipped-backoff=${r.skippedBackoff} '
         'skipped-exhausted=${r.skippedExhausted} '
         'skipped-too-young=${r.skippedTooYoung} '
         'skipped-in-flight=${r.skippedInFlight}) '
         'deletions(recovered=${d.recovered} failed=${d.failed} '
-        'refused=${d.refused} '
+        'refused=${d.refused} not-sent=${d.notSent} '
         'skipped-backoff=${d.skippedBackoff} '
         'skipped-exhausted=${d.skippedExhausted} '
         'skipped-in-flight=${d.skippedInFlight})',
@@ -410,6 +419,7 @@ class DmReactionRetryService {
       int recovered,
       int failed,
       int refused,
+      int notSent,
       int skippedBackoff,
       int skippedExhausted,
       int skippedTooYoung,
@@ -428,6 +438,7 @@ class DmReactionRetryService {
     var recovered = 0;
     var failed = 0;
     var refused = 0;
+    var notSent = 0;
     var skippedBackoff = 0;
     var skippedExhausted = 0;
     var skippedTooYoung = 0;
@@ -436,7 +447,8 @@ class DmReactionRetryService {
     // Rows this session may still attempt: they back off, age past the
     // in-flight guard, or failed with budget left. A row that was delivered,
     // refused, or has spent its budget will never be attempted again, so it
-    // must not keep the heartbeat alive.
+    // must not keep the heartbeat alive. Nor does one whose attempt reached
+    // no relay: a relay connecting wakes the sweep for it (#8516).
     var stillRetryable = 0;
 
     for (final target in targets) {
@@ -511,6 +523,8 @@ class DmReactionRetryService {
           _attempts.remove(id);
           _lastAttempt.remove(id);
           refused++;
+        case _RetryAttemptOutcome.notSent:
+          notSent++;
         case _RetryAttemptOutcome.failed:
           _attempts[id] = attempts + 1;
           _lastAttempt[id] = _now();
@@ -527,6 +541,7 @@ class DmReactionRetryService {
       recovered: recovered,
       failed: failed,
       refused: refused,
+      notSent: notSent,
       skippedBackoff: skippedBackoff,
       skippedExhausted: skippedExhausted,
       skippedTooYoung: skippedTooYoung,

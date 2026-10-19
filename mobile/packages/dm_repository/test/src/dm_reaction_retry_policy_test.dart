@@ -119,6 +119,136 @@ void main() {
       emoji: '🔥',
     );
 
+    group('a send that reached no relay', () {
+      const unreached = NIP17SendResult.failure(
+        'Reaction not sent: no relay reached',
+        reachedNoRelay: true,
+      );
+
+      test(
+        'is reported by publish, which leaves the sweep un-nudged',
+        () async {
+          var nudges = 0;
+          final subscription = reactions.retryableReactionWork.listen(
+            (_) => nudges++,
+          );
+          addTearDown(subscription.cancel);
+          stubWire((_) async => unreached);
+
+          final result = await publish();
+          await pumpEventQueue();
+
+          expect(result.success, isFalse);
+          expect(result.reachedNoRelay, isTrue);
+          expect(nudges, 0);
+          final row = await reactionsDao.getById(
+            id: result.rumorId,
+            ownerPubkey: _owner,
+          );
+          expect(row?.publishStatus, 'failed');
+        },
+      );
+
+      test('is reported by retry, which leaves the sweep un-nudged', () async {
+        stubWire((_) async => const NIP17SendResult.failure('rejected'));
+        final id = (await publish()).rumorId;
+        var nudges = 0;
+        final subscription = reactions.retryableReactionWork.listen(
+          (_) => nudges++,
+        );
+        addTearDown(subscription.cancel);
+        stubWire((_) async => unreached);
+
+        final result = await reactions.retry(
+          rumorId: id,
+          targetMessageAuthor: _peer,
+        );
+        await pumpEventQueue();
+
+        expect(result.reachedNoRelay, isTrue);
+        expect(nudges, 0);
+      });
+
+      test('is reported by retryDeletion as notSent, which leaves the sweep '
+          'un-nudged', () async {
+        stubConfirmed();
+        final id = (await publish()).rumorId;
+        stubWire((_) async => const NIP17SendResult.failure('rejected'));
+        await reactions.removeOwn(rumorId: id, targetMessageAuthor: _peer);
+        await pumpEventQueue();
+        var nudges = 0;
+        final subscription = reactions.retryableReactionWork.listen(
+          (_) => nudges++,
+        );
+        addTearDown(subscription.cancel);
+        stubWire((_) async => unreached);
+
+        final outcome = await reactions.retryDeletion(
+          rumorId: id,
+          targetMessageAuthor: _peer,
+        );
+        await pumpEventQueue();
+
+        expect(outcome, DmReactionDeletionOutcome.notSent);
+        expect(nudges, 0);
+        final row = await reactionsDao.getById(id: id, ownerPubkey: _owner);
+        expect(row?.publishStatus, 'deletion_pending');
+      });
+
+      /// A group of the owner, [_peer] and a third member; returns its id.
+      Future<String> seedGroup() async {
+        const third =
+            '3333333333333333333333333333333333333333333333333333333333333333';
+        final groupId = DmRepository.computeConversationId([
+          _owner,
+          _peer,
+          third,
+        ]);
+        await ConversationsDao(db).upsertConversation(
+          id: groupId,
+          participantPubkeys: '["$_owner","$_peer","$third"]',
+          isGroup: true,
+          createdAt: 1700000000,
+          ownerPubkey: _owner,
+        );
+        return groupId;
+      }
+
+      Future<DmReactionPublishResult> publishIn(String groupId) =>
+          reactions.publish(
+            conversationId: groupId,
+            targetMessageId: _targetMessageId,
+            targetMessageAuthor: _peer,
+            emoji: '🔥',
+          );
+
+      test('in a group is not reported when another recipient reached a '
+          'relay', () async {
+        final groupId = await seedGroup();
+        stubWire(
+          (invocation) async =>
+              invocation.namedArguments[#recipientPubkey] == _peer
+              ? unreached
+              : const NIP17SendResult.failure('rejected by relay'),
+        );
+
+        final result = await publishIn(groupId);
+
+        expect(result.success, isFalse);
+        expect(result.reachedNoRelay, isFalse);
+      });
+
+      test('in a group is reported when no recipient reached a '
+          'relay', () async {
+        final groupId = await seedGroup();
+        stubWire((_) async => unreached);
+
+        final result = await publishIn(groupId);
+
+        expect(result.reachedNoRelay, isTrue);
+      });
+    });
+
     group('attemptInFlight (#10044)', () {
       test('marks a removal whose own first attempt is still waiting for '
           'its OK', () async {

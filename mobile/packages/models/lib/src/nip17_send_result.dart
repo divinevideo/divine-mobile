@@ -81,10 +81,14 @@ sealed class NIP17SendResult {
   ///
   /// [queuedRumorId] is the durable `outgoing_dms` row the send left behind
   /// for the retry sweep — see [NIP17SendResult.queuedRumorId].
+  ///
+  /// [reachedNoRelay] marks a send that never got to any relay — see
+  /// [NIP17SendResult.reachedNoRelay].
   const factory NIP17SendResult.failure(
     String error, {
     bool retryablePending,
     String? queuedRumorId,
+    bool reachedNoRelay,
   }) = NIP17SendFailure;
 
   /// Build a blocked result: a send that is refused for good, such as a policy
@@ -132,6 +136,13 @@ sealed class NIP17SendResult {
   /// (frame written, no relay `OK`, no explicit rejection) and bounded
   /// pre-publish crypto build timeouts where retry is still the honest outcome.
   bool get retryablePending => false;
+
+  /// Whether the send reached no relay at all: the device was offline, or no
+  /// relay took the wrap, so nothing was delivered and nothing was rejected.
+  /// Retry sweeps do not count such an attempt against a row's automatic
+  /// retries, the same as a pass skipped while offline (#8516). Always
+  /// `false` for success.
+  bool get reachedNoRelay => false;
 
   /// The `outgoing_dms` row this send left parked for recovery.
   ///
@@ -258,6 +269,7 @@ final class NIP17SendFailure extends NIP17SendResult {
     this.error, {
     this.retryablePending = false,
     this.queuedRumorId,
+    this.reachedNoRelay = false,
   }) : blocked = false,
        _blockedDisposition = null,
        tooLong = false;
@@ -275,7 +287,8 @@ final class NIP17SendFailure extends NIP17SendResult {
        _blockedDisposition = disposition,
        tooLong = false,
        retryablePending = false,
-       queuedRumorId = null;
+       queuedRumorId = null,
+       reachedNoRelay = false;
 
   /// An oversized message (#7331): refused before any wrap build.
   ///
@@ -288,7 +301,8 @@ final class NIP17SendFailure extends NIP17SendResult {
       _blockedDisposition = null,
       tooLong = true,
       retryablePending = false,
-      queuedRumorId = null;
+      queuedRumorId = null,
+      reachedNoRelay = false;
 
   @override
   final String error;
@@ -311,6 +325,9 @@ final class NIP17SendFailure extends NIP17SendResult {
 
   @override
   final String? queuedRumorId;
+
+  @override
+  final bool reachedNoRelay;
 
   @override
   String? get rumorEventId => null;
@@ -336,7 +353,8 @@ final class NIP17SendFailure extends NIP17SendResult {
         other.blockedDisposition == blockedDisposition &&
         other.tooLong == tooLong &&
         other.retryablePending == retryablePending &&
-        other.queuedRumorId == queuedRumorId;
+        other.queuedRumorId == queuedRumorId &&
+        other.reachedNoRelay == reachedNoRelay;
   }
 
   @override
@@ -347,6 +365,7 @@ final class NIP17SendFailure extends NIP17SendResult {
     tooLong,
     retryablePending,
     queuedRumorId,
+    reachedNoRelay,
   );
 
   @override
@@ -355,5 +374,6 @@ final class NIP17SendFailure extends NIP17SendResult {
       'blockedDisposition: $blockedDisposition, '
       'tooLong: $tooLong, '
       'retryablePending: $retryablePending, '
-      'queuedRumorId: $queuedRumorId)';
+      'queuedRumorId: $queuedRumorId, '
+      'reachedNoRelay: $reachedNoRelay)';
 }

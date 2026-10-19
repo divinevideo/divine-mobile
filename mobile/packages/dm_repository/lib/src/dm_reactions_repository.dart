@@ -36,6 +36,7 @@ class DmReactionPublishResult {
     required this.rumorId,
     this.errorMessage,
     this.optimisticInsertSucceeded = false,
+    this.reachedNoRelay = false,
   });
 
   /// Whether the gift-wrap publish landed for the recipient.
@@ -54,6 +55,11 @@ class DmReactionPublishResult {
   /// catches up. `false` only when the repo was uninitialized or the insert
   /// itself failed (no durable row exists).
   final bool optimisticInsertSucceeded;
+
+  /// Whether the attempt reached no relay at all, so nothing was delivered or
+  /// rejected. The retry sweep does not count it against the reaction's
+  /// automatic retries (#8516).
+  final bool reachedNoRelay;
 }
 
 /// Outcome of one own-reaction deletion delivery attempt.
@@ -67,6 +73,11 @@ enum DmReactionDeletionOutcome {
 
   /// Delivery was not confirmed. The pending row remains sweep-retryable.
   unconfirmed,
+
+  /// No relay was reached, so nothing was delivered or rejected. The pending
+  /// row remains sweep-retryable, and the attempt does not count against its
+  /// automatic retries (#8516).
+  notSent,
 
   /// No initialized repository or stored deletion was available to drive.
   unavailable,
@@ -689,6 +700,7 @@ class DmReactionsRepository {
             :final error,
             :final retryablePending,
             :final blocked,
+            :final reachedNoRelay,
           ):
             // Policy-blocked (#176): terminal and non-retryable — retrying
             // only re-hits the same policy. Mark 'blocked' so the sweep and a
@@ -714,13 +726,16 @@ class DmReactionsRepository {
                 placeholderId: rumorId,
                 ownerPubkey: ownerPubkey,
               );
-              _notifyRetryableWork();
+              // An attempt that reached no relay waits for one to connect
+              // rather than the 30-second follow-up (#8516).
+              if (!reachedNoRelay) _notifyRetryableWork();
             }
             return DmReactionPublishResult(
               success: false,
               rumorId: rumorId,
               errorMessage: error,
               optimisticInsertSucceeded: true,
+              reachedNoRelay: reachedNoRelay,
             );
         }
       } finally {
@@ -852,6 +867,7 @@ class DmReactionsRepository {
             :final error,
             :final retryablePending,
             :final blocked,
+            :final reachedNoRelay,
           ):
             // Policy-blocked (#176): terminal — flip the row out of the
             // retryable pending/failed set so the sweep and a chip re-tap stop
@@ -872,13 +888,16 @@ class DmReactionsRepository {
                   ownerPubkey: ownerPubkey,
                 );
               }
-              _notifyRetryableWork();
+              // An attempt that reached no relay waits for one to connect
+              // rather than the 30-second follow-up (#8516).
+              if (!reachedNoRelay) _notifyRetryableWork();
             }
             return DmReactionPublishResult(
               success: false,
               rumorId: rumorId,
               errorMessage: error,
               optimisticInsertSucceeded: true,
+              reachedNoRelay: reachedNoRelay,
             );
         }
       } finally {
@@ -1166,7 +1185,11 @@ class DmReactionsRepository {
               ownerPubkey: ownerPubkey,
             );
             return DmReactionDeletionOutcome.sent;
-          case NIP17SendFailure(:final error, :final blocked):
+          case NIP17SendFailure(
+            :final error,
+            :final blocked,
+            :final reachedNoRelay,
+          ):
             if (blocked) {
               await _reactionsDao.markDeletionRefused(
                 id: rumorId,
@@ -1178,8 +1201,7 @@ class DmReactionsRepository {
               'DM reaction deletion retry was unconfirmed: $error',
               category: LogCategory.system,
             );
-            _notifyRetryableWork();
-            return DmReactionDeletionOutcome.unconfirmed;
+            return _unsentDeletionOutcome(reachedNoRelay: reachedNoRelay);
         }
       } finally {
         // After the outcome is recorded, so the copy cannot delay or change it.
@@ -1222,7 +1244,7 @@ class DmReactionsRepository {
               ownerPubkey: ownerPubkey,
             );
             return DmReactionDeletionOutcome.sent;
-          case NIP17SendFailure(:final blocked):
+          case NIP17SendFailure(:final blocked, :final reachedNoRelay):
             if (blocked) {
               await _reactionsDao.markDeletionRefused(
                 id: rumorId,
@@ -1230,8 +1252,7 @@ class DmReactionsRepository {
               );
               return DmReactionDeletionOutcome.refused;
             }
-            _notifyRetryableWork();
-            return DmReactionDeletionOutcome.unconfirmed;
+            return _unsentDeletionOutcome(reachedNoRelay: reachedNoRelay);
         }
       } finally {
         // After the outcome is recorded, so the copy cannot delay or change it.
@@ -1245,6 +1266,17 @@ class DmReactionsRepository {
       _notifyRetryableWork();
       return DmReactionDeletionOutcome.unconfirmed;
     }
+  }
+
+  /// The outcome of a removal attempt no relay confirmed. Only an attempt
+  /// that reached a relay nudges the retry sweep; one that reached none waits
+  /// for a relay to connect rather than the 30-second follow-up (#8516).
+  DmReactionDeletionOutcome _unsentDeletionOutcome({
+    required bool reachedNoRelay,
+  }) {
+    if (reachedNoRelay) return DmReactionDeletionOutcome.notSent;
+    _notifyRetryableWork();
+    return DmReactionDeletionOutcome.unconfirmed;
   }
 
   Future<DmReactionDeletionOutcome> _coalesceDeletionAttempt(
@@ -2006,6 +2038,9 @@ class DmReactionsRepository {
     return NIP17SendResult.failure(
       summary,
       retryablePending: failures.every((f) => f.retryablePending),
+      // A recipient whose wrap a relay took means the fan-out reached one.
+      reachedNoRelay:
+          lastSuccess == null && failures.every((f) => f.reachedNoRelay),
     );
   }
 

@@ -927,7 +927,8 @@ void main() {
                   ReactionRemovalRetryLocalStatus.sent,
                 DmReactionDeletionOutcome.refused =>
                   ReactionRemovalRetryLocalStatus.refused,
-                DmReactionDeletionOutcome.unconfirmed =>
+                DmReactionDeletionOutcome.unconfirmed ||
+                DmReactionDeletionOutcome.notSent =>
                   ReactionRemovalRetryLocalStatus.unconfirmed,
                 DmReactionDeletionOutcome.unavailable =>
                   ReactionRemovalRetryLocalStatus.unavailable,

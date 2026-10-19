@@ -780,6 +780,115 @@ void main() {
       );
     });
 
+    group('a pass that reached no relay (#8516)', () {
+      const twoAttempts = DmReactionRetryConfig(
+        maxRetries: 2,
+        initialDelay: Duration(milliseconds: 1),
+      );
+
+      test('does not use up a reaction retry', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(
+          repository.retryableReactions,
+        ).thenAnswer((_) async => [_target(rumorId: 'r1')]);
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer(
+          (_) async => const DmReactionPublishResult(
+            success: false,
+            rumorId: 'r1',
+            reachedNoRelay: true,
+          ),
+        );
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        for (var pass = 0; pass < 4; pass++) {
+          await service.sweep();
+          clock = clock.add(const Duration(seconds: 10));
+        }
+
+        verify(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(4);
+      });
+
+      test('does not use up a removal retry', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(repository.retryableDeletions).thenAnswer(
+          (_) async => [
+            _target(rumorId: 'd1', publishStatus: 'deletion_pending'),
+          ],
+        );
+        when(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => DmReactionDeletionOutcome.notSent);
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        for (var pass = 0; pass < 4; pass++) {
+          await service.sweep();
+          clock = clock.add(const Duration(seconds: 10));
+        }
+
+        verify(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(4);
+        verifyNever(
+          () => repository.markDeletionUnconfirmed(
+            rumorId: any(named: 'rumorId'),
+          ),
+        );
+      });
+
+      test('arms no heartbeat for it', () {
+        fakeAsync((async) {
+          when(repository.retryableDeletions).thenAnswer(
+            (_) async => [
+              _target(rumorId: 'd1', publishStatus: 'deletion_pending'),
+            ],
+          );
+          when(
+            () => repository.retryDeletion(
+              rumorId: 'd1',
+              targetMessageAuthor: _authorPubkey,
+            ),
+          ).thenAnswer((_) async => DmReactionDeletionOutcome.notSent);
+          final service = buildService(
+            now: async.getClock(DateTime.utc(2026, 10, 7, 12)).now,
+          );
+          unawaited(service.initialize());
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'a relay connecting wakes it, not the 30-second follow-up',
+          );
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
+    });
+
     group('a row whose own attempt is still in flight (#10044)', () {
       const twoAttempts = DmReactionRetryConfig(
         maxRetries: 2,

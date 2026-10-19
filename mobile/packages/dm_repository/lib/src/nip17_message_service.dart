@@ -685,6 +685,7 @@ class NIP17MessageService {
         );
         return const NIP17SendResult.failure(
           'Message not sent: device offline',
+          reachedNoRelay: true,
         );
       }
 
@@ -903,6 +904,7 @@ class NIP17MessageService {
         return NIP17SendResult.failure(
           errorMsg,
           retryablePending: softUnconfirmed,
+          reachedNoRelay: reachedNoRelay,
         );
       }
 

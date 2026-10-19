@@ -919,6 +919,21 @@ void main() {
         },
       );
 
+      test('reports reaching no relay only when nothing reached any relay '
+          '(#8516)', () async {
+        final (unreached, _) = await sendReaction(outcome());
+        final (rejected, _) = await sendReaction(
+          outcome(rejected: const {'wss://relay.example.com': 'blocked'}),
+        );
+        final (unanswered, _) = await sendReaction(
+          outcome(noResponse: const ['wss://relay.example.com']),
+        );
+
+        expect(unreached.reachedNoRelay, isTrue);
+        expect(rejected.reachedNoRelay, isFalse);
+        expect(unanswered.reachedNoRelay, isFalse);
+      });
+
       test('a hung connectivity probe cannot stall the send', () {
         // The probe is a raw platform-channel round trip with no timeout, and
         // `_isOfflineSafely`'s try/catch cannot help: a wedged channel is a
@@ -1006,6 +1021,8 @@ void main() {
           // in-flight min-age guard and re-drive on the next reconnect.
           expect(result.retryablePending, isFalse);
           expect(result.blocked, isFalse);
+          // Nothing left the device, so a retry sweep must not count it.
+          expect(result.reachedNoRelay, isTrue);
           // Offline short-circuits before any relay round-trip: nothing is
           // buffered to a stale socket, so there is no doomed OK-confirm wait…
           verifyNever(
