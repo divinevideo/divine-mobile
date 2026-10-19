@@ -41,6 +41,22 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('schedules no frame while the app is in the background', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const SizedBox());
+      await cacheImage(tester, 'decoded_image_cache_background_test');
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+
+      clearDecodedImageCache();
+
+      expect(cache.currentSizeBytes, isZero);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+    });
+
     testWidgets('keeps live images tracked unless asked to drop them', (
       tester,
     ) async {
