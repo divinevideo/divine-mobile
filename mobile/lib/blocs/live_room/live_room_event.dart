@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
-import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
 import 'package:openvine/models/live/live_session.dart';
 
@@ -15,16 +14,14 @@ sealed class LiveRoomEvent extends Equatable {
 class LiveRoomJoinRequested extends LiveRoomEvent {
   const LiveRoomJoinRequested({
     required this.room,
-    required this.role,
     this.sessionId,
   });
 
   final LiveRoom room;
-  final LiveRole role;
   final String? sessionId;
 
   @override
-  List<Object?> get props => <Object?>[room, role, sessionId];
+  List<Object?> get props => <Object?>[room, sessionId];
 }
 
 class LiveRoomSessionsUpdated extends LiveRoomEvent {

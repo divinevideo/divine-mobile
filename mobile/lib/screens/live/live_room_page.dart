@@ -195,7 +195,6 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
         )..add(
           LiveRoomJoinRequested(
             room: payload.room,
-            role: payload.role,
             sessionId: widget.sessionId,
           ),
         );

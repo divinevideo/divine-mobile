@@ -242,7 +242,7 @@ void main() {
             );
             addTearDown(bloc.close);
             bloc.add(
-              const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+              const LiveRoomJoinRequested(room: room),
             );
             await pumpEventQueue();
             sessionsController.add([liveSession]);
@@ -270,7 +270,7 @@ void main() {
         );
       }
       test(
-        'a requested host role without an identified host grants no privileges',
+        'joining without an identified user grants no host privileges',
         () async {
           stubAudienceConnection();
 
@@ -281,7 +281,7 @@ void main() {
           );
           addTearDown(bloc.close);
           bloc.add(
-            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+            const LiveRoomJoinRequested(room: room),
           );
           await pumpEventQueue();
           expect(bloc.state.canModerate, isFalse);
@@ -309,7 +309,7 @@ void main() {
           );
           addTearDown(bloc.close);
           bloc.add(
-            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+            const LiveRoomJoinRequested(room: room),
           );
           await pumpEventQueue();
           sessionsController.add([
@@ -355,7 +355,7 @@ void main() {
             );
             addTearDown(bloc.close);
             bloc.add(
-              const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+              const LiveRoomJoinRequested(room: room),
             );
             await pumpEventQueue();
             sessionsController.add([
@@ -417,7 +417,7 @@ void main() {
           );
           addTearDown(bloc.close);
           bloc.add(
-            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+            const LiveRoomJoinRequested(room: room),
           );
           await pumpEventQueue();
           sessionsController.add([liveSession]);
@@ -443,7 +443,7 @@ void main() {
           );
           addTearDown(bloc.close);
           bloc.add(
-            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+            const LiveRoomJoinRequested(room: room),
           );
           await pumpEventQueue();
           sessionsController.add([
@@ -514,7 +514,7 @@ void main() {
           );
           addTearDown(bloc.close);
           bloc.add(
-            const LiveRoomJoinRequested(room: room, role: LiveRole.host),
+            const LiveRoomJoinRequested(room: room),
           );
           await pumpEventQueue();
           sessionsController.add([liveSession]);
@@ -551,7 +551,6 @@ void main() {
       bloc.add(
         const LiveRoomJoinRequested(
           room: room,
-          role: LiveRole.audience,
           sessionId: 'missing-session',
         ),
       );
@@ -590,7 +589,9 @@ void main() {
           liveApiService: mockApiService,
           liveKitRoomService: mockMediaService,
         );
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
         sessionsController.add([liveSession]);
         await pumpEventQueue();
@@ -621,7 +622,9 @@ void main() {
           liveKitRoomService: mockMediaService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -674,7 +677,9 @@ void main() {
           liveKitRoomService: mockMediaService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -715,7 +720,9 @@ void main() {
         liveKitRoomService: mockMediaService,
       );
 
-      bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+      bloc.add(
+        const LiveRoomJoinRequested(room: room),
+      );
       await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
@@ -746,7 +753,9 @@ void main() {
         liveKitRoomService: mockMediaService,
       );
 
-      bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+      bloc.add(
+        const LiveRoomJoinRequested(room: room),
+      );
       await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
@@ -785,7 +794,9 @@ void main() {
           liveKitRoomService: mockMediaService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -840,7 +851,9 @@ void main() {
           liveKitRoomService: mockMediaService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -878,7 +891,9 @@ void main() {
           liveKitRoomService: mockMediaService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -955,7 +970,9 @@ void main() {
           nativeCameraPermissionService: mockNativeCameraPermissionService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1010,7 +1027,9 @@ void main() {
           nativeCameraPermissionService: mockNativeCameraPermissionService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1083,7 +1102,9 @@ void main() {
           nativeCameraPermissionService: mockNativeCameraPermissionService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1148,7 +1169,9 @@ void main() {
           nativeCameraPermissionService: mockNativeCameraPermissionService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1210,7 +1233,9 @@ void main() {
           nativeCameraPermissionService: mockNativeCameraPermissionService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1275,7 +1300,9 @@ void main() {
           nativeCameraPermissionService: mockNativeCameraPermissionService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1332,7 +1359,7 @@ void main() {
         );
 
         bloc.add(
-          const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+          const LiveRoomJoinRequested(room: room),
         );
         await pumpEventQueue();
 
@@ -1371,7 +1398,9 @@ void main() {
           liveKitRoomService: mockMediaService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1458,7 +1487,7 @@ void main() {
       );
 
       bloc.add(
-        const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+        const LiveRoomJoinRequested(room: room),
       );
       await pumpEventQueue();
 
@@ -1524,7 +1553,7 @@ void main() {
         );
 
         bloc.add(
-          const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+          const LiveRoomJoinRequested(room: room),
         );
         await pumpEventQueue();
 
@@ -1616,7 +1645,7 @@ void main() {
         );
 
         bloc.add(
-          const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+          const LiveRoomJoinRequested(room: room),
         );
         await pumpEventQueue();
 
@@ -1626,10 +1655,7 @@ void main() {
         verify(() => mockMediaService.connect(audienceJoinToken)).called(1);
 
         bloc.add(
-          const LiveRoomJoinRequested(
-            room: secondRoom,
-            role: LiveRole.audience,
-          ),
+          const LiveRoomJoinRequested(room: secondRoom),
         );
         await pumpEventQueue();
 
@@ -1679,7 +1705,7 @@ void main() {
         );
 
         bloc.add(
-          const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+          const LiveRoomJoinRequested(room: room),
         );
         await pumpEventQueue();
 
@@ -1689,7 +1715,7 @@ void main() {
         verify(() => mockMediaService.connect(audienceJoinToken)).called(1);
 
         bloc.add(
-          const LiveRoomJoinRequested(room: quietRoom, role: LiveRole.audience),
+          const LiveRoomJoinRequested(room: quietRoom),
         );
         await pumpEventQueue();
 
@@ -1727,7 +1753,9 @@ void main() {
         liveKitRoomService: mockMediaService,
       );
 
-      bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+      bloc.add(
+        const LiveRoomJoinRequested(room: room),
+      );
       await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
@@ -1764,7 +1792,9 @@ void main() {
         liveKitRoomService: mockMediaService,
       );
 
-      bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+      bloc.add(
+        const LiveRoomJoinRequested(room: room),
+      );
       await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
@@ -1811,7 +1841,9 @@ void main() {
         liveKitRoomService: mockMediaService,
       );
 
-      bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+      bloc.add(
+        const LiveRoomJoinRequested(room: room),
+      );
       await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
@@ -1853,7 +1885,7 @@ void main() {
       );
 
       bloc.add(
-        const LiveRoomJoinRequested(room: room, role: LiveRole.audience),
+        const LiveRoomJoinRequested(room: room),
       );
       await pumpEventQueue();
 
@@ -1898,7 +1930,9 @@ void main() {
           liveKitRoomService: mockMediaService,
         );
 
-        bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+        bloc.add(
+          const LiveRoomJoinRequested(room: room),
+        );
         await pumpEventQueue();
 
         sessionsController.add(<LiveSession>[liveSession]);
@@ -1939,7 +1973,9 @@ void main() {
         liveKitRoomService: mockMediaService,
       );
 
-      bloc.add(const LiveRoomJoinRequested(room: room, role: LiveRole.host));
+      bloc.add(
+        const LiveRoomJoinRequested(room: room),
+      );
       await pumpEventQueue();
 
       sessionsController.add(<LiveSession>[liveSession]);
