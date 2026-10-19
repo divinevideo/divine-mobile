@@ -1,5 +1,6 @@
 // ABOUTME: Widget tests for TimelineLayerMultiSelectControls.
-// ABOUTME: Verifies the count label, combine gating, combine wiring and done.
+// ABOUTME: Verifies the count label, combine gating, combine wiring, paste
+// ABOUTME: style, delete and done.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,9 +10,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
+import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_layer_multi_select_controls.dart';
@@ -20,6 +24,9 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
+
+class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
+    implements ClipEditorBloc {}
 
 class _MockProImageEditorState extends Mock implements ProImageEditorState {
   @override
@@ -57,19 +64,43 @@ WidgetLayer _stickerLayer(String id, Offset offset) {
   );
 }
 
+TimelineOverlayItem _itemFor(Layer layer) => TimelineOverlayItem(
+  id: layer.id,
+  type: TimelineOverlayType.layer,
+  startTime: Duration.zero,
+  endTime: const Duration(seconds: 3),
+  layer: layer,
+);
+
+/// Multi-select over [layers], with [selected] (all of them by default)
+/// picked.
+TimelineOverlayState _selecting(List<Layer> layers, {Set<String>? selected}) =>
+    TimelineOverlayState(
+      items: [for (final layer in layers) _itemFor(layer)],
+      isLayerMultiSelectMode: true,
+      multiSelectedLayerIds: selected ?? {for (final l in layers) l.id},
+    );
+
 void main() {
   group(TimelineLayerMultiSelectControls, () {
     late _MockTimelineOverlayBloc overlayBloc;
+    late _MockClipEditorBloc clipBloc;
     late _MockProImageEditorState editor;
+    late StyleClipboardCubit clipboard;
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     setUp(() {
       overlayBloc = _MockTimelineOverlayBloc();
+      clipBloc = _MockClipEditorBloc();
       editor = _MockProImageEditorState();
+      clipboard = StyleClipboardCubit();
       when(
         () => overlayBloc.stream,
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
+      when(() => clipBloc.state).thenReturn(const ClipEditorState());
     });
+
+    tearDown(() => clipboard.close());
 
     /// [canvas] stands in for the editor canvas: layers laid out there can be
     /// measured, which combining stickers needs.
@@ -79,8 +110,12 @@ void main() {
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: BlocProvider<TimelineOverlayBloc>.value(
-              value: overlayBloc,
+            body: MultiBlocProvider(
+              providers: [
+                BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+                BlocProvider<ClipEditorBloc>.value(value: clipBloc),
+                BlocProvider.value(value: clipboard),
+              ],
               child: VideoEditorScope(
                 editorKey: GlobalKey(),
                 removeAreaKey: GlobalKey(),
@@ -115,12 +150,9 @@ void main() {
     testWidgets('shows the selection count and the combine/done actions', (
       tester,
     ) async {
-      when(() => overlayBloc.state).thenReturn(
-        const TimelineOverlayState(
-          isLayerMultiSelectMode: true,
-          multiSelectedLayerIds: {'a', 'b'},
-        ),
-      );
+      when(
+        () => overlayBloc.state,
+      ).thenReturn(_selecting([_paintLayer('a'), _paintLayer('b')]));
 
       await tester.pumpWidget(build());
 
@@ -136,10 +168,7 @@ void main() {
       tester,
     ) async {
       when(() => overlayBloc.state).thenReturn(
-        const TimelineOverlayState(
-          isLayerMultiSelectMode: true,
-          multiSelectedLayerIds: {'a'},
-        ),
+        _selecting([_paintLayer('a'), _paintLayer('b')], selected: {'a'}),
       );
 
       await tester.pumpWidget(build());
@@ -155,12 +184,9 @@ void main() {
     testWidgets(
       'combine selects the ids, merges, exits mode and selects the result',
       (tester) async {
-        when(() => overlayBloc.state).thenReturn(
-          const TimelineOverlayState(
-            isLayerMultiSelectMode: true,
-            multiSelectedLayerIds: {'a', 'b'},
-          ),
-        );
+        when(
+          () => overlayBloc.state,
+        ).thenReturn(_selecting([_paintLayer('a'), _paintLayer('b')]));
         when(() => editor.unselectAllLayers()).thenAnswer((_) {});
         when(() => editor.clearLayerSelection()).thenAnswer((_) {});
         when(
@@ -202,9 +228,13 @@ void main() {
       tester,
     ) async {
       when(() => overlayBloc.state).thenReturn(
-        const TimelineOverlayState(
-          isLayerMultiSelectMode: true,
-          multiSelectedLayerIds: {'a', 'b'},
+        _selecting(
+          [
+            _paintLayer('a'),
+            _paintLayer('b'),
+            _paintLayer('c'),
+          ],
+          selected: {'a', 'b'},
         ),
       );
       when(
@@ -243,7 +273,7 @@ void main() {
 
       await tester.tap(
         find.bySemanticsLabel(
-          l10n.videoEditorDeleteSelectedDrawingsSemanticLabel,
+          l10n.videoEditorDeleteSelectedLayersSemanticLabel,
         ),
       );
       await tester.pump();
@@ -256,11 +286,11 @@ void main() {
         tester,
       ) async {
         when(() => overlayBloc.state).thenReturn(
-          const TimelineOverlayState(
-            isLayerMultiSelectMode: true,
-            multiSelectedLayerIds: {'a', 'b', 'c'},
-            layerMultiSelectKind: LayerMergeKind.sticker,
-          ),
+          _selecting([
+            _stickerLayer('a', Offset.zero),
+            _stickerLayer('b', Offset.zero),
+            _stickerLayer('c', Offset.zero),
+          ]),
         );
 
         await tester.pumpWidget(build());
@@ -288,13 +318,7 @@ void main() {
       ) async {
         final a = _stickerLayer('a', const Offset(-50, 0));
         final b = _stickerLayer('b', const Offset(50, 0));
-        when(() => overlayBloc.state).thenReturn(
-          const TimelineOverlayState(
-            isLayerMultiSelectMode: true,
-            multiSelectedLayerIds: {'a', 'b'},
-            layerMultiSelectKind: LayerMergeKind.sticker,
-          ),
-        );
+        when(() => overlayBloc.state).thenReturn(_selecting([a, b]));
         when(() => editor.activeLayers).thenReturn([a, b]);
         when(
           () => editor.addHistory(layers: any(named: 'layers')),
@@ -337,13 +361,91 @@ void main() {
       });
     });
 
-    testWidgets('done exits multi-select mode', (tester) async {
-      when(() => overlayBloc.state).thenReturn(
-        const TimelineOverlayState(
-          isLayerMultiSelectMode: true,
-          multiSelectedLayerIds: {'a', 'b'},
-        ),
+    group('mixed layers', () {
+      final text = TextLayer(id: 't', text: 'Hi');
+
+      testWidgets('names them layers and offers no combine', (tester) async {
+        when(
+          () => overlayBloc.state,
+        ).thenReturn(_selecting([_paintLayer('a'), text]));
+
+        await tester.pumpWidget(build());
+
+        expect(
+          find.text(l10n.videoEditorLayersMultiSelectCountLabel(2)),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorCombineDrawLayersSemanticLabel),
+        );
+        await tester.pump();
+
+        verifyNever(() => editor.mergeSelectedLayers());
+      });
+    });
+
+    group('paste style', () {
+      testWidgets('is disabled while no layer style is copied', (
+        tester,
+      ) async {
+        when(
+          () => overlayBloc.state,
+        ).thenReturn(_selecting([_paintLayer('a'), _paintLayer('b')]));
+        when(() => editor.mounted).thenReturn(true);
+
+        await tester.pumpWidget(build());
+        await tester.tap(
+          find.bySemanticsLabel(
+            l10n.videoEditorPasteStyleSelectedLayersSemanticLabel,
+          ),
+        );
+        await tester.pump();
+
+        verifyNever(() => editor.addHistory(layers: any(named: 'layers')));
+      });
+
+      testWidgets(
+        'restyles every selected layer in one undo step and exits the mode',
+        (tester) async {
+          final layers = [_paintLayer('a'), _paintLayer('b'), _paintLayer('c')];
+          when(
+            () => overlayBloc.state,
+          ).thenReturn(_selecting(layers, selected: {'a', 'c'}));
+          when(() => editor.mounted).thenReturn(true);
+          when(() => editor.activeLayers).thenReturn(layers);
+          when(
+            () => editor.addHistory(layers: any(named: 'layers')),
+          ).thenAnswer((_) {});
+          clipboard.copyLayerStyle(const LayerStyle(opacity: 0.4));
+
+          await tester.pumpWidget(build());
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorPasteStyleSelectedLayersSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final written =
+              verify(
+                    () =>
+                        editor.addHistory(layers: captureAny(named: 'layers')),
+                  ).captured.single
+                  as List<Layer>;
+          expect(written.map((l) => l.opacity), [0.4, 1, 0.4]);
+          verify(
+            () => overlayBloc.add(
+              const TimelineOverlayLayerMultiSelectCancelled(),
+            ),
+          ).called(1);
+        },
       );
+    });
+
+    testWidgets('done exits multi-select mode', (tester) async {
+      when(
+        () => overlayBloc.state,
+      ).thenReturn(_selecting([_paintLayer('a'), _paintLayer('b')]));
 
       await tester.pumpWidget(build());
 

@@ -6212,10 +6212,6 @@
       }
     }
   },
-  "videoEditorLayerMultiSelectSemanticLabel": "బహుళ డ్రాయింగ్‌లను ఎంచుకోండి",
-  "@videoEditorLayerMultiSelectSemanticLabel": {
-    "description": "Accessibility label for the button that starts draw-layer multi-select mode."
-  },
   "videoEditorLayerMultiSelectDoneSemanticLabel": "డ్రాయింగ్‌లను ఎంచుకోవడం పూర్తయింది",
   "@videoEditorLayerMultiSelectDoneSemanticLabel": {
     "description": "Accessibility label for the button that exits draw-layer multi-select mode."
@@ -6233,11 +6229,24 @@
       }
     }
   },
-  "videoEditorStickerMultiSelectSemanticLabel": "బహుళ స్టిక్కర్లను ఎంచుకోండి",
   "videoEditorStickerMultiSelectDoneSemanticLabel": "స్టిక్కర్లను ఎంచుకోవడం పూర్తయింది",
   "videoEditorDeleteSelectedStickersSemanticLabel": "ఎంచుకున్న స్టిక్కర్లను తొలగించండి",
   "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{స్టిక్కర్లు ఏవీ ఎంచుకోబడలేదు} =1{1 స్టిక్కర్ ఎంచుకోబడింది} other{{count} స్టిక్కర్లు ఎంచుకోబడ్డాయి}}",
   "videoEditorCombineStickerLayersSemanticLabel": "ఎంచుకున్న స్టిక్కర్లను ఒక లేయర్‌గా కలపండి",
+  "videoEditorCopyStyleLabel": "శైలిని కాపీ చేయండి",
+  "videoEditorPasteStyleLabel": "శైలిని పేస్ట్ చేయండి",
+  "videoEditorCopyClipStyleSemanticLabel": "ఈ క్లిప్ శైలిని కాపీ చేయండి",
+  "videoEditorCopyLayerStyleSemanticLabel": "ఈ లేయర్ శైలిని కాపీ చేయండి",
+  "videoEditorPasteClipStyleSemanticLabel": "కాపీ చేసిన శైలిని ఈ క్లిప్‌పై పేస్ట్ చేయండి",
+  "videoEditorPasteLayerStyleSemanticLabel": "కాపీ చేసిన శైలిని ఈ లేయర్‌పై పేస్ట్ చేయండి",
+  "videoEditorPasteStyleSelectedClipsSemanticLabel": "కాపీ చేసిన శైలిని ఎంచుకున్న క్లిప్‌లపై పేస్ట్ చేయండి",
+  "videoEditorPasteStyleSelectedLayersSemanticLabel": "కాపీ చేసిన శైలిని ఎంచుకున్న లేయర్‌లపై పేస్ట్ చేయండి",
+  "videoEditorStyleCopied": "శైలి కాపీ చేయబడింది",
+  "videoEditorPasteStyleColorMaskFailed": "{count, plural, =1{1 క్లిప్‌పై రంగు మాస్క్‌ను పేస్ట్ చేయడం సాధ్యపడలేదు. మిగతా శైలి వర్తింపజేయబడింది.} other{{count} క్లిప్‌లపై రంగు మాస్క్‌ను పేస్ట్ చేయడం సాధ్యపడలేదు. మిగతా శైలి వర్తింపజేయబడింది.}}",
+  "videoEditorLayersMultiSelectCountLabel": "{count, plural, =0{లేయర్‌లు ఏవీ ఎంచుకోబడలేదు} =1{1 లేయర్ ఎంచుకోబడింది} other{{count} లేయర్‌లు ఎంచుకోబడ్డాయి}}",
+  "videoEditorDeleteSelectedLayersSemanticLabel": "ఎంచుకున్న లేయర్‌లను తొలగించండి",
+  "videoEditorLayersMultiSelectDoneSemanticLabel": "లేయర్‌లను ఎంచుకోవడం పూర్తయింది",
+  "videoEditorSelectMultipleLayersSemanticLabel": "బహుళ లేయర్‌లను ఎంచుకోండి",
   "videoEditorStickerGroupLabel": "{count, plural, one{1 స్టిక్కర్} other{{count} స్టిక్కర్లు}}",
   "videoEditorMergeLabel": "విలీనం",
   "@videoEditorMergeLabel": {

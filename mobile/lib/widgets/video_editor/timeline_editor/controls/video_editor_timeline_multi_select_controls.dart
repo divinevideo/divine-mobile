@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
@@ -8,9 +9,10 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 
 /// Action bar shown while the timeline is in multi-select mode.
 ///
-/// Surfaces the selection count plus Merge / Delete / Done actions. Merge and
-/// Delete are gated on the selection so the user can never merge a single clip
-/// or delete every clip.
+/// Surfaces the selection count plus Merge / Paste style / Delete / Done
+/// actions. Merge and Delete are gated on the selection so the user can never
+/// merge a single clip or delete every clip; Paste style waits for a copied
+/// clip style.
 class TimelineMultiSelectControls extends StatelessWidget {
   const TimelineMultiSelectControls({super.key});
 
@@ -24,7 +26,12 @@ class TimelineMultiSelectControls extends StatelessWidget {
       ),
     );
 
+    final hasCopiedStyle = context.select(
+      (StyleClipboardCubit cubit) => cubit.state.clipStyle != null,
+    );
+
     final canMerge = selectedCount >= 2 && !isMerging;
+    final canPasteStyle = hasCopiedStyle && selectedCount >= 1 && !isMerging;
     final canDelete =
         selectedCount >= 1 && selectedCount < clipCount && !isMerging;
 
@@ -38,6 +45,13 @@ class TimelineMultiSelectControls extends StatelessWidget {
               context.l10n.videoEditorMergeSelectedClipsSemanticLabel,
           onPressed: canMerge ? () => _merge(context) : null,
           type: .primary,
+        ),
+        TimelineActionButton(
+          icon: .paintBucket,
+          label: context.l10n.videoEditorPasteStyleLabel,
+          semanticLabel:
+              context.l10n.videoEditorPasteStyleSelectedClipsSemanticLabel,
+          onPressed: canPasteStyle ? () => _pasteStyle(context) : null,
         ),
         TimelineActionButton(
           icon: .trash,
@@ -63,6 +77,22 @@ class TimelineMultiSelectControls extends StatelessWidget {
     context.read<ClipEditorBloc>().add(
       const ClipEditorSelectedClipsMergeRequested(),
     );
+  }
+
+  /// Puts the copied clip style on every selected clip, as one undo step, and
+  /// leaves multi-select.
+  void _pasteStyle(BuildContext context) {
+    final style = context.read<StyleClipboardCubit>().state.clipStyle;
+    final bloc = context.read<ClipEditorBloc>();
+    if (style == null) return;
+    bloc
+      ..add(
+        ClipEditorStylePasteRequested(
+          clipIds: bloc.state.selectedClipIds.toList(),
+          style: style,
+        ),
+      )
+      ..add(const ClipEditorMultiSelectCancelled());
   }
 
   void _delete(BuildContext context) {

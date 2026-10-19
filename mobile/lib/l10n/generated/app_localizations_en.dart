@@ -10517,10 +10517,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Select multiple drawings';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Done selecting drawings';
 
@@ -10539,10 +10535,6 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Select multiple stickers';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10567,6 +10559,74 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Combine selected stickers into one layer';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Copy style';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Paste style';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel => 'Copy this clip\'s style';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Copy this layer\'s style';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Paste the copied style onto this clip';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Paste the copied style onto this layer';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Paste the copied style onto the selected clips';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Paste the copied style onto the selected layers';
+
+  @override
+  String get videoEditorStyleCopied => 'Style copied';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Couldn\'t paste the color mask onto $count clips. The rest of the style is on.',
+      one: 'Couldn\'t paste the color mask onto 1 clip. The rest of the style is on.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count layers selected',
+      one: '1 layer selected',
+      zero: 'No layers selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Delete selected layers';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Done selecting layers';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Select multiple layers';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

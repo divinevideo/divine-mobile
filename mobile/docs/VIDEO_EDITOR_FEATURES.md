@@ -44,7 +44,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Trim** with handles on each clip. Minimum length 60 ms.
 - **Reorder** by long-press and drag.
 - **Duplicate** (the copy lands right after the original) and **delete**. At least one clip always remains.
-- **Merge** two or more clips into one, through multi-select.
+- **Merge** two or more clips into one, through multi-select, which can also paste a copied style onto the selected clips or delete them.
 - **Reverse**, as a toggle.
 - **Stabilize**, as a toggle: one tap measures the camera shake and bakes the steadied footage into the clip; tapping again restores the original. If the original footage is no longer on the device, the clip stays stabilized and the editor says so rather than offering a retry. It hides the borders only by zooming in, at most 1.15× (`VideoEditorConstants.stabilizationMaxZoom`), so where a clip would need more, some shake stays. A clip with a color mask is steadied from the footage under the key and keyed again.
 - **Speed** from 0.25× to 3.0× in 0.05 steps, on a slider, with one-tap presets for 0.25×, 0.5×, 1×, 1.5×, 2× and 3×.
@@ -55,6 +55,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Add clips** from the library or the camera.
 - **Volume** per clip, up to 300 % (see [Audio](#audio)). Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
 - **EQ:** ten octave bands of the clip's own sound (see [Audio](#audio)). Extract audio carries the setting over to the new sound track.
+- **Copy style / Paste style:** Copy style takes a clip's volume, EQ, speed, color mask and shape mask; Paste style puts them on the selected clip or, through multi-select, on several clips at once, as one undo step. Pasting makes the target match, so a style copied from a clip without a color mask takes the target's away. A color mask is rendered into each target in turn behind a progress overlay; a clip whose color mask cannot be changed keeps its own, takes the rest, and a message says so. Filters and adjustments are not part of it: they are timeline bars that can span several clips. Copy style is not offered on a freeze frame, a color or photo slot or a stop-motion clip, and a freeze frame takes only the shape mask. The copied style lasts while the editor is open.
 
 Transitions between clips ([`video_editor_transition_sheet.dart`](../lib/widgets/video_editor/timeline_editor/controls/video_editor_transition_sheet.dart)):
 
@@ -107,6 +108,8 @@ Timeline:
 ## Overlay layers
 
 Every overlay below sits on the timeline, where it can be moved, trimmed to show for only part of the video, split, duplicated and deleted. Text, stickers, drawings and audio visualizers can also be made see-through (opacity 0–100 %).
+
+Copy style and Paste style work on texts, stickers, drawings and audio visualizers. Copy style takes a layer's opacity, its enter, leave and loop animations and its shape mask, and for a text also its look: font, colors, background, alignment, size, outline and shadow. Paste style puts it on the selected layer or, through multi-select, on several at once, as one undo step, and makes the target match. Each layer takes what fits: a sticker takes a text's animations but not its look or its letter-by-letter and word-by-word typing, an audio visualizer takes no mask, and a layer with keyframes keeps the opacity its keyframes set. A shape mask keeps its proportions on a differently shaped layer. Hidden areas and detached clips take no style. Multi-select selects any of these layers to paste a style onto or delete; Combine is offered when the selection is two or more drawings, or two or more stickers, none of them animated, keyframed, masked or trimmed. The copied style lasts while the editor is open.
 
 - **Text:** 128 fonts (`VideoEditorConstants.textFontCatalogue`) grouped by style in the picker, left, center or right alignment, four background modes (none, solid, highlight, transparent), 11 preset colors plus a custom picker with recent colors, an outline and a drop shadow (each with its own color and a strength slider, off at the far left). Size is set by pinching the text on the canvas, and lines wrap at the visible edges of the video instead of running off them. Saved title styles keep font, colors, background, alignment, outline, shadow and animations, but not the pinch scale, position or rotation of the layer it came from (a style saved before the text size slider was removed in #9779 can still carry a font size); names are up to 40 characters.
 - **Drawing:** pencil, marker, arrow and eraser. A slider sets the brush size from 2 to 40 logical pixels, and each tool keeps its own size; while the slider is dragged, a dot in the middle of the video shows how thick the next stroke will be. Undo and redo inside the tool. Several drawing layers can be merged into one.

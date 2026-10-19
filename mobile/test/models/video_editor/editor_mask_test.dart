@@ -271,4 +271,32 @@ void main() {
       );
     });
   });
+
+  group('transferEditorMask', () {
+    const circle = LayerMask(
+      shape: LayerMaskShape.ellipse,
+      center: Offset(0.3, 0.5),
+      size: Size(0.4, 0.4),
+    );
+
+    test('keeps a circle round on a box of another shape', () {
+      final moved = transferEditorMask(
+        circle,
+        from: const Size(100, 100),
+        to: const Size(100, 300),
+      );
+
+      // 40 px across on the square stays 40 px across on the tall box.
+      expect(moved.size.width * 100, closeTo(40, 1e-9));
+      expect(moved.size.height * 300, closeTo(40, 1e-9));
+      expect(moved.center, circle.center);
+    });
+
+    test('carries the mask over as it is while a box is unknown', () {
+      expect(
+        transferEditorMask(circle, from: null, to: const Size(100, 300)),
+        circle,
+      );
+    });
+  });
 }

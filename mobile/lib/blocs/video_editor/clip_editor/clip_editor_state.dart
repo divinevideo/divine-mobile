@@ -43,6 +43,9 @@ class ClipEditorState extends Equatable {
     this.isBakingCapturedChromaKeys = false,
     this.capturedChromaKeyRenderId,
     this.lastCapturedChromaKeyBakeResult,
+    this.isPastingClipStyle = false,
+    this.clipStylePasteRenderId,
+    this.lastClipStylePasteResult,
     this.isMultiSelectMode = false,
     this.selectedClipIds = const {},
     this.isMerging = false,
@@ -243,6 +246,20 @@ class ClipEditorState extends Equatable {
   /// Outcome of the last pass over recorded chroma-key clips. Compared by
   /// identity so the same outcome twice in a row still surfaces.
   final CapturedChromaKeyBakeResult? lastCapturedChromaKeyBakeResult;
+
+  /// Whether a pasted style is being put on clips.
+  ///
+  /// Only takes a while when it carries a color mask, which is rendered into
+  /// each target in turn.
+  final bool isPastingClipStyle;
+
+  /// Render id of the color mask a paste is baking, or `null`. Moves on clip
+  /// by clip, so the progress follows the render actually running.
+  final String? clipStylePasteRenderId;
+
+  /// Outcome of the last style paste. Compared by identity so the same
+  /// outcome twice in a row still surfaces.
+  final ClipStylePasteResult? lastClipStylePasteResult;
 
   /// Whether the timeline is in multi-select mode — tapping a clip toggles its
   /// membership in [selectedClipIds] instead of entering single-clip editing.
@@ -450,6 +467,10 @@ class ClipEditorState extends Equatable {
     String? capturedChromaKeyRenderId,
     bool clearCapturedChromaKeyRenderId = false,
     CapturedChromaKeyBakeResult? lastCapturedChromaKeyBakeResult,
+    bool? isPastingClipStyle,
+    String? clipStylePasteRenderId,
+    bool clearClipStylePasteRenderId = false,
+    ClipStylePasteResult? lastClipStylePasteResult,
     bool clearTransformingClipId = false,
     ClipTransformResult? lastTransformResult,
     bool? isMultiSelectMode,
@@ -553,6 +574,12 @@ class ClipEditorState extends Equatable {
       lastCapturedChromaKeyBakeResult:
           lastCapturedChromaKeyBakeResult ??
           this.lastCapturedChromaKeyBakeResult,
+      isPastingClipStyle: isPastingClipStyle ?? this.isPastingClipStyle,
+      clipStylePasteRenderId: clearClipStylePasteRenderId
+          ? null
+          : (clipStylePasteRenderId ?? this.clipStylePasteRenderId),
+      lastClipStylePasteResult:
+          lastClipStylePasteResult ?? this.lastClipStylePasteResult,
       isMultiSelectMode: isMultiSelectMode ?? this.isMultiSelectMode,
       selectedClipIds: selectedClipIds ?? this.selectedClipIds,
       isMerging: isMerging ?? this.isMerging,
@@ -658,6 +685,10 @@ class ClipEditorState extends Equatable {
     capturedChromaKeyRenderId,
     // Identity-only: each CapturedChromaKeyBakeResult is a fresh instance.
     identityHashCode(lastCapturedChromaKeyBakeResult),
+    isPastingClipStyle,
+    clipStylePasteRenderId,
+    // Identity-only: each ClipStylePasteResult is a fresh instance.
+    identityHashCode(lastClipStylePasteResult),
     isMultiSelectMode,
     selectedClipIds,
     isMerging,
@@ -841,6 +872,26 @@ final class CapturedChromaKeyBakeSuccess extends CapturedChromaKeyBakeResult {}
 /// Its recorded settings stay on the clip, so the next pass — or the clip's
 /// own chroma key screen, which opens on them — can try again.
 final class CapturedChromaKeyBakeFailure extends CapturedChromaKeyBakeResult {}
+
+/// One-shot signal describing the outcome of a style paste.
+sealed class ClipStylePasteResult {}
+
+/// The targets took the style; [ClipEditorState.clips] already holds them.
+///
+/// [previousClips] is the clip list as it was before the paste, so the widget
+/// layer can rebase timeline markers and grow sounds across a speed change,
+/// and tell an unchanged list from a changed one. [colorMaskFailures] counts
+/// the targets whose color mask could not be put on or taken off; they keep
+/// the one they had and take the rest of the style.
+final class ClipStylePasteSuccess extends ClipStylePasteResult {
+  ClipStylePasteSuccess({
+    required this.previousClips,
+    this.colorMaskFailures = 0,
+  });
+
+  final List<DivineVideoClip> previousClips;
+  final int colorMaskFailures;
+}
 
 // === TRANSFORM RESULT ===
 

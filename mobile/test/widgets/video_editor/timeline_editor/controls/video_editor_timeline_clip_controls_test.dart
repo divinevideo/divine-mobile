@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
+import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
@@ -50,6 +52,7 @@ class _MockSizesManager extends Mock implements SizesManager {}
 void main() {
   group(TimelineClipControls, () {
     late _MockClipEditorBloc bloc;
+    late StyleClipboardCubit clipboard;
 
     setUpAll(() {
       registerFallbackValue(const ClipEditorEditingStopped());
@@ -57,6 +60,7 @@ void main() {
 
     setUp(() {
       bloc = _MockClipEditorBloc();
+      clipboard = StyleClipboardCubit();
       when(() => bloc.state).thenReturn(const ClipEditorState());
       when(
         () => bloc.stream,
@@ -65,14 +69,19 @@ void main() {
       when(() => bloc.isClosed).thenReturn(false);
     });
 
+    tearDown(() => clipboard.close());
+
     Widget build({Duration playhead = Duration.zero}) {
       return ProviderScope(
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: BlocProvider<ClipEditorBloc>.value(
-              value: bloc,
+            body: MultiBlocProvider(
+              providers: [
+                BlocProvider<ClipEditorBloc>.value(value: bloc),
+                BlocProvider.value(value: clipboard),
+              ],
               child: TimelineClipControls(
                 playheadPosition: ValueNotifier(playhead),
               ),
@@ -151,6 +160,7 @@ void main() {
                 child: MultiBlocProvider(
                   providers: [
                     BlocProvider<ClipEditorBloc>.value(value: bloc),
+                    BlocProvider.value(value: clipboard),
                     BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
                   ],
                   child: TimelineClipControls(
@@ -242,6 +252,7 @@ void main() {
                       child: MultiBlocProvider(
                         providers: [
                           BlocProvider<ClipEditorBloc>.value(value: bloc),
+                          BlocProvider.value(value: clipboard),
                           BlocProvider<TimelineOverlayBloc>.value(
                             value: overlayBloc,
                           ),
@@ -708,6 +719,65 @@ void main() {
       expect(controls.onStabilize, isNull);
       expect(controls.onDetach, isNull);
       expect(controls.onExtractAudio, isNull);
+      // A still has no sound, speed or color mask to copy, but it takes a
+      // pasted shape mask.
+      expect(controls.onCopyStyle, isNull);
+      expect(controls.onPasteStyle, isNotNull);
+    });
+
+    group('style', () {
+      testWidgets(
+        "copy style puts the selected clip's style on the clipboard",
+        (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          when(() => bloc.state).thenReturn(
+            ClipEditorState(clips: [clip('clip-1').copyWith(volume: 0.4)]),
+          );
+          await tester.pumpWidget(build());
+
+          tester
+              .widget<VideoEditorTimelineControls>(
+                find.byType(VideoEditorTimelineControls),
+              )
+              .onCopyStyle
+              ?.call();
+          await tester.pump();
+
+          expect(clipboard.state.clipStyle?.volume, 0.4);
+          expect(find.text(l10n.videoEditorStyleCopied), findsOneWidget);
+        },
+      );
+
+      testWidgets('paste style waits for a copied style, then pastes it onto '
+          'the selected clip', (tester) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [clip('clip-1'), clip('clip-2')],
+            currentClipIndex: 1,
+          ),
+        );
+        await tester.pumpWidget(build());
+        VideoEditorTimelineControls controls() =>
+            tester.widget(find.byType(VideoEditorTimelineControls));
+        expect(controls().canPasteStyle, isFalse);
+
+        final style = ClipStyle.of(clip('clip-1').copyWith(volume: 0.4));
+        clipboard.copyClipStyle(style);
+        await tester.pump();
+        expect(controls().canPasteStyle, isTrue);
+        controls().onPasteStyle?.call();
+
+        verify(
+          () => bloc.add(
+            ClipEditorStylePasteRequested(
+              clipIds: const ['clip-2'],
+              style: style,
+            ),
+          ),
+        ).called(1);
+      });
     });
 
     group('stabilize', () {
@@ -1046,6 +1116,7 @@ void main() {
                   child: MultiBlocProvider(
                     providers: [
                       BlocProvider<ClipEditorBloc>.value(value: bloc),
+                      BlocProvider.value(value: clipboard),
                       BlocProvider<TimelineOverlayBloc>.value(
                         value: overlayBloc,
                       ),

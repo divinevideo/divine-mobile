@@ -147,7 +147,6 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
       :timelineMarkers,
       :isLayerMultiSelectMode,
       :multiSelectedLayerIds,
-      :layerMultiSelectKind,
     ) = context.select(
       (TimelineOverlayBloc b) => (
         items: b.state.items,
@@ -156,7 +155,6 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         timelineMarkers: b.state.timelineMarkers,
         isLayerMultiSelectMode: b.state.isLayerMultiSelectMode,
         multiSelectedLayerIds: b.state.multiSelectedLayerIds,
-        layerMultiSelectKind: b.state.layerMultiSelectKind,
       ),
     );
     final isVolumeEditMode = context.select(
@@ -274,12 +272,11 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
                 isCollapsed: config.isCollapsed,
                 selectedItemId: selectedItemId,
                 // Every strip enters selection mode so items that cannot join
-                // the selection (audio, filters, text, the other mergeable
-                // kind) dim and can't drag; only layers of the kind being
-                // combined stay selectable.
+                // the selection (audio, filters, a hidden area, a detached
+                // clip) dim and can't drag; every layer a style can be pasted
+                // onto stays selectable.
                 isLayerMultiSelectMode: isLayerMultiSelectMode,
                 multiSelectedLayerIds: multiSelectedLayerIds,
-                layerMultiSelectKind: layerMultiSelectKind,
                 snapPointsMs: _snapPointsMs,
                 onItemTapped: widget.onItemTapped,
                 onItemMoved: widget.onItemMoved,

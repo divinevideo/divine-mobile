@@ -10581,10 +10581,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Sélectionner plusieurs dessins';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Terminer la sélection des dessins';
 
@@ -10603,10 +10599,6 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Sélectionner plusieurs stickers';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10632,6 +10624,79 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Combiner les stickers sélectionnés en un seul calque';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Copier le style';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Coller le style';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Copier le style de ce clip';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Copier le style de ce calque';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Coller le style copié sur ce clip';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Coller le style copié sur ce calque';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Coller le style copié sur les clips sélectionnés';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Coller le style copié sur les calques sélectionnés';
+
+  @override
+  String get videoEditorStyleCopied => 'Style copié';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Impossible de coller le masque de couleur sur $count clips. Le reste du style est appliqué.',
+      many:
+          'Impossible de coller le masque de couleur sur $count de clips. Le reste du style est appliqué.',
+      one:
+          'Impossible de coller le masque de couleur sur $count clip. Le reste du style est appliqué.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count calques sélectionnés',
+      many: '$count de calques sélectionnés',
+      one: '$count calque sélectionné',
+      zero: 'Aucun calque sélectionné',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Supprimer les calques sélectionnés';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Terminer la sélection des calques';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Sélectionner plusieurs calques';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

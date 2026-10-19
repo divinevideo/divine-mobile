@@ -49,6 +49,11 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onSaveToLibrary,
     this.isSavingToLibrary = false,
     this.isSaveToLibraryDisabled = false,
+    this.onCopyStyle,
+    this.copyStyleSemanticLabel,
+    this.onPasteStyle,
+    this.canPasteStyle = false,
+    this.pasteStyleSemanticLabel,
     this.onMultiSelect,
     this.multiSelectSemanticLabel,
     this.transformSemanticLabel,
@@ -206,6 +211,23 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// [isSavingToLibrary], which additionally swaps the button for a spinner on
   /// the clip actually being saved.
   final bool isSaveToLibraryDisabled;
+
+  /// Copies the style of the selected clip or layer, for [onPasteStyle] to
+  /// put on others.
+  final VoidCallback? onCopyStyle;
+
+  /// What a screen reader says [onCopyStyle] does.
+  final String? copyStyleSemanticLabel;
+
+  /// Puts the copied style on the selected clip or layer.
+  final VoidCallback? onPasteStyle;
+
+  /// Whether a style that fits is copied. The paste action stays in place but
+  /// disabled while there is none, so copying one does not reshuffle the bar.
+  final bool canPasteStyle;
+
+  /// What a screen reader says [onPasteStyle] does.
+  final String? pasteStyleSemanticLabel;
   final VoidCallback? onMultiSelect;
 
   /// Overrides the multi-select button's accessibility label. Defaults to the
@@ -418,6 +440,24 @@ class VideoEditorTimelineControls extends StatelessWidget {
                 ? null
                 : onSaveToLibrary,
             isLoading: isSavingToLibrary,
+          ),
+        if (onCopyStyle != null)
+          TimelineActionButton(
+            icon: .paintBrush,
+            label: context.l10n.videoEditorCopyStyleLabel,
+            semanticLabel:
+                copyStyleSemanticLabel ??
+                context.l10n.videoEditorCopyClipStyleSemanticLabel,
+            onPressed: onCopyStyle,
+          ),
+        if (onPasteStyle != null)
+          TimelineActionButton(
+            icon: .paintBucket,
+            label: context.l10n.videoEditorPasteStyleLabel,
+            semanticLabel:
+                pasteStyleSemanticLabel ??
+                context.l10n.videoEditorPasteClipStyleSemanticLabel,
+            onPressed: canPasteStyle ? onPasteStyle : null,
           ),
         if (onMultiSelect != null)
           TimelineActionButton(

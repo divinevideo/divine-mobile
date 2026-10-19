@@ -5376,10 +5376,6 @@
       }
     }
   },
-  "videoEditorLayerMultiSelectSemanticLabel": "Chọn nhiều hình vẽ",
-  "@videoEditorLayerMultiSelectSemanticLabel": {
-    "description": "Accessibility label for the button that starts draw-layer multi-select mode."
-  },
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Chọn hình vẽ xong",
   "@videoEditorLayerMultiSelectDoneSemanticLabel": {
     "description": "Accessibility label for the button that exits draw-layer multi-select mode."
@@ -5397,11 +5393,24 @@
       }
     }
   },
-  "videoEditorStickerMultiSelectSemanticLabel": "Chọn nhiều nhãn dán",
   "videoEditorStickerMultiSelectDoneSemanticLabel": "Chọn nhãn dán xong",
   "videoEditorDeleteSelectedStickersSemanticLabel": "Xóa các nhãn dán đã chọn",
   "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{Chưa chọn nhãn dán nào} =1{Đã chọn 1 nhãn dán} other{Đã chọn {count} nhãn dán}}",
   "videoEditorCombineStickerLayersSemanticLabel": "Kết hợp các nhãn dán đã chọn thành một lớp",
+  "videoEditorCopyStyleLabel": "Sao chép kiểu",
+  "videoEditorPasteStyleLabel": "Dán kiểu",
+  "videoEditorCopyClipStyleSemanticLabel": "Sao chép kiểu của clip này",
+  "videoEditorCopyLayerStyleSemanticLabel": "Sao chép kiểu của lớp này",
+  "videoEditorPasteClipStyleSemanticLabel": "Dán kiểu đã sao chép vào clip này",
+  "videoEditorPasteLayerStyleSemanticLabel": "Dán kiểu đã sao chép vào lớp này",
+  "videoEditorPasteStyleSelectedClipsSemanticLabel": "Dán kiểu đã sao chép vào các clip đã chọn",
+  "videoEditorPasteStyleSelectedLayersSemanticLabel": "Dán kiểu đã sao chép vào các lớp đã chọn",
+  "videoEditorStyleCopied": "Đã sao chép kiểu",
+  "videoEditorPasteStyleColorMaskFailed": "{count, plural, other{Không dán được mặt nạ màu vào {count} clip. Phần còn lại của kiểu đã được áp dụng.}}",
+  "videoEditorLayersMultiSelectCountLabel": "{count, plural, =0{Chưa chọn lớp nào} other{Đã chọn {count} lớp}}",
+  "videoEditorDeleteSelectedLayersSemanticLabel": "Xóa các lớp đã chọn",
+  "videoEditorLayersMultiSelectDoneSemanticLabel": "Chọn lớp xong",
+  "videoEditorSelectMultipleLayersSemanticLabel": "Chọn nhiều lớp",
   "videoEditorStickerGroupLabel": "{count, plural, other{{count} nhãn dán}}",
   "videoEditorMergeLabel": "Ghép",
   "@videoEditorMergeLabel": {

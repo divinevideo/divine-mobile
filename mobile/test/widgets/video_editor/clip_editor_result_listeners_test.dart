@@ -357,5 +357,70 @@ void main() {
         'b',
       ]);
     });
+
+    group('style paste', () {
+      testWidgets('commits the pasted clips in one entry', (tester) async {
+        final pasted = _clip('a').copyWith(volume: 0.3);
+        whenListen(
+          clipBloc,
+          Stream.value(
+            ClipEditorState(
+              clips: [pasted, _clip('b')],
+              lastClipStylePasteResult: ClipStylePasteSuccess(
+                previousClips: [_clip('a'), _clip('b')],
+              ),
+            ),
+          ),
+          initialState: const ClipEditorState(),
+        );
+
+        await tester.pumpWidget(build());
+        await tester.pump();
+
+        final meta =
+            verify(
+                  () => editor.addHistory(meta: captureAny(named: 'meta')),
+                ).captured.single
+                as Map<String, dynamic>;
+        final clips =
+            meta[VideoEditorConstants.clipsStateHistoryKey] as List<dynamic>;
+        expect(clips.map((c) => (c as Map<String, dynamic>)['volume']), [
+          0.3,
+          1.0,
+        ]);
+      });
+
+      testWidgets('says so when a color mask could not be pasted', (
+        tester,
+      ) async {
+        final clips = [_clip('a')];
+        whenListen(
+          clipBloc,
+          Stream.value(
+            ClipEditorState(
+              clips: clips,
+              lastClipStylePasteResult: ClipStylePasteSuccess(
+                previousClips: clips,
+                colorMaskFailures: 2,
+              ),
+            ),
+          ),
+          initialState: const ClipEditorState(),
+        );
+
+        await tester.pumpWidget(
+          build(child: const Scaffold(body: SizedBox.shrink())),
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.videoEditorPasteStyleColorMaskFailed(2)),
+          findsOneWidget,
+        );
+        // Nothing changed, so nothing is written to the undo history.
+        verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
+      });
+    });
   });
 }

@@ -1,6 +1,7 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
 // ABOUTME: (reverse, stabilize, transform, detach, backdrop, freeze frame,
-// ABOUTME: merge, library import, recorded chroma key) that block the editor.
+// ABOUTME: merge, library import, recorded chroma key, pasted color mask) that
+// ABOUTME: block the editor.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,6 +36,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
         _MergeProgressOverlay(),
         _LibraryImportProgressOverlay(),
         _CapturedChromaKeyProgressOverlay(),
+        _ClipStylePasteProgressOverlay(),
       ],
     );
   }
@@ -436,6 +438,35 @@ class _CapturedChromaKeyProgressOverlay extends StatelessWidget {
       selector: (state) => state.isBakingCapturedChromaKeys
           ? state.capturedChromaKeyRenderId
           : null,
+      builder: (context, renderId) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorChromaKeyApplying,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while a pasted style bakes its color
+/// mask into the target clips.
+///
+/// Covers the editor like the other renders, so the clips cannot change under
+/// the paste. The render id moves on clip by clip, and the progress stream
+/// follows it.
+class _ClipStylePasteProgressOverlay extends StatelessWidget {
+  const _ClipStylePasteProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ClipEditorBloc, ClipEditorState, String?>(
+      selector: (state) =>
+          state.isPastingClipStyle ? state.clipStylePasteRenderId : null,
       builder: (context, renderId) {
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),

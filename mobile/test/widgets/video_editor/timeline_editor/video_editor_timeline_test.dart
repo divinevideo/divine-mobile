@@ -16,6 +16,7 @@ import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
@@ -183,6 +184,7 @@ void main() {
                   BlocProvider<VideoEditorFilterBloc>.value(
                     value: mockFilterBloc,
                   ),
+                  BlocProvider(create: (_) => StyleClipboardCubit()),
                 ],
 
                 child: const VideoEditorTimelineScaffold(),

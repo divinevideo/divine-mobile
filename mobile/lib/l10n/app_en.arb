@@ -7395,10 +7395,6 @@
       }
     }
   },
-  "videoEditorLayerMultiSelectSemanticLabel": "Select multiple drawings",
-  "@videoEditorLayerMultiSelectSemanticLabel": {
-    "description": "Accessibility label for the button that starts draw-layer multi-select mode."
-  },
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Done selecting drawings",
   "@videoEditorLayerMultiSelectDoneSemanticLabel": {
     "description": "Accessibility label for the button that exits draw-layer multi-select mode."
@@ -7415,10 +7411,6 @@
         "type": "int"
       }
     }
-  },
-  "videoEditorStickerMultiSelectSemanticLabel": "Select multiple stickers",
-  "@videoEditorStickerMultiSelectSemanticLabel": {
-    "description": "Accessibility label for the button that starts sticker multi-select mode."
   },
   "videoEditorStickerMultiSelectDoneSemanticLabel": "Done selecting stickers",
   "@videoEditorStickerMultiSelectDoneSemanticLabel": {
@@ -7440,6 +7432,72 @@
   "videoEditorCombineStickerLayersSemanticLabel": "Combine selected stickers into one layer",
   "@videoEditorCombineStickerLayersSemanticLabel": {
     "description": "Accessibility label for the button that combines the selected stickers into one sticker layer."
+  },
+  "videoEditorCopyStyleLabel": "Copy style",
+  "@videoEditorCopyStyleLabel": {
+    "description": "Label of the timeline action that copies the selected clip's or layer's style, so it can be pasted onto other clips or layers."
+  },
+  "videoEditorPasteStyleLabel": "Paste style",
+  "@videoEditorPasteStyleLabel": {
+    "description": "Label of the timeline action that puts the copied style onto the selected clip, layer, or the clips or layers selected in multi-select."
+  },
+  "videoEditorCopyClipStyleSemanticLabel": "Copy this clip's style",
+  "@videoEditorCopyClipStyleSemanticLabel": {
+    "description": "Accessibility label for the action that copies the selected clip's style: its volume, EQ, speed, color mask and shape mask."
+  },
+  "videoEditorCopyLayerStyleSemanticLabel": "Copy this layer's style",
+  "@videoEditorCopyLayerStyleSemanticLabel": {
+    "description": "Accessibility label for the action that copies the selected layer's style: its opacity, animations and shape mask, and for a text also its look."
+  },
+  "videoEditorPasteClipStyleSemanticLabel": "Paste the copied style onto this clip",
+  "@videoEditorPasteClipStyleSemanticLabel": {
+    "description": "Accessibility label for the action that puts the copied clip style onto the selected clip."
+  },
+  "videoEditorPasteLayerStyleSemanticLabel": "Paste the copied style onto this layer",
+  "@videoEditorPasteLayerStyleSemanticLabel": {
+    "description": "Accessibility label for the action that puts the copied layer style onto the selected layer."
+  },
+  "videoEditorPasteStyleSelectedClipsSemanticLabel": "Paste the copied style onto the selected clips",
+  "@videoEditorPasteStyleSelectedClipsSemanticLabel": {
+    "description": "Accessibility label for the multi-select action that puts the copied clip style onto every selected clip."
+  },
+  "videoEditorPasteStyleSelectedLayersSemanticLabel": "Paste the copied style onto the selected layers",
+  "@videoEditorPasteStyleSelectedLayersSemanticLabel": {
+    "description": "Accessibility label for the multi-select action that puts the copied layer style onto every selected layer."
+  },
+  "videoEditorStyleCopied": "Style copied",
+  "@videoEditorStyleCopied": {
+    "description": "Snackbar shown after a clip's or layer's style was copied."
+  },
+  "videoEditorPasteStyleColorMaskFailed": "{count, plural, =1{Couldn't paste the color mask onto 1 clip. The rest of the style is on.} other{Couldn't paste the color mask onto {count} clips. The rest of the style is on.}}",
+  "@videoEditorPasteStyleColorMaskFailed": {
+    "description": "Snackbar shown when a pasted style's color mask could not be put on (or taken off) some clips; count is how many. Those clips keep their old color mask and took the rest of the style.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoEditorLayersMultiSelectCountLabel": "{count, plural, =0{No layers selected} =1{1 layer selected} other{{count} layers selected}}",
+  "@videoEditorLayersMultiSelectCountLabel": {
+    "description": "Header shown in the layer multi-select action bar reporting how many layers are selected, when the selection is not only drawings or only stickers.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoEditorDeleteSelectedLayersSemanticLabel": "Delete selected layers",
+  "@videoEditorDeleteSelectedLayersSemanticLabel": {
+    "description": "Accessibility label for the button that deletes the selected layers in layer multi-select mode, when the selection is not only drawings or only stickers."
+  },
+  "videoEditorLayersMultiSelectDoneSemanticLabel": "Done selecting layers",
+  "@videoEditorLayersMultiSelectDoneSemanticLabel": {
+    "description": "Accessibility label for the button that exits layer multi-select mode, when the selection is not only drawings or only stickers."
+  },
+  "videoEditorSelectMultipleLayersSemanticLabel": "Select multiple layers",
+  "@videoEditorSelectMultipleLayersSemanticLabel": {
+    "description": "Accessibility label for the button that starts layer multi-select mode, which selects texts, stickers, drawings and audio visualizers."
   },
   "videoEditorStickerGroupLabel": "{count, plural, one{1 sticker} other{{count} stickers}}",
   "@videoEditorStickerGroupLabel": {

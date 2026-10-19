@@ -12,6 +12,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_drop_indicator_line.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_positioned_item.dart';
@@ -65,7 +66,6 @@ class TimelineOverlayStrip extends StatefulWidget {
     this.selectedItemId,
     this.isLayerMultiSelectMode = false,
     this.multiSelectedLayerIds = const {},
-    this.layerMultiSelectKind,
     this.snapPointsMs,
     this.onItemTapped,
     this.onItemMoved,
@@ -112,12 +112,9 @@ class TimelineOverlayStrip extends StatefulWidget {
   /// show a selection overlay and long-press drag is disabled.
   final bool isLayerMultiSelectMode;
 
-  /// Layer ids currently selected for combining, used to render the per-tile
-  /// selection state while [isLayerMultiSelectMode] is active.
+  /// Layer ids currently selected, used to render the per-tile selection
+  /// state while [isLayerMultiSelectMode] is active.
   final Set<String> multiSelectedLayerIds;
-
-  /// The kind of layer being selected; tiles of any other kind are disabled.
-  final LayerMergeKind? layerMultiSelectKind;
 
   /// Edge positions (in ms) from other overlay items and clip
   /// boundaries. Used for cross-layer snap during drag and trim.
@@ -385,11 +382,7 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
   /// Resolves the per-tile multi-select visual state for [item].
   OverlayMultiSelectState _multiSelectStateFor(TimelineOverlayItem item) {
     if (!widget.isLayerMultiSelectMode) return OverlayMultiSelectState.none;
-    final kind = layerMergeKindOf(item.layer);
-    final selectedKind = widget.layerMultiSelectKind;
-    if (kind == null || (selectedKind != null && kind != selectedKind)) {
-      return OverlayMultiSelectState.disabled;
-    }
+    if (!canCopyLayerStyle(item.layer)) return OverlayMultiSelectState.disabled;
     return widget.multiSelectedLayerIds.contains(item.id)
         ? OverlayMultiSelectState.selected
         : OverlayMultiSelectState.unselected;

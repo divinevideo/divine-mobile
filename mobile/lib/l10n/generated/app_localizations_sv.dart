@@ -10424,10 +10424,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Välj flera teckningar';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Klar med att välja teckningar';
 
@@ -10446,10 +10442,6 @@ class AppLocalizationsSv extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Välj flera klistermärken';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10474,6 +10466,74 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Kombinera valda klistermärken till ett lager';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Kopiera stil';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Klistra in stil';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Kopiera det här klippets stil';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Kopiera det här lagrets stil';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Klistra in den kopierade stilen på det här klippet';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Klistra in den kopierade stilen på det här lagret';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Klistra in den kopierade stilen på de markerade klippen';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Klistra in den kopierade stilen på de valda lagren';
+
+  @override
+  String get videoEditorStyleCopied => 'Stil kopierad';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Det gick inte att klistra in färgmasken på $count klipp. Resten av stilen är på plats.',
+      one: 'Det gick inte att klistra in färgmasken på 1 klipp. Resten av stilen är på plats.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lager valda',
+      one: '1 lager valt',
+      zero: 'Inga lager valda',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Ta bort valda lager';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Klar med att välja lager';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel => 'Välj flera lager';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

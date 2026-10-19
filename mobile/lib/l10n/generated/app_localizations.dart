@@ -17709,12 +17709,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{No clips selected} =1{1 clip selected} other{{count} clips selected}}'**
   String videoEditorMultiSelectCountLabel(int count);
 
-  /// Accessibility label for the button that starts draw-layer multi-select mode.
-  ///
-  /// In en, this message translates to:
-  /// **'Select multiple drawings'**
-  String get videoEditorLayerMultiSelectSemanticLabel;
-
   /// Accessibility label for the button that exits draw-layer multi-select mode.
   ///
   /// In en, this message translates to:
@@ -17732,12 +17726,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =0{No drawings selected} =1{1 drawing selected} other{{count} drawings selected}}'**
   String videoEditorLayerMultiSelectCountLabel(int count);
-
-  /// Accessibility label for the button that starts sticker multi-select mode.
-  ///
-  /// In en, this message translates to:
-  /// **'Select multiple stickers'**
-  String get videoEditorStickerMultiSelectSemanticLabel;
 
   /// Accessibility label for the button that exits sticker multi-select mode.
   ///
@@ -17762,6 +17750,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Combine selected stickers into one layer'**
   String get videoEditorCombineStickerLayersSemanticLabel;
+
+  /// Label of the timeline action that copies the selected clip's or layer's style, so it can be pasted onto other clips or layers.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy style'**
+  String get videoEditorCopyStyleLabel;
+
+  /// Label of the timeline action that puts the copied style onto the selected clip, layer, or the clips or layers selected in multi-select.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste style'**
+  String get videoEditorPasteStyleLabel;
+
+  /// Accessibility label for the action that copies the selected clip's style: its volume, EQ, speed, color mask and shape mask.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy this clip\'s style'**
+  String get videoEditorCopyClipStyleSemanticLabel;
+
+  /// Accessibility label for the action that copies the selected layer's style: its opacity, animations and shape mask, and for a text also its look.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy this layer\'s style'**
+  String get videoEditorCopyLayerStyleSemanticLabel;
+
+  /// Accessibility label for the action that puts the copied clip style onto the selected clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the copied style onto this clip'**
+  String get videoEditorPasteClipStyleSemanticLabel;
+
+  /// Accessibility label for the action that puts the copied layer style onto the selected layer.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the copied style onto this layer'**
+  String get videoEditorPasteLayerStyleSemanticLabel;
+
+  /// Accessibility label for the multi-select action that puts the copied clip style onto every selected clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the copied style onto the selected clips'**
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel;
+
+  /// Accessibility label for the multi-select action that puts the copied layer style onto every selected layer.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the copied style onto the selected layers'**
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel;
+
+  /// Snackbar shown after a clip's or layer's style was copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Style copied'**
+  String get videoEditorStyleCopied;
+
+  /// Snackbar shown when a pasted style's color mask could not be put on (or taken off) some clips; count is how many. Those clips keep their old color mask and took the rest of the style.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Couldn\'t paste the color mask onto 1 clip. The rest of the style is on.} other{Couldn\'t paste the color mask onto {count} clips. The rest of the style is on.}}'**
+  String videoEditorPasteStyleColorMaskFailed(int count);
+
+  /// Header shown in the layer multi-select action bar reporting how many layers are selected, when the selection is not only drawings or only stickers.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No layers selected} =1{1 layer selected} other{{count} layers selected}}'**
+  String videoEditorLayersMultiSelectCountLabel(int count);
+
+  /// Accessibility label for the button that deletes the selected layers in layer multi-select mode, when the selection is not only drawings or only stickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected layers'**
+  String get videoEditorDeleteSelectedLayersSemanticLabel;
+
+  /// Accessibility label for the button that exits layer multi-select mode, when the selection is not only drawings or only stickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Done selecting layers'**
+  String get videoEditorLayersMultiSelectDoneSemanticLabel;
+
+  /// Accessibility label for the button that starts layer multi-select mode, which selects texts, stickers, drawings and audio visualizers.
+  ///
+  /// In en, this message translates to:
+  /// **'Select multiple layers'**
+  String get videoEditorSelectMultipleLayersSemanticLabel;
 
   /// Timeline label of a sticker layer made by combining several stickers; count is how many stickers it holds.
   ///

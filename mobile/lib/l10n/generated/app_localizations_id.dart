@@ -10335,10 +10335,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Pilih beberapa gambar';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Selesai memilih gambar';
 
@@ -10357,10 +10353,6 @@ class AppLocalizationsId extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Pilih beberapa stiker';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10385,6 +10377,71 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Gabungkan stiker terpilih menjadi satu lapisan';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Salin gaya';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Tempel gaya';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel => 'Salin gaya klip ini';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel => 'Salin gaya lapisan ini';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Tempel gaya yang disalin ke klip ini';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Tempel gaya yang disalin ke lapisan ini';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Tempel gaya yang disalin ke klip yang dipilih';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Tempel gaya yang disalin ke lapisan yang dipilih';
+
+  @override
+  String get videoEditorStyleCopied => 'Gaya disalin';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Masking warna tidak bisa ditempel ke $count klip. Bagian gaya lainnya sudah diterapkan.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lapisan dipilih',
+      zero: 'Tidak ada lapisan dipilih',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Hapus lapisan yang dipilih';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Selesai memilih lapisan';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Pilih beberapa lapisan';
 
   @override
   String videoEditorStickerGroupLabel(int count) {
