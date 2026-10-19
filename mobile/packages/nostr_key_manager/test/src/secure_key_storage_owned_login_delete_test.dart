@@ -231,6 +231,147 @@ void main() {
     );
   }
 
+  Future<LoginRecordsSnapshot> captureLogout({bool deleted = true}) async {
+    if (useNative) {
+      storage.dispose();
+      storage = SecureKeyStorage(
+        securityConfig: SecurityConfig.desktop,
+        platformStorage: PlatformSecureStorage.forPlatform(
+          TargetPlatform.android,
+          fallbackStorage: _storageForSlot(current),
+          legacyStorage: _storageForSlot(legacy),
+        ),
+      );
+    }
+    final proof = await storage.captureLoginRecordsStrict(
+      alice.publicKeyHex,
+      requireOwnedKeysAbsent: deleted,
+      ensureCurrent: ensureCurrent,
+    );
+    expect(proof, isNotNull);
+    return proof!;
+  }
+
+  group('Read-only completed logout snapshots', () {
+    for (final nativeBackend in [false, true]) {
+      test(
+        'unchanged foreign PRIMARY remains bound (native=$nativeBackend)',
+        () async {
+          useNative = nativeBackend;
+          if (nativeBackend) {
+            nativeRecords[primary] = nativeRecord(bob);
+          } else {
+            for (final slot in [current, legacy]) {
+              fallbackRecords[fallbackId(slot, primary)] = rawRecord(bob);
+            }
+          }
+          final beforeFallback = Map<String, String>.of(fallbackRecords);
+          final beforeNative = {
+            for (final entry in nativeRecords.entries)
+              entry.key: Map<String, Object?>.of(entry.value),
+          };
+          final proof = await captureLogout();
+          await proof.verifyUnchanged(ensureCurrent: ensureCurrent);
+          expect(fallbackRecords, beforeFallback);
+          expect(nativeRecords, beforeNative);
+          expect(deletes, isEmpty);
+        },
+      );
+
+      for (final changedKey in [primary, 'archive']) {
+        test(
+          'new $changedKey cannot use empty proof (native=$nativeBackend)',
+          () async {
+            useNative = nativeBackend;
+            final proof = await captureLogout();
+            final key = changedKey == primary ? primary : aliceSaved;
+            if (nativeBackend) {
+              nativeRecords[key] = nativeRecord(alice);
+            } else {
+              fallbackRecords[fallbackId(legacy, key)] = rawRecord(alice);
+            }
+            await expectLater(
+              proof.verifyUnchanged(ensureCurrent: ensureCurrent),
+              throwsA(isA<PlatformSecureStorageException>()),
+            );
+            expect(deletes, isEmpty);
+          },
+        );
+      }
+
+      test(
+        'owned remaining key cannot prove deletion (native=$nativeBackend)',
+        () async {
+          useNative = nativeBackend;
+          if (nativeBackend) {
+            nativeRecords[primary] = nativeRecord(alice);
+          } else {
+            fallbackRecords[fallbackId(current, primary)] = rawRecord(alice);
+          }
+          await expectLater(
+            captureLogout(),
+            throwsA(isA<PlatformSecureStorageException>()),
+          );
+          expect(deletes, isEmpty);
+        },
+      );
+    }
+
+    test(
+      'opaque retained PRIMARY is bound without claiming an owner',
+      () async {
+        final key = fallbackId(current, primary);
+        fallbackRecords[key] = '{retained-unknown-key';
+        final proof = await captureLogout(deleted: false);
+        await proof.verifyUnchanged(ensureCurrent: ensureCurrent);
+        expect(fallbackRecords[key], '{retained-unknown-key');
+        fallbackRecords[key] = rawRecord(bob);
+        await expectLater(
+          proof.verifyUnchanged(ensureCurrent: ensureCurrent),
+          throwsA(isA<PlatformSecureStorageException>()),
+        );
+        expect(deletes, isEmpty);
+      },
+    );
+
+    test('unreadable foreign PRIMARY cannot prove owned deletion', () async {
+      fallbackRecords[fallbackId(legacy, primary)] = '{unknown-key';
+      await expectLater(
+        captureLogout(),
+        throwsA(isA<PlatformSecureStorageException>()),
+      );
+      expect(deletes, isEmpty);
+    });
+
+    test('a read refusal cannot verify an unchanged proof', () async {
+      final proof = await captureLogout();
+      failingRead = fallbackId(current, primary);
+      await expectLater(
+        proof.verifyUnchanged(ensureCurrent: ensureCurrent),
+        throwsA(isA<PlatformException>()),
+      );
+      expect(deletes, isEmpty);
+    });
+
+    test(
+      'supersession across an awaited proof read rejects without writes',
+      () async {
+        final proof = await captureLogout();
+        heldRead = Completer<void>();
+        readStarted = Completer<void>();
+        final rejected = expectLater(
+          proof.verifyUnchanged(ensureCurrent: ensureCurrent),
+          throwsA(isA<StateError>()),
+        );
+        await readStarted!.future;
+        retired = true;
+        heldRead!.complete();
+        await rejected;
+        expect(deletes, isEmpty);
+      },
+    );
+  });
+
   group('Fallback owner-proven removal', () {
     test(
       'removes all four verified copies and proves they stayed absent',

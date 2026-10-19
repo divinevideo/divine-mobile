@@ -15,10 +15,14 @@ import 'package:nostr_sdk/nostr_sdk.dart'
     show NostrRemoteSigner, NostrRemoteSignerInfo;
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
+import 'package:openvine/services/auth/account_session_store.dart'
+    show kSessionRecoveryAnchorKey;
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/curated_lists/curated_list_account_authority.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,6 +31,29 @@ import '../../helpers/shared_channel_override.dart';
 import '../../test_setup.dart';
 
 class _Discovery extends Mock implements RelayDiscoveryService {}
+
+class _CaptureProbeStorage extends SecureKeyStorage {
+  _CaptureProbeStorage({
+    required super.platformStorage,
+    required this.beforeCapture,
+  }) : super(securityConfig: SecurityConfig.desktop);
+
+  final void Function() beforeCapture;
+
+  @override
+  Future<LoginRecordsSnapshot?> captureLoginRecordsStrict(
+    String ownerPubkey, {
+    required bool requireOwnedKeysAbsent,
+    void Function()? ensureCurrent,
+  }) {
+    beforeCapture();
+    return super.captureLoginRecordsStrict(
+      ownerPubkey,
+      requireOwnedKeysAbsent: requireOwnedKeysAbsent,
+      ensureCurrent: ensureCurrent,
+    );
+  }
+}
 
 class _RemoteSigner extends Mock implements NostrRemoteSigner {}
 
@@ -81,11 +108,15 @@ void main() {
   String? ignoredDelete;
   String? failedReadAfterDelete;
   bool cleanupAttempted = false;
+  var databaseCleanups = 0;
   late List<({String method, String? key})> nativeMutations;
   late List<({String slot, String? key})> nativeReads;
   String? heldDelete;
   Completer<void>? deleteEntered;
   Completer<void>? resumeDelete;
+  String? heldRead;
+  Completer<void>? readEntered;
+  Completer<void>? resumeRead;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -97,11 +128,15 @@ void main() {
     ignoredDelete = null;
     failedReadAfterDelete = null;
     cleanupAttempted = false;
+    databaseCleanups = 0;
     nativeMutations = [];
     nativeReads = [];
     heldDelete = null;
     deleteEntered = null;
     resumeDelete = null;
+    heldRead = null;
+    readEntered = null;
+    resumeRead = null;
     overrideSharedChannel(channel, (call) async {
       final args = call.arguments as Map<dynamic, dynamic>? ?? {};
       final key = args['key'] as String?;
@@ -115,6 +150,11 @@ void main() {
       switch (call.method) {
         case 'read':
           nativeReads.add((slot: isLegacy ? 'legacy' : 'current', key: key));
+          if (heldRead == key) {
+            heldRead = null;
+            readEntered!.complete();
+            await resumeRead!.future;
+          }
           if (key == failedRead ||
               (cleanupAttempted && key == failedReadAfterDelete)) {
             throw PlatformException(code: 'controlled_native_read_refusal');
@@ -172,12 +212,15 @@ void main() {
     bool injectSecureStorage = true,
   }) {
     final cleanup = UserDataCleanupService(prefs);
-    cleanup.onDatabaseCleanup = ({
-      String? userPubkey,
-      bool deleteUserData = false,
-      bool preserveActiveSession = false,
-      bool forgetAccount = false,
-    }) async {};
+    cleanup.onDatabaseCleanup =
+        ({
+          String? userPubkey,
+          bool deleteUserData = false,
+          bool preserveActiveSession = false,
+          bool forgetAccount = false,
+        }) async {
+          databaseCleanups++;
+        };
     final auth = AuthService(
       userDataCleanupService: cleanup,
       backgroundActivityManager: BackgroundActivityManager(),
@@ -222,6 +265,325 @@ void main() {
   }
 
   group('ownerless sign out ownership', () {
+    for (final deleteKeys in [false, true]) {
+      test(
+        'repeated verified sign out preserves signed-out list authority '
+        '(deleteKeys=$deleteKeys)',
+        () async {
+          final auth = subject();
+          expect((await auth.importFromHex('3' * 64)).success, isTrue);
+          var teardowns = 0;
+          auth.registerBeforeSessionTeardownCallback(() async {
+            teardowns++;
+          });
+          await auth.signOut(deleteKeys: deleteKeys);
+          final coordinator = AccountActivationCoordinator.forPreferences(
+            prefs,
+          );
+          final authority = CuratedListAccountAuthority(
+            authService: auth,
+            preferences: prefs,
+          );
+          final lease = CuratedListSessionCoordinator.forPreferences(prefs)
+              .acquire();
+          final beforePrefs = preferencesSnapshot();
+          final beforeNative = Map<String, String>.of(native);
+          final beforeLegacy = Map<String, String>.of(legacyNative);
+          final beforeMutations = List.of(nativeMutations);
+          final beforeCleanups = databaseCleanups;
+          expect(coordinator.hasUnresolvedActivation, isFalse);
+          expect(authority.isCurrent, isTrue);
+          expect(lease.isCurrent, isTrue);
+
+          Object? repeatedError;
+          try {
+            await auth.signOut(deleteKeys: deleteKeys);
+          } on Object catch (error) {
+            repeatedError = error;
+          }
+
+          expect(coordinator.hasUnresolvedActivation, isFalse);
+          expect(authority.isCurrent, isTrue);
+          expect(lease.isCurrent, isTrue);
+          expect(repeatedError, isNull);
+          expect(auth.authState, AuthState.unauthenticated);
+          expect(auth.committedAccountActivationReceipt, isNull);
+          expect(preferencesSnapshot(), beforePrefs);
+          expect(native, beforeNative);
+          expect(legacyNative, beforeLegacy);
+          expect(nativeMutations, beforeMutations);
+          expect(databaseCleanups, beforeCleanups);
+          expect(teardowns, 1);
+        },
+      );
+    }
+
+    for (final evidence in ['unreadable', 'pending']) {
+      test('repeated sign out rejects $evidence activation evidence', () async {
+        final auth = subject();
+        expect((await auth.importFromHex('3' * 64)).success, isTrue);
+        await auth.signOut(deleteKeys: true);
+        final previous = prefs.getString(
+          AccountActivationCoordinator.storageKey,
+        )!;
+        final raw = evidence == 'unreadable'
+            ? 'unreadable activation evidence'
+            : jsonEncode({
+                ...jsonDecode(previous) as Map<String, dynamic>,
+                'phase': 'pending',
+              });
+        await prefs.setString(AccountActivationCoordinator.storageKey, raw);
+        final beforeNative = Map<String, String>.of(native);
+        final beforeMutations = List.of(nativeMutations);
+        final beforeCleanups = databaseCleanups;
+        await expectLater(
+          auth.signOut(deleteKeys: true),
+          throwsA(isA<AccountStorageException>()),
+        );
+        expect(prefs.getString(AccountActivationCoordinator.storageKey), raw);
+        expect(native, beforeNative);
+        expect(nativeMutations, beforeMutations);
+        expect(databaseCleanups, beforeCleanups);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isTrue,
+        );
+      });
+    }
+
+    for (final evidence in [
+      'cleanup',
+      'native credentials',
+      'native read failure',
+      'native PRIMARY',
+      'legacy PRIMARY',
+    ]) {
+      test('repeated sign out cannot hide new $evidence', () async {
+        final auth = subject();
+        expect((await auth.importFromHex('3' * 64)).success, isTrue);
+        await auth.signOut(deleteKeys: true);
+        if (evidence == 'cleanup') {
+          await prefs.setString(
+            PendingAccountCleanup.storageKey,
+            'unreadable cleanup evidence',
+          );
+        } else if (evidence == 'native credentials') {
+          native['keycast_refresh_token'] = 'unattributed-native-token';
+        } else if (evidence == 'native read failure') {
+          failedRead = 'keycast_session';
+        } else if (evidence == 'native PRIMARY') {
+          native[primaryKey] = 'unattributed retained PRIMARY';
+        } else {
+          legacyNative[primaryKey] = 'unattributed retained legacy PRIMARY';
+        }
+        final beforePrefs = preferencesSnapshot();
+        final beforeNative = Map<String, String>.of(native);
+        final beforeLegacy = Map<String, String>.of(legacyNative);
+        final beforeMutations = List.of(nativeMutations);
+        final beforeCleanups = databaseCleanups;
+        await expectLater(
+          auth.signOut(deleteKeys: true),
+          throwsA(isA<Exception>()),
+        );
+        expect(preferencesSnapshot(), beforePrefs);
+        expect(native, beforeNative);
+        expect(legacyNative, beforeLegacy);
+        expect(nativeMutations, beforeMutations);
+        expect(databaseCleanups, beforeCleanups);
+        expect(auth.committedAccountActivationReceipt, isNull);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isTrue,
+        );
+      });
+    }
+
+    for (final strongerScope in ['login deletion', 'local data deletion']) {
+      test(
+        'repeated logout cannot silently complete new $strongerScope',
+        () async {
+          final auth = subject();
+          expect((await auth.importFromHex('3' * 64)).success, isTrue);
+          await auth.signOut(
+            deleteKeys: strongerScope == 'local data deletion',
+          );
+          final beforePrefs = preferencesSnapshot();
+          final beforeNative = Map<String, String>.of(native);
+          final beforeMutations = List.of(nativeMutations);
+          final beforeCleanups = databaseCleanups;
+          await expectLater(
+            auth.signOut(
+              deleteKeys: true,
+              deleteLocalUserData: strongerScope == 'local data deletion',
+            ),
+            throwsA(isA<AccountStorageException>()),
+          );
+          expect(preferencesSnapshot(), beforePrefs);
+          expect(native, beforeNative);
+          expect(nativeMutations, beforeMutations);
+          expect(databaseCleanups, beforeCleanups);
+        },
+      );
+    }
+
+    test(
+      'new owned PRIMARY during destructive capture refuses completion',
+      () async {
+        final keys = SecureKeyContainer.fromPrivateKeyHex('3' * 64);
+        final raw = keys.withPrivateKey(
+          (privateKey) =>
+              'privateKeyHex:$privateKey|'
+              'publicKeyHex:${keys.publicKeyHex}|npub:${keys.npub}',
+        );
+        keys.dispose();
+        storage.dispose();
+        late List<({String method, String? key})> mutationsAtCapture;
+        storage = _CaptureProbeStorage(
+          platformStorage: PlatformSecureStorage.forPlatform(
+            TargetPlatform.iOS,
+            fallbackStorage: _slotStorage('current'),
+            legacyStorage: _slotStorage('legacy'),
+          ),
+          beforeCapture: () {
+            expect(native[primaryKey], isNull);
+            native[primaryKey] = raw;
+            mutationsAtCapture = List.of(nativeMutations);
+          },
+        );
+        final auth = subject();
+        expect((await auth.importFromHex('3' * 64)).success, isTrue);
+        await expectLater(
+          auth.signOut(deleteKeys: true),
+          throwsA(
+            isA<PlatformSecureStorageException>().having(
+              (error) => error.code,
+              'owned key reappeared',
+              'key_deletion_unverified',
+            ),
+          ),
+        );
+        expect(native[primaryKey], raw);
+        expect(nativeMutations, mutationsAtCapture);
+        expect(auth.committedAccountActivationReceipt, isNull);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'unavailable snapshot preserves the successful first logout contract',
+      () async {
+        final auth = subject();
+        expect((await auth.importFromHex('3' * 64)).success, isTrue);
+        failedRead = primaryKey;
+        await auth.signOut();
+        final authority = CuratedListAccountAuthority(
+          authService: auth,
+          preferences: prefs,
+        );
+        expect(auth.authState, AuthState.unauthenticated);
+        expect(authority.isCurrent, isTrue);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isFalse,
+        );
+        final beforePrefs = preferencesSnapshot();
+        final beforeNative = Map<String, String>.of(native);
+        final beforeMutations = List.of(nativeMutations);
+        await expectLater(
+          auth.signOut(),
+          throwsA(isA<AccountStorageException>()),
+        );
+        expect(preferencesSnapshot(), beforePrefs);
+        expect(native, beforeNative);
+        expect(nativeMutations, beforeMutations);
+      },
+    );
+
+    for (final evidence in ['removed-owner archive', 'recovery anchor']) {
+      test(
+        'weaker repeat still verifies original $evidence boundary',
+        () async {
+          final auth = subject();
+          expect((await auth.importFromHex('3' * 64)).success, isTrue);
+          final owner = auth.currentPublicKeyHex!;
+          await auth.signOut(deleteKeys: true);
+          if (evidence == 'removed-owner archive') {
+            native['keycast_session_$owner'] = 'reappearing-archive';
+          } else {
+            await prefs.setString(
+              kSessionRecoveryAnchorKey,
+              'unattributed-recovery-anchor',
+            );
+          }
+          final beforePrefs = preferencesSnapshot();
+          final beforeNative = Map<String, String>.of(native);
+          final beforeMutations = List.of(nativeMutations);
+          await expectLater(
+            auth.signOut(),
+            throwsA(isA<UserDataCleanupException>()),
+          );
+          expect(preferencesSnapshot(), beforePrefs);
+          expect(native, beforeNative);
+          expect(nativeMutations, beforeMutations);
+          expect(
+            AccountActivationCoordinator.forPreferences(prefs)
+                .hasUnresolvedActivation,
+            isTrue,
+          );
+        },
+      );
+    }
+
+    test(
+      'repeated sign-out verification cannot retire an incoming activation',
+      () async {
+        final old = subject();
+        expect((await old.importFromHex('3' * 64)).success, isTrue);
+        await old.signOut(deleteKeys: true);
+        heldRead = 'keycast_session';
+        readEntered = Completer<void>();
+        resumeRead = Completer<void>();
+        final repeated = expectLater(
+          old.signOut(deleteKeys: true),
+          throwsA(isA<AccountActivationRetiredException>()),
+        );
+        try {
+          await readEntered!.future;
+          final coordinator = AccountActivationCoordinator.forPreferences(
+            prefs,
+          );
+          final incomingStarted = coordinator.changes.firstWhere(
+            (_) => coordinator.hasUnresolvedActivation,
+          );
+          final incoming = subject();
+          final incomingAttempt = incoming.importFromHex('4' * 64);
+          await incomingStarted;
+          resumeRead!.complete();
+          await repeated;
+          expect((await incomingAttempt).success, isTrue);
+          await expectCurrentIncoming(incoming);
+          final beforePrefs = preferencesSnapshot();
+          final beforeNative = Map<String, String>.of(native);
+          final beforeMutations = List.of(nativeMutations);
+          await pumpEventQueue();
+          expect(preferencesSnapshot(), beforePrefs);
+          expect(native, beforeNative);
+          expect(nativeMutations, beforeMutations);
+          expect(old.committedAccountActivationReceipt, isNull);
+        } finally {
+          if (!resumeRead!.isCompleted) resumeRead!.complete();
+          await repeated;
+        }
+      },
+    );
+
     test('a synchronous retirement listener cannot reenter the notification controller', () async {
       final coordinator = AccountActivationCoordinator.forPreferences(prefs);
       AccountActivationTicket? captured;
@@ -839,8 +1201,12 @@ void main() {
       }
     }
 
-    for (final kind in ['bunker', 'amber']) {
-      test('actual $kind logout preserves a foreign PRIMARY and legacy bytes', () async {
+    for (final (kind, deleteKeys) in [
+      ('bunker', false),
+      ('amber', false),
+    ]) {
+      test('actual $kind logout preserves a foreign PRIMARY and legacy bytes '
+          '(deleteKeys=$deleteKeys)', () async {
         debugDefaultTargetPlatformOverride = kind == 'amber'
             ? TargetPlatform.android
             : TargetPlatform.iOS;
@@ -907,11 +1273,32 @@ void main() {
         expect(auth.currentPublicKeyHex, owner);
         expect(auth.committedAccountActivationReceipt!.isCurrent, isTrue);
         expect(auth.takeFreshAccountListCreationPermit(), isNull);
-        await auth.signOut();
+        await auth.signOut(deleteKeys: deleteKeys);
         expect(native[primaryKey], beforePrimary);
         expect(legacyNative, beforeLegacy);
         expect(auth.authState, AuthState.unauthenticated);
-        expect(prefs.getString('session_recovery_anchor_npub'), ownerNpub);
+        expect(
+          prefs.getString('session_recovery_anchor_npub'),
+          deleteKeys ? null : ownerNpub,
+        );
+        final authority = CuratedListAccountAuthority(
+          authService: auth,
+          preferences: prefs,
+        );
+        final lease = CuratedListSessionCoordinator.forPreferences(prefs)
+            .acquire();
+        final beforeRepeat = preferencesSnapshot();
+        final beforeNative = Map<String, String>.of(native);
+        final beforeMutations = List.of(nativeMutations);
+        final beforeCleanups = databaseCleanups;
+        await auth.signOut();
+        expect(authority.isCurrent, isTrue);
+        expect(lease.isCurrent, isTrue);
+        expect(preferencesSnapshot(), beforeRepeat);
+        expect(native, beforeNative);
+        expect(legacyNative, beforeLegacy);
+        expect(nativeMutations, beforeMutations);
+        expect(databaseCleanups, beforeCleanups);
         storage.clearCache();
         expect((await storage.getKeyContainer())!.publicKeyHex, foreignOwner);
         expect(
@@ -921,6 +1308,43 @@ void main() {
         );
       });
     }
+
+    test(
+      'destructive repeated logout preserves proven foreign PRIMARY bytes',
+      () async {
+        final foreign = SecureKeyContainer.fromPrivateKeyHex('4' * 64);
+        final raw = foreign.withPrivateKey(
+          (privateKey) =>
+              'privateKeyHex:$privateKey|'
+              'publicKeyHex:${foreign.publicKeyHex}|npub:${foreign.npub}',
+        );
+        foreign.dispose();
+        final auth = subject();
+        expect((await auth.importFromHex('3' * 64)).success, isTrue);
+        native[primaryKey] = raw;
+        legacyNative[primaryKey] = raw;
+        await auth.signOut(deleteKeys: true);
+        final authority = CuratedListAccountAuthority(
+          authService: auth,
+          preferences: prefs,
+        );
+        final lease = CuratedListSessionCoordinator.forPreferences(prefs)
+            .acquire();
+        final beforePrefs = preferencesSnapshot();
+        final beforeNative = Map<String, String>.of(native);
+        final beforeLegacy = Map<String, String>.of(legacyNative);
+        final beforeMutations = List.of(nativeMutations);
+        final beforeCleanups = databaseCleanups;
+        await auth.signOut();
+        expect(authority.isCurrent, isTrue);
+        expect(lease.isCurrent, isTrue);
+        expect(preferencesSnapshot(), beforePrefs);
+        expect(native, beforeNative);
+        expect(legacyNative, beforeLegacy);
+        expect(nativeMutations, beforeMutations);
+        expect(databaseCleanups, beforeCleanups);
+      },
+    );
 
     for (final raw in [
       '{"bunker_url":"https://keycast.example.invalid","access_token":"token","scope":"policy:full"}',

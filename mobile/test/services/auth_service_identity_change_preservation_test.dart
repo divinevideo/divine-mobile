@@ -23,7 +23,18 @@ import 'package:unified_logger/unified_logger.dart';
 import '../test_setup.dart';
 import 'support/auth_service_test_harness.dart';
 
-class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {}
+class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {
+  @override
+  Future<LoginRecordsSnapshot?> captureLoginRecordsStrict(
+    String ownerPubkey, {
+    required bool requireOwnedKeysAbsent,
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
+    // In-memory keys cannot supply positive native storage evidence.
+    return null;
+  }
+}
 
 /// Invokes AuthService's real persistence boundary around a storage-only fake.
 Future<SecureKeyContainer> _completeGeneratedKeys(

@@ -3,6 +3,22 @@
 
 part of '../auth_service.dart';
 
+final _completedSignOutProofs = Expando<_CompletedSignOutProof>();
+
+class _CompletedSignOutProof {
+  const _CompletedSignOutProof({
+    required this.login,
+    required this.deletedKeys,
+    required this.deletedLocalUserData,
+    required this.recoveryAnchor,
+  });
+
+  final LoginRecordsSnapshot login;
+  final bool deletedKeys;
+  final bool deletedLocalUserData;
+  final String? recoveryAnchor;
+}
+
 extension _AccountSignOut on AuthService {
   Future<void> _signOutWithActivation({
     required bool deleteKeys,
@@ -13,6 +29,21 @@ extension _AccountSignOut on AuthService {
     final leavingNpub = currentNpub;
     final state = _activation;
     final previous = state.ticket;
+    final completed = state.coordinator;
+    final proof = previous == null ? null : _completedSignOutProofs[previous];
+    if (owner == null &&
+        previous != null &&
+        proof != null &&
+        (!deleteKeys || proof.deletedKeys) &&
+        (!deleteLocalUserData || proof.deletedLocalUserData) &&
+        completed?.isVerifiedSignedOut(previous) == true) {
+      await _verifyRepeatedSignOut(
+        completed!,
+        previous,
+        proof,
+      );
+      return;
+    }
     final receipt = committedAccountActivationReceipt;
     final verifiedBunkerUrl =
         receipt?.isCurrent == true &&
@@ -66,6 +97,19 @@ extension _AccountSignOut on AuthService {
           ensureCurrent,
           deletedOwner: deleteKeys ? owner : null,
         );
+        final login = await _captureSignOutLoginSnapshot(
+          owner,
+          deleteKeys,
+          ensureCurrent,
+        );
+        if (login != null) {
+          _completedSignOutProofs[ticket] = _CompletedSignOutProof(
+            login: login,
+            deletedKeys: deleteKeys,
+            deletedLocalUserData: deleteLocalUserData,
+            recoveryAnchor: !deleteKeys ? leavingNpub : null,
+          );
+        }
       });
       await coordinator.runGuardedStorage(ticket, () async {
         await prefs.reload();
@@ -99,6 +143,78 @@ extension _AccountSignOut on AuthService {
       }
       rethrow;
     }
+  }
+
+  Future<LoginRecordsSnapshot?> _captureSignOutLoginSnapshot(
+    String owner,
+    bool deleteKeys,
+    void Function() ensureCurrent,
+  ) async {
+    try {
+      return await _keyStorage.captureLoginRecordsStrict(
+        owner,
+        requireOwnedKeysAbsent: deleteKeys,
+        ensureCurrent: ensureCurrent,
+      );
+    } on Exception catch (error) {
+      if (error is! PlatformException &&
+          error is! MissingPluginException &&
+          error is! PlatformSecureStorageException &&
+          error is! SecureKeyStorageException) {
+        rethrow;
+      }
+      // Retained-login logout can stay terminal without future no-op authority.
+      ensureCurrent();
+      if (deleteKeys) rethrow;
+      return null;
+    }
+  }
+
+  /// Recheck the completed boundary without revoking its terminal capability
+  /// or retiring signed-out list readers through another shared-cache sweep.
+  Future<void> _verifyRepeatedSignOut(
+    AccountActivationCoordinator coordinator,
+    AccountActivationTicket ticket,
+    _CompletedSignOutProof proof,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await coordinator.runGuardedStorage(ticket, () async {
+      void ensureCurrent() {
+        coordinator.ensureCurrent(ticket);
+        if (!coordinator.isVerifiedSignedOut(ticket) ||
+            _currentIdentity != null ||
+            _currentKeyContainer != null ||
+            currentPublicKeyHex != null) {
+          throw const AccountActivationRetiredException();
+        }
+      }
+
+      void verifyPreferences() {
+        ensureCurrent();
+        if (PendingAccountCleanup.readbackUnknown(prefs) ||
+            prefs.containsKey(PendingAccountCleanup.storageKey) ||
+            prefs.containsKey(TermsAcceptanceKeys.ageVerified16Plus) ||
+            prefs.containsKey(TermsAcceptanceKeys.termsAcceptedAt) ||
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(
+              prefs,
+            ) ||
+            prefs.get(kSessionRecoveryAnchorKey) != proof.recoveryAnchor) {
+          throw const UserDataCleanupException(
+            'Could not verify previously completed sign out',
+          );
+        }
+      }
+
+      await prefs.reload();
+      verifyPreferences();
+      await _verifySignOutCredentialAbsence(
+        ensureCurrent,
+        deletedOwner: proof.deletedKeys ? ticket.ownerPubkey : null,
+      );
+      await proof.login.verifyUnchanged(ensureCurrent: ensureCurrent);
+      await prefs.reload();
+      verifyPreferences();
+    });
   }
 
   Future<void> _signOutWithoutOwner({

@@ -189,6 +189,37 @@ class SecureKeyStorage {
     return _platformStorage.hasKeyStrict(_primaryKeyId);
   }
 
+  /// Captures unchanged login storage without exposing or restoring keys.
+  ///
+  /// Set [requireOwnedKeysAbsent] only after owner-scoped deletion succeeded.
+  /// Valid foreign PRIMARY records remain bound to their exact bytes. Retained
+  /// records can stay opaque; capturing them never grants account authority.
+  /// Implementations unable to provide native evidence may return `null`;
+  /// this never proves absence or authorizes a repeated sign-out shortcut.
+  /// Storage failures propagate and never mean a record was absent.
+  Future<LoginRecordsSnapshot?> captureLoginRecordsStrict(
+    String ownerPubkey, {
+    required bool requireOwnedKeysAbsent,
+    void Function()? ensureCurrent,
+  }) async {
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(ownerPubkey)) {
+      throw const SecureKeyStorageException(
+        'A complete canonical owner public key is required',
+        code: 'invalid_owner_pubkey',
+      );
+    }
+    ensureCurrent?.call();
+    await _ensureInitialized();
+    ensureCurrent?.call();
+    return _platformStorage.captureLoginRecordsStrict(
+      primaryKeyId: _primaryKeyId,
+      identityKeyId: '$_savedKeysPrefix${Nip19.encodePubKey(ownerPubkey)}',
+      ownerPubkey: ownerPubkey,
+      requireOwnedKeysAbsent: requireOwnedKeysAbsent,
+      ensureCurrent: ensureCurrent,
+    );
+  }
+
   /// Removes proven login key copies for one complete owner public key.
   ///
   /// Both PRIMARY and that owner's saved identity are checked in current and

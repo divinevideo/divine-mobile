@@ -2,6 +2,7 @@
 // ABOUTME: Provides iOS Secure Enclave and Android Keystore integration
 
 import 'dart:async';
+import 'dart:convert';
 // Platform detection with web compatibility
 import 'dart:io'
     if (dart.library.html) 'stubs/platform_stub.dart'
@@ -12,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logging/logging.dart';
 import 'package:nostr_key_manager/src/secure_key_container.dart';
+import 'package:pointycastle/digests/sha256.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 final _log = Logger('PlatformSecureStorage');
@@ -83,6 +85,29 @@ class SecureStorageResult {
 
   /// Whether the storage is hardware-backed.
   bool get isHardwareBacked => securityLevel == SecurityLevel.hardware;
+}
+
+/// In-memory evidence of exact login records, without exposing their secrets.
+/// This capability only verifies unchanged storage; it cannot restore keys.
+final class LoginRecordsSnapshot {
+  LoginRecordsSnapshot._(
+    this._storage,
+    this._primaryKeyId,
+    this._identityKeyId,
+    this._verifyOwnership,
+    this._records,
+  );
+
+  final PlatformSecureStorage _storage;
+  final String _primaryKeyId;
+  final String _identityKeyId;
+  final bool _verifyOwnership;
+  final List<_LoginRecordFingerprint> _records;
+
+  /// Re-reads every selected backend without migration, cache use, or writes.
+  /// Throws if records changed, storage is unavailable, or the caller retired.
+  Future<void> verifyUnchanged({void Function()? ensureCurrent}) =>
+      _storage._verifyLoginRecordsSnapshot(this, ensureCurrent);
 }
 
 /// Platform detection helpers that work safely on web
@@ -628,26 +653,11 @@ class PlatformSecureStorage {
         code: 'invalid_owner_pubkey',
       );
     }
-    await _strictIO(_ensureInitialized, ensureCurrent);
-    _throwIfNativeInitializationFailed();
-
-    for (final keyId in {primaryKeyId, identityKeyId}) {
-      await _attestMissingNativeReads(keyId, ensureCurrent);
-    }
-
-    final snapshots = <_StrictKeySnapshot>[];
-    for (final keyId in {primaryKeyId, identityKeyId}) {
-      if (_useFallbackStorage) {
-        for (final storage in [_fallbackStorage, _legacyStorage]) {
-          snapshots.add(
-            await _readStrictSnapshot(keyId, storage, ensureCurrent),
-          );
-        }
-      }
-      if (!_useFallbackStorage || _nativeAndroidInitialized) {
-        snapshots.add(await _readStrictSnapshot(keyId, null, ensureCurrent));
-      }
-    }
+    final snapshots = await _readLoginSnapshotsStrict(
+      primaryKeyId,
+      identityKeyId,
+      ensureCurrent,
+    );
 
     for (final snapshot in snapshots) {
       if (snapshot.keyId == identityKeyId &&
@@ -764,6 +774,100 @@ class PlatformSecureStorage {
     }
   }
 
+  /// Binds the exact PRIMARY and outgoing-account archive after sign-out.
+  /// Retained login bytes remain opaque unless owned-key absence is required.
+  Future<LoginRecordsSnapshot> captureLoginRecordsStrict({
+    required String primaryKeyId,
+    required String identityKeyId,
+    required String ownerPubkey,
+    required bool requireOwnedKeysAbsent,
+    void Function()? ensureCurrent,
+  }) async {
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(ownerPubkey)) {
+      throw const PlatformSecureStorageException(
+        'A complete canonical owner public key is required',
+        code: 'invalid_owner_pubkey',
+      );
+    }
+    final snapshots = await _readLoginSnapshotsStrict(
+      primaryKeyId,
+      identityKeyId,
+      ensureCurrent,
+      verifyOwnership: requireOwnedKeysAbsent,
+    );
+    if (requireOwnedKeysAbsent &&
+        snapshots.any(
+          (snapshot) =>
+              snapshot.ownerPubkey == ownerPubkey ||
+              (snapshot.keyId == identityKeyId && snapshot.ownerPubkey != null),
+        )) {
+      throw const PlatformSecureStorageException(
+        'Outgoing login removal could not be verified',
+        code: 'key_deletion_unverified',
+      );
+    }
+    final proof = LoginRecordsSnapshot._(
+      this,
+      primaryKeyId,
+      identityKeyId,
+      requireOwnedKeysAbsent,
+      List.unmodifiable(snapshots.map(_LoginRecordFingerprint.fromSnapshot)),
+    );
+    await proof.verifyUnchanged(ensureCurrent: ensureCurrent);
+    return proof;
+  }
+
+  Future<void> _verifyLoginRecordsSnapshot(
+    LoginRecordsSnapshot proof,
+    void Function()? ensureCurrent,
+  ) async {
+    final current = await _readLoginSnapshotsStrict(
+      proof._primaryKeyId,
+      proof._identityKeyId,
+      ensureCurrent,
+      verifyOwnership: proof._verifyOwnership,
+    );
+    if (current.length != proof._records.length ||
+        Iterable<int>.generate(current.length).any(
+          (index) => !proof._records[index].matches(current[index]),
+        )) {
+      throw const PlatformSecureStorageException(
+        'Login records changed after sign out',
+        code: 'key_record_changed',
+      );
+    }
+  }
+
+  Future<List<_StrictKeySnapshot>> _readLoginSnapshotsStrict(
+    String primaryKeyId,
+    String identityKeyId,
+    void Function()? ensureCurrent, {
+    bool verifyOwnership = true,
+  }) async {
+    await _strictIO(_ensureInitialized, ensureCurrent);
+    _throwIfNativeInitializationFailed();
+    for (final keyId in {primaryKeyId, identityKeyId}) {
+      await _attestMissingNativeReads(keyId, ensureCurrent);
+    }
+    final snapshots = <_StrictKeySnapshot>[];
+    for (final keyId in {primaryKeyId, identityKeyId}) {
+      for (final storage in [
+        if (_useFallbackStorage) ...[_fallbackStorage, _legacyStorage],
+        if (!_useFallbackStorage || _nativeAndroidInitialized) null,
+      ]) {
+        snapshots.add(
+          await _readStrictSnapshot(
+            keyId,
+            storage,
+            ensureCurrent,
+            verifyOwnership: verifyOwnership,
+          ),
+        );
+      }
+    }
+    return snapshots;
+  }
+
   Future<void> _requireUnchangedSnapshot(
     _StrictKeySnapshot snapshot,
     void Function()? ensureCurrent,
@@ -784,8 +888,9 @@ class PlatformSecureStorage {
   Future<_StrictKeySnapshot> _readStrictSnapshot(
     String keyId,
     FlutterSecureStorage? storage,
-    void Function()? ensureCurrent,
-  ) async {
+    void Function()? ensureCurrent, {
+    bool verifyOwnership = true,
+  }) async {
     if (storage != null) {
       final raw = await _strictIO(
         () => storage.read(key: keyId),
@@ -795,7 +900,9 @@ class PlatformSecureStorage {
         keyId: keyId,
         storage: storage,
         raw: raw,
-        ownerPubkey: raw == null ? null : _ownerFromRawRecord(raw),
+        ownerPubkey: raw == null || !verifyOwnership
+            ? null
+            : _ownerFromRawRecord(raw),
       );
     }
 
@@ -822,7 +929,7 @@ class PlatformSecureStorage {
     return _StrictKeySnapshot(
       keyId: keyId,
       nativeFields: fields,
-      ownerPubkey: _ownerFromFields(fields),
+      ownerPubkey: verifyOwnership ? _ownerFromFields(fields) : null,
     );
   }
 
@@ -1174,6 +1281,33 @@ class PlatformSecureStorage {
       await initialize();
     }
   }
+}
+
+final class _LoginRecordFingerprint {
+  _LoginRecordFingerprint.fromSnapshot(_StrictKeySnapshot snapshot)
+    : keyId = snapshot.keyId,
+      storage = snapshot.storage {
+    final bytes = Uint8List.fromList(
+      utf8.encode(jsonEncode([snapshot.raw, snapshot.nativeFields])),
+    );
+    try {
+      _digest = SHA256Digest().process(bytes);
+    } finally {
+      bytes.fillRange(0, bytes.length, 0);
+    }
+  }
+
+  final String keyId;
+  final FlutterSecureStorage? storage;
+  late final Uint8List _digest;
+
+  bool matches(_StrictKeySnapshot snapshot) =>
+      keyId == snapshot.keyId &&
+      identical(storage, snapshot.storage) &&
+      listEquals(
+        _digest,
+        _LoginRecordFingerprint.fromSnapshot(snapshot)._digest,
+      );
 }
 
 final class _StrictKeySnapshot {

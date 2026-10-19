@@ -8,12 +8,19 @@ import 'dart:convert';
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart'
+    show MissingPluginException, PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_client/nostr_client.dart'
     show BlockListSigner, SharedPreferencesRelayStorage;
 import 'package:nostr_key_manager/nostr_key_manager.dart'
-    show SecureKeyContainer, SecureKeyStorage, SecureKeyStorageException;
+    show
+        LoginRecordsSnapshot,
+        PlatformSecureStorageException,
+        SecureKeyContainer,
+        SecureKeyStorage,
+        SecureKeyStorageException;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';

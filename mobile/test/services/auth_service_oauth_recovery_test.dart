@@ -20,6 +20,17 @@ import '../test_setup.dart';
 /// Consumer fixture with actual key-derived ownership and readback. Backend
 /// current/legacy native slot behavior is exercised by the package's real tests.
 class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {
+  @override
+  Future<LoginRecordsSnapshot?> captureLoginRecordsStrict(
+    String ownerPubkey, {
+    required bool requireOwnedKeysAbsent,
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
+    // In-memory keys cannot supply positive native storage evidence.
+    return null;
+  }
+
   final identitySnapshots = <String, SecureKeyContainer>{};
 
   @override

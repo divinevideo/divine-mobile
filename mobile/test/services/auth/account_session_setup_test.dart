@@ -24,7 +24,18 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 import '../../helpers/shared_channel_override.dart';
 import '../../test_setup.dart';
 
-class _Keys extends Mock implements SecureKeyStorage {}
+class _Keys extends Mock implements SecureKeyStorage {
+  @override
+  Future<LoginRecordsSnapshot?> captureLoginRecordsStrict(
+    String ownerPubkey, {
+    required bool requireOwnedKeysAbsent,
+    void Function()? ensureCurrent,
+  }) async {
+    ensureCurrent?.call();
+    // In-memory keys cannot supply positive native storage evidence.
+    return null;
+  }
+}
 
 class _Discovery extends Mock implements RelayDiscoveryService {}
 

@@ -146,10 +146,7 @@ class AccountActivationCoordinator {
     }
     final active = _active;
     if (active != null) {
-      if (active._signedOut &&
-          _isLive(active) &&
-          _preferences.get(storageKey) == _verifiedRecord &&
-          _preferences.get('current_user_pubkey_hex') == null) {
+      if (isVerifiedSignedOut(active)) {
         return false;
       }
       return !_isCommitted(active);
@@ -161,6 +158,14 @@ class AccountActivationCoordinator {
     final active = _active;
     return active != null && _isCommitted(active) ? active.ownerPubkey : null;
   }
+
+  /// Only this live terminal capability can make repeated sign-out a no-op.
+  bool isVerifiedSignedOut(AccountActivationTicket ticket) =>
+      _ownerlessSignOut == null &&
+      ticket._signedOut &&
+      _isLive(ticket) &&
+      _preferences.get(storageKey) == _verifiedRecord &&
+      _preferences.get('current_user_pubkey_hex') == null;
 
   bool _isLive(AccountActivationTicket ticket) {
     if (!identical(_active, ticket) || _uncertain) {
