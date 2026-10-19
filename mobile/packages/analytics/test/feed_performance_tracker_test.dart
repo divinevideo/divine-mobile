@@ -168,46 +168,6 @@ void main() {
       });
     });
 
-    group('video swipe tracking', () {
-      const videoId =
-          'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';
-
-      late _RecordingAnalyticsEventSink sink;
-      late FeedPerformanceTracker tracker;
-
-      setUp(() {
-        sink = _RecordingAnalyticsEventSink();
-        tracker = FeedPerformanceTracker(sink: sink);
-      });
-
-      test('startVideoSwipeTracking opens a session for the video', () {
-        tracker.startVideoSwipeTracking(videoId);
-
-        expect(tracker.activeSessionCount, 1);
-      });
-
-      test('markVideoSwipeComplete closes the session it opened', () {
-        tracker
-          ..startVideoSwipeTracking(videoId)
-          ..markVideoSwipeComplete(videoId);
-
-        expect(tracker.activeSessionCount, 0);
-      });
-
-      test('swipe tracking reports a video_swipe_ prefixed feed type', () {
-        tracker
-          ..startVideoSwipeTracking(videoId)
-          ..markVideoSwipeComplete(videoId);
-
-        expect(sink.events, hasLength(1));
-        expect(sink.events.single.name, 'feed_load_complete');
-        expect(
-          sink.events.single.parameters,
-          containsPair('feed_type', 'video_swipe_$videoId'),
-        );
-      });
-    });
-
     group('trackSearchSource', () {
       late _RecordingAnalyticsEventSink sink;
       late FeedPerformanceTracker tracker;

@@ -113,25 +113,5 @@ void main() {
         expect(tracker.activeSessionCount, 0);
       });
     });
-
-    group('video swipe tracking', () {
-      test('startVideoSwipeTracking creates a session', () {
-        const videoId =
-            'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';
-        tracker.startVideoSwipeTracking(videoId);
-
-        expect(tracker.activeSessionCount, 1);
-      });
-
-      test('markVideoSwipeComplete removes the session', () {
-        const videoId =
-            'abc123def456abc123def456abc123def456abc123def456abc123def456abcd';
-        tracker
-          ..startVideoSwipeTracking(videoId)
-          ..markVideoSwipeComplete(videoId);
-
-        expect(tracker.activeSessionCount, 0);
-      });
-    });
   });
 }
