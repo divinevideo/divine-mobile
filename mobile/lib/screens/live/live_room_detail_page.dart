@@ -94,7 +94,10 @@ class _LiveRoomDetailPageState extends ConsumerState<LiveRoomDetailPage> {
             initialSession.hostPubkey == initialRoom.hostPubkey &&
                 initialSession.roomId == initialRoom.id)) {
       final recording = initialSession?.hasEnded == true
-          ? await repository.fetchRecording(roomId: initialRoom.id)
+          ? await repository.fetchRecording(
+              roomId: initialRoom.id,
+              expectedHostPubkey: initialRoom.hostPubkey,
+            )
           : null;
       return _LiveRoomDetailPayload(
         room: initialRoom,
@@ -118,7 +121,10 @@ class _LiveRoomDetailPageState extends ConsumerState<LiveRoomDetailPage> {
         sessions.where((item) => item.isLive).firstOrNull ??
         sessions.firstOrNull;
     final recording = session?.hasEnded == true
-        ? await repository.fetchRecording(roomId: room.id)
+        ? await repository.fetchRecording(
+            roomId: room.id,
+            expectedHostPubkey: room.hostPubkey,
+          )
         : null;
     return _LiveRoomDetailPayload(
       room: room,

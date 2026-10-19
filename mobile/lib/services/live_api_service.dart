@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
+import 'package:openvine/models/live/live_room_host.dart';
 import 'package:openvine/models/live/live_room_recording.dart';
 import 'package:openvine/models/live/live_room_token.dart';
 import 'package:openvine/models/live/live_session.dart';
@@ -71,6 +72,7 @@ class LiveApiService {
 
   Future<LiveRoomToken> fetchJoinToken({
     required String roomId,
+    required String expectedHostPubkey,
     required LiveRole role,
   }) async {
     final json = await _sendJson(
@@ -80,6 +82,7 @@ class LiveApiService {
       actionLabel: 'fetch live room join token',
     );
 
+    _validateRoomHost(json, expectedHostPubkey);
     return LiveRoomToken.fromJson(json);
   }
 
@@ -110,6 +113,7 @@ class LiveApiService {
 
   Future<LiveRoomRecording?> fetchRecording({
     required String roomId,
+    required String expectedHostPubkey,
   }) async {
     final uri = _uri('/v1/live/rooms/${Uri.encodeComponent(roomId)}/recording');
 
@@ -135,6 +139,7 @@ class LiveApiService {
       }
 
       final json = _decodeBody(response.body);
+      _validateRoomHost(json, expectedHostPubkey);
       return LiveRoomRecording.fromJson(json);
     } on TimeoutException {
       throw const ApiException('Live room recording request timed out');
@@ -206,6 +211,15 @@ class LiveApiService {
         rethrow;
       }
       throw ApiException('Failed to $actionLabel: $error');
+    }
+  }
+
+  void _validateRoomHost(Map<String, dynamic> json, String expectedHostPubkey) {
+    if (!matchesLiveRoomHost(
+      hostPubkey: json['hostPubkey'],
+      expectedHostPubkey: expectedHostPubkey,
+    )) {
+      throw const ApiException('Live API returned an unexpected room host');
     }
   }
 

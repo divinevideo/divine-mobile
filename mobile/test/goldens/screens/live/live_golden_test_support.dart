@@ -51,6 +51,8 @@ class LiveGoldenFixtures {
   );
 
   static const hostPubkey = 'host-pubkey';
+  static const connectionHostPubkey =
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   static const speakerPubkey = 'speaker-pubkey';
   static const audiencePubkey = 'audience-pubkey';
 
@@ -101,7 +103,7 @@ class LiveGoldenFixtures {
   static const sessionAddress = '30313:host-pubkey:session-123';
 
   static final _hostProfile = UserProfile(
-    pubkey: hostPubkey,
+    pubkey: connectionHostPubkey,
     rawData: const <String, dynamic>{},
     createdAt: DateTime(2026, 4, 9),
     eventId: 'profile-host',
@@ -128,7 +130,7 @@ class LiveGoldenFixtures {
     final profileRepository = createMockProfileRepository();
 
     when(
-      () => profileRepository.getCachedProfile(pubkey: hostPubkey),
+      () => profileRepository.getCachedProfile(pubkey: connectionHostPubkey),
     ).thenAnswer((_) async => _hostProfile);
     when(
       () => profileRepository.getCachedProfile(pubkey: speakerPubkey),
@@ -138,7 +140,7 @@ class LiveGoldenFixtures {
     ).thenAnswer((_) async => _audienceProfile);
 
     when(
-      () => profileRepository.fetchFreshProfile(pubkey: hostPubkey),
+      () => profileRepository.fetchFreshProfile(pubkey: connectionHostPubkey),
     ).thenAnswer((_) async => _hostProfile);
     when(
       () => profileRepository.fetchFreshProfile(pubkey: speakerPubkey),
@@ -148,7 +150,7 @@ class LiveGoldenFixtures {
     ).thenAnswer((_) async => _audienceProfile);
 
     when(
-      () => profileRepository.watchProfile(pubkey: hostPubkey),
+      () => profileRepository.watchProfile(pubkey: connectionHostPubkey),
     ).thenAnswer((_) => Stream<UserProfile?>.value(_hostProfile));
     when(
       () => profileRepository.watchProfile(pubkey: speakerPubkey),
@@ -162,7 +164,7 @@ class LiveGoldenFixtures {
 
   static Stream<UserProfile?> _profileStreamFor(String pubkey) {
     final profile = switch (pubkey) {
-      hostPubkey => _hostProfile,
+      connectionHostPubkey => _hostProfile,
       speakerPubkey => _speakerProfile,
       audiencePubkey => _audienceProfile,
       _ => null,
@@ -244,6 +246,14 @@ class LiveGoldenFixtures {
   static Future<Widget> buildRoomPage({
     required String currentUserPubkey,
   }) async {
+    // Connected fixtures exercise the API's canonical host-key contract.
+    const hostPubkey = connectionHostPubkey;
+    final room = LiveGoldenFixtures.room.copyWith(hostPubkey: hostPubkey);
+    final liveSession = LiveGoldenFixtures.liveSession.copyWith(
+      hostPubkey: hostPubkey,
+      speakerPubkeys: const [hostPubkey, speakerPubkey],
+    );
+    const sessionAddress = '30313:$hostPubkey:session-123';
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final sharedPreferences = await SharedPreferences.getInstance();
     final authService = createMockAuthService();
@@ -256,6 +266,7 @@ class LiveGoldenFixtures {
     final liveKitRoomService = _MockLiveKitRoomService();
 
     const audienceToken = LiveRoomToken(
+      hostPubkey: hostPubkey,
       token: 'audience-token',
       serverUrl: 'wss://live.example.com',
       roomName: 'room-123',
@@ -263,13 +274,15 @@ class LiveGoldenFixtures {
       canPublish: false,
     );
     const hostToken = LiveRoomToken(
+      hostPubkey: hostPubkey,
       token: 'host-token',
       serverUrl: 'wss://live.example.com',
       roomName: 'room-123',
-      participantIdentity: 'host-pubkey',
+      participantIdentity: hostPubkey,
       canPublish: true,
     );
     const speakerToken = LiveRoomToken(
+      hostPubkey: hostPubkey,
       token: 'speaker-token',
       serverUrl: 'wss://live.example.com',
       roomName: 'room-123',
@@ -327,7 +340,7 @@ class LiveGoldenFixtures {
       (_) => Stream<List<LivePresence>>.value(<LivePresence>[
         LivePresence(
           sessionId: liveSession.id,
-          pubkey: 'host-pubkey',
+          pubkey: hostPubkey,
           role: LiveRole.host,
           handRaised: false,
           updatedAt: DateTime(2026, 4, 6, 8, 1),
@@ -344,15 +357,21 @@ class LiveGoldenFixtures {
     when(
       () => liveApiService.fetchJoinToken(
         roomId: room.id,
+        expectedHostPubkey: hostPubkey,
         role: LiveRole.audience,
       ),
     ).thenAnswer((_) async => audienceToken);
     when(
-      () => liveApiService.fetchJoinToken(roomId: room.id, role: LiveRole.host),
+      () => liveApiService.fetchJoinToken(
+        roomId: room.id,
+        expectedHostPubkey: hostPubkey,
+        role: LiveRole.host,
+      ),
     ).thenAnswer((_) async => hostToken);
     when(
       () => liveApiService.fetchJoinToken(
         roomId: room.id,
+        expectedHostPubkey: hostPubkey,
         role: LiveRole.speaker,
       ),
     ).thenAnswer((_) async => speakerToken);
@@ -402,7 +421,8 @@ class LiveGoldenFixtures {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final sharedPreferences = await SharedPreferences.getInstance();
     final authService = createMockAuthService();
-    when(() => authService.currentPublicKeyHex).thenReturn('host-pubkey');
+    when(() => authService.currentPublicKeyHex)
+        .thenReturn(connectionHostPubkey);
     final profileRepository = _buildProfileRepository();
 
     final liveRepository = _MockLiveRepository();

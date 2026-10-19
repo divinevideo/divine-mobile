@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 class LiveRoomToken extends Equatable {
   const LiveRoomToken({
     required this.token,
+    required this.hostPubkey,
     required this.roomName,
     required this.participantIdentity,
     required this.serverUrl,
@@ -14,6 +15,7 @@ class LiveRoomToken extends Equatable {
   factory LiveRoomToken.fromJson(Map<String, dynamic> json) {
     return LiveRoomToken(
       token: json['token'] as String? ?? '',
+      hostPubkey: json['hostPubkey'] as String,
       roomName:
           json['roomName'] as String? ?? json['room_name'] as String? ?? '',
       participantIdentity:
@@ -27,6 +29,7 @@ class LiveRoomToken extends Equatable {
   }
 
   final String token;
+  final String hostPubkey;
   final String roomName;
   final String participantIdentity;
   final String serverUrl;
@@ -34,6 +37,7 @@ class LiveRoomToken extends Equatable {
 
   LiveRoomToken copyWith({
     String? token,
+    String? hostPubkey,
     String? roomName,
     String? participantIdentity,
     String? serverUrl,
@@ -41,6 +45,7 @@ class LiveRoomToken extends Equatable {
   }) {
     return LiveRoomToken(
       token: token ?? this.token,
+      hostPubkey: hostPubkey ?? this.hostPubkey,
       roomName: roomName ?? this.roomName,
       participantIdentity: participantIdentity ?? this.participantIdentity,
       serverUrl: serverUrl ?? this.serverUrl,
@@ -51,6 +56,7 @@ class LiveRoomToken extends Equatable {
   @override
   List<Object?> get props => [
     token,
+    hostPubkey,
     roomName,
     participantIdentity,
     serverUrl,

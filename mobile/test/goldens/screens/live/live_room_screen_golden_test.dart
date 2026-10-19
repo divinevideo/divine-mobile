@@ -18,7 +18,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
         await LiveGoldenFixtures.buildRoomPage(
-          currentUserPubkey: 'host-pubkey',
+          currentUserPubkey: LiveGoldenFixtures.connectionHostPubkey,
         ),
       );
       await tester.pump();

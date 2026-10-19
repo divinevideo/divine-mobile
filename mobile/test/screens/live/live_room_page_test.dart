@@ -68,7 +68,8 @@ void main() {
 
     const room = LiveRoom(
       id: 'room-123',
-      hostPubkey: 'host-pubkey',
+      hostPubkey:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       title: 'Signal from the stage',
       summary: 'A live room for creators and the people following along.',
       imageUrl: null,
@@ -81,11 +82,17 @@ void main() {
       status: LiveSessionStatus.live,
       startedAt: DateTime.utc(2026, 4, 6, 8),
       endedAt: null,
-      speakerPubkeys: const <String>['host-pubkey', 'speaker-pubkey'],
+      speakerPubkeys: const <String>[
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'speaker-pubkey',
+      ],
       audienceCount: 64,
     );
-    const sessionAddress = '30313:host-pubkey:session-123';
+    const sessionAddress =
+        '30313:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:session-123';
     const audienceToken = LiveRoomToken(
+      hostPubkey:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       token: 'audience-token',
       serverUrl: 'wss://live.example.com',
       roomName: 'room-123',
@@ -93,13 +100,18 @@ void main() {
       canPublish: false,
     );
     const hostToken = LiveRoomToken(
+      hostPubkey:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       token: 'host-token',
       serverUrl: 'wss://live.example.com',
       roomName: 'room-123',
-      participantIdentity: 'host-pubkey',
+      participantIdentity:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       canPublish: true,
     );
     const speakerToken = LiveRoomToken(
+      hostPubkey:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       token: 'speaker-token',
       serverUrl: 'wss://live.example.com',
       roomName: 'room-123',
@@ -108,7 +120,8 @@ void main() {
     );
     final hostPresence = LivePresence(
       sessionId: session.id,
-      pubkey: 'host-pubkey',
+      pubkey:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       role: LiveRole.host,
       handRaised: false,
       updatedAt: DateTime.utc(2026, 4, 6, 8, 1),
@@ -203,7 +216,7 @@ void main() {
       when(
         () => mockContentBlocklistRepository.blockUser(
           'audience-pubkey',
-          ourPubkey: 'host-pubkey',
+          ourPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         ),
       ).thenAnswer((_) async => true);
       when(
@@ -219,18 +232,21 @@ void main() {
       when(
         () => mockLiveApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: room.hostPubkey,
           role: LiveRole.audience,
         ),
       ).thenAnswer((_) async => audienceToken);
       when(
         () => mockLiveApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: room.hostPubkey,
           role: LiveRole.host,
         ),
       ).thenAnswer((_) async => hostToken);
       when(
         () => mockLiveApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: room.hostPubkey,
           role: LiveRole.speaker,
         ),
       ).thenAnswer((_) async => speakerToken);
@@ -242,7 +258,9 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final preferences = await SharedPreferences.getInstance();
         final auth = createMockAuthService();
-        when(() => auth.currentPublicKeyHex).thenReturn('host-pubkey');
+        when(() => auth.currentPublicKeyHex).thenReturn(
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
         Stream<T> liveStream<T>(T value) {
           late final StreamController<T> controller;
           controller = StreamController<T>(
@@ -345,7 +363,9 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final sharedPreferences = await SharedPreferences.getInstance();
       final hostAuth = createMockAuthService();
-      when(() => hostAuth.currentPublicKeyHex).thenReturn('host-pubkey');
+      when(() => hostAuth.currentPublicKeyHex).thenReturn(
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
 
       await tester.pumpWidget(
         testMaterialApp(
@@ -473,7 +493,9 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final sharedPreferences = await SharedPreferences.getInstance();
         final hostAuth = createMockAuthService();
-        when(() => hostAuth.currentPublicKeyHex).thenReturn('host-pubkey');
+        when(() => hostAuth.currentPublicKeyHex).thenReturn(
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
 
         await tester.pumpWidget(
           testMaterialApp(
@@ -590,7 +612,9 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final sharedPreferences = await SharedPreferences.getInstance();
         final hostAuth = createMockAuthService();
-        when(() => hostAuth.currentPublicKeyHex).thenReturn('host-pubkey');
+        when(() => hostAuth.currentPublicKeyHex).thenReturn(
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
 
         const participantPubkey =
             'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
@@ -628,7 +652,7 @@ void main() {
         when(
           () => mockContentBlocklistRepository.blockUser(
             participantPubkey,
-            ourPubkey: 'host-pubkey',
+            ourPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           ),
         ).thenAnswer((_) async => true);
 
@@ -778,7 +802,7 @@ void main() {
         verify(
           () => mockContentBlocklistRepository.blockUser(
             participantPubkey,
-            ourPubkey: 'host-pubkey',
+            ourPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           ),
         ).called(1);
 
@@ -1002,7 +1026,9 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final sharedPreferences = await SharedPreferences.getInstance();
         final hostAuth = createMockAuthService();
-        when(() => hostAuth.currentPublicKeyHex).thenReturn('host-pubkey');
+        when(() => hostAuth.currentPublicKeyHex).thenReturn(
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
 
         addTearDown(() async {
           await mediaController.close();
@@ -1041,7 +1067,7 @@ void main() {
             requestedMicrophoneEnabled: true,
             cameraBusy: true,
             microphoneBusy: true,
-            localParticipantIdentity: 'host-pubkey',
+            localParticipantIdentity: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           ),
         );
         await tester.pump();
@@ -1065,7 +1091,7 @@ void main() {
       );
       final promotedSession = session.copyWith(
         speakerPubkeys: const <String>[
-          'host-pubkey',
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           'speaker-pubkey',
           'audience-pubkey',
         ],
@@ -1161,7 +1187,9 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         final sharedPreferences = await SharedPreferences.getInstance();
         final hostAuth = createMockAuthService();
-        when(() => hostAuth.currentPublicKeyHex).thenReturn('host-pubkey');
+        when(() => hostAuth.currentPublicKeyHex).thenReturn(
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
 
         addTearDown(() async {
           await mediaController.close();

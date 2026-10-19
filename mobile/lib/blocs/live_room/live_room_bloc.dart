@@ -10,6 +10,7 @@ import 'package:openvine/models/live/live_media_state.dart';
 import 'package:openvine/models/live/live_presence.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room.dart';
+import 'package:openvine/models/live/live_room_host.dart';
 import 'package:openvine/models/live/live_room_token.dart';
 import 'package:openvine/models/live/live_session.dart';
 import 'package:openvine/repositories/live_repository.dart';
@@ -711,9 +712,11 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
       final usedCachedToken = joinToken != null;
       joinToken ??= await _liveApiService.fetchJoinToken(
         roomId: room.id,
+        expectedHostPubkey: room.hostPubkey,
         role: role,
       );
       if (isClosed) return;
+      _validateJoinTokenHost(joinToken, room);
       _cachedJoinTokens[role] = joinToken;
 
       try {
@@ -727,9 +730,11 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
         _cachedJoinTokens.remove(role);
         joinToken = await _liveApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: room.hostPubkey,
           role: role,
         );
         if (isClosed) return;
+        _validateJoinTokenHost(joinToken, room);
         _cachedJoinTokens[role] = joinToken;
         await _liveKitRoomService.connect(joinToken);
       }
@@ -757,6 +762,15 @@ class LiveRoomBloc extends Bloc<LiveRoomEvent, LiveRoomState> {
           error: LiveRoomError.connectionFailed,
         ),
       );
+    }
+  }
+
+  void _validateJoinTokenHost(LiveRoomToken token, LiveRoom room) {
+    if (!matchesLiveRoomHost(
+      hostPubkey: token.hostPubkey,
+      expectedHostPubkey: room.hostPubkey,
+    )) {
+      throw const FormatException('Live room token has an unexpected host');
     }
   }
 

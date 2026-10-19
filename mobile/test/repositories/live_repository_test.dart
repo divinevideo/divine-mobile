@@ -965,14 +965,23 @@ void main() {
           status: RecordingStatus.ready,
         );
         when(
-          () => mockLiveApiService.fetchRecording(roomId: roomId),
+          () => mockLiveApiService.fetchRecording(
+            roomId: roomId,
+            expectedHostPubkey: hostPubkey,
+          ),
         ).thenAnswer((_) async => recording);
 
-        final result = await repository.fetchRecording(roomId: roomId);
+        final result = await repository.fetchRecording(
+          roomId: roomId,
+          expectedHostPubkey: hostPubkey,
+        );
 
         expect(result, recording);
         verify(
-          () => mockLiveApiService.fetchRecording(roomId: roomId),
+          () => mockLiveApiService.fetchRecording(
+            roomId: roomId,
+            expectedHostPubkey: hostPubkey,
+          ),
         ).called(1);
       },
     );

@@ -1,8 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/live/live_chat_message.dart';
 import 'package:openvine/models/live/live_media_state.dart';
@@ -20,11 +25,16 @@ import 'package:openvine/screens/live/live_room_detail_page.dart';
 import 'package:openvine/screens/live/live_room_detail_view.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/live_api_service.dart';
+import 'package:openvine/services/live_nostr_codec.dart';
 import 'package:openvine/services/livekit_room_service.dart';
 import 'package:share_plus_platform_interface/method_channel/method_channel_share.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+import '../../helpers/url_launcher_test_double.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockLiveRepository extends Mock implements LiveRepository {}
 
@@ -46,7 +56,8 @@ void main() {
 
     const room = LiveRoom(
       id: 'room-123',
-      hostPubkey: 'host-pubkey',
+      hostPubkey:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       title: 'Signal from the stage',
       summary: 'A live room for creators and the people following along.',
       imageUrl: null,
@@ -60,7 +71,9 @@ void main() {
       status: LiveSessionStatus.live,
       startedAt: DateTime.utc(2026, 4, 6, 8),
       endedAt: null,
-      speakerPubkeys: const <String>['host-pubkey'],
+      speakerPubkeys: const <String>[
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ],
       audienceCount: 64,
     );
     final endedSession = LiveSession(
@@ -70,11 +83,16 @@ void main() {
       status: LiveSessionStatus.ended,
       startedAt: DateTime.utc(2026, 4, 6, 7),
       endedAt: DateTime.utc(2026, 4, 6, 9),
-      speakerPubkeys: const <String>['host-pubkey'],
+      speakerPubkeys: const <String>[
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ],
       audienceCount: 64,
     );
-    const sessionAddress = '30313:host-pubkey:session-123';
+    const sessionAddress =
+        '30313:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:session-123';
     const token = LiveRoomToken(
+      hostPubkey:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       token: 'join-token',
       serverUrl: 'wss://live.example.com',
       roomName: 'room-123',
@@ -115,6 +133,7 @@ void main() {
       when(
         () => mockLiveApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: room.hostPubkey,
           role: LiveRole.audience,
         ),
       ).thenAnswer((_) async => token);
@@ -128,6 +147,77 @@ void main() {
         ),
       );
     });
+
+    for (final entry in <String, Object?>{
+      'missing': null,
+      'malformed': 'g' * 64,
+      'different': 'b' * 64,
+      'matching': room.hostPubkey,
+    }.entries) {
+      testWidgets(
+        'replay with ${entry.key} API host is checked before playback',
+        (
+          tester,
+        ) async {
+          final originalPlatform = UrlLauncherPlatform.instance;
+          final launcher = UrlLauncherTestDouble();
+          UrlLauncherPlatform.instance = launcher;
+          addTearDown(() => UrlLauncherPlatform.instance = originalPlatform);
+          final api = LiveApiService(
+            baseUrl: 'https://live.api.example.com',
+            client: MockClient((request) async {
+              expect(request.method, 'GET');
+              return http.Response(
+                jsonEncode({
+                  'status': 'ready',
+                  'playbackUrl': 'https://example.com/replay.m3u8',
+                  'hostPubkey': ?entry.value,
+                }),
+                200,
+              );
+            }),
+          );
+          final repository = LiveRepository(
+            nostrClient: _MockNostrClient(),
+            codec: const LiveNostrCodec(),
+            liveApiService: api,
+          );
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final preferences = await SharedPreferences.getInstance();
+          await tester.pumpWidget(
+            testMaterialApp(
+              mockSharedPreferences: preferences,
+              mockAuthService: mockAuthService,
+              additionalOverrides: [
+                liveRepositoryProvider.overrideWithValue(repository),
+              ],
+              home: LiveRoomDetailPage(
+                roomId: room.id,
+                initialRoom: room,
+                initialSession: endedSession,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          if (entry.value == room.hostPubkey) {
+            expect(find.text('Open replay'), findsOneWidget);
+            await tester.ensureVisible(find.text('Open replay'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('Open replay'));
+            await tester.pumpAndSettle();
+            expect(
+              launcher.launched.single.url,
+              'https://example.com/replay.m3u8',
+            );
+            expect(launcher.launched.single.useExternalApplication, isTrue);
+          } else {
+            expect(find.text('Open replay'), findsNothing);
+            expect(find.byType(LiveRoomDetailView), findsNothing);
+            expect(launcher.launched, isEmpty);
+          }
+        },
+      );
+    }
 
     for (final mismatch in ['host', 'room', 'missing host']) {
       testWidgets('ignores a $mismatch mismatch in the initial session extra', (
@@ -156,8 +246,12 @@ void main() {
                 canonicalSession,
               ],
             );
-        when(() => repository.fetchRecording(roomId: room.id))
-            .thenAnswer((_) async => null);
+        when(
+          () => repository.fetchRecording(
+            roomId: room.id,
+            expectedHostPubkey: room.hostPubkey,
+          ),
+        ).thenAnswer((_) async => null);
         await tester.pumpWidget(
           testMaterialApp(
             additionalOverrides: [
@@ -185,7 +279,12 @@ void main() {
         );
         verify(() => repository.fetchSessions(roomAddress: room.address))
             .called(1);
-        verifyNever(() => repository.fetchRecording(roomId: room.id));
+        verifyNever(
+          () => repository.fetchRecording(
+            roomId: room.id,
+            expectedHostPubkey: room.hostPubkey,
+          ),
+        );
         verifyNever(() => repository.fetchRoom(any()));
       });
     }
@@ -222,8 +321,12 @@ void main() {
         id: 'session/with ?#% 雪',
         roomId: linkedRoom.id,
       );
-      when(() => mockLiveRepository.fetchRecording(roomId: linkedRoom.id))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockLiveRepository.fetchRecording(
+          roomId: linkedRoom.id,
+          expectedHostPubkey: linkedRoom.hostPubkey,
+        ),
+      ).thenAnswer((_) async => null);
       Map<String, String>? joinedParameters;
       final router = GoRouter(
         routes: <RouteBase>[
@@ -305,7 +408,10 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final sharedPreferences = await SharedPreferences.getInstance();
       when(
-        () => mockLiveRepository.fetchRecording(roomId: room.id),
+        () => mockLiveRepository.fetchRecording(
+          roomId: room.id,
+          expectedHostPubkey: room.hostPubkey,
+        ),
       ).thenAnswer(
         (_) async => const LiveRoomRecording(
           playbackUrl: 'https://example.com/replay.m3u8',
@@ -349,7 +455,10 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final sharedPreferences = await SharedPreferences.getInstance();
       when(
-        () => mockLiveRepository.fetchRecording(roomId: room.id),
+        () => mockLiveRepository.fetchRecording(
+          roomId: room.id,
+          expectedHostPubkey: room.hostPubkey,
+        ),
       ).thenAnswer((_) async => null);
 
       await tester.pumpWidget(
@@ -412,7 +521,12 @@ void main() {
 
       expect(find.text('Schedule'), findsOneWidget);
       expect(find.text('Speakers'), findsOneWidget);
-      expect(find.text('host-pubkey'), findsOneWidget);
+      expect(
+        find.text(
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('share room sends a public live URL', (tester) async {

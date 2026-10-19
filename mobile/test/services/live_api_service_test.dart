@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/live/live_role.dart';
 import 'package:openvine/models/live/live_room_recording.dart';
 import 'package:openvine/models/live/live_session.dart';
+import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/live_api_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
@@ -41,6 +43,123 @@ void main() {
       baseUrl: 'https://live.api.example.com',
       nip98AuthService: mockNip98AuthService,
     );
+  });
+
+  group('Live API room host responses', () {
+    for (final entry in <String, Object?>{
+      'missing': null,
+      'empty': '',
+      'short': 'a' * 63,
+      'long': 'a' * 65,
+      'non-hex': 'g' * 64,
+      'non-string': 42,
+      'different': 'b' * 64,
+      'uppercase': 'A' * 64,
+      'trailing whitespace': '${'a' * 64} ',
+      'trailing newline': '${'a' * 64}\n',
+    }.entries) {
+      final host = entry.value;
+      test('join rejects ${entry.key} host', () async {
+        when(
+          () => mockNip98AuthService.createAuthToken(
+            url: any(named: 'url'),
+            method: any(named: 'method'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) async => authToken);
+        final api = LiveApiService(
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'token': 'join-token',
+                'roomName': 'room:with:colons',
+                'participantIdentity': 'b' * 64,
+                'serverUrl': 'wss://live.example.com',
+                'canPublish': false,
+                'hostPubkey': ?host,
+              }),
+              200,
+            ),
+          ),
+          baseUrl: 'https://live.api.example.com',
+          nip98AuthService: mockNip98AuthService,
+        );
+        await expectLater(
+          api.fetchJoinToken(
+            roomId: 'room:with:colons',
+            expectedHostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            role: LiveRole.audience,
+          ),
+          throwsA(isA<ApiException>()),
+        );
+      });
+      test('replay rejects ${entry.key} host', () async {
+        final api = LiveApiService(
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'status': 'ready',
+                'playbackUrl': 'https://example.com/replay.m3u8',
+                'hostPubkey': ?host,
+              }),
+              200,
+            ),
+          ),
+          baseUrl: 'https://live.api.example.com',
+        );
+        await expectLater(
+          api.fetchRecording(
+            roomId: 'room:with:colons',
+            expectedHostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ),
+          throwsA(isA<ApiException>()),
+        );
+      });
+    }
+  });
+
+  group('Live API expected host argument', () {
+    for (final expectedHost in ['', 'a' * 63, 'a' * 65, 'g' * 64, 'A' * 64]) {
+      test('does not accept a malformed selected host', () async {
+        when(
+          () => mockNip98AuthService.createAuthToken(
+            url: any(named: 'url'),
+            method: any(named: 'method'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) async => authToken);
+        final api = LiveApiService(
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'hostPubkey': expectedHost,
+                'token': 'join-token',
+                'status': 'ready',
+                'playbackUrl': 'https://example.com/replay.m3u8',
+              }),
+              200,
+            ),
+          ),
+          baseUrl: 'https://live.api.example.com',
+          nip98AuthService: mockNip98AuthService,
+        );
+        await expectLater(
+          api.fetchJoinToken(
+            roomId: 'room:with:colons',
+            expectedHostPubkey: expectedHost,
+            role: LiveRole.audience,
+          ),
+          throwsA(isA<ApiException>()),
+        );
+        await expectLater(
+          api.fetchRecording(
+            roomId: 'room:with:colons',
+            expectedHostPubkey: expectedHost,
+          ),
+          throwsA(isA<ApiException>()),
+        );
+      });
+    }
   });
 
   group('LiveApiService', () {
@@ -241,6 +360,7 @@ void main() {
         (_) async => http.Response(
           jsonEncode({
             'token': 'jwt-token',
+            'hostPubkey': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             'roomName': 'room-abc',
             'participantIdentity': 'host-pubkey',
             'serverUrl': 'wss://livekit.example.com',
@@ -252,6 +372,8 @@ void main() {
 
       final token = await service.fetchJoinToken(
         roomId: 'room-abc',
+        expectedHostPubkey:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         role: LiveRole.host,
       );
 
@@ -412,13 +534,18 @@ void main() {
         (_) async => http.Response(
           jsonEncode({
             'status': 'ready',
+            'hostPubkey': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             'playbackUrl': 'https://example.com/replay.m3u8',
           }),
           200,
         ),
       );
 
-      final recording = await service.fetchRecording(roomId: 'room-abc');
+      final recording = await service.fetchRecording(
+        roomId: 'room-abc',
+        expectedHostPubkey:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
 
       expect(recording, isNotNull);
       expect(recording!.status, RecordingStatus.ready);
@@ -439,7 +566,10 @@ void main() {
           () => mockClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer((_) async => http.Response('', 404));
 
-        final recording = await service.fetchRecording(roomId: 'room-abc');
+        final recording = await service.fetchRecording(
+          roomId: 'room-abc',
+          expectedHostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        );
 
         expect(recording, isNull);
       },

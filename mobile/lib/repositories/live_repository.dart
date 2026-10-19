@@ -219,13 +219,17 @@ class LiveRepository {
 
   Future<LiveRoomRecording?> fetchRecording({
     required String roomId,
+    required String expectedHostPubkey,
   }) async {
     final liveApiService = _liveApiService;
     if (liveApiService == null) {
       return null;
     }
 
-    return liveApiService.fetchRecording(roomId: roomId);
+    return liveApiService.fetchRecording(
+      roomId: roomId,
+      expectedHostPubkey: expectedHostPubkey,
+    );
   }
 
   Stream<List<T>> _watchCollection<T>({

@@ -100,6 +100,7 @@ void main() {
       updatedAt: DateTime.utc(2026, 4, 6, 12, 5),
     );
     const joinToken = LiveRoomToken(
+      hostPubkey: hostPubkey,
       token: 'jwt-token',
       roomName: 'room-abc',
       participantIdentity: hostPubkey,
@@ -107,6 +108,7 @@ void main() {
       canPublish: true,
     );
     const audienceJoinToken = LiveRoomToken(
+      hostPubkey: hostPubkey,
       token: 'audience-jwt-token',
       roomName: 'room-abc',
       participantIdentity: audiencePubkey,
@@ -114,6 +116,7 @@ void main() {
       canPublish: false,
     );
     const speakerJoinToken = LiveRoomToken(
+      hostPubkey: hostPubkey,
       token: 'speaker-jwt-token',
       roomName: 'room-abc',
       participantIdentity: audiencePubkey,
@@ -140,6 +143,7 @@ void main() {
       when(
         () => mockApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: hostPubkey,
           role: LiveRole.host,
         ),
       ).thenAnswer((_) async => joinToken);
@@ -150,6 +154,7 @@ void main() {
       when(
         () => mockApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: hostPubkey,
           role: LiveRole.audience,
         ),
       ).thenAnswer((_) async => audienceJoinToken);
@@ -162,6 +167,7 @@ void main() {
       when(
         () => mockApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: hostPubkey,
           role: LiveRole.speaker,
         ),
       ).thenAnswer((_) async => speakerJoinToken);
@@ -221,6 +227,89 @@ void main() {
       await sessionsController.close();
       await presenceController.close();
       await mediaController.close();
+    });
+
+    group('join token host validation', () {
+      for (final host in ['', 'a' * 63, 'a' * 65, 'g' * 64, speakerPubkey]) {
+        test('rejects an unbound token before connection or caching', () async {
+          var response = audienceJoinToken.copyWith(hostPubkey: host);
+          when(
+            () => mockApiService.fetchJoinToken(
+              roomId: room.id,
+              expectedHostPubkey: room.hostPubkey,
+              role: LiveRole.audience,
+            ),
+          ).thenAnswer((_) async => response);
+          when(() => mockMediaService.connect(any())).thenAnswer((_) async {});
+          final bloc = LiveRoomBloc(
+            liveRepository: mockRepository,
+            liveApiService: mockApiService,
+            liveKitRoomService: mockMediaService,
+          );
+          addTearDown(bloc.close);
+          bloc.add(const LiveRoomJoinRequested(room: room));
+          await pumpEventQueue();
+          sessionsController.add([liveSession]);
+          await pumpEventQueue();
+          expect(bloc.state.error, LiveRoomError.connectionFailed);
+          verifyNever(() => mockMediaService.connect(any()));
+
+          response = audienceJoinToken;
+          bloc.add(const LiveRoomAppForegroundChanged(true));
+          await pumpEventQueue();
+          verify(() => mockMediaService.connect(audienceJoinToken)).called(1);
+          verify(
+            () => mockApiService.fetchJoinToken(
+              roomId: room.id,
+              expectedHostPubkey: room.hostPubkey,
+              role: LiveRole.audience,
+            ),
+          ).called(2);
+        });
+      }
+
+      test(
+        'validates a replacement after cached-token connection fails',
+        () async {
+          var tokenRequests = 0;
+          when(
+            () => mockApiService.fetchJoinToken(
+              roomId: room.id,
+              expectedHostPubkey: room.hostPubkey,
+              role: LiveRole.audience,
+            ),
+          ).thenAnswer(
+            (_) async => ++tokenRequests == 1
+                ? audienceJoinToken
+                : audienceJoinToken.copyWith(hostPubkey: speakerPubkey),
+          );
+          var connects = 0;
+          when(() => mockMediaService.connect(any())).thenAnswer((_) async {
+            if (++connects > 1) throw StateError('Expired cached token');
+          });
+          final bloc = LiveRoomBloc(
+            liveRepository: mockRepository,
+            liveApiService: mockApiService,
+            liveKitRoomService: mockMediaService,
+          );
+          addTearDown(bloc.close);
+          bloc.add(const LiveRoomJoinRequested(room: room));
+          await pumpEventQueue();
+          sessionsController.add([liveSession]);
+          await pumpEventQueue();
+          bloc.add(const LiveRoomAppForegroundChanged(false));
+          await pumpEventQueue();
+          bloc.add(const LiveRoomAppForegroundChanged(true));
+          await pumpEventQueue();
+          expect(tokenRequests, 2);
+          expect(connects, 2);
+          expect(bloc.state.error, LiveRoomError.connectionFailed);
+          bloc.add(const LiveRoomAppForegroundChanged(true));
+          await pumpEventQueue();
+          expect(tokenRequests, 3);
+          expect(connects, 2);
+        },
+      );
     });
 
     group('host-signed authority', () {
@@ -291,6 +380,7 @@ void main() {
           verifyNever(
             () => mockApiService.fetchJoinToken(
               roomId: room.id,
+              expectedHostPubkey: hostPubkey,
               role: LiveRole.host,
             ),
           );
@@ -561,6 +651,7 @@ void main() {
       verifyNever(
         () => mockApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: hostPubkey,
           role: any(named: 'role'),
         ),
       );
@@ -574,6 +665,7 @@ void main() {
         when(
           () => mockApiService.fetchJoinToken(
             roomId: room.id,
+            expectedHostPubkey: hostPubkey,
             role: LiveRole.host,
           ),
         ).thenAnswer(
@@ -656,6 +748,7 @@ void main() {
         verify(
           () => mockApiService.fetchJoinToken(
             roomId: room.id,
+            expectedHostPubkey: hostPubkey,
             role: LiveRole.host,
           ),
         ).called(1);
@@ -709,6 +802,7 @@ void main() {
       when(
         () => mockApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: hostPubkey,
           role: LiveRole.host,
         ),
       ).thenThrow(Exception('token failed'));
@@ -1376,6 +1470,7 @@ void main() {
         verify(
           () => mockApiService.fetchJoinToken(
             roomId: room.id,
+            expectedHostPubkey: hostPubkey,
             role: LiveRole.speaker,
           ),
         ).called(1);
@@ -1502,6 +1597,7 @@ void main() {
       verify(
         () => mockApiService.fetchJoinToken(
           roomId: room.id,
+          expectedHostPubkey: hostPubkey,
           role: LiveRole.audience,
         ),
       ).called(1);
@@ -1515,6 +1611,7 @@ void main() {
       'audience reconnect fetches a fresh token after a stale-token failure',
       () async {
         const refreshedAudienceJoinToken = LiveRoomToken(
+          hostPubkey: hostPubkey,
           token: 'audience-jwt-token-fresh',
           roomName: 'room-abc',
           participantIdentity: audiencePubkey,
@@ -1526,6 +1623,7 @@ void main() {
         when(
           () => mockApiService.fetchJoinToken(
             roomId: room.id,
+            expectedHostPubkey: hostPubkey,
             role: LiveRole.audience,
           ),
         ).thenAnswer((_) async {
@@ -1568,6 +1666,7 @@ void main() {
         verify(
           () => mockApiService.fetchJoinToken(
             roomId: room.id,
+            expectedHostPubkey: hostPubkey,
             role: LiveRole.audience,
           ),
         ).called(2);
@@ -1606,6 +1705,7 @@ void main() {
           audienceCount: 18,
         );
         const secondAudienceJoinToken = LiveRoomToken(
+          hostPubkey: secondHostPubkey,
           token: 'audience-jwt-token-room-two',
           roomName: 'room-two',
           participantIdentity: audiencePubkey,
@@ -1630,6 +1730,7 @@ void main() {
         when(
           () => mockApiService.fetchJoinToken(
             roomId: secondRoom.id,
+            expectedHostPubkey: secondRoom.hostPubkey,
             role: LiveRole.audience,
           ),
         ).thenAnswer((_) async => secondAudienceJoinToken);
@@ -1726,6 +1827,7 @@ void main() {
         verifyNever(
           () => mockApiService.fetchJoinToken(
             roomId: quietRoom.id,
+            expectedHostPubkey: hostPubkey,
             role: LiveRole.audience,
           ),
         );

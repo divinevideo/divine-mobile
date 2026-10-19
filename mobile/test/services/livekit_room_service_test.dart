@@ -30,6 +30,7 @@ void main() {
 
         await service.connect(
           const LiveRoomToken(
+            hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             token: 'jwt-token',
             roomName: 'room-abc',
             participantIdentity: 'host-pubkey',
@@ -82,6 +83,7 @@ void main() {
 
         await service.connect(
           const LiveRoomToken(
+            hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             token: 'jwt-token',
             roomName: 'room-abc',
             participantIdentity: 'host-pubkey',
@@ -111,6 +113,7 @@ void main() {
 
         await service.connect(
           const LiveRoomToken(
+            hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             token: 'jwt-token',
             roomName: 'room-abc',
             participantIdentity: 'host-pubkey',
@@ -149,6 +152,7 @@ void main() {
       () async {
         await service.connect(
           const LiveRoomToken(
+            hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             token: 'jwt-token',
             roomName: 'room-abc',
             participantIdentity: 'host-pubkey',
@@ -177,6 +181,7 @@ void main() {
       () async {
         await service.connect(
           const LiveRoomToken(
+            hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             token: 'jwt-token',
             roomName: 'room-abc',
             participantIdentity: 'host-pubkey',
@@ -212,6 +217,7 @@ void main() {
     test('switchCamera delegates to the room client', () async {
       await service.connect(
         const LiveRoomToken(
+          hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           token: 'jwt-token',
           roomName: 'room-abc',
           participantIdentity: 'host-pubkey',
@@ -229,6 +235,7 @@ void main() {
     test('reconnecting events surface a reconnecting media state', () async {
       await service.connect(
         const LiveRoomToken(
+          hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           token: 'jwt-token',
           roomName: 'room-abc',
           participantIdentity: 'host-pubkey',
@@ -259,6 +266,7 @@ void main() {
 
       await service.connect(
         const LiveRoomToken(
+          hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           token: 'jwt-token',
           roomName: 'room-abc',
           participantIdentity: 'host-pubkey',
@@ -290,6 +298,7 @@ void main() {
       await expectLater(
         () => service.connect(
           const LiveRoomToken(
+            hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             token: 'jwt-token',
             roomName: 'room-abc',
             participantIdentity: 'host-pubkey',
@@ -307,6 +316,7 @@ void main() {
     test('disconnect resets the state to disconnected', () async {
       await service.connect(
         const LiveRoomToken(
+          hostPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           token: 'jwt-token',
           roomName: 'room-abc',
           participantIdentity: 'audience-pubkey',
