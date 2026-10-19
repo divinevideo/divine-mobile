@@ -6907,6 +6907,131 @@ void main() {
         ).thenAnswer((_) async => HomeFeedResult(videos: videos));
       }
 
+      for (final (duplicateOutcome, alreadyPaging) in [
+        ('holder failure', false),
+        ('pager failure', false),
+        ('badge success', false),
+        ('pager failure', true),
+        ('badge success', true),
+      ]) {
+        test(
+          'cursorless cached-window pagination cannot replace a committed badge snapshot: $duplicateOutcome, already paging $alreadyPaging',
+          () async {
+            when(
+              () => mockCache.readVideos(
+                pubkey: any(named: 'pubkey'),
+                mode: any(named: 'mode'),
+              ),
+            ).thenAnswer((_) async => createTestVideos(2, idPrefix: 'cached'));
+            when(() => mockFollowRepository.followingPubkeys)
+                .thenReturn(['1' * 64]);
+            stubFollowingFetch([createTestVideo('direct-fallback')]);
+            final firstHolders = Completer<Iterable<String>>();
+            final duplicateHolders = Completer<Iterable<String>>();
+            final duplicatePage = Completer<List<VideoEvent>>();
+            final firstPager = _MockBadgeVideoPager();
+            final duplicatePager = _MockBadgeVideoPager();
+            var holderReads = 0;
+            var firstPages = 0;
+            when(
+              () => mockVideosRepository.createBadgeVideoPager(
+                any(),
+                prioritizeUnseen: true,
+              ),
+            ).thenAnswer(
+              (call) =>
+                  (call.positionalArguments.single as Iterable<String>)
+                      .contains('2' * 64)
+                  ? firstPager
+                  : duplicatePager,
+            );
+            when(firstPager.loadMore).thenAnswer(
+              (_) async => [
+                createTestVideo(
+                  ++firstPages == 1 ? 'visible-first' : 'visible-second',
+                ),
+              ],
+            );
+            when(() => firstPager.hasMore).thenAnswer((_) => firstPages < 2);
+            when(duplicatePager.loadMore).thenAnswer((_) async {
+              if (alreadyPaging) return duplicatePage.future;
+              if (duplicateOutcome == 'pager failure') {
+                throw Exception('duplicate pager failed');
+              }
+              return [createTestVideo('unshown-first')];
+            });
+            when(() => duplicatePager.hasMore).thenReturn(true);
+            final bloc = VideoFeedBloc(
+              videosRepository: mockVideosRepository,
+              followRepository: mockFollowRepository,
+              curatedListRepository: mockCuratedListRepository,
+              sharedPreferences: sharedPreferences,
+              homeFeedCache: mockCache,
+              badgeAuthors: () => holderReads++ == 0
+                  ? firstHolders.future
+                  : duplicateHolders.future,
+            );
+            addTearDown(bloc.close);
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+            await pumpEventQueue();
+            expect(bloc.state.videos.map((v) => v.id), [
+              'cached-0',
+              'cached-1',
+            ]);
+            expect(bloc.state.paginationCursor, isNull);
+            expect(bloc.state.hasMore, isTrue);
+            bloc.add(const VideoFeedLoadMoreRequested());
+            await pumpEventQueue();
+            expect(holderReads, 2);
+            if (alreadyPaging) {
+              duplicateHolders.complete(['3' * 64]);
+              await pumpEventQueue();
+            }
+            firstHolders.complete(['2' * 64]);
+            await pumpEventQueue();
+            expect(bloc.state.videos.map((v) => v.id), [
+              'cached-0',
+              'cached-1',
+              'visible-first',
+            ]);
+            expect(bloc.state.paginationCursor, 'badge-following');
+            if (alreadyPaging) {
+              if (duplicateOutcome == 'pager failure') {
+                duplicatePage.completeError(
+                  Exception('duplicate pager failed'),
+                );
+              } else {
+                duplicatePage.complete([createTestVideo('unshown-first')]);
+              }
+            } else if (duplicateOutcome == 'holder failure') {
+              duplicateHolders.completeError(
+                Exception('duplicate holder read failed'),
+              );
+            } else {
+              duplicateHolders.complete(['3' * 64]);
+            }
+            await pumpEventQueue();
+            bloc.add(const VideoFeedLoadMoreRequested());
+            await pumpEventQueue();
+            expect(
+              {
+                'visibleIds': bloc.state.videos.map((v) => v.id).toList(),
+                'visiblePagerPages': firstPages,
+              },
+              {
+                'visibleIds': [
+                  'cached-0',
+                  'cached-1',
+                  'visible-first',
+                  'visible-second',
+                ],
+                'visiblePagerPages': 2,
+              },
+            );
+          },
+        );
+      }
+
       feedBlocTest(
         'serves cached videos then splices fresh after the active video',
         setUp: () {
