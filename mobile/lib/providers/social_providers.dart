@@ -54,21 +54,19 @@ import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
 import 'package:openvine/utils/local_content_owner.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
+import 'package:openvine/utils/relay_connected_transitions.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'social_providers.g.dart';
 
-/// Reconnect trigger for the DM reaction retry sweep: emits once each time
-/// `connectivity_plus` reports any non-`none` result, so work queued during a
-/// brief network drop is re-driven the moment connectivity returns — without
-/// waiting for an app-foreground transition. The sweep short-circuits when
-/// nothing is retryable. For [DmReactionRetryService], `→ none` transitions
-/// are filtered out because a sweep fired on going offline has nothing to do:
-/// its own offline gate skips the pass anyway. The filter is a cheap
-/// short-circuit for the reaction consumer; the profile-save consumer also
-/// shares this stream and relies on the filter to avoid a futile offline
-/// trigger until it gains the same guard.
+/// Reconnect trigger for the profile-save and report retry sweeps: emits once
+/// each time `connectivity_plus` reports any non-`none` result, so work queued
+/// during a brief network drop is re-driven the moment connectivity returns —
+/// without waiting for an app-foreground transition. `→ none` transitions are
+/// filtered out because a sweep fired on going offline has nothing to do; the
+/// profile-save consumer relies on that to avoid a futile offline trigger.
+/// The DM reaction sweep wakes on a relay connecting instead (#8516).
 Stream<void> _dmRetryConnectivityTriggerStream() => Connectivity()
     .onConnectivityChanged
     .where((results) => results.any((r) => r != ConnectivityResult.none))
@@ -432,7 +430,7 @@ final profileSaveRetryServiceProvider = Provider<ProfileSaveRetryService?>((
 
 /// Auto-sweep service that re-drives undelivered DM reactions and removals
 /// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]
-/// on app-foreground transitions, connectivity changes, and an in-session
+/// on app-foreground transitions, a relay connecting, and an in-session
 /// follow-up heartbeat while retryable work remains.
 ///
 /// Gives reactions the durable delivery that DM messages already get from
@@ -473,11 +471,15 @@ DmReactionRetryService? dmReactionRetryService(Ref ref) {
   final foregroundController = StreamController<bool>();
   ref.onDispose(foregroundController.close);
 
-  // Re-drive undelivered reactions/removals the moment connectivity returns,
-  // not only on app-foreground transitions — a reaction left during a brief
-  // network drop would otherwise sit undelivered until the app is backgrounded
-  // and re-foregrounded.
-  final retryTriggerStream = _dmRetryConnectivityTriggerStream();
+  // Re-drive undelivered reactions/removals the moment a relay connects, not
+  // only on app-foreground transitions. Unlike the phone's network change this
+  // also fires when a relay server comes back while the phone stayed online,
+  // and never before a relay can take the send (#8516).
+  final nostrClient = ref.watch(nostrServiceProvider);
+  final retryTriggerStream = relayConnectedTransitions(
+    nostrClient.relayStatusStream,
+    initial: nostrClient.relayStatuses,
+  );
 
   final service = DmReactionRetryService(
     crashReporting: ref.read(crashReportingServiceProvider),

@@ -109,13 +109,13 @@ enum _RetryAttemptOutcome {
 ///
 /// **Triggers:** [appForegroundStream] transitions to `true` (the provider
 /// seeds the current foreground state, so the cold-start sweep fires
-/// automatically), the optional connectivity stream, the repository's
-/// `retryableReactionWork` nudge, and a follow-up heartbeat. The heartbeat is
-/// armed whenever a pass leaves rows that can still be retried this session,
-/// and by a nudge when none is armed. Without it a session on stable
-/// connectivity has no second pass at all: a removal that did not confirm
-/// leaves no chip to re-tap, so the counterparty keeps a reaction the sender
-/// believes is gone.
+/// automatically), the optional retry trigger (a relay connecting), the
+/// repository's `retryableReactionWork` nudge, and a follow-up heartbeat. The
+/// heartbeat is armed whenever a pass leaves rows that can still be retried
+/// this session, and by a nudge when none is armed. Without it a session on
+/// stable connectivity has no second pass at all: a removal that did not
+/// confirm leaves no chip to re-tap, so the counterparty keeps a reaction the
+/// sender believes is gone.
 ///
 /// **Re-entrancy:** a sweep already in progress short-circuits the next
 /// trigger. A nudge or heartbeat that lands mid-pass is remembered and arms a
@@ -153,9 +153,9 @@ class DmReactionRetryService {
   final Stream<bool> _appForegroundStream;
 
   /// Fires a sweep on each event, independent of foreground transitions.
-  /// Wired to connectivity/relay-reconnection so a reaction (or removal) made
-  /// during a brief network drop is re-driven the moment the network returns —
-  /// without waiting for the user to background and re-foreground the app.
+  /// Wired to a relay connecting, so a reaction (or removal) made while no
+  /// relay could be reached is re-driven as soon as one can take it — without
+  /// waiting for the user to background and re-foreground the app (#8516).
   final Stream<void>? _retryTriggerStream;
 
   /// Connectivity probe (same contract as `NIP17MessageService`'s). When it
