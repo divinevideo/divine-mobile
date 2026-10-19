@@ -8,6 +8,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
@@ -82,6 +83,7 @@ Widget _buildSubject({
   required _MockAuthService mockAuthService,
   required SharedPreferences sharedPreferences,
   required Stream<RouteContext> contextStream,
+  Widget? app,
 }) => _wrapWithBlocs(
   ProviderScope(
     overrides: _overrides(
@@ -89,7 +91,7 @@ Widget _buildSubject({
       sharedPreferences: sharedPreferences,
       contextStream: contextStream,
     ),
-    child: _appShellMaterialApp(),
+    child: app ?? _appShellMaterialApp(),
   ),
 );
 
@@ -109,6 +111,68 @@ void main() {
   });
 
   group(AppShell, () {
+    for (final route in [
+      (path: '/inbox', index: 2, hasAppBar: false),
+      (path: '/profile/me', index: 3, hasAppBar: false),
+      (path: '/profile/me/0', index: 3, hasAppBar: true),
+    ]) {
+      testWidgets(
+        '${route.path} keeps its header layout without global route context',
+        (tester) async {
+          const contentKey = Key('branch-content');
+          final contextController = StreamController<RouteContext>();
+          addTearDown(contextController.close);
+          final router = GoRouter(
+            initialLocation: route.path,
+            observers: [routeObserver],
+            routes: [
+              ShellRoute(
+                builder: (_, _, child) =>
+                    AppShell(currentIndex: route.index, child: child),
+                routes: [
+                  GoRoute(
+                    path: route.path,
+                    builder: (_, _) => const SizedBox.expand(key: contentKey),
+                  ),
+                ],
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+
+          await tester.pumpWidget(
+            _buildSubject(
+              mockAuthService: mockAuthService,
+              sharedPreferences: sharedPreferences,
+              // The branch navigator already has its route, but the global
+              // asynchronous route provider has not emitted one yet.
+              contextStream: contextController.stream,
+              app: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            tester.getTopLeft(find.byKey(contentKey)).dy,
+            route.hasAppBar ? greaterThan(0) : 0,
+          );
+
+          // A failed stream must not leave a permanent empty toolbar either.
+          contextController.addError(StateError('Route context unavailable'));
+          await tester.pump();
+          expect(
+            tester.getTopLeft(find.byKey(contentKey)).dy,
+            route.hasAppBar ? greaterThan(0) : 0,
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+        },
+      );
+    }
+
     testWidgets(
       'keeps the own-profile-grid app bar suppressed while a full-screen route '
       'covers the shell (#5925)',
