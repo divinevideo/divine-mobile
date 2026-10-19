@@ -14641,6 +14641,7 @@ void main() {
           () => mockDirectMessagesDao.hasGiftWrap(any()),
         ).thenAnswer((_) async => false);
         final controller = StreamController<Event>();
+        addTearDown(controller.close);
         when(
           () => mockNostrClient.subscribe(
             any(),
