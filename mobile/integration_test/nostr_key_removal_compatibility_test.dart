@@ -105,6 +105,14 @@ Future<void> _verifyOwnedRemoval({
     ownerPubkey: alice.publicKeyHex,
   );
 
+  final proof = await platformStorage.captureLoginRecordsStrict(
+    primaryKeyId: primaryId,
+    identityKeyId: identityId,
+    ownerPubkey: alice.publicKeyHex,
+    requireOwnedKeysAbsent: true,
+  );
+  await proof.verifyUnchanged();
+
   for (final storage in [current, legacy]) {
     expect(
       await storage.read(key: identityId) == null,
@@ -121,6 +129,18 @@ Future<void> _verifyOwnedRemoval({
           ? 'Another account’s primary record must remain byte-for-byte intact'
           : 'The selected primary must be absent through both readers',
     );
+  }
+
+  // A completed logout proof cannot conceal a changed native key record.
+  // Verification must refuse it without modifying the newly retained bytes.
+  await seeded.write(key: primaryId, value: ownedRecord);
+  await expectLater(
+    proof.verifyUnchanged(),
+    throwsA(isA<PlatformSecureStorageException>()),
+  );
+  for (final storage in [current, legacy]) {
+    expect(await storage.read(key: primaryId) == ownedRecord, isTrue);
+    expect(await storage.read(key: identityId) == null, isTrue);
   }
 }
 

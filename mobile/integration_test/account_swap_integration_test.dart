@@ -13,7 +13,9 @@ import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/swap_account.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/content_filter_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_account_authority.dart';
 
 import 'helpers/native_account_test_scope.dart';
 
@@ -57,6 +59,25 @@ void main() {
       expect(
         scope.prefs.get(ContentFilterService.filterMigratedStorageKey),
         isTrue,
+      );
+      final signedOutAuthority = CuratedListAccountAuthority(
+        authService: setupAuth,
+        preferences: scope.prefs,
+      );
+      final terminalRecord = scope.prefs.get(
+        AccountActivationCoordinator.storageKey,
+      );
+      expect(signedOutAuthority.isCurrent, isTrue);
+      await setupAuth.signOut();
+      expect(signedOutAuthority.isCurrent, isTrue);
+      expect(
+        AccountActivationCoordinator.forPreferences(scope.prefs)
+            .hasUnresolvedActivation,
+        isFalse,
+      );
+      expect(
+        scope.prefs.get(AccountActivationCoordinator.storageKey),
+        terminalRecord,
       );
       await setupAuth.createNewIdentity();
       final pubkeyB = setupAuth.currentPublicKeyHex;
@@ -126,6 +147,36 @@ void main() {
       expect(
         swappedAuth.committedAccountActivationReceipt?.isCurrent,
         isTrue,
+      );
+      await swappedAuth.signOut(
+        deleteKeys: true,
+        abortOnKeyDeletionFailure: true,
+      );
+      final destructiveAuthority = CuratedListAccountAuthority(
+        authService: swappedAuth,
+        preferences: scope.prefs,
+      );
+      final destructiveRecord = scope.prefs.get(
+        AccountActivationCoordinator.storageKey,
+      );
+      expect(destructiveAuthority.isCurrent, isTrue);
+      expect(
+        await swapped!.read(secureKeyStorageProvider).hasKeysStrict(),
+        isFalse,
+      );
+      await swappedAuth.signOut(
+        deleteKeys: true,
+        abortOnKeyDeletionFailure: true,
+      );
+      expect(destructiveAuthority.isCurrent, isTrue);
+      expect(
+        AccountActivationCoordinator.forPreferences(scope.prefs)
+            .hasUnresolvedActivation,
+        isFalse,
+      );
+      expect(
+        scope.prefs.get(AccountActivationCoordinator.storageKey),
+        destructiveRecord,
       );
       expect(tester.takeException(), isNull);
     });
