@@ -1,5 +1,5 @@
 // ABOUTME: Tests that clearing the decoded-image cache also schedules a frame,
-// ABOUTME: which is when Impeller gives the cached textures' memory back.
+// ABOUTME: which is when the cache releases the images it dropped.
 
 import 'dart:ui' as ui;
 

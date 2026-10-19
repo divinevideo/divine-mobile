@@ -6,11 +6,11 @@ import 'package:flutter/widgets.dart';
 
 /// Empties Flutter's decoded-image cache and schedules a frame.
 ///
-/// [ImageCache.clear] only drops the cache's references. Impeller gives the
-/// textures behind them back when it next draws a frame, and a static screen
-/// draws none: with a full cache, graphics memory stayed at 690 MB for 30 s
-/// after a clear on a Galaxy S26 and fell to 386 MB once frames ran, and an
-/// iPhone 12 Pro fell from 824 to 552 MB (#10301).
+/// [ImageCache] releases each image it drops in a post-frame callback, so
+/// nothing it held is freed until a frame is drawn, on any renderer, and a
+/// static screen draws none. With a full cache, graphics memory stayed at
+/// 690 MB for 30 s after a clear on a Galaxy S26 and fell to 386 MB once
+/// frames ran, and an iPhone 12 Pro fell from 824 to 552 MB (#10301).
 ///
 /// [includeLiveImages] also stops tracking images that are still on screen.
 /// They stay visible, and are freed when the widgets showing them let go.
