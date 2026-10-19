@@ -115,10 +115,19 @@ LoopPointSearch? loopPointSearchFor(List<DivineVideoClip> clips) {
 }
 
 /// [clip] trimmed to end right before [end] of its footage.
+///
+/// A clip is stored with whole-millisecond trims, so the trim is rounded up
+/// to one: rounded down when the editor saves it, the end would move past
+/// [end] and show that frame again.
 DivineVideoClip clipEndingAt(DivineVideoClip clip, Duration end) {
   final trimEnd = clip.duration - end;
+  if (trimEnd <= Duration.zero) return clip.copyWith(trimEnd: Duration.zero);
+  const perMillisecond = Duration.microsecondsPerMillisecond;
   return clip.copyWith(
-    trimEnd: trimEnd < Duration.zero ? Duration.zero : trimEnd,
+    trimEnd: Duration(
+      milliseconds:
+          (trimEnd.inMicroseconds + perMillisecond - 1) ~/ perMillisecond,
+    ),
   );
 }
 

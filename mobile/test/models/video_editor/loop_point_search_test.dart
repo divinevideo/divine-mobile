@@ -120,5 +120,20 @@ void main() {
       expect(trimmed.trimStart, _s);
       expect(trimmed.trimEnd, _ms * 1800);
     });
+
+    test('rounds the trim up to whole milliseconds, as the clip is saved', () {
+      final clip = _clip('a', duration: _s * 6);
+      // A 30 fps frame: 149 / 30 s.
+      const end = Duration(microseconds: 4966666);
+
+      final trimmed = clipEndingAt(clip, end);
+      final saved = Duration(
+        milliseconds: trimmed.toJson()['trimEndMs'] as int,
+      );
+
+      expect(trimmed.trimEnd, _ms * 1034);
+      expect(saved, trimmed.trimEnd);
+      expect(clip.duration - saved, lessThanOrEqualTo(end));
+    });
   });
 }
