@@ -41,7 +41,7 @@ const _Script _silent = (
 class _ScriptedRelay extends Relay {
   _ScriptedRelay(String url, this.script) : super(url, RelayStatus(url));
 
-  final _Script script;
+  _Script script;
 
   /// Every frame this relay was handed.
   final List<List<dynamic>> sent = [];
@@ -275,14 +275,15 @@ Future<void> _seedCachedInbox(
   _Harness h, {
   String privateKey = _peerKey,
   String relay = _peerInboxUrl,
+  Event? list,
 }) async {
-  final cached = _inboxList(privateKey, relay);
+  final cached = list ?? _inboxList(privateKey, relay);
   await h.db.nostrEventsDao.upsertEvent(cached);
 
   final read = await h.client.queryEventsDetailed(
     [
       Filter(
-        authors: [getPublicKey(privateKey)],
+        authors: [cached.pubkey],
         kinds: const [EventKind.dmRelaysList],
         limit: 1,
       ),
@@ -427,6 +428,60 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       syncState = DmSyncState(await SharedPreferences.getInstance());
     });
+
+    for (final sameTimestamp in [false, true]) {
+      test(
+        sameTimestamp
+            ? 'preserves the lower event ID at equal timestamps before '
+                  'confirming own inbox coverage'
+            : 'an older relay list cannot replace a newer cached own inbox or '
+                  'confirm history coverage',
+        () async {
+          final candidates = [
+            _inboxList(_ownerKey, _ownInboxUrl, createdAt: 1700000100),
+            _inboxList(
+              _ownerKey,
+              _peerInboxUrl,
+              createdAt: sameTimestamp ? 1700000100 : 1700000000,
+            ),
+          ];
+          if (sameTimestamp) {
+            candidates.sort((a, b) => a.id.compareTo(b.id));
+          }
+          final preferred = candidates.first;
+          final superseded = candidates.last;
+          final preferredRelay = preferred.tags.single[1];
+          final h = await _harness(
+            syncState: syncState,
+            script: (_) => (
+              answersPages: true,
+              inboxReads: _InboxReads.silent,
+              list: null,
+            ),
+          );
+          await _seedCachedInbox(h, list: preferred);
+          h.pooled.script = (
+            answersPages: true,
+            inboxReads: _InboxReads.serve,
+            list: superseded,
+          );
+
+          await h.repository.backfillHistoryIfNeeded();
+
+          expect(syncState.historyDrainComplete(_owner), isFalse);
+          expect(syncState.drainCoveredOwnInbox(_owner), isFalse);
+          expect(
+            _asked(_dialled(h, preferredRelay), EventKind.giftWrap),
+            isTrue,
+          );
+          expect(
+            await h.repository.resolveSelfWrapTargetRelays(_owner),
+            unorderedEquals([_poolRelayUrl, preferredRelay]),
+          );
+        },
+        timeout: const Timeout(Duration(seconds: 90)),
+      );
+    }
 
     test(
       'rechecks a generation-5 completion that trusted a cached own inbox',

@@ -348,11 +348,13 @@ enum _OwnDmInboxState {
 
 /// An own-inbox read's outcome. `advertisedMissing` is the newest list found,
 /// set only for a `found` read that asked the advertised relay without that
-/// relay returning it (#8433).
+/// relay returning it (#8433). `list` retains the selected signed event, even
+/// when it names no relays, so later reads cannot downgrade its ordering.
 typedef _OwnDmInboxRead = ({
   _OwnDmInboxState state,
   List<String>? relays,
   Event? advertisedMissing,
+  Event? list,
 });
 
 /// What one NIP-04 recovery sweep heard back about one page.
@@ -1638,6 +1640,16 @@ class DmRepository {
     );
     if (_ingestSessionEnded(pubkey, generation)) {
       return (relays: null, conclusive: false);
+    }
+    final knownList = memo.list;
+    final returnedList = strict.list;
+    if (knownList != null &&
+        returnedList != null &&
+        _compareInboxLists(knownList, returnedList) < 0) {
+      // A relay may lag behind a newer signed list we already hold. Its older
+      // answer neither replaces our routing evidence nor confirms coverage of
+      // the newer inbox. Page the known relays, but retry confirmation later.
+      return (relays: memoRelays, conclusive: false);
     }
     // Repair the session memo with the better answer, so the live
     // subscription's next re-subscribe stops routing by a silence we have
@@ -5528,14 +5540,24 @@ class DmRepository {
           }
         }
         logInconclusiveRead();
-        return (state: absentOrFailed, relays: null, advertisedMissing: null);
+        return (
+          state: absentOrFailed,
+          relays: null,
+          advertisedMissing: null,
+          list: null,
+        );
       }
       // Newest wins for a replaceable event served from multiple relays.
-      matchingEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      matchingEvents.sort(_compareInboxLists);
       final inbox = _classifyInboxList(matchingEvents.first, pubkey, source);
       final relays = inbox.relays;
       if (relays == null) {
-        return (state: inbox.state, relays: null, advertisedMissing: null);
+        return (
+          state: inbox.state,
+          relays: null,
+          advertisedMissing: null,
+          list: matchingEvents.first,
+        );
       }
       final advertisedServesList =
           advertisedEvents == null ||
@@ -5547,6 +5569,7 @@ class DmRepository {
         state: _OwnDmInboxState.found,
         relays: relays,
         advertisedMissing: advertisedServesList ? null : matchingEvents.first,
+        list: matchingEvents.first,
       );
     } on TimeoutException {
       // Deliberately `failed`, never `absent`. NIP-17 says an absent kind-10050
@@ -5563,6 +5586,7 @@ class DmRepository {
         state: _OwnDmInboxState.failed,
         relays: null,
         advertisedMissing: null,
+        list: null,
       );
     } on Object catch (e) {
       Log.warning(
@@ -5573,8 +5597,16 @@ class DmRepository {
         state: _OwnDmInboxState.failed,
         relays: null,
         advertisedMissing: null,
+        list: null,
       );
     }
+  }
+
+  /// Orders replaceable inbox lists newest first, with NIP-01's lower event ID
+  /// winning when two signed lists share a timestamp.
+  static int _compareInboxLists(Event a, Event b) {
+    final timestampOrder = b.createdAt.compareTo(a.createdAt);
+    return timestampOrder != 0 ? timestampOrder : a.id.compareTo(b.id);
   }
 
   /// Reads one kind-10050 into the relays a gift wrap may be routed to.
@@ -5708,6 +5740,7 @@ class DmRepository {
       state: _OwnDmInboxState.absent,
       relays: null,
       advertisedMissing: null,
+      list: null,
     );
     if (relayLists.isEmpty) return absent;
     final newest = relayLists.reduce(
@@ -5775,8 +5808,9 @@ class DmRepository {
           event,
     ];
     if (lists.isNotEmpty) {
+      lists.sort(_compareInboxLists);
       final inbox = _classifyInboxList(
-        lists.reduce((a, b) => b.createdAt > a.createdAt ? b : a),
+        lists.first,
         pubkey,
         _DmRelayListSource.remote,
       );
@@ -5784,6 +5818,7 @@ class DmRepository {
         state: inbox.state,
         relays: inbox.relays,
         advertisedMissing: null,
+        list: lists.first,
       );
     }
     if (result.noRelays || result.timedOut) {
@@ -5800,6 +5835,7 @@ class DmRepository {
         state: _OwnDmInboxState.failed,
         relays: null,
         advertisedMissing: null,
+        list: null,
       );
     }
     return absent;
