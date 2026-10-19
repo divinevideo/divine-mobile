@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:media_cache/media_cache.dart' show CancellableCacheOperation;
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
@@ -27,6 +28,7 @@ import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -97,7 +99,25 @@ void main() {
       mockHashtagRepository = _MockHashtagRepository();
       mockCuratedListRepository = _MockCuratedListRepository();
       mockPeopleListsRepository = _MockPeopleListsRepository();
+
+      // These policy tests render thumbnails, but must not open the shared
+      // disk cache and leave database cleanup work in the merged test isolate.
+      final imageCache = createMockMediaCacheManager();
+      when(() => imageCache.getFileFromCache(any()))
+          .thenAnswer((_) async => null);
+      when(
+        () => imageCache.cacheFileCancellable(
+          any(),
+          key: any(named: 'key'),
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).thenAnswer(
+        (_) => CancellableCacheOperation.fromStream(const Stream.empty()),
+      );
+      debugImageCacheOverride = imageCache;
     });
+
+    tearDown(() => debugImageCacheOverride = null);
 
     Widget createTestWidget({
       Override? profileRepositoryOverride,
