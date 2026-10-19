@@ -12,9 +12,10 @@ import 'package:flutter/widgets.dart';
 /// (`AppConstants.imageCacheMaxBytes`) is full. Impeller holds each one as a
 /// GPU texture with a full mip chain, so a full budget measured as about twice
 /// its size in graphics memory: ~500 MB on a Galaxy S26 after 50 camera →
-/// editor round trips (#10301). On iOS a later clear gave almost none of that
-/// footprint back, so the images are released each time the screen closes,
-/// before they can pile up.
+/// editor round trips (#10301). The app already empties the cache when it goes
+/// to the background or the OS reports memory pressure, but neither happens
+/// while the user stays in the app, so the next export ran with the camera's
+/// and editor's leftovers still on the GPU.
 ///
 /// Images still on screen are live and stay; everything else is decoded again
 /// from disk when it is next shown.
