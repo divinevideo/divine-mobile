@@ -479,6 +479,22 @@ void main() {
       );
     });
 
+    testWidgets('Cancel stops the seam before the old end reloads the player', (
+      tester,
+    ) async {
+      await findSuggestion(tester);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.commonCancel));
+      await tester.pump();
+
+      // A pause sent while the player reloads is ignored.
+      verifyInOrder([
+        () => mainBloc.add(any(that: isA<VideoEditorAuditionEnded>())),
+        () => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())),
+      ]);
+    });
+
     testWidgets('Keep writes the new end as one undo step', (tester) async {
       await findSuggestion(tester);
       clearInteractions(clipBloc);

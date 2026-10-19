@@ -171,6 +171,12 @@ class TimelineLoopSuggestionControls extends StatelessWidget {
         ? null
         : clipBloc.state.clips.where((c) => c.id == original.id).firstOrNull;
     if (original != null && clip != null && !_sameTrim(clip, original)) {
+      // Putting the old end back reloads the player, which ignores a pause
+      // sent while it reloads: stop the seam first, so a video that was
+      // paused before the suggestion stays paused.
+      context
+          .findAncestorStateOfType<_LoopSuggestionResultListenerState>()
+          ?._endSeam();
       clipBloc.add(
         ClipEditorClipUpdated(
           clipId: clip.id,
@@ -224,14 +230,7 @@ class _LoopSuggestionResultListenerState
           listenWhen: (previous, current) =>
               previous.status == LoopSuggestionStatus.suggested &&
               current.status != LoopSuggestionStatus.suggested,
-          listener: (context, _) {
-            _pendingAudition = null;
-            if (!_isPlayingSeam) return;
-            _isPlayingSeam = false;
-            context.read<VideoEditorMainBloc>().add(
-              const VideoEditorAuditionEnded(),
-            );
-          },
+          listener: (_, _) => _endSeam(),
         ),
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
           listenWhen: (previous, current) =>
@@ -245,6 +244,14 @@ class _LoopSuggestionResultListenerState
       ],
       child: widget.child,
     );
+  }
+
+  /// Stops the seam's audition, if the loop preview started one.
+  void _endSeam() {
+    _pendingAudition = null;
+    if (!_isPlayingSeam) return;
+    _isPlayingSeam = false;
+    context.read<VideoEditorMainBloc>().add(const VideoEditorAuditionEnded());
   }
 
   void _onPlayerReady(BuildContext context, VideoEditorMainState _) {
