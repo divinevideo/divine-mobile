@@ -200,6 +200,9 @@ void main() {
         await tester.pump();
         await tester.enterText(find.byType(TextField), 'cats');
         videoLookup.complete(VideoRouteFound(video));
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
         await tester.pumpAndSettle();
 
         expect(find.text('video:$hexId'), findsNothing);
@@ -218,6 +221,9 @@ void main() {
             ),
           ),
         );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.runAsync(() async {});
+        await tester.pump();
         await tester.pumpAndSettle();
 
         // Focusing moves the cursor, which notifies the controller without
@@ -233,6 +239,9 @@ void main() {
     testWidgets('ordinary text stays in search', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.enterText(find.byType(TextField), 'cats');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.runAsync(() async {});
+      await tester.pump();
       await tester.pumpAndSettle();
 
       expect(find.text('profile:$npub'), findsNothing);
