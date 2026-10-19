@@ -15,11 +15,11 @@ import 'package:flutter/widgets.dart';
 /// [includeLiveImages] also stops tracking images that are still on screen.
 /// They stay visible, and are freed when the widgets showing them let go.
 ///
-/// The frame follows the app's lifecycle, so a clear while the app is in the
-/// background draws nothing until it returns. On Android the memory-pressure
-/// clear on backgrounding arrives while the app is still inactive, so its
-/// frame is drawn: graphics memory in the background fell from 632 MB to
-/// 254–270 MB on the S26.
+/// The frame follows the app's lifecycle, so a clear while the app is hidden
+/// or paused frees nothing until it returns. On a Galaxy S26 the
+/// memory-pressure clear on backgrounding arrived while the app was still
+/// inactive, so its frame was drawn and graphics memory in the background
+/// fell from 632 MB to 254–270 MB. Android does not guarantee that order.
 void clearDecodedImageCache({bool includeLiveImages = false}) {
   final cache = PaintingBinding.instance.imageCache..clear();
   if (includeLiveImages) cache.clearLiveImages();
