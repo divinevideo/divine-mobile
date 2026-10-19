@@ -13,8 +13,10 @@ import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
 
 import '../../helpers/l10n.dart';
 
@@ -76,7 +78,10 @@ VideoRecorderRoute _recorderRouteFor(String location, {Object? extra}) {
     _FakeBuildContext(),
     _FakeGoRouterState(Uri.parse(location), extra: extra),
   );
-  return (page as CustomTransitionPage<void>).child as VideoRecorderRoute;
+  final scope =
+      (page as CustomTransitionPage<void>).child
+          as ReleaseCachedImagesOnDispose;
+  return scope.child as VideoRecorderRoute;
 }
 
 void main() {
@@ -130,6 +135,51 @@ void main() {
       expect(recorder.entryPoint, CreationEntryPoint.bottomNav);
       expect(recorder.autoRecord, isTrue);
     });
+  });
+
+  group('videoRoutes image release', () {
+    test('releases cached images when the recorder closes', () {
+      final route = videoRoutes().whereType<GoRoute>().firstWhere(
+        (route) => route.path == VideoRecorderScreen.path,
+      );
+      final page = route.pageBuilder!(
+        _FakeBuildContext(),
+        _FakeGoRouterState(Uri.parse(VideoRecorderScreen.path)),
+      );
+
+      expect(
+        (page as CustomTransitionPage<void>).child,
+        isA<ReleaseCachedImagesOnDispose>().having(
+          (scope) => scope.child,
+          'child',
+          isA<VideoRecorderRoute>(),
+        ),
+      );
+    });
+
+    for (final path in [
+      VideoEditorScreen.path,
+      VideoEditorScreen.draftPathWithId,
+    ]) {
+      test('$path releases cached images when the editor closes', () {
+        final route = videoRoutes().whereType<GoRoute>().firstWhere(
+          (route) => route.path == path,
+        );
+        final widget = route.builder!(
+          _FakeBuildContext(),
+          _FakeGoRouterState(Uri.parse(VideoEditorScreen.path)),
+        );
+
+        expect(
+          widget,
+          isA<ReleaseCachedImagesOnDispose>().having(
+            (scope) => scope.child,
+            'child',
+            isA<VideoEditorScreen>(),
+          ),
+        );
+      });
+    }
   });
 
   group('videoRoutes engagement routes', () {

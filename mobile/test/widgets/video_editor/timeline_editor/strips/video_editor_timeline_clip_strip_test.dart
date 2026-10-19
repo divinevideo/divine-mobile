@@ -660,12 +660,9 @@ void main() {
     });
 
     group('thumbnail fallback', () {
-      // Regression: the fallback must be a plain FileImage (not a
-      // cacheHeight-keyed ResizeImage) so it hits the warm poster cache entry
-      // instead of a cold decode that flashes black on first open.
-      testWidgets('poster fallback reuses the plain FileImage key (no resize)', (
-        tester,
-      ) async {
+      // Regression (#10301): a full-size decode of the 640 px clip thumbnail
+      // for a 64 dp tile stayed in the image cache as ~2.8 MB per clip.
+      testWidgets('decodes the clip thumbnail at tile height', (tester) async {
         final clips = [
           _createTestClip(
             id: 'a',
@@ -675,22 +672,28 @@ void main() {
 
         await tester.pumpWidget(buildWidget(clips: clips, totalWidth: 400));
 
-        // Before strip thumbnails stream in, every slot renders the poster
-        // fallback. Each must be a plain FileImage on the thumbnail path.
+        // Before strip thumbnails stream in, every slot renders the clip
+        // thumbnail as its fallback.
+        final tileHeight =
+            (TimelineConstants.thumbnailStripHeight *
+                    tester.view.devicePixelRatio)
+                .round();
         final images = tester.widgetList<Image>(find.byType(Image)).toList();
         expect(images, isNotEmpty);
         for (final image in images) {
           expect(
             image.image,
-            isA<FileImage>().having(
-              (provider) => provider.file.path,
-              'file.path',
-              '/tmp/nonexistent_thumb_a.jpg',
-            ),
-            reason:
-                'Fallback must use a plain FileImage (not a cacheHeight-keyed '
-                'ResizeImage) so it hits the warm poster cache entry and '
-                'paints instantly instead of flashing black.',
+            isA<ResizeImage>()
+                .having((provider) => provider.height, 'height', tileHeight)
+                .having(
+                  (provider) => provider.imageProvider,
+                  'imageProvider',
+                  isA<FileImage>().having(
+                    (provider) => provider.file.path,
+                    'file.path',
+                    '/tmp/nonexistent_thumb_a.jpg',
+                  ),
+                ),
           );
         }
       });

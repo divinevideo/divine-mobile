@@ -151,6 +151,12 @@ class AppConstants {
   /// view again. A larger budget keeps a much bigger working set resident so
   /// scroll-back is an instant (synchronous) cache hit. Per-thumbnail memory is
   /// bounded separately by decoding at display size, so this stays bounded.
+  ///
+  /// The budget counts decoded pixels, not what the GPU holds: Impeller keeps
+  /// each image as a texture with a full mip chain, and a full cache measured
+  /// as ~500 MB of graphics memory on a Galaxy S26 (#10301). The cache is
+  /// emptied when the app is backgrounded or the OS reports memory pressure,
+  /// and when the camera or editor closes (`ReleaseCachedImagesOnDispose`).
   static const int imageCacheMaxBytes = 256 * 1024 * 1024;
 
   // ============================================================================
