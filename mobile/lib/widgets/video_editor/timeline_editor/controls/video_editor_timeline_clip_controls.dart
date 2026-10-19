@@ -151,9 +151,11 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     final canFindLoop = context.select((ClipEditorBloc bloc) {
       final state = bloc.state;
       return state.currentClipIndex == state.clips.length - 1 &&
-          !state.hasPendingClipOperation &&
           loopPointSearchFor(state.clips) != null;
     });
+    final hasPendingClipOperation = context.select(
+      (ClipEditorBloc bloc) => bloc.state.hasPendingClipOperation,
+    );
     final isFindingLoop = context.select(
       (LoopSuggestionCubit cubit) => cubit.state.isSearching,
     );
@@ -199,6 +201,7 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       onSplit: () => _splitClip(context),
       onLoop: canFindLoop ? () => _findLoop(context) : null,
       isFindingLoop: isFindingLoop,
+      isLoopDisabled: hasPendingClipOperation,
       onFreezeFrame: () => _freezeFrame(context),
       isFreezingFrame: isFreezingCurrentClip,
       onDetach: () => _detachClip(context),

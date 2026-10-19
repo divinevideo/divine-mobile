@@ -18,6 +18,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onSplit,
     this.onLoop,
     this.isFindingLoop = false,
+    this.isLoopDisabled = false,
     this.onFreezeFrame,
     this.isFreezingFrame = false,
     this.onDetach,
@@ -103,6 +104,10 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether that search runs now. Shows the action as a spinner, matching
   /// the other analysis actions.
   final bool isFindingLoop;
+
+  /// Whether Loop should be shown disabled because another clip operation
+  /// runs. Greyed rather than removed, so the actions after it stay put.
+  final bool isLoopDisabled;
 
   /// Holds the frame under the playhead still for a beat.
   final VoidCallback? onFreezeFrame;
@@ -406,7 +411,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
             icon: .repeat,
             label: context.l10n.videoEditorLoopLabel,
             semanticLabel: context.l10n.videoEditorLoopSemanticLabel,
-            onPressed: isFindingLoop ? null : onLoop,
+            onPressed: isFindingLoop || isLoopDisabled ? null : onLoop,
             isLoading: isFindingLoop,
           ),
         if (onExtractAudio != null)

@@ -22,6 +22,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:pro_image_editor/features/main_editor/services/sizes_manager.dart'
@@ -313,7 +314,7 @@ void main() {
     });
 
     group('Loop', () {
-      testWidgets('waits for a render on another clip before offering Loop', (
+      testWidgets('keeps Loop in place but disabled during another render', (
         tester,
       ) async {
         when(() => bloc.state).thenReturn(
@@ -327,10 +328,15 @@ void main() {
 
         await tester.pumpWidget(build());
 
-        final controls = tester.widget<VideoEditorTimelineControls>(
-          find.byType(VideoEditorTimelineControls),
+        // Greyed rather than removed, so the actions after it stay put.
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final loop = tester.widget<TimelineActionButton>(
+          find.ancestor(
+            of: find.text(l10n.videoEditorLoopLabel),
+            matching: find.byType(TimelineActionButton),
+          ),
         );
-        expect(controls.onLoop, isNull);
+        expect(loop.onPressed, isNull);
       });
 
       testWidgets('is offered on the last clip, whose end is the seam', (
