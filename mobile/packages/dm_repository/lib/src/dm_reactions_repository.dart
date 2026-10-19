@@ -103,6 +103,7 @@ class DmReactionRetryTarget {
     required this.targetMessageAuthor,
     required this.publishStatus,
     required this.createdAt,
+    this.attemptInFlight = false,
   });
 
   /// Reaction rumor id — the argument `retry` expects.
@@ -120,6 +121,11 @@ class DmReactionRetryTarget {
   /// Rumor `created_at` (unix seconds). Lets the sweep hold back a still-in-
   /// flight `'pending'` reaction until its original publish has resolved.
   final int createdAt;
+
+  /// Whether an attempt to deliver this row was running when it was listed.
+  /// A retry called now would join that attempt and send nothing, so the
+  /// sweep leaves the row for a later pass instead of counting it (#10044).
+  final bool attemptInFlight;
 }
 
 /// Resolves [pubkey]'s NIP-17 kind-10050 DM inbox relays, and says why the
@@ -916,9 +922,10 @@ class DmReactionsRepository {
   /// foreground retry sweep to re-drive via [retry]. Returns empty when
   /// credentials have not been wired.
   Future<List<DmReactionRetryTarget>> retryableReactions() async {
-    if (_userPubkey.isEmpty) return const [];
+    final ownerPubkey = _userPubkey;
+    if (ownerPubkey.isEmpty) return const [];
     final rows = await _reactionsDao.getRetryableOwnReactions(
-      ownerPubkey: _userPubkey,
+      ownerPubkey: ownerPubkey,
     );
     return rows
         .map(
@@ -927,6 +934,10 @@ class DmReactionsRepository {
             targetMessageAuthor: r.targetMessageAuthor,
             publishStatus: r.publishStatus ?? 'pending',
             createdAt: r.createdAt,
+            attemptInFlight: _reactionPublishesInFlight.containsKey((
+              ownerPubkey,
+              r.id,
+            )),
           ),
         )
         .toList(growable: false);
@@ -1068,6 +1079,7 @@ class DmReactionsRepository {
             targetMessageAuthor: r.targetMessageAuthor,
             publishStatus: r.publishStatus ?? '',
             createdAt: r.createdAt,
+            attemptInFlight: _deletionRecoveriesInFlight.containsKey(r.id),
           ),
         )
         .toList(growable: false);

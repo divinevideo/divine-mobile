@@ -319,11 +319,13 @@ class DmReactionRetryService {
         'refused=${r.refused} '
         'skipped-backoff=${r.skippedBackoff} '
         'skipped-exhausted=${r.skippedExhausted} '
-        'skipped-too-young=${r.skippedTooYoung}) '
+        'skipped-too-young=${r.skippedTooYoung} '
+        'skipped-in-flight=${r.skippedInFlight}) '
         'deletions(recovered=${d.recovered} failed=${d.failed} '
         'refused=${d.refused} '
         'skipped-backoff=${d.skippedBackoff} '
-        'skipped-exhausted=${d.skippedExhausted})',
+        'skipped-exhausted=${d.skippedExhausted} '
+        'skipped-in-flight=${d.skippedInFlight})',
         name: 'DmReactionRetryService',
         category: LogCategory.system,
       );
@@ -411,6 +413,7 @@ class DmReactionRetryService {
       int skippedBackoff,
       int skippedExhausted,
       int skippedTooYoung,
+      int skippedInFlight,
       int stillRetryable,
     })
   >
@@ -428,6 +431,7 @@ class DmReactionRetryService {
     var skippedBackoff = 0;
     var skippedExhausted = 0;
     var skippedTooYoung = 0;
+    var skippedInFlight = 0;
 
     // Rows this session may still attempt: they back off, age past the
     // in-flight guard, or failed with budget left. A row that was delivered,
@@ -441,6 +445,14 @@ class DmReactionRetryService {
 
       if (attempts >= _config.maxRetries) {
         skippedExhausted++;
+        continue;
+      }
+
+      // A retry now would join the running attempt and send nothing, so it
+      // must not use up a retry (#10044). That attempt reports its own result.
+      if (target.attemptInFlight) {
+        skippedInFlight++;
+        stillRetryable++;
         continue;
       }
 
@@ -518,6 +530,7 @@ class DmReactionRetryService {
       skippedBackoff: skippedBackoff,
       skippedExhausted: skippedExhausted,
       skippedTooYoung: skippedTooYoung,
+      skippedInFlight: skippedInFlight,
       stillRetryable: stillRetryable,
     );
   }

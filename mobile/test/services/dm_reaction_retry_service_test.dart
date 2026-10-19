@@ -22,11 +22,13 @@ DmReactionRetryTarget _target({
   required String rumorId,
   String publishStatus = 'failed',
   int createdAt = 1700000000,
+  bool attemptInFlight = false,
 }) => DmReactionRetryTarget(
   rumorId: rumorId,
   targetMessageAuthor: _authorPubkey,
   publishStatus: publishStatus,
   createdAt: createdAt,
+  attemptInFlight: attemptInFlight,
 );
 
 DmReactionPublishResult _ok(String id) =>
@@ -776,6 +778,122 @@ void main() {
           ).called(1);
         },
       );
+    });
+
+    group('a row whose own attempt is still in flight (#10044)', () {
+      const twoAttempts = DmReactionRetryConfig(
+        maxRetries: 2,
+        initialDelay: Duration(milliseconds: 1),
+      );
+
+      test('does not use up a removal retry', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        var inFlight = true;
+        when(repository.retryableDeletions).thenAnswer(
+          (_) async => [
+            _target(
+              rumorId: 'd1',
+              publishStatus: 'deletion_pending',
+              attemptInFlight: inFlight,
+            ),
+          ],
+        );
+        when(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => DmReactionDeletionOutcome.unconfirmed);
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        verifyNever(
+          () => repository.retryDeletion(
+            rumorId: any(named: 'rumorId'),
+            targetMessageAuthor: any(named: 'targetMessageAuthor'),
+          ),
+        );
+
+        inFlight = false;
+        for (var pass = 0; pass < 3; pass++) {
+          clock = clock.add(const Duration(seconds: 10));
+          await service.sweep();
+        }
+
+        verify(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(twoAttempts.maxRetries);
+      });
+
+      test('does not use up a reaction retry', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        var inFlight = true;
+        when(repository.retryableReactions).thenAnswer(
+          (_) async => [_target(rumorId: 'r1', attemptInFlight: inFlight)],
+        );
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        verifyNever(
+          () => repository.retry(
+            rumorId: any(named: 'rumorId'),
+            targetMessageAuthor: any(named: 'targetMessageAuthor'),
+          ),
+        );
+
+        inFlight = false;
+        for (var pass = 0; pass < 3; pass++) {
+          clock = clock.add(const Duration(seconds: 10));
+          await service.sweep();
+        }
+
+        verify(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(twoAttempts.maxRetries);
+      });
+
+      test('keeps the heartbeat armed for it', () {
+        fakeAsync((async) {
+          when(repository.retryableDeletions).thenAnswer(
+            (_) async => [
+              _target(
+                rumorId: 'd1',
+                publishStatus: 'deletion_pending',
+                attemptInFlight: true,
+              ),
+            ],
+          );
+          final service = buildService(
+            now: async.getClock(DateTime.utc(2026, 10, 7, 12)).now,
+          );
+          unawaited(service.initialize());
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          expect(async.pendingTimers, hasLength(1));
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
     });
 
     group('follow-up heartbeat (#7327)', () {
