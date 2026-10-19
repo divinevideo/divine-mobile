@@ -35,6 +35,7 @@ import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
+import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
@@ -83,6 +84,15 @@ import 'package:unified_logger/unified_logger.dart';
 class VideoEditorCanvas extends StatelessWidget {
   /// Creates a [VideoEditorCanvas].
   const VideoEditorCanvas({super.key});
+
+  /// Overlays restored from history belong to that history's clips, not an
+  /// uncommitted trim shown by the live preview. Legacy entries without clip
+  /// metadata retain the existing live-duration behavior.
+  @visibleForTesting
+  static Duration overlayHistoryDuration({
+    required List<DivineVideoClip> historyClips,
+    required Duration liveDuration,
+  }) => historyClips.isEmpty ? liveDuration : compositionDuration(historyClips);
 
   /// Pushes the post-`setClips` start position back into the
   /// [VideoEditorMainBloc] and the [ProVideoController] after a trim
@@ -2190,7 +2200,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       ),
     );
 
-    final videoDuration = context.read<ClipEditorBloc>().state.totalDuration;
+    final documentsPath = cachedDocumentsPath ?? await _documentsPath;
+    if (!mounted) return;
+    final snapshot = editor.stateManager.clipSnapshots(documentsPath);
+    final videoDuration = VideoEditorCanvas.overlayHistoryDuration(
+      historyClips: snapshot,
+      liveDuration: context.read<ClipEditorBloc>().state.totalDuration,
+    );
 
     context.read<TimelineOverlayBloc>().add(
       TimelineOverlayItemsUpdate(
@@ -2214,8 +2230,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     // A detached clip's file is stored by name, so its sound is found through
     // the documents path, which is known from the first sync on.
-    final documentsPath = cachedDocumentsPath ?? await _documentsPath;
-    if (!mounted) return;
     final detachedClips = DetachedClipSound.inLayers(
       editor.activeLayers,
       documentsPath: documentsPath,
@@ -2239,7 +2253,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // freezes the editor. Orphaned clips are filtered out, and an entry whose
     // clips are *all* orphaned is stepped over (rather than left to diverge
     // from, or empty the, native player).
-    final snapshot = editor.stateManager.clipSnapshots(await _documentsPath);
     if (!mounted || _isImportingHistory) return;
 
     final decision = VideoEditorCanvas.resolveClipSnapshotSync(
