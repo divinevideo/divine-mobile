@@ -601,8 +601,9 @@ class BadgeRepository {
     }
     var expired = false;
     Future<Set<String>> load() async {
-      final subscriptions = (await loadSubscriptions(
+      final subscriptions = (await _loadSubscriptions(
         requireComplete: true,
+        callerAwaiting: () => !expired,
       )).toList();
       if (expired || !_isSubscriptionSessionCurrent(pubkey, session)) {
         throw const BadgeReadIncompleteException(
@@ -642,6 +643,11 @@ class BadgeRepository {
       onTimeout: () {
         // In-flight relay reads settle themselves; do not queue another batch.
         expired = true;
+        if (_isSubscriptionSessionCurrent(pubkey, session) &&
+            proof == _subscriptionProof &&
+            _subscriptionCoordinates(_observedSubscriptions).isEmpty) {
+          _subscriptionDiscoveryPending = true;
+        }
         throw TimeoutException('Badge subscriptions could not be fully loaded');
       },
     );
@@ -654,6 +660,11 @@ class BadgeRepository {
   /// change supersedes the read.
   Future<Set<BadgeCoordinate>> loadSubscriptions({
     bool requireComplete = false,
+  }) => _loadSubscriptions(requireComplete: requireComplete);
+
+  Future<Set<BadgeCoordinate>> _loadSubscriptions({
+    required bool requireComplete,
+    bool Function()? callerAwaiting,
   }) async {
     final pubkey = _requireCurrentPubkey();
     _syncSubscriptionAccount();
@@ -712,17 +723,12 @@ class BadgeRepository {
       }
     }
     _observedSubscriptions = event;
-    if (event == null) return const {};
-    final coordinates = <BadgeCoordinate>{};
-    for (final tag in event.tags) {
-      if (tag.length < 2 || tag[0] != 'a') continue;
-      final coordinate = BadgeCoordinate.parse(tag[1]);
-      if (coordinate != null) coordinates.add(coordinate);
-    }
+    final coordinates = _subscriptionCoordinates(event);
     if (coordinates.isNotEmpty) {
-      // A caller deadline revokes the shortcut, not a late same-session
-      // discovery. Keep its refresh pending until signed state settles it.
-      final notify = _subscriptionDiscoveryPending;
+      // A foreground caller owns its result; abandoned and background reads
+      // refresh Following once when they discover signed subscriptions.
+      final notify =
+          _subscriptionDiscoveryPending && !(callerAwaiting?.call() ?? false);
       _subscriptionDiscoveryPending = false;
       _invalidateEmptySubscriptions();
       if (notify && !_subscriptionChanges.isClosed) {
@@ -731,6 +737,11 @@ class BadgeRepository {
     }
     return Set.unmodifiable(coordinates);
   }
+
+  static Set<BadgeCoordinate> _subscriptionCoordinates(Event? event) => {
+    for (final tag in event?.tags ?? <List<String>>[])
+      if (tag.length >= 2 && tag[0] == 'a') ?BadgeCoordinate.parse(tag[1]),
+  };
 
   static int _compareSubscriptionEvents(Event a, Event b) {
     final byTime = b.createdAt.compareTo(a.createdAt);
