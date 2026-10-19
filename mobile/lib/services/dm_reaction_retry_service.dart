@@ -200,6 +200,12 @@ class DmReactionRetryService {
   final Map<String, int> _attempts = {};
   final Map<String, DateTime> _lastAttempt = {};
 
+  /// Rows, keyed like [_attempts], whose retries have run out: in this
+  /// session, or in an earlier one ([DmReactionRetryTarget.retriesRanOut]).
+  /// They get [DmReactionRetryConfig.retriesOnceRanOut] for the rest of the
+  /// session, whatever status a manual retry leaves them in.
+  final Set<String> _ranOut = {};
+
   StreamSubscription<bool>? _foregroundSubscription;
   StreamSubscription<void>? _retryTriggerSubscription;
   StreamSubscription<void>? _retryableWorkSubscription;
@@ -469,14 +475,6 @@ class DmReactionRetryService {
     for (final target in targets) {
       final id = '$phase:${target.rumorId}';
       final attempts = _attempts[id] ?? 0;
-      final allowance = target.retriesRanOut
-          ? _config.retriesOnceRanOut
-          : _config.maxRetries;
-
-      if (attempts >= allowance) {
-        skippedExhausted++;
-        continue;
-      }
 
       // A retry now would join the running attempt and send nothing, so it
       // must not use up a retry (#10044). That attempt reports its own result.
@@ -488,6 +486,25 @@ class DmReactionRetryService {
       )) {
         skippedInFlight++;
         stillRetryable++;
+        continue;
+      }
+
+      // Once a row's retries have run out, this session treats it so even if
+      // a manual retry has since marked it pending again.
+      if (target.retriesRanOut) _ranOut.add(id);
+      final allowance = _ranOut.contains(id)
+          ? _config.retriesOnceRanOut
+          : _config.maxRetries;
+
+      if (attempts >= allowance) {
+        skippedExhausted++;
+        // A manual retry of a reaction marks it pending, and if no relay
+        // confirms it, it stays so. Mark it again so it shows with its retry,
+        // not as in flight (#8516). A removal's manual retry leaves its
+        // status alone.
+        if (target.publishStatus == 'pending') {
+          await onBudgetSpent?.call(target);
+        }
         continue;
       }
 
@@ -555,6 +572,7 @@ class DmReactionRetryService {
           if (attempts + 1 < allowance) {
             stillRetryable++;
           } else {
+            _ranOut.add(id);
             await onBudgetSpent?.call(target);
           }
       }
@@ -639,5 +657,6 @@ class DmReactionRetryService {
   void _pruneTracking(Set<String> liveIds) {
     _attempts.removeWhere((id, _) => !liveIds.contains(id));
     _lastAttempt.removeWhere((id, _) => !liveIds.contains(id));
+    _ranOut.removeWhere((id) => !liveIds.contains(id));
   }
 }

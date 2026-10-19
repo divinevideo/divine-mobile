@@ -835,11 +835,21 @@ void main() {
           () => repository.markReactionUnconfirmed(rumorId: 'r1'),
         ).called(1);
 
+        // What the database now lists: the spent row, marked.
+        when(repository.retryableReactions).thenAnswer(
+          (_) async => [_target(rumorId: 'r1', publishStatus: 'unconfirmed')],
+        );
         clock = clock.add(const Duration(seconds: 10));
         await service.sweep();
         verifyNever(
           () => repository.markReactionUnconfirmed(rumorId: 'r1'),
         );
+        verify(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(2);
       });
 
       test('is not marked when it is delivered on its last attempt', () async {
@@ -904,6 +914,119 @@ void main() {
           ).called(1);
         },
       );
+    });
+
+    group('a reaction retried by hand after its retries ran out (#8516)', () {
+      const twoAttempts = DmReactionRetryConfig(
+        maxRetries: 2,
+        initialDelay: Duration(milliseconds: 1),
+      );
+
+      test(
+        'is marked unconfirmed again when that retry is not confirmed',
+        () async {
+          var clock = DateTime.utc(2026, 5, 10, 12);
+          when(repository.retryableReactions).thenAnswer(
+            (_) async => [_target(rumorId: 'r1', publishStatus: 'pending')],
+          );
+          when(
+            () => repository.retry(
+              rumorId: 'r1',
+              targetMessageAuthor: _authorPubkey,
+            ),
+          ).thenAnswer((_) async => _fail('r1'));
+          final service = buildService(
+            retryConfig: twoAttempts,
+            now: () => clock,
+          );
+          for (var pass = 0; pass < 2; pass++) {
+            await service.sweep();
+            clock = clock.add(const Duration(seconds: 10));
+          }
+          verify(
+            () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+          ).called(1);
+
+          // A manual retry left the row pending again, and no relay confirmed
+          // it. The next pass must not leave it looking in flight.
+          await service.sweep();
+
+          verify(
+            () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+          ).called(1);
+          verify(
+            () => repository.retry(
+              rumorId: 'r1',
+              targetMessageAuthor: _authorPubkey,
+            ),
+          ).called(2);
+        },
+      );
+
+      test('gets no more automatic tries this session', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        var listed = _target(
+          rumorId: 'r1',
+          publishStatus: 'unconfirmed',
+          retriesRanOut: true,
+        );
+        when(repository.retryableReactions).thenAnswer((_) async => [listed]);
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        final service = buildService(now: () => clock);
+        await service.sweep();
+
+        // The manual retry marked it pending, which no longer reads as ran out.
+        listed = _target(rumorId: 'r1', publishStatus: 'pending', createdAt: 0);
+        for (var pass = 0; pass < 3; pass++) {
+          clock = clock.add(const Duration(minutes: 10));
+          await service.sweep();
+        }
+
+        verify(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(1);
+      });
+
+      test('is not marked while that retry is still running', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(repository.retryableReactions).thenAnswer(
+          (_) async => [_target(rumorId: 'r1', publishStatus: 'pending')],
+        );
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        var inFlight = false;
+        when(
+          () => repository.isAttemptInFlight('r1', removal: false),
+        ).thenAnswer((_) => inFlight);
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+        for (var pass = 0; pass < 2; pass++) {
+          await service.sweep();
+          clock = clock.add(const Duration(seconds: 10));
+        }
+        verify(
+          () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+        ).called(1);
+
+        inFlight = true;
+        await service.sweep();
+
+        verifyNever(() => repository.markReactionUnconfirmed(rumorId: 'r1'));
+      });
     });
 
     group('a row whose retries ran out in an earlier session (#8516)', () {
