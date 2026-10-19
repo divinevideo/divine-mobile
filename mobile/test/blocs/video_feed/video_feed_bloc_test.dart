@@ -1493,6 +1493,276 @@ void main() {
       );
 
       group('Following pager ownership', () {
+        for (final hasBadgeLoader in [false, true]) {
+          blocTest<VideoFeedBloc, VideoFeedBlocState>(
+            'badge cursor without a live snapshot never creates a pager or calls home, loader $hasBadgeLoader',
+            build: () => VideoFeedBloc(
+              videosRepository: mockVideosRepository,
+              followRepository: mockFollowRepository,
+              curatedListRepository: mockCuratedListRepository,
+              badgeAuthors: hasBadgeLoader ? () async => ['2' * 64] : null,
+            ),
+            seed: () => VideoFeedBlocState(
+              mode: FeedMode.following,
+              status: VideoFeedStatus.success,
+              videos: [createTestVideo('cached-badge')],
+              paginationCursor: 'badge-following',
+            ),
+            act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
+            expect: () => [
+              isA<VideoFeedBlocState>().having(
+                (s) => s.isLoadingMore,
+                'loading more',
+                true,
+              ),
+              isA<VideoFeedBlocState>()
+                  .having(
+                    (s) => s.videos.single.id,
+                    'preserved video',
+                    'cached-badge',
+                  )
+                  .having((s) => s.isLoadingMore, 'loading more', false)
+                  .having((s) => s.hasMore, 'no live continuation', false)
+                  .having((s) => s.paginationCursor, 'cursor cleared', isNull),
+            ],
+            verify: (_) {
+              verifyNever(
+                () => mockVideosRepository.createBadgeVideoPager(
+                  any(),
+                  prioritizeUnseen: true,
+                ),
+              );
+              verifyNever(
+                () => mockVideosRepository.getHomeFeedVideos(
+                  authors: any(named: 'authors'),
+                  userPubkey: any(named: 'userPubkey'),
+                  cursor: any(named: 'cursor'),
+                ),
+              );
+            },
+          );
+        }
+        for (final successor in ['badge', 'direct']) {
+          for (final obsoleteFailure in [false, true]) {
+            test(
+              'cursor page during silent refresh cannot replace $successor successor, old failure $obsoleteFailure',
+              () async {
+                final refreshHolders = Completer<Iterable<String>>();
+                final oldPage = Completer<List<VideoEvent>>();
+                final oldPager = _MockBadgeVideoPager();
+                final newPager = _MockBadgeVideoPager();
+                var holderReads = 0;
+                var oldPages = 0;
+                var newPages = 0;
+                final homeCursors = <String?>[];
+                when(() => mockFollowRepository.followingPubkeys)
+                    .thenReturn(['1' * 64]);
+                when(
+                  () => mockVideosRepository.getHomeFeedVideos(
+                    authors: any(named: 'authors'),
+                    userPubkey: any(named: 'userPubkey'),
+                    cursor: any(named: 'cursor'),
+                  ),
+                ).thenAnswer((call) async {
+                  final cursor = call.namedArguments[#cursor] as String?;
+                  homeCursors.add(cursor);
+                  return HomeFeedResult(
+                    videos: [
+                      createTestVideo(
+                        cursor == null ? 'direct-first' : 'direct-second',
+                      ),
+                    ],
+                    hasMore: cursor == null,
+                    paginationCursor: cursor == null ? '25' : null,
+                  );
+                });
+                when(
+                  () => mockVideosRepository.createBadgeVideoPager(
+                    any(),
+                    prioritizeUnseen: true,
+                  ),
+                ).thenAnswer(
+                  (call) =>
+                      (call.positionalArguments.single as Iterable<String>)
+                          .contains('2' * 64)
+                      ? newPager
+                      : oldPager,
+                );
+                when(oldPager.loadMore).thenAnswer((_) {
+                  oldPages++;
+                  return switch (oldPages) {
+                    1 => Future.value([createTestVideo('old-first')]),
+                    2 => oldPage.future,
+                    _ => Future.value([createTestVideo('wrong-old-third')]),
+                  };
+                });
+                when(() => oldPager.hasMore).thenReturn(true);
+                when(newPager.loadMore).thenAnswer(
+                  (_) async => [
+                    createTestVideo(
+                      ++newPages == 1 ? 'new-first' : 'new-second',
+                    ),
+                  ],
+                );
+                when(() => newPager.hasMore).thenAnswer((_) => newPages < 2);
+                final bloc = VideoFeedBloc(
+                  videosRepository: mockVideosRepository,
+                  followRepository: mockFollowRepository,
+                  curatedListRepository: mockCuratedListRepository,
+                  badgeAuthors: () => holderReads++ == 0
+                      ? Future.value(['3' * 64])
+                      : refreshHolders.future,
+                );
+                addTearDown(bloc.close);
+                bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+                await pumpEventQueue();
+                expect(bloc.state.videos.single.id, 'old-first');
+                bloc.add(const VideoFeedBadgeSubscriptionsChanged());
+                await pumpEventQueue();
+                expect(bloc.state.status, VideoFeedStatus.success);
+                bloc.add(const VideoFeedLoadMoreRequested());
+                await pumpEventQueue();
+                expect(oldPages, 2);
+                refreshHolders.complete(successor == 'badge' ? ['2' * 64] : []);
+                await pumpEventQueue();
+                expect(
+                  bloc.state.videos.single.id,
+                  successor == 'badge' ? 'new-first' : 'direct-first',
+                );
+                if (obsoleteFailure) {
+                  oldPage.completeError(Exception('obsolete cursor page'));
+                } else {
+                  oldPage.complete([createTestVideo('obsolete-second')]);
+                }
+                await pumpEventQueue();
+                bloc.add(const VideoFeedLoadMoreRequested());
+                await pumpEventQueue();
+                expect(
+                  {
+                    'visibleIds': bloc.state.videos.map((v) => v.id).toList(),
+                    'oldPages': oldPages,
+                    'error': bloc.state.error,
+                    'opaqueTokenSentHome': homeCursors.contains(
+                      'badge-following',
+                    ),
+                  },
+                  {
+                    'visibleIds': successor == 'badge'
+                        ? ['new-first', 'new-second']
+                        : ['direct-first', 'direct-second'],
+                    'oldPages': 2,
+                    'error': null,
+                    'opaqueTokenSentHome': false,
+                  },
+                );
+              },
+            );
+          }
+        }
+
+        for (final fallback in ['empty subscriptions', 'pager failure']) {
+          test(
+            'visible badge cursor stays on its snapshot while $fallback direct replacement is pending',
+            () async {
+              final directReplacement = Completer<HomeFeedResult>();
+              final oldPager = _MockBadgeVideoPager();
+              final failingPager = _MockBadgeVideoPager();
+              var holderReads = 0;
+              var oldPages = 0;
+              var directFirstPages = 0;
+              final homeCursors = <String?>[];
+              when(() => mockFollowRepository.followingPubkeys)
+                  .thenReturn(['1' * 64]);
+              when(
+                () => mockVideosRepository.getHomeFeedVideos(
+                  authors: any(named: 'authors'),
+                  userPubkey: any(named: 'userPubkey'),
+                  cursor: any(named: 'cursor'),
+                ),
+              ).thenAnswer((call) {
+                final cursor = call.namedArguments[#cursor] as String?;
+                homeCursors.add(cursor);
+                if (cursor != null) int.parse(cursor);
+                if (cursor == null && ++directFirstPages == 2) {
+                  return directReplacement.future;
+                }
+                return Future.value(
+                  HomeFeedResult(
+                    videos: [
+                      createTestVideo(
+                        cursor == null ? 'unused-prefetch' : 'direct-second',
+                      ),
+                    ],
+                    hasMore: false,
+                  ),
+                );
+              });
+              when(
+                () => mockVideosRepository.createBadgeVideoPager(
+                  any(),
+                  prioritizeUnseen: true,
+                ),
+              ).thenAnswer(
+                (call) =>
+                    (call.positionalArguments.single as Iterable<String>)
+                        .contains('2' * 64)
+                    ? failingPager
+                    : oldPager,
+              );
+              when(oldPager.loadMore).thenAnswer(
+                (_) async => [
+                  createTestVideo(++oldPages == 1 ? 'old-first' : 'old-second'),
+                ],
+              );
+              when(() => oldPager.hasMore).thenReturn(true);
+              when(failingPager.loadMore)
+                  .thenThrow(Exception('replacement badge page failed'));
+              final bloc = VideoFeedBloc(
+                videosRepository: mockVideosRepository,
+                followRepository: mockFollowRepository,
+                curatedListRepository: mockCuratedListRepository,
+                badgeAuthors: () async => holderReads++ == 0
+                    ? ['3' * 64]
+                    : fallback == 'pager failure'
+                    ? ['2' * 64]
+                    : [],
+              );
+              addTearDown(bloc.close);
+              bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+              await pumpEventQueue();
+              bloc.add(const VideoFeedBadgeSubscriptionsChanged());
+              await pumpEventQueue();
+              expect(bloc.state.videos.single.id, 'old-first');
+              bloc.add(const VideoFeedLoadMoreRequested());
+              await pumpEventQueue();
+              final duringReplacement = {
+                'visibleIds': bloc.state.videos.map((v) => v.id).toList(),
+                'error': bloc.state.error,
+                'opaqueTokenSentHome': homeCursors.contains('badge-following'),
+              };
+              directReplacement.complete(
+                HomeFeedResult(
+                  videos: [createTestVideo('direct-first')],
+                  hasMore: true,
+                  paginationCursor: '25',
+                ),
+              );
+              await pumpEventQueue();
+              bloc.add(const VideoFeedLoadMoreRequested());
+              await pumpEventQueue();
+              expect(duringReplacement, {
+                'visibleIds': ['old-first', 'old-second'],
+                'error': null,
+                'opaqueTokenSentHome': false,
+              });
+              expect(bloc.state.videos.map((v) => v.id), [
+                'direct-first',
+                'direct-second',
+              ]);
+              expect(homeCursors.whereType<String>(), ['25']);
+            },
+          );
+        }
         for (final oldOutcome in [
           'holder failure',
           'holder success',

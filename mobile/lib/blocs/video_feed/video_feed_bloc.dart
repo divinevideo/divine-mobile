@@ -1270,9 +1270,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       userPubkey: _userPubkey,
       cursor: cursor,
     );
-    if (_badgeAuthors == null) return loadDirect();
+    if (cursor == 'badge-following') {
+      final pager = _badgeVideoPager;
+      if (pager == null || _cachedBadgeAuthors?.isNotEmpty != true) {
+        return const HomeFeedResult(videos: [], hasMore: false);
+      }
+      final videos = await pager.loadMore();
+      if (!identical(pager, _badgeVideoPager) || isClosed) {
+        return const HomeFeedResult(videos: [], hasMore: false);
+      }
+      return HomeFeedResult(
+        videos: videos,
+        hasMore: pager.hasMore,
+        paginationCursor: pager.hasMore ? 'badge-following' : null,
+      );
+    }
+    if (cursor != null || _badgeAuthors == null) return loadDirect();
     // Observe both outcomes immediately; the badge page may supersede this read.
-    final directPage = cursor == null && directAuthors.isNotEmpty
+    final directPage = directAuthors.isNotEmpty
         ? Future<HomeFeedResult>.sync(
             loadDirect,
           ).then<({HomeFeedResult? value, Object? error, StackTrace? stack})>(
@@ -1281,31 +1296,21 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
                 (value: null, error: error, stack: stack),
           )
         : null;
-    final badgeAuthors = cursor != null && _cachedBadgeAuthors != null
-        ? _cachedBadgeAuthors!
-        : await _loadBadgeAuthors();
-    if (cursor == null && !ownsSnapshot()) {
-      return const HomeFeedResult(videos: []);
-    }
+    final badgeAuthors = await _loadBadgeAuthors();
+    if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
     if (badgeAuthors.isNotEmpty) {
       try {
         // Keep a first-page pager local until its page is ready and this load
         // still owns the feed. Stale loads may neither activate nor clear it.
-        final pager = cursor != null && _badgeVideoPager != null
-            ? _badgeVideoPager!
-            : _videosRepository.createBadgeVideoPager([
-                ..._followRepository.followingPubkeys,
-                ...badgeAuthors,
-              ], prioritizeUnseen: true);
+        final pager = _videosRepository.createBadgeVideoPager([
+          ..._followRepository.followingPubkeys,
+          ...badgeAuthors,
+        ], prioritizeUnseen: true);
         final videos = await pager.loadMore();
-        if (cursor == null && !ownsSnapshot()) {
-          return const HomeFeedResult(videos: []);
-        }
-        if (ownsSnapshot()) {
-          _cachedBadgeAuthors = badgeAuthors;
-          _hasBadgeAuthors = true;
-          _badgeVideoPager = pager;
-        }
+        if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
+        _cachedBadgeAuthors = badgeAuthors;
+        _hasBadgeAuthors = true;
+        _badgeVideoPager = pager;
         return HomeFeedResult(
           videos: videos,
           hasMore: pager.hasMore,
@@ -1313,14 +1318,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           paginationCursor: pager.hasMore ? 'badge-following' : null,
         );
       } catch (error, stackTrace) {
-        if (cursor == null && !ownsSnapshot()) {
-          return const HomeFeedResult(videos: []);
-        }
-        // A later page keeps the merged feed's ordering; only the first page
-        // may fall back without mixing two orderings in one list.
-        if (cursor != null || _followRepository.followingPubkeys.isEmpty) {
-          rethrow;
-        }
+        if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
+        if (_followRepository.followingPubkeys.isEmpty) rethrow;
         Log.warning(
           'VideoFeedBloc: badge holder videos unavailable, showing follows',
           name: 'VideoFeedBloc',
@@ -1330,17 +1329,21 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         );
       }
     }
-    if (ownsSnapshot()) {
-      _cachedBadgeAuthors = const [];
-      _hasBadgeAuthors = false;
-      _badgeVideoPager = null;
+    final HomeFeedResult result;
+    if (directPage == null) {
+      result = await loadDirect();
+    } else {
+      final page = await directPage;
+      if (page.error case final error?) {
+        Error.throwWithStackTrace(error, page.stack!);
+      }
+      result = page.value!;
     }
-    if (directPage == null) return loadDirect();
-    final page = await directPage;
-    if (page.error case final error?) {
-      Error.throwWithStackTrace(error, page.stack!);
-    }
-    return page.value!;
+    if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
+    _cachedBadgeAuthors = const [];
+    _hasBadgeAuthors = false;
+    _badgeVideoPager = null;
+    return result;
   }
 
   /// Subscribed badge holders, falling back only when direct follows exist.
