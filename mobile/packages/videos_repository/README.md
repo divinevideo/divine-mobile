@@ -39,9 +39,12 @@ A verified empty subscription list then permits direct-feed first display while
 one background read revalidates it. Account changes, sign-out and local edits
 invalidate the proof; same-account upgrade/resume notifications do not. A newly
 observed subscription triggers a merged-feed refresh; failed revalidation revokes
-the shortcut for the next load without discarding the current page. A late
-same-session discovery still refreshes Following. The newest
-signed subscription list wins by replaceable-event ordering; a missing or older
+the shortcut for the next load without discarding the current page. A signed
+subscription list arriving after its caller's deadline can trigger a merged-feed
+refresh once. Deadlines and incomplete reads during holder loading retain the
+existing failure policy: users can retry explicitly, and late holder results do
+not automatically replace the feed. The newest signed subscription list wins by
+replaceable-event ordering; a missing or older
 relay result cannot erase it, and a newer signed empty list can supersede it.
 Empty holder results and incomplete reads are never absence proofs.
 The cache is in memory and stores no state across app restarts.

@@ -915,6 +915,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
                   .reduce((a, b) => a < b ? a : b)
             : null,
         paginationCursor: usesCursor ? state.paginationCursor : null,
+        paginationGeneration: paginationGeneration,
       );
       if (!_canEmitForSource(source, emit) ||
           paginationGeneration != _paginationGeneration) {
@@ -1855,6 +1856,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     String? paginationCursor,
     bool skipCache = false,
     bool revalidate = false,
+    int? paginationGeneration,
   }) => switch (source.type) {
     VideoFeedSourceType.forYou =>
       paginationCursor == null
@@ -1872,6 +1874,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             ),
     VideoFeedSourceType.following => _fetchFollowingWithBadges(
       cursor: paginationCursor,
+      paginationGeneration: paginationGeneration,
     ),
     VideoFeedSourceType.subscribedHashtag => _fetchHashtagVideos(
       source.hashtag!,
@@ -1933,10 +1936,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
-  Future<HomeFeedResult> _fetchFollowingWithBadges({String? cursor}) async {
+  Future<HomeFeedResult> _fetchFollowingWithBadges({
+    String? cursor,
+    int? paginationGeneration,
+  }) async {
     final requestSequence = _firstPageRequestSequence;
     bool ownsSnapshot() =>
-        requestSequence == _firstPageRequestSequence && !isClosed;
+        requestSequence == _firstPageRequestSequence &&
+        (paginationGeneration == null ||
+            paginationGeneration == _paginationGeneration) &&
+        !isClosed;
     final directAuthors = List<String>.of(_followRepository.followingPubkeys);
     Future<HomeFeedResult> loadDirect() => _videosRepository.getHomeFeedVideos(
       authors: directAuthors,
