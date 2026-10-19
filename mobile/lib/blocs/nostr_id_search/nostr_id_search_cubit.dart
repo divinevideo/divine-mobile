@@ -20,7 +20,8 @@ part 'nostr_id_search_state.dart';
 class NostrIdSearchCubit extends Cubit<NostrIdSearchState>
     with CloseGuardedEmit<NostrIdSearchState> {
   /// Creates the cubit with [initialQuery] as its current query, so text the
-  /// route prefilled resolves only once the user edits it.
+  /// route prefilled resolves only once the user edits it. A prefilled query
+  /// that looks like a private key is not kept.
   NostrIdSearchCubit({
     required ProfileRepository profileRepository,
     required VideosRepository videosRepository,
@@ -43,9 +44,12 @@ class NostrIdSearchCubit extends Cubit<NostrIdSearchState>
            return lookup is! VideoRouteMissing;
          },
        ),
-       super(NostrIdSearchState(query: initialQuery.trim()));
+       super(NostrIdSearchState(query: _queryToKeep(initialQuery.trim())));
 
   final NostrIdSearchResolver _resolver;
+
+  static String _queryToKeep(String query) =>
+      NostrKeyUtils.containsPrivateKey(query) ? '' : query;
 
   /// Resolves [rawQuery] when it differs from the current query.
   ///
@@ -56,9 +60,13 @@ class NostrIdSearchCubit extends Cubit<NostrIdSearchState>
   Future<void> queryChanged(String rawQuery) async {
     final query = rawQuery.trim();
     if (query == state.query) return;
+    // Direct navigation follows the same query policy as text search, and
+    // like the text search blocs it treats such text as no query at all.
+    if (NostrKeyUtils.containsPrivateKey(query)) {
+      emitIfOpen(const NostrIdSearchState());
+      return;
+    }
     emitIfOpen(NostrIdSearchState(query: query));
-    // Direct navigation follows the same query policy as text search.
-    if (NostrKeyUtils.containsPrivateKey(query)) return;
     final action = await _resolver.resolve(query);
     if (action == null || state.query != query) return;
     emitIfOpen(NostrIdSearchState(query: query, action: action));
