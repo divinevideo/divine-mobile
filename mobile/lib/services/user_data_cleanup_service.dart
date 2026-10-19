@@ -22,6 +22,7 @@ import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
+import 'package:openvine/services/curated_lists/curated_list_relay_evidence.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
@@ -243,6 +244,7 @@ class UserDataCleanupService {
   static const List<String> identityChangePrefixes = [
     CuratedListRecoveryJournal.storagePrefix,
     CuratedListRecoveryStorage.quarantinePrefix,
+    CuratedListRelayEvidence.storagePrefix,
     // Durable authorization tombstones survive same-pubkey account re-adds.
     CuratedListRecoveryStorage.generationPrefix,
     'following_list_', // follow cache per pubkey
@@ -412,6 +414,9 @@ class UserDataCleanupService {
       _prefs,
       userPubkey,
     )).length;
+    if (!await CuratedListRelayEvidence.removeOwner(_prefs, userPubkey)) {
+      throw const CuratedListRecoveryException();
+    }
     await remove(SavedSoundsService.accountStorageKey(userPubkey));
     await remove(
       SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
@@ -626,6 +631,14 @@ class UserDataCleanupService {
       );
       clearedCount += removed.length;
       clearedKeys.addAll(removed);
+      if (!await CuratedListRelayEvidence.removeOwner(_prefs, userPubkey)) {
+        throw const CuratedListRecoveryException();
+      }
+    } else if (deleteUserData &&
+        _prefs.getKeys().any(
+          (key) => key.startsWith(CuratedListRelayEvidence.storagePrefix),
+        )) {
+      throw const CuratedListRecoveryException();
     }
 
     // Clear exact-match keys (always).
