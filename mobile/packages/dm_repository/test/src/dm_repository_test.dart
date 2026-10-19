@@ -14231,6 +14231,7 @@ void main() {
           final repository = createRepository(
             rumorDecryptor: (_, _) async => markerRumor,
           );
+          addTearDown(repository.stopListening);
           await repository.startListening();
           controller.add(giftWrap());
           await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -14431,6 +14432,7 @@ void main() {
             processedGiftWrapsDao: ledger,
             rumorDecryptor: (_, _) async => foreignMarker,
           );
+          addTearDown(repository.stopListening);
           await repository.startListening();
           controller.add(
             Event.fromJson({
@@ -14484,6 +14486,7 @@ void main() {
           processedGiftWrapsDao: ledger,
           rumorDecryptor: (_, _) async => rumor,
         );
+        addTearDown(repository.stopListening);
         await repository.startListening();
         controller.add(
           Event.fromJson({
@@ -14652,6 +14655,7 @@ void main() {
           signer: LocalNostrSigner(victimPrivate),
           processedGiftWrapsDao: ledger,
         );
+        addTearDown(repository.stopListening);
         await repository.startListening();
         controller.add(wrap);
 
