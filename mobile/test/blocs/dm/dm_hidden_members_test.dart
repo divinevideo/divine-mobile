@@ -88,8 +88,8 @@ void main() {
     bool previewHidden({
       required String? lastSender,
       bool isGroup = true,
-      bool everyMemberBlocked = false,
       Set<String> hidden = const {hiddenMember},
+      Set<String> blocked = const {hiddenMember},
     }) => dmPreviewHidden(
       conversation: DmConversation(
         id: 'e' * 64,
@@ -100,12 +100,19 @@ void main() {
         lastMessageSenderPubkey: lastSender,
       ),
       currentUserPubkey: viewer,
-      everyMemberBlocked: everyMemberBlocked,
       isHidden: hidden.contains,
+      isBlockedByUs: blocked.contains,
     );
 
     test("hides a hidden member's last message in a group", () {
       expect(previewHidden(lastSender: hiddenMember), isTrue);
+    });
+
+    test('hides the last message of a member who is muted, not blocked', () {
+      expect(
+        previewHidden(lastSender: hiddenMember, blocked: const {}),
+        isTrue,
+      );
     });
 
     test('never hides a one-to-one preview', () {
@@ -117,7 +124,11 @@ void main() {
 
     test('never hides the preview once every member is blocked', () {
       expect(
-        previewHidden(lastSender: hiddenMember, everyMemberBlocked: true),
+        previewHidden(
+          lastSender: hiddenMember,
+          hidden: const {hiddenMember, visibleMember},
+          blocked: const {hiddenMember, visibleMember},
+        ),
         isFalse,
       );
     });

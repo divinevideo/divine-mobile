@@ -49,20 +49,31 @@ bool dmMessageHiddenByDefault({
 /// search shows a hidden member's words.
 ///
 /// The same rule as [dmMessageHiddenByDefault], applied to the message the row
-/// previews: only a group hides it, never the viewer's own, and not once
-/// [everyMemberBlocked], which lists the row under Blocked to be read in full.
+/// previews: only a group hides it, never the viewer's own, and not once every
+/// other member is blocked ([dmEveryPeerBlocked]), which lists the row under
+/// Blocked to be read in full. The inbox projection, the row and search all
+/// ask here, so they cannot disagree. [isHidden] and [isBlockedByUs] must
+/// answer from the viewer's own lists only (#7345).
 bool dmPreviewHidden({
   required DmConversation conversation,
   required String currentUserPubkey,
-  required bool everyMemberBlocked,
   required bool Function(String pubkey) isHidden,
-}) => dmMessageHiddenByDefault(
-  isGroup: conversation.isGroup,
-  everyMemberBlocked: everyMemberBlocked,
-  senderPubkey: conversation.lastMessageSenderPubkey ?? '',
-  currentUserPubkey: currentUserPubkey,
-  isHidden: isHidden,
-);
+  required bool Function(String pubkey) isBlockedByUs,
+}) =>
+    // Every member is asked about last: a one-to-one, or a group the viewer or
+    // a visible member wrote last, is settled without walking its members.
+    dmMessageHiddenByDefault(
+      isGroup: conversation.isGroup,
+      everyMemberBlocked: false,
+      senderPubkey: conversation.lastMessageSenderPubkey ?? '',
+      currentUserPubkey: currentUserPubkey,
+      isHidden: isHidden,
+    ) &&
+    !dmEveryPeerBlocked(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: currentUserPubkey,
+      isBlockedByUs: isBlockedByUs,
+    );
 
 /// [conversations] as the viewer's inbox reads them once the members they hide
 /// are set aside, so a hidden member's messages neither mark a group unread nor
@@ -90,25 +101,14 @@ Future<List<DmConversation>> dmConversationsAsSeen({
   required bool Function(String pubkey) isBlockedByUs,
   required DmRepository dmRepository,
 }) async {
-  // [dmPreviewHidden], asking whether every member is blocked last: a
-  // one-to-one, or a group the viewer or a visible member wrote last, is
-  // settled without walking its members.
-  bool previewHidden(DmConversation conversation) =>
-      dmPreviewHidden(
-        conversation: conversation,
-        currentUserPubkey: currentUserPubkey,
-        everyMemberBlocked: false,
-        isHidden: isHidden,
-      ) &&
-      !dmEveryPeerBlocked(
-        participantPubkeys: conversation.participantPubkeys,
-        currentUserPubkey: currentUserPubkey,
-        isBlockedByUs: isBlockedByUs,
-      );
-
   final excludedSenders = <String, Set<String>>{
     for (final conversation in conversations)
-      if (previewHidden(conversation))
+      if (dmPreviewHidden(
+        conversation: conversation,
+        currentUserPubkey: currentUserPubkey,
+        isHidden: isHidden,
+        isBlockedByUs: isBlockedByUs,
+      ))
         conversation.id: {
           for (final pubkey in conversation.participantPubkeys)
             if (!pubkeysEqual(pubkey, currentUserPubkey) && isHidden(pubkey))

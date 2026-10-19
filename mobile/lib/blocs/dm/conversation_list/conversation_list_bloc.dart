@@ -962,12 +962,8 @@ class ConversationListBloc
       final previewHidden = dmPreviewHidden(
         conversation: c,
         currentUserPubkey: userPubkey,
-        everyMemberBlocked: dmEveryPeerBlocked(
-          participantPubkeys: c.participantPubkeys,
-          currentUserPubkey: userPubkey,
-          isBlockedByUs: isBlockedByUs,
-        ),
         isHidden: isHidden,
+        isBlockedByUs: isBlockedByUs,
       );
       final preview = peerLabels != null && isClosed
           ? peerLabels.retiredConversationClosed.toLowerCase()

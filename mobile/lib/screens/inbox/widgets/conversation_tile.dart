@@ -95,12 +95,8 @@ class ConversationTile extends ConsumerWidget {
     final previewHidden = dmPreviewHidden(
       conversation: conversation,
       currentUserPubkey: currentUserPubkey,
-      everyMemberBlocked: dmEveryPeerBlocked(
-        participantPubkeys: conversation.participantPubkeys,
-        currentUserPubkey: currentUserPubkey,
-        isBlockedByUs: blocklist.isBlocked,
-      ),
       isHidden: blocklist.shouldFilterFromDms,
+      isBlockedByUs: blocklist.isBlocked,
     );
 
     final profileAsync = ref.watch(fetchUserProfileProvider(namedPubkey));
