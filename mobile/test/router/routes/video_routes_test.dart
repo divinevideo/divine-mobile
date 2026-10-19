@@ -1,6 +1,7 @@
-// ABOUTME: Tests for the video routes' recorder builder and engagement paths.
-// ABOUTME: Pins recorder query parsing, the flat engagement registration and
-// ABOUTME: the detail location an engagement screen falls back to.
+// ABOUTME: Tests for the video routes' recorder builder, engagement paths and
+// ABOUTME: sound links. Pins recorder query parsing, the flat engagement
+// ABOUTME: registration, the detail location an engagement screen falls back
+// ABOUTME: to, and the sound link round trip.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 
@@ -335,6 +337,43 @@ void main() {
       expect(aid, isNotNull);
       expect(aid!.kind, equals(34236));
       expect(aid.dTag, equals(dTag));
+    });
+  });
+
+  group('a sound link', () {
+    const soundId = 'a?b/c#d';
+
+    testWidgets('survives the round trip to the sound route', (tester) async {
+      final location = SoundDetailScreen.pathForId(soundId);
+      // Raw, the `?` ended the path at `a`, so the link named a different
+      // sound before it ever reached the router.
+      expect(Uri.parse(location).pathSegments, equals(['sound', soundId]));
+
+      String? seen;
+      final router = GoRouter(
+        initialLocation: location,
+        routes: [
+          GoRoute(
+            path: SoundDetailScreen.path,
+            builder: (_, state) {
+              seen = state.pathParameters['id'];
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(seen, equals(soundId));
     });
   });
 }
