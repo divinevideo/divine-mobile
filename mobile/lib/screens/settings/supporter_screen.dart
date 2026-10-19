@@ -106,7 +106,7 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                       subtitle: Text(
                         context.l10n.supporterPublicRecognitionBody,
                       ),
-                      value: state.snapshot?.haloVisible ?? false,
+                      value: state.haloVisible,
                       onChanged:
                           state.snapshot == null || state.savingRecognition
                           ? null
@@ -437,7 +437,7 @@ class _FailureBanner extends StatelessWidget {
           color: VineTheme.accentOrange,
         ),
         const SizedBox(width: 8),
-        Expanded(child: Text(_message(context, failure))),
+        Expanded(child: Text(failure.message(context.l10n))),
         DivineIconButton(
           icon: DivineIconName.x,
           type: DivineIconButtonType.ghostSecondary,
@@ -447,26 +447,20 @@ class _FailureBanner extends StatelessWidget {
       ],
     );
   }
+}
 
-  String _message(BuildContext context, SupporterFailure failure) {
-    final l10n = context.l10n;
-    switch (failure) {
-      case SupporterFailure.storeUnavailable:
-        return l10n.supporterErrorStoreUnavailable;
-      case SupporterFailure.purchaseFailed:
-        return l10n.supporterErrorPurchaseFailed;
-      case SupporterFailure.purchasePending:
-        return l10n.supporterErrorPurchasePending;
-      case SupporterFailure.restoreFailed:
-        return l10n.supporterErrorRestoreFailed;
-      case SupporterFailure.ownershipConflict:
-        return l10n.supporterErrorOwnershipConflict;
-      case SupporterFailure.verificationUnavailable:
-        return l10n.supporterErrorVerificationUnavailable;
-      case SupporterFailure.unknown:
-        return l10n.supporterErrorUnknown;
-    }
-  }
+/// User-facing wording for a [SupporterFailure].
+extension SupporterFailureMessage on SupporterFailure {
+  String message(AppLocalizations l10n) => switch (this) {
+    SupporterFailure.storeUnavailable => l10n.supporterErrorStoreUnavailable,
+    SupporterFailure.purchaseFailed => l10n.supporterErrorPurchaseFailed,
+    SupporterFailure.purchasePending => l10n.supporterErrorPurchasePending,
+    SupporterFailure.restoreFailed => l10n.supporterErrorRestoreFailed,
+    SupporterFailure.ownershipConflict => l10n.supporterErrorOwnershipConflict,
+    SupporterFailure.verificationUnavailable =>
+      l10n.supporterErrorVerificationUnavailable,
+    SupporterFailure.unknown => l10n.supporterErrorUnknown,
+  };
 }
 
 class _Disclaimer extends StatelessWidget {

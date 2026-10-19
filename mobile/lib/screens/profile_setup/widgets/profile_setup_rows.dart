@@ -108,6 +108,53 @@ class ProfileSelectRow extends StatelessWidget {
   }
 }
 
+/// A form card with one line of text and a switch. Tapping anywhere on the
+/// card flips it, and the label and switch read as one control.
+class ProfileSwitchRow extends StatelessWidget {
+  /// Creates a switch form card.
+  const ProfileSwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    super.key,
+  });
+
+  /// The setting the switch controls.
+  final String label;
+
+  final bool value;
+
+  /// Called with the new value, or null to disable the row.
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final onChanged = this.onChanged;
+    final colors = context.vineColors;
+    return MergeSemantics(
+      child: _FormCard(
+        onTap: onChanged == null ? null : () => onChanged(!value),
+        child: Row(
+          spacing: 8,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: VineTheme.bodyLargeFont(
+                  color: onChanged == null
+                      ? colors.disabled
+                      : colors.primaryText,
+                ),
+              ),
+            ),
+            DivineSwitch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A read-only form card: small label above a value, with a trailing action.
 ///
 /// Used for the npub row, which Figma draws as a field the user can copy but

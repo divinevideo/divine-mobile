@@ -1,5 +1,6 @@
 // ABOUTME: Widget tests for the edit-profile form's non-editable cards.
-// ABOUTME: Covers the select row's two states and what each announces.
+// ABOUTME: Covers the select row's two states, the switch row, and what each
+// ABOUTME: announces.
 
 import 'dart:ui' show Tristate;
 
@@ -123,6 +124,53 @@ void main() {
       await tester.pump();
 
       expect(taps, 1);
+      handle.dispose();
+    });
+  });
+
+  group(ProfileSwitchRow, () {
+    testWidgets('flips its value when the card is tapped', (tester) async {
+      final changes = <bool>[];
+      await pump(
+        tester,
+        ProfileSwitchRow(
+          label: 'Show publicly',
+          value: false,
+          onChanged: changes.add,
+        ),
+      );
+
+      await tester.tap(find.text('Show publicly'));
+
+      expect(changes, [true]);
+    });
+
+    testWidgets('announces the label and state as one toggle', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pump(
+        tester,
+        ProfileSwitchRow(
+          label: 'Show publicly',
+          value: true,
+          onChanged: (_) {},
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.byType(ProfileSwitchRow)),
+        matchesSemantics(
+          label: 'Show publicly',
+          hasToggledState: true,
+          isToggled: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+        ),
+      );
       handle.dispose();
     });
   });
