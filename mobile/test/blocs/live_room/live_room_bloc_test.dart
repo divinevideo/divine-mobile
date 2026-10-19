@@ -136,6 +136,61 @@ void main() {
       registerFallbackValue(LiveRole.audience);
     });
 
+    void stubHostConnection() {
+      when(
+        () => mockApiService.fetchJoinToken(
+          roomId: room.id,
+          role: LiveRole.host,
+        ),
+      ).thenAnswer((_) async => joinToken);
+      when(() => mockMediaService.connect(joinToken)).thenAnswer((_) async {});
+    }
+
+    void stubAudienceConnection() {
+      when(
+        () => mockApiService.fetchJoinToken(
+          roomId: room.id,
+          role: LiveRole.audience,
+        ),
+      ).thenAnswer((_) async => audienceJoinToken);
+      when(
+        () => mockMediaService.connect(audienceJoinToken),
+      ).thenAnswer((_) async {});
+    }
+
+    void stubSpeakerConnection() {
+      when(
+        () => mockApiService.fetchJoinToken(
+          roomId: room.id,
+          role: LiveRole.speaker,
+        ),
+      ).thenAnswer((_) async => speakerJoinToken);
+      when(
+        () => mockMediaService.connect(speakerJoinToken),
+      ).thenAnswer((_) async {});
+    }
+
+    void stubSessionPublication() {
+      when(
+        () => mockRepository.publishSession(
+          session: any(named: 'session'),
+          roomAddress: room.address,
+          hostPubkey: room.hostPubkey,
+        ),
+      ).thenAnswer((_) async => null);
+    }
+
+    void stubRosterUpdates() {
+      when(
+        () => mockApiService.setParticipantRole(
+          roomId: room.id,
+          pubkey: any(named: 'pubkey'),
+          role: any(named: 'role'),
+        ),
+      ).thenAnswer((_) async {});
+      stubSessionPublication();
+    }
+
     setUp(() {
       mockRepository = _MockLiveRepository();
       mockApiService = _MockLiveApiService();
@@ -157,78 +212,9 @@ void main() {
         ),
       ).thenAnswer((_) => presenceController.stream);
       when(
-        () => mockApiService.fetchJoinToken(
-          roomId: room.id,
-          role: LiveRole.host,
-        ),
-      ).thenAnswer((_) async => joinToken);
-      when(
-        () => mockApiService.fetchJoinToken(
-          roomId: room.id,
-          role: LiveRole.audience,
-        ),
-      ).thenAnswer((_) async => audienceJoinToken);
-      when(
-        () => mockApiService.fetchJoinToken(
-          roomId: room.id,
-          role: LiveRole.speaker,
-        ),
-      ).thenAnswer((_) async => speakerJoinToken);
-      when(
-        () => mockApiService.endSession(
-          roomId: room.id,
-          sessionId: liveSession.id,
-        ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockApiService.setParticipantRole(
-          roomId: room.id,
-          pubkey: any(named: 'pubkey'),
-          role: any(named: 'role'),
-        ),
-      ).thenAnswer((_) async {});
-      when(
         () => mockMediaService.watchState(),
       ).thenAnswer((_) => mediaController.stream);
-      when(() => mockMediaService.connect(joinToken)).thenAnswer((_) async {});
-      when(
-        () => mockMediaService.connect(audienceJoinToken),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockMediaService.connect(speakerJoinToken),
-      ).thenAnswer((_) async {});
       when(() => mockMediaService.disconnect()).thenAnswer((_) async {});
-      when(
-        () => mockMediaService.setMicrophoneEnabled(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockMediaService.setCameraEnabled(any()),
-      ).thenAnswer((_) async {});
-      when(() => mockMediaService.switchCamera()).thenAnswer((_) async {});
-      when(() => mockMediaService.enableAudioOnly()).thenAnswer((_) async {});
-      when(
-        () => mockMediaService.publishLocalTracks(
-          cameraEnabled: any(named: 'cameraEnabled'),
-          microphoneEnabled: any(named: 'microphoneEnabled'),
-        ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockRepository.publishSession(
-          session: any(named: 'session'),
-          roomAddress: room.address,
-          hostPubkey: room.hostPubkey,
-        ),
-      ).thenAnswer((_) async => null);
-      when(
-        () => mockRepository.publishRoom(any()),
-      ).thenAnswer((_) async => null);
-      when(
-        () => mockRepository.publishPresence(
-          sessionAddress: any(named: 'sessionAddress'),
-          role: any(named: 'role'),
-          handRaised: any(named: 'handRaised'),
-        ),
-      ).thenAnswer((_) async => null);
     });
 
     tearDown(() async {
@@ -246,6 +232,8 @@ void main() {
         test(
           'a presence claim of ${claimedRole.name} cannot grant privileges',
           () async {
+            stubAudienceConnection();
+
             final bloc = LiveRoomBloc(
               liveRepository: mockRepository,
               liveApiService: mockApiService,
@@ -284,6 +272,8 @@ void main() {
       test(
         'a requested host role without an identified host grants no privileges',
         () async {
+          stubAudienceConnection();
+
           final bloc = LiveRoomBloc(
             liveRepository: mockRepository,
             liveApiService: mockApiService,
@@ -309,6 +299,8 @@ void main() {
       test(
         'hidden speakers still occupy the full publisher capacity',
         () async {
+          stubHostConnection();
+
           final bloc = LiveRoomBloc(
             liveRepository: mockRepository,
             liveApiService: mockApiService,
@@ -351,6 +343,9 @@ void main() {
         test(
           '$action preserves unrelated hidden speakers in the signed roster',
           () async {
+            stubHostConnection();
+            stubRosterUpdates();
+
             final adding = action == 'promote' || action == 'approve';
             final bloc = LiveRoomBloc(
               liveRepository: mockRepository,
@@ -411,6 +406,9 @@ void main() {
       test(
         'an accepted host roster replaces the local stage prediction',
         () async {
+          stubHostConnection();
+          stubRosterUpdates();
+
           final bloc = LiveRoomBloc(
             liveRepository: mockRepository,
             liveApiService: mockApiService,
@@ -435,6 +433,8 @@ void main() {
       test(
         'approval at capacity retains its error and hidden roster',
         () async {
+          stubHostConnection();
+
           final bloc = LiveRoomBloc(
             liveRepository: mockRepository,
             liveApiService: mockApiService,
@@ -503,6 +503,9 @@ void main() {
       test(
         'denying a hidden speaker still removes their signed role',
         () async {
+          stubHostConnection();
+          stubRosterUpdates();
+
           final bloc = LiveRoomBloc(
             liveRepository: mockRepository,
             liveApiService: mockApiService,
@@ -609,6 +612,8 @@ void main() {
     test(
       'join request watches room state, fetches a token, and exposes host speaker state',
       () async {
+        stubHostConnection();
+
         final bloc = LiveRoomBloc(
           currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
@@ -660,6 +665,8 @@ void main() {
     test(
       'host join does not auto-publish local tracks on room entry',
       () async {
+        stubHostConnection();
+
         final bloc = LiveRoomBloc(
           currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
@@ -722,6 +729,16 @@ void main() {
     });
 
     test('publish control events delegate to the media service', () async {
+      stubHostConnection();
+      when(
+        () => mockMediaService.setMicrophoneEnabled(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockMediaService.setCameraEnabled(any()),
+      ).thenAnswer((_) async {});
+      when(() => mockMediaService.switchCamera()).thenAnswer((_) async {});
+      when(() => mockMediaService.enableAudioOnly()).thenAnswer((_) async {});
+
       final bloc = LiveRoomBloc(
         currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
@@ -756,6 +773,11 @@ void main() {
     test(
       'camera toggle follows requested state while local publish is still in flight',
       () async {
+        stubHostConnection();
+        when(
+          () => mockMediaService.setCameraEnabled(any()),
+        ).thenAnswer((_) async {});
+
         final bloc = LiveRoomBloc(
           currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
@@ -805,6 +827,8 @@ void main() {
     test(
       'drops duplicate camera toggles while media publish is in flight',
       () async {
+        stubHostConnection();
+
         final cameraCompleter = Completer<void>();
         when(
           () => mockMediaService.setCameraEnabled(false),
@@ -842,6 +866,11 @@ void main() {
     test(
       'microphone toggle follows requested state while local publish is still in flight',
       () async {
+        stubHostConnection();
+        when(
+          () => mockMediaService.setMicrophoneEnabled(any()),
+        ).thenAnswer((_) async {});
+
         final bloc = LiveRoomBloc(
           currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
@@ -891,6 +920,11 @@ void main() {
     test(
       'turning the host camera on on macOS explicitly requests native permission before publishing',
       () async {
+        stubHostConnection();
+        when(
+          () => mockMediaService.setCameraEnabled(any()),
+        ).thenAnswer((_) async {});
+
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
@@ -950,6 +984,8 @@ void main() {
     test(
       'turning the host camera on on macOS surfaces a launch-environment message when macOS blocks the prompt',
       () async {
+        stubHostConnection();
+
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
@@ -1006,6 +1042,11 @@ void main() {
     test(
       'turning the host microphone on on macOS explicitly requests native permission before publishing',
       () async {
+        stubHostConnection();
+        when(
+          () => mockMediaService.setMicrophoneEnabled(any()),
+        ).thenAnswer((_) async {});
+
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
@@ -1081,6 +1122,8 @@ void main() {
     test(
       'turning the host microphone on on macOS surfaces a clear error when the native request is denied',
       () async {
+        stubHostConnection();
+
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
@@ -1141,6 +1184,8 @@ void main() {
     test(
       'turning the host microphone on on macOS surfaces a launch-environment message when macOS blocks the prompt',
       () async {
+        stubHostConnection();
+
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
@@ -1201,6 +1246,8 @@ void main() {
     test(
       'turning the host microphone on on macOS surfaces a settings message when access is denied',
       () async {
+        stubHostConnection();
+
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
@@ -1267,6 +1314,9 @@ void main() {
     test(
       'audience members promoted onto the stage reconnect as speakers and gain publish access',
       () async {
+        stubAudienceConnection();
+        stubSpeakerConnection();
+
         final promotedSession = liveSession.copyWith(
           speakerPubkeys: const <String>[
             hostPubkey,
@@ -1311,6 +1361,9 @@ void main() {
     test(
       'host can promote and demote speakers while enforcing the publisher cap',
       () async {
+        stubHostConnection();
+        stubRosterUpdates();
+
         final bloc = LiveRoomBloc(
           currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
@@ -1396,6 +1449,8 @@ void main() {
     );
 
     test('audience backgrounds cleanly and reconnects on foreground', () async {
+      stubAudienceConnection();
+
       final bloc = LiveRoomBloc(
         liveRepository: mockRepository,
         liveApiService: mockApiService,
@@ -1498,6 +1553,8 @@ void main() {
     test(
       'joining a second live room disconnects the previous audience connection before reconnecting',
       () async {
+        stubAudienceConnection();
+
         const secondHostPubkey =
             'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
         const secondRoom = LiveRoom(
@@ -1593,6 +1650,8 @@ void main() {
     test(
       'joining a room with no live session disconnects any previous audience connection',
       () async {
+        stubAudienceConnection();
+
         const secondHostPubkey =
             'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
         const quietRoom = LiveRoom(
@@ -1652,6 +1711,15 @@ void main() {
     );
 
     test('host can end the live session', () async {
+      stubHostConnection();
+      stubSessionPublication();
+      when(
+        () => mockApiService.endSession(
+          roomId: room.id,
+          sessionId: liveSession.id,
+        ),
+      ).thenAnswer((_) async {});
+
       final bloc = LiveRoomBloc(
         currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
@@ -1684,6 +1752,11 @@ void main() {
     });
 
     test('host can publish room metadata updates', () async {
+      stubHostConnection();
+      when(
+        () => mockRepository.publishRoom(any()),
+      ).thenAnswer((_) async => null);
+
       final bloc = LiveRoomBloc(
         currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
@@ -1728,6 +1801,9 @@ void main() {
     });
 
     test('host can approve and deny raised hands locally', () async {
+      stubHostConnection();
+      stubRosterUpdates();
+
       final bloc = LiveRoomBloc(
         currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
@@ -1760,6 +1836,15 @@ void main() {
     });
 
     test('audience members can raise a hand through live presence', () async {
+      stubAudienceConnection();
+      when(
+        () => mockRepository.publishPresence(
+          sessionAddress: any(named: 'sessionAddress'),
+          role: any(named: 'role'),
+          handRaised: any(named: 'handRaised'),
+        ),
+      ).thenAnswer((_) async => null);
+
       final bloc = LiveRoomBloc(
         liveRepository: mockRepository,
         liveApiService: mockApiService,
@@ -1804,6 +1889,8 @@ void main() {
     test(
       'host can hide participants locally without changing their room role',
       () async {
+        stubHostConnection();
+
         final bloc = LiveRoomBloc(
           currentUserPubkey: hostPubkey,
           liveRepository: mockRepository,
@@ -1843,6 +1930,8 @@ void main() {
     );
 
     test('hosts stay connected when the app backgrounds', () async {
+      stubHostConnection();
+
       final bloc = LiveRoomBloc(
         currentUserPubkey: hostPubkey,
         liveRepository: mockRepository,
