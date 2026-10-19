@@ -55,6 +55,8 @@ void main() {
 
       clearDecodedImageCache();
       expect(cache.liveImageCount, greaterThan(0));
+      await tester.pump();
+      expect(tester.binding.hasScheduledFrame, isFalse);
 
       clearDecodedImageCache(includeLiveImages: true);
       expect(cache.liveImageCount, isZero);
