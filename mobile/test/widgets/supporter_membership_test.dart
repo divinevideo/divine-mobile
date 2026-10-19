@@ -1,4 +1,4 @@
-// ABOUTME: Tests persistent own-account acknowledgement and public opt-in badges.
+// ABOUTME: Tests own-account membership entries in settings and on the profile.
 // ABOUTME: Covers refresh without store work and suppression of external prompts.
 
 import 'dart:async';
@@ -271,8 +271,31 @@ void main() {
             expect(find.text('Become a supporter'), findsNothing);
           } else {
             expect(requests, 1);
-            expect(find.text('Supporter'), findsOneWidget);
+            expect(repo.isSupporter, isTrue);
+            // The halo and wings mark a supporter's profile instead.
+            expect(find.byType(ActionChip), findsNothing);
             expect(repo.snapshot?.haloVisible, isFalse);
+
+            // Settings still acknowledges the membership.
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  authServiceProvider.overrideWithValue(auth),
+                  currentAuthStateProvider.overrideWithValue(
+                    AuthState.authenticated,
+                  ),
+                  currentAuthRpcCapabilityProvider.overrideWithValue(
+                    AuthRpcCapability.rpcReady,
+                  ),
+                  supporterRepositoryProvider.overrideWithValue(repo),
+                ],
+                child: buildLocalizedWidget(
+                  const Scaffold(body: SupporterMembership()),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            expect(find.text('Supporter'), findsOneWidget);
           }
           await tester.pumpWidget(const SizedBox.shrink());
         },

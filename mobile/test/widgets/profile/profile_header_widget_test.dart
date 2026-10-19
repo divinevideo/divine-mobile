@@ -14,6 +14,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -47,6 +50,7 @@ import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/supporter_api_client.dart';
+import 'package:openvine/services/supporter_repository.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/secure_account_prompt_dismissal.dart';
@@ -403,6 +407,7 @@ void main() {
       Nip05VerificationStatus verificationStatus =
           Nip05VerificationStatus.verified,
       SupporterApiClient? supporterClient,
+      SupporterRepository? supporterRepository,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -514,6 +519,8 @@ void main() {
             mockFollowRepository: mockFollowRepository,
             supporterApiClient: supporterClient,
           ),
+          if (supporterRepository != null)
+            supporterRepositoryProvider.overrideWithValue(supporterRepository),
           profileVanishedProvider(userIdHex).overrideWith((ref) => isVanished),
           if ((profile ?? suppliedProfile)?.nip05 case final String claim)
             nip05ClaimVerificationProvider(
@@ -679,10 +686,10 @@ void main() {
       }
 
       testWidgets(
-        '${ownProfile ? 'shows' : 'hides'} the private membership chip on '
+        '${ownProfile ? 'shows' : 'hides'} the supporter membership entry on '
         '${ownProfile ? 'your own' : "someone else's"} profile',
         (tester) async {
-          // The private chip reads the signed-in account's membership, so on
+          // The entry reads the signed-in account's membership, so on
           // anyone else's profile it would show the viewer's status, not theirs.
           await tester.pumpWidget(
             buildTestWidget(
@@ -720,7 +727,7 @@ void main() {
       );
     }
 
-    group('public supporter status', () {
+    group('supporter status', () {
       const supporterPicture = 'https://example.com/supporter.jpg';
       final l10n = lookupAppLocalizations(const Locale('en'));
       late Duration visibilityInterval;
@@ -746,10 +753,58 @@ void main() {
         return client;
       }
 
+      String accountJson({required bool active, required bool haloVisible}) =>
+          jsonEncode({
+            'status': active ? 'active' : 'expired',
+            'entitlement': {'source': 'server', 'isActive': active},
+            'recognition': {'haloVisible': haloVisible},
+          });
+
+      /// The viewer's own membership, read from a stubbed supporters API.
+      Future<SupporterRepository> membership(
+        WidgetTester tester, {
+        required bool isSupporter,
+        bool haloVisible = false,
+      }) async {
+        final client = SupporterApiClient(
+          baseUri: Uri.parse('https://supporters.test'),
+          authHeaderProvider:
+              ({required url, required method, payload}) async =>
+                  (authorizationHeader: 'Nostr fixture', pubkey: testUserHex),
+          httpClient: MockClient((request) async {
+            if (request.url.path.endsWith('/recognition')) {
+              final body = jsonDecode(request.body) as Map<String, dynamic>;
+              return http.Response(
+                accountJson(
+                  active: isSupporter,
+                  haloVisible: body['halo_visible'] as bool,
+                ),
+                200,
+              );
+            }
+            return http.Response(
+              accountJson(active: isSupporter, haloVisible: haloVisible),
+              200,
+            );
+          }),
+        );
+        addTearDown(client.dispose);
+        final repository = SupporterRepository(
+          pubkey: testUserHex,
+          validator: StubEntitlementValidator(),
+          prefs: await SharedPreferences.getInstance(),
+          apiClient: client,
+        );
+        addTearDown(repository.dispose);
+        await tester.runAsync(repository.refreshFromServer);
+        return repository;
+      }
+
       Future<void> pumpHeader(
         WidgetTester tester, {
         required bool isOwnProfile,
-        required bool isPublicSupporter,
+        bool isPublicSupporter = false,
+        SupporterRepository? ownMembership,
       }) async {
         await tester.pumpWidget(
           buildTestWidget(
@@ -762,6 +817,7 @@ void main() {
             supporterClient: supporterClient(
               isPublicSupporter: isPublicSupporter,
             ),
+            supporterRepository: ownMembership,
             // Holds the halo still so the tree can settle.
             disableAnimations: true,
           ),
@@ -769,34 +825,106 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      /// Opens the supporter view, whose halo keeps looping on the pushed
+      /// route, so it never settles; the first frame only lays the route
+      /// out offstage for the Hero.
+      Future<void> openSupporterView(WidgetTester tester) async {
+        await tester.tap(find.byType(UserAvatar));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+      }
+
       group('renders', () {
-        for (final isOwnProfile in [true, false]) {
-          final whose = isOwnProfile ? 'your own' : "someone else's";
+        testWidgets("shows the halo and wings on someone else's public "
+            'supporter profile', (tester) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+          );
 
-          testWidgets('shows the halo and wings on $whose public supporter '
-              'profile', (tester) async {
+          expect(find.byType(SupporterHaloWings), findsOneWidget);
+        });
+
+        testWidgets("shows no halo on someone else's profile without public "
+            'supporter status', (tester) async {
+          await pumpHeader(tester, isOwnProfile: false);
+
+          expect(find.byType(SupporterHaloWings), findsNothing);
+        });
+
+        testWidgets('shows the halo and wings on your own profile while '
+            'your supporter status is public', (tester) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: await membership(
+              tester,
+              isSupporter: true,
+              haloVisible: true,
+            ),
+          );
+
+          expect(find.byType(SupporterHaloWings), findsOneWidget);
+        });
+
+        testWidgets('shows no halo on your own profile while your supporter '
+            'status is private', (tester) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            // Public status from the API is stale; the account is current.
+            isPublicSupporter: true,
+            ownMembership: await membership(tester, isSupporter: true),
+          );
+
+          expect(find.byType(SupporterHaloWings), findsNothing);
+        });
+
+        testWidgets('shows the halo on your own profile as soon as you make '
+            'your supporter status public', (tester) async {
+          final repository = await membership(tester, isSupporter: true);
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: repository,
+          );
+          expect(find.byType(SupporterHaloWings), findsNothing);
+
+          await tester.runAsync(
+            () => repository.updateRecognition(
+              haloVisible: true,
+              discoveryVisible: false,
+              foundingHistoryVisible: false,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(SupporterHaloWings), findsOneWidget);
+        });
+
+        for (final haloVisible in [true, false]) {
+          testWidgets('shows no supporter label on your own supporter profile '
+              'with public status ${haloVisible ? 'on' : 'off'}', (
+            tester,
+          ) async {
             await pumpHeader(
               tester,
-              isOwnProfile: isOwnProfile,
-              isPublicSupporter: true,
+              isOwnProfile: true,
+              ownMembership: await membership(
+                tester,
+                isSupporter: true,
+                haloVisible: haloVisible,
+              ),
             );
 
-            expect(find.byType(SupporterHaloWings), findsOneWidget);
-          });
-
-          testWidgets('shows no halo on $whose profile without public '
-              'supporter status', (tester) async {
-            await pumpHeader(
-              tester,
-              isOwnProfile: isOwnProfile,
-              isPublicSupporter: false,
-            );
-
-            expect(find.byType(SupporterHaloWings), findsNothing);
+            expect(find.byType(ActionChip), findsNothing);
+            expect(find.text(l10n.supporterBadgeLabel), findsNothing);
           });
         }
 
-        testWidgets('no longer shows the old supporter label', (tester) async {
+        testWidgets("shows no supporter label on someone else's supporter "
+            'profile', (tester) async {
           await pumpHeader(
             tester,
             isOwnProfile: false,
@@ -826,9 +954,7 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(seconds: 1));
 
-          await tester.tap(find.byType(UserAvatar));
-          await tester.pump();
-          await tester.pump(const Duration(seconds: 1));
+          await openSupporterView(tester);
           Navigator.of(
             tester.element(find.text(l10n.supporterLightboxBody)),
           ).pop();
@@ -867,18 +993,36 @@ void main() {
             isPublicSupporter: true,
           );
 
-          await tester.tap(find.byType(UserAvatar));
-          // The pushed route keeps the halo looping, so it never settles;
-          // the first frame only lays the route out offstage for the Hero.
-          await tester.pump();
-          await tester.pump(const Duration(seconds: 1));
+          await openSupporterView(tester);
 
           expect(find.text(l10n.supporterLightboxBody), findsOneWidget);
+          expect(find.text(l10n.supporterActiveBadge), findsNothing);
         });
 
-        for (final (label, isOwnProfile, isPublicSupporter) in [
+        testWidgets('tapping your own supporter avatar opens your supporter '
+            'view, without its public setting', (tester) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: await membership(
+              tester,
+              isSupporter: true,
+              haloVisible: true,
+            ),
+          );
+
+          await openSupporterView(tester);
+
+          expect(find.text(l10n.supporterActiveBadge), findsOneWidget);
+          expect(find.byType(DivineSwitch), findsNothing);
+          expect(find.text(l10n.supporterLightboxBody), findsNothing);
+          expect(find.text(l10n.supporterJoinLabel), findsNothing);
+        });
+
+        for (final (label, isOwnProfile, isSupporter) in [
           ("someone else's non-supporter avatar", false, false),
-          ('your own supporter avatar', true, true),
+          ('your own avatar without a membership', true, false),
+          ('your own avatar with a private membership', true, true),
         ]) {
           testWidgets('tapping $label opens the photo lightbox', (
             tester,
@@ -886,7 +1030,9 @@ void main() {
             await pumpHeader(
               tester,
               isOwnProfile: isOwnProfile,
-              isPublicSupporter: isPublicSupporter,
+              ownMembership: isOwnProfile
+                  ? await membership(tester, isSupporter: isSupporter)
+                  : null,
             );
 
             await tester.tap(find.byType(UserAvatar));
@@ -899,6 +1045,7 @@ void main() {
               isNotEmpty,
             );
             expect(find.text(l10n.supporterLightboxBody), findsNothing);
+            expect(find.text(l10n.supporterActiveBadge), findsNothing);
           });
         }
       });

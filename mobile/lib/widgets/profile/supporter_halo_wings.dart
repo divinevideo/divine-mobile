@@ -7,11 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-/// Called with the animation of a route that lifts the avatar away, such as
-/// the avatar lightbox, so the halo and wings can follow it out and back.
-typedef TrackCoveringTransition = void Function(Animation<double> transition);
-
-/// Wraps the avatar from [builder] with a halo above it and a wing on each
+/// Wraps [avatar] with a halo above it and a wing on each
 /// side.
 ///
 /// Geometry comes from the Figma profile frame, where the avatar is 144pt.
@@ -20,7 +16,7 @@ typedef TrackCoveringTransition = void Function(Animation<double> transition);
 class SupporterHaloWings extends StatefulWidget {
   const SupporterHaloWings({
     required this.avatarSize,
-    required this.builder,
+    required this.avatar,
     this.sparkles,
     this.reveal,
     super.key,
@@ -37,10 +33,8 @@ class SupporterHaloWings extends StatefulWidget {
   /// Used where the supporter status is the subject, such as its lightbox.
   final Animation<double>? sparkles;
 
-  /// Builds the avatar. Call the given callback with the route animation when
-  /// the avatar opens something that flies it away.
-  final Widget Function(BuildContext context, TrackCoveringTransition track)
-  builder;
+  /// The avatar the treatment surrounds, [avatarSize] square.
+  final Widget avatar;
 
   @override
   State<SupporterHaloWings> createState() => _SupporterHaloWingsState();
@@ -164,22 +158,6 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
   final Key _visibilityKey = UniqueKey();
   bool _visible = true;
 
-  /// The lightbox transition while it is open or closing, else null.
-  Animation<double>? _cover;
-
-  void _trackCover(Animation<double> transition) {
-    void onStatus(AnimationStatus status) {
-      if (status != AnimationStatus.dismissed) return;
-      transition.removeStatusListener(onStatus);
-      if (mounted && identical(_cover, transition)) {
-        setState(() => _cover = null);
-      }
-    }
-
-    transition.addStatusListener(onStatus);
-    setState(() => _cover = transition);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -278,11 +256,8 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   top: wingTop,
                   width: wingWidth,
                   height: wingHeight,
-                  child: _CoverFade(
-                    reveal: widget.reveal ?? kAlwaysCompleteAnimation,
-                    cover: _cover,
-                    // The avatar's centre, in this wing's own coordinates.
-                    origin: Offset(outset + size / 2, size / 2 - wingTop),
+                  child: FadeTransition(
+                    opacity: widget.reveal ?? kAlwaysCompleteAnimation,
                     child: _AnimatedPart(
                       animation: _controller,
                       builder: (t) => _Wing(t: t, isLeft: true),
@@ -295,13 +270,8 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   top: wingTop,
                   width: wingWidth,
                   height: wingHeight,
-                  child: _CoverFade(
-                    reveal: widget.reveal ?? kAlwaysCompleteAnimation,
-                    cover: _cover,
-                    origin: Offset(
-                      wingWidth - outset - size / 2,
-                      size / 2 - wingTop,
-                    ),
+                  child: FadeTransition(
+                    opacity: widget.reveal ?? kAlwaysCompleteAnimation,
                     child: _AnimatedPart(
                       animation: _controller,
                       builder: (t) => _Wing(t: t, isLeft: false),
@@ -316,20 +286,15 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                   top: 0,
                   width: size,
                   height: size,
-                  child: widget.builder(context, _trackCover),
+                  child: widget.avatar,
                 ),
                 Positioned(
                   left: outset + (size - haloWidth) / 2,
                   top: size * _Geometry.haloTop,
                   width: haloWidth,
                   height: haloHeight,
-                  child: _CoverFade(
-                    reveal: widget.reveal ?? kAlwaysCompleteAnimation,
-                    cover: _cover,
-                    origin: Offset(
-                      haloWidth / 2,
-                      size / 2 - size * _Geometry.haloTop,
-                    ),
+                  child: FadeTransition(
+                    opacity: widget.reveal ?? kAlwaysCompleteAnimation,
                     child: _AnimatedPart(
                       animation: _controller,
                       builder: (t) => _Halo(t: t, avatarSize: size),
@@ -427,65 +392,6 @@ class _Group implements _PartTransform {
 
   @override
   Alignment get origin => Alignment.center;
-}
-
-/// Fades a halo or wing in with [reveal], and hides it while the avatar is
-/// lifted away by [cover].
-///
-/// It fades and draws in toward the avatar as the avatar takes off, and
-/// returns only as the avatar lands, so neither is left floating around an
-/// empty spot. Following the route animation keeps it in step when a close
-/// is interrupted or swiped back.
-class _CoverFade extends StatelessWidget {
-  const _CoverFade({
-    required this.reveal,
-    required this.cover,
-    required this.origin,
-    required this.child,
-  });
-
-  /// Share of the opening transition the fade-out takes (~150 ms of 300).
-  static const Interval _leave = Interval(0, 0.5, curve: Curves.easeOut);
-
-  /// Share of the closing transition, from its end, that the return takes.
-  static const Interval _land = Interval(0, 0.3, curve: Curves.easeIn);
-
-  static const double _hiddenScale = 0.85;
-
-  /// Fades the part in when supporter status arrives after the avatar.
-  final Animation<double> reveal;
-  final Animation<double>? cover;
-  final Offset origin;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final cover = this.cover;
-    if (cover == null) return FadeTransition(opacity: reveal, child: child);
-    final reduceMotion = context.reduceMotion;
-    return FadeTransition(
-      opacity: reveal,
-      child: AnimatedBuilder(
-        animation: cover,
-        builder: (context, child) {
-          final hidden = reduceMotion
-              ? (cover.value > 0 ? 1.0 : 0.0)
-              : (cover.status == AnimationStatus.reverse ? _land : _leave)
-                    .transform(cover.value);
-          final scale = 1 - (1 - _hiddenScale) * hidden;
-          return Opacity(
-            opacity: 1 - hidden,
-            child: Transform(
-              origin: origin,
-              transform: Matrix4.diagonal3Values(scale, scale, 1),
-              child: child,
-            ),
-          );
-        },
-        child: child,
-      ),
-    );
-  }
 }
 
 /// Applies a per-frame transform to an image without rebuilding it.

@@ -443,7 +443,7 @@ class _ProfileAvatarWithColor extends StatelessWidget {
     required this.showSkeleton,
     this.profileColor,
     this.pendingActions = const [],
-    this.opensSupporterLightbox = false,
+    this.isOwnProfile = false,
     this.onActionTap,
   });
 
@@ -466,9 +466,9 @@ class _ProfileAvatarWithColor extends StatelessWidget {
   /// Called when the label or avatar is tapped.
   final VoidCallback? onActionTap;
 
-  /// Whether a tap opens the supporter lightbox, where the halo and wings fly
-  /// along with the avatar, instead of the plain photo lightbox.
-  final bool opensSupporterLightbox;
+  /// Whether this is the viewer's own profile, which reflects their own
+  /// membership and opens their supporter view, with its public setting.
+  final bool isOwnProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -483,50 +483,42 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         size: avatarSize,
       );
       final hasAvatar = imageUrl != null && imageUrl!.isNotEmpty;
-      // Public status arrives after the header renders; the halo and wings
-      // fade in around the avatar, which stays put.
-      final showSupporterTreatment = _isPublicSupporter(context);
-      Widget tappableAvatar({void Function(Animation<double>)? onOpened}) {
-        if (!hasAvatar) return avatarWidget;
-        return GestureDetector(
-          onTap: () {
-            final transition = _showAvatarLightbox(
-              context,
-              imageUrl: imageUrl,
-              userIdHex: userIdHex,
-            );
-            onOpened?.call(transition);
-          },
-          child: Hero(
-            tag: _avatarHeroTag(userIdHex),
-            flightShuttleBuilder: (_, _, _, _, _) => _AvatarHeroFlightShuttle(
-              imageUrl: imageUrl,
-              userIdHex: userIdHex,
-            ),
-            child: avatarWidget,
-          ),
-        );
-      }
-
+      final plainAvatar = hasAvatar
+          ? GestureDetector(
+              onTap: () => _showAvatarLightbox(
+                context,
+                imageUrl: imageUrl,
+                userIdHex: userIdHex,
+              ),
+              child: Hero(
+                tag: _avatarHeroTag(userIdHex),
+                flightShuttleBuilder: (_, _, _, _, _) =>
+                    _AvatarHeroFlightShuttle(
+                      imageUrl: imageUrl,
+                      userIdHex: userIdHex,
+                    ),
+                child: avatarWidget,
+              ),
+            )
+          : avatarWidget;
+      // Status arrives after the header renders; the halo and wings fade in
+      // around the avatar, which stays put.
+      final isSupporter = _showsSupporterTreatment(
+        context,
+        isOwnProfile: isOwnProfile,
+      );
       avatar = SupporterReveal(
-        visible: showSupporterTreatment,
-        builder: (context, reveal) =>
-            showSupporterTreatment && opensSupporterLightbox
+        visible: isSupporter,
+        builder: (context, reveal) => isSupporter
             ? _SupporterAvatarHero(
                 imageUrl: imageUrl,
                 userIdHex: userIdHex,
                 avatarSize: avatarSize,
                 avatar: avatarWidget,
                 reveal: reveal,
+                isOwnProfile: isOwnProfile,
               )
-            : showSupporterTreatment
-            ? SupporterHaloWings(
-                avatarSize: avatarSize,
-                reveal: reveal,
-                builder: (context, trackCover) =>
-                    tappableAvatar(onOpened: trackCover),
-              )
-            : tappableAvatar(),
+            : plainAvatar,
       );
     }
 
@@ -728,9 +720,7 @@ class _AvatarHeroFlightShuttle extends StatelessWidget {
   }
 }
 
-/// Opens the lightbox and returns its route animation, so decorations around
-/// the header avatar can follow the transition both ways.
-Animation<double> _showAvatarLightbox(
+void _showAvatarLightbox(
   BuildContext context, {
   required String userIdHex,
   String? imageUrl,
@@ -743,23 +733,23 @@ Animation<double> _showAvatarLightbox(
   // from the current PageRoute of nested navigators, so the header avatar
   // (branch) and the lightbox (root) are matched. A PageRoute — not a
   // PopupRoute like showGeneralDialog — is required for the HeroController.
-  final route = PageRouteBuilder<void>(
-    opaque: false,
-    barrierColor: VineTheme.transparent,
-    barrierDismissible: true,
-    barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
-    pageBuilder: (context, _, _) =>
-        _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
-    transitionsBuilder: (context, animation, _, child) =>
-        FadeTransition(opacity: animation, child: child),
-  );
   _runProfileDetached(
     _awaitProfileResult(
-      Navigator.of(context, rootNavigator: true).push<void>(route),
+      Navigator.of(context, rootNavigator: true).push<void>(
+        PageRouteBuilder<void>(
+          opaque: false,
+          barrierColor: VineTheme.transparent,
+          barrierDismissible: true,
+          barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
+          pageBuilder: (context, _, _) =>
+              _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
+          transitionsBuilder: (context, animation, _, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      ),
     ),
     'open avatar lightbox',
   );
-  return route.animation!;
 }
 
 class _AvatarLightbox extends StatelessWidget {

@@ -87,7 +87,7 @@ class SupporterCubit extends Cubit<SupporterState> {
   Future<void> setPublicRecognition(bool visible) async {
     final snapshot = state.snapshot;
     if (snapshot == null || state.savingRecognition) return;
-    _emit(state.copyWith(savingRecognition: true, clearFailure: true));
+    _emit(state.copyWith(requestedHaloVisible: visible, clearFailure: true));
     try {
       await _repository.updateRecognition(
         haloVisible: visible,
@@ -97,12 +97,12 @@ class SupporterCubit extends Cubit<SupporterState> {
       _emit(
         state.copyWith(
           snapshot: _repository.snapshot,
-          savingRecognition: false,
+          clearRequestedHaloVisible: true,
         ),
       );
     } on SupporterApiException catch (error) {
       _emitApiFailure(error);
-      _emit(state.copyWith(savingRecognition: false));
+      _emit(state.copyWith(clearRequestedHaloVisible: true));
     } on Object catch (error, stackTrace) {
       // A failure outside the typed contract, such as a signer error, must
       // still end the save, or the recognition toggle stays disabled.
@@ -114,7 +114,7 @@ class SupporterCubit extends Cubit<SupporterState> {
         state.copyWith(
           status: SupporterStatus.error,
           failure: SupporterFailure.unknown,
-          savingRecognition: false,
+          clearRequestedHaloVisible: true,
         ),
       );
     }

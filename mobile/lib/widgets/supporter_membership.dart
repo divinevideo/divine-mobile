@@ -16,7 +16,11 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 
-/// Private acknowledgement remains visible even when public recognition is off.
+/// Entry to supporter membership. The settings tile acknowledges supporters;
+/// the compact profile entry hides once the account is a supporter.
+///
+/// Reads the [SupporterCubit] of an enclosing [SupporterMembershipScope] when
+/// there is one, so it shares that scope's single membership read.
 class SupporterMembership extends ConsumerWidget {
   const SupporterMembership({this.compact = false, super.key});
 
@@ -28,14 +32,36 @@ class SupporterMembership extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     ref.watch(currentAuthStateProvider);
-    final auth = ref.watch(authServiceProvider);
-    if (!auth.isAuthenticated) {
+    if (!ref.watch(authServiceProvider).isAuthenticated) {
       return _MembershipEntry(
         compact: compact,
         label: context.l10n.supporterTitle,
         subtitle: context.l10n.supporterTileSubtitle,
       );
     }
+    final status = _MembershipStatus(compact: compact);
+    return _hasSupporterCubit(context)
+        ? status
+        : SupporterMembershipScope(child: status);
+  }
+}
+
+/// Provides the signed-in account's [SupporterCubit] to [child], refreshing
+/// the cached membership only where that cannot prompt an external signer.
+///
+/// Leaves [child] without a cubit when supporters are not configured or no
+/// one is signed in.
+class SupporterMembershipScope extends ConsumerWidget {
+  const SupporterMembershipScope({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(supporterApiConfiguredProvider)) return child;
+    ref.watch(currentAuthStateProvider);
+    final auth = ref.watch(authServiceProvider);
+    if (!auth.isAuthenticated) return child;
     ref.watch(currentAuthRpcCapabilityProvider);
     final repository = ref.watch(supporterRepositoryProvider);
     // External signers may prompt. Passive entry must not interrupt browsing;
@@ -59,23 +85,45 @@ class SupporterMembership extends ConsumerWidget {
         if (canRefresh) unawaited(repository.refreshIfStale());
         return cubit;
       },
-      child: BlocBuilder<SupporterCubit, SupporterState>(
-        builder: (context, state) {
-          final confirmedInactive = state.isConfirmedInactive;
-          final label = state.isSupporter
-              ? context.l10n.supporterBadgeLabel
-              : confirmedInactive
-              ? context.l10n.supporterJoinLabel
-              : context.l10n.supporterTitle;
-          return _MembershipEntry(
-            compact: compact,
-            label: label,
-            subtitle: state.isSupporter
-                ? context.l10n.supporterActiveBadge
-                : context.l10n.supporterTileSubtitle,
-          );
-        },
-      ),
+      child: child,
+    );
+  }
+}
+
+bool _hasSupporterCubit(BuildContext context) {
+  try {
+    context.read<SupporterCubit>();
+    return true;
+  } on ProviderNotFoundException {
+    return false;
+  }
+}
+
+class _MembershipStatus extends StatelessWidget {
+  const _MembershipStatus({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SupporterCubit, SupporterState>(
+      builder: (context, state) {
+        // On the profile, the halo and wings are the supporter's mark; the
+        // compact entry only remains as a way in for everyone else.
+        if (compact && state.isSupporter) return const SizedBox.shrink();
+        final label = state.isSupporter
+            ? context.l10n.supporterBadgeLabel
+            : state.isConfirmedInactive
+            ? context.l10n.supporterJoinLabel
+            : context.l10n.supporterTitle;
+        return _MembershipEntry(
+          compact: compact,
+          label: label,
+          subtitle: state.isSupporter
+              ? context.l10n.supporterActiveBadge
+              : context.l10n.supporterTileSubtitle,
+        );
+      },
     );
   }
 }

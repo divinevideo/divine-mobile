@@ -412,8 +412,9 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
             enabled: showIdentitySkeleton,
             enableSwitchAnimation: true,
             effect: vineSkeletonEffectOf(context),
-            child: _PublicSupporterScope(
+            child: _SupporterStatusScope(
               pubkey: widget.userIdHex,
+              isOwnProfile: widget.isOwnProfile,
               enabled: !isVanished,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -426,7 +427,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                       showSkeleton: showIdentitySkeleton,
                       profileColor: profileColor,
                       pendingActions: pendingActions,
-                      opensSupporterLightbox: !widget.isOwnProfile,
+                      isOwnProfile: widget.isOwnProfile,
                       onActionTap: pendingActions.isEmpty
                           ? null
                           : pendingActions.first ==

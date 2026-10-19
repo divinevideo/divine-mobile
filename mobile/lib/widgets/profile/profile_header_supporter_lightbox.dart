@@ -15,7 +15,7 @@ const Interval _supporterContentReveal = Interval(
 /// Share of the route transition over which the sparkles fade in.
 const Interval _supporterSparkleReveal = Interval(0.4, 1);
 
-/// Header avatar of another user's supporter profile.
+/// Header avatar of a supporter's profile.
 ///
 /// The whole group — avatar, wings and halo — is the Hero, so the treatment
 /// flies into the supporter lightbox and keeps moving instead of being left
@@ -26,6 +26,7 @@ class _SupporterAvatarHero extends StatelessWidget {
     required this.avatarSize,
     required this.avatar,
     required this.reveal,
+    required this.isOwnProfile,
     this.imageUrl,
   });
 
@@ -37,6 +38,10 @@ class _SupporterAvatarHero extends StatelessWidget {
   /// Owned outside the Hero, which remounts its child when a flight lands.
   final Animation<double> reveal;
 
+  /// Opens the owner's own supporter view rather than the one other viewers
+  /// see.
+  final bool isOwnProfile;
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -47,6 +52,7 @@ class _SupporterAvatarHero extends StatelessWidget {
           context,
           imageUrl: imageUrl,
           userIdHex: userIdHex,
+          isOwnProfile: isOwnProfile,
         ),
         child: Hero(
           tag: _avatarHeroTag(userIdHex),
@@ -55,7 +61,7 @@ class _SupporterAvatarHero extends StatelessWidget {
           child: SupporterHaloWings(
             avatarSize: avatarSize,
             reveal: reveal,
-            builder: (_, _) => avatar,
+            avatar: avatar,
           ),
         ),
       ),
@@ -74,7 +80,7 @@ HeroFlightShuttleBuilder _supporterShuttle(String? imageUrl, String userIdHex) {
         parent: animation,
         curve: _supporterSparkleReveal,
       ),
-      builder: (_, _) => UserAvatar(
+      avatar: UserAvatar(
         imageUrl: imageUrl,
         placeholderSeed: userIdHex,
         size: _supporterLightboxAvatarSize,
@@ -93,6 +99,7 @@ RectTween _supporterRectTween(Rect? begin, Rect? end) =>
 void _showSupporterLightbox(
   BuildContext context, {
   required String userIdHex,
+  required bool isOwnProfile,
   String? imageUrl,
 }) {
   _runProfileDetached(
@@ -103,8 +110,11 @@ void _showSupporterLightbox(
           barrierColor: VineTheme.transparent,
           barrierDismissible: true,
           barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
-          pageBuilder: (context, _, _) =>
-              _SupporterLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
+          pageBuilder: (context, _, _) => _SupporterLightbox(
+            imageUrl: imageUrl,
+            userIdHex: userIdHex,
+            isOwnProfile: isOwnProfile,
+          ),
           transitionsBuilder: (context, animation, _, child) =>
               FadeTransition(opacity: animation, child: child),
         ),
@@ -114,13 +124,18 @@ void _showSupporterLightbox(
   );
 }
 
-/// Full-screen view of another user's supporter avatar, explaining what the
-/// status means and inviting the viewer to become a supporter too.
+/// Full-screen view of a supporter's avatar. Other viewers see what the
+/// status means and an invitation to join; the owner sees their membership.
 class _SupporterLightbox extends StatelessWidget {
-  const _SupporterLightbox({required this.userIdHex, this.imageUrl});
+  const _SupporterLightbox({
+    required this.userIdHex,
+    required this.isOwnProfile,
+    this.imageUrl,
+  });
 
   final String? imageUrl;
   final String userIdHex;
+  final bool isOwnProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -177,29 +192,16 @@ class _SupporterLightbox extends StatelessWidget {
                             const SizedBox(height: 30),
                             FadeTransition(
                               opacity: reveal,
-                              child: Column(
-                                children: [
-                                  _SupporterLightboxHeadline(
-                                    userIdHex: userIdHex,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    context.l10n.supporterLightboxBody,
-                                    textAlign: TextAlign.center,
-                                    style: VineTheme.bodyLargeFont(
-                                      color: colors.secondaryText,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 32),
-                                  const _SupporterBenefits(),
-                                ],
-                              ),
+                              child: isOwnProfile
+                                  ? const _OwnSupporterDetails()
+                                  : _SupporterDetails(userIdHex: userIdHex),
                             ),
                             const Spacer(),
-                            FadeTransition(
-                              opacity: reveal,
-                              child: const _SupporterLightboxActions(),
-                            ),
+                            if (!isOwnProfile)
+                              FadeTransition(
+                                opacity: reveal,
+                                child: const _SupporterLightboxActions(),
+                              ),
                           ],
                         ),
                       ),
@@ -227,6 +229,85 @@ class _SupporterLightbox extends StatelessWidget {
   }
 }
 
+/// What another user's supporter status means.
+class _SupporterDetails extends StatelessWidget {
+  const _SupporterDetails({required this.userIdHex});
+
+  final String userIdHex;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _SupporterLightboxHeadline(userIdHex: userIdHex),
+        const SizedBox(height: 12),
+        Text(
+          context.l10n.supporterLightboxBody,
+          textAlign: TextAlign.center,
+          style: VineTheme.bodyLargeFont(
+            color: context.vineColors.secondaryText,
+          ),
+        ),
+        const SizedBox(height: 32),
+        const _SupporterBenefits(),
+      ],
+    );
+  }
+}
+
+/// The owner's own membership, in the words of the Supporter settings.
+class _OwnSupporterDetails extends StatelessWidget {
+  const _OwnSupporterDetails();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.vineColors;
+    return Column(
+      children: [
+        Text(
+          l10n.supporterHeroTitle,
+          textAlign: TextAlign.center,
+          style: VineTheme.headlineSmallFont(color: colors.primaryText),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          l10n.supporterMembershipBody,
+          textAlign: TextAlign.center,
+          style: VineTheme.bodyLargeFont(color: colors.secondaryText),
+        ),
+        const SizedBox(height: 32),
+        MergeSemantics(
+          child: Row(
+            spacing: 12,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.iconButton,
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: DivineIcon(
+                    icon: DivineIconName.heart,
+                    color: colors.accentBrand,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  l10n.supporterActiveBadge,
+                  style: VineTheme.bodyLargeFont(color: colors.primaryText),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SupporterLightboxAvatar extends StatelessWidget {
   const _SupporterLightboxAvatar({required this.userIdHex, this.imageUrl});
 
@@ -243,7 +324,7 @@ class _SupporterLightboxAvatar extends StatelessWidget {
       child: SupporterHaloWings(
         avatarSize: size,
         sparkles: kAlwaysCompleteAnimation,
-        builder: (_, _) => UserAvatar(
+        avatar: UserAvatar(
           imageUrl: imageUrl,
           placeholderSeed: userIdHex,
           size: size,
@@ -460,19 +541,23 @@ class _SupporterMaybeLater extends StatelessWidget {
   }
 }
 
-/// Provides one [PublicSupporterCubit] for a profile, so everything in the
-/// header that reflects supporter status reads the same single request.
+/// Provides the supporter status every part of the header reads, from one
+/// request per profile: the halo and wings show only where the profile's
+/// supporter status is public, so a profile looks the same to its owner as
+/// to everyone else.
 ///
-/// Only opted-in public recognition is used, for every profile including the
-/// viewer's own, so a profile looks the same to its owner as to everyone else.
-class _PublicSupporterScope extends ConsumerWidget {
-  const _PublicSupporterScope({
+/// The owner's profile also gets their membership, which carries a change
+/// to their public setting as soon as it is saved.
+class _SupporterStatusScope extends ConsumerWidget {
+  const _SupporterStatusScope({
     required this.pubkey,
+    required this.isOwnProfile,
     required this.enabled,
     required this.child,
   });
 
   final String pubkey;
+  final bool isOwnProfile;
 
   /// False for a deleted account, which never shows supporter status.
   final bool enabled;
@@ -481,8 +566,11 @@ class _PublicSupporterScope extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!enabled || !ref.watch(supporterApiConfiguredProvider)) return child;
+    final scoped = isOwnProfile
+        ? SupporterMembershipScope(child: child)
+        : child;
     final client = ref.watch(supporterApiClientProvider);
-    if (client == null) return child;
+    if (client == null) return scoped;
     return BlocProvider(
       key: ValueKey((client, pubkey)),
       create: (_) {
@@ -490,17 +578,40 @@ class _PublicSupporterScope extends ConsumerWidget {
         unawaited(cubit.load());
         return cubit;
       },
-      child: child,
+      child: scoped,
     );
   }
 }
 
-/// Whether the profile in the nearest [_PublicSupporterScope] shows its
-/// supporter status publicly. False while loading and outside a scope.
-bool _isPublicSupporter(BuildContext context) {
+/// Whether the header shows the halo and wings: the profile's public
+/// supporter status. On the owner's profile, their membership answers as
+/// soon as it is known, so changing the public setting shows straight away.
+/// False while loading and outside a [_SupporterStatusScope].
+bool _showsSupporterTreatment(
+  BuildContext context, {
+  required bool isOwnProfile,
+}) {
+  if (isOwnProfile) {
+    final own = _ownPublicRecognition(context);
+    if (own != null) return own;
+  }
   try {
     return context.select<PublicSupporterCubit, bool>((cubit) => cubit.state);
   } on ProviderNotFoundException {
     return false;
+  }
+}
+
+/// The owner's published supporter status, or null until their account has
+/// been read.
+bool? _ownPublicRecognition(BuildContext context) {
+  try {
+    return context.select<SupporterCubit, bool?>((cubit) {
+      final state = cubit.state;
+      if (state.snapshot == null) return null;
+      return state.isSupporter && state.haloVisible;
+    });
+  } on ProviderNotFoundException {
+    return null;
   }
 }
