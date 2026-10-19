@@ -138,8 +138,8 @@ class DmSyncState {
   /// Bumped to 6 for #8528: a cached own inbox list could mark both history
   /// completion and own-inbox coverage without a relay confirming the list.
   /// Those installs skip the new relay-only read unless completion is re-armed.
-  /// Spend one background recovery pass from now, retaining the prior-completion
-  /// record so established inboxes do not become gated again (#8550).
+  /// Spend one background recovery pass from now, retaining the earlier
+  /// completion record so established inboxes stay ungated (#8550).
   static const int currentDrainVersion = 6;
 
   /// Maximum clock skew, in seconds, tolerated on a self-asserted DM
