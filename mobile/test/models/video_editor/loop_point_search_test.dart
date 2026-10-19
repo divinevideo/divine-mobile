@@ -109,6 +109,25 @@ void main() {
 
       expect(loopPointSearchFor([frames, last]), isNull);
     });
+
+    test('has nothing to search when the last clip is as short as it gets', () {
+      final first = _clip('a', duration: _s * 2);
+      // Its start handle as far right as a trim lets it go.
+      final last = _clip('b', duration: _s * 2, trimStart: _ms * 1940);
+
+      expect(loopPointSearchFor([first, last]), isNull);
+    });
+
+    test('has nothing to search when a full loop needs all the footage', () {
+      final clip = _clip(
+        'a',
+        duration: _s * 3,
+        trimStart: _s * 2,
+        trimEnd: _ms * 500,
+      );
+
+      expect(loopPointSearchFor([clip]), isNull);
+    });
   });
 
   group('clipEndingAt', () {

@@ -101,7 +101,11 @@ LoopPointSearch? loopPointSearchFor(List<DivineVideoClip> clips) {
     _min(VideoEditorConstants.loopPointSearchBack, loop ~/ 2),
   );
   final endFrom = _max(shortestEnd, end - searchBack);
-  if (end <= visibleStart || endTo < endFrom) return null;
+  // Every frame starts before the footage ends, so a search that may only
+  // end there has no frame to cut at.
+  if (end <= visibleStart || endTo < endFrom || endFrom >= last.duration) {
+    return null;
+  }
 
   return LoopPointSearch(
     clipId: last.id,
