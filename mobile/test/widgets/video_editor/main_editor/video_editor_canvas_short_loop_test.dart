@@ -26,12 +26,12 @@ import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
-import 'package:pro_video_editor/pro_video_editor.dart'
-    show CustomVideoEffect, EditorVideo;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show CustomVideoEffect, EditorVideo;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/divine_video_player_channel.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -59,8 +59,8 @@ class _OwnedPaths extends Fake
 class _GatedRenderer extends editor.ProVideoEditor {
   final firstStarted = Completer<editor.VideoRenderData>();
   final pending = <String, Completer<void>>{};
-  var completedRenders = 0;
-  var metadataReads = 0;
+  int completedRenders = 0;
+  int metadataReads = 0;
   @override
   void initializeStream() {}
   @override
@@ -80,8 +80,9 @@ class _GatedRenderer extends editor.ProVideoEditor {
   @override
   Future<void> cancel(String id) async {
     final gate = pending.remove(id);
-    if (gate != null && !gate.isCompleted)
+    if (gate != null && !gate.isCompleted) {
       gate.completeError(const editor.RenderCanceledException());
+    }
   }
 
   @override
@@ -333,8 +334,8 @@ void main() {
         onPlayerCall: (call) {
           if (call.method == 'setClips' &&
               nextReload != null &&
-              !nextReload!.isCompleted) {
-            nextReload!.complete(call);
+              !nextReload.isCompleted) {
+            nextReload.complete(call);
           }
         },
       );
