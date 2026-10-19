@@ -55,13 +55,13 @@ class _FloatingBadgesState extends State<_FloatingBadges>
 
   final _seconds = ValueNotifier<double>(0);
   late final Ticker _ticker;
-  late _FloatingBadgeField _field;
+  late FloatingBadgeField _field;
   Duration _lastElapsed = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _field = _FloatingBadgeField(badgeCount: widget.items.length);
+    _field = FloatingBadgeField(badgeCount: widget.items.length);
     _ticker = createTicker(_onTick)..start();
   }
 
@@ -69,7 +69,7 @@ class _FloatingBadgesState extends State<_FloatingBadges>
   void didUpdateWidget(_FloatingBadges oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.items.length != oldWidget.items.length) {
-      _field = _FloatingBadgeField(badgeCount: widget.items.length);
+      _field = FloatingBadgeField(badgeCount: widget.items.length);
     }
   }
 
@@ -97,7 +97,7 @@ class _FloatingBadgesState extends State<_FloatingBadges>
             _ProfileBadgeChip(
               badge: items[slot % items.length],
               compact: true,
-              depthLayer: _FloatingBadgeField.layerOf(slot),
+              depthLayer: FloatingBadgeField.layerOf(slot),
             ),
         ],
       ),
@@ -112,8 +112,9 @@ class _FloatingBadgesState extends State<_FloatingBadges>
 /// that path never covers more than [maxOverlap] of a chip already rising;
 /// when no lane is clear it waits, which also caps how crowded the banner
 /// gets.
-class _FloatingBadgeField {
-  _FloatingBadgeField({required int badgeCount})
+@visibleForTesting
+class FloatingBadgeField {
+  FloatingBadgeField({required int badgeCount})
     : slotCount = math.max(badgeCount, _minSlots) {
     _idleSlots.addAll(List.generate(slotCount, (slot) => slot));
   }
@@ -154,16 +155,16 @@ class _FloatingBadgeField {
   static const _sampleSeconds = 0.1;
 
   /// Chips this faint are still fading in; covering them is not clutter.
-  static const _visibleOpacity = 0.15;
+  static const visibleOpacity = 0.15;
 
   final int slotCount;
   final _idleSlots = Queue<int>();
-  final _rising = <_FloatingBadge>[];
+  final _rising = <FloatingBadge>[];
   double _nextEntryAt = 0;
   int _entries = 0;
 
   /// Chips on the banner, farthest first so nearer ones paint over them.
-  List<_FloatingBadge> get rising => _rising;
+  List<FloatingBadge> get rising => _rising;
 
   /// Lets in every chip due by [seconds] and retires every chip done by then.
   ///
@@ -191,14 +192,14 @@ class _FloatingBadgeField {
     if (_idleSlots.isEmpty) return false;
     final slot = _idleSlots.first;
     final layer = layerOf(slot);
-    final size = chipSize(slot) * _FloatingBadge.scaleFor(layer);
-    const sway = _FloatingBadge.swayAmplitude;
+    final size = chipSize(slot) * FloatingBadge.scaleFor(layer);
+    const sway = FloatingBadge.swayAmplitude;
     final travel = math.max(0, band.width - size.width - sway * 2);
     final firstLane = (_fraction(0.21 + _entries * 0.6180339887) * _laneCount)
         .floor();
     for (var i = 0; i < _laneCount; i++) {
       final lane = (firstLane + i * _laneStride) % _laneCount;
-      final candidate = _FloatingBadge(
+      final candidate = FloatingBadge(
         slot: slot,
         enteredAt: seconds,
         left: sway + travel * lane / (_laneCount - 1),
@@ -216,16 +217,16 @@ class _FloatingBadgeField {
     return false;
   }
 
-  bool _staysClear(_FloatingBadge candidate, Size band) {
+  bool _staysClear(FloatingBadge candidate, Size band) {
     for (
       var t = candidate.enteredAt;
       t < candidate.endsAt;
       t += _sampleSeconds
     ) {
-      if (candidate.opacityAt(t) < _visibleOpacity) continue;
+      if (candidate.opacityAt(t) < visibleOpacity) continue;
       final rect = candidate.rectAt(t, band);
       for (final other in _rising) {
-        if (t >= other.endsAt || other.opacityAt(t) < _visibleOpacity) {
+        if (t >= other.endsAt || other.opacityAt(t) < visibleOpacity) {
           continue;
         }
         if (_coveredShare(rect, other.rectAt(t, band)) > maxOverlap) {
@@ -251,8 +252,9 @@ class _FloatingBadgeField {
 /// farther ones also get a lighter background. Every chip is drawn fully
 /// opaque: see-through chips muddy the banner behind them.
 @immutable
-class _FloatingBadge {
-  const _FloatingBadge({
+@visibleForTesting
+class FloatingBadge {
+  const FloatingBadge({
     required this.slot,
     required this.enteredAt,
     required this.left,
@@ -275,7 +277,7 @@ class _FloatingBadge {
 
   /// 1 for the nearest layer, 0 for the farthest.
   static double _depthOf(int layer) =>
-      1 - layer / (_FloatingBadgeField.depthLayers - 1);
+      1 - layer / (FloatingBadgeField.depthLayers - 1);
 
   /// Index of the [Flow] child this chip paints.
   final int slot;
@@ -349,7 +351,7 @@ class _FloatingBadgesDelegate extends FlowDelegate {
   static const _maxChipWidthFraction = 0.6;
 
   final ValueListenable<double> clock;
-  final _FloatingBadgeField field;
+  final FloatingBadgeField field;
 
   @override
   BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) {
