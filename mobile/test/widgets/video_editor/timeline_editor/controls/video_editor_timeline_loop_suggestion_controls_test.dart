@@ -367,6 +367,41 @@ void main() {
       });
     }
 
+    testWidgets('drops a result that lands under another screen', (
+      tester,
+    ) async {
+      await pump(tester);
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(
+        PageRouteBuilder<void>(
+          opaque: false,
+          pageBuilder: (_, _, _) => const SizedBox(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await cubit.search([clip]);
+      await tester.pump();
+
+      expect(cubit.state.status, LoopSuggestionStatus.idle);
+      verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
+    });
+
+    testWidgets('drops a result while a sub-editor is open', (tester) async {
+      when(() => mainBloc.state).thenReturn(
+        const VideoEditorMainState(
+          isPlayerReady: true,
+          openSubEditor: SubEditorType.effects,
+        ),
+      );
+      await pump(tester);
+      await cubit.search([clip]);
+      await tester.pump();
+
+      expect(cubit.state.status, LoopSuggestionStatus.idle);
+      verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
+    });
+
     testWidgets('drops a result while another clip operation is in flight', (
       tester,
     ) async {

@@ -285,6 +285,15 @@ class _LoopSuggestionResultListenerState
     final index = original == null
         ? -1
         : clips.indexWhere((c) => c.id == original.id);
+    // Another editor opened over the timeline while the search ran, such as
+    // a sheet, the mask editor or a sub-editor. The preview would land under
+    // it, and what it confirms would save the previewed trim without Keep.
+    final mainState = context.read<VideoEditorMainBloc>().state;
+    if (!(ModalRoute.isCurrentOf(context) ?? true) ||
+        mainState.isSubEditorOpen) {
+      cubit.resultHandled();
+      return;
+    }
     // The clip was trimmed, moved or removed while the search ran; the
     // suggestion would undo that.
     if (original == null ||
