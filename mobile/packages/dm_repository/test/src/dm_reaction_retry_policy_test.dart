@@ -297,6 +297,57 @@ void main() {
       });
     });
 
+    group('a retry that reaches no relay leaves the status as it was', () {
+      const unreached = NIP17SendResult.failure(
+        'Reaction not sent: no relay reached',
+        reachedNoRelay: true,
+      );
+
+      Future<String> seedWith(NIP17SendResult firstAnswer) async {
+        stubWire((_) async => firstAnswer);
+        return (await publish()).rumorId;
+      }
+
+      Future<String?> retryUnreached(String id) async {
+        stubWire((_) async => unreached);
+        await reactions.retry(rumorId: id, targetMessageAuthor: _peer);
+        return (await reactionsDao.getById(
+          id: id,
+          ownerPubkey: _owner,
+        ))?.publishStatus;
+      }
+
+      test(
+        'for a reaction whose retries ran out, which keeps its mark',
+        () async {
+          final id = await seedWith(
+            const NIP17SendResult.failure('no OK', retryablePending: true),
+          );
+          await reactions.markReactionUnconfirmed(rumorId: id);
+
+          expect(await retryUnreached(id), DmReactionsDao.unconfirmed);
+          expect(
+            (await reactions.retryableReactions()).single.retriesRanOut,
+            isTrue,
+          );
+        },
+      );
+
+      test('for a reaction whose OK was lost', () async {
+        final id = await seedWith(
+          const NIP17SendResult.failure('no OK', retryablePending: true),
+        );
+
+        expect(await retryUnreached(id), 'pending');
+      });
+
+      test('for a reaction a relay rejected', () async {
+        final id = await seedWith(const NIP17SendResult.failure('rejected'));
+
+        expect(await retryUnreached(id), 'failed');
+      });
+    });
+
     group('retriesRanOut', () {
       test(
         'marks a reaction whose retries ran out, and only that one',

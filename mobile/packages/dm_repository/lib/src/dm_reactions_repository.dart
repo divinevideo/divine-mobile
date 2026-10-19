@@ -883,6 +883,12 @@ class DmReactionsRepository {
                 id: rumorId,
                 ownerPubkey: ownerPubkey,
               );
+            } else if (reachedNoRelay) {
+              // Nothing left the device, so the row keeps the status it had
+              // before this attempt: one whose retries ran out keeps that
+              // mark. No nudge either: a relay connecting wakes the sweep
+              // for it, not the 30-second follow-up (#8516).
+              await _restoreStatusBeforeRetry(row, ownerPubkey: ownerPubkey);
             } else {
               // Confirmed rejection/error: flip to 'failed' so the chip is
               // tappable again. A soft (retryablePending) failure instead
@@ -894,9 +900,7 @@ class DmReactionsRepository {
                   ownerPubkey: ownerPubkey,
                 );
               }
-              // An attempt that reached no relay waits for one to connect
-              // rather than the 30-second follow-up (#8516).
-              if (!reachedNoRelay) _notifyRetryableWork();
+              _notifyRetryableWork();
             }
             return DmReactionPublishResult(
               success: false,
@@ -922,6 +926,30 @@ class DmReactionsRepository {
         rumorId: rumorId,
         errorMessage: e.toString(),
       );
+    }
+  }
+
+  /// Put [row] back to the status it had before a retry marked it
+  /// `'pending'`, for an attempt that reached no relay.
+  Future<void> _restoreStatusBeforeRetry(
+    DmReactionRow row, {
+    required String ownerPubkey,
+  }) async {
+    switch (row.publishStatus) {
+      case DmReactionsDao.unconfirmed:
+        await _reactionsDao.markUnconfirmed(
+          id: row.id,
+          ownerPubkey: ownerPubkey,
+        );
+      case 'failed':
+        await _reactionsDao.markFailed(
+          placeholderId: row.id,
+          ownerPubkey: ownerPubkey,
+        );
+      default:
+        // Intentional no-op: the row was `'pending'`, which the retry wrote
+        // again before sending.
+        break;
     }
   }
 
