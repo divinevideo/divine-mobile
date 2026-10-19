@@ -150,7 +150,12 @@ void main() {
           audienceCount: 0,
         );
         when(() => repository.fetchSessions(roomAddress: room.address))
-            .thenAnswer((_) async => [canonicalSession]);
+            .thenAnswer(
+              (_) async => [
+                foreignSession.copyWith(status: LiveSessionStatus.live),
+                canonicalSession,
+              ],
+            );
         when(() => repository.fetchRecording(roomId: room.id))
             .thenAnswer((_) async => null);
         await tester.pumpWidget(
@@ -172,7 +177,12 @@ void main() {
               .session,
           canonicalSession,
         );
-        expect(find.text('Join live'), findsOneWidget);
+        expect(
+          find.text(
+            tester.element(find.byType(LiveRoomDetailPage)).l10n.liveJoinLive,
+          ),
+          findsOneWidget,
+        );
         verify(() => repository.fetchSessions(roomAddress: room.address))
             .called(1);
         verifyNever(() => repository.fetchRecording(roomId: room.id));
@@ -260,15 +270,26 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Join live'), findsOneWidget);
+      expect(
+        find.text(
+          tester.element(find.byType(LiveRoomDetailPage)).l10n.liveJoinLive,
+        ),
+        findsOneWidget,
+      );
 
       await tester.scrollUntilVisible(
-        find.text('Join live'),
+        find.text(
+          tester.element(find.byType(LiveRoomDetailPage)).l10n.liveJoinLive,
+        ),
         200,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Join live'));
+      await tester.tap(
+        find.text(
+          tester.element(find.byType(LiveRoomDetailPage)).l10n.liveJoinLive,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('room page'), findsOneWidget);

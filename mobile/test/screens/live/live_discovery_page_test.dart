@@ -128,7 +128,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(LiveRoomCard), findsNothing);
       expect(find.text(publicRoom.title), findsNothing);
-      expect(find.text('Featured hosts'), findsNothing);
+      expect(
+        find.text(
+          tester.element(find.byType(LiveDiscoveryPage)).l10n.liveFeaturedHosts,
+        ),
+        findsNothing,
+      );
     });
 
     for (final featured in [false, true]) {
@@ -167,6 +172,7 @@ void main() {
               .thenAnswer((_) async => [firstSession, secondSession]);
           LiveRoomDetailRouteData? routedData;
           Map<String, String>? joinedParameters;
+          LiveRoomRouteData? joinedData;
           final router = GoRouter(
             routes: [
               GoRoute(
@@ -188,6 +194,7 @@ void main() {
                 path: '/live/room/:roomId/session/:sessionId',
                 builder: (context, state) {
                   joinedParameters = state.pathParameters;
+                  joinedData = state.extra! as LiveRoomRouteData;
                   return const Scaffold(body: Text('Joined room'));
                 },
               ),
@@ -233,17 +240,25 @@ void main() {
             firstSession,
           );
           await tester.scrollUntilVisible(
-            find.text('Join live'),
+            find.text(
+              tester.element(find.byType(LiveRoomDetailPage)).l10n.liveJoinLive,
+            ),
             200,
             scrollable: find.byType(Scrollable).first,
           );
           await tester.pumpAndSettle();
-          await tester.tap(find.text('Join live'));
+          await tester.tap(
+            find.text(
+              tester.element(find.byType(LiveRoomDetailPage)).l10n.liveJoinLive,
+            ),
+          );
           await tester.pumpAndSettle();
           expect(joinedParameters, {
             'roomId': firstRoom.id,
             'sessionId': firstSession.id,
           });
+          expect(joinedData!.room, firstRoom);
+          expect(joinedData!.session, firstSession);
         },
       );
     }
@@ -309,7 +324,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LiveRoomDetailPage), findsOneWidget);
-      expect(find.text('Join live'), findsOneWidget);
+      expect(
+        find.text(
+          tester.element(find.byType(LiveRoomDetailPage)).l10n.liveJoinLive,
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows featured hosts above the room sections', (
@@ -360,7 +380,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.pumpAndSettle();
 
-      expect(find.text('Featured hosts'), findsOneWidget);
+      expect(
+        find.text(
+          tester.element(find.byType(LiveDiscoveryPage)).l10n.liveFeaturedHosts,
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Signal from the stage'), findsWidgets);
       expect(find.text('After hours'), findsWidgets);
       expect(
