@@ -614,6 +614,7 @@ void main() {
       'relay settings': RelaySettingsScreen.path,
       'video edit': VideoMetadataEditScreen.pathFor('test-id-abc'),
       'subtitle edit': SubtitleEditorScreen.pathFor('test-id-abc'),
+      'sound detail': '/sound/a%3Fb%2Fc%23d',
       'people list create': CreatePeopleListPage.path,
       'people list members': '/people-lists/list%3A123',
       'people list add people': '/people-lists/list%3A123/add-people',
