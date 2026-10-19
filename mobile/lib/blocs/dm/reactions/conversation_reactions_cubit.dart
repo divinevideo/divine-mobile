@@ -101,7 +101,8 @@ class ConversationReactionsCubit
       // was merely lost/late on a flaky relay). Re-drive delivery instead —
       // mirrors the detail sheet's failed → retry fork.
       if (existing.publishStatus == DmReactionPublishStatus.pending ||
-          existing.publishStatus == DmReactionPublishStatus.failed) {
+          existing.publishStatus == DmReactionPublishStatus.failed ||
+          existing.publishStatus == DmReactionPublishStatus.unconfirmed) {
         add(
           ConversationReactionRetryRequested(
             rumorId: existing.id,

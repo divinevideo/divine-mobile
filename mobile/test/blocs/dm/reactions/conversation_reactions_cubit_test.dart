@@ -618,6 +618,7 @@ void main() {
       for (final status in [
         DmReactionPublishStatus.failed,
         DmReactionPublishStatus.pending,
+        DmReactionPublishStatus.unconfirmed,
       ]) {
         blocTest<ConversationReactionsCubit, ConversationReactionsState>(
           're-tapping a $status own reaction retries instead of removing it',

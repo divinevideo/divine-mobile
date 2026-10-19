@@ -26,6 +26,10 @@ abstract class DmReactionRetryServiceReportableSites {
   /// A removal whose budget ran out could not be recorded as unconfirmed.
   static const String markDeletionUnconfirmed =
       'DmReactionRetryService.markDeletionUnconfirmed';
+
+  /// A reaction whose budget ran out could not be recorded as unconfirmed.
+  static const String markReactionUnconfirmed =
+      'DmReactionRetryService.markReactionUnconfirmed';
 }
 
 /// Backoff + budget configuration for [DmReactionRetryService].
@@ -124,11 +128,13 @@ enum _RetryAttemptOutcome {
 ///
 /// **Backoff/budget:** per-reaction attempts are tracked in memory. A reaction
 /// is skipped until `lastAttempt + backoff(attempts)` elapses and dropped from
-/// the sweep once it hits [DmReactionRetryConfig.maxRetries] (a manual re-tap
-/// still works). A removal has no chip to re-tap, so when its budget runs out
-/// it is marked unconfirmed: the thread then shows it as a warning with a
-/// retry, and a later launch retries it with a fresh budget (#8390). Entries
-/// for reactions that are no longer retryable (sent, deleted) are pruned each
+/// the sweep once it hits [DmReactionRetryConfig.maxRetries] (a manual retry
+/// still works). When its budget runs out it is marked unconfirmed: a removal
+/// shows as a warning with a retry (#8390), and a reaction no relay confirmed
+/// shows like a failed one, with a retry, instead of looking in flight for
+/// good (#8516). A later launch retries either. A pass that reached no relay
+/// or found the row's own attempt still running is not counted. Entries for
+/// reactions that are no longer retryable (sent, deleted) are pruned each
 /// pass so the maps stay bounded to the live set.
 class DmReactionRetryService {
   /// Construct the service. [reactionsRepository] must be the same instance
@@ -304,6 +310,7 @@ class DmReactionRetryService {
             _RetryAttemptOutcome.notSent,
           _ => _RetryAttemptOutcome.failed,
         },
+        onBudgetSpent: _markReactionUnconfirmed,
       );
       final d = await _driveTargets(
         deletionTargets,
@@ -550,29 +557,46 @@ class DmReactionRetryService {
     );
   }
 
-  /// This process will not attempt [target] again. Record that, so the
-  /// removal is shown with a retry instead of staying hidden.
-  ///
+  /// This process will not attempt the removal [target] again. Record that,
+  /// so it is shown with a retry instead of staying hidden.
+  Future<void> _markDeletionUnconfirmed(DmReactionRetryTarget target) =>
+      _recordBudgetSpent(
+        target,
+        what: 'removal',
+        mark: _repository.markDeletionUnconfirmed,
+        site: DmReactionRetryServiceReportableSites.markDeletionUnconfirmed,
+      );
+
+  /// This process will not attempt the reaction [target] again. Record that,
+  /// so one no relay confirmed is shown with a retry instead of looking in
+  /// flight for good (#8516). A reaction a relay rejected stays failed.
+  Future<void> _markReactionUnconfirmed(DmReactionRetryTarget target) =>
+      _recordBudgetSpent(
+        target,
+        what: 'reaction',
+        mark: _repository.markReactionUnconfirmed,
+        site: DmReactionRetryServiceReportableSites.markReactionUnconfirmed,
+      );
+
   /// Never throws: a throw would end the pass before the targets after
-  /// this one were driven.
-  Future<void> _markDeletionUnconfirmed(DmReactionRetryTarget target) async {
+  /// [target] were driven.
+  Future<void> _recordBudgetSpent(
+    DmReactionRetryTarget target, {
+    required String what,
+    required Future<void> Function({required String rumorId}) mark,
+    required String site,
+  }) async {
     try {
-      await _repository.markDeletionUnconfirmed(rumorId: target.rumorId);
+      await mark(rumorId: target.rumorId);
     } on Object catch (e, stackTrace) {
       Log.error(
-        'could not mark removal ${target.rumorId} unconfirmed: $e',
+        'could not mark $what ${target.rumorId} unconfirmed: $e',
         name: 'DmReactionRetryService',
         category: LogCategory.system,
         error: e,
         stackTrace: stackTrace,
       );
-      unawaited(
-        _crashReporting.recordError(
-          e,
-          stackTrace,
-          reason: DmReactionRetryServiceReportableSites.markDeletionUnconfirmed,
-        ),
-      );
+      unawaited(_crashReporting.recordError(e, stackTrace, reason: site));
     }
   }
 

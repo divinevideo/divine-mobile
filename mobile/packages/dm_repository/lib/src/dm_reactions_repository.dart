@@ -1144,6 +1144,24 @@ class DmReactionsRepository {
     );
   }
 
+  /// Record that automatic retries ran out for the own reaction [rumorId]
+  /// while no relay had confirmed it (#8516).
+  ///
+  /// The reaction shows as [DmReactionPublishStatus.unconfirmed], with a
+  /// retry, instead of looking in flight for good. It keeps its rumor and
+  /// stays in [retryableReactions], so a later launch retries it on its own.
+  /// Changes nothing unless the reaction is still `'pending'`.
+  ///
+  /// Throws:
+  ///
+  /// * the database error when the row cannot be written.
+  Future<void> markReactionUnconfirmed({required String rumorId}) {
+    return _reactionsDao.markUnconfirmed(
+      id: rumorId,
+      ownerPubkey: _userPubkey,
+    );
+  }
+
   Future<DmReactionDeletionOutcome> _retryDeletion({
     required String rumorId,
     required String targetMessageAuthor,
@@ -2136,6 +2154,7 @@ class DmReactionsRepository {
     final publishStatus = switch (row.publishStatus) {
       'pending' => DmReactionPublishStatus.pending,
       'failed' => DmReactionPublishStatus.failed,
+      DmReactionsDao.unconfirmed => DmReactionPublishStatus.unconfirmed,
       'sent' => DmReactionPublishStatus.sent,
       'blocked' => DmReactionPublishStatus.blocked,
       DmReactionsDao.deletionRefused || DmReactionsDao.deletionUnconfirmed =>

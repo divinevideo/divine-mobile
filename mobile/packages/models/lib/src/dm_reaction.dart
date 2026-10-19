@@ -9,6 +9,9 @@ import 'package:equatable/equatable.dart';
 /// - [sent]: real reaction event id; published and ack'd.
 /// - [pending]: optimistic placeholder id, publish in flight.
 /// - [failed]: publish attempt threw; chip shows retry affordance.
+/// - [unconfirmed]: the automatic retries ran out while no relay confirmed
+///   the reaction, though one may have received it (#8516). Shows like
+///   [failed], with a retry, and a later launch tries it again on its own.
 /// - [blocked]: send policy (#176 protected-minor DM restriction) rejected the
 ///   recipient. Terminal and NOT retryable — retrying only re-hits the same
 ///   policy — so the retry sweep and a chip re-tap must leave it alone. Renders
@@ -22,6 +25,7 @@ enum DmReactionPublishStatus {
   sent,
   pending,
   failed,
+  unconfirmed,
   blocked,
   removalRefused,
   received,
@@ -84,7 +88,8 @@ class DmReaction extends Equatable {
   /// Is this row still in flight or failed (UI shows retry affordance)?
   bool get isUnsettled =>
       publishStatus == DmReactionPublishStatus.pending ||
-      publishStatus == DmReactionPublishStatus.failed;
+      publishStatus == DmReactionPublishStatus.failed ||
+      publishStatus == DmReactionPublishStatus.unconfirmed;
 
   @override
   List<Object?> get props => [

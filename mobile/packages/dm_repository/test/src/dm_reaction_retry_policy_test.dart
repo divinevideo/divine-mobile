@@ -249,6 +249,54 @@ void main() {
       });
     });
 
+    group('markReactionUnconfirmed', () {
+      Future<String> seedUnconfirmedAdd() async {
+        stubWire(
+          (_) async =>
+              const NIP17SendResult.failure('no OK', retryablePending: true),
+        );
+        final id = (await publish()).rumorId;
+        await reactions.markReactionUnconfirmed(rumorId: id);
+        return id;
+      }
+
+      test('shows the reaction in the thread as unconfirmed', () async {
+        final id = await seedUnconfirmedAdd();
+
+        final shown = await reactions
+            .watchForConversation(conversationId)
+            .first;
+        expect(shown.map((reaction) => reaction.id), [id]);
+        expect(
+          shown.single.publishStatus,
+          DmReactionPublishStatus.unconfirmed,
+        );
+      });
+
+      test("keeps it on the retry sweep's worklist", () async {
+        final id = await seedUnconfirmedAdd();
+
+        final targets = await reactions.retryableReactions();
+
+        expect(targets.map((target) => target.rumorId), [id]);
+        expect(targets.single.publishStatus, DmReactionsDao.unconfirmed);
+      });
+
+      test('a retry a relay confirms delivers it', () async {
+        final id = await seedUnconfirmedAdd();
+        stubConfirmed();
+
+        final result = await reactions.retry(
+          rumorId: id,
+          targetMessageAuthor: _peer,
+        );
+
+        expect(result.success, isTrue);
+        final row = await reactionsDao.getById(id: id, ownerPubkey: _owner);
+        expect(row?.publishStatus, 'sent');
+      });
+    });
+
     group('attemptInFlight (#10044)', () {
       test('marks a removal whose own first attempt is still waiting for '
           'its OK', () async {

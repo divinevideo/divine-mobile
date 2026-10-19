@@ -78,6 +78,11 @@ void main() {
         rumorId: any(named: 'rumorId'),
       ),
     ).thenAnswer((_) async {});
+    when(
+      () => repository.markReactionUnconfirmed(
+        rumorId: any(named: 'rumorId'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -711,7 +716,8 @@ void main() {
         );
       });
 
-      test('leaves a reaction whose own budget ran out alone', () async {
+      test('marks a reaction whose own budget ran out as a reaction, not a '
+          'removal', () async {
         var clock = DateTime.utc(2026, 5, 10, 12);
         when(
           repository.retryableReactions,
@@ -737,6 +743,9 @@ void main() {
             targetMessageAuthor: _authorPubkey,
           ),
         ).called(2);
+        verify(
+          () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+        ).called(1);
         verifyNever(
           () => repository.markDeletionUnconfirmed(
             rumorId: any(named: 'rumorId'),
@@ -775,6 +784,117 @@ void main() {
           ).called(1);
           verify(
             () => repository.markDeletionUnconfirmed(rumorId: 'd2'),
+          ).called(1);
+        },
+      );
+    });
+
+    group('a reaction whose retry budget runs out (#8516)', () {
+      const twoAttempts = DmReactionRetryConfig(
+        maxRetries: 2,
+        initialDelay: Duration(milliseconds: 1),
+      );
+
+      void stubPendingReaction(String id) {
+        when(repository.retryableReactions).thenAnswer(
+          (_) async => [
+            _target(rumorId: id, publishStatus: 'pending', createdAt: 0),
+          ],
+        );
+      }
+
+      test('is marked unconfirmed after its last attempt fails, not '
+          'before', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        stubPendingReaction('r1');
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        verifyNever(
+          () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+        );
+
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+        verify(
+          () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+        ).called(1);
+
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+        verifyNever(
+          () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+        );
+      });
+
+      test('is not marked when it is delivered on its last attempt', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        stubPendingReaction('r1');
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        await service.sweep();
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _ok('r1'));
+        clock = clock.add(const Duration(seconds: 10));
+        await service.sweep();
+
+        verifyNever(
+          () => repository.markReactionUnconfirmed(
+            rumorId: any(named: 'rumorId'),
+          ),
+        );
+      });
+
+      test(
+        'a failure to mark it does not stop the reactions after it',
+        () async {
+          when(repository.retryableReactions).thenAnswer(
+            (_) async => [_target(rumorId: 'r1'), _target(rumorId: 'r2')],
+          );
+          when(
+            () => repository.retry(
+              rumorId: any(named: 'rumorId'),
+              targetMessageAuthor: _authorPubkey,
+            ),
+          ).thenAnswer((_) async => _fail('r'));
+          when(
+            () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+          ).thenThrow(StateError('database closed'));
+
+          await buildService(
+            retryConfig: const DmReactionRetryConfig(maxRetries: 1),
+          ).sweep();
+
+          verify(
+            () => repository.retry(
+              rumorId: 'r2',
+              targetMessageAuthor: _authorPubkey,
+            ),
+          ).called(1);
+          verify(
+            () => repository.markReactionUnconfirmed(rumorId: 'r2'),
           ).called(1);
         },
       );
