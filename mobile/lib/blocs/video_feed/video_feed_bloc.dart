@@ -1934,6 +1934,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   }
 
   Future<HomeFeedResult> _fetchFollowingWithBadges({String? cursor}) async {
+    final requestSequence = _firstPageRequestSequence;
+    bool ownsSnapshot() =>
+        requestSequence == _firstPageRequestSequence && !isClosed;
     final directAuthors = List<String>.of(_followRepository.followingPubkeys);
     Future<HomeFeedResult> loadDirect() => _videosRepository.getHomeFeedVideos(
       authors: directAuthors,
@@ -1954,18 +1957,28 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final badgeAuthors = cursor != null && _cachedBadgeAuthors != null
         ? _cachedBadgeAuthors!
         : await _loadBadgeAuthors();
-    _cachedBadgeAuthors = badgeAuthors;
-    _hasBadgeAuthors = badgeAuthors.isNotEmpty;
+    if (cursor == null && !ownsSnapshot()) {
+      return const HomeFeedResult(videos: []);
+    }
     if (badgeAuthors.isNotEmpty) {
       try {
-        if (cursor == null || _badgeVideoPager == null) {
-          _badgeVideoPager = _videosRepository.createBadgeVideoPager([
-            ..._followRepository.followingPubkeys,
-            ...badgeAuthors,
-          ], prioritizeUnseen: true);
-        }
-        final pager = _badgeVideoPager!;
+        // Keep a first-page pager local until its page is ready and this load
+        // still owns the feed. Stale loads may neither activate nor clear it.
+        final pager = cursor != null && _badgeVideoPager != null
+            ? _badgeVideoPager!
+            : _videosRepository.createBadgeVideoPager([
+                ..._followRepository.followingPubkeys,
+                ...badgeAuthors,
+              ], prioritizeUnseen: true);
         final videos = await pager.loadMore();
+        if (cursor == null && !ownsSnapshot()) {
+          return const HomeFeedResult(videos: []);
+        }
+        if (ownsSnapshot()) {
+          _cachedBadgeAuthors = badgeAuthors;
+          _hasBadgeAuthors = true;
+          _badgeVideoPager = pager;
+        }
         return HomeFeedResult(
           videos: videos,
           hasMore: pager.hasMore,
@@ -1973,6 +1986,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           paginationCursor: pager.hasMore ? 'badge-following' : null,
         );
       } catch (error, stackTrace) {
+        if (cursor == null && !ownsSnapshot()) {
+          return const HomeFeedResult(videos: []);
+        }
         // A later page keeps the merged feed's ordering; only the first page
         // may fall back without mixing two orderings in one list.
         if (cursor != null || _followRepository.followingPubkeys.isEmpty) {
@@ -1985,11 +2001,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           error: error,
           stackTrace: stackTrace,
         );
-        _cachedBadgeAuthors = const [];
-        _hasBadgeAuthors = false;
       }
     }
-    _badgeVideoPager = null;
+    if (ownsSnapshot()) {
+      _cachedBadgeAuthors = const [];
+      _hasBadgeAuthors = false;
+      _badgeVideoPager = null;
+    }
     if (directPage == null) return loadDirect();
     final page = await directPage;
     if (page.error case final error?) {
