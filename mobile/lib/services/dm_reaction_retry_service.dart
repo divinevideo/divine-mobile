@@ -217,6 +217,11 @@ class DmReactionRetryService {
   /// the pass so a row that landed mid-pass still arms a follow-up.
   bool _wakeRequestedDuringSweep = false;
 
+  /// The retry trigger fired while a pass was running. A relay that connected
+  /// mid-pass may be what an earlier row in that pass was waiting for, so one
+  /// more pass runs as soon as this one ends (#8516).
+  bool _triggeredDuringSweep = false;
+
   /// Passes in a row that threw before listing the worklist. Bounds the
   /// heartbeat so a persistent fault cannot loop for the rest of the session.
   int _consecutiveSweepFaults = 0;
@@ -238,9 +243,9 @@ class DmReactionRetryService {
       }
     });
 
-    _retryTriggerSubscription = _retryTriggerStream?.listen((_) {
-      unawaited(sweep());
-    });
+    _retryTriggerSubscription = _retryTriggerStream?.listen(
+      (_) => _onRetryTrigger(),
+    );
 
     _retryableWorkSubscription = _repository.retryableReactionWork.listen(
       (_) => _onRepositoryNudge(),
@@ -257,6 +262,7 @@ class DmReactionRetryService {
   /// un-init. Idempotent.
   Future<void> dispose() async {
     _isInitialized = false;
+    _triggeredDuringSweep = false;
     _followUpTimer?.cancel();
     _followUpTimer = null;
     await _foregroundSubscription?.cancel();
@@ -393,7 +399,19 @@ class DmReactionRetryService {
         _wakeRequestedDuringSweep = false;
         _armFollowUpIfIdle();
       }
+      if (_triggeredDuringSweep) {
+        _triggeredDuringSweep = false;
+        if (_isInitialized) unawaited(sweep());
+      }
     }
+  }
+
+  void _onRetryTrigger() {
+    if (_isSweeping) {
+      _triggeredDuringSweep = true;
+      return;
+    }
+    unawaited(sweep());
   }
 
   /// Arm the heartbeat to run one more pass after [DmReactionRetryConfig

@@ -205,6 +205,11 @@ class OutgoingDmRetryService {
   /// follow-up timer instead of stranding until the next external trigger.
   bool _nudgedDuringSweep = false;
 
+  /// The retry trigger fired while a sweep was running. A relay that
+  /// connected mid-pass may be what an earlier row in that pass was waiting
+  /// for, so one more pass runs as soon as this one ends (#8516).
+  bool _triggeredDuringSweep = false;
+
   /// Per-rumor attempt count and last-attempt time for the message-deletion
   /// pass. Session-scoped: entries are pruned each sweep as rows settle.
   final Map<String, int> _deletionAttempts = {};
@@ -228,9 +233,9 @@ class OutgoingDmRetryService {
       }
     });
 
-    _retryTriggerSubscription = _retryTriggerStream?.listen((_) {
-      unawaited(sweep());
-    });
+    _retryTriggerSubscription = _retryTriggerStream?.listen(
+      (_) => _onRetryTrigger(),
+    );
 
     // The send path nudges when it leaves a retryable row behind (soft
     // unconfirmed, hard failure, partial delivery). Without this the 30s
@@ -267,6 +272,7 @@ class OutgoingDmRetryService {
     _followUpTimer?.cancel();
     _followUpTimer = null;
     _nudgedDuringSweep = false;
+    _triggeredDuringSweep = false;
     _consecutiveTopLevelFaults = 0;
     await _foregroundSubscription?.cancel();
     _foregroundSubscription = null;
@@ -708,7 +714,19 @@ class OutgoingDmRetryService {
         _nudgedDuringSweep = false;
         _armFollowUpIfIdle();
       }
+      if (_triggeredDuringSweep) {
+        _triggeredDuringSweep = false;
+        if (_isInitialized) unawaited(sweep());
+      }
     }
+  }
+
+  void _onRetryTrigger() {
+    if (_isSweeping) {
+      _triggeredDuringSweep = true;
+      return;
+    }
+    unawaited(sweep());
   }
 
   /// One pass over the delete-for-everyone requests that no relay has

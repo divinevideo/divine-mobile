@@ -1874,6 +1874,53 @@ void main() {
       );
     });
 
+    group('a retry trigger that arrives mid-pass (#8516)', () {
+      test('runs one more pass once the current one ends', () async {
+        final triggers = StreamController<void>.broadcast();
+        addTearDown(triggers.close);
+        final gate = Completer<NIP17SendResult>();
+        var listings = 0;
+        when(
+          () => dao.getRetryableForOwner(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        ).thenAnswer((_) async {
+          listings++;
+          return listings == 1
+              ? [
+                  _row(
+                    id: 'rumor-mid-pass',
+                    recipient: OutgoingWrapStatus.failed,
+                    self: OutgoingWrapStatus.failed,
+                  ),
+                ]
+              : [];
+        });
+        when(
+          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+        ).thenAnswer((_) => gate.future);
+        final service = buildService(retryTriggerStream: triggers.stream);
+        await service.initialize();
+        addTearDown(service.dispose);
+
+        triggers.add(null);
+        await pumpEventQueue();
+        expect(service.isSweeping, isTrue);
+        triggers.add(null);
+        await pumpEventQueue();
+        gate.complete(
+          const NIP17SendResult.failure(
+            'Message not sent: no relay reached',
+            reachedNoRelay: true,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(listings, 2);
+      });
+    });
+
     group('a send that reached no relay (#8516)', () {
       const unreached = NIP17SendResult.failure(
         'Message not sent: no relay reached',

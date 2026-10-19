@@ -1132,6 +1132,45 @@ void main() {
       });
     });
 
+    group('a retry trigger that arrives mid-pass (#8516)', () {
+      test('runs one more pass once the current one ends', () async {
+        final triggers = StreamController<void>.broadcast();
+        addTearDown(triggers.close);
+        final gate = Completer<DmReactionPublishResult>();
+        var listings = 0;
+        when(repository.retryableReactions).thenAnswer((_) async {
+          listings++;
+          return listings == 1 ? [_target(rumorId: 'r1')] : [];
+        });
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) => gate.future);
+        final service = buildService(retryTriggerStream: triggers.stream);
+        await service.initialize();
+        addTearDown(service.dispose);
+
+        triggers.add(null);
+        await pumpEventQueue();
+        expect(service.isSweeping, isTrue);
+        // A relay connects while that pass still waits on its send.
+        triggers.add(null);
+        await pumpEventQueue();
+        gate.complete(
+          const DmReactionPublishResult(
+            success: false,
+            rumorId: 'r1',
+            reachedNoRelay: true,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(listings, 2);
+      });
+    });
+
     group('a pass that reached no relay (#8516)', () {
       const twoAttempts = DmReactionRetryConfig(
         maxRetries: 2,
