@@ -2,6 +2,7 @@
 // ABOUTME: and again, and keeps it as one undo step or puts the end back.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -261,6 +262,7 @@ class _LoopSuggestionResultListenerState
         suggested == null ||
         index < 0 ||
         index != clips.length - 1 ||
+        !listEquals(clips, state.originalClips) ||
         !_sameTrim(clips[index], original)) {
       cubit.resultHandled();
       return;

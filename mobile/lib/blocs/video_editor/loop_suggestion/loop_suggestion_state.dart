@@ -29,6 +29,7 @@ class LoopSuggestionState extends Equatable {
     this.status = LoopSuggestionStatus.idle,
     this.progress = 0,
     this.original,
+    this.originalClips = const [],
     this.suggested,
     this.isCloseMatch = false,
   });
@@ -40,6 +41,10 @@ class LoopSuggestionState extends Equatable {
 
   /// The last clip as it was when the search started.
   final DivineVideoClip? original;
+
+  /// The composition the search compared, before its asynchronous analysis.
+  /// A result cannot be applied to a different start or timeline.
+  final List<DivineVideoClip> originalClips;
 
   /// [original] trimmed to the suggested end, once [status] is
   /// [LoopSuggestionStatus.suggested].
@@ -59,6 +64,7 @@ class LoopSuggestionState extends Equatable {
     status: status,
     progress: progress ?? this.progress,
     original: original,
+    originalClips: originalClips,
     suggested: suggested,
     isCloseMatch: isCloseMatch,
   );
@@ -68,6 +74,7 @@ class LoopSuggestionState extends Equatable {
     status,
     progress,
     original,
+    originalClips,
     suggested,
     isCloseMatch,
   ];

@@ -45,10 +45,12 @@ class LoopSuggestionCubit extends Cubit<LoopSuggestionState>
     final search = loopPointSearchFor(clips);
     if (search == null) return;
     final clip = clips.last;
+    final originalClips = List<DivineVideoClip>.unmodifiable(clips);
     emit(
       LoopSuggestionState(
         status: LoopSuggestionStatus.searching,
         original: clip,
+        originalClips: originalClips,
       ),
     );
     try {
@@ -81,6 +83,7 @@ class LoopSuggestionCubit extends Cubit<LoopSuggestionState>
                 status: LoopSuggestionStatus.suggested,
                 progress: 1,
                 original: clip,
+                originalClips: originalClips,
                 suggested: clipEndingAt(clip, point.end),
                 isCloseMatch: point.difference <= closeMatch,
               )
