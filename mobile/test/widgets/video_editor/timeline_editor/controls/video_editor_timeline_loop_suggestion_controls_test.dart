@@ -507,6 +507,13 @@ void main() {
       expect((clips.single as Map<String, dynamic>)['trimEndMs'], 500);
       verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
       expect(cubit.state.status, LoopSuggestionStatus.idle);
+      verify(
+        () => overlayBloc.add(
+          const TimelineOverlayTotalDurationChanged(
+            Duration(milliseconds: 2500),
+          ),
+        ),
+      ).called(1);
     });
 
     testWidgets('lets go of the suggestion once the clip is trimmed by hand', (

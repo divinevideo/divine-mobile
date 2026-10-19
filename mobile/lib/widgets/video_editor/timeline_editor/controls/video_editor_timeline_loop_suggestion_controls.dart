@@ -154,6 +154,11 @@ class TimelineLoopSuggestionControls extends StatelessWidget {
       markers: overlayBloc.state.timelineMarkers,
     );
     overlayBloc.add(TimelineMarkersRebased(markers));
+    // The duration listener deliberately leaves overlays alone for a preview.
+    // Apply its clamp only once the creator keeps this composition.
+    overlayBloc.add(
+      TimelineOverlayTotalDurationChanged(compositionDuration(after)),
+    );
     editor.setLengthenedClipState(
       previousClips: before,
       clips: after,

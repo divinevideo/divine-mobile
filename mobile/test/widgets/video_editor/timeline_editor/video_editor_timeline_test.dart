@@ -144,6 +144,7 @@ void main() {
       ClipEditorState? clipState,
       ProImageEditorState? editor,
       LoopSuggestionCubit? loopCubit,
+      TimelineOverlayBloc? overlayBloc,
     }) {
       if (mainState != null) {
         when(() => mockMainBloc.state).thenReturn(mainState);
@@ -180,7 +181,7 @@ void main() {
                   BlocProvider<VideoEditorMainBloc>.value(value: mockMainBloc),
                   BlocProvider<ClipEditorBloc>.value(value: mockClipBloc),
                   BlocProvider<TimelineOverlayBloc>.value(
-                    value: mockOverlayBloc,
+                    value: overlayBloc ?? mockOverlayBloc,
                   ),
                   BlocProvider<VideoEditorFilterBloc>.value(
                     value: mockFilterBloc,
@@ -222,6 +223,101 @@ void main() {
     });
 
     group('renders', () {
+      testWidgets(
+        'a cancelled loop preview preserves sounds and markers beyond its end',
+        (
+          tester,
+        ) async {
+          const s = Duration(seconds: 1);
+          final clip = _createTestClip(id: 'a', seconds: 3);
+          final states = StreamController<ClipEditorState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            mockClipBloc,
+            states.stream,
+            initialState: ClipEditorState(clips: [clip]),
+          );
+          final overlay = TimelineOverlayBloc();
+          addTearDown(overlay.close);
+          final cubit = LoopSuggestionCubit(
+            findLoopPoint:
+                ({required search, required taskId, onProgress}) async =>
+                    const VideoLoopPoint(
+                      start: Duration.zero,
+                      end: Duration(milliseconds: 2500),
+                      difference: 0.01,
+                      currentDifference: 0.2,
+                    ),
+          );
+          addTearDown(cubit.close);
+          overlay.add(
+            TimelineOverlayItemsUpdate(
+              layers: const [],
+              filters: const [],
+              audioTracks: [
+                AudioEvent(
+                  id: 'sound',
+                  pubkey: 'bundled',
+                  createdAt: 0,
+                  url: 'asset://sounds/loop.mp3',
+                  duration: 3,
+                  startTime: const Duration(milliseconds: 2700),
+                  endTime: s * 3,
+                ),
+              ],
+              totalVideoDuration: s * 3,
+              timelineMarkers: const [
+                Duration(milliseconds: 2700),
+                Duration(milliseconds: 2900),
+              ],
+            ),
+          );
+          await tester.pumpWidget(
+            buildWidget(loopCubit: cubit, overlayBloc: overlay),
+          );
+          await tester.pump();
+          expect(
+            overlay.state.items.where(
+              (item) => item.type == TimelineOverlayType.sound,
+            ),
+            hasLength(1),
+          );
+          expect(overlay.state.timelineMarkers, const [
+            Duration(milliseconds: 2700),
+            Duration(milliseconds: 2900),
+          ]);
+
+          await cubit.search([clip]);
+          await tester.pump();
+          states.add(ClipEditorState(clips: [cubit.state.suggested!]));
+          await tester.pump();
+          expect(
+            overlay.state.items.where(
+              (item) => item.type == TimelineOverlayType.sound,
+            ),
+            hasLength(1),
+          );
+          expect(overlay.state.timelineMarkers, const [
+            Duration(milliseconds: 2700),
+            Duration(milliseconds: 2900),
+          ]);
+
+          cubit.resultHandled();
+          states.add(ClipEditorState(clips: [clip]));
+          await tester.pump();
+          expect(
+            overlay.state.items.where(
+              (item) => item.type == TimelineOverlayType.sound,
+            ),
+            hasLength(1),
+          );
+          expect(overlay.state.timelineMarkers, const [
+            Duration(milliseconds: 2700),
+            Duration(milliseconds: 2900),
+          ]);
+        },
+      );
+
       testWidgets('requires Keep or Cancel before another timeline edit', (
         tester,
       ) async {
