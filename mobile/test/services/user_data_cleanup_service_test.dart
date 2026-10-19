@@ -940,6 +940,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               throw StateError(privateContents);
             };
@@ -972,6 +973,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               throw failure;
             };
@@ -1108,6 +1110,7 @@ void main() {
                 userPubkey,
                 deleteUserData = false,
                 preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 scopes.add(preserveActiveSession);
                 if (failDatabase) throw StateError('database unavailable');

@@ -16,7 +16,6 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -89,14 +88,15 @@ class CuratedListRelayGateway {
     required Future<void> cancelled,
     void Function(Event event)? onEventObserved,
   }) async {
-    final snapshot = await CuratedListRelaySnapshotReader(
-      nostrClient: _nostrService,
-    ).read(
-      ownerPubkey: ownerPubkey,
-      timeout: timeout,
-      cancelled: cancelled,
-      onEventObserved: onEventObserved,
-    );
+    final snapshot =
+        await CuratedListRelaySnapshotReader(
+          nostrClient: _nostrService,
+        ).read(
+          ownerPubkey: ownerPubkey,
+          timeout: timeout,
+          cancelled: cancelled,
+          onEventObserved: onEventObserved,
+        );
     return (
       events: snapshot.events,
       completedNormally: snapshot.completedNormally,

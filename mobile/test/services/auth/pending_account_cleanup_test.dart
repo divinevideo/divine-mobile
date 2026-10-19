@@ -119,6 +119,7 @@ void main() {
           userPubkey,
           deleteUserData = false,
           preserveActiveSession = false,
+          bool forgetAccount = false,
         }) async => databaseAttempts++;
         store.failReadback = true;
         await expectLater(
@@ -198,6 +199,7 @@ void main() {
             userPubkey,
             deleteUserData = false,
             preserveActiveSession = false,
+            bool forgetAccount = false,
           }) async => databaseAttempts++;
         await expectLater(
           cleanup.clearUserSpecificData(
@@ -224,6 +226,7 @@ void main() {
             userPubkey,
             deleteUserData = false,
             preserveActiveSession = false,
+            bool forgetAccount = false,
           }) async => databaseAttempts++;
         await expectLater(
           cleanup.clearUserSpecificData(
@@ -247,6 +250,7 @@ void main() {
             userPubkey,
             deleteUserData = false,
             preserveActiveSession = false,
+            bool forgetAccount = false,
           }) async => throw StateError('synthetic database unavailable');
         await expectLater(
           cleanup.clearUserSpecificData(

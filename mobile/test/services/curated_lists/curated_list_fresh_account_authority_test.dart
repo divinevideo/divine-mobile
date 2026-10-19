@@ -84,6 +84,7 @@ void main() {
         String? userPubkey,
         bool deleteUserData = false,
         bool preserveActiveSession = false,
+        bool forgetAccount = false,
       }) async {};
       auth = AuthService(
         userDataCleanupService: cleanup,

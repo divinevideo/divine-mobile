@@ -619,6 +619,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               databaseCleanups++;
             };
@@ -1284,7 +1285,7 @@ void main() {
       final resolve = liveAccountContainer(initial);
       ProviderContainer? attempted;
 
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -1295,7 +1296,7 @@ void main() {
             throw StateError('session expired');
           },
         ),
-        throwsStateError,
+        expected: throwsStateError,
       );
       await tester.pump();
 
@@ -1640,14 +1641,16 @@ void main() {
         'target in', (tester) async {
       await pumpLeavingHost(tester);
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        // Stands in for AuthService._setupUserSession, whose
-        // clearUserSpecificData clears the shared curated_lists key.
-        signIn: (_, _) async => events.add('sign in target'),
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          // Stands in for AuthService._setupUserSession, whose
+          // clearUserSpecificData clears the shared curated_lists key.
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
       );
       await tester.pump();
 
@@ -1659,7 +1662,7 @@ void main() {
     ) async {
       await pumpLeavingHost(tester);
 
-      await expectLater(
+      await driveSwap(
         swapAccount(
           deviceScope: deviceScope,
           controller: controller,
@@ -1667,7 +1670,7 @@ void main() {
           account: account,
           signIn: (_, _) async => throw _FakeSignInException(),
         ),
-        throwsA(isA<_FakeSignInException>()),
+        expected: throwsA(isA<_FakeSignInException>()),
       );
       await tester.pump();
 

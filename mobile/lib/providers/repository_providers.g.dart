@@ -713,7 +713,7 @@ final class CuratedListsStateProvider
     : super(
         from: null,
         argument: null,
-        retry: null,
+        retry: _noAutomaticRetry,
         name: r'curatedListsStateProvider',
         isAutoDispose: true,
         dependencies: null,
@@ -728,7 +728,7 @@ final class CuratedListsStateProvider
   CuratedListsState create() => CuratedListsState();
 }
 
-String _$curatedListsStateHash() => r'39c808b7b3455397d1a1d3563d80e0c0276cfbde';
+String _$curatedListsStateHash() => r'8caded05a91d76b1cf9a1c280e581059ad340ed6';
 
 /// Lists state notifier - manages curated lists state
 

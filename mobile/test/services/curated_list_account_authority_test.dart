@@ -383,6 +383,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               expect(userPubkey, _ownerA);
               expect(deleteUserData, isFalse);

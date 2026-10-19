@@ -224,8 +224,7 @@ class CuratedListService extends ChangeNotifier {
 
   /// Whether this instance may still mutate the active account's cache.
   bool get isCurrentSession =>
-      !_isDisposed && !_isSuspended &&
-      _sessionLease.isCurrent && _accountAuthority.isCurrent;
+      !_isStopped && _sessionLease.isCurrent && _accountAuthority.isCurrent;
 
   bool _isCurrent(String? owner) =>
       isCurrentSession && _relayGateway.currentAuthenticatedPubkey() == owner;
@@ -1633,7 +1632,7 @@ class CuratedListService extends ChangeNotifier {
 
     // Process each unique list
     for (final event in latest) {
-      if (!isCurrentSession) return;
+      if (!isCurrentSession) return false;
       await _processListEvent(event);
     }
 

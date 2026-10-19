@@ -86,7 +86,8 @@ void main() {
       test('completes normally with the events received when the relay '
           'stream closes', () async {
         final relay = StreamController<Event>();
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) => relay.stream);
+        when(() => mockNostr.subscribe(any(), closeOnEose: true))
+            .thenAnswer((_) => relay.stream);
         final event = _event(content: '', pubkey: _ownerPubkey);
 
         final read = gateway.readOwnedLists(
@@ -107,7 +108,7 @@ void main() {
         fakeAsync((async) {
           final relay = StreamController<Event>();
           when(
-            () => mockNostr.subscribe(any()),
+            () => mockNostr.subscribe(any(), closeOnEose: true),
           ).thenAnswer((_) => relay.stream);
           final event = _event(content: '', pubkey: _ownerPubkey);
           ({List<Event> events, bool completedNormally})? result;
@@ -135,7 +136,8 @@ void main() {
 
       test('ends as incomplete as soon as it is cancelled', () async {
         final relay = StreamController<Event>();
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) => relay.stream);
+        when(() => mockNostr.subscribe(any(), closeOnEose: true))
+            .thenAnswer((_) => relay.stream);
         final cancel = Completer<void>();
 
         final read = gateway.readOwnedLists(

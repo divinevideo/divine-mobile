@@ -125,6 +125,7 @@ void main() {
           String? userPubkey,
           bool deleteUserData = false,
           bool preserveActiveSession = false,
+          bool forgetAccount = false,
         }) async {
           sweeps.add((
             owner: userPubkey,
@@ -539,6 +540,7 @@ void main() {
                 userPubkey,
                 deleteUserData = false,
                 preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 expect(auth.isAuthenticated, isFalse);
                 sweeps.add((

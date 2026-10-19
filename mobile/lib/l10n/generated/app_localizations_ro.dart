@@ -1478,34 +1478,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Niciun videoclip disponibil';
 
   @override
-  String get exploreDiscoverLists => 'Descoperă liste';
-
-  @override
-  String get exploreAboutLists => 'Despre liste';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listele te ajută să organizezi și să curaâezi conținutul Divine în două feluri:';
-
-  @override
   String get explorePeopleLists => 'Liste de oameni';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Urmărește grupuri de creatori și vezi cele mai noi videoclipuri ale lor';
-
-  @override
   String get exploreVideoLists => 'Liste de videoclipuri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Creează playlisturi cu videoclipurile preferate ca să le vezi mai târziu';
-
-  @override
-  String get exploreMyLists => 'Listele mele';
-
-  @override
-  String get exploreSubscribedLists => 'Liste la care ești abonat';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4141,14 +4117,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Încearcă din nou';
 
   @override
-  String get peopleListsAddButton => 'Adaugă';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Adaugă $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -5114,18 +5082,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count de persoane',
-      few: '$count persoane',
-      one: '1 persoană',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'De ';
 
   @override
@@ -5145,13 +5101,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Descriere (opțional)';
-
-  @override
-  String get listPublicList => 'Listă publică';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Alții pot urmări și vedea această listă';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5229,10 +5178,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listContinue => 'Continuă';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5262,9 +5207,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name pe Divine';
   }
-
-  @override
-  String get listCancel => 'Anulează';
 
   @override
   String get listCreate => 'Creează';
@@ -6350,31 +6292,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Nu s-a putut actualiza abonamentul. Încearcă din nou.';
-
-  @override
-  String get discoverListsTitle => 'Descoperă liste';
-
-  @override
-  String get discoverListsFailedToLoad => 'N-am putut încărca listele';
-
-  @override
-  String get discoverListsLoading => 'Se descoperă liste publice...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Releul nu a returnat liste la timp. Încearcă din nou.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Serviciul nu este disponibil.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Nicio listă publică găsită';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Revino mai târziu pentru liste noi';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'de';
 
   @override
   String get curatedListEmptyTitle => 'Niciun videoclip în această listă';
@@ -14095,6 +14012,99 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Se încarcă listele';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Listele de persoane nu sunt disponibile acum.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Listele de videoclipuri nu sunt disponibile acum.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Nu am putut șterge datele contului anterior. Încearcă din nou.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Caută persoane';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Elimină pe $name din listă';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'N-am putut actualiza lista. Mai încearcă.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Adaugă pe $name la listă';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Adaugă un colaborator';
+
+  @override
+  String get listMakePublicLabel => 'Fă lista publică';
+
+  @override
+  String get listCollaboratorSearchHint => 'Caută în Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Niciunul';
+
+  @override
+  String get listMakePublicSubtitle => 'Lasă-i pe alții să vadă această listă';
+
+  @override
+  String get listVideoNotAdded =>
+      'Lista ta a fost creată, dar acest videoclip nu a fost adăugat.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.';
+
+  @override
+  String get listRetrySync => 'Sincronizează acum';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Nu am putut confirma această schimbare. Încearcă din nou.';
+
+  @override
+  String get listRecoveryPending =>
+      'Această listă are modificări care așteaptă sincronizarea.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.';
+
+  @override
+  String get listAddToLists => 'Adaugă la liste';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.';
 
   @override
   String get soundRequestAction => 'Solicită acest sunet';

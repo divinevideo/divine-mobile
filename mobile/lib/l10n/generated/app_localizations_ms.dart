@@ -1404,34 +1404,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tiada video tersedia';
 
   @override
-  String get exploreDiscoverLists => 'Terokai Senarai';
-
-  @override
-  String get exploreAboutLists => 'Perihal Senarai';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Senarai membantu anda menyusun dan mengurus kandungan Divine dalam dua cara:';
-
-  @override
   String get explorePeopleLists => 'Senarai Orang';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Ikut kumpulan pencipta dan lihat video terbaharu mereka';
-
-  @override
   String get exploreVideoLists => 'Senarai Video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Cipta senarai main video kegemaran anda untuk ditonton nanti';
-
-  @override
-  String get exploreMyLists => 'Senarai Saya';
-
-  @override
-  String get exploreSubscribedLists => 'Senarai Langganan';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -4008,14 +3984,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Cuba lagi';
 
   @override
-  String get peopleListsAddButton => 'Tambah';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Tambah $count';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4966,17 +4934,6 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count orang',
-      one: '1 orang',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Oleh ';
 
   @override
@@ -4996,13 +4953,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Keterangan (pilihan)';
-
-  @override
-  String get listPublicList => 'Senarai Awam';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Orang lain boleh mengikuti dan melihat senarai ini';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5080,10 +5030,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listContinue => 'Teruskan';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -5114,9 +5060,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name di Divine';
   }
-
-  @override
-  String get listCancel => 'Batal';
 
   @override
   String get listCreate => 'Cipta';
@@ -6189,32 +6132,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Gagal mengemas kini langganan. Sila cuba lagi.';
-
-  @override
-  String get discoverListsTitle => 'Terokai Senarai';
-
-  @override
-  String get discoverListsFailedToLoad => 'Gagal memuatkan senarai';
-
-  @override
-  String get discoverListsLoading => 'Menemui senarai awam...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay tidak memulangkan senarai tepat pada masanya. Cuba lagi.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Perkhidmatan tidak tersedia.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Tiada senarai awam ditemui';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Semak semula nanti untuk senarai baharu';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'oleh';
 
   @override
   String get curatedListEmptyTitle => 'Tiada video dalam senarai ini';
@@ -13810,6 +13727,100 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get followedHashtagsEmpty =>
       'Ikuti hashtag dari halamannya untuk menemuinya di sini.';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Memuatkan senarai';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Tiada senarai yang muncul kali ini. Tarik untuk muat semula.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Senarai orang tidak tersedia buat masa ini.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Senarai video tidak tersedia buat masa ini.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Cari orang';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Alih keluar $name daripada senarai';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Tidak dapat mengemas kini senarai. Sila cuba lagi.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Tambah $name ke senarai';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Tambah kolaborator';
+
+  @override
+  String get listMakePublicLabel => 'Jadikan awam';
+
+  @override
+  String get listCollaboratorSearchHint => 'Cari Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Tiada';
+
+  @override
+  String get listMakePublicSubtitle =>
+      'Benarkan orang lain melihat senarai ini';
+
+  @override
+  String get listVideoNotAdded =>
+      'Senarai anda telah dibuat, tetapi video ini tidak ditambahkan.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Menjadikan senarai ini peribadi turut mengalih keluar kolaboratornya. Hanya anda yang boleh menambah video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Senarai dan video anda disimpan di sini. Video sedang menunggu untuk disegerakkan.';
+
+  @override
+  String get listRetrySync => 'Segerakkan sekarang';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Perubahan ini tidak dapat disahkan. Cuba lagi.';
+
+  @override
+  String get listRecoveryPending =>
+      'Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.';
+
+  @override
+  String get listAddToLists => 'Tambah ke senarai';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.';
 
   @override
   String get soundRequestAction => 'Minta bunyi ini';

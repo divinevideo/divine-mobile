@@ -2455,59 +2455,17 @@ abstract class AppLocalizations {
   /// **'No videos available'**
   String get exploreNoVideosAvailable;
 
-  /// No description provided for @exploreDiscoverLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover Lists'**
-  String get exploreDiscoverLists;
-
-  /// No description provided for @exploreAboutLists.
-  ///
-  /// In en, this message translates to:
-  /// **'About Lists'**
-  String get exploreAboutLists;
-
-  /// No description provided for @exploreAboutListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Lists help you organize and curate Divine content in two ways:'**
-  String get exploreAboutListsDescription;
-
   /// No description provided for @explorePeopleLists.
   ///
   /// In en, this message translates to:
   /// **'People Lists'**
   String get explorePeopleLists;
 
-  /// No description provided for @explorePeopleListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow groups of creators and see their latest videos'**
-  String get explorePeopleListsDescription;
-
   /// No description provided for @exploreVideoLists.
   ///
   /// In en, this message translates to:
   /// **'Video Lists'**
   String get exploreVideoLists;
-
-  /// No description provided for @exploreVideoListsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Create playlists of your favorite videos to watch later'**
-  String get exploreVideoListsDescription;
-
-  /// No description provided for @exploreMyLists.
-  ///
-  /// In en, this message translates to:
-  /// **'My Lists'**
-  String get exploreMyLists;
-
-  /// No description provided for @exploreSubscribedLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Subscribed Lists'**
-  String get exploreSubscribedLists;
 
   /// No description provided for @exploreErrorLoadingLists.
   ///
@@ -6847,18 +6805,6 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get peopleListsAddPeopleRetry;
 
-  /// No description provided for @peopleListsAddButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Add'**
-  String get peopleListsAddButton;
-
-  /// No description provided for @peopleListsAddButtonWithCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Add {count}'**
-  String peopleListsAddButtonWithCount(int count);
-
   /// No description provided for @peopleListsInNLists.
   ///
   /// In en, this message translates to:
@@ -8437,12 +8383,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
 
-  /// No description provided for @listPersonCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 person} other{{count} people}}'**
-  String listPersonCount(int count);
-
   /// No description provided for @listByAuthorPrefix.
   ///
   /// In en, this message translates to:
@@ -8484,18 +8424,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Description (optional)'**
   String get listDescriptionLabel;
-
-  /// No description provided for @listPublicList.
-  ///
-  /// In en, this message translates to:
-  /// **'Public List'**
-  String get listPublicList;
-
-  /// No description provided for @listPublicListSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Others can follow and see this list'**
-  String get listPublicListSubtitle;
 
   /// No description provided for @listPrivateListSubtitle.
   ///
@@ -8593,12 +8521,6 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get listContinue;
 
-  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
-  ///
-  /// In en, this message translates to:
-  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
-  String get listPrivateConversionTooLarge;
-
   /// Shown when a video cannot be added to a private list because its encrypted payload would exceed the NIP-44 size limit. Retrying cannot succeed, so the copy must not suggest trying again.
   ///
   /// In en, this message translates to:
@@ -8646,12 +8568,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} on Divine'**
   String listShareSubject(String name);
-
-  /// No description provided for @listCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get listCancel;
 
   /// No description provided for @listCreate.
   ///
@@ -10548,54 +10464,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to update subscription. Please try again.'**
   String get discoverListsFailedToUpdateSubscription;
-
-  /// No description provided for @discoverListsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover Lists'**
-  String get discoverListsTitle;
-
-  /// No description provided for @discoverListsFailedToLoad.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to load lists'**
-  String get discoverListsFailedToLoad;
-
-  /// No description provided for @discoverListsLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Discovering public lists...'**
-  String get discoverListsLoading;
-
-  /// No description provided for @discoverListsRelayTimeout.
-  ///
-  /// In en, this message translates to:
-  /// **'The relay did not return lists in time. Try again.'**
-  String get discoverListsRelayTimeout;
-
-  /// No description provided for @discoverListsServiceUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Service not available.'**
-  String get discoverListsServiceUnavailable;
-
-  /// No description provided for @discoverListsEmptyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No public lists found'**
-  String get discoverListsEmptyTitle;
-
-  /// No description provided for @discoverListsEmptySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Check back later for new lists'**
-  String get discoverListsEmptySubtitle;
-
-  /// No description provided for @discoverListsByAuthorPrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'by'**
-  String get discoverListsByAuthorPrefix;
 
   /// No description provided for @curatedListEmptyTitle.
   ///
@@ -23048,6 +22916,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Follow a hashtag from its page to find it here.'**
   String get followedHashtagsEmpty;
+
+  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
+  ///
+  /// In en, this message translates to:
+  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
+  String get listPrivateConversionTooLarge;
+
+  /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lists'**
+  String get listsDiscoveryLoadingLabel;
+
+  /// Full-screen message on the Explore Lists tab when neither discovery column returned any lists.
+  ///
+  /// In en, this message translates to:
+  /// **'No lists turned up this time. Pull to refresh.'**
+  String get listsDiscoveryEmpty;
+
+  /// People-list search source could not answer; shown beside healthy video results with retry.
+  ///
+  /// In en, this message translates to:
+  /// **'People lists are unavailable right now.'**
+  String get listSearchPeopleUnavailable;
+
+  /// Video-list search source could not answer; shown beside healthy people results with retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Video lists are unavailable right now.'**
+  String get listSearchVideosUnavailable;
+
+  /// Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t clear the previous account\'s data. Try again.'**
+  String get authAccountCleanupFailed;
+
+  /// No description provided for @peopleListsAddPeopleSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search people'**
+  String get peopleListsAddPeopleSearchHint;
+
+  /// Screen-reader label of the row button that removes a person from the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} from list'**
+  String peopleListsRemovePersonSemanticLabel(String name);
+
+  /// Snackbar shown when adding or removing a person from a people list fails and the change is rolled back.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the list. Please try again.'**
+  String get peopleListsMembershipUpdateFailed;
+
+  /// Screen-reader label of the row button that adds a person to the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {name} to list'**
+  String peopleListsAddPersonSemanticLabel(String name);
+
+  /// No description provided for @listAddCollaboratorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a collaborator'**
+  String get listAddCollaboratorTitle;
+
+  /// Title of the switch on the list info sheet that makes a curated list visible to others.
+  ///
+  /// In en, this message translates to:
+  /// **'Make public'**
+  String get listMakePublicLabel;
+
+  /// No description provided for @listCollaboratorSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Divine...'**
+  String get listCollaboratorSearchHint;
+
+  /// No description provided for @listCollaboratorsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get listCollaboratorsNone;
+
+  /// Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Let others see this list'**
+  String get listMakePublicSubtitle;
+
+  /// A newly created list exists but could not accept the requested video.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list was created, but this video wasn\'t added.'**
+  String get listVideoNotAdded;
+
+  /// Confirmation explains that making a list private revokes its collaborators.
+  ///
+  /// In en, this message translates to:
+  /// **'Making this list private also removes its collaborators. Only you will be able to add videos.'**
+  String get listPrivateCollaboratorsWarning;
+
+  /// Video added locally to a newly created list but publication has not succeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list and video are saved here. The video is waiting to sync.'**
+  String get listVideoPendingSync;
+
+  /// Retry publishing the saved list without adding or removing videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get listRetrySync;
+
+  /// Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t confirm this change. Try again.'**
+  String get listPermissionsUnconfirmed;
+
+  /// Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure.
+  ///
+  /// In en, this message translates to:
+  /// **'This list has changes waiting to sync.'**
+  String get listRecoveryPending;
+
+  /// A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.'**
+  String get listPermissionsRecoveryPending;
+
+  /// No description provided for @listRecoveryReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.'**
+  String get listRecoveryReadOnly;
+
+  /// Title of the sheet where the viewer picks which of their lists a video or a person belongs to.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to lists'**
+  String get listAddToLists;
+
+  /// An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account deletion is processing, but we couldn’t finish signing you out. Try again.'**
+  String get accountDeletionProcessingSignOutFailed;
 
   /// Sound request DM flow: Request this sound
   ///

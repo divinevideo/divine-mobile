@@ -328,15 +328,17 @@ void main() {
       expect(captured.single, equals(oldPubkeyHex));
     });
 
-    test('remove-device signOut (deleteKeys: true) preserves user data by default', () async {
-      // Exercise real native owner verification, deletion and readback.
-      await useNativeKeyStorage();
-      // First sign in so there is a current identity to sign out from.
-      when(() => mockCleanupService.shouldClearDataForUser(any()))
-          .thenReturn(false);
-      expect((await authService.createNewIdentity()).success, isTrue);
-      final owner = authService.currentPublicKeyHex!;
-      await expectOwnedLoginPresent(owner);
+    test(
+      'remove-device signOut (deleteKeys: true) preserves user data by default',
+      () async {
+        // Exercise real native owner verification, deletion and readback.
+        await useNativeKeyStorage();
+        // First sign in so there is a current identity to sign out from.
+        when(() => mockCleanupService.shouldClearDataForUser(any()))
+            .thenReturn(false);
+        expect((await authService.createNewIdentity()).success, isTrue);
+        final owner = authService.currentPublicKeyHex!;
+        await expectOwnedLoginPresent(owner);
 
         // Now remove local login material. This must not delete device-local
         // drafts/clips because they are scoped by ownerPubkey.
@@ -349,8 +351,8 @@ void main() {
           ),
         ).thenAnswer((_) async => 0);
 
-      await authService.signOut(deleteKeys: true);
-      await expectOwnedLoginRemoved(owner);
+        await authService.signOut(deleteKeys: true);
+        await expectOwnedLoginRemoved(owner);
 
         // The explicit-logout path preserves owner-scoped local data by default.
         verify(
@@ -554,6 +556,7 @@ void main() {
               userPubkey,
               deleteUserData = false,
               preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               attempts++;
               throw StateError('database unavailable');
@@ -599,6 +602,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               databaseCleanups++;
               expect(userPubkey, oldPubkeyHex);
@@ -715,6 +719,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 databaseCleanups++;
               };
@@ -809,6 +814,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 expect(userPubkey, oldPubkeyHex);
                 databaseCleanups++;
@@ -937,6 +943,7 @@ void main() {
                   String? userPubkey,
                   bool deleteUserData = false,
                   bool preserveActiveSession = false,
+                  bool forgetAccount = false,
                 }) async {
                   databaseCleanups++;
                 };

@@ -1318,31 +1318,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreNoVideosAvailable => '暂无视频';
 
   @override
-  String get exploreDiscoverLists => '发现列表';
-
-  @override
-  String get exploreAboutLists => '关于列表';
-
-  @override
-  String get exploreAboutListsDescription => '列表帮你用两种方式整理和策划 Divine 内容：';
-
-  @override
   String get explorePeopleLists => '人物列表';
 
   @override
-  String get explorePeopleListsDescription => '关注一群创作者，查看他们的最新视频';
-
-  @override
   String get exploreVideoLists => '视频列表';
-
-  @override
-  String get exploreVideoListsDescription => '把喜欢的视频做成播放列表，稍后观看';
-
-  @override
-  String get exploreMyLists => '我的列表';
-
-  @override
-  String get exploreSubscribedLists => '订阅的列表';
 
   @override
   String get exploreErrorLoadingLists => '加载列表出错，请重试。';
@@ -3752,14 +3731,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '再试一次';
 
   @override
-  String get peopleListsAddButton => '添加';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return '添加 $count 人';
-  }
-
-  @override
   String peopleListsInNLists(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4644,17 +4615,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 人',
-      one: '1 人',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => '来自 ';
 
   @override
@@ -4674,12 +4634,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => '描述（可选）';
-
-  @override
-  String get listPublicList => '公开列表';
-
-  @override
-  String get listPublicListSubtitle => '其他人可以关注并查看此列表';
 
   @override
   String get listPrivateListSubtitle => '视频保持私密。名称、描述、标签和封面仍会显示。';
@@ -4755,10 +4709,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listContinue => '继续';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
-
-  @override
   String get listPrivateFull =>
       'This private list is full. Remove something to add more.';
 
@@ -4787,9 +4737,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String listShareSubject(String name) {
     return 'Divine 上的 $name';
   }
-
-  @override
-  String get listCancel => '取消';
 
   @override
   String get listCreate => '创建';
@@ -5820,30 +5767,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverListsFailedToUpdateSubscription => '更新订阅失败，请重试。';
-
-  @override
-  String get discoverListsTitle => '发现列表';
-
-  @override
-  String get discoverListsFailedToLoad => '列表加载失败';
-
-  @override
-  String get discoverListsLoading => '正在发现公开列表...';
-
-  @override
-  String get discoverListsRelayTimeout => '中继没有及时返回列表。再试一次。';
-
-  @override
-  String get discoverListsServiceUnavailable => '服务不可用。';
-
-  @override
-  String get discoverListsEmptyTitle => '没有找到公开列表';
-
-  @override
-  String get discoverListsEmptySubtitle => '过会儿再来看看新列表';
-
-  @override
-  String get discoverListsByAuthorPrefix => '来自';
 
   @override
   String get curatedListEmptyTitle => '该列表还没有视频';
@@ -12975,6 +12898,87 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get followedHashtagsEmpty => '在话题标签页面关注后，即可在这里找到。';
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
+
+  @override
+  String get listsDiscoveryLoadingLabel => '正在加载列表';
+
+  @override
+  String get listsDiscoveryEmpty => '这次没找到列表。下拉刷新试试。';
+
+  @override
+  String get listSearchPeopleUnavailable => '人员列表暂时不可用。';
+
+  @override
+  String get listSearchVideosUnavailable => '视频列表暂时不可用。';
+
+  @override
+  String get authAccountCleanupFailed => '无法清除上一个账号的数据。请重试。';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => '搜索用户';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '把 $name 从列表移除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => '无法更新列表，请重试。';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '把 $name 加入列表';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => '添加协作者';
+
+  @override
+  String get listMakePublicLabel => '设为公开';
+
+  @override
+  String get listCollaboratorSearchHint => '搜索 Divine...';
+
+  @override
+  String get listCollaboratorsNone => '无';
+
+  @override
+  String get listMakePublicSubtitle => '让其他人看到此列表';
+
+  @override
+  String get listVideoNotAdded => '你的列表已创建，但未添加此视频。';
+
+  @override
+  String get listPrivateCollaboratorsWarning => '将此列表设为私密也会移除其协作者。只有你可以添加视频。';
+
+  @override
+  String get listVideoPendingSync => '你的列表和视频已保存在此设备上。视频正在等待同步。';
+
+  @override
+  String get listRetrySync => '立即同步';
+
+  @override
+  String get listPermissionsUnconfirmed => '无法确认此更改。请重试。';
+
+  @override
+  String get listRecoveryPending => '此列表有等待同步的更改。';
+
+  @override
+  String get listPermissionsRecoveryPending => '更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。';
+
+  @override
+  String get listRecoveryReadOnly => '视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。';
+
+  @override
+  String get listAddToLists => '加入列表';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      '你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。';
 
   @override
   String get soundRequestAction => '请求使用此声音';

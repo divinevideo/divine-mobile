@@ -67,6 +67,7 @@ void main() {
           String? userPubkey,
           bool deleteUserData = false,
           bool preserveActiveSession = false,
+          bool forgetAccount = false,
         }) async {
           databaseAttempts++;
           if (databaseAttempts < 3) {
@@ -111,6 +112,7 @@ void main() {
         userPubkey,
         deleteUserData = false,
         preserveActiveSession = false,
+        bool forgetAccount = false,
       }) async => throw StateError('database unavailable');
 
       await expectLater(
@@ -132,6 +134,7 @@ void main() {
           userPubkey,
           deleteUserData = false,
           preserveActiveSession = false,
+          bool forgetAccount = false,
         }) async => databaseAttempts++;
 
         await expectLater(
@@ -156,6 +159,7 @@ void main() {
           userPubkey,
           deleteUserData = false,
           preserveActiveSession = false,
+          bool forgetAccount = false,
         }) async => databaseAttempts++;
 
         await expectLater(
@@ -184,6 +188,7 @@ void main() {
               userPubkey,
               deleteUserData = false,
               preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               attempts.add((userPubkey, deleteUserData));
               if (attempts.length == 1) {
@@ -218,6 +223,7 @@ void main() {
           userPubkey,
           deleteUserData = false,
           preserveActiveSession = false,
+          bool forgetAccount = false,
         }) async => databaseAttempts++;
         await expectLater(
           cleanup.clearUserSpecificData(

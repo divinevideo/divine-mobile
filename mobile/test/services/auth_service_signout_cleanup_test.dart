@@ -346,6 +346,7 @@ void main() {
             // Explicit false is the sign-out cleanup behavior under verification.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false,
+            // Plain sign-out must retain the known account and its kept rows.
             // ignore: avoid_redundant_argument_values
             forgetAccount: false,
           ),

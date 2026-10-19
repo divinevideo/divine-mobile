@@ -215,6 +215,7 @@ void main() {
                   userPubkey,
                   deleteUserData = false,
                   preserveActiveSession = false,
+                  bool forgetAccount = false,
                 }) async {
                   databaseCalls++;
                 };
@@ -244,6 +245,7 @@ void main() {
               userPubkey,
               deleteUserData = false,
               preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               expect(userPubkey, _owner);
               databaseCalls++;

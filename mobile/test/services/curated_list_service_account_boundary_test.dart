@@ -247,6 +247,7 @@ void main() {
                 String? userPubkey,
                 bool deleteUserData = false,
                 bool preserveActiveSession = false,
+                bool forgetAccount = false,
               }) async {
                 sweepCount++;
                 timeline.add(
@@ -574,6 +575,7 @@ void main() {
             userPubkey,
             deleteUserData = false,
             preserveActiveSession = false,
+            bool forgetAccount = false,
           }) async {
             expect(userPubkey, owner);
             expect(deleteUserData, isFalse);

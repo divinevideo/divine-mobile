@@ -482,6 +482,7 @@ void main() {
               String? userPubkey,
               bool deleteUserData = false,
               bool preserveActiveSession = false,
+              bool forgetAccount = false,
             }) async {
               // Delegate to the actual provider reset, then simulate a retained
               // account write. The regression must not exempt these values.
