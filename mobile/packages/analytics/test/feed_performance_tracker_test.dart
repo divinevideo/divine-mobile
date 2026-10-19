@@ -1,5 +1,5 @@
-// ABOUTME: Tests for FeedPerformanceTracker swipe convenience methods.
-// ABOUTME: Verifies video swipe tracking delegates to correct feed types.
+// ABOUTME: Tests FeedPerformanceTracker feed-load phases and search telemetry.
+// ABOUTME: Verifies session lifecycle and emitted analytics parameters.
 
 import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
