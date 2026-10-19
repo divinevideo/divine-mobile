@@ -16,6 +16,7 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
@@ -52,9 +53,17 @@ bool _matchesLoopComposition(
 String _suggestionText(BuildContext context, LoopSuggestionState state) {
   final original = state.original;
   final suggested = state.suggested;
-  if (original == null || suggested == null) return '';
+  final clips = state.originalClips;
+  if (original == null || suggested == null || clips.isEmpty) return '';
   final l10n = context.l10n;
-  final shift = original.trimEnd - suggested.trimEnd;
+  // Where the posted video starts over, in playback time and up to the
+  // longest export, not in the last clip's footage.
+  final shift =
+      TransitionTimelineMap.fromClips([
+        ...clips.take(clips.length - 1),
+        suggested,
+      ]).loopPoint -
+      TransitionTimelineMap.fromClips(clips).loopPoint;
   final seconds =
       (NumberFormat.decimalPattern(
               Localizations.localeOf(context).toString(),

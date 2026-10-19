@@ -205,6 +205,59 @@ void main() {
       );
     });
 
+    /// Finds a loop point at [end] in [clips], which the clip editor holds.
+    Future<void> suggestEnd(
+      WidgetTester tester,
+      List<DivineVideoClip> clips,
+      Duration end,
+    ) async {
+      when(() => clipBloc.state).thenReturn(ClipEditorState(clips: clips));
+      await cubit.close();
+      cubit = LoopSuggestionCubit(
+        findLoopPoint: ({required search, required taskId, onProgress}) async =>
+            VideoLoopPoint(
+              start: Duration.zero,
+              end: end,
+              difference: 0.01,
+              currentDifference: 0.2,
+            ),
+      );
+      await pump(tester);
+      await cubit.search(clips);
+      await tester.pump();
+    }
+
+    testWidgets('says how much sooner a sped-up clip ends in playback', (
+      tester,
+    ) async {
+      // 10 s of footage at double speed plays for 5 s.
+      final fast = clip.copyWith(duration: s * 10, playbackSpeed: 2);
+
+      await suggestEnd(tester, [fast], s * 9);
+
+      // 1 s less footage is 0.5 s less playback.
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(l10n.videoEditorLoopFoundEarlier('0.5')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('counts a long video as ending where its export stops', (
+      tester,
+    ) async {
+      final long = clip.copyWith(duration: s * 8);
+
+      await suggestEnd(tester, [long], s * 6);
+
+      // The export stops at 6.3 s, so the loop now ends 0.3 s sooner.
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(l10n.videoEditorLoopFoundEarlier('0.3')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('waits for the player to load the new end before playing', (
       tester,
     ) async {
