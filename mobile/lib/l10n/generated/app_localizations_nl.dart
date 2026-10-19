@@ -10254,6 +10254,52 @@ class AppLocalizationsNl extends AppLocalizations {
       'Halverwege uit het oog verloren. Vanaf daar staat de laag stil.';
 
   @override
+  String get videoEditorLoopLabel => 'Loop';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'Vloeiender looppunt zoeken';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Vloeiendere loop gevonden. Hij eindigt $seconds s eerder.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Vloeiendere loop gevonden. Hij eindigt $seconds s later.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Geen perfecte match, maar dit is de dichtstbijzijnde. Hij eindigt $seconds s eerder.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Geen perfecte match, maar dit is de dichtstbijzijnde. Hij eindigt $seconds s later.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Houden';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'Nieuw looppunt houden';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Oude einde terugzetten';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Deze loopt al vloeiend rond.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'Loop controleren is niet gelukt. Probeer het opnieuw.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Geen naadloze loop gevonden. Niets aan het eind past bij het begin van de video.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effect';
 
   @override

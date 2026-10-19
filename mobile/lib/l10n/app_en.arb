@@ -7205,6 +7205,74 @@
   "@videoEditorTrackLostPartway": {
     "description": "Snackbar when tracking lost the object before the end, for example because it left the frame. The layer follows it up to there and then stays still."
   },
+  "videoEditorLoopLabel": "Loop",
+  "@videoEditorLoopLabel": {
+    "description": "Clip action on the last clip that looks for where it can end so the video loops without a visible jump."
+  },
+  "videoEditorLoopSemanticLabel": "Find a smoother loop point",
+  "@videoEditorLoopSemanticLabel": {
+    "description": "Screen reader label for the Loop clip action."
+  },
+  "videoEditorLoopFoundEarlier": "Smoother loop found. It ends {seconds} s earlier.",
+  "@videoEditorLoopFoundEarlier": {
+    "description": "Shown above Keep and Cancel while a smoother loop point is previewed. {seconds} is how much earlier the video now ends, already formatted with one or two decimals.",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorLoopFoundLater": "Smoother loop found. It ends {seconds} s later.",
+  "@videoEditorLoopFoundLater": {
+    "description": "Like videoEditorLoopFoundEarlier, when the new end brings back footage trimmed off before. {seconds} is how much later the video now ends.",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorLoopClosestEarlier": "No perfect match, but this is the closest. It ends {seconds} s earlier.",
+  "@videoEditorLoopClosestEarlier": {
+    "description": "Like videoEditorLoopFoundEarlier, when no end matches the first frame closely and this is only the closest one. {seconds} is how much earlier the video now ends.",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorLoopClosestLater": "No perfect match, but this is the closest. It ends {seconds} s later.",
+  "@videoEditorLoopClosestLater": {
+    "description": "Like videoEditorLoopClosestEarlier, when the closest end lies later. {seconds} is how much later the video now ends.",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorLoopKeepLabel": "Keep",
+  "@videoEditorLoopKeepLabel": {
+    "description": "Button that keeps the suggested loop point as an editing step."
+  },
+  "videoEditorLoopKeepSemanticLabel": "Keep the new loop point",
+  "@videoEditorLoopKeepSemanticLabel": {
+    "description": "Screen reader label for the Keep button of the loop suggestion."
+  },
+  "videoEditorLoopDiscardSemanticLabel": "Put the old end back",
+  "@videoEditorLoopDiscardSemanticLabel": {
+    "description": "Screen reader label for the Cancel button of the loop suggestion, which restores the clip's previous end."
+  },
+  "videoEditorLoopAlreadySmooth": "This already loops smoothly.",
+  "@videoEditorLoopAlreadySmooth": {
+    "description": "Snackbar when no cut would make the video loop more smoothly than it does now."
+  },
+  "videoEditorLoopFailed": "Couldn't check the loop. Try again.",
+  "@videoEditorLoopFailed": {
+    "description": "Snackbar when the loop point search failed because a clip could not be read or it stopped responding."
+  },
+  "videoEditorLoopNoMatch": "No seamless loop found. Nothing near the end matches how the video starts.",
+  "@videoEditorLoopNoMatch": {
+    "description": "Snackbar when no cut makes the loop smoother because nothing near the end looks like the first frame, so the motion never comes back around."
+  },
   "videoEditorKeyframeEffect": "Effect",
   "@videoEditorKeyframeEffect": {
     "description": "Label above the effects in the keyframe sheet of a layer in the video editor: none, wiggle, bounce or pulse, played while the layer moves from one keyframe to the next."

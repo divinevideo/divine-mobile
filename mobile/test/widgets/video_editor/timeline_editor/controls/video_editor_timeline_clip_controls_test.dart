@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -71,8 +72,11 @@ void main() {
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: BlocProvider<ClipEditorBloc>.value(
-              value: bloc,
+            body: MultiBlocProvider(
+              providers: [
+                BlocProvider<ClipEditorBloc>.value(value: bloc),
+                BlocProvider(create: (_) => LoopSuggestionCubit()),
+              ],
               child: TimelineClipControls(
                 playheadPosition: ValueNotifier(playhead),
               ),
@@ -151,6 +155,7 @@ void main() {
                 child: MultiBlocProvider(
                   providers: [
                     BlocProvider<ClipEditorBloc>.value(value: bloc),
+                    BlocProvider(create: (_) => LoopSuggestionCubit()),
                     BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
                   ],
                   child: TimelineClipControls(
@@ -242,6 +247,7 @@ void main() {
                       child: MultiBlocProvider(
                         providers: [
                           BlocProvider<ClipEditorBloc>.value(value: bloc),
+                          BlocProvider(create: (_) => LoopSuggestionCubit()),
                           BlocProvider<TimelineOverlayBloc>.value(
                             value: overlayBloc,
                           ),
@@ -304,6 +310,36 @@ void main() {
         find.byType(VideoEditorTimelineControls),
       );
       expect(controls.onDetach, isNotNull);
+    });
+
+    group('Loop', () {
+      testWidgets('is offered on the last clip, whose end is the seam', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(clips: [clip('a'), clip('b')], currentClipIndex: 1),
+        );
+
+        await tester.pumpWidget(build());
+
+        final controls = tester.widget<VideoEditorTimelineControls>(
+          find.byType(VideoEditorTimelineControls),
+        );
+        expect(controls.onLoop, isNotNull);
+      });
+
+      testWidgets('is not offered on an earlier clip', (tester) async {
+        when(
+          () => bloc.state,
+        ).thenReturn(ClipEditorState(clips: [clip('a'), clip('b')]));
+
+        await tester.pumpWidget(build());
+
+        final controls = tester.widget<VideoEditorTimelineControls>(
+          find.byType(VideoEditorTimelineControls),
+        );
+        expect(controls.onLoop, isNull);
+      });
     });
 
     testWidgets('hides Detach on a placeholder clip', (tester) async {
@@ -1046,6 +1082,7 @@ void main() {
                   child: MultiBlocProvider(
                     providers: [
                       BlocProvider<ClipEditorBloc>.value(value: bloc),
+                      BlocProvider(create: (_) => LoopSuggestionCubit()),
                       BlocProvider<TimelineOverlayBloc>.value(
                         value: overlayBloc,
                       ),

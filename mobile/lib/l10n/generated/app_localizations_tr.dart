@@ -10123,6 +10123,52 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yarı yolda gözden kayboldu. Katman oradan itibaren sabit kalır.';
 
   @override
+  String get videoEditorLoopLabel => 'Döngü';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'Daha akıcı bir döngü noktası bul';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Daha akıcı bir döngü bulundu. $seconds sn önce bitiyor.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Daha akıcı bir döngü bulundu. $seconds sn sonra bitiyor.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Tam eşleşme yok ama en yakını bu. $seconds sn önce bitiyor.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Tam eşleşme yok ama en yakını bu. $seconds sn sonra bitiyor.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Koru';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'Yeni döngü noktasını koru';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Eski bitişi geri getir';
+
+  @override
+  String get videoEditorLoopAlreadySmooth =>
+      'Bu zaten akıcı bir şekilde dönüyor.';
+
+  @override
+  String get videoEditorLoopFailed => 'Döngü kontrol edilemedi. Tekrar dene.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Kusursuz bir döngü bulunamadı. Sona yakın hiçbir şey videonun başlangıcıyla eşleşmiyor.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efekt';
 
   @override

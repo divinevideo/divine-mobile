@@ -23,6 +23,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_p
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_loop_suggestion_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_tracking_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_bottom_bar.dart';
@@ -52,8 +53,10 @@ class VideoEditorScaffold extends StatelessWidget {
         resizeToAvoidBottomInset: false,
         floatingActionButton: const _AddElementFab(),
         body: LayerTrackingResultListener(
-          child: ClipEditorResultListeners(
-            child: _ScaffoldBody(isLoading: isLoading),
+          child: LoopSuggestionResultListener(
+            child: ClipEditorResultListeners(
+              child: _ScaffoldBody(isLoading: isLoading),
+            ),
           ),
         ),
       ),
