@@ -39,6 +39,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockMyFollowersDao extends Mock implements MyFollowersDao {}
@@ -394,14 +395,27 @@ void main() {
 
     setUpAll(() => registerFallbackValue(<Filter>[]));
 
-    ProviderContainer buildContainer() {
-      client = _MockNostrClient();
+    Future<_MockAuthService> buildAuth() async {
       final auth = _MockAuthService();
-      stubListPublishing(client: client, auth: auth, pubkey: pubkey);
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(pubkey);
+      when(() => auth.accountActivationChanges)
+          .thenAnswer((_) => const Stream.empty());
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
+      return auth;
+    }
+
+    ProviderContainer buildContainer(_MockAuthService auth) {
+      client = _MockNostrClient();
+      stubListPublishing(client: client, auth: auth, pubkey: pubkey);
       relay = StreamController<Event>.broadcast();
-      when(() => client.subscribe(any())).thenAnswer((_) => relay.stream);
+      when(
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => relay.stream);
 
       final container = ProviderContainer(
         overrides: [
@@ -436,9 +450,15 @@ void main() {
     test(
       'publishes nothing when the closed relay stream ends the sync',
       () async {
-        final container = buildContainer();
+        final container = buildContainer(await buildAuth());
         await container.read(curatedListsStateProvider.future);
         await pumpEventQueue();
+        final service = container
+            .read(curatedListsStateProvider.notifier)
+            .service!;
+        expect(service.isInitialized, isTrue);
+        expect(service.isCurrentSession, isTrue);
+        expect(relay.hasListener, isTrue);
 
         container.dispose();
         await relay.close();
@@ -448,31 +468,41 @@ void main() {
       },
     );
 
-    test('leaves the cleared lists key empty when the sync times out', () {
-      fakeAsync((async) {
-        final container = buildContainer();
-        async.flushMicrotasks();
-        expect(
-          prefs.getString(CuratedListService.listsStorageKey),
-          isNotNull,
-        );
-        relay.add(
-          Event(pubkey, 30005, const [
-            ['d', 'relay_list'],
-            ['title', 'From the relay'],
-            ['e', 'relay-video'],
-          ], 'A public list'),
-        );
-        async.flushMicrotasks();
+    test(
+      'leaves the cleared lists key empty when the sync times out',
+      () async {
+        final auth = await buildAuth();
+        fakeAsync((async) {
+          final container = buildContainer(auth);
+          async.flushMicrotasks();
+          final service = container
+              .read(curatedListsStateProvider.notifier)
+              .service!;
+          expect(service.isInitialized, isTrue);
+          expect(service.isCurrentSession, isTrue);
+          expect(relay.hasListener, isTrue);
+          expect(
+            prefs.getString(CuratedListService.listsStorageKey),
+            isNotNull,
+          );
+          relay.add(
+            Event(pubkey, 30005, const [
+              ['d', 'relay_list'],
+              ['title', 'From the relay'],
+              ['e', 'relay-video'],
+            ], 'A public list'),
+          );
+          async.flushMicrotasks();
 
-        unawaited(prefs.remove(CuratedListService.listsStorageKey));
-        container.dispose();
-        async
-          ..elapse(const Duration(seconds: 11))
-          ..flushMicrotasks();
+          unawaited(prefs.remove(CuratedListService.listsStorageKey));
+          container.dispose();
+          async
+            ..elapse(const Duration(seconds: 11))
+            ..flushMicrotasks();
 
-        expect(prefs.getString(CuratedListService.listsStorageKey), isNull);
-      });
-    });
+          expect(prefs.getString(CuratedListService.listsStorageKey), isNull);
+        });
+      },
+    );
   });
 }
