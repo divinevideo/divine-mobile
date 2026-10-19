@@ -1,5 +1,5 @@
-import 'package:flutter/painting.dart';
 import 'package:media_cache/media_cache.dart';
+import 'package:openvine/utils/decoded_image_cache.dart';
 
 /// Global image cache singleton backed by [MediaCacheManager].
 final openVineImageCache = MediaCacheManager(
@@ -10,8 +10,6 @@ final openVineImageCache = MediaCacheManager(
 Future<void> clearOpenVineImageCache() async {
   // Clear all image entries, not only thumbnails, so revoked adult-media auth
   // cannot survive in live ImageProviders or shared cache-manager files.
-  final imageCache = PaintingBinding.instance.imageCache;
-  imageCache.clear();
-  imageCache.clearLiveImages();
+  clearDecodedImageCache(includeLiveImages: true);
   await openVineImageCache.clearCache();
 }
