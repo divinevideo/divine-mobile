@@ -429,6 +429,47 @@ void main() {
     });
 
     test(
+      'rechecks a generation-5 completion that trusted a cached own inbox',
+      () async {
+        final h = await _harness(
+          syncState: syncState,
+          script: (_) => (
+            answersPages: true,
+            inboxReads: _InboxReads.silent,
+            list: null,
+          ),
+        );
+        await _seedCachedInbox(h, privateKey: _ownerKey, relay: _ownInboxUrl);
+        await syncState.setDrainVersion(_owner, 5);
+        await syncState.setDrainCoveredOwnInbox(_owner);
+        await syncState.markHistoryDrainComplete(_owner);
+        expect(syncState.historyDrainComplete(_owner), isTrue);
+        expect(syncState.drainCoveredOwnInbox(_owner), isTrue);
+        final beforeRestore = h.pooled.sent.length;
+        final before = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+        await h.repository.backfillHistoryIfNeeded();
+
+        expect(syncState.historyDrainComplete(_owner), isFalse);
+        expect(syncState.historyDrainCompletedBefore(_owner), isTrue);
+        expect(
+          syncState.historyDrainCursor(_owner),
+          inInclusiveRange(
+            before,
+            DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+        );
+        expect(
+          h.pooled.sent
+              .skip(beforeRestore)
+              .where((frame) => _readsKind(frame, EventKind.dmRelaysList)),
+          isNotEmpty,
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 90)),
+    );
+
+    test(
       'does not record history complete from a cached own kind-10050 that no '
       'relay returns',
       () async {

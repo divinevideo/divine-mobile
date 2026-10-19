@@ -134,7 +134,13 @@ class DmSyncState {
   /// The owner-scoped DM key migration deliberately does not bump this value:
   /// the processed-wrap ledger records no outcome, so a forced replay could not
   /// distinguish a stranded message from a legitimate no-message result.
-  static const int currentDrainVersion = 5;
+  ///
+  /// Bumped to 6 for #8528: a cached own inbox list could mark both history
+  /// completion and own-inbox coverage without a relay confirming the list.
+  /// Those installs skip the new relay-only read unless completion is re-armed.
+  /// Spend one background recovery pass from now, retaining the prior-completion
+  /// record so established inboxes do not become gated again (#8550).
+  static const int currentDrainVersion = 6;
 
   /// Maximum clock skew, in seconds, tolerated on a self-asserted DM
   /// `created_at` before callers should stop treating it as an honest send
