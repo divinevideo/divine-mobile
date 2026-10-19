@@ -9,6 +9,7 @@ import 'dart:ui';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -450,7 +451,8 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                   // Name, NIP-05, and bio. Horizontal inset lives on the
                   // children so the badge row can scroll edge-to-edge.
                   Padding(
-                    padding: const EdgeInsets.only(top: 16, bottom: 16),
+                    // The gap above the name lives inside the block.
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: _ProfileNameAndBio(
                       profile: effectiveProfile,
                       userIdHex: widget.userIdHex,
