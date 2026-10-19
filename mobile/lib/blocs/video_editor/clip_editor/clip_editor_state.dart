@@ -405,6 +405,23 @@ class ClipEditorState extends Equatable {
   /// Total wall-clock duration of all clips (respecting trim and playback speed).
   Duration get totalDuration => compositionDuration(clips);
 
+  /// Whether an asynchronous clip operation may still publish a composition.
+  /// A temporary loop trim must not enter that operation's saved snapshot.
+  bool get hasPendingClipOperation =>
+      isExtractingAudio ||
+      isSplitting ||
+      isReversing ||
+      isStabilizing ||
+      isTransforming ||
+      isChromaKeying ||
+      isBakingCapturedChromaKeys ||
+      isMerging ||
+      isSavingClipToLibrary ||
+      isDetaching ||
+      isRefillingPlaceholder ||
+      isFreezingFrame ||
+      isImportingLibraryClips;
+
   /// Creates a copy with the given fields replaced.
   ClipEditorState copyWith({
     List<DivineVideoClip>? clips,

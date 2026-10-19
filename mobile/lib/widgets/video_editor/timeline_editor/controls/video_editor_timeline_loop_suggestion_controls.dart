@@ -282,6 +282,7 @@ class _LoopSuggestionResultListenerState
         suggested == null ||
         index < 0 ||
         index != clips.length - 1 ||
+        clipBloc.state.hasPendingClipOperation ||
         clipBloc.state.isTrimDragging ||
         context.read<VideoEditorMainBloc>().state.isReordering ||
         context.read<TimelineOverlayBloc>().state.draggingItemId != null ||

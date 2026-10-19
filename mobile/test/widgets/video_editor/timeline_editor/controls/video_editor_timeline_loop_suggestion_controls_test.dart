@@ -314,6 +314,24 @@ void main() {
       });
     }
 
+    testWidgets('drops a result while another clip operation is in flight', (
+      tester,
+    ) async {
+      when(() => clipBloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip],
+          isStabilizing: true,
+          stabilizingClipId: 'another-clip',
+        ),
+      );
+      await pump(tester);
+      await cubit.search([clip]);
+      await tester.pump();
+
+      expect(cubit.state.status, LoopSuggestionStatus.idle);
+      verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
+    });
+
     testWidgets('Cancel puts the old end back and stops the seam', (
       tester,
     ) async {

@@ -313,6 +313,26 @@ void main() {
     });
 
     group('Loop', () {
+      testWidgets('waits for a render on another clip before offering Loop', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [clip('a'), clip('b')],
+            currentClipIndex: 1,
+            isStabilizing: true,
+            stabilizingClipId: 'a',
+          ),
+        );
+
+        await tester.pumpWidget(build());
+
+        final controls = tester.widget<VideoEditorTimelineControls>(
+          find.byType(VideoEditorTimelineControls),
+        );
+        expect(controls.onLoop, isNull);
+      });
+
       testWidgets('is offered on the last clip, whose end is the seam', (
         tester,
       ) async {

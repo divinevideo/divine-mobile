@@ -151,6 +151,7 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     final canFindLoop = context.select((ClipEditorBloc bloc) {
       final state = bloc.state;
       return state.currentClipIndex == state.clips.length - 1 &&
+          !state.hasPendingClipOperation &&
           loopPointSearchFor(state.clips) != null;
     });
     final isFindingLoop = context.select(
@@ -548,10 +549,11 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
 
   /// Looks for where the last clip can end so the video loops without a
   /// visible jump; [LoopSuggestionResultListener] shows what it finds.
-  Future<void> _findLoop(BuildContext context) =>
-      context.read<LoopSuggestionCubit>().search(
-        context.read<ClipEditorBloc>().state.clips,
-      );
+  Future<void> _findLoop(BuildContext context) async {
+    final state = context.read<ClipEditorBloc>().state;
+    if (state.hasPendingClipOperation) return;
+    await context.read<LoopSuggestionCubit>().search(state.clips);
+  }
 
   /// Opens the equalizer of the selected clip. The preview loops the clip and
   /// plays every change while the sheet is open; a confirmed one becomes one
