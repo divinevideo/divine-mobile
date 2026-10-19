@@ -208,12 +208,13 @@ bool isOwnProfileGridRoute(RouteContext? context, String? currentUserHex) =>
 /// matched it to.
 ///
 /// [matchedTemplate] is that route's full path pattern (`GoRouterState.fullPath`
-/// or `RouteMatchList.fullPath`), or null when nothing matched. A context
-/// counts only when [buildRoute] lands on the same pattern, so a nested route
-/// the parser does not model, such as `/video/:eventId/likers`, is never read
-/// as its parent. Without a match it counts only when its canonical path keeps
-/// every segment: a retired alias is still recognized, an unknown trailing
-/// segment is not.
+/// or `RouteMatchList.fullPath`); null or empty, as `GoRouterState.fullPath`
+/// is for an unmatched location, means nothing matched. A context counts only
+/// when [buildRoute] lands on the same pattern, so a nested route the parser
+/// does not model, such as `/video/:eventId/likers`, is never read as its
+/// parent. Without a match it counts only when its canonical path has no fewer
+/// segments: a retired alias is still recognized, an unknown trailing segment
+/// is not. [location] may carry a query, which the parser reads.
 RouteContext? parseMatchedRoute(
   String location, {
   required String? matchedTemplate,

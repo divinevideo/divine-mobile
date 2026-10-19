@@ -1,5 +1,5 @@
-// ABOUTME: Tests for route normalization skip logic
-// ABOUTME: Prevents universal links from being rewritten by internal canonicalization
+// ABOUTME: Tests for route normalization: what is skipped, and what is rewritten
+// ABOUTME: Walks the registered route tree so no route is redirected off itself
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +10,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
-import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
@@ -201,9 +200,25 @@ void main() {
       }
     });
 
+    test('leaves a non-numeric index on the route GoRouter matched', () {
+      final expected = {
+        '/explore/latest': null,
+        '/liked-videos/latest': null,
+        '/home/latest': '/home/0',
+        '/notifications/latest': '/notifications/0',
+      };
+
+      for (final entry in expected.entries) {
+        expect(
+          normalizedPathFor(routes, Uri.parse(entry.key)),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    });
+
     test('leaves an unregistered trailing segment to GoRouter', () {
       for (final route in [
-        ExploreScreen.pathForTab('popular'),
         '/people-lists/new/extra',
         '/hashtag/dogs/3',
         '/video/$videoId/bogus',

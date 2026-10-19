@@ -114,6 +114,53 @@ void main() {
       expect(snapshot.recentScreens, ['profile']);
     });
 
+    test('does not record a route registered under a profile as it', () async {
+      final nestedLocations = StreamController<String>.broadcast();
+      final nestedContainer = ProviderContainer(
+        overrides: [
+          routerLocationStreamProvider.overrideWithValue(
+            nestedLocations.stream,
+          ),
+          goRouterProvider.overrideWith((ref) {
+            final router = GoRouter(
+              navigatorKey: NavigatorKeys.root,
+              routes: [
+                GoRoute(
+                  path: '/profile/:npub/collections',
+                  builder: (_, _) => throw UnimplementedError(),
+                ),
+                ...appRoutes(ref),
+              ],
+            );
+            ref.onDispose(router.dispose);
+            return router;
+          }),
+        ],
+      );
+      addTearDown(() async {
+        nestedContainer.dispose();
+        await nestedLocations.close();
+      });
+      nestedContainer.read(supportRouteTrailProvider);
+      nestedContainer.listen(routerLocationProvider, (_, _) {});
+
+      for (final location in [
+        '/home/0',
+        '/profile/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/collections',
+      ]) {
+        nestedLocations.add(location);
+        await pumpEventQueue();
+      }
+
+      expect(
+        nestedContainer
+            .read(supportRouteTrailProvider.notifier)
+            .snapshot
+            .recentScreens,
+        ['home'],
+      );
+    });
+
     test(
       'uses the root router stream when page context is branch-scoped',
       () async {
