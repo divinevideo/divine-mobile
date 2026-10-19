@@ -17,6 +17,7 @@ import 'package:openvine/services/curated_lists/curated_list_session_coordinator
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -164,6 +165,7 @@ void main() {
             () => mockNostr.subscribe(
               any(),
               closeOnEose: true,
+              onEose: any(named: 'onEose'),
             ),
           ).thenAnswer((_) {
             relaySubscribed = true;
@@ -212,6 +214,7 @@ void main() {
               () => mockNostr.subscribe(
                 any(),
                 closeOnEose: true,
+                onEose: any(named: 'onEose'),
               ),
             ).called(1);
           } finally {
@@ -229,8 +232,11 @@ void main() {
         () => mockNostr.subscribe(
           any(),
           closeOnEose: true,
+          onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
 
       final service = CuratedListService(
         nostrService: mockNostr,
@@ -260,6 +266,7 @@ void main() {
           () => mockNostr.subscribe(
             any(),
             closeOnEose: true,
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) {
           return Stream.fromFuture(
@@ -312,6 +319,7 @@ void main() {
           () => mockNostr.subscribe(
             any(),
             closeOnEose: true,
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) {
           return Stream.fromFuture(
@@ -368,10 +376,12 @@ void main() {
           () => mockNostr.subscribe(
             any(),
             closeOnEose: true,
+            onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((invocation) {
+        ).thenAnswer((invocation) async* {
           // Return a stream that will emit an event after delay
-          return Stream.fromFuture(relayResponseCompleter.future);
+          final event = await relayResponseCompleter.future;
+          yield* completedOwnedListSnapshot(invocation, [event]);
         });
 
         final service = CuratedListService(

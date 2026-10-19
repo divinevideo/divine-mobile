@@ -16,6 +16,7 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Auth extends Mock implements AuthService {}
@@ -334,8 +335,11 @@ void main() {
               () => client.subscribe(
                 any(),
                 closeOnEose: any(named: 'closeOnEose'),
+                onEose: any(named: 'onEose'),
               ),
-            ).thenAnswer((_) => const Stream<Event>.empty());
+            ).thenAnswer(
+              (invocation) => completedOwnedListSnapshot(invocation, const []),
+            );
             await service.fetchUserListsFromRelays();
           } else if (method == 'add') {
             expect(await service.addVideoToList(':$id', added), isFalse);
@@ -701,9 +705,14 @@ void main() {
           final local = row();
           await load([local], follows: follows);
           when(
-            () =>
-                client.subscribe(any(), closeOnEose: any(named: 'closeOnEose')),
-          ).thenAnswer((_) => const Stream<Event>.empty());
+            () => client.subscribe(
+              any(),
+              closeOnEose: any(named: 'closeOnEose'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, const []),
+          );
           final disk = prefs.getString(CuratedListService.listsStorageKey);
           await service.fetchUserListsFromRelays();
           expect(service.getListById(id), local);
@@ -719,8 +728,14 @@ void main() {
         final local = row(eventId: first).copyWith(pendingRepublish: true);
         await load([local]);
         when(
-          () => client.subscribe(any(), closeOnEose: any(named: 'closeOnEose')),
-        ).thenAnswer((_) => const Stream<Event>.empty());
+          () => client.subscribe(
+            any(),
+            closeOnEose: any(named: 'closeOnEose'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, const []),
+        );
         final disk = prefs.getString(CuratedListService.listsStorageKey);
         await service.fetchUserListsFromRelays();
         expect(service.getListById(id), local);
@@ -758,9 +773,14 @@ void main() {
           final owned = row(pubkey: owner, eventId: first);
           await load(legacyFirst ? [legacy, owned] : [owned, legacy]);
           when(
-            () =>
-                client.subscribe(any(), closeOnEose: any(named: 'closeOnEose')),
-          ).thenAnswer((_) => const Stream<Event>.empty());
+            () => client.subscribe(
+              any(),
+              closeOnEose: any(named: 'closeOnEose'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, const []),
+          );
           final rows = service.lists;
           final disk = prefs.getString(CuratedListService.listsStorageKey);
           final expectedRows = legacyFirst ? [legacy, owned] : [owned, legacy];
@@ -858,9 +878,14 @@ void main() {
           ).copyWith(pendingRepublish: true);
           await load(legacyFirst ? [legacy, owned] : [owned, legacy]);
           when(
-            () =>
-                client.subscribe(any(), closeOnEose: any(named: 'closeOnEose')),
-          ).thenAnswer((_) => const Stream<Event>.empty());
+            () => client.subscribe(
+              any(),
+              closeOnEose: any(named: 'closeOnEose'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, const []),
+          );
           await service.fetchUserListsFromRelays();
           expect(service.getListById(':$id'), legacy);
           expect(service.getListById('$owner:$id')?.pendingRepublish, isFalse);
@@ -904,8 +929,12 @@ void main() {
                 () => client.subscribe(
                   any(),
                   closeOnEose: any(named: 'closeOnEose'),
+                  onEose: any(named: 'onEose'),
                 ),
-              ).thenAnswer((_) => const Stream<Event>.empty());
+              ).thenAnswer(
+                (invocation) =>
+                    completedOwnedListSnapshot(invocation, const []),
+              );
               await service.fetchUserListsFromRelays();
             } else if (method == 'add') {
               expect(await service.addVideoToList(':$id', added), isFalse);

@@ -78,7 +78,7 @@ class CuratedListRelayGateway {
 
   /// Reads [ownerPubkey]'s kind 30005 lists from relays.
   ///
-  /// `completedNormally` is true only when the relay stream closed by itself.
+  /// `completedNormally` requires EOSE followed by the bounded stream closing.
   /// The read reports an incomplete one when it errors, when [timeout] passes,
   /// or when [cancelled] completes first; the events received until then are
   /// returned either way.

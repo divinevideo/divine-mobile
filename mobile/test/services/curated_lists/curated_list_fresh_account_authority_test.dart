@@ -1,7 +1,6 @@
 // ABOUTME: Exercises new-account default creation through real AuthService setup.
 // ABOUTME: Import and retired permits never authorize canonical default writes.
 
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +18,7 @@ import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/completed_owned_list_snapshot.dart';
 import '../../test_setup.dart';
 
 class _Keys extends Mock implements SecureKeyStorage {}
@@ -98,8 +98,14 @@ void main() {
       final signer = keys.withPrivateKey(LocalNostrSigner.new);
       when(() => client.signer).thenReturn(signer);
       when(
-        () => client.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => const Stream<Event>.empty());
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
       sent = [];
       when(() => client.publishEventAwaitOk(any())).thenAnswer((
         invocation,

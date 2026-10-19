@@ -28,6 +28,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../helpers/signed_curated_list.dart';
 
@@ -146,8 +147,15 @@ void _actor(_Auth auth, _Client client, String owner) {
   when(() => auth.accountActivationChanges)
       .thenAnswer((_) => const Stream.empty());
   stubListPublishing(client: client, auth: auth, pubkey: owner);
-  when(() => client.subscribe(any(), closeOnEose: true))
-      .thenAnswer((_) => const Stream.empty());
+  when(
+    () => client.subscribe(
+      any(),
+      closeOnEose: true,
+      onEose: any(named: 'onEose'),
+    ),
+  ).thenAnswer(
+    (invocation) => completedOwnedListSnapshot(invocation, const []),
+  );
 }
 
 void main() {
@@ -216,11 +224,25 @@ void main() {
       );
       expect(revision.isValid && revision.isSigned, isTrue);
       when(() => clientA.signer).thenReturn(signer);
-      when(() => clientA.subscribe(any(), closeOnEose: true))
-          .thenAnswer((_) => Stream.value(revision));
+      when(
+        () => clientA.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, [revision]),
+      );
       await service.fetchUserListsFromRelays(force: true);
-      when(() => clientA.subscribe(any(), closeOnEose: true))
-          .thenAnswer((_) => const Stream.empty());
+      when(
+        () => clientA.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
       final baseline = service.getDefaultList()!;
       expect(baseline.nostrEventId, revision.id);
       expect(baseline.videoEventIds, row.videoEventIds);
@@ -431,6 +453,13 @@ void main() {
         verifyNever(() => clientA.publishEventAwaitOk(any()));
         verifyNever(() => clientA.subscribe(any()));
         verifyNever(
+          () => clientA.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        );
+        verifyNever(
           () => clientA.queryEvents(any(), timeout: any(named: 'timeout')),
         );
         expect(prefs.getString(PendingAccountCleanup.storageKey), pendingRaw);
@@ -610,6 +639,13 @@ void main() {
         isEmpty,
       );
       verifyNever(() => clientA.subscribe(any()));
+      verifyNever(
+        () => clientA.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      );
       verifyNever(() => clientA.publishEventAwaitOk(any()));
       expect(blocked.subscribedListIds, contains(row.authorScopedId));
       verifyNever(

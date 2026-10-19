@@ -20,7 +20,7 @@ final class CuratedListRelaySnapshot {
   /// The events received before completion, error, or the timeout.
   final List<Event> events;
 
-  /// False on a timeout or stream error; callers must not backfill from it.
+  /// True only after relay EOSE; teardown, cancellation and errors are incomplete.
   final bool completedNormally;
 }
 
@@ -66,6 +66,7 @@ final class CuratedListRelaySnapshotReader {
           }),
         );
       }
+      var observedEose = false;
       final receivedEvents = <Event>[];
       final filter = Filter(authors: [ownerPubkey], kinds: [30005]);
       Log.debug(
@@ -73,7 +74,13 @@ final class CuratedListRelaySnapshotReader {
         name: 'CuratedListService',
         category: LogCategory.system,
       );
-      final subscription = _nostrClient.subscribe([filter], closeOnEose: true);
+      final subscription = _nostrClient.subscribe(
+        [filter],
+        closeOnEose: true,
+        onEose: () {
+          if (!completer.isCompleted) observedEose = true;
+        },
+      );
       timeoutTimer = Timer(timeout, () {
         Log.debug(
           'Relay sync timeout reached, processing received events',
@@ -89,6 +96,7 @@ final class CuratedListRelaySnapshotReader {
       });
       relaySubscription = subscription.listen(
         (event) {
+          if (completer.isCompleted) return;
           // A relay may ignore the authors filter; only the owner's lists count.
           if (event.pubkey != ownerPubkey) return;
           receivedEvents.add(event);
@@ -101,7 +109,7 @@ final class CuratedListRelaySnapshotReader {
         },
         onDone: () {
           timeoutTimer?.cancel();
-          if (!completer.isCompleted) completer.complete(true);
+          if (!completer.isCompleted) completer.complete(observedEose);
         },
         onError: (Object error) {
           Log.error(

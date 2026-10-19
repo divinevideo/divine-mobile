@@ -13,7 +13,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
@@ -30,6 +29,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../test_setup.dart';
 
 class _Keys extends Mock implements SecureKeyStorage {}
@@ -199,8 +199,15 @@ void main() {
       relayDiscoveryService: discovery,
     );
     client = _Client();
-    when(() => client.subscribe(any(), closeOnEose: true))
-        .thenAnswer((_) => const Stream<Event>.empty());
+    when(
+      () => client.subscribe(
+        any(),
+        closeOnEose: true,
+        onEose: any(named: 'onEose'),
+      ),
+    ).thenAnswer(
+      (invocation) => completedOwnedListSnapshot(invocation, const []),
+    );
     controller = AccountSwitchController();
   }
 

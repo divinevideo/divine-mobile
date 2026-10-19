@@ -18,6 +18,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -102,8 +103,15 @@ void main() {
           auth: incomingAuth,
           pubkey: _ownerB,
         );
-        when(() => incomingClient.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => const Stream.empty());
+        when(
+          () => incomingClient.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, const []),
+        );
         await prefs.setString('current_user_pubkey_hex', _ownerB);
         await stubCommittedListAccount(
           auth: incomingAuth,

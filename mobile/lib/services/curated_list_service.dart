@@ -253,7 +253,6 @@ class CuratedListService extends ChangeNotifier {
   /// Stops the service while the outgoing account is quiescent.
   bool _isSuspended = false;
   bool get _isStopped => _isDisposed || _isSuspended;
-  bool _canRun() => isCurrentSession;
   final Set<Completer<void>> _relaySyncCancels = {};
 
   Future<T> _serializeListOperation<T>(
@@ -1571,13 +1570,20 @@ class CuratedListService extends ChangeNotifier {
         },
       );
       final receivedEvents = snapshot.events;
-      if (!isReadyForMutations || !_isCurrent(userPubkey)) return;
-      // Merge recovery only for this active owner, and persist before backfill.
-      if (receivedEvents.isNotEmpty &&
-          !await _processReceivedListEvents(receivedEvents)) {
+      if (cancel.isCompleted ||
+          !isReadyForMutations ||
+          !_isCurrent(userPubkey)) {
         return;
       }
-      if (!_isCurrent(userPubkey)) return;
+      // Merge recovery only for this active owner, and persist before backfill.
+      if (receivedEvents.isNotEmpty &&
+          !await _processReceivedListEvents(
+            receivedEvents,
+            isCurrentRead: () => !cancel.isCompleted,
+          )) {
+        return;
+      }
+      if (cancel.isCompleted || !_isCurrent(userPubkey)) return;
 
       if (!snapshot.completedNormally) {
         Log.warning(
@@ -1597,7 +1603,9 @@ class CuratedListService extends ChangeNotifier {
 
       // After the merge, so a list the relay already holds is not republished
       // from a stale local copy.
-      if (await _backfillUnpublishedLists() && _isCurrent(userPubkey)) {
+      if (await _backfillUnpublishedLists() &&
+          !cancel.isCompleted &&
+          _isCurrent(userPubkey)) {
         _hasSyncedWithRelays = true;
       }
     } catch (e) {
@@ -1612,7 +1620,10 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Process list events received from relays
-  Future<bool> _processReceivedListEvents(List<Event> events) async {
+  Future<bool> _processReceivedListEvents(
+    List<Event> events, {
+    required bool Function() isCurrentRead,
+  }) async {
     final currentOwner = _relayGateway.currentAuthenticatedPubkey();
     final latest = CuratedListConverter.latestRevisions(
       events
@@ -1632,13 +1643,13 @@ class CuratedListService extends ChangeNotifier {
 
     // Process each unique list
     for (final event in latest) {
-      if (!isCurrentSession) return false;
-      await _processListEvent(event);
+      if (!isCurrentRead() || !isCurrentSession) return false;
+      await _processListEvent(event, isCurrentRead: isCurrentRead);
     }
 
     // Reattach minimal owner recovery after relay replacement, then store it.
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    if (owner == null || !_isCurrent(owner)) return false;
+    if (!isCurrentRead() || owner == null || !_isCurrent(owner)) return false;
     for (var i = 0; i < _lists.length; i++) {
       _lists[i] = _recovery.recover(_lists[i], owner);
     }
@@ -1723,16 +1734,19 @@ class CuratedListService extends ChangeNotifier {
   }
 
   /// Process a single list event from Nostr
-  Future<void> _processListEvent(Event event) async {
+  Future<void> _processListEvent(
+    Event event, {
+    required bool Function() isCurrentRead,
+  }) async {
+    if (!isCurrentRead() || !isReadyForMutations) return;
     _defaultAuthority.beginObservation(event);
-    if (!isReadyForMutations) return;
     try {
       final owner = _relayGateway.currentAuthenticatedPubkey();
       final unsealedItemTags = await _relayGateway.unsealItemTags(
         event,
-        canRun: _canRun,
+        canRun: () => isCurrentRead() && isCurrentSession,
       );
-      if (!_isCurrent(owner)) return;
+      if (!isCurrentRead() || !_isCurrent(owner)) return;
       _defaultAuthority.observe(event, unsealedItemTags);
       if (CuratedListConverter.extractDTag(event) == defaultListId &&
           !_defaultAuthority.hasReadableRevision(event)) {

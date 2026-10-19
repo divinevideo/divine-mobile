@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../helpers/committed_list_account.dart';
+import '../../helpers/completed_owned_list_snapshot.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -107,7 +108,9 @@ void main() {
           closeOnEose: true,
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
     });
 
     tearDown(() {
@@ -198,8 +201,15 @@ void main() {
             ),
             isTrue,
           );
-          when(() => client.subscribe(any(), closeOnEose: true))
-              .thenAnswer((_) => Stream.value(baseline));
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [baseline]),
+          );
           final current = open();
           await current.fetchUserListsFromRelays(force: true);
           expect(current.getDefaultList()!.nostrEventId, baseline.id);

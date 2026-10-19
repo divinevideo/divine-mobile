@@ -8,7 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
@@ -20,6 +19,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 import 'package:shared_preferences_platform_interface/types.dart';
 
 import '../../helpers/committed_list_account.dart';
+import '../../helpers/completed_owned_list_snapshot.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -100,8 +100,15 @@ void main() {
     stubListSigner(client, owner);
     when(() => auth.isAuthenticated).thenReturn(true);
     when(() => auth.currentPublicKeyHex).thenReturn(owner);
-    when(() => client.subscribe(any(), closeOnEose: true))
-        .thenAnswer((_) => const Stream<Event>.empty());
+    when(
+      () => client.subscribe(
+        any(),
+        closeOnEose: true,
+        onEose: any(named: 'onEose'),
+      ),
+    ).thenAnswer(
+      (invocation) => completedOwnedListSnapshot(invocation, const []),
+    );
     await stubCommittedListAccount(auth: auth, preferences: prefs);
     service = CuratedListService(
       nostrService: client,

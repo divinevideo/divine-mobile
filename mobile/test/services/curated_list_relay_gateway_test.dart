@@ -84,10 +84,19 @@ void main() {
       setUpAll(() => registerFallbackValue(<Filter>[]));
 
       test('completes normally with the events received when the relay '
-          'stream closes', () async {
+          'stream closes after EOSE', () async {
         final relay = StreamController<Event>();
-        when(() => mockNostr.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => relay.stream);
+        void Function()? completeRead;
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((invocation) {
+          completeRead = invocation.namedArguments[#onEose] as void Function()?;
+          return relay.stream;
+        });
         final event = _event(content: '', pubkey: _ownerPubkey);
 
         final read = gateway.readOwnedLists(
@@ -96,6 +105,9 @@ void main() {
           cancelled: Completer<void>().future,
         );
         relay.add(event);
+        await pumpEventQueue();
+        expect(completeRead, isNotNull);
+        completeRead!();
         await relay.close();
 
         final result = await read;
@@ -103,12 +115,39 @@ void main() {
         expect(result.events, [same(event)]);
       });
 
+      test(
+        'bare stream teardown does not authorize completed relay reads',
+        () async {
+          final relay = StreamController<Event>();
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => relay.stream);
+          final read = gateway.readOwnedLists(
+            _ownerPubkey,
+            timeout: const Duration(hours: 1),
+            cancelled: Completer<void>().future,
+          );
+          await relay.close();
+
+          expect((await read).completedNormally, isFalse);
+          expect(relay.hasListener, isFalse);
+        },
+      );
+
       test('reports an incomplete read and stops listening when the '
           'timeout fires first', () {
         fakeAsync((async) {
           final relay = StreamController<Event>();
           when(
-            () => mockNostr.subscribe(any(), closeOnEose: true),
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
           ).thenAnswer((_) => relay.stream);
           final event = _event(content: '', pubkey: _ownerPubkey);
           ({List<Event> events, bool completedNormally})? result;
@@ -136,8 +175,13 @@ void main() {
 
       test('ends as incomplete as soon as it is cancelled', () async {
         final relay = StreamController<Event>();
-        when(() => mockNostr.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => relay.stream);
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => relay.stream);
         final cancel = Completer<void>();
 
         final read = gateway.readOwnedLists(

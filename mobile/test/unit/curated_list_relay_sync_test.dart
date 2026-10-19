@@ -83,7 +83,13 @@ void main() {
         await curatedListService.fetchUserListsFromRelays();
 
         // Verify: No relay calls should be made
-        verifyNever(() => mockNostrService.subscribe(any(), closeOnEose: true));
+        verifyNever(
+          () => mockNostrService.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        );
         verifyNever(() => mockNostrService.subscribe(any()));
 
         // Verify: Service should handle this gracefully
@@ -107,7 +113,11 @@ void main() {
         );
 
         when(
-          () => mockNostrService.subscribe(any(), closeOnEose: true),
+          () => mockNostrService.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).thenAnswer((_) => streamController.stream);
 
         var completed = false;
@@ -141,21 +151,36 @@ void main() {
         await activateOwner();
 
         // Mock subscription stream
+        void Function()? onEose;
         final streamController = StreamController<Event>();
         when(
-          () => mockNostrService.subscribe(any(), closeOnEose: true),
-        ).thenAnswer((_) => streamController.stream);
+          () => mockNostrService.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((invocation) {
+          onEose = invocation.namedArguments[#onEose] as void Function()?;
+          expect(onEose, isNotNull);
+          return streamController.stream;
+        });
 
         // Test: fetchUserListsFromRelays should create subscription
         final future = curatedListService.fetchUserListsFromRelays();
 
-        // Close stream to complete the subscription
+        // Report protocol completion before closing the transport
+        await pumpEventQueue();
+        onEose!();
         unawaited(streamController.close());
         await future;
 
         // Verify: Subscription was created with correct filter
         final captured = verify(
-          () => mockNostrService.subscribe(captureAny(), closeOnEose: true),
+          () => mockNostrService.subscribe(
+            captureAny(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).captured;
         expect(captured.length, 1);
 
@@ -203,10 +228,19 @@ void main() {
       );
 
       // Mock subscription stream that emits our test event
+      void Function()? onEose;
       final streamController = StreamController<Event>();
       when(
-        () => mockNostrService.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => streamController.stream);
+        () => mockNostrService.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((invocation) {
+        onEose = invocation.namedArguments[#onEose] as void Function()?;
+        expect(onEose, isNotNull);
+        return streamController.stream;
+      });
 
       // Start the sync
       final future = curatedListService.fetchUserListsFromRelays();
@@ -214,7 +248,9 @@ void main() {
       // Emit the test event
       streamController.add(mockEvent);
 
-      // Close stream to complete
+      // Report protocol completion before closing the transport
+      await pumpEventQueue();
+      onEose!();
       unawaited(streamController.close());
       await future;
 
@@ -274,10 +310,19 @@ void main() {
       );
 
       // Mock subscription stream
+      void Function()? onEose;
       final streamController = StreamController<Event>();
       when(
-        () => mockNostrService.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => streamController.stream);
+        () => mockNostrService.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((invocation) {
+        onEose = invocation.namedArguments[#onEose] as void Function()?;
+        expect(onEose, isNotNull);
+        return streamController.stream;
+      });
 
       // Start the sync
       final future = curatedListService.fetchUserListsFromRelays();
@@ -286,7 +331,9 @@ void main() {
       streamController.add(olderEvent);
       streamController.add(newerEvent);
 
-      // Close stream to complete
+      // Report protocol completion before closing the transport
+      await pumpEventQueue();
+      onEose!();
       unawaited(streamController.close());
       await future;
 
@@ -309,13 +356,24 @@ void main() {
       );
 
       // Mock subscription stream
+      void Function()? onEose;
       final streamController = StreamController<Event>();
       when(
-        () => mockNostrService.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => streamController.stream);
+        () => mockNostrService.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((invocation) {
+        onEose = invocation.namedArguments[#onEose] as void Function()?;
+        expect(onEose, isNotNull);
+        return streamController.stream;
+      });
 
       // First sync
       final future1 = curatedListService.fetchUserListsFromRelays();
+      await pumpEventQueue();
+      onEose!();
       unawaited(streamController.close());
       await future1;
 
@@ -323,8 +381,13 @@ void main() {
       await curatedListService.fetchUserListsFromRelays();
 
       // Verify: Subscription was only created once
-      verify(() => mockNostrService.subscribe(any(), closeOnEose: true))
-          .called(1);
+      verify(
+        () => mockNostrService.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).called(1);
     });
   });
 
@@ -403,14 +466,25 @@ void main() {
         );
 
         // Mock subscription
+        void Function()? onEose;
         final streamController = StreamController<Event>();
         when(
-          () => freshMockNostrService.subscribe(any(), closeOnEose: true),
-        ).thenAnswer((_) => streamController.stream);
+          () => freshMockNostrService.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((invocation) {
+          onEose = invocation.namedArguments[#onEose] as void Function()?;
+          expect(onEose, isNotNull);
+          return streamController.stream;
+        });
 
         // Sync from relay
         final future = freshService.fetchUserListsFromRelays();
         streamController.add(relayEvent);
+        await pumpEventQueue();
+        onEose!();
         unawaited(streamController.close());
         await future;
 

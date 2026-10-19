@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
@@ -17,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Auth extends Mock implements AuthService {}
@@ -153,9 +153,14 @@ void main() {
         () async {
           final raw = await load([rawRow(row())..[label] = _bob]);
           when(
-            () =>
-                client.subscribe(any(), closeOnEose: any(named: 'closeOnEose')),
-          ).thenAnswer((_) => const Stream<Event>.empty());
+            () => client.subscribe(
+              any(),
+              closeOnEose: any(named: 'closeOnEose'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, const []),
+          );
           await service.fetchUserListsFromRelays();
           expect(prefs.getString(CuratedListService.listsStorageKey), raw);
           expect((jsonDecode(raw) as List).single['pendingPlaintextEventIds'], [

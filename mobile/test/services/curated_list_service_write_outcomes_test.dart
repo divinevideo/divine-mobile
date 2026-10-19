@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../helpers/signed_curated_list.dart';
 
@@ -403,8 +404,16 @@ void main() {
                 isPrivateEvent: !source.isPublic,
               )!;
               registerFallbackValue(<Filter>[]);
-              when(() => client.subscribe(any(), closeOnEose: true))
-                  .thenAnswer((_) => Stream.value(revision));
+              when(
+                () => client.subscribe(
+                  any(),
+                  closeOnEose: true,
+                  onEose: any(named: 'onEose'),
+                ),
+              ).thenAnswer(
+                (invocation) =>
+                    completedOwnedListSnapshot(invocation, [revision]),
+              );
             }
             await prefs.setString(
               CuratedListService.listsStorageKey,
@@ -514,7 +523,9 @@ void main() {
             closeOnEose: true,
             onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((_) => const Stream<Event>.empty());
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, const []),
+        );
         await prefs.setString(CuratedListService.listsStorageKey, '[]');
         await prefs.setStringList(
           PrefsCuratedListStore.deletedCoordinatesStorageKey,

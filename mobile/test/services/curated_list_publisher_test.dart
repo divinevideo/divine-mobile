@@ -25,6 +25,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -349,7 +350,10 @@ void main() {
                     closeOnEose: true,
                     onEose: any(named: 'onEose'),
                   ),
-                ).thenAnswer((_) => const Stream<Event>.empty());
+                ).thenAnswer(
+                  (invocation) =>
+                      completedOwnedListSnapshot(invocation, const []),
+                );
                 await current.fetchUserListsFromRelays(force: true);
             }
             final event = sent.singleWhere((e) => e.kind == 30005);
@@ -416,7 +420,10 @@ void main() {
                   closeOnEose: true,
                   onEose: any(named: 'onEose'),
                 ),
-              ).thenAnswer((_) => const Stream<Event>.empty());
+              ).thenAnswer(
+                (invocation) =>
+                    completedOwnedListSnapshot(invocation, const []),
+              );
               await current.fetchUserListsFromRelays(force: true);
             case 'retry':
               break;
@@ -444,7 +451,10 @@ void main() {
                   closeOnEose: true,
                   onEose: any(named: 'onEose'),
                 ),
-              ).thenAnswer((_) => const Stream<Event>.empty());
+              ).thenAnswer(
+                (invocation) =>
+                    completedOwnedListSnapshot(invocation, const []),
+              );
               await current.fetchUserListsFromRelays(force: true);
           }
           final redaction = sent.singleWhere((e) => e.kind == 5);
@@ -492,8 +502,16 @@ void main() {
                     acknowledged = true;
                     return acceptedOutcome(event);
                   });
-              when(() => client.subscribe(any(), closeOnEose: true))
-                  .thenAnswer((_) => const Stream<Event>.empty());
+              when(
+                () => client.subscribe(
+                  any(),
+                  closeOnEose: true,
+                  onEose: any(named: 'onEose'),
+                ),
+              ).thenAnswer(
+                (invocation) =>
+                    completedOwnedListSnapshot(invocation, const []),
+              );
               final current = open();
               expect(
                 await current.updateList(
@@ -1032,7 +1050,9 @@ void main() {
             closeOnEose: true,
             onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((_) => Stream.value(newer));
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [newer]),
+        );
         when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
           final event = i.positionalArguments.single as Event;
           sent.add(event);
@@ -1145,7 +1165,9 @@ void main() {
             closeOnEose: true,
             onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((_) => Stream.value(sealed));
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [sealed]),
+        );
         await current.fetchUserListsFromRelays(force: true);
         expect(current.getListById(original.id)!.isPublic, isFalse);
         final deletion = sent.single;
@@ -1215,7 +1237,9 @@ void main() {
             closeOnEose: true,
             onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((_) => const Stream<Event>.empty());
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, const []),
+        );
         await current.fetchUserListsFromRelays(force: true);
         expect(sent.length, before);
         expect(current.getListById(list.id)!.videoEventIds, [_video]);
@@ -1256,7 +1280,9 @@ void main() {
             closeOnEose: true,
             onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((_) => Stream.value(event));
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [event]),
+        );
         final current = open();
         backing.rejects = (key, _) =>
             key.endsWith(CuratedListService.listsStorageKey);
@@ -1307,7 +1333,9 @@ void main() {
               closeOnEose: true,
               onEose: any(named: 'onEose'),
             ),
-          ).thenAnswer((_) => Stream.value(relay));
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [relay]),
+          );
           when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
             final event = i.positionalArguments.single as Event;
             sent.add(event);
@@ -1392,7 +1420,9 @@ void main() {
             closeOnEose: true,
             onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((_) => Stream.value(relay));
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [relay]),
+        );
         final current = open();
         await current.fetchUserListsFromRelays(force: true);
         final publication = sent.singleWhere((event) => event.kind == 30005);
@@ -1479,7 +1509,9 @@ void main() {
           closeOnEose: true,
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => Stream.value(relay));
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, [relay]),
+      );
       final current = open();
       await current.fetchUserListsFromRelays(force: true);
       expect(sent, isEmpty);
@@ -1574,7 +1606,9 @@ void main() {
             closeOnEose: true,
             onEose: any(named: 'onEose'),
           ),
-        ).thenAnswer((_) => Stream.value(newer));
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [newer]),
+        );
         await current.fetchUserListsFromRelays(force: true);
         final winning = current.getListById(list.id)!;
         expect(winning.name, 'Newer relay');
@@ -1899,8 +1933,15 @@ void main() {
             ),
             isTrue,
           );
-          when(() => client.subscribe(any(), closeOnEose: true))
-              .thenAnswer((_) => Stream.value(baseline));
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [baseline]),
+          );
           final current = open();
           await current.fetchUserListsFromRelays(force: true);
           expect(current.getDefaultList()!.nostrEventId, baseline.id);
@@ -1946,8 +1987,15 @@ void main() {
             CuratedListService.defaultListDeletedStorageKey,
             false,
           );
-          when(() => client.subscribe(any(), closeOnEose: true))
-              .thenAnswer((_) => Stream.value(baseline));
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [baseline]),
+          );
           sent.clear();
           final restored = open();
           await restored.initialize();

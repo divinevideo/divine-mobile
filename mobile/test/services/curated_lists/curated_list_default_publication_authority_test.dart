@@ -25,6 +25,7 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../helpers/completed_owned_list_snapshot.dart';
 import '../../helpers/signed_curated_list.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -87,8 +88,12 @@ class _Harness {
     when(() => auth.committedAccountActivationReceipt).thenReturn(receipt);
     when(() => client.signer).thenReturn(signer);
     when(
-      () => client.subscribe(any(), closeOnEose: true),
-    ).thenAnswer((_) => relay());
+      () => client.subscribe(
+        any(),
+        closeOnEose: true,
+        onEose: any(named: 'onEose'),
+      ),
+    ).thenAnswer((invocation) => relay(invocation));
     when(
       () => auth.createAndSignEvent(
         kind: any(named: 'kind'),
@@ -139,7 +144,8 @@ class _Harness {
   final signed = <Event>[];
   final sent = <Event>[];
   late final CuratedListService service;
-  Stream<Event> Function() relay = () => const Stream.empty();
+  Stream<Event> Function(Invocation) relay = (invocation) =>
+      completedOwnedListSnapshot(invocation, const []);
 
   Future<void> settle() async {
     await service.initialize();
@@ -274,7 +280,8 @@ void main() {
       () async {
         await make();
         final event = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(event);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         await h.settle();
         expect(h.signed, isEmpty);
         expect(h.service.getDefaultList()!.videoEventIds, [_video]);
@@ -289,7 +296,8 @@ void main() {
         final before = h.prefs.getStringList(
           PrefsCuratedListStore.deletedCoordinatesStorageKey,
         );
-        h.relay = () => Stream.value(_publicEvent(owner));
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [_publicEvent(owner)]);
         await h.settle();
         expect(
           h.prefs.getStringList(
@@ -389,7 +397,8 @@ void main() {
       () async {
         await make();
         final event = await _privateEvent(signer, owner, kind: 30006);
-        h.relay = () => Stream.value(event);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         await h.settle();
         expect(h.service.getDefaultList(), isNull);
         expect(h.signed, isEmpty);
@@ -403,7 +412,8 @@ void main() {
         event.sig = '0'.padRight(128, '0');
         expect(event.isValid, isTrue);
         expect(event.isSigned, isFalse);
-        h.relay = () => Stream.value(event);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         await h.settle();
         expect(h.service.getDefaultList(), isNull);
         expect(h.signed, isEmpty);
@@ -418,7 +428,8 @@ void main() {
           foreign,
           (await foreign.getPublicKey())!,
         );
-        h.relay = () => Stream.value(event);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         await h.settle();
         expect(h.service.getDefaultList(), isNull);
         expect(h.signed, isEmpty);
@@ -428,7 +439,7 @@ void main() {
       'timeout without a positive event does not create authority',
       () async {
         await make();
-        h.relay = () => StreamController<Event>().stream;
+        h.relay = (_) => StreamController<Event>().stream;
         await h.settle();
         expect(h.service.isInitialized, isTrue);
         expect(h.service.getDefaultList(), isNull);
@@ -531,7 +542,8 @@ void main() {
       'intentional removal of last item can publish a genuinely signed private empty list',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         h.signed.clear();
         h.sent.clear();
@@ -551,7 +563,8 @@ void main() {
       'signed empty remote version is observed without implicit replacement and allows explicit add',
       () async {
         final baseline = await _privateEvent(signer, owner, items: []);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         expect(h.signed, isEmpty);
         expect(await h.service.addVideoToList(_defaultId, _video), isTrue);
@@ -576,7 +589,8 @@ void main() {
           signer,
           relayTimeout: const Duration(seconds: 1),
         );
-        h.relay = () => Stream.value(revision);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [revision]);
         await h.settle();
         expect(h.service.getDefaultList()!.description, isNull);
         expect(await h.service.addVideoToList(_defaultId, 'c' * 64), isTrue);
@@ -586,7 +600,8 @@ void main() {
       'newest opaque signed version fences old readable state without dropping it',
       () async {
         final older = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(older);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [older]);
         await h.settle();
         h.signed.clear();
         final opaque = await _privateEvent(
@@ -595,7 +610,8 @@ void main() {
           plaintext: 'not item JSON',
           at: 1700000001,
         );
-        h.relay = () => Stream.fromIterable([older, opaque]);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [older, opaque]);
         await h.service.fetchUserListsFromRelays(force: true);
         expect(h.service.getDefaultList()!.videoEventIds, [_video]);
         expect(
@@ -609,7 +625,7 @@ void main() {
       'an error after a positive event preserves presence without inferring relay absence',
       () async {
         final event = await _privateEvent(signer, owner);
-        h.relay = () async* {
+        h.relay = (_) async* {
           yield event;
           throw StateError('controlled read interrupted');
         };
@@ -625,7 +641,8 @@ void main() {
       'authenticated header retirement does not await stream close or EOSE',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         h.signed.clear();
         h.sent.clear();
@@ -637,7 +654,7 @@ void main() {
         );
         final observed = Completer<void>();
         final close = Completer<void>();
-        h.relay = () async* {
+        h.relay = (_) async* {
           yield newer;
           observed.complete();
           await close.future;
@@ -662,7 +679,8 @@ void main() {
     );
     test('a genuine newer header retires old authority before private decryption settles', () async {
       final baseline = await _privateEvent(signer, owner);
-      h.relay = () => Stream.value(baseline);
+      h.relay = (invocation) =>
+          completedOwnedListSnapshot(invocation, [baseline]);
       await h.settle();
       h.signed.clear();
       h.sent.clear();
@@ -674,7 +692,8 @@ void main() {
       );
       final paused = _PausingSigner()..pausedCiphertext = opaque.content;
       when(() => h.client.signer).thenReturn(paused);
-      h.relay = () => Stream.value(opaque);
+      h.relay = (invocation) =>
+          completedOwnedListSnapshot(invocation, [opaque]);
       final refresh = h.service.fetchUserListsFromRelays(force: true);
       await paused.entered.future;
       expect(await h.service.removeVideoFromList(_defaultId, _video), isFalse);
@@ -690,7 +709,8 @@ void main() {
       'new opaque evidence during signing prevents network dispatch and backfill',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         h.signed.clear();
         h.sent.clear();
@@ -725,12 +745,14 @@ void main() {
           plaintext: 'unsupported recovery schema',
           at: 1700000001,
         );
-        h.relay = () => Stream.value(opaque);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [opaque]);
         await h.service.fetchUserListsFromRelays(force: true);
         signing.complete(h.signed.single);
         await mutation;
         expect(h.sent, isEmpty);
-        h.relay = () => const Stream.empty();
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, const []);
         await h.service.fetchUserListsFromRelays(force: true);
         expect(h.sent, isEmpty);
         expect(
@@ -743,7 +765,8 @@ void main() {
       'a newer opaque default during deletion signing prevents dispatch and tombstone',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         h.signed.clear();
         h.sent.clear();
@@ -777,7 +800,8 @@ void main() {
           plaintext: 'unknown schema',
           at: 1700000001,
         );
-        h.relay = () => Stream.value(opaque);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [opaque]);
         await h.service.fetchUserListsFromRelays(force: true);
         signing.complete(h.signed.single);
         expect(await deletion, isFalse);
@@ -793,7 +817,8 @@ void main() {
     );
     test('retired service cannot reuse a prior signed baseline', () async {
       final baseline = await _privateEvent(signer, owner);
-      h.relay = () => Stream.value(baseline);
+      h.relay = (invocation) =>
+          completedOwnedListSnapshot(invocation, [baseline]);
       await h.settle();
       h.signed.clear();
       h.service.dispose();
@@ -810,7 +835,8 @@ void main() {
             ['new-item-schema', _video],
           ]),
         );
-        h.relay = () => Stream.value(event);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         await h.settle();
         expect(h.service.getDefaultList(), isNull);
         expect(h.signed, isEmpty);
@@ -827,7 +853,8 @@ void main() {
             ['e', _video],
           ]),
         );
-        h.relay = () => Stream.value(event);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         await h.settle();
         expect(h.service.getDefaultList(), isNull);
         expect(h.signed, isEmpty);
@@ -859,7 +886,8 @@ void main() {
           CuratedListConverter.isEncryptedItemPayload(mixed.content),
           isTrue,
         );
-        h.relay = () => Stream.value(mixed);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [mixed]);
         await h.settle();
         h.signed.clear();
         h.sent.clear();
@@ -877,7 +905,8 @@ void main() {
         final baseline = await _privateEvent(signer, owner);
         final forged = await _privateEvent(signer, owner, at: 1700000002);
         forged.sig = '0'.padRight(128, '0');
-        h.relay = () => Stream.fromIterable([baseline, forged]);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline, forged]);
         await h.settle();
         expect(h.service.getDefaultList()!.videoEventIds, [_video]);
         expect(h.signed, isEmpty);
@@ -887,16 +916,19 @@ void main() {
       'forged newer revision cannot retire or prevent recovery of a valid signed baseline',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         h.signed.clear();
         final forged = await _privateEvent(signer, owner, at: 1700000002);
         forged.sig = '0'.padRight(128, '0');
         expect(forged.isValid, isTrue);
         expect(forged.isSigned, isFalse);
-        h.relay = () => Stream.value(forged);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [forged]);
         await h.service.fetchUserListsFromRelays(force: true);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.service.fetchUserListsFromRelays(force: true);
         expect(await h.service.removeVideoFromList(_defaultId, _video), isTrue);
         expect(h.signed.single.isSigned, isTrue);
@@ -917,7 +949,8 @@ void main() {
           createdAt: 1700000000,
         );
         await signer.signEvent(event);
-        h.relay = () => Stream.value(event);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         await h.settle();
         h.signed.clear();
         h.sent.clear();
@@ -933,7 +966,8 @@ void main() {
       'identical verified re-read preserves the exact in-flight explicit intent',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         expect(h.service.getDefaultList()!.videoEventIds, contains(_video));
         h.signed.clear();
@@ -994,7 +1028,8 @@ void main() {
             relayTimeout: const Duration(seconds: 1),
           );
           final baseline = await _privateEvent(signer, owner);
-          h.relay = () => Stream.value(baseline);
+          h.relay = (invocation) =>
+              completedOwnedListSnapshot(invocation, [baseline]);
           await h.settle();
           final saved = 'c' * 64;
           final rejected = 'd' * 64;
@@ -1021,7 +1056,7 @@ void main() {
               at: 1700000001,
             );
             final observed = Completer<void>();
-            h.relay = () async* {
+            h.relay = (_) async* {
               yield opaque;
               observed.complete();
             };
@@ -1045,7 +1080,8 @@ void main() {
               noResponseFrom: const [],
             );
           });
-          h.relay = () => const Stream.empty();
+          h.relay = (invocation) =>
+              completedOwnedListSnapshot(invocation, const []);
           await h.service.fetchUserListsFromRelays(force: true);
           if (observeNewerOpaque) {
             expect(h.sent, isEmpty);
@@ -1084,7 +1120,8 @@ void main() {
         'signed default rejects unauthorized extra ${extra.first} tag',
         () async {
           final baseline = await _privateEvent(signer, owner);
-          h.relay = () => Stream.value(baseline);
+          h.relay = (invocation) =>
+              completedOwnedListSnapshot(invocation, [baseline]);
           await h.settle();
           h.signed.clear();
           h.sent.clear();
@@ -1124,7 +1161,8 @@ void main() {
       'failed explicit publication cannot authorize backfill of a concurrently changed value',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         expect(h.service.getDefaultList()!.videoEventIds, contains(_video));
         h.signed.clear();
@@ -1152,7 +1190,8 @@ void main() {
         expect(h.service.getDefaultList()!.videoEventIds, contains(concurrent));
         h.signed.clear();
         h.sent.clear();
-        h.relay = () => const Stream.empty();
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, const []);
         await h.service.fetchUserListsFromRelays(force: true);
         expect(h.signed, isEmpty);
         expect(h.sent, isEmpty);
@@ -1171,7 +1210,8 @@ void main() {
         signedIntentStore: store,
       );
       final baseline = await _privateEvent(signer, owner);
-      h.relay = () => Stream.value(baseline);
+      h.relay = (invocation) =>
+          completedOwnedListSnapshot(invocation, [baseline]);
       await h.settle();
       when(() => h.client.publishEvent(any()))
           .thenAnswer((_) async => const PublishFailed());
@@ -1223,7 +1263,8 @@ void main() {
       'retry of the same failed explicit value remains permitted without broadening intent',
       () async {
         final baseline = await _privateEvent(signer, owner);
-        h.relay = () => Stream.value(baseline);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [baseline]);
         await h.settle();
         expect(h.service.getDefaultList()!.videoEventIds, contains(_video));
         h.signed.clear();
@@ -1237,7 +1278,8 @@ void main() {
         expect(h.service.getDefaultList()!.videoEventIds, contains(added));
         h.signed.clear();
         h.sent.clear();
-        h.relay = () => const Stream.empty();
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, const []);
         await h.service.fetchUserListsFromRelays(force: true);
         expect(h.sent, hasLength(1));
         final items = jsonDecode(

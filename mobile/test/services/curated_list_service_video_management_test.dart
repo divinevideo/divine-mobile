@@ -16,6 +16,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../helpers/signed_curated_list.dart';
 
@@ -72,7 +73,9 @@ void main() {
           closeOnEose: true,
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
     }
 
     setUp(() async {
@@ -115,7 +118,9 @@ void main() {
           closeOnEose: true,
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
 
       // Mock event creation
       when(
@@ -445,8 +450,15 @@ void main() {
           ),
           signer,
         );
-        when(() => mockNostr.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => Stream.value(revision));
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [revision]),
+        );
       });
 
       test('returns true when video is in default list', () async {

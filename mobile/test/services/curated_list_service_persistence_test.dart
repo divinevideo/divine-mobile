@@ -16,6 +16,7 @@ import 'package:openvine/services/curated_lists/curated_list_recovery_storage.da
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -84,7 +85,9 @@ void main() {
           closeOnEose: true,
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
 
       when(
         () => mockAuth.createAndSignEvent(

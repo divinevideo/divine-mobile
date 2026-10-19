@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_auth_fixture.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
@@ -162,7 +163,9 @@ void main() {
           closeOnEose: true,
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
 
       // Mock event creation
       when(
@@ -224,8 +227,15 @@ void main() {
         freshPublished.add(event);
         return _accepted(event);
       });
-      when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-        (_) => Stream.fromIterable(
+      when(
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(
+          invocation,
           List<Event>.of(freshPublished.where((event) => event.kind == 30005)),
         ),
       );
@@ -243,8 +253,15 @@ void main() {
         client: mockNostr,
         items: items,
       );
-      when(() => mockNostr.subscribe(any(), closeOnEose: true))
-          .thenAnswer((_) => Stream.value(event));
+      when(
+        () => mockNostr.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, [event]),
+      );
       await service.fetchUserListsFromRelays(force: true);
       return event;
     }
@@ -374,8 +391,14 @@ void main() {
 
       test('calls fetchUserListsFromRelays during initialization', () async {
         // Mock subscription for relay sync
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [
             Event.fromJson({
               'id': 'relay_list_event',
               'pubkey': _ownerPubkey,
@@ -388,34 +411,64 @@ void main() {
               'content': 'List from relay',
               'sig': 'test_signature',
             }),
-          ),
+          ]),
         );
 
         await service.initialize();
 
         // Should have called subscribeToEvents
-        verify(() => mockNostr.subscribe(any(), closeOnEose: true)).called(1);
+        verify(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).called(1);
       });
 
       test('re-queries relays only when the fetch is forced', () async {
         when(
-          () => mockNostr.subscribe(any(), closeOnEose: true),
-        ).thenAnswer((_) => const Stream.empty());
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, const []),
+        );
         await service.fetchUserListsFromRelays();
         clearInteractions(mockNostr);
 
         // The session sync already ran, so an unforced call is a no-op and a
         // list created on another device would stay invisible until restart.
         await service.fetchUserListsFromRelays();
-        verifyNever(() => mockNostr.subscribe(any(), closeOnEose: true));
+        verifyNever(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        );
 
         await service.fetchUserListsFromRelays(force: true);
-        verify(() => mockNostr.subscribe(any(), closeOnEose: true)).called(1);
+        verify(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).called(1);
       });
 
       test('relay-synced own lists stay in myLists', () async {
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [
             Event.fromJson({
               'id': 'relay_list_event',
               'pubkey': _ownerPubkey,
@@ -428,7 +481,7 @@ void main() {
               'content': 'List from relay',
               'sig': 'test_signature',
             }),
-          ),
+          ]),
         );
 
         await service.fetchUserListsFromRelays();
@@ -494,13 +547,19 @@ void main() {
         });
         final neverCompletes = StreamController<Event>();
         var subscriptionCount = 0;
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer((
-          _,
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((
+          invocation,
         ) {
           subscriptionCount++;
           return subscriptionCount == 1
               ? neverCompletes.stream
-              : const Stream<Event>.empty();
+              : completedOwnedListSnapshot(invocation, const []);
         });
         final upgraded = CuratedListService(
           nostrService: mockNostr,
@@ -545,8 +604,15 @@ void main() {
           client: mockNostr,
           items: [relayVideo],
         );
-        when(() => mockNostr.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => Stream.value(baseline));
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [baseline]),
+        );
         final upgraded = CuratedListService(
           nostrService: mockNostr,
           authService: mockAuth,
@@ -590,8 +656,15 @@ void main() {
           expect(deleted, isTrue);
           clearInteractions(mockNostr);
 
-          when(() => mockNostr.subscribe(any(), closeOnEose: true))
-              .thenAnswer((_) => Stream.value(baseline));
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [baseline]),
+          );
 
           await service.fetchUserListsFromRelays(force: true);
 
@@ -629,8 +702,14 @@ void main() {
               event: invocation.positionalArguments[0] as Event,
             ),
           );
-          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-            (_) => Stream.value(
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [
               Event.fromJson({
                 'id': 'stale_relay_event',
                 'pubkey': _ownerPubkey,
@@ -646,7 +725,7 @@ void main() {
                 'content': 'Failed Delete',
                 'sig': 'test_signature',
               }),
-            ),
+            ]),
           );
 
           await service.fetchUserListsFromRelays(force: true);
@@ -682,8 +761,14 @@ void main() {
             ).toJson(),
           ]),
         });
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [
             Event.fromJson({
               'id': 'relay_collaborative_event',
               'pubkey': _ownerPubkey,
@@ -697,7 +782,7 @@ void main() {
               'content': 'Collaborative Local',
               'sig': 'test_signature',
             }),
-          ),
+          ]),
         );
         final upgraded = CuratedListService(
           nostrService: mockNostr,
@@ -730,8 +815,14 @@ void main() {
               ).toJson(),
             ]),
           });
-          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-            (_) => Stream.value(
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [
               Event.fromJson({
                 'id': 'relay_collaborative_event',
                 'pubkey': _ownerPubkey,
@@ -747,7 +838,7 @@ void main() {
                 'content': 'Collaborative Relay',
                 'sig': 'test_signature',
               }),
-            ),
+            ]),
           );
           final upgraded = CuratedListService(
             nostrService: mockNostr,
@@ -1012,8 +1103,14 @@ void main() {
       });
 
       test('reconstructs a private list from its sealed content', () async {
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [
             Event.fromJson({
               'id': 'relay_private_event',
               'pubkey': _ownerPubkey,
@@ -1031,7 +1128,7 @@ void main() {
               ),
               'sig': 'test_signature',
             }),
-          ),
+          ]),
         );
 
         await service.fetchUserListsFromRelays();
@@ -1056,8 +1153,14 @@ void main() {
             ['e', 'legacy_private_video_id'],
           ]),
         );
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [
             Event.fromJson({
               'id': 'relay_nip04_private_event',
               'pubkey': _ownerPubkey,
@@ -1070,7 +1173,7 @@ void main() {
               'content': legacyCiphertext,
               'sig': 'test_signature',
             }),
-          ),
+          ]),
         );
 
         await service.fetchUserListsFromRelays();
@@ -1082,8 +1185,14 @@ void main() {
       });
 
       test('skips a sealed list signed by another user', () async {
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [
             Event.fromJson({
               'id': 'relay_foreign_event',
               'pubkey': _otherPubkey,
@@ -1100,7 +1209,7 @@ void main() {
               ),
               'sig': 'test_signature',
             }),
-          ),
+          ]),
         );
 
         await service.fetchUserListsFromRelays();
@@ -1114,7 +1223,11 @@ void main() {
       test('skips a sealed event if the user signs out during sync', () async {
         final events = StreamController<Event>();
         when(
-          () => mockNostr.subscribe(any(), closeOnEose: true),
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
         ).thenAnswer((_) => events.stream);
 
         final sync = service.fetchUserListsFromRelays();
@@ -1149,8 +1262,14 @@ void main() {
         when(
           () => mockSigner.nip44Decrypt(any(), any()),
         ).thenAnswer((_) async => null);
-        when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) => Stream.value(
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) => completedOwnedListSnapshot(invocation, [
             Event.fromJson({
               'id': 'relay_legacy_event',
               'pubkey': _ownerPubkey,
@@ -1164,7 +1283,7 @@ void main() {
               'content': 'Curated video list: Legacy List',
               'sig': 'test_signature',
             }),
-          ),
+          ]),
         );
 
         await service.fetchUserListsFromRelays();
@@ -1190,8 +1309,14 @@ void main() {
           when(
             () => mockSigner.nip44Decrypt(any(), any()),
           ).thenAnswer((_) async => null);
-          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-            (_) => Stream.value(
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [
               Event.fromJson({
                 'id': 'relay_private_unreadable_event',
                 'pubkey': _ownerPubkey,
@@ -1208,7 +1333,7 @@ void main() {
                 'content': _seal('but signer not ready'),
                 'sig': 'test_signature',
               }),
-            ),
+            ]),
           );
 
           await service.fetchUserListsFromRelays(force: true);
@@ -2286,8 +2411,16 @@ void main() {
           // NIP-09 is advisory. A relay that never saw the deletion, or chose
           // not to honour it, keeps serving the original kind 30005 event.
           when(
-            () => mockNostr.subscribe(any(), closeOnEose: true),
-          ).thenAnswer((_) => Stream.value(_listEvent(listId, 'Doomed List')));
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [
+              _listEvent(listId, 'Doomed List'),
+            ]),
+          );
 
           await service.fetchUserListsFromRelays(force: true);
 
@@ -2334,8 +2467,16 @@ void main() {
           expect(await service.deleteOwnedList(listId), isTrue);
 
           when(
-            () => mockNostr.subscribe(any(), closeOnEose: true),
-          ).thenAnswer((_) => Stream.value(_listEvent(listId, 'Doomed List')));
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [
+              _listEvent(listId, 'Doomed List'),
+            ]),
+          );
 
           final relaunched = CuratedListService(
             nostrService: mockNostr,
@@ -2361,8 +2502,15 @@ void main() {
             auth: mockAuth,
             client: mockNostr,
           );
-          when(() => mockNostr.subscribe(any(), closeOnEose: true))
-              .thenAnswer((_) => Stream.value(baseline));
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [baseline]),
+          );
           final relaunched = CuratedListService(
             nostrService: mockNostr,
             authService: mockAuth,
@@ -2405,9 +2553,16 @@ void main() {
           // identifier is a different coordinate entirely.
           when(() => mockAuth.currentPublicKeyHex).thenReturn(_otherPubkey);
           when(mockSigner.getPublicKey).thenAnswer((_) async => _otherPubkey);
-          when(() => mockNostr.subscribe(any(), closeOnEose: true)).thenAnswer(
-            (_) =>
-                Stream.value(_listEvent(listId, 'Someone Else', _otherPubkey)),
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [
+              _listEvent(listId, 'Someone Else', _otherPubkey),
+            ]),
           );
 
           await prefs.setString('current_user_pubkey_hex', _otherPubkey);

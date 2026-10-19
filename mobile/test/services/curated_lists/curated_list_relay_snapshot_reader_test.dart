@@ -37,17 +37,29 @@ void main() {
 
     test('reads only the captured owner and marks normal completion', () async {
       var cancellations = 0;
+      void Function()? completeRead;
       final controller = StreamController<Event>(
         onCancel: () => cancellations++,
       );
-      when(() => client.subscribe(any(), closeOnEose: true))
-          .thenAnswer((_) => controller.stream);
+      when(
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((invocation) {
+        completeRead = invocation.namedArguments[#onEose] as void Function()?;
+        return controller.stream;
+      });
 
       final pending = reader.read(
         ownerPubkey: owner,
         timeout: const Duration(seconds: 10),
       );
       controller.add(event);
+      await pumpEventQueue();
+      expect(completeRead, isNotNull);
+      completeRead!();
       unawaited(controller.close());
       final snapshot = await pending;
 
@@ -56,12 +68,110 @@ void main() {
       expect(cancellations, 1);
       final filters =
           verify(
-                () => client.subscribe(captureAny(), closeOnEose: true),
+                () => client.subscribe(
+                  captureAny(),
+                  closeOnEose: true,
+                  onEose: any(named: 'onEose'),
+                ),
               ).captured.single
               as List<Filter>;
       expect(filters.single.authors, [owner]);
       expect(filters.single.kinds, [30005]);
       expect(snapshot.events.clear, throwsUnsupportedError);
+    });
+
+    group('completion authority', () {
+      test('plain stream closure is incomplete without relay EOSE', () async {
+        final controller = StreamController<Event>();
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => controller.stream);
+        final pending = reader.read(
+          ownerPubkey: owner,
+          timeout: const Duration(hours: 1),
+        );
+        controller.add(event);
+        unawaited(controller.close());
+
+        final snapshot = await pending;
+
+        expect(snapshot.events, [event]);
+        expect(snapshot.completedNormally, isFalse);
+        expect(controller.hasListener, isFalse);
+      });
+
+      test('actual relay EOSE authorizes a completed snapshot', () async {
+        void Function()? observedEose;
+        final controller = StreamController<Event>();
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((invocation) {
+          observedEose = invocation.namedArguments[#onEose] as void Function()?;
+          return controller.stream;
+        });
+        final pending = reader.read(
+          ownerPubkey: owner,
+          timeout: const Duration(hours: 1),
+        );
+        controller.add(event);
+        await pumpEventQueue();
+        expect(observedEose, isNotNull);
+        observedEose!();
+        unawaited(controller.close());
+
+        final snapshot = await pending;
+
+        expect(snapshot.events, [event]);
+        expect(snapshot.completedNormally, isTrue);
+      });
+
+      test(
+        'retirement settles a pending read without waiting for its timeout',
+        () {
+          fakeAsync((async) {
+            final controller = StreamController<Event>();
+            final cancel = Completer<void>();
+            when(
+              () => client.subscribe(
+                any(),
+                closeOnEose: true,
+                onEose: any(named: 'onEose'),
+              ),
+            ).thenAnswer((_) => controller.stream);
+            CuratedListRelaySnapshot? snapshot;
+            unawaited(
+              reader
+                  .read(
+                    ownerPubkey: owner,
+                    timeout: const Duration(hours: 1),
+                    cancelled: cancel.future,
+                  )
+                  .then((value) => snapshot = value),
+            );
+            controller.add(event);
+            async.flushMicrotasks();
+            expect(snapshot, isNull);
+
+            cancel.complete();
+            async.flushMicrotasks();
+
+            expect(snapshot?.completedNormally, isFalse);
+            expect(snapshot?.events, [event]);
+            expect(controller.hasListener, isFalse);
+            expect(async.nonPeriodicTimerCount, 0);
+            unawaited(controller.close());
+            async.flushMicrotasks();
+          });
+        },
+      );
     });
 
     test('drops events a relay returns for another author', () async {
@@ -78,8 +188,13 @@ void main() {
       });
       final observed = <Event>[];
       final controller = StreamController<Event>();
-      when(() => client.subscribe(any(), closeOnEose: true))
-          .thenAnswer((_) => controller.stream);
+      when(
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => controller.stream);
 
       final pending = reader.read(
         ownerPubkey: owner,
@@ -102,8 +217,13 @@ void main() {
         final controller = StreamController<Event>(
           onCancel: () => cancellations++,
         );
-        when(() => client.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => controller.stream);
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => controller.stream);
         CuratedListRelaySnapshot? snapshot;
         unawaited(
           reader
@@ -134,8 +254,13 @@ void main() {
         final controller = StreamController<Event>(
           onCancel: () => cancellations++,
         );
-        when(() => client.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => controller.stream);
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => controller.stream);
         final pending = reader.read(
           ownerPubkey: owner,
           timeout: const Duration(seconds: 10),
@@ -155,8 +280,13 @@ void main() {
     test('propagates setup failure to the service without leaking timers', () {
       fakeAsync((async) {
         final setupError = StateError('subscription unavailable');
-        when(() => client.subscribe(any(), closeOnEose: true))
-            .thenThrow(setupError);
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenThrow(setupError);
         Object? observedError;
         unawaited(
           reader

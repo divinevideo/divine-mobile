@@ -24,6 +24,7 @@ import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../helpers/test_provider_overrides.dart';
 
@@ -139,7 +140,9 @@ void main() {
           closeOnEose: true,
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
       await stubCommittedListAccount(auth: auth, preferences: prefs);
       service = CuratedListService(
         nostrService: client,
@@ -238,7 +241,10 @@ void main() {
               closeOnEose: true,
               onEose: any(named: 'onEose'),
             ),
-          ).thenAnswer((_) => Stream.value(initialEvent));
+          ).thenAnswer(
+            (invocation) =>
+                completedOwnedListSnapshot(invocation, [initialEvent]),
+          );
           await service.fetchUserListsFromRelays(force: true);
           verify(
             () => client.subscribe(
@@ -302,7 +308,9 @@ void main() {
               closeOnEose: true,
               onEose: any(named: 'onEose'),
             ),
-          ).thenAnswer((_) => Stream.value(old));
+          ).thenAnswer(
+            (invocation) => completedOwnedListSnapshot(invocation, [old]),
+          );
           final reloaded = CuratedListService(
             nostrService: client,
             authService: auth,

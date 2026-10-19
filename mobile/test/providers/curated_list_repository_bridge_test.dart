@@ -437,8 +437,13 @@ void main() {
             onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((_) => stream.stream);
-        when(() => nostr.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => stream.stream);
+        when(
+          () => nostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => stream.stream);
         when(() => nostr.subscribe(any())).thenAnswer((_) => stream.stream);
         final service = CuratedListService(
           nostrService: nostr,

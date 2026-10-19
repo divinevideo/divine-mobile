@@ -38,6 +38,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../test_setup.dart';
 
@@ -233,10 +234,11 @@ void main() {
             () => client.subscribe(
               any(),
               closeOnEose: any(named: 'closeOnEose'),
+              onEose: any(named: 'onEose'),
             ),
           ).thenAnswer((i) {
             timeline.add('relay-query');
-            return const Stream<Event>.empty();
+            return completedOwnedListSnapshot(i, const []);
           });
           final cleanup = UserDataCleanupService(prefs);
           var sweepCount = 0;
@@ -414,8 +416,15 @@ void main() {
       if (committed) {
         await stubCommittedListAccount(auth: auth, preferences: prefs);
       }
-      when(() => client.subscribe(any(), closeOnEose: true))
-          .thenAnswer((_) => const Stream<Event>.empty());
+      when(
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer(
+        (invocation) => completedOwnedListSnapshot(invocation, const []),
+      );
       if (cached) {
         await prefs.setString(
           CuratedListService.listsStorageKey,
@@ -517,7 +526,13 @@ void main() {
           );
           expect(await x.service.createList(name: 'Blocked'), isNull);
           await x.service.fetchUserListsFromRelays(force: true);
-          verifyNever(() => x.client.subscribe(any(), closeOnEose: true));
+          verifyNever(
+            () => x.client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          );
           verifyNever(() => x.client.publishEventAwaitOk(any()));
           expect(x.prefs.get(PendingAccountCleanup.storageKey), original);
           x.service.dispose();
@@ -547,7 +562,13 @@ void main() {
         await x.service.initialize();
         expect(x.service.isReadyForMutations, isFalse);
         expect(x.service.isInitialized, isFalse);
-        verifyNever(() => x.client.subscribe(any(), closeOnEose: true));
+        verifyNever(
+          () => x.client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        );
         verifyNever(() => x.client.publishEventAwaitOk(any()));
         x.service.dispose();
       } finally {

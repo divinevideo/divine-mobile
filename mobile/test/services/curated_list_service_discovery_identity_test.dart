@@ -16,6 +16,7 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/completed_owned_list_snapshot.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 import '../helpers/signed_curated_list.dart';
 
@@ -86,8 +87,16 @@ void main() {
                 row,
           ]),
         );
-        when(() => nostr.subscribe(any(), closeOnEose: true))
-            .thenAnswer((_) => Stream.value(ownedRevision!));
+        when(
+          () => nostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer(
+          (invocation) =>
+              completedOwnedListSnapshot(invocation, [ownedRevision!]),
+        );
       }
       final service = CuratedListService(
         nostrService: nostr,
