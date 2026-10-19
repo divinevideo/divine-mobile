@@ -203,9 +203,20 @@ class _AppShellState extends ConsumerState<AppShell> with RouteAware {
     final shellRoute = ModalRoute.of(context);
     final isShellCovered = !(shellRoute?.isCurrent ?? true);
     final pageCtxAsync = ref.watch(pageContextProvider);
+    // The branch already has a route before the asynchronous context stream
+    // emits. Without this fallback, inbox and own-profile grids briefly get an
+    // empty app bar above their own headers (or keep it if the stream fails).
+    final router = GoRouter.maybeOf(context);
+    final liveContext =
+        pageCtxAsync.asData?.value ??
+        (router == null
+            ? null
+            : parseRoute(
+                router.routerDelegate.currentConfiguration.uri.toString(),
+              ));
     final chrome = resolveShellChromeContext(
       isShellCovered: isShellCovered,
-      liveContext: pageCtxAsync.asData?.value,
+      liveContext: liveContext,
       lastTabContext: _lastTabRouteContext,
     );
     _lastTabRouteContext = chrome.nextCache;
