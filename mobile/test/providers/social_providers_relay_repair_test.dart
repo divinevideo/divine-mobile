@@ -211,8 +211,8 @@ void main() {
         ),
       ).called(1);
 
-      // The pool republishes its snapshot on a poll; the same relay staying
-      // connected is no new reason to sweep.
+      // A later snapshot in which the same relay is still connected is no
+      // new reason to sweep.
       relayStatuses.add(_relayIs(RelayState.connected));
       await pumpEventQueue();
       verifyNever(

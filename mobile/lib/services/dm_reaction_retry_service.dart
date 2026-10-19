@@ -1,5 +1,5 @@
 // ABOUTME: Sweep that re-drives undelivered DM reactions and removals via
-// ABOUTME: DmReactionsRepository on foreground, connectivity, repository
+// ABOUTME: DmReactionsRepository on foreground, a relay connecting, repository
 // ABOUTME: nudges and a follow-up heartbeat, so a stable session still recovers.
 
 import 'dart:async';
@@ -80,7 +80,7 @@ class DmReactionRetryConfig {
   /// repository nudge) the next pass runs on its own. Mirrors
   /// `OutgoingDmRetryService`'s follow-up gap, so a reaction or removal that
   /// did not confirm is re-driven within the session instead of waiting for
-  /// the next foreground transition or connectivity change.
+  /// the next foreground transition or relay connection.
   final Duration followUpSweepGap;
 
   /// Minimum gap required before re-attempting a reaction whose previous

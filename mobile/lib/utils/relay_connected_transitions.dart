@@ -7,10 +7,11 @@ import 'package:nostr_client/nostr_client.dart';
 /// that was not connected in the snapshot before it.
 ///
 /// [initial] is the snapshot to compare the first one with, so relays already
-/// connected when listening starts do not fire. The pool republishes its
-/// snapshot on every change and on a periodic poll, so a repeat of the same
-/// connected set emits nothing. Each listener keeps its own comparison and
-/// subscribes to [statuses] as it listens, so no snapshot is missed.
+/// connected when listening starts do not fire. A later snapshot with the
+/// same connected set, or with only a relay that dropped, emits nothing. Each
+/// listener keeps its own comparison and subscribes to [statuses] the moment
+/// it listens; a broadcast stream does not replay, which is what [initial]
+/// stands in for.
 ///
 /// Retry sweeps wake on this rather than on the phone's network change
 /// (#8516): it also fires when a relay server comes back while the phone

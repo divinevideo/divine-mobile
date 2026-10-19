@@ -125,8 +125,9 @@ class DmReactionRetryTarget {
   /// stores none.
   final String targetMessageAuthor;
 
-  /// Persisted publish status: `'failed'` or `'pending'` for a reaction,
-  /// `'deletion_pending'` or `'deletion_unconfirmed'` for a removal.
+  /// Persisted publish status: `'failed'`, `'pending'` or `'unconfirmed'` for
+  /// a reaction, `'deletion_pending'` or `'deletion_unconfirmed'` for a
+  /// removal.
   final String publishStatus;
 
   /// Rumor `created_at` (unix seconds). Lets the sweep hold back a still-in-
@@ -242,8 +243,10 @@ class DmReactionsRepository {
   /// unconfirmed or failed reaction, a removal whose kind-5 did not confirm,
   /// or a removal recorded before its recipients were known. The retry
   /// service listens and arms its in-session follow-up pass. Without it, such
-  /// a row waits for the next foreground transition or connectivity change,
-  /// and a removal has no chip left for the user to re-tap.
+  /// a row waits for the next foreground transition or relay connection, and
+  /// a removal has no chip left for the user to re-tap. An attempt that
+  /// reached no relay does not fire it: a relay connecting wakes the sweep for
+  /// that row instead (#8516).
   ///
   /// Some emissions follow a database write that other work may still be
   /// reading, so listeners MUST NOT touch the database synchronously: arm a
@@ -975,9 +978,9 @@ class DmReactionsRepository {
   }
 
   /// List this user's own outgoing reactions still awaiting durable delivery
-  /// (publish `'failed'`, or `'pending'` from an interrupted send), for the
-  /// foreground retry sweep to re-drive via [retry]. Returns empty when
-  /// credentials have not been wired.
+  /// (publish `'failed'`, `'pending'` from an interrupted send, or
+  /// `'unconfirmed'` once their retries ran out), for the retry sweep to
+  /// re-drive via [retry]. Returns empty when credentials have not been wired.
   Future<List<DmReactionRetryTarget>> retryableReactions() async {
     final ownerPubkey = _userPubkey;
     if (ownerPubkey.isEmpty) return const [];
