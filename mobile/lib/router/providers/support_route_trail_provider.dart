@@ -59,7 +59,7 @@ class SupportRouteTrail extends Notifier<List<RouteType>> {
 
     final match = routes.findMatch(uri);
     final route = parseMatchedRoute(
-      uri.path,
+      location,
       matchedTemplate: match.isError ? null : match.fullPath,
     )?.type;
     if (route == null || (current.isNotEmpty && current.last == route)) {

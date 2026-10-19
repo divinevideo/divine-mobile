@@ -99,6 +99,14 @@ void main() {
       expect(snapshot.recentScreens, ['home']);
     });
 
+    test('records a list addressed by its owner as that list', () async {
+      final snapshot = await visit([
+        '/people-lists/new?owner=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      ]);
+
+      expect(snapshot.recentScreens, ['peopleListMembers']);
+    });
+
     test('ignores unknown locations rather than recording home', () async {
       final snapshot = await visit(['/profile/0', '/not-a-real-route']);
 

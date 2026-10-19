@@ -219,7 +219,7 @@ RouteContext? parseMatchedRoute(
   required String? matchedTemplate,
 }) {
   final path = Uri.tryParse(location)?.path ?? location;
-  final route = _parseRoute(path, knownOnly: true);
+  final route = _parseRoute(location, knownOnly: true);
   if (route == null) return null;
 
   final canonical = _pathSegments(buildRoute(route));
