@@ -402,6 +402,20 @@ void main() {
       verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
     });
 
+    testWidgets('drops a result while clip volumes are being edited', (
+      tester,
+    ) async {
+      when(() => mainBloc.state).thenReturn(
+        const VideoEditorMainState(isPlayerReady: true, isVolumeEditMode: true),
+      );
+      await pump(tester);
+      await cubit.search([clip]);
+      await tester.pump();
+
+      expect(cubit.state.status, LoopSuggestionStatus.idle);
+      verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
+    });
+
     testWidgets('drops a result while another clip operation is in flight', (
       tester,
     ) async {
