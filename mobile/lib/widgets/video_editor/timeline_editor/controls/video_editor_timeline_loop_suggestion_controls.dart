@@ -161,10 +161,22 @@ class TimelineLoopSuggestionControls extends StatelessWidget {
 ///
 /// Kept at the scaffold level, always mounted, so the result lands even
 /// when the timeline controls changed while the search ran.
-class LoopSuggestionResultListener extends StatelessWidget {
+class LoopSuggestionResultListener extends StatefulWidget {
   const LoopSuggestionResultListener({required this.child, super.key});
 
   final Widget child;
+
+  @override
+  State<LoopSuggestionResultListener> createState() =>
+      _LoopSuggestionResultListenerState();
+}
+
+class _LoopSuggestionResultListenerState
+    extends State<LoopSuggestionResultListener> {
+  /// The seam to play once the player has loaded the suggested end. Started
+  /// any earlier, its seek and play land while the player reloads the clips,
+  /// which drops both.
+  PlaybackAudition? _pendingAudition;
 
   @override
   Widget build(BuildContext context) {
@@ -178,16 +190,33 @@ class LoopSuggestionResultListener extends StatelessWidget {
           listenWhen: (previous, current) =>
               previous.status == LoopSuggestionStatus.suggested &&
               current.status != LoopSuggestionStatus.suggested,
-          listener: (context, _) => context.read<VideoEditorMainBloc>().add(
-            const VideoEditorAuditionEnded(),
-          ),
+          listener: (context, _) {
+            _pendingAudition = null;
+            context.read<VideoEditorMainBloc>().add(
+              const VideoEditorAuditionEnded(),
+            );
+          },
+        ),
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (previous, current) =>
+              !previous.isPlayerReady && current.isPlayerReady,
+          listener: _onPlayerReady,
         ),
         BlocListener<ClipEditorBloc, ClipEditorState>(
           listenWhen: (previous, current) => previous.clips != current.clips,
           listener: _onClipsChanged,
         ),
       ],
-      child: child,
+      child: widget.child,
+    );
+  }
+
+  void _onPlayerReady(BuildContext context, VideoEditorMainState _) {
+    final audition = _pendingAudition;
+    if (audition == null) return;
+    _pendingAudition = null;
+    context.read<VideoEditorMainBloc>().add(
+      VideoEditorAuditionStarted(start: audition.start, end: audition.end),
     );
   }
 
@@ -215,7 +244,8 @@ class LoopSuggestionResultListener extends StatelessWidget {
   }
 
   /// Puts the suggested end on the clip, without an undo step yet, and
-  /// plays the seam until the creator keeps or drops it.
+  /// plays the seam, once the player has loaded it, until the creator keeps
+  /// or drops it.
   void _preview(BuildContext context, LoopSuggestionState state) {
     final cubit = context.read<LoopSuggestionCubit>();
     final original = state.original;
@@ -243,11 +273,9 @@ class LoopSuggestionResultListener extends StatelessWidget {
 
     final end = compositionDuration(List.of(clips)..[index] = clip);
     const side = VideoEditorConstants.loopSeamPreviewSide;
-    context.read<VideoEditorMainBloc>().add(
-      end > side * 2
-          ? VideoEditorAuditionStarted(start: end - side, end: side)
-          : VideoEditorAuditionStarted(start: Duration.zero, end: end),
-    );
+    _pendingAudition = end > side * 2
+        ? (start: end - side, end: side)
+        : (start: Duration.zero, end: end);
     runDetached(
       SemanticsService.sendAnnouncement(
         View.of(context),

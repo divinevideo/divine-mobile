@@ -59,6 +59,7 @@ void main() {
     late _MockTimelineOverlayBloc overlayBloc;
     late _MockProImageEditorState editor;
     late StreamController<ClipEditorState> clipStates;
+    late StreamController<VideoEditorMainState> mainStates;
     late LoopSuggestionCubit cubit;
 
     setUpAll(() {
@@ -72,9 +73,13 @@ void main() {
       overlayBloc = _MockTimelineOverlayBloc();
       editor = _MockProImageEditorState();
       clipStates = StreamController<ClipEditorState>.broadcast();
+      mainStates = StreamController<VideoEditorMainState>.broadcast();
       when(() => clipBloc.state).thenReturn(ClipEditorState(clips: [clip]));
       when(() => clipBloc.stream).thenAnswer((_) => clipStates.stream);
-      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+      when(
+        () => mainBloc.state,
+      ).thenReturn(const VideoEditorMainState(isPlayerReady: true));
+      when(() => mainBloc.stream).thenAnswer((_) => mainStates.stream);
       when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
 
       final stateManager = _MockStateManager();
@@ -112,6 +117,7 @@ void main() {
     tearDown(() async {
       await cubit.close();
       await clipStates.close();
+      await mainStates.close();
     });
 
     Future<void> pump(WidgetTester tester) => tester.pumpWidget(
@@ -167,6 +173,11 @@ void main() {
       ).thenReturn(ClipEditorState(clips: [suggested]));
       clipStates.add(ClipEditorState(clips: [suggested]));
       await tester.pump();
+      // The player reloads the clips for the new end.
+      mainStates
+        ..add(const VideoEditorMainState())
+        ..add(const VideoEditorMainState(isPlayerReady: true));
+      await tester.pump();
       return suggested;
     }
 
@@ -191,6 +202,18 @@ void main() {
       expect(
         find.text('Smoother loop found. It ends 0.5 s earlier.'),
         findsOneWidget,
+      );
+    });
+
+    testWidgets('waits for the player to load the new end before playing', (
+      tester,
+    ) async {
+      await pump(tester);
+      await cubit.search([clip]);
+      await tester.pump();
+
+      verifyNever(
+        () => mainBloc.add(any(that: isA<VideoEditorAuditionStarted>())),
       );
     });
 
