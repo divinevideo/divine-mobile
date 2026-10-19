@@ -208,6 +208,10 @@ class _LoopSuggestionResultListenerState
   /// which drops both.
   PlaybackAudition? _pendingAudition;
 
+  /// Whether the seam plays as the audition [_onPlayerReady] started. Any
+  /// other audition, such as the equalizer's, is not the loop's to end.
+  bool _isPlayingSeam = false;
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -222,6 +226,8 @@ class _LoopSuggestionResultListenerState
               current.status != LoopSuggestionStatus.suggested,
           listener: (context, _) {
             _pendingAudition = null;
+            if (!_isPlayingSeam) return;
+            _isPlayingSeam = false;
             context.read<VideoEditorMainBloc>().add(
               const VideoEditorAuditionEnded(),
             );
@@ -245,6 +251,7 @@ class _LoopSuggestionResultListenerState
     final audition = _pendingAudition;
     if (audition == null) return;
     _pendingAudition = null;
+    _isPlayingSeam = true;
     context.read<VideoEditorMainBloc>().add(
       VideoEditorAuditionStarted(start: audition.start, end: audition.end),
     );

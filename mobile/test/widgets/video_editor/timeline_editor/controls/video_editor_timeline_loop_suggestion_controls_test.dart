@@ -434,6 +434,33 @@ void main() {
       verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
     });
 
+    testWidgets('leaves another audition playing when it drops a result', (
+      tester,
+    ) async {
+      // Extract audio runs while the equalizer auditions its clip.
+      when(() => clipBloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip],
+          isExtractingAudio: true,
+          extractingAudioClipId: clip.id,
+        ),
+      );
+      when(() => mainBloc.state).thenReturn(
+        const VideoEditorMainState(
+          isPlayerReady: true,
+          audition: (start: Duration.zero, end: Duration(seconds: 3)),
+        ),
+      );
+      await pump(tester);
+      await cubit.search([clip]);
+      await tester.pump();
+
+      expect(cubit.state.status, LoopSuggestionStatus.idle);
+      verifyNever(
+        () => mainBloc.add(any(that: isA<VideoEditorAuditionEnded>())),
+      );
+    });
+
     testWidgets('Cancel puts the old end back and stops the seam', (
       tester,
     ) async {
