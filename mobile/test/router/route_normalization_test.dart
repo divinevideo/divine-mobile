@@ -1,6 +1,7 @@
 // ABOUTME: Tests for route normalization skip logic
 // ABOUTME: Prevents universal links from being rewritten by internal canonicalization
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -8,18 +9,14 @@ import 'package:openvine/features/people_lists/view/create_people_list_page.dart
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
-import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
-import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
-import 'package:openvine/screens/minor_account_review_screen.dart';
-import 'package:openvine/screens/minor_account_review_under13_screen.dart';
-import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   const videoId =
       '672c4eb9fc29adb6b505713bc6da94af2244c1de55dc6f034e2bcdaba133ebbe';
   const pubkey =
@@ -115,43 +112,6 @@ void main() {
         }
       },
     );
-
-    test('skips parse-but-build-shorter route families', () {
-      final routes = {
-        WelcomeScreen.path:
-            'welcome subtree is GoRouter-owned and normalization-sensitive',
-        WelcomeScreen.loginOptionsPath:
-            'welcome subtree is GoRouter-owned and normalization-sensitive',
-        '/apps/primal/sandbox':
-            'app sandbox is not represented in RouteContext',
-        '/video/$videoId/likers':
-            'video engagement list suffix is not represented in RouteContext',
-        '/video/$videoId/reposters':
-            'video engagement list suffix is not represented in RouteContext',
-        MinorAccountReviewScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewScreen.welcomePath:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewLoadingScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewParentConsentScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewParentContactScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewUnder13Screen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewUnder13SupportScreen.path:
-            'minor account review flow is GoRouter-owned',
-      };
-
-      for (final entry in routes.entries) {
-        expect(
-          shouldSkipRouteNormalization(entry.key),
-          isTrue,
-          reason: entry.value,
-        );
-      }
-    });
   });
 
   group('normalization classification', () {
@@ -215,12 +175,16 @@ void main() {
   });
 
   group('normalizedPathFor over the registered route tree', () {
+    late List<RouteBase> registered;
     late List<String> templates;
+    late RouteConfiguration routes;
 
     setUp(() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      templates = _templatesOf(container.read(_appRoutesProvider));
+      registered = container.read(_appRoutesProvider);
+      templates = _templatesOf(registered);
+      routes = _configurationOf(registered);
     });
 
     test('leaves every registered route where it is', () {
@@ -228,6 +192,9 @@ void main() {
         templates,
         containsAll([
           '/video/:eventId/likers',
+          '/video/:eventId/reposters',
+          '/apps/:appId/sandbox',
+          '/account-review/parent-consent',
           '/profile/:npub/:index',
           '/welcome/login-options/reset-password',
         ]),
@@ -236,7 +203,7 @@ void main() {
       for (final template in templates) {
         final location = Uri.parse(_sampleLocation(template));
         expect(
-          normalizedPathFor(location),
+          normalizedPathFor(routes, location),
           isNull,
           reason: 'registered route $template was rewritten from $location',
         );
@@ -244,15 +211,15 @@ void main() {
     });
 
     test('canonicalizes a negative index on its own route', () {
-      final routes = {
+      final expected = {
         '/home/-3': '/home/0',
         '/notifications/-2': '/notifications/0',
         '/profile/$pubkey/-1': '/profile/$pubkey/0',
       };
 
-      for (final entry in routes.entries) {
+      for (final entry in expected.entries) {
         expect(
-          normalizedPathFor(Uri.parse(entry.key)),
+          normalizedPathFor(routes, Uri.parse(entry.key)),
           entry.value,
           reason: entry.key,
         );
@@ -260,14 +227,14 @@ void main() {
     });
 
     test('rescues a retired alias GoRouter no longer registers', () {
-      final routes = {
+      final expected = {
         '/video-feed': '/pooled-video-feed',
         '/clips-no-sound': '/clips-only',
       };
 
-      for (final entry in routes.entries) {
+      for (final entry in expected.entries) {
         expect(
-          normalizedPathFor(Uri.parse(entry.key)),
+          normalizedPathFor(routes, Uri.parse(entry.key)),
           entry.value,
           reason: entry.key,
         );
@@ -280,10 +247,46 @@ void main() {
         '/home/0/extra',
         '/profile/$pubkey/0/extra',
       ]) {
-        expect(normalizedPathFor(Uri.parse(route)), isNull, reason: route);
+        expect(
+          normalizedPathFor(routes, Uri.parse(route)),
+          isNull,
+          reason: route,
+        );
+      }
+    });
+
+    test('never moves a route registered under another one onto it', () {
+      final lastParameter = RegExp(r'/:\w+$');
+      final nested = {
+        for (final template in templates) ...{
+          _joinPath(template, 'added'),
+          if (lastParameter.hasMatch(template))
+            template.replaceFirst(lastParameter, '/added'),
+        },
+      }..removeAll(templates);
+      expect(nested, containsAll(['/profile/:npub/added', '/home/added']));
+      final withNested = _configurationOf([
+        for (final path in nested)
+          GoRoute(path: path, builder: (_, _) => const SizedBox()),
+        ...registered,
+      ]);
+
+      for (final template in nested) {
+        final location = Uri.parse(_sampleLocation(template));
+        expect(
+          normalizedPathFor(withNested, location),
+          isNull,
+          reason: 'a new route at $template was redirected from $location',
+        );
       }
     });
   });
+}
+
+RouteConfiguration _configurationOf(List<RouteBase> routes) {
+  final router = GoRouter(navigatorKey: NavigatorKeys.root, routes: routes);
+  addTearDown(router.dispose);
+  return router.configuration;
 }
 
 final _appRoutesProvider = Provider<List<RouteBase>>(appRoutes);

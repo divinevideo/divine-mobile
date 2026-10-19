@@ -307,6 +307,42 @@ RouteContext? parseKnownRoute(String path) {
   return _parseRoute(path, knownOnly: true);
 }
 
+/// Parses [location] only when [RouteContext] models the route GoRouter
+/// matched it to.
+///
+/// [matchedTemplate] is that route's full path pattern (`GoRouterState.fullPath`
+/// or `RouteMatchList.fullPath`), or null when nothing matched. A context
+/// counts only when [buildRoute] lands on the same pattern, so a nested route
+/// the parser does not model, such as `/video/:eventId/likers`, is never read
+/// as its parent. Without a match it counts only when its canonical path keeps
+/// every segment: a retired alias is still recognized, an unknown trailing
+/// segment is not.
+RouteContext? parseMatchedRoute(
+  String location, {
+  required String? matchedTemplate,
+}) {
+  final path = Uri.tryParse(location)?.path ?? location;
+  final route = parseKnownRoute(path);
+  if (route == null) return null;
+
+  final canonical = _pathSegments(buildRoute(route));
+  if (matchedTemplate == null || matchedTemplate.isEmpty) {
+    return canonical.length >= _pathSegments(path).length ? route : null;
+  }
+
+  final template = _pathSegments(matchedTemplate);
+  if (template.length != canonical.length) return null;
+  for (var i = 0; i < template.length; i++) {
+    if (!template[i].startsWith(':') && template[i] != canonical[i]) {
+      return null;
+    }
+  }
+  return route;
+}
+
+List<String> _pathSegments(String path) =>
+    path.split('/').where((s) => s.isNotEmpty).toList();
+
 RouteContext? _parseRoute(String path, {required bool knownOnly}) {
   // Callers pass full router locations, which may carry query parameters
   // (e.g. /clips-only?type=video). Segment matching below must only ever see
@@ -315,8 +351,7 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
   // the RouteType.home fallback (which the normalizer then "corrects" by
   // yanking the user to /home/0).
   final uri = Uri.tryParse(path);
-  final pathOnly = uri?.path ?? path;
-  final segments = pathOnly.split('/').where((s) => s.isNotEmpty).toList();
+  final segments = _pathSegments(uri?.path ?? path);
 
   if (segments.isEmpty) {
     return const RouteContext(type: RouteType.home, videoIndex: 0);
