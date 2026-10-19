@@ -67,6 +67,7 @@ class LiveGoldenFixtures {
   static final liveSession = LiveSession(
     id: 'session-123',
     roomId: room.id,
+    hostPubkey: hostPubkey,
     status: LiveSessionStatus.live,
     // Use local wall-clock times so the golden text stays stable across
     // machines even though the UI formats these values with toLocal().
@@ -79,6 +80,7 @@ class LiveGoldenFixtures {
   static final endedSession = LiveSession(
     id: 'session-ended',
     roomId: room.id,
+    hostPubkey: hostPubkey,
     status: LiveSessionStatus.ended,
     startedAt: DateTime(2026, 4, 6, 7),
     endedAt: DateTime(2026, 4, 6, 9),
@@ -189,6 +191,7 @@ class LiveGoldenFixtures {
           session: LiveSession(
             id: 'session-planned',
             roomId: 'room-456',
+            hostPubkey: hostPubkey,
             status: LiveSessionStatus.planned,
             startedAt: DateTime(2026, 4, 6, 12),
             endedAt: null,
@@ -294,12 +297,15 @@ class LiveGoldenFixtures {
       );
     }
 
-    when(() => liveKitRoomService.connect(audienceToken))
-        .thenAnswer((_) => connected(audienceToken));
-    when(() => liveKitRoomService.connect(hostToken))
-        .thenAnswer((_) => connected(hostToken));
-    when(() => liveKitRoomService.connect(speakerToken))
-        .thenAnswer((_) => connected(speakerToken));
+    when(
+      () => liveKitRoomService.connect(audienceToken),
+    ).thenAnswer((_) => connected(audienceToken));
+    when(
+      () => liveKitRoomService.connect(hostToken),
+    ).thenAnswer((_) => connected(hostToken));
+    when(
+      () => liveKitRoomService.connect(speakerToken),
+    ).thenAnswer((_) => connected(speakerToken));
     when(liveKitRoomService.disconnect).thenAnswer((_) async {});
     when(
       () => liveKitRoomService.publishLocalTracks(
