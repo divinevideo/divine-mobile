@@ -1,11 +1,12 @@
 // ABOUTME: Tests for route normalization skip logic
 // ABOUTME: Prevents universal links from being rewritten by internal canonicalization
 
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
@@ -241,6 +242,53 @@ void main() {
           reason: 'a new route at $template was redirected from $location',
         );
       }
+    });
+  });
+
+  group('routeNormalizationProvider', () {
+    testWidgets('normalizes the location a refresh redirect lands on', (
+      tester,
+    ) async {
+      final refresh = ValueNotifier<bool>(false);
+      addTearDown(refresh.dispose);
+      var redirected = false;
+      final router = GoRouter(
+        initialLocation: '/home/0',
+        refreshListenable: refresh,
+        redirect: (_, _) {
+          if (!refresh.value || redirected) return null;
+          redirected = true;
+          return '/home/-1';
+        },
+        routes: [
+          GoRoute(path: '/home/:index', builder: (_, _) => const SizedBox()),
+        ],
+      );
+      addTearDown(router.dispose);
+      final container = ProviderContainer(
+        overrides: [goRouterProvider.overrideWithValue(router)],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      container.read(routeNormalizationProvider);
+
+      refresh.value = true;
+      await tester.pumpAndSettle();
+
+      expect(redirected, isTrue);
+      expect(
+        router.routerDelegate.currentConfiguration.uri.toString(),
+        '/home/0',
+      );
     });
   });
 }

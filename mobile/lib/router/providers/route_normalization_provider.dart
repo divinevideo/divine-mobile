@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
+import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -80,7 +81,7 @@ final routeNormalizationProvider = Provider<void>((ref) {
 
   // Set up listener on router delegate to detect navigation changes
   void listener() {
-    final uri = router.routeInformationProvider.value.uri;
+    final uri = routerLocationOf(router);
     final loc = uri.toString();
     final canonicalPath = normalizedPathFor(router.configuration, uri);
 
@@ -90,7 +91,7 @@ final routeNormalizationProvider = Provider<void>((ref) {
         // Re-check before redirecting: skip when navigation moved on in the
         // meantime (redirecting then would yank the user off the new route)
         // or the location already became canonical.
-        final now = router.routeInformationProvider.value.uri;
+        final now = routerLocationOf(router);
         if (now.toString() != loc || now.path == canonicalPath) return;
 
         final canonical = Uri(
