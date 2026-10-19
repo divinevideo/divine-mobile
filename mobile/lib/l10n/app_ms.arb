@@ -6456,6 +6456,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} ialah {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Penyokong Divine",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Menyokong aplikasi bebas untuk internet yang lebih terbuka dan kreatif.",
+  "supporterLightboxBenefitIndependent": "Membantu Divine kekal bebas",
+  "supporterLightboxBenefitFeatures": "Menyokong ciri baharu yang menarik",
+  "supporterLightboxBenefitCommunity": "Menyemarakkan komuniti yang lebih kreatif",
+  "supporterLightboxMaybeLater": "Mungkin nanti",
   "supporterTitle": "Penyokong Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

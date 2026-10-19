@@ -3398,6 +3398,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} من {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "داعمي Divine",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "دعمٌ للتطبيق المستقل من أجل إنترنت أكثر انفتاحًا وإبداعًا.",
+  "supporterLightboxBenefitIndependent": "يساعد على بقاء Divine مستقلًا",
+  "supporterLightboxBenefitFeatures": "يدعم ميزات جديدة ومثيرة",
+  "supporterLightboxBenefitCommunity": "يغذّي مجتمعًا أكثر إبداعًا",
+  "supporterLightboxMaybeLater": "ربما لاحقًا",
   "supporterTitle": "داعمو Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

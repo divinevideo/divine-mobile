@@ -2649,6 +2649,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "Isang {badge} si {name}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Divine Supporter",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Sinusuportahan ang independent na app para sa mas bukas at malikhaing internet.",
+  "supporterLightboxBenefitIndependent": "Tumutulong panatilihing independent ang Divine",
+  "supporterLightboxBenefitFeatures": "Sumusuporta sa mga bagong exciting na feature",
+  "supporterLightboxBenefitCommunity": "Nagpapalakas ng mas malikhaing community",
+  "supporterLightboxMaybeLater": "Sa susunod na lang",
   "supporterTitle": "Mga Divine Supporter",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

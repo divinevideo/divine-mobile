@@ -3405,6 +3405,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} se numără printre {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Susținătorii Divine",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Susține aplicația independentă pentru un internet mai deschis și mai creativ.",
+  "supporterLightboxBenefitIndependent": "Ajută Divine să rămână independent",
+  "supporterLightboxBenefitFeatures": "Susține funcții noi și interesante",
+  "supporterLightboxBenefitCommunity": "Hrănește o comunitate mai creativă",
+  "supporterLightboxMaybeLater": "Poate mai târziu",
   "supporterTitle": "Susținătorii Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

@@ -3398,6 +3398,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name}さんは{badge}です",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Divine サポーター",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "もっとオープンでクリエイティブなインターネットのために、独立したアプリを応援しています。",
+  "supporterLightboxBenefitIndependent": "Divine の独立を支えます",
+  "supporterLightboxBenefitFeatures": "ワクワクする新機能を後押しします",
+  "supporterLightboxBenefitCommunity": "よりクリエイティブなコミュニティを育てます",
+  "supporterLightboxMaybeLater": "あとで",
   "supporterTitle": "Divine サポーター",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

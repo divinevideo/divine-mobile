@@ -12236,30 +12236,27 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String supporterLightboxHeadline(String name, String badge) {
-    return '$name is a $badge';
+    return '$name $badge ናቸው';
   }
 
   @override
-  String get supporterLightboxBadge => 'Divine Supporter';
+  String get supporterLightboxBadge => 'የDivine ደጋፊ';
 
   @override
   String get supporterLightboxBody =>
-      'Supporting the independent app for a more open, creative internet.';
+      'የበለጠ ክፍት እና ፈጠራ የተሞላ ኢንተርኔት እንዲኖር ራሱን የቻለውን መተግበሪያ ይደግፋሉ።';
 
   @override
-  String get supporterLightboxBenefitIndependent =>
-      'Helps keep Divine independent';
+  String get supporterLightboxBenefitIndependent => 'Divine ራሱን ችሎ እንዲቆይ ይረዳል';
 
   @override
-  String get supporterLightboxBenefitFeatures =>
-      'Supports new exciting features';
+  String get supporterLightboxBenefitFeatures => 'አዳዲስ አስደሳች ባህሪያትን ይደግፋል';
 
   @override
-  String get supporterLightboxBenefitCommunity =>
-      'Powers a more creative community';
+  String get supporterLightboxBenefitCommunity => 'የበለጠ ፈጠራ ያለው ማህበረሰብን ያጎለብታል';
 
   @override
-  String get supporterLightboxMaybeLater => 'Maybe later';
+  String get supporterLightboxMaybeLater => 'ምናልባት በኋላ';
 
   @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';

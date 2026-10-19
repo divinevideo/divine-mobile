@@ -3405,6 +3405,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} bir {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Divine Destekçisi",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Daha açık ve yaratıcı bir internet için bağımsız uygulamayı destekliyor.",
+  "supporterLightboxBenefitIndependent": "Divine'ın bağımsız kalmasına yardım eder",
+  "supporterLightboxBenefitFeatures": "Heyecan verici yeni özellikleri destekler",
+  "supporterLightboxBenefitCommunity": "Daha yaratıcı bir topluluğa güç verir",
+  "supporterLightboxMaybeLater": "Belki sonra",
   "supporterTitle": "Divine Destekçileri",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

@@ -12536,30 +12536,29 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String supporterLightboxHeadline(String name, String badge) {
-    return '$name is a $badge';
+    return '$name ایک $badge ہیں';
   }
 
   @override
-  String get supporterLightboxBadge => 'Divine Supporter';
+  String get supporterLightboxBadge => 'Divine سپورٹر';
 
   @override
   String get supporterLightboxBody =>
-      'Supporting the independent app for a more open, creative internet.';
+      'زیادہ کھلے اور تخلیقی انٹرنیٹ کے لیے آزاد ایپ کی سپورٹ۔';
 
   @override
   String get supporterLightboxBenefitIndependent =>
-      'Helps keep Divine independent';
+      'Divine کو آزاد رکھنے میں مدد';
 
   @override
-  String get supporterLightboxBenefitFeatures =>
-      'Supports new exciting features';
+  String get supporterLightboxBenefitFeatures => 'نئے دلچسپ فیچرز کی سپورٹ';
 
   @override
   String get supporterLightboxBenefitCommunity =>
-      'Powers a more creative community';
+      'زیادہ تخلیقی کمیونٹی کو تقویت';
 
   @override
-  String get supporterLightboxMaybeLater => 'Maybe later';
+  String get supporterLightboxMaybeLater => 'شاید بعد میں';
 
   @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';

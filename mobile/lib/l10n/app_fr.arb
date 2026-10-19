@@ -3405,6 +3405,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} est {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Supporter Divine",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Soutient l'app indépendante pour un internet plus ouvert et créatif.",
+  "supporterLightboxBenefitIndependent": "Aide Divine à rester indépendant",
+  "supporterLightboxBenefitFeatures": "Soutient de nouvelles fonctionnalités géniales",
+  "supporterLightboxBenefitCommunity": "Fait vivre une communauté plus créative",
+  "supporterLightboxMaybeLater": "Peut-être plus tard",
   "supporterTitle": "Supporters Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

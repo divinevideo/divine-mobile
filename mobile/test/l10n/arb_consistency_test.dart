@@ -632,15 +632,6 @@ const _knownUntranslatedDebt = <String>{
   'contentPreferencesSubtitleKeepOriginal',
   'contentPreferencesSubtitleKeepOriginalNone',
 
-  // Supporter avatar lightbox prototype (#9914), English until translated.
-  'supporterLightboxHeadline',
-  'supporterLightboxBadge',
-  'supporterLightboxBody',
-  'supporterLightboxBenefitIndependent',
-  'supporterLightboxBenefitFeatures',
-  'supporterLightboxBenefitCommunity',
-  'supporterLightboxMaybeLater',
-
   // A people list whose members are all hidden from the viewer (#9895).
   'peopleListsAllMembersHiddenTitle',
   'peopleListsAllMembersHiddenSubtitle',

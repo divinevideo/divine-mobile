@@ -1117,6 +1117,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} {badge} ናቸው",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "የDivine ደጋፊ",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "የበለጠ ክፍት እና ፈጠራ የተሞላ ኢንተርኔት እንዲኖር ራሱን የቻለውን መተግበሪያ ይደግፋሉ።",
+  "supporterLightboxBenefitIndependent": "Divine ራሱን ችሎ እንዲቆይ ይረዳል",
+  "supporterLightboxBenefitFeatures": "አዳዲስ አስደሳች ባህሪያትን ይደግፋል",
+  "supporterLightboxBenefitCommunity": "የበለጠ ፈጠራ ያለው ማህበረሰብን ያጎለብታል",
+  "supporterLightboxMaybeLater": "ምናልባት በኋላ",
   "supporterTitle": "የDivine ደጋፊዎች",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

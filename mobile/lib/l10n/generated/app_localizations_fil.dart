@@ -12659,7 +12659,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String supporterLightboxHeadline(String name, String badge) {
-    return '$name is a $badge';
+    return 'Isang $badge si $name';
   }
 
   @override
@@ -12667,22 +12667,22 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get supporterLightboxBody =>
-      'Supporting the independent app for a more open, creative internet.';
+      'Sinusuportahan ang independent na app para sa mas bukas at malikhaing internet.';
 
   @override
   String get supporterLightboxBenefitIndependent =>
-      'Helps keep Divine independent';
+      'Tumutulong panatilihing independent ang Divine';
 
   @override
   String get supporterLightboxBenefitFeatures =>
-      'Supports new exciting features';
+      'Sumusuporta sa mga bagong exciting na feature';
 
   @override
   String get supporterLightboxBenefitCommunity =>
-      'Powers a more creative community';
+      'Nagpapalakas ng mas malikhaing community';
 
   @override
-  String get supporterLightboxMaybeLater => 'Maybe later';
+  String get supporterLightboxMaybeLater => 'Sa susunod na lang';
 
   @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';
