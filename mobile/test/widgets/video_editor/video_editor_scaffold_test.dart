@@ -45,6 +45,9 @@ class _MockProImageEditorState extends Mock implements ProImageEditorState {
 
 class _MockStateManager extends Mock implements StateManager {}
 
+class _MockLoopSuggestionCubit extends MockCubit<LoopSuggestionState>
+    implements LoopSuggestionCubit {}
+
 class _FakeLayer extends Fake implements Layer {}
 
 DivineVideoClip _detachedClip({String file = 'clip-1.mp4'}) => DivineVideoClip(
@@ -89,6 +92,7 @@ void main() {
       ClipEditorBloc? clipBlocOverride,
       ProImageEditorState? editorOverride,
       VideoEditorEffectsCubit? effectsCubit,
+      LoopSuggestionCubit? loopSuggestionCubit,
       ThemeData? theme,
     }) {
       final editorKey = GlobalKey<ProImageEditorState>();
@@ -127,7 +131,12 @@ void main() {
               BlocProvider<LayerTrackingCubit>(
                 create: (_) => LayerTrackingCubit(),
               ),
-              BlocProvider(create: (_) => LoopSuggestionCubit()),
+              if (loopSuggestionCubit != null)
+                BlocProvider<LoopSuggestionCubit>.value(
+                  value: loopSuggestionCubit,
+                )
+              else
+                BlocProvider(create: (_) => LoopSuggestionCubit()),
               if (effectsCubit != null)
                 BlocProvider<VideoEditorEffectsCubit>.value(
                   value: effectsCubit,
@@ -314,6 +323,30 @@ void main() {
         expect(mainBloc.state.playbackToggleCounter, 2);
       },
     );
+
+    testWidgets('hides FAB while a loop suggestion waits on Keep or Cancel', (
+      tester,
+    ) async {
+      final loopSuggestionCubit = _MockLoopSuggestionCubit();
+      whenListen(
+        loopSuggestionCubit,
+        const Stream<LoopSuggestionState>.empty(),
+        initialState: const LoopSuggestionState(
+          status: LoopSuggestionStatus.suggested,
+        ),
+      );
+
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, loopSuggestionCubit: loopSuggestionCubit),
+      );
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.bySemanticsLabel(l10n.videoEditorAddElementSemanticLabel),
+        findsNothing,
+      );
+    });
 
     testWidgets('hides FAB when an overlay item is selected', (tester) async {
       overlayBloc.add(const TimelineOverlayItemSelected('overlay-1'));

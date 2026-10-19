@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -376,8 +377,16 @@ class _AddElementFab extends StatelessWidget {
     final isClipInteracting = context.select(
       (ClipEditorBloc b) => b.state.isEditing || b.state.isMultiSelectMode,
     );
+    // Anything added now would be saved with the previewed loop trim.
+    final hasLoopSuggestion = context.select(
+      (LoopSuggestionCubit c) =>
+          c.state.status == LoopSuggestionStatus.suggested,
+    );
 
-    if (shouldHide || isOverlayInteracting || isClipInteracting) {
+    if (shouldHide ||
+        isOverlayInteracting ||
+        isClipInteracting ||
+        hasLoopSuggestion) {
       return const SizedBox.shrink();
     }
 
