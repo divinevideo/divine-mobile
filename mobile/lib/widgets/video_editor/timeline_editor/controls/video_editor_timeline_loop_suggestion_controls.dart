@@ -29,6 +29,25 @@ bool _sameTrim(DivineVideoClip clip, DivineVideoClip other) =>
     clip.trimStart == other.trimStart &&
     clip.trimEnd == other.trimEnd;
 
+/// Only the previewed last trim may differ from the searched composition.
+bool _matchesLoopComposition(
+  List<DivineVideoClip> clips,
+  LoopSuggestionState state,
+) {
+  final original = state.original;
+  final suggested = state.suggested;
+  if (clips.isEmpty ||
+      original == null ||
+      suggested == null ||
+      clips.length != state.originalClips.length) {
+    return false;
+  }
+  for (var i = 0; i < clips.length - 1; i++) {
+    if (!identical(clips[i], state.originalClips[i])) return false;
+  }
+  return identical(clips.last, original) || identical(clips.last, suggested);
+}
+
 /// What the bar says about the suggestion in [state].
 String _suggestionText(BuildContext context, LoopSuggestionState state) {
   final original = state.original;
@@ -97,6 +116,7 @@ class TimelineLoopSuggestionControls extends StatelessWidget {
     if (original == null ||
         suggested == null ||
         index == -1 ||
+        !_matchesLoopComposition(clips, cubit.state) ||
         editor == null ||
         !editor.mounted) {
       cubit.resultHandled();
@@ -114,7 +134,7 @@ class TimelineLoopSuggestionControls extends StatelessWidget {
         trimStart: suggested.trimStart,
         trimEnd: suggested.trimEnd,
       );
-    // An undo while the suggestion showed put the old end back.
+    // The preview may not have reached the clip bloc yet.
     if (!_sameTrim(clip, suggested)) {
       clipBloc.add(ClipEditorClipUpdated(clipId: clip.id, clip: after[index]));
     }
@@ -262,16 +282,17 @@ class _LoopSuggestionResultListenerState
         suggested == null ||
         index < 0 ||
         index != clips.length - 1 ||
+        clipBloc.state.isTrimDragging ||
+        context.read<VideoEditorMainBloc>().state.isReordering ||
+        context.read<TimelineOverlayBloc>().state.draggingItemId != null ||
+        context.read<TimelineOverlayBloc>().state.trimmingItemId != null ||
         !listEquals(clips, state.originalClips) ||
         !_sameTrim(clips[index], original)) {
       cubit.resultHandled();
       return;
     }
 
-    final clip = clips[index].copyWith(
-      trimStart: suggested.trimStart,
-      trimEnd: suggested.trimEnd,
-    );
+    final clip = suggested;
     clipBloc.add(ClipEditorClipUpdated(clipId: clip.id, clip: clip));
 
     final end = compositionDuration(List.of(clips)..[index] = clip);
@@ -303,11 +324,7 @@ class _LoopSuggestionResultListenerState
         suggested == null) {
       return;
     }
-    final clip = clipState.clips.where((c) => c.id == original.id).firstOrNull;
-    if (clip != null &&
-        (_sameTrim(clip, suggested) || _sameTrim(clip, original))) {
-      return;
-    }
+    if (_matchesLoopComposition(clipState.clips, state)) return;
     cubit.resultHandled();
   }
 }

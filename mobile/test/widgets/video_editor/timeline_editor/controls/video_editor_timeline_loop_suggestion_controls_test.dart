@@ -282,6 +282,38 @@ void main() {
       verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
     });
 
+    for (final interaction in [
+      'trim',
+      'reorder',
+      'overlay drag',
+      'overlay trim',
+    ]) {
+      testWidgets('drops a result during an active $interaction gesture', (
+        tester,
+      ) async {
+        when(() => clipBloc.state).thenReturn(
+          ClipEditorState(clips: [clip], isTrimDragging: interaction == 'trim'),
+        );
+        when(() => mainBloc.state).thenReturn(
+          VideoEditorMainState(isReordering: interaction == 'reorder'),
+        );
+        when(() => overlayBloc.state).thenReturn(
+          TimelineOverlayState(
+            draggingItemId: interaction == 'overlay drag' ? 'overlay' : null,
+            trimmingItemId: interaction == 'overlay trim' ? 'overlay' : null,
+          ),
+        );
+        await pump(tester);
+        await cubit.search([clip]);
+        await tester.pump();
+
+        expect(cubit.state.status, LoopSuggestionStatus.idle);
+        verifyNever(
+          () => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())),
+        );
+      });
+    }
+
     testWidgets('Cancel puts the old end back and stops the seam', (
       tester,
     ) async {
@@ -335,6 +367,19 @@ void main() {
 
       clipStates.add(
         ClipEditorState(clips: [clip.copyWith(trimEnd: ms * 900)]),
+      );
+      await tester.pump();
+
+      expect(cubit.state.status, LoopSuggestionStatus.idle);
+    });
+
+    testWidgets('drops a preview when history changes the clip speed', (
+      tester,
+    ) async {
+      final suggested = await findSuggestion(tester);
+
+      clipStates.add(
+        ClipEditorState(clips: [suggested.copyWith(playbackSpeed: 2)]),
       );
       await tester.pump();
 

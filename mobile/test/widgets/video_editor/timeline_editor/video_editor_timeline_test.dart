@@ -143,6 +143,7 @@ void main() {
       VideoEditorMainState? mainState,
       ClipEditorState? clipState,
       ProImageEditorState? editor,
+      LoopSuggestionCubit? loopCubit,
     }) {
       if (mainState != null) {
         when(() => mockMainBloc.state).thenReturn(mainState);
@@ -184,7 +185,10 @@ void main() {
                   BlocProvider<VideoEditorFilterBloc>.value(
                     value: mockFilterBloc,
                   ),
-                  BlocProvider(create: (_) => LoopSuggestionCubit()),
+                  if (loopCubit == null)
+                    BlocProvider(create: (_) => LoopSuggestionCubit())
+                  else
+                    BlocProvider.value(value: loopCubit),
                 ],
 
                 child: const VideoEditorTimelineScaffold(),
@@ -218,6 +222,47 @@ void main() {
     });
 
     group('renders', () {
+      testWidgets('requires Keep or Cancel before another timeline edit', (
+        tester,
+      ) async {
+        final clip = _createTestClip(id: 'a', seconds: 5);
+        final cubit = LoopSuggestionCubit(
+          findLoopPoint:
+              ({required search, required taskId, onProgress}) async =>
+                  const VideoLoopPoint(
+                    start: Duration.zero,
+                    end: Duration(seconds: 4),
+                    difference: 0.01,
+                    currentDifference: 0.2,
+                  ),
+        );
+        addTearDown(cubit.close);
+        await cubit.search([clip]);
+        await tester.pumpWidget(
+          buildWidget(
+            clipState: ClipEditorState(clips: [clip]),
+            loopCubit: cubit,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final tile = find.byKey(const ValueKey('a'));
+        final point = tester.getTopLeft(tile) + const Offset(30, 20);
+
+        await tester.tapAt(point);
+        await tester.pump();
+        verifyNever(() => mockClipBloc.add(const ClipEditorEditingToggled()));
+        expect(find.text('Keep').hitTestable(), findsOneWidget);
+        expect(find.text('Cancel').hitTestable(), findsOneWidget);
+
+        // The same gesture works once the pending preview is dismissed.
+        cubit.resultHandled();
+        await tester.pumpAndSettle();
+        await tester.tapAt(point);
+        await tester.pump();
+        verify(() => mockClipBloc.add(const ClipEditorEditingToggled()))
+            .called(1);
+      });
+
       testWidgets('renders timeline with clips', (tester) async {
         final clips = [
           _createTestClip(id: 'clip1', seconds: 3),
