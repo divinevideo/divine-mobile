@@ -296,6 +296,7 @@ void main() {
     initialLocation: initialLocation,
     redirect: (_, state) => profileOwnerRedirectTarget(
       location: state.matchedLocation,
+      matchedTemplate: state.fullPath,
       currentPublicKeyHex: meHex,
     ),
     routes: [
@@ -327,6 +328,7 @@ void main() {
     initialLocation: initialLocation,
     redirect: (_, state) => profileOwnerRedirectTarget(
       location: state.matchedLocation,
+      matchedTemplate: state.fullPath,
       currentPublicKeyHex: meHex,
     ),
     routes: [
@@ -456,6 +458,7 @@ void main() {
         expect(
           profileOwnerRedirectTarget(
             location: ProfileScreenRouter.pathForNpub(otherNpub),
+            matchedTemplate: ProfileScreenRouter.pathWithNpub,
             currentPublicKeyHex: meHex,
           ),
           OtherProfileScreen.pathForNpub(otherNpub),
@@ -463,6 +466,7 @@ void main() {
         expect(
           profileOwnerRedirectTarget(
             location: OtherProfileScreen.pathForNpub(meNpub),
+            matchedTemplate: OtherProfileScreen.pathWithNpub,
             currentPublicKeyHex: meHex,
           ),
           ProfileScreenRouter.pathForNpub(meNpub),
@@ -470,6 +474,7 @@ void main() {
         expect(
           profileOwnerRedirectTarget(
             location: ProfileScreenRouter.pathForNpub(otherNpub),
+            matchedTemplate: ProfileScreenRouter.pathWithNpub,
             currentPublicKeyHex: null,
           ),
           isNull,
@@ -477,6 +482,19 @@ void main() {
         expect(
           profileOwnerRedirectTarget(
             location: ProfileScreenRouter.pathForNpub('invalid'),
+            matchedTemplate: ProfileScreenRouter.pathWithNpub,
+            currentPublicKeyHex: meHex,
+          ),
+          isNull,
+        );
+      });
+
+      test('leaves a route registered under another user profile alone', () {
+        expect(
+          profileOwnerRedirectTarget(
+            location:
+                '${ProfileScreenRouter.pathForNpub(otherNpub)}/collections',
+            matchedTemplate: '${ProfileScreenRouter.pathWithNpub}/collections',
             currentPublicKeyHex: meHex,
           ),
           isNull,

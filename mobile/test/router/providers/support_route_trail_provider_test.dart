@@ -5,9 +5,13 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/router/providers/providers.dart';
+import 'package:go_router/go_router.dart';
+import 'package:openvine/router/router.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late StreamController<String> locations;
   late ProviderContainer container;
 
@@ -16,6 +20,7 @@ void main() {
     container = ProviderContainer(
       overrides: [
         routerLocationStreamProvider.overrideWithValue(locations.stream),
+        _appRouter,
       ],
     );
     container.read(supportRouteTrailProvider);
@@ -85,6 +90,15 @@ void main() {
       ]);
     });
 
+    test('does not record a route registered under a parsed one', () async {
+      final snapshot = await visit([
+        '/home/0',
+        '/video/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/likers',
+      ]);
+
+      expect(snapshot.recentScreens, ['home']);
+    });
+
     test('ignores unknown locations rather than recording home', () async {
       final snapshot = await visit(['/profile/0', '/not-a-real-route']);
 
@@ -104,6 +118,7 @@ void main() {
             pageContextProvider.overrideWith(
               (ref) => Stream.value(const RouteContext(type: RouteType.home)),
             ),
+            _appRouter,
           ],
         );
         addTearDown(() async {
@@ -127,3 +142,13 @@ void main() {
     );
   });
 }
+
+/// The app's real routes, so the trail sees what GoRouter matched.
+final Override _appRouter = goRouterProvider.overrideWith((ref) {
+  final router = GoRouter(
+    navigatorKey: NavigatorKeys.root,
+    routes: appRoutes(ref),
+  );
+  ref.onDispose(router.dispose);
+  return router;
+});

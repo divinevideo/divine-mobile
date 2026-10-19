@@ -114,66 +114,6 @@ void main() {
     );
   });
 
-  group('normalization classification', () {
-    test('normalizes modeled routes only', () {
-      final routes = {
-        '/home/-3': '/home/0',
-        '/profile/$pubkey/-1': '/profile/$pubkey/0',
-        '/hashtag/nostr%20video': '/hashtag/nostr%20video',
-      };
-
-      for (final entry in routes.entries) {
-        final parsed = parseKnownRoute(entry.key);
-        expect(parsed, isNotNull, reason: entry.key);
-        expect(buildRoute(parsed!), entry.value, reason: entry.key);
-      }
-    });
-
-    test('leaves unknown and incomplete routes to GoRouter', () {
-      expect(
-        parseKnownRoute('/search-results/nostr'),
-        isNull,
-        reason: 'search results are GoRouter-owned, not RouteContext modeled',
-      );
-      expect(
-        parseKnownRoute('/verify-email'),
-        isNull,
-        reason: 'auth deep links are GoRouter-owned',
-      );
-      expect(
-        parseKnownRoute('/wat/xyz'),
-        isNull,
-        reason: 'unknown routes should not be rewritten to home',
-      );
-      expect(
-        parseKnownRoute('/following'),
-        isNull,
-        reason: 'incomplete dynamic routes should not throw or normalize',
-      );
-      expect(
-        parseKnownRoute(ProfileSetupScreen.setupPath),
-        isNull,
-        reason: 'setup profile must not normalize to edit profile',
-      );
-    });
-
-    test('leaves routes with unmodeled trailing segments to GoRouter', () {
-      for (final route in [
-        ExploreScreen.pathForTab('popular'),
-        '/people-lists/new/extra',
-        '/hashtag/dogs/3',
-        '/video/$videoId/bogus',
-        '/profile/$pubkey/0/extra',
-      ]) {
-        expect(
-          parseKnownRoute(route),
-          isNull,
-          reason: 'unmodeled suffix must not be normalized away: $route',
-        );
-      }
-    });
-  });
-
   group('normalizedPathFor over the registered route tree', () {
     late List<RouteBase> registered;
     late List<String> templates;
@@ -241,8 +181,30 @@ void main() {
       }
     });
 
+    test('leaves unknown, incomplete and canonical routes alone', () {
+      final cases = {
+        '/search-results/nostr': 'search results are not RouteContext modeled',
+        '/verify-email': 'auth deep links are GoRouter-owned',
+        '/wat/xyz': 'unknown routes must not be rewritten to home',
+        '/following': 'an incomplete dynamic route must not normalize',
+        ProfileSetupScreen.setupPath: 'setup profile is not edit profile',
+        '/hashtag/nostr%20video': 'an encoded parameter is already canonical',
+      };
+
+      for (final entry in cases.entries) {
+        expect(
+          normalizedPathFor(routes, Uri.parse(entry.key)),
+          isNull,
+          reason: entry.value,
+        );
+      }
+    });
+
     test('leaves an unregistered trailing segment to GoRouter', () {
       for (final route in [
+        ExploreScreen.pathForTab('popular'),
+        '/people-lists/new/extra',
+        '/hashtag/dogs/3',
         '/video/$videoId/bogus',
         '/home/0/extra',
         '/profile/$pubkey/0/extra',

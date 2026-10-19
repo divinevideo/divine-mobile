@@ -512,13 +512,17 @@ void main() {
       });
 
       test('Unknown route is not a known normalizable route', () {
-        expect(parseKnownRoute('/unknown-route'), isNull);
+        expect(
+          parseMatchedRoute('/unknown-route', matchedTemplate: null),
+          isNull,
+        );
       });
 
       test('people list roster is a known normalizable route', () {
-        // Registered with the normalizer, so the route is modeled rather
-        // than passed through as unknown.
-        final context = parseKnownRoute('/people-lists/list%3A123/members');
+        final context = parseMatchedRoute(
+          '/people-lists/list%3A123/members',
+          matchedTemplate: '/people-lists/:listId/members',
+        );
         expect(context?.type, RouteType.peopleListRoster);
         expect(context?.listId, 'list:123');
       });
@@ -533,14 +537,14 @@ void main() {
         expect(() => parseRoute('/following'), returnsNormally);
         final context = parseRoute('/following');
         expect(context.type, RouteType.home);
-        expect(parseKnownRoute('/following'), isNull);
+        expect(parseMatchedRoute('/following', matchedTemplate: null), isNull);
       });
 
       test('Incomplete followers route defaults to home without throwing', () {
         expect(() => parseRoute('/followers'), returnsNormally);
         final context = parseRoute('/followers');
         expect(context.type, RouteType.home);
-        expect(parseKnownRoute('/followers'), isNull);
+        expect(parseMatchedRoute('/followers', matchedTemplate: null), isNull);
       });
     });
 
