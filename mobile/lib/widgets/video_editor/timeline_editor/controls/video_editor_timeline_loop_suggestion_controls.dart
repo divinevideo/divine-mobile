@@ -259,6 +259,7 @@ class _LoopSuggestionResultListenerState
     // suggestion would undo that.
     if (original == null ||
         suggested == null ||
+        index < 0 ||
         index != clips.length - 1 ||
         !_sameTrim(clips[index], original)) {
       cubit.resultHandled();

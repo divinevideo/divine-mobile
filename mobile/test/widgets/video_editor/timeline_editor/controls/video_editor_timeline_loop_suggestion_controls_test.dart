@@ -217,6 +217,34 @@ void main() {
       );
     });
 
+    testWidgets('drops a result when all clips were removed during search', (
+      tester,
+    ) async {
+      final result = Completer<VideoLoopPoint>();
+      await cubit.close();
+      cubit = LoopSuggestionCubit(
+        findLoopPoint: ({required search, required taskId, onProgress}) =>
+            result.future,
+      );
+      await pump(tester);
+      final search = cubit.search([clip]);
+      when(() => clipBloc.state).thenReturn(const ClipEditorState());
+      result.complete(
+        const VideoLoopPoint(
+          start: Duration.zero,
+          end: Duration(milliseconds: 2500),
+          difference: 0.01,
+          currentDifference: 0.2,
+        ),
+      );
+      await search;
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(cubit.state.status, LoopSuggestionStatus.idle);
+      verifyNever(() => clipBloc.add(any(that: isA<ClipEditorClipUpdated>())));
+    });
+
     testWidgets('Cancel puts the old end back and stops the seam', (
       tester,
     ) async {
