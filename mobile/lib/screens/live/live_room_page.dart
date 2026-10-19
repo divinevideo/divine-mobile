@@ -265,7 +265,10 @@ class _LiveRoomPageState extends ConsumerState<LiveRoomPage> {
     }
 
     final isSpeaker = sessions.any(
-      (session) => session.speakerPubkeys.contains(currentUserPubkey),
+      (session) =>
+          session.hostPubkey == room.hostPubkey &&
+          session.roomId == room.id &&
+          session.speakerPubkeys.contains(currentUserPubkey),
     );
     return isSpeaker ? LiveRole.speaker : LiveRole.audience;
   }

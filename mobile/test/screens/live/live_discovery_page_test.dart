@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
@@ -13,8 +14,11 @@ import 'package:openvine/providers/live_providers.dart';
 import 'package:openvine/repositories/live_repository.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/live_room_detail_page.dart';
+import 'package:openvine/screens/live/live_room_detail_view.dart';
 import 'package:openvine/screens/live/live_route_data.dart';
 import 'package:openvine/screens/live/widgets/live_explore_entry_card.dart';
+import 'package:openvine/screens/live/widgets/live_room_card.dart';
+import 'package:openvine/services/live_nostr_codec.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -85,6 +89,165 @@ void main() {
       },
     );
 
+    testWidgets('a foreign host session cannot advertise an unrelated room', (
+      tester,
+    ) async {
+      const host =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const otherHost =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      final publicRoom = _room(
+        id: 'shared-room',
+        hostPubkey: host,
+        title: 'Public room',
+      );
+      final foreignSession = const LiveNostrCodec().parseSession(
+        Event(
+          otherHost,
+          30313,
+          [
+            ['d', 'foreign-session'],
+            ['a', '30312:$otherHost:${publicRoom.id}'],
+          ],
+          '',
+          createdAt: 1700000000,
+        ),
+      );
+      when(mockLiveRepository.fetchPublicRooms)
+          .thenAnswer((_) async => [publicRoom]);
+      when(mockLiveRepository.fetchSessions)
+          .thenAnswer((_) async => [foreignSession]);
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            liveRepositoryProvider.overrideWithValue(mockLiveRepository),
+          ],
+          home: const LiveDiscoveryPage(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(LiveRoomCard), findsNothing);
+      expect(find.text(publicRoom.title), findsNothing);
+      expect(find.text('Featured hosts'), findsNothing);
+    });
+
+    for (final featured in [false, true]) {
+      testWidgets(
+        '${featured ? 'featured host' : 'room card'} keeps a shared room id associated with its host through joining',
+        (tester) async {
+          const host =
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+          const otherHost =
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+          final firstRoom = _room(
+            id: 'shared:room',
+            hostPubkey: host,
+            title: 'First host',
+          );
+          final secondRoom = _room(
+            id: firstRoom.id,
+            hostPubkey: otherHost,
+            title: 'Second host',
+          );
+          final firstSession = _session(
+            id: 'first:session',
+            roomId: firstRoom.id,
+            hostPubkey: host,
+            status: LiveSessionStatus.live,
+          );
+          final secondSession = _session(
+            id: 'second:session',
+            roomId: secondRoom.id,
+            hostPubkey: otherHost,
+            status: LiveSessionStatus.live,
+          );
+          when(mockLiveRepository.fetchPublicRooms)
+              .thenAnswer((_) async => [firstRoom, secondRoom]);
+          when(mockLiveRepository.fetchSessions)
+              .thenAnswer((_) async => [firstSession, secondSession]);
+          LiveRoomDetailRouteData? routedData;
+          Map<String, String>? joinedParameters;
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const LiveDiscoveryPage(),
+              ),
+              GoRoute(
+                path: LiveRoomDetailPage.pathPattern,
+                builder: (context, state) {
+                  routedData = state.extra! as LiveRoomDetailRouteData;
+                  return LiveRoomDetailPage(
+                    roomId: state.pathParameters['roomId']!,
+                    initialRoom: routedData!.room,
+                    initialSession: routedData!.session,
+                  );
+                },
+              ),
+              GoRoute(
+                path: '/live/room/:roomId/session/:sessionId',
+                builder: (context, state) {
+                  joinedParameters = state.pathParameters;
+                  return const Scaffold(body: Text('Joined room'));
+                },
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            testProviderScope(
+              additionalOverrides: [
+                liveRepositoryProvider.overrideWithValue(mockLiveRepository),
+              ],
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          if (featured) {
+            await tester.tap(find.text(firstRoom.title).first);
+          } else {
+            final card = find.byWidgetPredicate(
+              (widget) =>
+                  widget is LiveRoomCard && widget.room.hostPubkey == host,
+            );
+            await tester.scrollUntilVisible(
+              card,
+              200,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.pumpAndSettle();
+            expect(tester.widget<LiveRoomCard>(card).session, firstSession);
+            await tester.tap(card);
+          }
+          await tester.pumpAndSettle();
+          expect(routedData!.room, firstRoom);
+          expect(routedData!.session, firstSession);
+          expect(
+            tester
+                .widget<LiveRoomDetailView>(find.byType(LiveRoomDetailView))
+                .session,
+            firstSession,
+          );
+          await tester.scrollUntilVisible(
+            find.text('Join live'),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Join live'));
+          await tester.pumpAndSettle();
+          expect(joinedParameters, {
+            'roomId': firstRoom.id,
+            'sessionId': firstSession.id,
+          });
+        },
+      );
+    }
+
     testWidgets('tapping a room card opens room detail', (tester) async {
       final activeRoom = _room(
         id: 'room-123',
@@ -94,6 +257,7 @@ void main() {
       final activeSession = _session(
         id: 'session-123',
         roomId: activeRoom.id,
+        hostPubkey: activeRoom.hostPubkey,
         status: LiveSessionStatus.live,
       );
 
@@ -164,11 +328,13 @@ void main() {
       final activeSession = _session(
         id: 'session-123',
         roomId: activeRoom.id,
+        hostPubkey: activeRoom.hostPubkey,
         status: LiveSessionStatus.live,
       );
       final upcomingSession = _session(
         id: 'session-456',
         roomId: upcomingRoom.id,
+        hostPubkey: upcomingRoom.hostPubkey,
         status: LiveSessionStatus.planned,
       );
 
@@ -240,15 +406,17 @@ LiveRoom _room({
 LiveSession _session({
   required String id,
   required String roomId,
+  required String hostPubkey,
   required LiveSessionStatus status,
 }) {
   return LiveSession(
     id: id,
     roomId: roomId,
+    hostPubkey: hostPubkey,
     status: status,
     startedAt: DateTime.utc(2026, 4, 6, 8),
     endedAt: null,
-    speakerPubkeys: const <String>['host-pubkey'],
+    speakerPubkeys: <String>[hostPubkey],
     audienceCount: 42,
   );
 }

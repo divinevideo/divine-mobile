@@ -248,7 +248,7 @@ class _DiscoverySection extends StatelessWidget {
             final session = sessions
                 .where(
                   (item) =>
-                      item.roomAddressKey == room.address ||
+                      item.hostPubkey == room.hostPubkey &&
                       item.roomId == room.id,
                 )
                 .fold(
@@ -322,7 +322,7 @@ class _FeaturedHostsSection extends StatelessWidget {
                 final session = sessions
                     .where(
                       (item) =>
-                          item.roomAddressKey == room.address ||
+                          item.hostPubkey == room.hostPubkey &&
                           item.roomId == room.id,
                     )
                     .fold(

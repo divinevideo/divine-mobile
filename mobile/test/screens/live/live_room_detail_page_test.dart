@@ -17,6 +17,7 @@ import 'package:openvine/repositories/live_chat_repository.dart';
 import 'package:openvine/repositories/live_repository.dart';
 import 'package:openvine/screens/live/live_discovery_page.dart';
 import 'package:openvine/screens/live/live_room_detail_page.dart';
+import 'package:openvine/screens/live/live_room_detail_view.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/live_api_service.dart';
 import 'package:openvine/services/livekit_room_service.dart';
@@ -55,6 +56,7 @@ void main() {
     final session = LiveSession(
       id: 'session-123',
       roomId: 'room-123',
+      hostPubkey: room.hostPubkey,
       status: LiveSessionStatus.live,
       startedAt: DateTime.utc(2026, 4, 6, 8),
       endedAt: null,
@@ -64,6 +66,7 @@ void main() {
     final endedSession = LiveSession(
       id: 'session-ended',
       roomId: 'room-123',
+      hostPubkey: room.hostPubkey,
       status: LiveSessionStatus.ended,
       startedAt: DateTime.utc(2026, 4, 6, 7),
       endedAt: DateTime.utc(2026, 4, 6, 9),
@@ -125,6 +128,57 @@ void main() {
         ),
       );
     });
+
+    for (final mismatch in ['host', 'room', 'missing host']) {
+      testWidgets('ignores a $mismatch mismatch in the initial session extra', (
+        tester,
+      ) async {
+        final repository = _MockLiveRepository();
+        final canonicalSession = session.copyWith(hostPubkey: room.hostPubkey);
+        final foreignSession = LiveSession(
+          id: 'foreign-session',
+          roomId: mismatch == 'room' ? 'another-room' : room.id,
+          hostPubkey: mismatch == 'missing host'
+              ? null
+              : mismatch == 'host'
+              ? 'another-host'
+              : room.hostPubkey,
+          status: LiveSessionStatus.ended,
+          startedAt: DateTime.utc(2026),
+          endedAt: DateTime.utc(2026, 1, 2),
+          speakerPubkeys: const [],
+          audienceCount: 0,
+        );
+        when(() => repository.fetchSessions(roomAddress: room.address))
+            .thenAnswer((_) async => [canonicalSession]);
+        when(() => repository.fetchRecording(roomId: room.id))
+            .thenAnswer((_) async => null);
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              liveRepositoryProvider.overrideWithValue(repository),
+            ],
+            home: LiveRoomDetailPage(
+              roomId: room.id,
+              initialRoom: room,
+              initialSession: foreignSession,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<LiveRoomDetailView>(find.byType(LiveRoomDetailView))
+              .session,
+          canonicalSession,
+        );
+        expect(find.text('Join live'), findsOneWidget);
+        verify(() => repository.fetchSessions(roomAddress: room.address))
+            .called(1);
+        verifyNever(() => repository.fetchRecording(roomId: room.id));
+        verifyNever(() => repository.fetchRoom(any()));
+      });
+    }
 
     testWidgets('missing direct link finishes loading with unavailable state', (
       tester,

@@ -88,23 +88,32 @@ class _LiveRoomDetailPageState extends ConsumerState<LiveRoomDetailPage> {
     final initialRoom = widget.initialRoom?.id == widget.roomId
         ? widget.initialRoom
         : null;
-    if (initialRoom != null) {
-      final recording = widget.initialSession?.hasEnded == true
+    final initialSession = widget.initialSession;
+    if (initialRoom != null &&
+        (initialSession == null ||
+            initialSession.hostPubkey == initialRoom.hostPubkey &&
+                initialSession.roomId == initialRoom.id)) {
+      final recording = initialSession?.hasEnded == true
           ? await repository.fetchRecording(roomId: initialRoom.id)
           : null;
       return _LiveRoomDetailPayload(
         room: initialRoom,
-        session: widget.initialSession,
+        session: initialSession,
         recording: recording,
       );
     }
 
-    final room = await repository.fetchRoom(widget.roomId);
+    final room = initialRoom ?? await repository.fetchRoom(widget.roomId);
     if (room == null) {
       return null;
     }
 
-    final sessions = await repository.fetchSessions(roomAddress: room.address);
+    final sessions = (await repository.fetchSessions(roomAddress: room.address))
+        .where(
+          (session) =>
+              session.hostPubkey == room.hostPubkey &&
+              session.roomId == room.id,
+        );
     final session =
         sessions.where((item) => item.isLive).firstOrNull ??
         sessions.firstOrNull;

@@ -35,6 +35,7 @@ void main() {
     final liveSession = LiveSession(
       id: 'session-live',
       roomId: roomOne.id,
+      hostPubkey: roomOne.hostPubkey,
       status: LiveSessionStatus.live,
       startedAt: DateTime.utc(2026, 4, 6, 12),
       endedAt: null,
