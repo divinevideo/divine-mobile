@@ -1,6 +1,7 @@
 // ABOUTME: Pins how the canvas drives the timeline position on a short loop,
 // ABOUTME: and that it hands the frame effects to the player after each load.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -28,6 +29,9 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:pro_video_editor/pro_video_editor.dart'
     show CustomVideoEffect, EditorVideo;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 import '../../../helpers/divine_video_player_channel.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -38,6 +42,65 @@ class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
+
+class _OwnedPaths extends Fake
+    with MockPlatformInterfaceMixin
+    implements PathProviderPlatform {
+  _OwnedPaths(this.path);
+  final String path;
+  @override
+  Future<String?> getTemporaryPath() async => path;
+  @override
+  Future<String?> getApplicationCachePath() async => path;
+  @override
+  Future<String?> getApplicationDocumentsPath() async => path;
+}
+
+class _GatedRenderer extends editor.ProVideoEditor {
+  final firstStarted = Completer<editor.VideoRenderData>();
+  final pending = <String, Completer<void>>{};
+  var completedRenders = 0;
+  var metadataReads = 0;
+  @override
+  void initializeStream() {}
+  @override
+  Future<String> renderVideoToFile(
+    String path,
+    editor.VideoRenderData data, {
+    editor.NativeLogLevel? nativeLogLevel,
+  }) async {
+    final gate = pending[data.id] = Completer<void>();
+    if (!firstStarted.isCompleted) firstStarted.complete(data);
+    await gate.future;
+    File(path).writeAsStringSync('rendered');
+    completedRenders++;
+    return path;
+  }
+
+  @override
+  Future<void> cancel(String id) async {
+    final gate = pending.remove(id);
+    if (gate != null && !gate.isCompleted)
+      gate.completeError(const editor.RenderCanceledException());
+  }
+
+  @override
+  Future<editor.VideoMetadata> getMetadata(
+    editor.EditorVideo video, {
+    bool checkStreamingOptimization = false,
+    editor.NativeLogLevel? nativeLogLevel,
+  }) async {
+    metadataReads++;
+    return editor.VideoMetadata(
+      duration: const Duration(milliseconds: 1500),
+      extension: 'mp4',
+      fileSize: 1024,
+      resolution: const Size(1080, 1920),
+      rotation: 0,
+      bitrate: 1000000,
+    );
+  }
+}
 
 /// Seeds the editor with [clips] instead of the recorder's session.
 class _SeededClipManagerNotifier extends ClipManagerNotifier {
@@ -135,7 +198,13 @@ void main() {
 
   /// Mounts the canvas over one clip of [duration] and lets its player come
   /// up on the mocked channel.
-  Future<void> pumpCanvas(WidgetTester tester, Duration duration) async {
+  Future<void> pumpCanvas(
+    WidgetTester tester,
+    Duration duration, {
+    double? playbackSpeed,
+    Stream<ClipEditorState>? clipStates,
+    void Function(MethodCall)? onPlayerCall,
+  }) async {
     // Built inside the test body so the mocked channel's stream and the
     // bloc's event pipeline schedule on the binding's fake zone, where a
     // plain pump delivers them; created in setUp they would run on the real
@@ -144,15 +213,16 @@ void main() {
       streamHandler: reports,
       onMethodCall: (call) async {
         playerCalls.add(call);
+        onPlayerCall?.call(call);
         return null;
       },
     );
     mainBloc = VideoEditorMainBloc();
     effectsCubit = VideoEditorEffectsCubit();
-    final clip = clipOf(duration);
+    final clip = clipOf(duration).copyWith(playbackSpeed: playbackSpeed);
     whenListen(
       clipBloc,
-      const Stream<ClipEditorState>.empty(),
+      clipStates ?? const Stream<ClipEditorState>.empty(),
       initialState: ClipEditorState(clips: [clip]),
     );
     final bodySizeNotifier = ValueNotifier(const Size(360, 640));
@@ -240,6 +310,89 @@ void main() {
   }
 
   group('short loop', () {
+    testWidgets('a finished render keeps the uncommitted preview trim', (
+      tester,
+    ) async {
+      final originalPlugin = editor.ProVideoEditor.instance;
+      final originalPaths = PathProviderPlatform.instance;
+      final renderer = _GatedRenderer();
+      editor.ProVideoEditor.instance = renderer;
+      PathProviderPlatform.instance = _OwnedPaths(tempDir.path);
+      addTearDown(() {
+        editor.ProVideoEditor.instance = originalPlugin;
+        PathProviderPlatform.instance = originalPaths;
+      });
+      final states = StreamController<ClipEditorState>.broadcast();
+      addTearDown(states.close);
+      Completer<MethodCall>? nextReload;
+      await pumpCanvas(
+        tester,
+        const Duration(seconds: 3),
+        playbackSpeed: 2,
+        clipStates: states.stream,
+        onPlayerCall: (call) {
+          if (call.method == 'setClips' &&
+              nextReload != null &&
+              !nextReload!.isCompleted) {
+            nextReload!.complete(call);
+          }
+        },
+      );
+      expect(tester.takeException(), isNull);
+      final firstRender = await tester.runAsync(
+        () => renderer.firstStarted.future.timeout(const Duration(seconds: 10)),
+      );
+      final original = clipBloc.state.clips.single;
+      nextReload = Completer<MethodCall>();
+      states.add(
+        ClipEditorState(
+          clips: [original.copyWith(trimEnd: const Duration(seconds: 1))],
+        ),
+      );
+      await tester.pump();
+      final previewReload = await tester.runAsync(
+        () => nextReload!.future.timeout(const Duration(seconds: 10)),
+      );
+      expect(
+        (((previewReload!.arguments as Map)['clips'] as List).single
+            as Map)['endMs'],
+        2000,
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+
+      nextReload = Completer<MethodCall>();
+      await tester.runAsync(() async {
+        renderer.pending[firstRender!.id]!.complete();
+        await pumpEventQueue();
+      });
+      await tester.pump();
+      expect(
+        renderer.completedRenders,
+        1,
+        reason: 'the gated native render completed',
+      );
+      // Publishing the cache performs copy, rename and delete I/O. Let those
+      // real completions and their fake-zone continuations reach metadata.
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      }
+      expect(
+        renderer.metadataReads,
+        1,
+        reason: 'the published speed file was read',
+      );
+      final reload = await tester.runAsync(
+        () => nextReload!.future.timeout(const Duration(seconds: 10)),
+      );
+      final clips = (reload!.arguments as Map)['clips'] as List;
+      final end = (clips.single as Map)['endMs'];
+      await unmount(tester);
+      expect(end, 2000);
+    });
+
     const loop = Duration(milliseconds: 130);
 
     testWidgets('drives the timeline position from the playhead ticker', (

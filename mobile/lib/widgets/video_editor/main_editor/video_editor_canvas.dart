@@ -974,7 +974,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// The composition the preview player plays (rendered seams and speed
   /// bodies spliced in) plus the player↔editor position mapping.
   late final _composition = PreviewComposition(
-    readClips: () => ref.read(clipManagerProvider).clips,
+    // Preview-only trims live in the clip bloc until Keep commits history.
+    readClips: () => context.read<ClipEditorBloc>().state.clips,
     runDetached: _runDetached,
     onSeamRendered: _resyncPlayerClips,
     onSpeedClipRendered: _resyncSpeedClipsWhenIdle,
@@ -1080,7 +1081,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// preserving the current playback position.
   void _resyncPlayerClips() {
     if (!_isPlayerInitialized) return;
-    final clips = ref.read(clipManagerProvider).clips;
+    final clips = context.read<ClipEditorBloc>().state.clips;
     if (clips.isEmpty) return;
     final currentPosition = context
         .read<VideoEditorMainBloc>()
