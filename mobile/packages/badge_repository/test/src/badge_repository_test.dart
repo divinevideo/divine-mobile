@@ -622,6 +622,105 @@ void main() {
         );
 
         test(
+          'foreground discovery after a failed recheck returns holders without a refresh',
+          () async {
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            await repository.loadSubscribedHolders();
+            final revalidation = Completer<_SubscriptionRead>();
+            deferRead(revalidation);
+            await repository.loadSubscribedHolders();
+            revalidation.completeError(
+              const BadgeReadIncompleteException('relay unavailable'),
+            );
+            await pumpEventQueue();
+            final coordinate = '30009:${_pubkey(2)}:daily';
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [subscription()],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+            when(() => nostrClient.readAllEvents(any())).thenAnswer((
+              call,
+            ) async {
+              final filter = call.positionalArguments.single as Filter;
+              return PagedQueryResult(
+                events: switch (filter.kinds?.single) {
+                  EventKind.badgeAward => [
+                    _event(
+                      id: _eventId(710),
+                      pubkey: _pubkey(2),
+                      kind: EventKind.badgeAward,
+                      tags: [
+                        ['a', coordinate],
+                        ['p', _pubkey(3)],
+                      ],
+                    ),
+                  ],
+                  EventKind.profileBadges => [
+                    _event(
+                      id: _eventId(711),
+                      pubkey: _pubkey(3),
+                      kind: EventKind.profileBadges,
+                      tags: [
+                        ['a', coordinate],
+                        ['e', _eventId(710)],
+                      ],
+                    ),
+                  ],
+                  _ => <Event>[],
+                },
+                isComplete: true,
+                pages: 1,
+              );
+            });
+            expect(await repository.loadSubscribedHolders(), {_pubkey(3)});
+            await pumpEventQueue();
+            expect(changes, isEmpty);
+          },
+        );
+
+        test(
+          'repeated slow reads notify only the first undelivered discovery',
+          () async {
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            final positive = (
+              events: [subscription()],
+              timedOut: false,
+              noRelays: false,
+            );
+            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            for (var attempt = 0; attempt < 3; attempt++) {
+              final pending = Completer<_SubscriptionRead>();
+              deferRead(pending);
+              await expectLater(
+                repository.loadSubscribedHolders(timeout: Duration.zero),
+                throwsA(isA<TimeoutException>()),
+              );
+              pending.complete(positive);
+              await pumpEventQueue();
+              expect(changes, hasLength(1));
+            }
+          },
+        );
+
+        test(
           'subscribed badges with zero holders are not an absence proof',
           () async {
             when(

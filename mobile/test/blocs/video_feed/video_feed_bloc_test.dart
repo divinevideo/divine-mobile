@@ -1753,15 +1753,16 @@ void main() {
             expect(afterVerification.videos.single.id, 'direct');
           },
         );
-        for (final (beforeHomeCompletes, timedOut, authNudge) in [
-          (false, false, false),
-          (true, false, false),
-          (false, true, false),
-          (false, false, true),
+        for (final (beforeHomeCompletes, timedOut, authNudge, unknown) in [
+          (false, false, false, false),
+          (true, false, false, false),
+          (false, true, false, false),
+          (false, false, true, false),
+          (false, true, false, true),
         ]) {
           test(
             'new subscription appears during startup: pending home '
-            '$beforeHomeCompletes, timed-out revalidation $timedOut, auth nudge $authNudge',
+            '$beforeHomeCompletes, timed-out revalidation $timedOut, auth nudge $authNudge, unknown $unknown',
             () async {
               StreamController<AuthState>? authChanges;
               if (authNudge) {
@@ -1794,7 +1795,7 @@ void main() {
                 badges = container.read(badgeRepositoryProvider);
               }
               stubEmptySubscriptions();
-              if (!authNudge) await badges.loadSubscribedHolders();
+              if (!authNudge && !unknown) await badges.loadSubscribedHolders();
               when(() => mockFollowRepository.followingPubkeys)
                   .thenReturn(['1' * 64]);
               final home = Completer<HomeFeedResult>();
