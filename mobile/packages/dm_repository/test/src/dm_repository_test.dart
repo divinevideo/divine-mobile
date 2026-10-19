@@ -26696,6 +26696,39 @@ void main() {
           );
         });
 
+        test(
+          'does not fire when a send reached no relay, and says so (#8516)',
+          () async {
+            stubSendRumor(
+              (_, _) async => const NIP17SendResult.failure(
+                'Message not sent: no relay reached',
+                reachedNoRelay: true,
+              ),
+            );
+            final repository = createRepository(
+              outgoingDmsDao: mockOutgoingDmsDao,
+            );
+            late NIP17SendResult result;
+
+            final events = await collectedEvents(repository, () async {
+              result = await repository.sendMessage(
+                recipientPubkey: _validPubkeyB,
+                content: 'no relay',
+              );
+            });
+
+            expect(
+              events,
+              isEmpty,
+              reason:
+                  'a relay connecting wakes the sweep for it; a nudge would '
+                  'retry it every 30 seconds while the relays are out of '
+                  'reach',
+            );
+            expect(result.reachedNoRelay, isTrue);
+          },
+        );
+
         test('fires when a send hard-fails', () async {
           stubSendRumor(
             (_, _) async => const NIP17SendResult.failure('relay refused'),

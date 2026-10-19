@@ -157,7 +157,7 @@ final class OutgoingDmRetryServiceProvider
 }
 
 String _$outgoingDmRetryServiceHash() =>
-    r'2a99dc230c6632a3e80d2c797153b5da9715a010';
+    r'f207d64b424afeb715ca1e6ea933a6fc7b544775';
 
 /// Auto-sweep service that re-drives undelivered DM reactions and removals
 /// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]

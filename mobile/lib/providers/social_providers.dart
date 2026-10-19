@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:async/async.dart';
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -329,9 +330,17 @@ OutgoingDmRetryService? outgoingDmRetryService(Ref ref) {
   // `online` arrives only after the connectivity owner's repair attempt has
   // finished, failed or hit its cap, so the sweep runs after that reconnect
   // instead of racing it, and the pool is not reconnected twice (#8990).
-  final retryTriggerStream = ref
-      .watch(connectivityRelayReconnectProvider)
-      .map<void>((_) {});
+  // A relay connecting also wakes it: a send that reached no relay is not
+  // charged, and that is the event it waits for, including a relay server
+  // that comes back while the phone stayed online (#8516).
+  final nostrClient = ref.watch(nostrServiceProvider);
+  final retryTriggerStream = StreamGroup.merge<void>([
+    ref.watch(connectivityRelayReconnectProvider).map<void>((_) {}),
+    relayConnectedTransitions(
+      nostrClient.relayStatusStream,
+      initial: nostrClient.relayStatuses,
+    ),
+  ]);
 
   final service = OutgoingDmRetryService(
     crashReporting: ref.read(crashReportingServiceProvider),
