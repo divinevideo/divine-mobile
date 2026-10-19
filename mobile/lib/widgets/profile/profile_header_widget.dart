@@ -2,10 +2,14 @@
 // ABOUTME: Reusable between own profile and others' profile screens
 
 import 'dart:async';
+import 'dart:collection';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -70,6 +74,7 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
+part 'profile_header_floating_badges.dart';
 part 'profile_header_identity.dart';
 part 'profile_header_media.dart';
 part 'profile_header_supporter_lightbox.dart';

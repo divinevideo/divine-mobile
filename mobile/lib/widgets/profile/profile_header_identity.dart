@@ -355,8 +355,10 @@ class _ProfileBadgesBlock extends ConsumerWidget {
     final items =
         ref.watch(profileAcceptedBadgesProvider(userIdHex)).value ??
         const <ProfileBadgeViewData>[];
+    // Otherwise the badges float over the banner instead.
+    final showsRow = items.isNotEmpty && _showsStaticProfileBadgeRow(context);
     return _ProfileHeaderReveal(
-      child: items.isEmpty ? null : _ProfileBadgesRow(items: items),
+      child: showsRow ? _ProfileBadgesRow(items: items) : null,
     );
   }
 }
@@ -401,9 +403,24 @@ class _ProfileBadgesRow extends StatelessWidget {
 }
 
 class _ProfileBadgeChip extends StatelessWidget {
-  const _ProfileBadgeChip({required this.badge});
+  const _ProfileBadgeChip({
+    required this.badge,
+    this.compact = false,
+    this.depthLayer = 0,
+  });
 
   final ProfileBadgeViewData badge;
+
+  /// Hugs the content for the floating layer: no 48dp height floor, no
+  /// border, and the badge image sits as far from the leading edge as from
+  /// the top and bottom, centred in the pill's rounded end. The static row
+  /// keeps the full 48dp touch target, and its border, which is all that
+  /// outlines a chip whose fill matches the page.
+  final bool compact;
+
+  /// Floating depth layer, 0 for the nearest. Each layer behind it lightens
+  /// the background by one more coat of white.
+  final int depthLayer;
 
   @override
   Widget build(BuildContext context) {
@@ -414,22 +431,29 @@ class _ProfileBadgeChip extends StatelessWidget {
       button: true,
       label: l10n.profileBadgeSemanticLabel(badge.displayName),
       child: Material(
-        color: context.vineColors.surface,
+        color: _depthTintedBackground(context.vineColors.surface, depthLayer),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
-          side: BorderSide(
-            color: context.vineColors.isLight
-                ? context.vineColors.outline
-                : VineTheme.neutral10,
-          ),
+          side: compact
+              ? BorderSide.none
+              : BorderSide(
+                  color: context.vineColors.isLight
+                      ? context.vineColors.outline
+                      : VineTheme.neutral10,
+                ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(radius),
           onTap: () => _showProfileBadgeSheet(context, badge),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+            constraints: BoxConstraints(
+              minHeight: compact ? 0 : 48,
+              minWidth: 48,
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: compact
+                  ? const EdgeInsetsDirectional.fromSTEB(6, 6, 10, 6)
+                  : const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

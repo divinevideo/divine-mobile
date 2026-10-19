@@ -74,10 +74,17 @@ class _ProfileBannerLayerState extends ConsumerState<ProfileBannerLayer> {
       valueListenable: _topOffset,
       builder: (_, topOffset, child) => child!,
       child: ExcludeSemantics(
-        child: ProfileBanner(
-          bannerUrl: bannerUrl,
-          profileColor: profileColor,
-          height: widget.height,
+        child: Stack(
+          children: [
+            ProfileBanner(
+              bannerUrl: bannerUrl,
+              profileColor: profileColor,
+              height: widget.height,
+            ),
+            Positioned.fill(
+              child: ProfileFloatingBadgesLayer(userIdHex: widget.userIdHex),
+            ),
+          ],
         ),
       ),
     );
