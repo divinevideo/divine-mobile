@@ -48,11 +48,18 @@ class DmReactionRetryConfig {
     this.backoffMultiplier = 2.0,
     this.interruptedPendingMinAge = const Duration(seconds: 30),
     this.followUpSweepGap = const Duration(seconds: 30),
+    this.retriesOnceRanOut = 1,
   });
 
   /// Attempts a single reaction gets before the sweep drops it (a manual
   /// re-tap still works).
   final int maxRetries;
+
+  /// Attempts a reaction or removal gets in a session once an earlier
+  /// session's retries ran out for it ([DmReactionRetryTarget.retriesRanOut]).
+  /// Fewer than [maxRetries], so one the relays never confirm costs a single
+  /// gift wrap per launch rather than a full set (#8516).
+  final int retriesOnceRanOut;
 
   /// Delay before the first retry after a failure.
   final Duration initialDelay;
@@ -132,7 +139,8 @@ enum _RetryAttemptOutcome {
 /// still works). When its budget runs out it is marked unconfirmed: a removal
 /// shows as a warning with a retry (#8390), and a reaction no relay confirmed
 /// shows like a failed one, with a retry, instead of looking in flight for
-/// good (#8516). A later launch retries either. A pass that reached no relay
+/// good (#8516). A later launch gives either one more automatic try
+/// ([DmReactionRetryConfig.retriesOnceRanOut]). A pass that reached no relay
 /// or found the row's own attempt still running is not counted. Entries for
 /// reactions that are no longer retryable (sent, deleted) are pruned each
 /// pass so the maps stay bounded to the live set.
@@ -461,8 +469,11 @@ class DmReactionRetryService {
     for (final target in targets) {
       final id = '$phase:${target.rumorId}';
       final attempts = _attempts[id] ?? 0;
+      final allowance = target.retriesRanOut
+          ? _config.retriesOnceRanOut
+          : _config.maxRetries;
 
-      if (attempts >= _config.maxRetries) {
+      if (attempts >= allowance) {
         skippedExhausted++;
         continue;
       }
@@ -536,7 +547,7 @@ class DmReactionRetryService {
           _attempts[id] = attempts + 1;
           _lastAttempt[id] = _now();
           failed++;
-          if (attempts + 1 < _config.maxRetries) {
+          if (attempts + 1 < allowance) {
             stillRetryable++;
           } else {
             await onBudgetSpent?.call(target);

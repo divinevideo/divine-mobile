@@ -23,12 +23,14 @@ DmReactionRetryTarget _target({
   String publishStatus = 'failed',
   int createdAt = 1700000000,
   bool attemptInFlight = false,
+  bool retriesRanOut = false,
 }) => DmReactionRetryTarget(
   rumorId: rumorId,
   targetMessageAuthor: _authorPubkey,
   publishStatus: publishStatus,
   createdAt: createdAt,
   attemptInFlight: attemptInFlight,
+  retriesRanOut: retriesRanOut,
 );
 
 DmReactionPublishResult _ok(String id) =>
@@ -898,6 +900,109 @@ void main() {
           ).called(1);
         },
       );
+    });
+
+    group('a row whose retries ran out in an earlier session (#8516)', () {
+      test('gets one automatic try, not a full set, as a reaction', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(repository.retryableReactions).thenAnswer(
+          (_) async => [
+            _target(
+              rumorId: 'r1',
+              publishStatus: 'unconfirmed',
+              retriesRanOut: true,
+            ),
+          ],
+        );
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        final service = buildService(now: () => clock);
+
+        for (var pass = 0; pass < 3; pass++) {
+          await service.sweep();
+          clock = clock.add(const Duration(minutes: 10));
+        }
+
+        verify(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(1);
+        verify(
+          () => repository.markReactionUnconfirmed(rumorId: 'r1'),
+        ).called(1);
+      });
+
+      test('gets one automatic try, not a full set, as a removal', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(repository.retryableDeletions).thenAnswer(
+          (_) async => [
+            _target(
+              rumorId: 'd1',
+              publishStatus: 'deletion_unconfirmed',
+              retriesRanOut: true,
+            ),
+          ],
+        );
+        when(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => DmReactionDeletionOutcome.unconfirmed);
+        final service = buildService(now: () => clock);
+
+        for (var pass = 0; pass < 3; pass++) {
+          await service.sweep();
+          clock = clock.add(const Duration(minutes: 10));
+        }
+
+        verify(
+          () => repository.retryDeletion(
+            rumorId: 'd1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(1);
+      });
+
+      test('a try that reached no relay leaves it its one try', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(repository.retryableReactions).thenAnswer(
+          (_) async => [
+            _target(
+              rumorId: 'r1',
+              publishStatus: 'unconfirmed',
+              retriesRanOut: true,
+            ),
+          ],
+        );
+        var calls = 0;
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer(
+          (_) async => DmReactionPublishResult(
+            success: false,
+            rumorId: 'r1',
+            reachedNoRelay: calls++ == 0,
+          ),
+        );
+        final service = buildService(now: () => clock);
+
+        for (var pass = 0; pass < 3; pass++) {
+          await service.sweep();
+          clock = clock.add(const Duration(minutes: 10));
+        }
+
+        expect(calls, 2);
+      });
     });
 
     group('a pass that reached no relay (#8516)', () {

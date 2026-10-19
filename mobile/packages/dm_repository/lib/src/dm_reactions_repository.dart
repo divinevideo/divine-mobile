@@ -115,6 +115,7 @@ class DmReactionRetryTarget {
     required this.publishStatus,
     required this.createdAt,
     this.attemptInFlight = false,
+    this.retriesRanOut = false,
   });
 
   /// Reaction rumor id — the argument `retry` expects.
@@ -137,6 +138,11 @@ class DmReactionRetryTarget {
   /// A retry called now would join that attempt and send nothing, so the
   /// sweep leaves the row for a later pass instead of counting it (#10044).
   final bool attemptInFlight;
+
+  /// Whether an earlier run of automatic retries ran out for this row without
+  /// a relay confirming it: the reaction or removal is shown with a retry. A
+  /// new session gives it one automatic try rather than a full set (#8516).
+  final bool retriesRanOut;
 }
 
 /// Resolves [pubkey]'s NIP-17 kind-10050 DM inbox relays, and says why the
@@ -957,6 +963,7 @@ class DmReactionsRepository {
               ownerPubkey,
               r.id,
             )),
+            retriesRanOut: r.publishStatus == DmReactionsDao.unconfirmed,
           ),
         )
         .toList(growable: false);
@@ -1099,6 +1106,8 @@ class DmReactionsRepository {
             publishStatus: r.publishStatus ?? '',
             createdAt: r.createdAt,
             attemptInFlight: _deletionRecoveriesInFlight.containsKey(r.id),
+            retriesRanOut:
+                r.publishStatus == DmReactionsDao.deletionUnconfirmed,
           ),
         )
         .toList(growable: false);

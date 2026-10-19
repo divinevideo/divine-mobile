@@ -297,6 +297,52 @@ void main() {
       });
     });
 
+    group('retriesRanOut', () {
+      test(
+        'marks a reaction whose retries ran out, and only that one',
+        () async {
+          stubWire(
+            (_) async =>
+                const NIP17SendResult.failure('no OK', retryablePending: true),
+          );
+          final id = (await publish()).rumorId;
+          expect(
+            (await reactions.retryableReactions()).single.retriesRanOut,
+            isFalse,
+          );
+
+          await reactions.markReactionUnconfirmed(rumorId: id);
+
+          expect(
+            (await reactions.retryableReactions()).single.retriesRanOut,
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        'marks a removal whose retries ran out, and only that one',
+        () async {
+          stubConfirmed();
+          final id = (await publish()).rumorId;
+          stubWire((_) async => const NIP17SendResult.failure('rejected'));
+          await reactions.removeOwn(rumorId: id, targetMessageAuthor: _peer);
+          await pumpEventQueue();
+          expect(
+            (await reactions.retryableDeletions()).single.retriesRanOut,
+            isFalse,
+          );
+
+          await reactions.markDeletionUnconfirmed(rumorId: id);
+
+          expect(
+            (await reactions.retryableDeletions()).single.retriesRanOut,
+            isTrue,
+          );
+        },
+      );
+    });
+
     group('attemptInFlight (#10044)', () {
       test('marks a removal whose own first attempt is still waiting for '
           'its OK', () async {
