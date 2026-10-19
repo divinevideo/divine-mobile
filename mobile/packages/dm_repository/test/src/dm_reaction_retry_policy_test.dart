@@ -394,9 +394,9 @@ void main() {
       );
     });
 
-    group('attemptInFlight (#10044)', () {
-      test('marks a removal whose own first attempt is still waiting for '
-          'its OK', () async {
+    group('isAttemptInFlight (#10044)', () {
+      test('reports a removal whose own first attempt is still waiting for '
+          'its OK, and not its reaction', () async {
         stubConfirmed();
         final id = (await publish()).rumorId;
         final send = Completer<NIP17SendResult>();
@@ -405,43 +405,36 @@ void main() {
         await reactions.removeOwn(rumorId: id, targetMessageAuthor: _peer);
         await pumpEventQueue();
 
-        final waiting = await reactions.retryableDeletions();
-        expect(waiting.map((target) => target.rumorId), [id]);
-        expect(waiting.single.attemptInFlight, isTrue);
+        expect(reactions.isAttemptInFlight(id, removal: true), isTrue);
+        expect(reactions.isAttemptInFlight(id, removal: false), isFalse);
 
         send.complete(
           const NIP17SendResult.failure('no OK', retryablePending: true),
         );
         await pumpEventQueue();
 
-        final settled = await reactions.retryableDeletions();
-        expect(settled.map((target) => target.rumorId), [id]);
-        expect(settled.single.attemptInFlight, isFalse);
+        expect(reactions.isAttemptInFlight(id, removal: true), isFalse);
       });
 
-      test(
-        'marks a reaction whose publish is still waiting for its OK',
-        () async {
-          final send = Completer<NIP17SendResult>();
-          stubWaitingOn(send);
+      test('reports a reaction whose publish is still waiting for its OK, '
+          'and not a removal of it', () async {
+        final send = Completer<NIP17SendResult>();
+        stubWaitingOn(send);
 
-          final publishing = publish();
-          await pumpEventQueue();
+        final publishing = publish();
+        await pumpEventQueue();
+        final id = (await reactions.retryableReactions()).single.rumorId;
 
-          final waiting = await reactions.retryableReactions();
-          expect(waiting, hasLength(1));
-          expect(waiting.single.attemptInFlight, isTrue);
+        expect(reactions.isAttemptInFlight(id, removal: false), isTrue);
+        expect(reactions.isAttemptInFlight(id, removal: true), isFalse);
 
-          send.complete(
-            const NIP17SendResult.failure('no OK', retryablePending: true),
-          );
-          final result = await publishing;
+        send.complete(
+          const NIP17SendResult.failure('no OK', retryablePending: true),
+        );
+        await publishing;
 
-          final settled = await reactions.retryableReactions();
-          expect(settled.map((target) => target.rumorId), [result.rumorId]);
-          expect(settled.single.attemptInFlight, isFalse);
-        },
-      );
+        expect(reactions.isAttemptInFlight(id, removal: false), isFalse);
+      });
     });
   });
 }

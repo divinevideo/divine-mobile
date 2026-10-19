@@ -480,7 +480,12 @@ class DmReactionRetryService {
 
       // A retry now would join the running attempt and send nothing, so it
       // must not use up a retry (#10044). That attempt reports its own result.
-      if (target.attemptInFlight) {
+      // Asked here rather than when the row was listed, since a pass can run
+      // for minutes; nothing below awaits before the driver starts its call.
+      if (_repository.isAttemptInFlight(
+        target.rumorId,
+        removal: phase == _deletionPhase,
+      )) {
         skippedInFlight++;
         stillRetryable++;
         continue;

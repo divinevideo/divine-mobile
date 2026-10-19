@@ -22,14 +22,12 @@ DmReactionRetryTarget _target({
   required String rumorId,
   String publishStatus = 'failed',
   int createdAt = 1700000000,
-  bool attemptInFlight = false,
   bool retriesRanOut = false,
 }) => DmReactionRetryTarget(
   rumorId: rumorId,
   targetMessageAuthor: _authorPubkey,
   publishStatus: publishStatus,
   createdAt: createdAt,
-  attemptInFlight: attemptInFlight,
   retriesRanOut: retriesRanOut,
 );
 
@@ -85,6 +83,12 @@ void main() {
         rumorId: any(named: 'rumorId'),
       ),
     ).thenAnswer((_) async {});
+    when(
+      () => repository.isAttemptInFlight(
+        any(),
+        removal: any(named: 'removal'),
+      ),
+    ).thenReturn(false);
   });
 
   tearDown(() async {
@@ -1125,13 +1129,12 @@ void main() {
         var inFlight = true;
         when(repository.retryableDeletions).thenAnswer(
           (_) async => [
-            _target(
-              rumorId: 'd1',
-              publishStatus: 'deletion_pending',
-              attemptInFlight: inFlight,
-            ),
+            _target(rumorId: 'd1', publishStatus: 'deletion_pending'),
           ],
         );
+        when(
+          () => repository.isAttemptInFlight('d1', removal: true),
+        ).thenAnswer((_) => inFlight);
         when(
           () => repository.retryDeletion(
             rumorId: 'd1',
@@ -1168,9 +1171,12 @@ void main() {
       test('does not use up a reaction retry', () async {
         var clock = DateTime.utc(2026, 5, 10, 12);
         var inFlight = true;
-        when(repository.retryableReactions).thenAnswer(
-          (_) async => [_target(rumorId: 'r1', attemptInFlight: inFlight)],
-        );
+        when(
+          repository.retryableReactions,
+        ).thenAnswer((_) async => [_target(rumorId: 'r1')]);
+        when(
+          () => repository.isAttemptInFlight('r1', removal: false),
+        ).thenAnswer((_) => inFlight);
         when(
           () => repository.retry(
             rumorId: 'r1',
@@ -1204,17 +1210,46 @@ void main() {
         ).called(twoAttempts.maxRetries);
       });
 
+      test('is checked when the row is driven, not when it was listed, so '
+          'an attempt started mid-pass is not joined', () async {
+        var r2InFlight = false;
+        when(repository.retryableReactions).thenAnswer(
+          (_) async => [_target(rumorId: 'r1'), _target(rumorId: 'r2')],
+        );
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async {
+          // The person taps Retry on r2 while the pass is busy with r1.
+          r2InFlight = true;
+          return _fail('r1');
+        });
+        when(
+          () => repository.isAttemptInFlight('r2', removal: false),
+        ).thenAnswer((_) => r2InFlight);
+
+        await buildService().sweep();
+
+        verifyNever(
+          () => repository.retry(
+            rumorId: 'r2',
+            targetMessageAuthor: any(named: 'targetMessageAuthor'),
+          ),
+        );
+      });
+
       test('keeps the heartbeat armed for it', () {
         fakeAsync((async) {
           when(repository.retryableDeletions).thenAnswer(
             (_) async => [
-              _target(
-                rumorId: 'd1',
-                publishStatus: 'deletion_pending',
-                attemptInFlight: true,
-              ),
+              _target(rumorId: 'd1', publishStatus: 'deletion_pending'),
             ],
           );
+          when(
+            () => repository.isAttemptInFlight('d1', removal: true),
+          ).thenReturn(true);
           final service = buildService(
             now: async.getClock(DateTime.utc(2026, 10, 7, 12)).now,
           );

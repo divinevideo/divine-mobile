@@ -114,7 +114,6 @@ class DmReactionRetryTarget {
     required this.targetMessageAuthor,
     required this.publishStatus,
     required this.createdAt,
-    this.attemptInFlight = false,
     this.retriesRanOut = false,
   });
 
@@ -133,11 +132,6 @@ class DmReactionRetryTarget {
   /// Rumor `created_at` (unix seconds). Lets the sweep hold back a still-in-
   /// flight `'pending'` reaction until its original publish has resolved.
   final int createdAt;
-
-  /// Whether an attempt to deliver this row was running when it was listed.
-  /// A retry called now would join that attempt and send nothing, so the
-  /// sweep leaves the row for a later pass instead of counting it (#10044).
-  final bool attemptInFlight;
 
   /// Whether an earlier run of automatic retries ran out for this row without
   /// a relay confirming it: the reaction or removal is shown with a retry. A
@@ -953,6 +947,16 @@ class DmReactionsRepository {
     }
   }
 
+  /// Whether an attempt to deliver [rumorId] is running now: the reaction's
+  /// publish or a retry of it, or with [removal] its kind-5 removal.
+  ///
+  /// A retry called while one is would join it and send nothing, so the
+  /// retry sweep asks right before driving a row and leaves the row for a
+  /// later pass instead of counting it (#10044).
+  bool isAttemptInFlight(String rumorId, {required bool removal}) => removal
+      ? _deletionRecoveriesInFlight.containsKey(rumorId)
+      : _reactionPublishesInFlight.containsKey((_userPubkey, rumorId));
+
   Future<DmReactionPublishResult> _coalesceReactionAttempt(
     String ownerPubkey,
     String rumorId,
@@ -987,10 +991,6 @@ class DmReactionsRepository {
             targetMessageAuthor: r.targetMessageAuthor,
             publishStatus: r.publishStatus ?? 'pending',
             createdAt: r.createdAt,
-            attemptInFlight: _reactionPublishesInFlight.containsKey((
-              ownerPubkey,
-              r.id,
-            )),
             retriesRanOut: r.publishStatus == DmReactionsDao.unconfirmed,
           ),
         )
@@ -1133,7 +1133,6 @@ class DmReactionsRepository {
             targetMessageAuthor: r.targetMessageAuthor,
             publishStatus: r.publishStatus ?? '',
             createdAt: r.createdAt,
-            attemptInFlight: _deletionRecoveriesInFlight.containsKey(r.id),
             retriesRanOut:
                 r.publishStatus == DmReactionsDao.deletionUnconfirmed,
           ),
