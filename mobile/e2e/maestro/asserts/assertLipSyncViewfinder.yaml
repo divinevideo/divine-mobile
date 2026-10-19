@@ -32,6 +32,8 @@ appId: co.openvine.app.staging
 - assertVisible:
     id: camera_timer_button
 - assertVisible:
+    id: camera_ghost_frame_button
+- assertVisible:
     id: camera_aspect_ratio_button
 - assertVisible:
     id: camera_switch_camera_button

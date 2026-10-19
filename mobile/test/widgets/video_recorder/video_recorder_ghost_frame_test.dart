@@ -74,10 +74,14 @@ void main() {
 
     Widget buildTestWidget({
       bool showLastClipOverlay = false,
+      VideoRecorderMode recorderMode = VideoRecorderMode.capture,
       List<DivineVideoClip> clips = const [],
     }) {
       when(() => recorderBloc.state).thenReturn(
-        VideoRecorderBlocState(showLastClipOverlay: showLastClipOverlay),
+        VideoRecorderBlocState(
+          showLastClipOverlay: showLastClipOverlay,
+          recorderMode: recorderMode,
+        ),
       );
       return ProviderScope(
         overrides: [
@@ -109,6 +113,21 @@ void main() {
 
       testWidgets('$SizedBox when no ghost frame exists', (tester) async {
         await tester.pumpWidget(buildTestWidget(clips: [createClip()]));
+
+        expect(find.byType(SizedBox), findsOneWidget);
+        expect(find.byType(Opacity), findsNothing);
+      });
+
+      // The toggle outlives a mode switch, and chroma key has no toggle to
+      // turn the overlay back off.
+      testWidgets('$SizedBox in a mode without a ghost toggle', (tester) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            showLastClipOverlay: true,
+            recorderMode: VideoRecorderMode.chromaKey,
+            clips: [createClip(ghostFramePath: tempFile.path)],
+          ),
+        );
 
         expect(find.byType(SizedBox), findsOneWidget);
         expect(find.byType(Opacity), findsNothing);

@@ -8,7 +8,7 @@ tags:
 # of them back on its default.
 #
 # The rail itself lives in ../utils/driveCaptureRail.yaml, because lip-sync
-# renders exactly the same five controls with the same behaviour. Everything
+# renders exactly the same six controls with the same behaviour. Everything
 # about *how* they are asserted — reading the Semantics `value`, pinning `id`
 # alongside `text`, the `enabled` guards on flash and stabilization — is
 # documented there.

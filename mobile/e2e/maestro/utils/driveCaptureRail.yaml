@@ -4,13 +4,15 @@ appId: co.openvine.app.staging
 #control rail (capture and lip-sync), drive every control and leave each one
 #back on its default.
 #
-# Three of the five controls are unconditional and are shared with every other
+# Three of the six controls are unconditional and are shared with every other
 # mode that renders a rail, so they live in their own utils and this file
-# sequences them. Timer and stabilization are rendered only by the modes that
-# declare `supportsCountdownTimer` / `supportsVideoStabilization`, so they stay
-# here. A mode with a different set composes the per-control utils in its own
-# order rather than calling this one with parts skipped —
-# `tests/stopMotionModeControls.yaml` is the worked example.
+# sequences them. The ghost-frame toggle is shared with stop-motion and
+# classic, so it has its own util too. Timer and stabilization are rendered
+# only by the modes that declare `supportsCountdownTimer` /
+# `supportsVideoStabilization`, so they stay here. A mode with a different set
+# composes the per-control utils in its own order rather than calling this one
+# with parts skipped — `tests/stopMotionModeControls.yaml` is the worked
+# example.
 #
 # The assertions read each control's Semantics `value`, which Flutter folds
 # into the Android content description / iOS accessibilityValue. That is the
@@ -40,6 +42,7 @@ appId: co.openvine.app.staging
 # 3. Camera: Back -> Front -> Back
 # 4. Flash (if present): Off -> On -> Auto -> Off
 # 5. Stabilization (if supported): Off -> some other mode -> Off
+# 6. Ghost frame: off -> on -> off
 
 # 1. Aspect ratio flips between two states.
 - runFlow: driveAspectRatioControl.yaml
@@ -119,3 +122,17 @@ appId: co.openvine.app.staging
             id: camera_stabilization_button
             text: ".*Off.*"
           timeout: 10000
+
+# 6. Ghost frame (onion-skin), deliberately last. Each tap raises a 4-second
+# confirmation snackbar that floats over the bottom of the screen, which is
+# where the stabilization sheet in step 5 opens its options.
+- runFlow: driveGhostFrameControl.yaml
+
+# Let the banner go before handing over: it also floats over the record and
+# delete buttons the recording tests tap next.
+#
+# `waitForAnimationToEnd` runs its timeout out rather than returning early: it
+# waits for the screen to stop changing and the live camera preview never
+# does, which makes it the deterministic wait this needs.
+- waitForAnimationToEnd:
+    timeout: 4500

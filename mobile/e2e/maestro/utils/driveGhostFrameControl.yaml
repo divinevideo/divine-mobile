@@ -1,14 +1,14 @@
 appId: co.openvine.app.staging
 ---
 #Utility: toggle the ghost-frame (onion-skin) overlay on and back off, leaving
-#it on its default. Rendered by both modes that draw the previous frame over
-#the live preview — stop-motion on the capture rail, classic in its own action
-#row.
+#it on its default. Rendered by every mode that draws the previous take over
+#the live preview — capture, lip-sync and stop-motion on the capture rail,
+#classic in its own action row.
 #
 # Not persisted, so it always starts off. Restoring it is not just tidiness:
 # the overlay draws the previous still (stop-motion) or the last clip's final
-# frame (classic) over the live preview, which makes a failure screenshot from
-# any later test much harder to read.
+# frame (every other mode) over the live preview, which makes a failure
+# screenshot from any later test much harder to read.
 #
 # The control carries a Semantics `toggled` flag rather than a `value`, which
 # Flutter maps to the accessibility node's checked state, so it is driven with

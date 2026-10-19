@@ -216,7 +216,7 @@ bar, its own action rows, and no record button at all.
 | `camera_switch_camera_button` | ✅ | ✅ | ✅ | ✅ |
 | `camera_timer_button` | ✅ | ✅ | — | — |
 | `camera_stabilization_button` | ✅ | ✅ | — | — |
-| `camera_ghost_frame_button` | — | — | ✅ | ✅ |
+| `camera_ghost_frame_button` | ✅ | ✅ | ✅ | ✅ |
 | `camera_grid_button` | — | — | ✅ | ✅ |
 
 Lip-sync and capture are the subset trap. Their rails are identical, so assert
@@ -227,15 +227,16 @@ that one line is what keeps it honest. `video_editor_audio_chip_test.dart` pins
 the anchor itself at the widget level.
 
 Stop-motion is not that case, and its `assertNotVisible` block is there for a
-different reason. Its rail and capture's are **disjoint**, not nested — capture
-has timer and stabilization, stop-motion has ghost frame and grid — so each
-assert already fails on the other's viewfinder on the rail alone. What settles
+different reason. Its rail and capture's **overlap without either containing
+the other** — both have the ghost frame, but only capture has timer and
+stabilization and only stop-motion has the grid — so each assert already fails
+on the other's viewfinder on the rail alone. What settles
 which viewfinder is up before either gets that far is the mode wheel's
 `selected` state, asserted on the first line of all four files.
 
 So the pairs those two asserts carry — `assertStopMotionMode` pinning timer and
-stabilization absent, `assertCaptureMode` pinning ghost frame, grid and the
-budget absent — are **leak guards**, not mode separators: they fail when a
+stabilization absent, `assertCaptureMode` pinning grid and the budget absent —
+are **leak guards**, not mode separators: they fail when a
 control starts rendering in a mode that does not declare it, which nothing else
 in the suite would catch. `camera_classic_shutter`, pinned absent by all three
 capture-stack asserts, is the same kind of line: the record button is already
@@ -248,9 +249,11 @@ rail*, the three capture-stack modes drive them with the same three files —
 `utils/driveAspectRatioControl`, `utils/driveLensControl`,
 `utils/driveFlashControl`. Capture and lip-sync wrap those in
 `utils/driveCaptureRail.yaml`, which adds the timer and stabilization controls
-they alone render. The two `supportGridLines` / ghost toggles are shared by
-stop-motion and classic, so they are per-control utils on the same rule —
-`utils/driveGridControl`, `utils/driveGhostFrameControl`. Each mode's
+they alone render, and the ghost toggle. The grid toggle (`supportGridLines`)
+is shared by stop-motion and classic, and the ghost toggle
+(`supportsGhostFrame`) by those two plus capture and lip-sync, so they are
+per-control utils on the same rule — `utils/driveGridControl`,
+`utils/driveGhostFrameControl`. Each mode's
 `…Controls` test is a sequence of those utils plus its own mode assert, and
 what it owns is the **order**, not the sequences. `classicModeControls` is the
 worked example: the same three utils stop-motion runs, in the order classic's
@@ -329,6 +332,12 @@ Capture only:
   first tap does nothing and `captureModeRecordClip` fails on its wait.
   Stop-motion is immune: the record button disables long-press outright for any
   mode that captures stills.
+- **The ghost-frame snackbar, under the stabilization sheet.** The same
+  4-second banner stop-motion has floats over the bottom of the screen, which
+  is where the stabilization sheet lists its modes and where the record and
+  delete buttons sit. `utils/driveCaptureRail` therefore drives ghost last and
+  waits the banner out before handing over, for lip-sync as well, since it
+  runs the same util.
 
 Lip-sync only:
 

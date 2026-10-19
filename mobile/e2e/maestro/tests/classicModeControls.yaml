@@ -7,19 +7,19 @@ tags:
 # validate each control actually changes recorder state, and leave every one
 # of them back on its default.
 #
-# Classic renders three controls where capture renders five and stop-motion
+# Classic renders three controls where capture renders six and stop-motion
 # five: a lens switch, the grid toggle and the ghost toggle. There is no flash
 # control (classic has no rail at all), no aspect ratio (classic is square by
 # definition — the only mode whose `defaultAspectRatio` returns square), and
 # neither of the declared-only pair.
 #
 # All three are shared per-control utils: the lens switch with every mode that
-# renders a rail, grid and ghost with stop-motion, the other mode that declares
-# them. So what this file actually owns is the order — see step 3 — not the
-# sequences themselves. Grid and ghost carry a Semantics `toggled` flag rather
-# than a `value`, which Flutter maps to the accessibility node's checked state,
-# so they are driven with `checked:` — see the note on that selector in
-# e2e/maestro/README.md.
+# renders a rail, the ghost toggle with capture, lip-sync and stop-motion, and
+# the grid with stop-motion, the other mode that declares it. So what this file
+# actually owns is the order — see step 3 — not the sequences themselves. Grid
+# and ghost carry a Semantics `toggled` flag rather than a `value`, which
+# Flutter maps to the accessibility node's checked state, so they are driven
+# with `checked:` — see the note on that selector in e2e/maestro/README.md.
 #
 # Preconditions beyond an open viewfinder:
 # - **Real camera hardware**, for the lens switch. See classicModeRecordClip.

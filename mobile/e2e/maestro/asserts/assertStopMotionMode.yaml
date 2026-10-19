@@ -28,8 +28,8 @@ appId: co.openvine.app.staging
 - assertVisible:
     id: camera_stop_motion_budget
 
-# Control rail, top to bottom. Ghost frame and grid are rendered only by modes
-# that capture stills.
+# Control rail, top to bottom. The grid is rendered only by the mode that
+# captures stills; the ghost frame is shared with capture and lip-sync.
 - assertVisible:
     id: camera_flash_button
 - assertVisible:
@@ -44,7 +44,7 @@ appId: co.openvine.app.staging
 # And the two capture mode has that this mode does not: stop-motion declares
 # neither `supportsCountdownTimer` nor `supportsVideoStabilization`. This pair
 # is a leak guard, not what separates the two screens — the mode wheel above
-# already does that, and the two rails are disjoint rather than nested, so
+# already does that, and neither rail contains the other, so
 # assertCaptureMode fails here on `camera_timer_button` regardless. What it
 # catches is a control starting to render in a mode that does not declare it,
 # which nothing else in the suite would.
