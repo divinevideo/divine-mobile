@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -23,6 +24,8 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show EditorVideo, VideoLoopPoint;
 
 import '../../../helpers/go_router.dart';
 
@@ -111,6 +114,7 @@ void main() {
       bool isAutosavedDraft = false,
       bool hasBeenEdited = false,
       DraftSaveOutcome saveAsDraftResult = DraftSaveOutcome.saved,
+      LoopSuggestionCubit? loopCubit,
     }) {
       if (state != null) {
         when(() => mockBloc.state).thenReturn(state);
@@ -160,6 +164,10 @@ void main() {
                   providers: [
                     BlocProvider<VideoEditorMainBloc>.value(value: mockBloc),
                     BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
+                    if (loopCubit == null)
+                      BlocProvider(create: (_) => LoopSuggestionCubit())
+                    else
+                      BlocProvider.value(value: loopCubit),
                   ],
                   child: const VideoEditorMainOverlayActions(),
                 ),
@@ -171,6 +179,49 @@ void main() {
     }
 
     group('renders', () {
+      testWidgets('requires Keep or Cancel before continuing to post details', (
+        tester,
+      ) async {
+        final cubit = LoopSuggestionCubit(
+          findLoopPoint:
+              ({required search, required taskId, onProgress}) async =>
+                  const VideoLoopPoint(
+                    start: Duration.zero,
+                    end: Duration(seconds: 2),
+                    difference: 0.01,
+                    currentDifference: 0.2,
+                  ),
+        );
+        addTearDown(cubit.close);
+        await cubit.search([
+          DivineVideoClip(
+            id: 'clip',
+            video: EditorVideo.file('/docs/clip.mp4'),
+            duration: const Duration(seconds: 3),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: model.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+          ),
+        ]);
+        await tester.pumpWidget(buildWidget(loopCubit: cubit));
+
+        expect(
+          tester
+              .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+              .onDone,
+          isNull,
+        );
+
+        cubit.resultHandled();
+        await tester.pump();
+        expect(
+          tester
+              .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+              .onDone,
+          isNotNull,
+        );
+      });
+
       testWidgets('renders $VideoEditorMainOverlayActions', (tester) async {
         await tester.pumpWidget(buildWidget());
 
