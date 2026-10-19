@@ -44,6 +44,7 @@ import 'package:openvine/startup/app_composition_root.dart';
 import 'package:openvine/startup/app_side_effects.dart';
 import 'package:openvine/startup/divine_material_app.dart';
 import 'package:openvine/startup/startup_splash_release_controller.dart';
+import 'package:openvine/utils/decoded_image_cache.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -190,11 +191,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
         // before our handler clears live images and sheds ingestion below.
         _sampleMemory('memory_pressure');
       },
-      clearImageCache: () {
-        PaintingBinding.instance.imageCache
-          ..clear()
-          ..clearLiveImages();
-      },
+      clearImageCache: () => clearDecodedImageCache(includeLiveImages: true),
       shedIngestion: () {
         ref.read(videoEventServiceProvider).eventRouter?.shedLowPriority();
       },

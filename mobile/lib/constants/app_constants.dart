@@ -143,15 +143,33 @@ class AppConstants {
   // IMAGE CACHE CONFIGURATION
   // ============================================================================
 
-  /// Byte budget for Flutter's in-memory [ImageCache] (decoded images).
+  /// Largest byte budget for Flutter's in-memory [ImageCache] (decoded
+  /// images).
   ///
   /// Flutter's default is 100 MB, which on the thumbnail grids only holds a few
   /// dozen decoded thumbnails — fast scrolling evicts already-loaded thumbnails,
   /// so they flash back through their blurhash placeholder when scrolled into
   /// view again. A larger budget keeps a much bigger working set resident so
-  /// scroll-back is an instant (synchronous) cache hit. Per-thumbnail memory is
-  /// bounded separately by decoding at display size, so this stays bounded.
+  /// scroll-back is an instant (synchronous) cache hit. Startup sizes the
+  /// budget by device RAM (`imageCacheBudgetBytes`), up to this value.
+  ///
+  /// The budget counts decoded pixels, not what the GPU holds: Impeller keeps
+  /// each image as a texture with a mip chain, and every MB of cache measured
+  /// as about 2 MB of graphics memory on a Galaxy S26 and an iPhone 12 Pro
+  /// (#10301). This ceiling therefore costs about 500 MB once browsing fills it.
   static const int imageCacheMaxBytes = 256 * 1024 * 1024;
+
+  /// Smallest RAM-sized [ImageCache] budget, for devices with 4 GB of RAM or
+  /// less: an estimated 11 grid screens of instant scroll-back (#10301).
+  static const int imageCacheMinBytes = 96 * 1024 * 1024;
+
+  /// [ImageCache] budget when the device's RAM cannot be read. It still
+  /// keeps 15–17 grid screens of instant scroll-back (#10301).
+  static const int imageCacheFallbackBytes = 128 * 1024 * 1024;
+
+  /// The RAM-sized [ImageCache] budget is physical RAM divided by this, so its
+  /// GPU cost (about twice the budget) stays near 4 % of RAM.
+  static const int imageCacheRamDivisor = 48;
 
   // ============================================================================
   // NETWORK CONFIGURATION

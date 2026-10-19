@@ -82,6 +82,9 @@ extension FlutterError: @retroactive Error {}
     // Set up app-icon badge channel.
     setupAppBadgeChannel(with: engineBridge)
 
+    // Physical RAM, which sizes Flutter's decoded-image cache (#10301).
+    setupDeviceMemoryChannel(with: engineBridge)
+
     NSLog("✅ AppDelegate: Implicit Flutter engine initialized with UIScene lifecycle")
   }
 
@@ -275,6 +278,27 @@ extension FlutterError: @retroactive Error {}
     }
 
     NSLog("✅ AppBadge: Platform channel registered")
+  }
+
+  /// Device-memory platform channel.
+  ///
+  /// The Dart side reads the physical RAM once at startup to size Flutter's
+  /// decoded-image cache.
+  private func setupDeviceMemoryChannel(with engineBridge: FlutterImplicitEngineBridge) {
+    let channel = FlutterMethodChannel(
+      name: "divine/device_memory",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+
+    channel.setMethodCallHandler { (call, result) in
+      switch call.method {
+      case "getPhysicalMemoryBytes":
+        result(Int(clamping: ProcessInfo.processInfo.physicalMemory))
+
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 
   private func setupZendeskChannel(with engineBridge: FlutterImplicitEngineBridge) {
