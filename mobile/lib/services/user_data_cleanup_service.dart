@@ -515,12 +515,15 @@ class UserDataCleanupService {
                   userPubkey: pending.userPubkey,
                   deleteUserData: pending.deleteUserData,
                 );
-          if (pending.covers(
-            userPubkey: userPubkey,
-            isIdentityChange: isIdentityChange,
-            deleteUserData: deleteUserData,
-            preserveActiveSession: pending.preserveActiveSession,
-          )) {
+          // Only a full deletion also removes rows kept for a returning
+          // account; an identity-only retry cannot consume a new forget request.
+          if ((!forgetAccount || pending.deleteUserData) &&
+              pending.covers(
+                userPubkey: userPubkey,
+                isIdentityChange: isIdentityChange,
+                deleteUserData: deleteUserData,
+                preserveActiveSession: pending.preserveActiveSession,
+              )) {
             return resumedCount;
           }
         }
