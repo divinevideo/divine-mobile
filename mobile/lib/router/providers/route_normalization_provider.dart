@@ -61,9 +61,8 @@ String? normalizedPathFor(RouteConfiguration routes, Uri location) {
   }
 
   // Parse and rebuild to get canonical form. Unknown or incomplete routes
-  // are left to GoRouter instead of being rewritten to home.
-  // Only the *path* is normalized; query parameters are route input
-  // (e.g. the library's ?type= clip filter) and must survive untouched.
+  // are left to GoRouter instead of being rewritten to home. A location with
+  // a query never gets here, so only the path is rebuilt.
   final match = routes.findMatch(location);
   final parsed = parseMatchedRoute(
     location.path,
@@ -94,10 +93,7 @@ final routeNormalizationProvider = Provider<void>((ref) {
         final now = routerLocationOf(router);
         if (now.toString() != loc || now.path == canonicalPath) return;
 
-        final canonical = Uri(
-          path: canonicalPath,
-          query: now.query.isEmpty ? null : now.query,
-        ).toString();
+        final canonical = Uri(path: canonicalPath).toString();
         Log.info(
           '🔄 Normalizing route from $now to $canonical',
           name: 'RouteNormalizationProvider',
