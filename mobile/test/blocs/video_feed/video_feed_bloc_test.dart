@@ -1609,6 +1609,139 @@ void main() {
         },
       );
 
+      group('Following pager ownership', () {
+        for (final oldOutcome in [
+          'holder failure',
+          'holder success',
+          'page failure',
+          'page success',
+        ]) {
+          for (final newPagePending in [false, true]) {
+            test(
+              'obsolete $oldOutcome cannot replace the current badge pager, new page pending $newPagePending',
+              () async {
+                final oldHolders = Completer<Iterable<String>>();
+                final oldPage = Completer<List<VideoEvent>>();
+                final newFirstPage = Completer<List<VideoEvent>>();
+                final oldPager = _MockBadgeVideoPager();
+                final newPager = _MockBadgeVideoPager();
+                var holderReads = 0;
+                var newPages = 0;
+                var oldPages = 0;
+                final homeCursors = <String?>[];
+                when(() => mockFollowRepository.followingPubkeys)
+                    .thenReturn(['1' * 64]);
+                when(
+                  () => mockVideosRepository.getHomeFeedVideos(
+                    authors: any(named: 'authors'),
+                    userPubkey: any(named: 'userPubkey'),
+                    cursor: any(named: 'cursor'),
+                  ),
+                ).thenAnswer((call) async {
+                  final cursor = call.namedArguments[#cursor] as String?;
+                  homeCursors.add(cursor);
+                  return HomeFeedResult(
+                    videos: [
+                      createTestVideo(
+                        cursor == null ? 'direct' : 'wrong-home-page',
+                      ),
+                    ],
+                    hasMore: false,
+                  );
+                });
+                when(
+                  () => mockVideosRepository.createBadgeVideoPager(
+                    any(),
+                    prioritizeUnseen: true,
+                  ),
+                ).thenAnswer((call) {
+                  final authors =
+                      call.positionalArguments.single as Iterable<String>;
+                  return authors.contains('2' * 64) ? newPager : oldPager;
+                });
+                when(newPager.loadMore).thenAnswer((_) {
+                  newPages++;
+                  return newPages == 1 && newPagePending
+                      ? newFirstPage.future
+                      : Future.value([
+                          createTestVideo(
+                            newPages == 1 ? 'new-first' : 'new-second',
+                          ),
+                        ]);
+                });
+                when(() => newPager.hasMore).thenAnswer((_) => newPages < 2);
+                when(oldPager.loadMore).thenAnswer(
+                  (_) => oldOutcome.startsWith('page')
+                      ? oldPage.future
+                      : Future.value([
+                          createTestVideo(
+                            ++oldPages == 1 ? 'old-first' : 'old-second',
+                          ),
+                        ]),
+                );
+                when(() => oldPager.hasMore).thenReturn(true);
+                final bloc = VideoFeedBloc(
+                  videosRepository: mockVideosRepository,
+                  followRepository: mockFollowRepository,
+                  curatedListRepository: mockCuratedListRepository,
+                  badgeAuthors: () => holderReads++ == 0
+                      ? oldOutcome.startsWith('page')
+                            ? Future.value(['3' * 64])
+                            : oldHolders.future
+                      : Future.value(['2' * 64]),
+                );
+                addTearDown(bloc.close);
+                bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+                await pumpEventQueue();
+                bloc.add(const VideoFeedBadgeSubscriptionsChanged());
+                await pumpEventQueue();
+                if (newPagePending) {
+                  expect(bloc.state.isLoading, isTrue);
+                } else {
+                  expect(bloc.state.videos.map((v) => v.id), ['new-first']);
+                  expect(bloc.state.paginationCursor, 'badge-following');
+                }
+                switch (oldOutcome) {
+                  case 'holder failure':
+                    oldHolders.completeError(
+                      Exception('obsolete holder read failed'),
+                    );
+                  case 'holder success':
+                    oldHolders.complete(['3' * 64]);
+                  case 'page failure':
+                    oldPage.completeError(Exception('obsolete pager failed'));
+                  case 'page success':
+                    oldPage.complete([createTestVideo('old-first')]);
+                }
+                await pumpEventQueue();
+                if (newPagePending) {
+                  newFirstPage.complete([createTestVideo('new-first')]);
+                  await pumpEventQueue();
+                }
+                expect(bloc.state.videos.map((v) => v.id), ['new-first']);
+                expect(bloc.state.paginationCursor, 'badge-following');
+                bloc.add(const VideoFeedLoadMoreRequested());
+                await pumpEventQueue();
+                expect(
+                  {
+                    'visibleIds': bloc.state.videos.map((v) => v.id).toList(),
+                    'newPagerPages': newPages,
+                    'opaqueTokenSentHome': homeCursors.contains(
+                      'badge-following',
+                    ),
+                  },
+                  {
+                    'visibleIds': ['new-first', 'new-second'],
+                    'newPagerPages': 2,
+                    'opaqueTokenSentHome': false,
+                  },
+                );
+              },
+            );
+          }
+        }
+      });
+
       group('badge session cache', () {
         setUpAll(() => registerFallbackValue(nostr.Filter()));
         late _MockBadgeNostrClient client;
