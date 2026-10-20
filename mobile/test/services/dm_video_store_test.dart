@@ -2116,6 +2116,41 @@ void main() {
 
     group('account folders', () {
       test(
+        'the known-owner sweep must not expire a live decoder input',
+        () async {
+          final message = _videoMessage();
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            opened: now.subtract(const Duration(days: 31)),
+          );
+          final started = Completer<void>();
+          final release = Completer<Uint8List?>();
+          readFrame = (_) {
+            started.complete();
+            return release.future;
+          };
+          final store = createStore();
+          final preview = store.previewFor(message, download: false);
+          await started.future;
+          try {
+            await DmVideoStore.sweepOwners(
+              {_owner},
+              activeOwnerPubkey: _owner,
+              rootDirectory: () async => root,
+              now: () => now,
+            );
+            expect(video.existsSync(), isTrue);
+          } finally {
+            release.complete(_frame);
+            await preview;
+          }
+          await store.prune();
+          expect(video.existsSync(), isFalse);
+        },
+      );
+
+      test(
         'legacy playback cleanup leaves other temporary files alone',
         () async {
           final legacy = File('${root.path}/dm_video_playback/clip.mp4')

@@ -536,8 +536,11 @@ class DmVideoStore {
   /// Runs at launch for every account, so an account the user switched away
   /// from does not keep its videos past [maxIdle]: its store prunes only
   /// while it is the signed-in one.
+  /// The known [activeOwnerPubkey] is left to its live store, which knows
+  /// about native-read and playback leases that this static sweep cannot see.
   static Future<int> sweepOwners(
     Set<String> keepOwnerPubkeys, {
+    String? activeOwnerPubkey,
     Future<Directory> Function()? rootDirectory,
     DateTime Function()? now,
     Duration maxIdle = defaultMaxIdle,
@@ -547,15 +550,18 @@ class DmVideoStore {
     final dir = Directory('${root.path}/$dirName');
     if (!dir.existsSync()) return 0;
     final keep = keepOwnerPubkeys.map(_safeName).toSet();
+    final active = activeOwnerPubkey == null
+        ? null
+        : _safeName(activeOwnerPubkey);
     final currentTime = (now ?? DateTime.now)();
     var deleted = 0;
     try {
       await for (final entity in dir.list()) {
         if (entity is! Directory) continue;
         try {
-          if (keep.contains(
-            entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
-          )) {
+          final owner = entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
+          if (keep.contains(owner)) {
+            if (owner == active) continue;
             await _deleteIdleFiles(entity, currentTime, maxIdle);
             continue;
           }

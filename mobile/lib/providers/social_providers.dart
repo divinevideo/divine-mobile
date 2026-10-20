@@ -1135,7 +1135,12 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
   service
     ..onConversationSweep = db.conversationsDao.deleteForOwnersNotIn
     ..onQueuedViewSweep = db.pendingViewEventsDao.deleteForUsersNotIn
-    ..onKeptDmVideoSweep = DmVideoStore.sweepOwners;
+    ..onKeptDmVideoSweep = (keep) => DmVideoStore.sweepOwners(
+      keep,
+      // Read persisted identity, not an auth-dependent provider from account
+      // cleanup: the latter can rebuild the session while it is being torn down.
+      activeOwnerPubkey: prefs.getString('current_user_pubkey_hex'),
+    );
   // Kept conversations and queued views outlive their account when it leaves
   // the known-accounts list without its own cleanup; collect those once per
   // launch as well as after every account cleanup (#10276, #10290).

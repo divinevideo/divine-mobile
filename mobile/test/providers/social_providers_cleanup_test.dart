@@ -2959,6 +2959,23 @@ void main() {
         expect(unrelated.existsSync(), isTrue);
       });
 
+      test(
+        'known-owner expiry leaves the active account to its live store',
+        () async {
+          await prefs.setString('current_user_pubkey_hex', _pubkeyA);
+          final active = keptVideoOf(_pubkeyA);
+          final inactive = keptVideoOf(_pubkeyB);
+          final old = DateTime.now().subtract(const Duration(days: 31));
+          active.setLastModifiedSync(old);
+          inactive.setLastModifiedSync(old);
+
+          await readCleanupService().onKeptDmVideoSweep!({_pubkeyA, _pubkeyB});
+
+          expect(active.existsSync(), isTrue);
+          expect(inactive.existsSync(), isFalse);
+        },
+      );
+
       test("removing an account deletes only that account's videos", () async {
         final removed = keptVideoOf(_pubkeyA);
         final staying = keptVideoOf(_pubkeyB);
