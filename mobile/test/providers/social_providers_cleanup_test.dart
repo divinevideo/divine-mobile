@@ -40,6 +40,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/upload_manager.dart';
@@ -2916,6 +2917,84 @@ void main() {
         expect(await hasQueuedView(forgottenPubkey), isFalse);
         expect(await hasQueuedView(_pubkeyA), isTrue);
       });
+    });
+
+    group('kept video DMs', () {
+      const forgottenPubkey =
+          'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
+
+      File keptVideoOf(String owner) => File(
+        '${tempDir.path}/cache/${DmVideoStore.dirName}/$owner/clip.mp4',
+      )..createSync(recursive: true);
+
+      UserDataCleanupService readCleanupService() {
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        return subscription.read();
+      }
+
+      test("removing an account deletes only that account's videos", () async {
+        final removed = keptVideoOf(_pubkeyA);
+        final staying = keptVideoOf(_pubkeyB);
+
+        await readCleanupService().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          forgetAccount: true,
+        );
+
+        expect(removed.existsSync(), isFalse);
+        expect(staying.existsSync(), isTrue);
+      });
+
+      test("deleting an account deletes that account's videos", () async {
+        final deleted = keptVideoOf(_pubkeyA);
+
+        await readCleanupService().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(deleted.existsSync(), isFalse);
+      });
+
+      test("an account switch keeps the departing account's videos", () async {
+        final kept = keptVideoOf(_pubkeyA);
+
+        await readCleanupService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        expect(kept.existsSync(), isTrue);
+      });
+
+      test(
+        'the launch sweep deletes the videos of an account the device no '
+        'longer knows',
+        () async {
+          final forgotten = keptVideoOf(forgottenPubkey);
+          final known = keptVideoOf(_pubkeyA);
+          await prefs.setString(
+            kKnownAccountsKey,
+            jsonEncode([
+              KnownAccount(
+                pubkeyHex: _pubkeyA,
+                authSource: AuthenticationSource.importedKeys,
+                addedAt: DateTime.utc(2026),
+                lastUsedAt: DateTime.utc(2026),
+              ).toJson(),
+            ]),
+          );
+
+          readCleanupService();
+          for (var i = 0; i < 20 && forgotten.existsSync(); i++) {
+            await pumpEventQueue();
+          }
+
+          expect(forgotten.existsSync(), isFalse);
+          expect(known.existsSync(), isTrue);
+        },
+      );
     });
   });
 }

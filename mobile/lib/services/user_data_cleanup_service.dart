@@ -85,8 +85,13 @@ class UserDataCleanupService {
   /// no longer knows it (#10290). Set by the provider layer.
   Future<int> Function(Set<String> keepOwnerPubkeys)? onQueuedViewSweep;
 
-  /// Deletes the rows kept for accounts this device no longer knows: DM
-  /// conversations and queued view events.
+  /// Optional callback that deletes the received video DMs kept on this
+  /// device for every account except the given pubkeys, and returns how many
+  /// accounts' videos it deleted. Set by the provider layer.
+  Future<int> Function(Set<String> keepOwnerPubkeys)? onKeptDmVideoSweep;
+
+  /// Deletes what is kept for accounts this device no longer knows: DM
+  /// conversations, queued view events and received video DMs.
   ///
   /// A switch or sign-out keeps the departing account's rows for its return
   /// (#10276, #10290), but an account can later leave the known-accounts
@@ -96,7 +101,11 @@ class UserDataCleanupService {
   /// decoded, so an unreadable list never counts as "no accounts". Never
   /// throws.
   Future<void> sweepRowsOfUnknownAccounts() async {
-    if (onConversationSweep == null && onQueuedViewSweep == null) return;
+    if (onConversationSweep == null &&
+        onQueuedViewSweep == null &&
+        onKeptDmVideoSweep == null) {
+      return;
+    }
     final Set<String> keep;
     try {
       final raw = _prefs.getString(kKnownAccountsKey);
@@ -118,6 +127,7 @@ class UserDataCleanupService {
     }
     await _sweepUnknownOwners(onConversationSweep, keep, 'conversations');
     await _sweepUnknownOwners(onQueuedViewSweep, keep, 'queued view events');
+    await _sweepUnknownOwners(onKeptDmVideoSweep, keep, 'kept video DMs');
   }
 
   Future<void> _sweepUnknownOwners(
