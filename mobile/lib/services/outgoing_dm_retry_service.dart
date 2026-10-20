@@ -62,11 +62,14 @@ class OutgoingDmRetryConfig {
 /// next trigger; the deferred work is picked up on the next trigger.
 ///
 /// **Per-row backoff:** rows whose `lastAttemptAt + backoff(retryCount)`
-/// is in the future are skipped this pass. `incrementRetry` is called
-/// only on a real publish failure so transient repo-not-ready states
-/// don't burn the retry budget. A send that reached no relay is not a
-/// real failure either: it is not charged, and it waits for a relay to
-/// connect rather than the follow-up timer (#8516).
+/// is in the future are skipped this pass. A failed attempt is charged to
+/// the budget by the [DmRepository] recovery call that ran it, never by
+/// this sweep, so a Resend and a sweep pass spend it the same way (#8628).
+/// The sweep charges only a dispatch that threw unexpectedly, which never
+/// reached that charge. Transient repo-not-ready states are not charged. A
+/// send that reached no relay is not a real failure either: it is not
+/// charged, and it waits for a relay to connect rather than the follow-up
+/// timer (#8516).
 ///
 /// **Scope:** three sweep arms run on each trigger:
 ///
@@ -369,12 +372,9 @@ class OutgoingDmRetryService {
               // count it as a failure.
               blockedSelfWrap++;
             } else {
-              // Publish failed. recoverSelfWrap already wrote
-              // selfWrapStatus=failed + lastError + lastAttemptAt via
-              // markSelfWrapStatus; bump the retry counter so the next
-              // sweep applies backoff and so the row eventually exits
-              // the retryable filter at maxRetries.
-              await _dao.incrementRetry(row.id);
+              // Publish failed. recoverSelfWrap marked the self-wrap failed
+              // and charged the attempt itself, so backoff applies and the
+              // row exits the retryable filter at maxRetries (#8628).
               failedSelfWrap++;
             }
           } on Object catch (e, stackTrace) {
@@ -460,13 +460,10 @@ class OutgoingDmRetryService {
               // wakes the sweep for it, not the follow-up heartbeat (#8516).
               notSentFullSend++;
             } else {
-              // Publish failed again. recoverFullSend already
-              // re-marked both wraps failed with the new error via
-              // _finalizeAfterRecipientFailure (which writes
-              // lastAttemptAt through the DAO codec). Bump the retry
-              // counter so backoff applies and the row eventually
-              // exits the retryable filter at maxRetries.
-              await _dao.incrementRetry(row.id);
+              // Publish failed again. recoverFullSend re-marked both wraps
+              // failed and charged the attempt itself — including a row
+              // another caller promoted to self-wrap-only in the meantime,
+              // which it replays through recoverSelfWrap (#8628).
               failedFullSend++;
             }
           } on Object catch (e, stackTrace) {
@@ -583,7 +580,7 @@ class OutgoingDmRetryService {
               // Same as the failed-send arm: not charged (#8516).
               notSentInterrupted++;
             } else {
-              await _dao.incrementRetry(row.id);
+              // Charged by recoverFullSend, as in the failed-send arm.
               failedInterrupted++;
             }
           } on Object catch (e, stackTrace) {

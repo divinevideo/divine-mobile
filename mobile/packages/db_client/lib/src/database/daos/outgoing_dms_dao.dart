@@ -486,9 +486,10 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
     return rows > 0;
   }
 
-  /// Increment the retry count for [id]. The retry service calls this
-  /// after scheduling a replay regardless of the eventual outcome —
-  /// backoff caps growth at the policy max.
+  /// Increment the retry count for [id]. `DmRepository` calls this once for
+  /// each failed attempt it runs (a replay, or a first send left
+  /// unconfirmed), and the retry sweep for a dispatch that threw before
+  /// reaching it — backoff caps growth at the policy max.
   ///
   /// Implemented as a typed Drift `update().write()` inside a transaction
   /// so the [DateTime] write goes through the same codec

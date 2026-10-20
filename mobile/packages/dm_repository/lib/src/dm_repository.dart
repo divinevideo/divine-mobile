@@ -6862,7 +6862,8 @@ class DmRepository {
   ///
   /// - Success: delete the queue row — both wraps have now landed.
   /// - Failure: mark the self-wrap status [OutgoingWrapStatus.failed]
-  ///   so the row stays retryable.
+  ///   so the row stays retryable, and charge the attempt to the row's
+  ///   retry budget. Callers never charge the returned outcome (#8628).
   ///
   /// Returns the underlying [NIP17SendResult] so callers can chain a
   /// per-rumor recovery and aggregate the result.
@@ -6977,6 +6978,7 @@ class DmRepository {
         );
         // Swallow — caller still gets the failure result below.
       }
+      await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       // Row stays retryable (self-wrap failed) — nudge the sweep.
       _notifyRetryableWork();
       return NIP17SendResult.failure('rumor JSON parse failed: $e');
@@ -7072,12 +7074,12 @@ class DmRepository {
               .recoverSelfWrapMarkFailedAfterPublishFailure,
         );
         // Don't rethrow — caller already gets the failure result.
-      } finally {
-        // The self-wrap is still missing — nudge the sweep. Manual
-        // recoveries (sentPartial Retry) reach here without a sweep pass
-        // to reschedule them.
-        _notifyRetryableWork();
       }
+      await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+      // The self-wrap is still missing — nudge the sweep. Manual
+      // recoveries (sentPartial Retry) reach here without a sweep pass
+      // to reschedule them.
+      _notifyRetryableWork();
     }
 
     return result;
@@ -7106,6 +7108,11 @@ class DmRepository {
   ///   missing self-wrap via [recoverSelfWrap].
   /// - Recipient failure: re-mark both wraps `failed` so the row
   ///   stays retryable.
+  ///
+  /// Every failed attempt this runs is charged to the row's retry budget
+  /// here, once — a soft-unconfirmed one too — except one that reached no
+  /// relay (#8516). Callers never charge the returned outcome, so the budget
+  /// counts the same attempts whoever asked for them (#8628).
   ///
   /// After a full success on a one-to-one thread still latched to NIP-04, the
   /// legacy kind-4 copy goes out too, as it would have from [sendMessage]
@@ -7233,6 +7240,7 @@ class DmRepository {
         rumorId: rumorId,
         errorMessage: 'rumor JSON parse failed: $e',
       );
+      await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       return NIP17SendResult.failure('rumor JSON parse failed: $e');
     }
 
@@ -7525,6 +7533,11 @@ class DmRepository {
         errorMessage: result.error ?? 'Unknown publish failure',
         reachedNoRelay: result.reachedNoRelay,
       );
+      // An attempt that reached no relay is an outage on our side, not a
+      // failed attempt, so it stays free (#8516).
+      if (!result.reachedNoRelay) {
+        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+      }
     }
 
     return result;
@@ -8188,6 +8201,34 @@ class DmRepository {
       // The row stays pending either way — nudge the sweep so a
       // soft-unconfirmed send converges without a foreground flip.
       _notifyRetryableWork();
+    }
+  }
+
+  /// Charge one failed [recoverFullSend] / [recoverSelfWrap] attempt to the
+  /// row's retry budget.
+  ///
+  /// The locked recovery body is the only place a failed replay is charged,
+  /// so every caller — the sweep, a Resend, a banner Retry — spends the same
+  /// budget for the same attempt, and a joiner never charges it again
+  /// (#8628). Non-rethrowing: the caller already has the failure result.
+  Future<void> _chargeFailedReplay({
+    required OutgoingDmsDao dao,
+    required String rumorId,
+  }) async {
+    try {
+      await dao.incrementRetry(rumorId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to charge the failed replay of outgoing_dms row $rumorId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.chargeFailedReplay,
+      );
     }
   }
 

@@ -749,7 +749,7 @@ void main() {
       );
 
       test(
-        'recoverFullSend publish-failure path bumps incrementRetry once',
+        'recoverFullSend publish failure: leaves the charge to the repository',
         () async {
           final row = _row(
             id: 'rumor2b',
@@ -773,7 +773,9 @@ void main() {
           verify(
             () => dmRepository.recoverFullSend(rumorId: 'rumor2b'),
           ).called(1);
-          verify(() => dao.incrementRetry('rumor2b')).called(1);
+          // recoverFullSend charged its own failed attempt (#8628); charging
+          // the result here would spend two retries on one.
+          verifyNever(() => dao.incrementRetry(any()));
         },
       );
 
@@ -810,7 +812,7 @@ void main() {
         },
       );
 
-      test('publish-failure path bumps incrementRetry once', () async {
+      test('recoverSelfWrap publish failure: leaves the charge to the repository', () async {
         final row = _row(
           id: 'rumor3',
           recipient: OutgoingWrapStatus.sent,
@@ -833,7 +835,8 @@ void main() {
         await service.sweep();
 
         verify(() => dmRepository.recoverSelfWrap(rumorId: 'rumor3')).called(1);
-        verify(() => dao.incrementRetry('rumor3')).called(1);
+        // recoverSelfWrap charged its own failed attempt (#8628).
+        verifyNever(() => dao.incrementRetry(any()));
       });
 
       // recoverSelfWrap reports a row addressed to its own sender as blocked
@@ -2415,7 +2418,7 @@ void main() {
       );
 
       test(
-        'publish-failure path bumps incrementRetry once',
+        'publish failure: leaves the charge to the repository',
         () async {
           final now = DateTime.utc(2026, 5, 10, 12);
           final stalePending = _row(
@@ -2433,7 +2436,8 @@ void main() {
 
           await buildService(now: () => now).sweep();
 
-          verify(() => dao.incrementRetry('interrupted-fail')).called(1);
+          // recoverFullSend charged its own failed attempt (#8628).
+          verifyNever(() => dao.incrementRetry(any()));
         },
       );
     });
