@@ -56,6 +56,11 @@ class DmVideoDecryptor {
   /// Maximum idle time between chunks while downloading the ciphertext.
   static const Duration receiveTimeout = Duration(seconds: 30);
 
+  /// Redirects followed to reach the ciphertext, each checked for HTTPS.
+  static const int maxRedirects = 5;
+
+  static const Set<int> _redirectStatuses = {301, 302, 303, 307, 308};
+
   static final RegExp _hexKey = RegExp(r'^[0-9a-fA-F]{64}$');
   static final RegExp _hexNonce = RegExp(r'^[0-9a-fA-F]{24}$');
 
@@ -111,16 +116,16 @@ class DmVideoDecryptor {
     ));
   }
 
-  /// Fetches the ciphertext at [url], refusing anything but `https` and
-  /// aborting as soon as the body exceeds [maxBytes] or the download outlasts
-  /// [timeLimit].
+  /// Fetches the ciphertext at [url], refusing anything but `https`, on the
+  /// first request and on every redirect, and aborting as soon as the body
+  /// exceeds [maxBytes] or the download outlasts [timeLimit].
   Future<Uint8List> _download(
     String url, {
     required int maxBytes,
     Duration? timeLimit,
   }) async {
     final uri = Uri.tryParse(url);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    if (uri == null || !_isHttps(uri)) {
       throw const DmVideoUnavailableException('the video is not on HTTPS');
     }
 
@@ -133,19 +138,47 @@ class DmVideoDecryptor {
             outlasted = true;
             cancelToken.cancel('encrypted video download took too long');
           });
-    final Response<List<int>> response;
+    late final Response<List<int>> response;
     try {
-      response = await _dio.get<List<int>>(
-        url,
-        options: Options(responseType: ResponseType.bytes),
-        cancelToken: cancelToken,
-        onReceiveProgress: (received, total) {
-          if (received > maxBytes || total > maxBytes) {
-            oversized = true;
-            cancelToken.cancel('encrypted video exceeds size limit');
-          }
-        },
-      );
+      var target = url;
+      for (var redirects = 0; ; redirects++) {
+        final hop = await _dio.get<List<int>>(
+          target,
+          options: Options(
+            responseType: ResponseType.bytes,
+            // The client would follow a redirect to plain HTTP unchecked, so
+            // each hop is followed, and checked, here.
+            followRedirects: false,
+            validateStatus: (status) => status != null && status < 400,
+          ),
+          cancelToken: cancelToken,
+          onReceiveProgress: (received, total) {
+            if (received > maxBytes || total > maxBytes) {
+              oversized = true;
+              cancelToken.cancel('encrypted video exceeds size limit');
+            }
+          },
+        );
+        if (!_redirectStatuses.contains(hop.statusCode)) {
+          response = hop;
+          break;
+        }
+        if (redirects == maxRedirects) {
+          throw const DmVideoUnavailableException(
+            'the video redirected too many times',
+          );
+        }
+        final location = Uri.tryParse(hop.headers.value('location') ?? '');
+        final resolved = location == null
+            ? null
+            : Uri.parse(target).resolveUri(location);
+        if (resolved == null || !_isHttps(resolved)) {
+          throw const DmVideoUnavailableException(
+            'the video redirected away from HTTPS',
+          );
+        }
+        target = resolved.toString();
+      }
     } on DioException catch (error) {
       if (oversized && CancelToken.isCancel(error)) {
         throw const DmVideoUnavailableException(
@@ -179,6 +212,8 @@ class DmVideoDecryptor {
     }
     return data is Uint8List ? data : Uint8List.fromList(data);
   }
+
+  static bool _isHttps(Uri uri) => uri.scheme == 'https' && uri.host.isNotEmpty;
 }
 
 /// What [_verifyAndDecrypt] needs, sent to the isolate it runs in.

@@ -258,7 +258,6 @@ void main() {
         ).thenThrow(
           DioException(
             requestOptions: RequestOptions(path: _videoUrl),
-            type: DioExceptionType.unknown,
             error: HttpException(
               'Connection closed while receiving data',
               uri: Uri.parse(_videoUrl),
@@ -364,6 +363,134 @@ void main() {
         );
       },
     );
+
+    group('redirects', () {
+      const cdnUrl = 'https://cdn.example/blob';
+
+      void stubRedirect(String from, String location) {
+        when(
+          () => dio.get<List<int>>(
+            from,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => Response<List<int>>(
+            requestOptions: RequestOptions(path: from),
+            statusCode: 302,
+            headers: Headers.fromMap({
+              'location': [location],
+            }),
+          ),
+        );
+      }
+
+      test('follows a redirect to another HTTPS server', () async {
+        final plaintext = Uint8List.fromList(const [9, 8, 7, 6]);
+        final encrypted = await FileEncryption().encrypt(plaintext);
+        stubRedirect(_videoUrl, cdnUrl);
+        when(
+          () => dio.get<List<int>>(
+            cdnUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => Response<List<int>>(
+            requestOptions: RequestOptions(path: cdnUrl),
+            statusCode: 200,
+            data: encrypted.ciphertext.toList(),
+          ),
+        );
+        final message = _videoMessage(
+          fileHash: HashUtil.sha256Hash(encrypted.ciphertext),
+          key: encrypted.key,
+          nonce: encrypted.nonce,
+        );
+
+        expect(
+          await DmVideoDecryptor(dio: dio).decrypt(message),
+          equals(plaintext),
+        );
+      });
+
+      test('refuses a redirect to plain HTTP before following it', () async {
+        const insecureUrl = 'http://insecure.example/blob';
+        stubRedirect(_videoUrl, insecureUrl);
+
+        await expectLater(
+          DmVideoDecryptor(dio: dio)
+              .decrypt(_videoMessage(fileHash: 'ab' * 32)),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.message,
+              'message',
+              contains('away from HTTPS'),
+            ),
+          ),
+        );
+        verifyNever(
+          () => dio.get<List<int>>(
+            insecureUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        );
+      });
+
+      test('gives up on a redirect loop', () async {
+        stubRedirect(_videoUrl, _videoUrl);
+
+        await expectLater(
+          DmVideoDecryptor(dio: dio)
+              .decrypt(_videoMessage(fileHash: 'ab' * 32)),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.message,
+              'message',
+              contains('too many'),
+            ),
+          ),
+        );
+        verify(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).called(DmVideoDecryptor.maxRedirects + 1);
+      });
+
+      test(
+        'leaves no redirect to the client, which would follow one to plain '
+        'HTTP',
+        () async {
+          stubDownload(Uint8List.fromList(const [1, 2, 3]));
+
+          final decrypted = await DmVideoDecryptor(
+            dio: dio,
+            encryption: _IsolateNamingEncryption(),
+          ).decrypt(_videoMessage(fileHash: ''));
+          expect(decrypted, isNotEmpty);
+
+          final options =
+              verify(
+                    () => dio.get<List<int>>(
+                      _videoUrl,
+                      options: captureAny(named: 'options'),
+                      cancelToken: any(named: 'cancelToken'),
+                      onReceiveProgress: any(named: 'onReceiveProgress'),
+                    ),
+                  ).captured.single
+                  as Options;
+          expect(options.followRedirects, isFalse);
+        },
+      );
+    });
 
     test('reports an HTTP failure by its status only', () async {
       when(
