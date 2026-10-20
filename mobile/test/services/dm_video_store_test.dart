@@ -212,7 +212,9 @@ void main() {
       Future<bool> Function(String conversationId, int sentAt)?
       isConversationRemoved,
       Future<Directory> Function()? rootDirectory,
-      Duration frameTurnLimit = DmVideoStore.defaultFrameTurnLimit,
+      // Not the default minute: a decode a test leaves running would log a
+      // turn-limit warning into a later suite of the merged test isolate.
+      Duration frameTurnLimit = const Duration(days: 1),
       Duration frameDeadline = DmVideoStore.defaultFrameDeadline,
     }) => DmVideoStore(
       ownerPubkey: _owner,
