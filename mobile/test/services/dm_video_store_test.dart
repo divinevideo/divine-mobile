@@ -133,6 +133,7 @@ void main() {
     late DateTime now;
     late int fetches;
     late List<({int? maxBytes, Duration? timeLimit})> fetchLimits;
+    late List<bool Function()?> fetchWanted;
     late int frameReads;
     late Future<Uint8List> Function(DmMessage message) fetch;
     late Future<Uint8List?> Function(File video) readFrame;
@@ -142,6 +143,7 @@ void main() {
       now = DateTime(2026, 10, 20, 12);
       fetches = 0;
       fetchLimits = [];
+      fetchWanted = [];
       frameReads = 0;
       fetch = (_) async => _plaintext;
       readFrame = (_) async => _frame;
@@ -154,9 +156,10 @@ void main() {
     DmVideoStore createStore({int maxBytes = DmVideoStore.defaultMaxBytes}) =>
         DmVideoStore(
           ownerPubkey: _owner,
-          fetchVideo: (message, {maxBytes, timeLimit}) {
+          fetchVideo: (message, {maxBytes, timeLimit, stillWanted}) {
             fetches++;
             fetchLimits.add((maxBytes: maxBytes, timeLimit: timeLimit));
+            fetchWanted.add(stillWanted);
             return fetch(message);
           },
           readFrame: (video) {
@@ -634,6 +637,114 @@ void main() {
             equals(_plaintext),
           );
           expect(await store.previewFor(message, download: true), isNotNull);
+        },
+      );
+
+      test('drop a queued download nobody wants any more', () async {
+        final blocking = Completer<Uint8List>();
+        final unwanted = _videoMessage(id: '9' * 64);
+        final fetchedIds = <String>[];
+        fetch = (message) {
+          fetchedIds.add(message.id);
+          return message.id == unwanted.id
+              ? Future.value(_plaintext)
+              : blocking.future;
+        };
+        final store = createStore();
+        var wanted = true;
+
+        final first = store.previewFor(_videoMessage(), download: true);
+        final dropped = store.previewFor(
+          unwanted,
+          download: true,
+          stillWanted: () => wanted,
+        );
+        await pumpEventQueue();
+        wanted = false;
+        blocking.complete(_plaintext);
+
+        expect(await first, isNotNull);
+        expect(await dropped, isNull);
+        expect(fetchedIds, isNot(contains(unwanted.id)));
+      });
+
+      test('keep a queued download that another card still wants', () async {
+        final blocking = Completer<Uint8List>();
+        final shared = _videoMessage(id: '9' * 64);
+        fetch = (message) => message.id == shared.id
+            ? Future.value(_plaintext)
+            : blocking.future;
+        final store = createStore();
+
+        unawaited(store.previewFor(_videoMessage(), download: true));
+        final closed = store.previewFor(
+          shared,
+          download: true,
+          stillWanted: () => false,
+        );
+        final open = store.previewFor(
+          shared,
+          download: true,
+          stillWanted: () => true,
+        );
+        await pumpEventQueue();
+        blocking.complete(_plaintext);
+
+        expect(await open, isNotNull);
+        expect(await closed, isNotNull);
+      });
+
+      test('read no frame of a video nobody wants any more', () async {
+        final release = Completer<Uint8List>();
+        fetch = (_) => release.future;
+        final store = createStore();
+        final message = _videoMessage();
+        var wanted = true;
+
+        final preview = store.previewFor(
+          message,
+          download: true,
+          stillWanted: () => wanted,
+        );
+        await pumpEventQueue();
+        wanted = false;
+        release.complete(_plaintext);
+
+        expect(await preview, isNull);
+        expect(frameReads, isZero);
+        expect(
+          File(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+          ).existsSync(),
+          isTrue,
+        );
+      });
+
+      test(
+        'let the download stop once nobody wants it, unless a tap waits',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+          var wanted = true;
+
+          final preview = store.previewFor(
+            message,
+            download: true,
+            stillWanted: () => wanted,
+          );
+          await pumpEventQueue();
+          final stillWanted = fetchWanted.single!;
+          wanted = false;
+          expect(stillWanted(), isFalse);
+
+          final tapped = store.videoFor(message);
+          expect(stillWanted(), isTrue);
+
+          release.complete(_plaintext);
+          await tapped;
+          await preview;
         },
       );
 

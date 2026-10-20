@@ -84,7 +84,11 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
       return;
     }
     try {
-      final frame = await store.previewFor(_message, download: _download);
+      final frame = await store.previewFor(
+        _message,
+        download: _download,
+        stillWanted: () => !isClosed,
+      );
       if (frame != null) {
         emitIfOpen(
           DmVideoPreviewState(

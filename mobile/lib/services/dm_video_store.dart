@@ -14,11 +14,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Downloads, verifies and decrypts a video DM, returning its plaintext. A
-/// null [maxBytes] or [timeLimit] keeps the fetcher's own limit.
+/// null [maxBytes] or [timeLimit] keeps the fetcher's own limit, and a
+/// download may stop once [stillWanted] says no.
 typedef DmVideoFetcher = Future<Uint8List> Function(
   DmMessage message, {
   int? maxBytes,
   Duration? timeLimit,
+  bool Function()? stillWanted,
 });
 
 /// Reads the preview frame of a decrypted video, or null when it cannot.
@@ -127,6 +129,9 @@ class DmVideoStore {
   Future<void> _autoDownloadQueue = Future<void>.value();
   final Map<String, Future<File?>> _previewsInFlight = {};
 
+  /// Whether each caller waiting on a frame still wants it, by preview key.
+  final Map<String, List<bool Function()>> _previewWanters = {};
+
   /// Paths of the frames this store read or found, by message id.
   final Map<String, String> _knownPreviews = {};
 
@@ -212,18 +217,33 @@ class DmVideoStore {
   /// [autoDownloadRetryAfter] when it may pass; a tap on play still fetches
   /// it.
   ///
+  /// [stillWanted], when given, is asked before a queued download starts,
+  /// while it runs and before the frame is read. Once no caller waiting on
+  /// this frame wants it, as when their cards closed, that work is dropped
+  /// and null returned, unless a tap on play waits for the same video.
+  ///
   /// Throws what [videoFor] throws when it downloads the video, or a
   /// [DmVideoUnavailableException] when the frame cannot be stored.
-  Future<File?> previewFor(DmMessage message, {required bool download}) {
+  Future<File?> previewFor(
+    DmMessage message, {
+    required bool download,
+    bool Function()? stillWanted,
+  }) {
     final key = '${message.id}|$download';
+    (_previewWanters[key] ??= []).add(stillWanted ?? _alwaysWanted);
     return _previewsInFlight[key] ??=
         _obtainPreview(
           message,
           download: download,
-        ).whenComplete(
-          () => _previewsInFlight.removeWhere((pending, _) => pending == key),
-        );
+          wanted: () =>
+              _previewWanters[key]?.any((wanted) => wanted()) ?? false,
+        ).whenComplete(() {
+          _previewsInFlight.removeWhere((pending, _) => pending == key);
+          _previewWanters.removeWhere((pending, _) => pending == key);
+        });
   }
+
+  static bool _alwaysWanted() => true;
 
   /// The path of [message]'s frame when this store already read or found it,
   /// so a card built again shows it at once. Null once the file is gone: the
@@ -384,8 +404,12 @@ class DmVideoStore {
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
   /// for, within their limits, or, when its turn comes, uses the download a
-  /// tap started meanwhile.
-  Future<File> _autoVideoFor(DmMessage message) {
+  /// tap started meanwhile. Dropped at its turn, and stopped while running,
+  /// once [wanted] says no and no tap waits for it.
+  Future<File> _autoVideoFor(
+    DmMessage message, {
+    required bool Function() wanted,
+  }) {
     final id = message.id;
     return _autoDownloadsInFlight[id] ??=
         _inAutoDownloadQueue(() {
@@ -396,10 +420,12 @@ class DmVideoStore {
               return file;
             });
           }
+          if (!wanted()) throw const _DownloadDropped();
           final fetch = _obtainVideo(
             message,
             maxBytes: autoDownloadMaxBytes,
             timeLimit: autoDownloadTimeLimit,
+            stillWanted: () => wanted() || _videosInFlight.containsKey(id),
           );
           _autoFetchesRunning[id] = fetch;
           return fetch.whenComplete(
@@ -421,6 +447,7 @@ class DmVideoStore {
     DmMessage message, {
     int? maxBytes,
     Duration? timeLimit,
+    bool Function()? stillWanted,
   }) async {
     final file = File(
       '${(await _ownerDirectory()).path}/${videoFileNameFor(message)}',
@@ -435,7 +462,12 @@ class DmVideoStore {
     try {
       await _writeAtomically(
         file,
-        await _fetchVideo(message, maxBytes: maxBytes, timeLimit: timeLimit),
+        await _fetchVideo(
+          message,
+          maxBytes: maxBytes,
+          timeLimit: timeLimit,
+          stillWanted: stillWanted,
+        ),
       );
     } on Object {
       _release(file);
@@ -455,6 +487,7 @@ class DmVideoStore {
   Future<File?> _obtainPreview(
     DmMessage message, {
     required bool download,
+    required bool Function() wanted,
   }) async {
     final dir = await _ownerDirectory();
     final preview = File('${dir.path}/${_previewFileNameFor(message)}');
@@ -475,8 +508,13 @@ class DmVideoStore {
         _mayAutoDownload(message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
       try {
-        video = await _autoVideoFor(message);
+        video = await _autoVideoFor(message, wanted: wanted);
+      } on _DownloadDropped {
+        return null;
       } on Object catch (error) {
+        // Stopped, or failed, after every card stopped waiting: no one to
+        // tell, and nothing to hold against the next one.
+        if (!wanted()) return null;
         _autoDownloadFailures[message.id] =
             error is DmVideoUnavailableException && error.mayPass
             ? _now().add(autoDownloadRetryAfter)
@@ -488,6 +526,8 @@ class DmVideoStore {
     }
 
     try {
+      // No card shows it: decode nothing.
+      if (!wanted()) return null;
       final frame = await _readFrame(video);
       if (frame == null || frame.isEmpty) {
         _unreadableFrames.add(message.id);
@@ -606,4 +646,9 @@ class DmVideoStore {
       );
     }
   }
+}
+
+/// A queued download no card wants any more when its turn comes.
+class _DownloadDropped implements Exception {
+  const _DownloadDropped();
 }

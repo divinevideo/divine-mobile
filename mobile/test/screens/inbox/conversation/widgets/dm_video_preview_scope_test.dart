@@ -54,7 +54,11 @@ void main() {
     kept = StreamController<String>.broadcast();
     when(() => store.kept).thenAnswer((_) => kept.stream);
     when(
-      () => store.previewFor(any(), download: any(named: 'download')),
+      () => store.previewFor(
+        any(),
+        download: any(named: 'download'),
+        stillWanted: any(named: 'stillWanted'),
+      ),
     ).thenAnswer((_) async => File(_framePath));
   });
 
@@ -95,7 +99,13 @@ void main() {
         await tester.pumpWidget(host(accepted: true));
         await tester.pump();
 
-        verify(() => store.previewFor(any(), download: true)).called(1);
+        verify(
+          () => store.previewFor(
+            any(),
+            download: true,
+            stillWanted: any(named: 'stillWanted'),
+          ),
+        ).called(1);
       });
 
       testWidgets('downloads at once from someone the user follows', (
@@ -107,7 +117,13 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        verify(() => store.previewFor(any(), download: true)).called(1);
+        verify(
+          () => store.previewFor(
+            any(),
+            download: true,
+            stillWanted: any(named: 'stillWanted'),
+          ),
+        ).called(1);
       });
 
       testWidgets(
@@ -119,8 +135,20 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          verifyNever(() => store.previewFor(any(), download: true));
-          verify(() => store.previewFor(any(), download: false)).called(1);
+          verifyNever(
+            () => store.previewFor(
+              any(),
+              download: true,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          );
+          verify(
+            () => store.previewFor(
+              any(),
+              download: false,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          ).called(1);
         },
       );
     });
@@ -163,7 +191,13 @@ void main() {
           relationships.single.add(FollowRelationship.youFollow);
           await tester.pump();
           await tester.pump();
-          verify(() => store.previewFor(any(), download: true)).called(1);
+          verify(
+            () => store.previewFor(
+              any(),
+              download: true,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          ).called(1);
 
           // The follower cache lands, so the relationship rebuilds and has
           // not answered yet.
@@ -176,7 +210,13 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          verifyNever(() => store.previewFor(any(), download: true));
+          verifyNever(
+            () => store.previewFor(
+              any(),
+              download: true,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          );
         },
       );
     });
@@ -196,8 +236,20 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          verifyNever(() => store.previewFor(any(), download: true));
-          verify(() => store.previewFor(any(), download: false)).called(1);
+          verifyNever(
+            () => store.previewFor(
+              any(),
+              download: true,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          );
+          verify(
+            () => store.previewFor(
+              any(),
+              download: false,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          ).called(1);
         },
       );
     });

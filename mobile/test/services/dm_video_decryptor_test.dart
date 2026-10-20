@@ -327,6 +327,39 @@ void main() {
       );
     });
 
+    test('stops a download its caller no longer wants', () async {
+      var wanted = true;
+      when(
+        () => dio.get<List<int>>(
+          _videoUrl,
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+          onReceiveProgress: any(named: 'onReceiveProgress'),
+        ),
+      ).thenAnswer((invocation) async {
+        final token = invocation.namedArguments[#cancelToken] as CancelToken;
+        final progress =
+            invocation.namedArguments[#onReceiveProgress] as ProgressCallback;
+        wanted = false;
+        progress(16, 1024);
+        throw await token.whenCancel;
+      });
+
+      await expectLater(
+        DmVideoDecryptor(dio: dio).decrypt(
+          _videoMessage(fileHash: 'ab' * 32),
+          stillWanted: () => wanted,
+        ),
+        throwsA(
+          isA<DmVideoUnavailableException>().having(
+            (e) => e.message,
+            'message',
+            contains('no longer wanted'),
+          ),
+        ),
+      );
+    });
+
     test('rejects ciphertext whose hash does not match the x tag', () async {
       final produced = await FileEncryption().encrypt(
         Uint8List.fromList([1, 2, 3, 4, 5]),

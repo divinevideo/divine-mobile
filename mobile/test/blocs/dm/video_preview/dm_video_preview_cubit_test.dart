@@ -55,7 +55,11 @@ void main() {
 
   void stubPreview(String? path, {required bool download}) {
     when(
-      () => store.previewFor(any(), download: download),
+      () => store.previewFor(
+        any(),
+        download: download,
+        stillWanted: any(named: 'stillWanted'),
+      ),
     ).thenAnswer((_) async => path == null ? null : File(path));
   }
 
@@ -89,6 +93,30 @@ void main() {
       );
     });
 
+    group('wanting its frame', () {
+      test('stops once closed, so its queued download is dropped', () async {
+        bool Function()? stillWanted;
+        when(
+          () => store.previewFor(
+            any(),
+            download: true,
+            stillWanted: any(named: 'stillWanted'),
+          ),
+        ).thenAnswer((invocation) async {
+          stillWanted =
+              invocation.namedArguments[#stillWanted] as bool Function()?;
+          return null;
+        });
+        final cubit = createCubit(download: true);
+        await cubit.load();
+        expect(stillWanted!(), isTrue);
+
+        await cubit.close();
+
+        expect(stillWanted!(), isFalse);
+      });
+    });
+
     group('load', () {
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows the frame the store keeps, downloading the video if needed',
@@ -116,7 +144,11 @@ void main() {
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows no frame and reports a failed download',
         setUp: () => when(
-          () => store.previewFor(any(), download: true),
+          () => store.previewFor(
+            any(),
+            download: true,
+            stillWanted: any(named: 'stillWanted'),
+          ),
         ).thenThrow(const SocketException('offline')),
         build: () => createCubit(download: true),
         act: (cubit) => cubit.load(),
@@ -150,7 +182,11 @@ void main() {
           DmVideoPreviewState(status: DmVideoPreviewStatus.none),
         ],
         verify: (_) => verifyNever(
-          () => store.previewFor(any(), download: true),
+          () => store.previewFor(
+            any(),
+            download: true,
+            stillWanted: any(named: 'stillWanted'),
+          ),
         ),
       );
 
@@ -197,7 +233,11 @@ void main() {
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows the frame of a video whose download failed once it is played',
         setUp: () => when(
-          () => store.previewFor(any(), download: true),
+          () => store.previewFor(
+            any(),
+            download: true,
+            stillWanted: any(named: 'stillWanted'),
+          ),
         ).thenThrow(const SocketException('offline')),
         build: () => createCubit(download: true),
         act: (cubit) async {

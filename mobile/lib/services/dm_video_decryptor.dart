@@ -76,7 +76,9 @@ class DmVideoDecryptor {
   ///
   /// The download is cut off past [maxBytes] of ciphertext, which defaults to
   /// [dmVideoMaxCiphertextBytes], and, when [timeLimit] is given, once it has
-  /// run that long; a host can otherwise trickle bytes forever.
+  /// run that long; a host can otherwise trickle bytes forever. When
+  /// [stillWanted] is given it is asked as the download progresses, and the
+  /// download stops once it says no.
   ///
   /// Throws a [DmVideoUnavailableException] when the message is not a video
   /// or carries a malformed key or nonce (checked before any download, and
@@ -93,6 +95,7 @@ class DmVideoDecryptor {
     DmMessage message, {
     int? maxBytes,
     Duration? timeLimit,
+    bool Function()? stillWanted,
   }) async {
     final metadata = message.fileMetadata;
     if (metadata == null || !metadata.isVideo) {
@@ -109,6 +112,7 @@ class DmVideoDecryptor {
       message.content,
       maxBytes: maxBytes ?? dmVideoMaxCiphertextBytes,
       timeLimit: timeLimit,
+      stillWanted: stillWanted,
     );
 
     return compute(_verifyAndDecrypt, (
@@ -127,6 +131,7 @@ class DmVideoDecryptor {
     String url, {
     required int maxBytes,
     Duration? timeLimit,
+    bool Function()? stillWanted,
   }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || !_isHttps(uri)) {
@@ -136,6 +141,7 @@ class DmVideoDecryptor {
     final cancelToken = CancelToken();
     var oversized = false;
     var outlasted = false;
+    var unwanted = false;
     final deadline = timeLimit == null
         ? null
         : Timer(timeLimit, () {
@@ -160,6 +166,9 @@ class DmVideoDecryptor {
             if (received > maxBytes || total > maxBytes) {
               oversized = true;
               cancelToken.cancel('encrypted video exceeds size limit');
+            } else if (stillWanted != null && !stillWanted()) {
+              unwanted = true;
+              cancelToken.cancel('encrypted video no longer wanted');
             }
           },
         );
@@ -187,6 +196,12 @@ class DmVideoDecryptor {
       if (oversized && CancelToken.isCancel(error)) {
         throw const DmVideoUnavailableException(
           'ciphertext exceeds the size limit',
+        );
+      }
+      if (unwanted && CancelToken.isCancel(error)) {
+        throw const DmVideoUnavailableException(
+          'the download was no longer wanted',
+          mayPass: true,
         );
       }
       if (outlasted && CancelToken.isCancel(error)) {
