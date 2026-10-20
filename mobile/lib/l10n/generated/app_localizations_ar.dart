@@ -10178,6 +10178,52 @@ class AppLocalizationsAr extends AppLocalizations {
       'فُقد الأثر في منتصف الطريق، وتبقى الطبقة ثابتة من هناك.';
 
   @override
+  String get videoEditorLoopLabel => 'تكرار';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'ابحث عن نقطة تكرار أكثر سلاسة';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'وجدنا تكرارًا أكثر سلاسة. ينتهي أبكر بمقدار $seconds ث.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'وجدنا تكرارًا أكثر سلاسة. ينتهي متأخرًا بمقدار $seconds ث.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي أبكر بمقدار $seconds ث.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي متأخرًا بمقدار $seconds ث.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'احتفظ';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'احتفظ بنقطة التكرار الجديدة';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'أعِد النهاية السابقة';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'هذا يتكرر بسلاسة بالفعل.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'تعذّر فحص التكرار. يُرجى المحاولة مجددًا.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'لم نجد تكرارًا سلسًا. لا شيء قرب النهاية يطابق بداية الفيديو.';
+
+  @override
   String get videoEditorKeyframeEffect => 'التأثير';
 
   @override

@@ -5,8 +5,15 @@ part of 'video_editor_main_bloc.dart';
 typedef DetachedClipOpacityPreview = ({String layerId, double opacity});
 
 /// A stretch of the timeline that playback loops over while a sheet plays
-/// it; see [VideoEditorAuditionStarted].
+/// it; see [VideoEditorAuditionStarted]. One whose `end` lies before its
+/// `start` runs across the loop point.
 typedef PlaybackAudition = ({Duration start, Duration end});
+
+/// Whether [position] lies within [audition].
+bool auditionContains(PlaybackAudition audition, Duration position) =>
+    audition.end > audition.start
+    ? position >= audition.start && position < audition.end
+    : position >= audition.start || position < audition.end;
 
 /// State for the video editor main screen.
 class VideoEditorMainState extends Equatable {

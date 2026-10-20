@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
@@ -14,6 +15,7 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
+import 'package:openvine/models/video_editor/loop_point_search.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
 import 'package:openvine/screens/video_editor/video_clip_transform_screen.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
@@ -144,6 +146,19 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
           index < state.clips.length &&
           state.clips[index].mask != null;
     });
+    // The loop's seam is at the end of the last clip, so only that clip
+    // offers to find a smoother one.
+    final canFindLoop = context.select((ClipEditorBloc bloc) {
+      final state = bloc.state;
+      return state.currentClipIndex == state.clips.length - 1 &&
+          loopPointSearchFor(state.clips) != null;
+    });
+    final hasPendingClipOperation = context.select(
+      (ClipEditorBloc bloc) => bloc.state.hasPendingClipOperation,
+    );
+    final isFindingLoop = context.select(
+      (LoopSuggestionCubit cubit) => cubit.state.isSearching,
+    );
 
     // A colour or photo standing in for a detached clip is a backdrop, not
     // footage. Splitting, reversing, speeding up or extracting audio from a
@@ -184,6 +199,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       // Split/Speed stay mounted and are shown disabled (not removed) while
       // busy, so the control set doesn't visibly reshuffle mid-operation.
       onSplit: () => _splitClip(context),
+      onLoop: canFindLoop ? () => _findLoop(context) : null,
+      isFindingLoop: isFindingLoop,
+      isLoopDisabled: hasPendingClipOperation,
       onFreezeFrame: () => _freezeFrame(context),
       isFreezingFrame: isFreezingCurrentClip,
       onDetach: () => _detachClip(context),
@@ -530,6 +548,14 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       clips: newClips,
       timelineMarkers: rebasedMarkers,
     );
+  }
+
+  /// Looks for where the last clip can end so the video loops without a
+  /// visible jump; [LoopSuggestionResultListener] shows what it finds.
+  Future<void> _findLoop(BuildContext context) async {
+    final state = context.read<ClipEditorBloc>().state;
+    if (state.hasPendingClipOperation) return;
+    await context.read<LoopSuggestionCubit>().search(state.clips);
   }
 
   /// Opens the equalizer of the selected clip. The preview loops the clip and

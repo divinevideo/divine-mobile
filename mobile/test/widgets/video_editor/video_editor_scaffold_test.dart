@@ -13,6 +13,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/layer_tracking/layer_tracking_cubit.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -43,6 +44,9 @@ class _MockProImageEditorState extends Mock implements ProImageEditorState {
 }
 
 class _MockStateManager extends Mock implements StateManager {}
+
+class _MockLoopSuggestionCubit extends MockCubit<LoopSuggestionState>
+    implements LoopSuggestionCubit {}
 
 class _FakeLayer extends Fake implements Layer {}
 
@@ -88,6 +92,7 @@ void main() {
       ClipEditorBloc? clipBlocOverride,
       ProImageEditorState? editorOverride,
       VideoEditorEffectsCubit? effectsCubit,
+      LoopSuggestionCubit? loopSuggestionCubit,
       ThemeData? theme,
     }) {
       final editorKey = GlobalKey<ProImageEditorState>();
@@ -126,6 +131,12 @@ void main() {
               BlocProvider<LayerTrackingCubit>(
                 create: (_) => LayerTrackingCubit(),
               ),
+              if (loopSuggestionCubit != null)
+                BlocProvider<LoopSuggestionCubit>.value(
+                  value: loopSuggestionCubit,
+                )
+              else
+                BlocProvider(create: (_) => LoopSuggestionCubit()),
               if (effectsCubit != null)
                 BlocProvider<VideoEditorEffectsCubit>.value(
                   value: effectsCubit,
@@ -312,6 +323,30 @@ void main() {
         expect(mainBloc.state.playbackToggleCounter, 2);
       },
     );
+
+    testWidgets('hides FAB while a loop suggestion waits on Keep or Cancel', (
+      tester,
+    ) async {
+      final loopSuggestionCubit = _MockLoopSuggestionCubit();
+      whenListen(
+        loopSuggestionCubit,
+        const Stream<LoopSuggestionState>.empty(),
+        initialState: const LoopSuggestionState(
+          status: LoopSuggestionStatus.suggested,
+        ),
+      );
+
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, loopSuggestionCubit: loopSuggestionCubit),
+      );
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.bySemanticsLabel(l10n.videoEditorAddElementSemanticLabel),
+        findsNothing,
+      );
+    });
 
     testWidgets('hides FAB when an overlay item is selected', (tester) async {
       overlayBloc.add(const TimelineOverlayItemSelected('overlay-1'));

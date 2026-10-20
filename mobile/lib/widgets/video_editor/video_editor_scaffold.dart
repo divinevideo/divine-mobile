@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_p
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_loop_suggestion_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_tracking_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_bottom_bar.dart';
@@ -52,8 +54,10 @@ class VideoEditorScaffold extends StatelessWidget {
         resizeToAvoidBottomInset: false,
         floatingActionButton: const _AddElementFab(),
         body: LayerTrackingResultListener(
-          child: ClipEditorResultListeners(
-            child: _ScaffoldBody(isLoading: isLoading),
+          child: LoopSuggestionResultListener(
+            child: ClipEditorResultListeners(
+              child: _ScaffoldBody(isLoading: isLoading),
+            ),
           ),
         ),
       ),
@@ -373,8 +377,16 @@ class _AddElementFab extends StatelessWidget {
     final isClipInteracting = context.select(
       (ClipEditorBloc b) => b.state.isEditing || b.state.isMultiSelectMode,
     );
+    // Anything added now would be saved with the previewed loop trim.
+    final hasLoopSuggestion = context.select(
+      (LoopSuggestionCubit c) =>
+          c.state.status == LoopSuggestionStatus.suggested,
+    );
 
-    if (shouldHide || isOverlayInteracting || isClipInteracting) {
+    if (shouldHide ||
+        isOverlayInteracting ||
+        isClipInteracting ||
+        hasLoopSuggestion) {
       return const SizedBox.shrink();
     }
 

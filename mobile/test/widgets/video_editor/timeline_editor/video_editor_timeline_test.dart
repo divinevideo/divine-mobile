@@ -15,6 +15,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -142,6 +143,8 @@ void main() {
       VideoEditorMainState? mainState,
       ClipEditorState? clipState,
       ProImageEditorState? editor,
+      LoopSuggestionCubit? loopCubit,
+      TimelineOverlayBloc? overlayBloc,
     }) {
       if (mainState != null) {
         when(() => mockMainBloc.state).thenReturn(mainState);
@@ -178,11 +181,15 @@ void main() {
                   BlocProvider<VideoEditorMainBloc>.value(value: mockMainBloc),
                   BlocProvider<ClipEditorBloc>.value(value: mockClipBloc),
                   BlocProvider<TimelineOverlayBloc>.value(
-                    value: mockOverlayBloc,
+                    value: overlayBloc ?? mockOverlayBloc,
                   ),
                   BlocProvider<VideoEditorFilterBloc>.value(
                     value: mockFilterBloc,
                   ),
+                  if (loopCubit == null)
+                    BlocProvider(create: (_) => LoopSuggestionCubit())
+                  else
+                    BlocProvider.value(value: loopCubit),
                 ],
 
                 child: const VideoEditorTimelineScaffold(),
@@ -216,6 +223,142 @@ void main() {
     });
 
     group('renders', () {
+      testWidgets(
+        'a cancelled loop preview preserves sounds and markers beyond its end',
+        (
+          tester,
+        ) async {
+          const s = Duration(seconds: 1);
+          final clip = _createTestClip(id: 'a', seconds: 3);
+          final states = StreamController<ClipEditorState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            mockClipBloc,
+            states.stream,
+            initialState: ClipEditorState(clips: [clip]),
+          );
+          final overlay = TimelineOverlayBloc();
+          addTearDown(overlay.close);
+          final cubit = LoopSuggestionCubit(
+            findLoopPoint:
+                ({required search, required taskId, onProgress}) async =>
+                    const VideoLoopPoint(
+                      start: Duration.zero,
+                      end: Duration(milliseconds: 2500),
+                      difference: 0.01,
+                      currentDifference: 0.2,
+                    ),
+          );
+          addTearDown(cubit.close);
+          overlay.add(
+            TimelineOverlayItemsUpdate(
+              layers: const [],
+              filters: const [],
+              audioTracks: [
+                AudioEvent(
+                  id: 'sound',
+                  pubkey: 'bundled',
+                  createdAt: 0,
+                  url: 'asset://sounds/loop.mp3',
+                  duration: 3,
+                  startTime: const Duration(milliseconds: 2700),
+                  endTime: s * 3,
+                ),
+              ],
+              totalVideoDuration: s * 3,
+              timelineMarkers: const [
+                Duration(milliseconds: 2700),
+                Duration(milliseconds: 2900),
+              ],
+            ),
+          );
+          await tester.pumpWidget(
+            buildWidget(loopCubit: cubit, overlayBloc: overlay),
+          );
+          await tester.pump();
+          expect(
+            overlay.state.items.where(
+              (item) => item.type == TimelineOverlayType.sound,
+            ),
+            hasLength(1),
+          );
+          expect(overlay.state.timelineMarkers, const [
+            Duration(milliseconds: 2700),
+            Duration(milliseconds: 2900),
+          ]);
+
+          await cubit.search([clip]);
+          await tester.pump();
+          states.add(ClipEditorState(clips: [cubit.state.suggested!]));
+          await tester.pump();
+          expect(
+            overlay.state.items.where(
+              (item) => item.type == TimelineOverlayType.sound,
+            ),
+            hasLength(1),
+          );
+          expect(overlay.state.timelineMarkers, const [
+            Duration(milliseconds: 2700),
+            Duration(milliseconds: 2900),
+          ]);
+
+          cubit.resultHandled();
+          states.add(ClipEditorState(clips: [clip]));
+          await tester.pump();
+          expect(
+            overlay.state.items.where(
+              (item) => item.type == TimelineOverlayType.sound,
+            ),
+            hasLength(1),
+          );
+          expect(overlay.state.timelineMarkers, const [
+            Duration(milliseconds: 2700),
+            Duration(milliseconds: 2900),
+          ]);
+        },
+      );
+
+      testWidgets('requires Keep or Cancel before another timeline edit', (
+        tester,
+      ) async {
+        final clip = _createTestClip(id: 'a', seconds: 5);
+        final cubit = LoopSuggestionCubit(
+          findLoopPoint:
+              ({required search, required taskId, onProgress}) async =>
+                  const VideoLoopPoint(
+                    start: Duration.zero,
+                    end: Duration(seconds: 4),
+                    difference: 0.01,
+                    currentDifference: 0.2,
+                  ),
+        );
+        addTearDown(cubit.close);
+        await cubit.search([clip]);
+        await tester.pumpWidget(
+          buildWidget(
+            clipState: ClipEditorState(clips: [clip]),
+            loopCubit: cubit,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final tile = find.byKey(const ValueKey('a'));
+        final point = tester.getTopLeft(tile) + const Offset(30, 20);
+
+        await tester.tapAt(point);
+        await tester.pump();
+        verifyNever(() => mockClipBloc.add(const ClipEditorEditingToggled()));
+        expect(find.text('Keep').hitTestable(), findsOneWidget);
+        expect(find.text('Cancel').hitTestable(), findsOneWidget);
+
+        // The same gesture works once the pending preview is dismissed.
+        cubit.resultHandled();
+        await tester.pumpAndSettle();
+        await tester.tapAt(point);
+        await tester.pump();
+        verify(() => mockClipBloc.add(const ClipEditorEditingToggled()))
+            .called(1);
+      });
+
       testWidgets('renders timeline with clips', (tester) async {
         final clips = [
           _createTestClip(id: 'clip1', seconds: 3),

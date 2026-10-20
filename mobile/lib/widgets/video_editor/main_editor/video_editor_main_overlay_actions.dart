@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -56,6 +57,10 @@ class _TopActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scope = VideoEditorScope.of(context);
+    final hasLoopSuggestion = context.select(
+      (LoopSuggestionCubit cubit) =>
+          cubit.state.status == LoopSuggestionStatus.suggested,
+    );
     // Uses `read` because `draftId` is set once during `initialize()` and
     // does not change during the editor session.
     final isAutosavedDraft = ref.watch(
@@ -115,7 +120,7 @@ class _TopActions extends ConsumerWidget {
                 value: stopMotionData.value,
               ),
         onClose: close,
-        onDone: () => _onDonePressed(context, scope),
+        onDone: hasLoopSuggestion ? null : () => _onDonePressed(context, scope),
       ),
     );
   }
@@ -125,6 +130,10 @@ class _TopActions extends ConsumerWidget {
   /// that length by silently looping at render, so instead the tap surfaces a
   /// "capture more frames" snackbar and stays in the editor.
   void _onDonePressed(BuildContext context, VideoEditorScope scope) {
+    if (context.read<LoopSuggestionCubit>().state.status ==
+        LoopSuggestionStatus.suggested) {
+      return;
+    }
     final clipState = context.read<ClipEditorBloc>().state;
     const minDuration = VideoEditorConstants.stopMotionMinOutputDuration;
     if (isStopMotionComposition(clipState.clips) &&

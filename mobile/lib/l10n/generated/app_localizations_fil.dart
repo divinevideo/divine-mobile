@@ -10288,6 +10288,53 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nawala ito sa kalagitnaan. Hindi na gagalaw ang layer mula roon.';
 
   @override
+  String get videoEditorLoopLabel => 'Loop';
+
+  @override
+  String get videoEditorLoopSemanticLabel =>
+      'Humanap ng mas makinis na loop point';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'May nakitang mas makinis na loop. Natatapos ito nang $seconds s mas maaga.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'May nakitang mas makinis na loop. Natatapos ito nang $seconds s mas huli.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Walang eksaktong tugma, pero ito ang pinakamalapit. Natatapos ito nang $seconds s mas maaga.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Walang eksaktong tugma, pero ito ang pinakamalapit. Natatapos ito nang $seconds s mas huli.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Panatilihin';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel =>
+      'Panatilihin ang bagong loop point';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Ibalik ang dating dulo';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Makinis na ang loop nito.';
+
+  @override
+  String get videoEditorLoopFailed => 'Hindi ma-check ang loop. Subukan ulit.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Walang nakitang tuloy-tuloy na loop. Walang malapit sa dulo na tumutugma sa simula ng video.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effect';
 
   @override

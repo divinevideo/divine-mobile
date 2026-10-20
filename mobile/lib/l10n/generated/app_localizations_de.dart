@@ -10337,6 +10337,52 @@ class AppLocalizationsDe extends AppLocalizations {
       'Unterwegs aus den Augen verloren. Ab da bleibt die Ebene stehen.';
 
   @override
+  String get videoEditorLoopLabel => 'Loop';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'Flüssigeren Loop-Punkt finden';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Flüssigerer Loop gefunden. Er endet $seconds s früher.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Flüssigerer Loop gefunden. Er endet $seconds s später.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Kein perfekter Treffer, aber der nächste, den es gibt. Er endet $seconds s früher.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Kein perfekter Treffer, aber der nächste, den es gibt. Er endet $seconds s später.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Behalten';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'Neuen Loop-Punkt behalten';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Altes Ende zurückholen';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Das loopt schon flüssig.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'Der Loop konnte nicht geprüft werden. Versuch es noch mal.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Kein nahtloser Loop gefunden. Nichts gegen Ende passt zum Anfang des Videos.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effekt';
 
   @override
