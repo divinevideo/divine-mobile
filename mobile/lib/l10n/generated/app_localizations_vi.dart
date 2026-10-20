@@ -13810,4 +13810,102 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Đã đánh dấu đã đọc';
+
+  @override
+  String get videoEditorLayoutLabel => 'Bố cục';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Sắp xếp clip theo kiểu chia màn hình';
+
+  @override
+  String get videoEditorLayoutTitle => 'Bố cục';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Đóng bố cục';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Đặt bố cục';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Cạnh nhau';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Trên dưới';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Ba hàng';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Một trên, hai dưới';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Lưới bốn ô';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Ba cạnh nhau';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Hai trên, một dưới';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo =>
+      'Một bên trái, hai bên phải';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne =>
+      'Hai bên trái, một bên phải';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Một trên, ba dưới';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Hình trong hình, góc trên bên trái';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Hình trong hình, góc trên bên phải';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Hình trong hình, góc dưới bên trái';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Hình trong hình, góc dưới bên phải';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Ô $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Ô $number, trống';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Gỡ clip khỏi ô';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Khoảng cách';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Màu viền';
+
+  @override
+  String get videoEditorLayoutApplying => 'Đang sắp xếp bố cục của bạn…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Bước $step/$count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed => 'Không đặt được bố cục. Thử lại nhé.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Một số clip không vừa: tất cả các ô đã đầy.';
 }

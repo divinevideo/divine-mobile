@@ -27,6 +27,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     required SharedPreferences sharedPreferences,
     this.clipTypeFilter = LibraryClipTypeFilter.all,
     bool allowsMixedClipTypes = false,
+    int? maxSelectedClips,
   }) : _clipLibraryService = clipLibraryService,
        _sharedPreferences = sharedPreferences,
        super(
@@ -34,6 +35,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
            clipSort: _readPersistedSort(sharedPreferences),
            gridColumnCount: _readPersistedGridColumns(sharedPreferences),
            allowsMixedClipTypes: allowsMixedClipTypes,
+           maxSelectedClips: maxSelectedClips,
          ),
        ) {
     on<ClipsLibraryLoadRequested>(_onLoadRequested, transformer: droppable());
@@ -254,6 +256,14 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       // disables such clips; this guards the event path.
       final selectedType = state.selectedIsStopMotion;
       if (selectedType != null && clip.isStopMotion != selectedType) return;
+      // A pick with room for one clip swaps it; a fuller one stops growing.
+      final limit = state.maxSelectedClips;
+      if (limit == 1) {
+        selectedIds.clear();
+        selectedDuration = Duration.zero;
+      } else if (limit != null && selectedIds.length >= limit) {
+        return;
+      }
       selectedIds.add(clip.id);
       selectedDuration += clip.duration;
     }
@@ -275,14 +285,18 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     // no anchor either.
     if (state.disabledClipIds.contains(clip.id)) return;
 
+    // A press that lands while the selection is out of sight cannot be
+    // toggling it — it is the one that brings the selection up.
+    final selecting =
+        !event.selectionEnabled || !state.selectedClipIds.contains(clip.id);
     final next = _withDragRange(
       ClipsLibraryDragSelection(
         anchorClipId: clip.id,
-        // A press that lands while the selection is out of sight cannot be
-        // toggling it — it is the one that brings the selection up.
-        selecting:
-            !event.selectionEnabled || !state.selectedClipIds.contains(clip.id),
-        baseSelectedClipIds: state.selectedClipIds,
+        selecting: selecting,
+        // With room for one clip, picking swaps it, as a tap does.
+        baseSelectedClipIds: selecting && state.maxSelectedClips == 1
+            ? const {}
+            : state.selectedClipIds,
         targetAspectRatio: event.targetAspectRatio,
       ),
       focusClipId: clip.id,
@@ -330,6 +344,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     if (anchorIndex < 0 || focusIndex < 0) return state;
 
     final selectedIds = Set<String>.from(drag.baseSelectedClipIds);
+    final limit = state.maxSelectedClips;
     // Both constraints tighten as the range grows: with nothing selected yet,
     // the first clip the drag picks up is what the rest has to match. The
     // type constraint is off entirely where mixing is allowed.
@@ -345,8 +360,8 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       if (!state.disabledClipIds.contains(clip.id)) {
         if (!drag.selecting) {
           selectedIds.remove(clip.id);
-        } else if ((isStopMotion == null ||
-                clip.isStopMotion == isStopMotion) &&
+        } else if ((limit == null || selectedIds.length < limit) &&
+            (isStopMotion == null || clip.isStopMotion == isStopMotion) &&
             (aspectRatio == null ||
                 aspectRatio == clip.targetAspectRatio.value)) {
           selectedIds.add(clip.id);

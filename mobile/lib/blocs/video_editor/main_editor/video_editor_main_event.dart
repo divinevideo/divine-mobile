@@ -178,6 +178,10 @@ enum SubEditorType {
   clips,
   captions,
 
+  /// The split-screen layout screen. Full-screen over the editor, which only
+  /// pauses beneath it.
+  layout,
+
   /// The voice-over recorder. It sits over the editor as a translucent route,
   /// so the preview plays on beneath it — muted, with the timeline and the
   /// editor's own controls stepped aside.

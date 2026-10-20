@@ -14152,4 +14152,101 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Oznaczono jako przeczytane';
+
+  @override
+  String get videoEditorLayoutLabel => 'Układ';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Ułóż klipy na podzielonym ekranie';
+
+  @override
+  String get videoEditorLayoutTitle => 'Układ';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Zamknij układ';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Wstaw układ';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Obok siebie';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Jeden nad drugim';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Trzy rzędy';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Jeden nad dwoma';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Siatka z czterech';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Trzy obok siebie';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Dwa nad jednym';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Jeden obok dwóch';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Dwa obok jednego';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Jeden nad trzema';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Obraz w obrazie, w lewym górnym rogu';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Obraz w obrazie, w prawym górnym rogu';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Obraz w obrazie, w lewym dolnym rogu';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Obraz w obrazie, w prawym dolnym rogu';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Komórka $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Komórka $number, pusta';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Usuń klip z komórki';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Odstęp';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Kolor obramowania';
+
+  @override
+  String get videoEditorLayoutApplying => 'Układanie klipów…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Krok $step z $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Nie udało się wstawić układu. Spróbuj jeszcze raz.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Nie wszystkie klipy się zmieściły — wszystkie komórki są zajęte.';
 }

@@ -267,6 +267,49 @@ void main() {
       }
     });
 
+    testWidgets('a layout clip joins editor history at its seam', (
+      tester,
+    ) async {
+      when(() => overlayBloc.state).thenReturn(
+        const TimelineOverlayState(timelineMarkers: [Duration(seconds: 3)]),
+      );
+      whenListen(
+        clipBloc,
+        Stream.value(
+          ClipEditorState(
+            clips: [_clip('a'), _clip('split_layout_1'), _clip('b')],
+            lastSplitScreenLayoutResult: ClipSplitScreenLayoutResult(
+              previousClips: [_clip('a'), _clip('b')],
+              clipId: 'split_layout_1',
+            ),
+          ),
+        ),
+        initialState: const ClipEditorState(),
+      );
+
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      // The marker on the clip after the layout follows its footage.
+      verify(
+        () => overlayBloc.add(
+          const TimelineMarkersRebased([Duration(seconds: 5)]),
+        ),
+      ).called(1);
+      final meta =
+          verify(
+                () => editor.addHistory(meta: captureAny(named: 'meta')),
+              ).captured.single
+              as Map<String, dynamic>;
+      final clips =
+          meta[VideoEditorConstants.clipsStateHistoryKey] as List<dynamic>;
+      expect(clips.map((c) => (c as Map<String, dynamic>)['id']), [
+        'a',
+        'split_layout_1',
+        'b',
+      ]);
+    });
+
     testWidgets('putting a clip back removes its layer in the same entry', (
       tester,
     ) async {

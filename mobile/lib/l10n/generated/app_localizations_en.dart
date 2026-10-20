@@ -13956,4 +13956,101 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Marked as read';
+
+  @override
+  String get videoEditorLayoutLabel => 'Layout';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Arrange clips in a split screen';
+
+  @override
+  String get videoEditorLayoutTitle => 'Layout';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Close layout';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Place layout';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Side by side';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Stacked';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Three rows';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'One over two';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Grid of four';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Three side by side';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Two over one';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'One beside two';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Two beside one';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'One over three';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Picture in picture, top left';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Picture in picture, top right';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Picture in picture, bottom left';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Picture in picture, bottom right';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Cell $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Cell $number, empty';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Remove clip from cell';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Gap';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Border color';
+
+  @override
+  String get videoEditorLayoutApplying => 'Arranging your layout…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Step $step of $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Couldn\'t place the layout. Give it another go.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Some clips didn\'t fit — every cell is full.';
 }

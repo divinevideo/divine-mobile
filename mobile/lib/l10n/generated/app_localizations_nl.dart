@@ -13940,4 +13940,101 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Als gelezen gemarkeerd';
+
+  @override
+  String get videoEditorLayoutLabel => 'Lay-out';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Clips in een gesplitst scherm zetten';
+
+  @override
+  String get videoEditorLayoutTitle => 'Lay-out';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Lay-out sluiten';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Lay-out plaatsen';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Naast elkaar';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Boven elkaar';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Drie rijen';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Eén boven twee';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Raster van vier';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Drie naast elkaar';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Twee boven één';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Eén naast twee';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Twee naast één';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Eén boven drie';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Beeld-in-beeld, linksboven';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Beeld-in-beeld, rechtsboven';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Beeld-in-beeld, linksonder';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Beeld-in-beeld, rechtsonder';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Vak $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Vak $number, leeg';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Clip uit het vak halen';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Tussenruimte';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Randkleur';
+
+  @override
+  String get videoEditorLayoutApplying => 'Je lay-out wordt geplaatst…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Stap $step van $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Kon de lay-out niet plaatsen. Probeer het nog eens.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Niet alle clips pasten: alle vakken zijn vol.';
 }

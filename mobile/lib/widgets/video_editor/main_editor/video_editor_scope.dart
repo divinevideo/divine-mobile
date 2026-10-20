@@ -48,6 +48,7 @@ class VideoEditorScope extends InheritedWidget {
     this.clipFrameTracker,
     this.previewReleasedNotifier,
     this.onAddAudioVisualizer,
+    this.onOpenLayout,
     super.child = const SizedBox.shrink(),
     super.key,
   }) : assert(
@@ -84,6 +85,10 @@ class VideoEditorScope extends InheritedWidget {
 
   /// Callback to open the in-editor camera recorder.
   final VoidCallback onOpenCamera;
+
+  /// Callback to open the split-screen layout screen, or `null` where the
+  /// editor offers none.
+  final VoidCallback? onOpenLayout;
 
   /// Callback to open the clips editor.
   final VoidCallback onOpenClipsEditor;

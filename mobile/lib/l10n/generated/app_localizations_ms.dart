@@ -13866,4 +13866,102 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Ditandakan sudah dibaca';
+
+  @override
+  String get videoEditorLayoutLabel => 'Susun atur';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Susun klip dalam skrin terbahagi';
+
+  @override
+  String get videoEditorLayoutTitle => 'Susun atur';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Tutup susun atur';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Letakkan susun atur';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Sebelah-menyebelah';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Atas bawah';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Tiga baris';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Satu atas dua';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Grid empat';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Tiga sebelah-menyebelah';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Dua atas satu';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Satu sebelah dua';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Dua sebelah satu';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Satu atas tiga';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Gambar dalam gambar, kiri atas';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Gambar dalam gambar, kanan atas';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Gambar dalam gambar, kiri bawah';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Gambar dalam gambar, kanan bawah';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Sel $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Sel $number, kosong';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel =>
+      'Alih keluar klip daripada sel';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Jarak';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Warna sempadan';
+
+  @override
+  String get videoEditorLayoutApplying => 'Menyusun susun atur anda…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Langkah $step daripada $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Susun atur tidak dapat diletakkan. Cuba lagi.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Sesetengah klip tidak muat — semua sel sudah penuh.';
 }

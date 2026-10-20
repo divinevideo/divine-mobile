@@ -10289,5 +10289,135 @@
   "inboxThreadMarkedRead": "Marked as read",
   "@inboxThreadMarkedRead": {
     "description": "Confirmation after marking a single conversation or request as read."
+  },
+  "videoEditorLayoutLabel": "Layout",
+  "@videoEditorLayoutLabel": {
+    "description": "Label of the add-sheet action that opens the split-screen layout tool."
+  },
+  "videoEditorOpenLayoutSemanticLabel": "Arrange clips in a split screen",
+  "@videoEditorOpenLayoutSemanticLabel": {
+    "description": "Screen reader label for the add-sheet action that opens the split-screen layout tool."
+  },
+  "videoEditorLayoutTitle": "Layout",
+  "@videoEditorLayoutTitle": {
+    "description": "Title of the split-screen layout screen, where several clips are arranged side by side, stacked or in a grid."
+  },
+  "videoEditorLayoutCloseSemanticLabel": "Close layout",
+  "@videoEditorLayoutCloseSemanticLabel": {
+    "description": "Screen reader label for the close button of the split-screen layout screen. Closing discards the layout."
+  },
+  "videoEditorLayoutDoneSemanticLabel": "Place layout",
+  "@videoEditorLayoutDoneSemanticLabel": {
+    "description": "Screen reader label for the done button of the split-screen layout screen, which puts the layout into the video."
+  },
+  "videoEditorLayoutPresetSideBySide": "Side by side",
+  "@videoEditorLayoutPresetSideBySide": {
+    "description": "Name of the layout with two clips next to each other, each half the width."
+  },
+  "videoEditorLayoutPresetStacked": "Stacked",
+  "@videoEditorLayoutPresetStacked": {
+    "description": "Name of the layout with two clips on top of each other, each half the height."
+  },
+  "videoEditorLayoutPresetThreeStacked": "Three rows",
+  "@videoEditorLayoutPresetThreeStacked": {
+    "description": "Name of the layout with three clips in three equal rows."
+  },
+  "videoEditorLayoutPresetOneOverTwo": "One over two",
+  "@videoEditorLayoutPresetOneOverTwo": {
+    "description": "Name of the layout with one clip across the top half and two clips side by side underneath."
+  },
+  "videoEditorLayoutPresetGrid": "Grid of four",
+  "@videoEditorLayoutPresetGrid": {
+    "description": "Name of the layout with four clips in a two-by-two grid."
+  },
+  "videoEditorLayoutPresetThreeColumns": "Three side by side",
+  "@videoEditorLayoutPresetThreeColumns": {
+    "description": "Name of the layout with three clips next to each other in three equal columns."
+  },
+  "videoEditorLayoutPresetTwoOverOne": "Two over one",
+  "@videoEditorLayoutPresetTwoOverOne": {
+    "description": "Name of the layout with two clips side by side across the top half and one clip across the bottom half."
+  },
+  "videoEditorLayoutPresetOneBesideTwo": "One beside two",
+  "@videoEditorLayoutPresetOneBesideTwo": {
+    "description": "Name of the layout with one clip down the left half and two clips stacked on the right half."
+  },
+  "videoEditorLayoutPresetTwoBesideOne": "Two beside one",
+  "@videoEditorLayoutPresetTwoBesideOne": {
+    "description": "Name of the layout with two clips stacked on the left half and one clip down the right half."
+  },
+  "videoEditorLayoutPresetOneOverThree": "One over three",
+  "@videoEditorLayoutPresetOneOverThree": {
+    "description": "Name of the layout with one clip across the top two thirds and three clips in a row underneath."
+  },
+  "videoEditorLayoutPresetPictureInPictureTopLeft": "Picture in picture, top left",
+  "@videoEditorLayoutPresetPictureInPictureTopLeft": {
+    "description": "Name of the layout with one clip filling the frame and a small one in its top-left corner."
+  },
+  "videoEditorLayoutPresetPictureInPictureTopRight": "Picture in picture, top right",
+  "@videoEditorLayoutPresetPictureInPictureTopRight": {
+    "description": "Name of the layout with one clip filling the frame and a small one in its top-right corner."
+  },
+  "videoEditorLayoutPresetPictureInPictureBottomLeft": "Picture in picture, bottom left",
+  "@videoEditorLayoutPresetPictureInPictureBottomLeft": {
+    "description": "Name of the layout with one clip filling the frame and a small one in its bottom-left corner."
+  },
+  "videoEditorLayoutPresetPictureInPictureBottomRight": "Picture in picture, bottom right",
+  "@videoEditorLayoutPresetPictureInPictureBottomRight": {
+    "description": "Name of the layout with one clip filling the frame and a small one in its bottom-right corner."
+  },
+  "videoEditorLayoutCellSemanticLabel": "Cell {number}",
+  "@videoEditorLayoutCellSemanticLabel": {
+    "description": "Screen reader label for a filled cell of the split-screen layout. {number} is the cell's position, counted from 1 and already formatted. Tapping selects the cell; dragging moves the picture inside it.",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorLayoutCellEmptySemanticLabel": "Cell {number}, empty",
+  "@videoEditorLayoutCellEmptySemanticLabel": {
+    "description": "Screen reader label for an empty cell of the split-screen layout. {number} is the cell's position, counted from 1 and already formatted.",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorLayoutRemoveClipLabel": "Remove clip from cell",
+  "@videoEditorLayoutRemoveClipLabel": {
+    "description": "Screen reader label for the button that empties the selected cell of the split-screen layout. The clip stays in the library."
+  },
+  "videoEditorLayoutGapLabel": "Gap",
+  "@videoEditorLayoutGapLabel": {
+    "description": "Label of the slider that sets the space around and between the cells of the split-screen layout."
+  },
+  "videoEditorLayoutBorderColorLabel": "Border color",
+  "@videoEditorLayoutBorderColorLabel": {
+    "description": "Label of the color row that sets the color shown in the gaps and empty cells of the split-screen layout."
+  },
+  "videoEditorLayoutApplying": "Arranging your layout…",
+  "@videoEditorLayoutApplying": {
+    "description": "Progress label while the clips of a split-screen layout are cropped to their cells."
+  },
+  "videoEditorLayoutApplyStep": "Step {step} of {count}",
+  "@videoEditorLayoutApplyStep": {
+    "description": "Which render of the split-screen layout is running, e.g. 'Step 2 of 5'. Both are positions, already formatted.",
+    "placeholders": {
+      "step": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorLayoutFailed": "Couldn't place the layout. Give it another go.",
+  "@videoEditorLayoutFailed": {
+    "description": "Snackbar when rendering a split-screen layout failed. The layout stays on screen, so trying again is one tap."
+  },
+  "videoEditorLayoutClipsDidNotFit": "Some clips didn't fit — every cell is full.",
+  "@videoEditorLayoutClipsDidNotFit": {
+    "description": "Snackbar when more clips were picked than the split-screen layout has empty cells for."
   }
 }

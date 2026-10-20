@@ -30,6 +30,7 @@ import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
+import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Which tabs the library shows.
@@ -80,6 +81,8 @@ class LibraryScreen extends ConsumerWidget {
     this.includeAutosaveDraft = true,
     this.editorClips = const [],
     this.scrollController,
+    this.cropGuideAspectRatio,
+    this.maxSelectedClips,
   });
 
   /// Index of the tab to show when the screen opens.
@@ -122,6 +125,15 @@ class LibraryScreen extends ConsumerWidget {
   /// Optional scroll controller, e.g. from a parent [DraggableScrollableSheet].
   final ScrollController? scrollController;
 
+  /// The shape picked clips will be cropped to, drawn over every thumbnail —
+  /// a split-screen cell's. Clips of any shape can be picked then, since the
+  /// crop decides the shape. `null` when picked clips keep their frame.
+  final double? cropGuideAspectRatio;
+
+  /// The most clips one pick may hold — a split-screen layout's free cells.
+  /// At one, a tap swaps the picked clip; `null` sets no limit.
+  final int? maxSelectedClips;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (kIsWeb) {
@@ -131,6 +143,15 @@ class LibraryScreen extends ConsumerWidget {
     final clipLibraryService = ref.watch(clipLibraryServiceProvider);
     final draftStorageService = ref.watch(draftStorageServiceProvider);
 
+    final view = _LibraryView(
+      initialTabIndex: initialTabIndex,
+      selectionMode: selectionMode,
+      tabsMode: tabsMode,
+      editorClips: editorClips,
+      scrollController: scrollController,
+      anyAspectRatio: cropGuideAspectRatio != null,
+    );
+
     return MultiBlocProvider(
       providers: [
         BlocProvider<ClipsLibraryBloc>(
@@ -138,6 +159,7 @@ class LibraryScreen extends ConsumerWidget {
             clipLibraryService,
             clipTypeFilter,
             allowsMixedClipTypes,
+            maxSelectedClips,
           )),
           create: (_) {
             final editorClipIds = selectionMode
@@ -148,6 +170,7 @@ class LibraryScreen extends ConsumerWidget {
               sharedPreferences: ref.read(sharedPreferencesProvider),
               clipTypeFilter: clipTypeFilter,
               allowsMixedClipTypes: allowsMixedClipTypes,
+              maxSelectedClips: maxSelectedClips,
             )..add(
               ClipsLibraryLoadRequested(
                 preSelectedIds: editorClipIds,
@@ -167,13 +190,13 @@ class LibraryScreen extends ConsumerWidget {
           const GalleryClipImportProvider(),
         const ClipGallerySaveProvider(),
       ],
-      child: _LibraryView(
-        initialTabIndex: initialTabIndex,
-        selectionMode: selectionMode,
-        tabsMode: tabsMode,
-        editorClips: editorClips,
-        scrollController: scrollController,
-      ),
+      child: switch (cropGuideAspectRatio) {
+        final aspectRatio? => ClipCropGuide(
+          aspectRatio: aspectRatio,
+          child: view,
+        ),
+        null => view,
+      },
     );
   }
 }
@@ -192,6 +215,7 @@ class _LibraryView extends ConsumerStatefulWidget {
     required this.tabsMode,
     required this.editorClips,
     required this.scrollController,
+    required this.anyAspectRatio,
   });
 
   final int initialTabIndex;
@@ -200,6 +224,10 @@ class _LibraryView extends ConsumerStatefulWidget {
 
   final List<DivineVideoClip> editorClips;
   final ScrollController? scrollController;
+
+  /// Whether clips of every shape can be picked — see
+  /// [LibraryScreen.cropGuideAspectRatio].
+  final bool anyAspectRatio;
 
   @override
   ConsumerState<_LibraryView> createState() => _LibraryViewState();
@@ -717,11 +745,13 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
           // shows no marked clip and the state is indistinguishable from
           // having selected nothing at all.
           final selectedCount = clipsState.selectedClipIds.length;
-          final targetAspectRatio = libraryTargetAspectRatioForSelection(
-            selectionMode: widget.selectionMode,
-            editorClips: editorClips,
-            clipsState: clipsState,
-          );
+          final targetAspectRatio = widget.anyAspectRatio
+              ? null
+              : libraryTargetAspectRatioForSelection(
+                  selectionMode: widget.selectionMode,
+                  editorClips: editorClips,
+                  clipsState: clipsState,
+                );
 
           void createVideo() => _detach(
             _createVideoFromSelected(

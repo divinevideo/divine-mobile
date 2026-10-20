@@ -13874,4 +13874,100 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Markerat som läst';
+
+  @override
+  String get videoEditorLayoutLabel => 'Layout';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel => 'Ordna klipp i delad skärm';
+
+  @override
+  String get videoEditorLayoutTitle => 'Layout';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Stäng layouten';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Placera layouten';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Sida vid sida';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Staplade';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Tre rader';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'En över två';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Rutnät med fyra';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Tre sida vid sida';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Två över en';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'En bredvid två';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Två bredvid en';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'En över tre';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Bild i bild, uppe till vänster';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Bild i bild, uppe till höger';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Bild i bild, nere till vänster';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Bild i bild, nere till höger';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Ruta $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Ruta $number, tom';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Ta bort klippet från rutan';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Mellanrum';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Kantfärg';
+
+  @override
+  String get videoEditorLayoutApplying => 'Ordnar din layout …';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Steg $step av $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Det gick inte att placera layouten. Försök igen.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Alla klipp fick inte plats – alla rutor är fulla.';
 }

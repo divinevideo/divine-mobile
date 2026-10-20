@@ -14219,4 +14219,102 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'చదివినట్లు గుర్తించబడింది';
+
+  @override
+  String get videoEditorLayoutLabel => 'లేఅవుట్';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'క్లిప్‌లను స్ప్లిట్ స్క్రీన్‌లో అమర్చండి';
+
+  @override
+  String get videoEditorLayoutTitle => 'లేఅవుట్';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'లేఅవుట్‌ను మూసివేయండి';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'లేఅవుట్‌ను ఉంచండి';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'పక్కపక్కనే';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'ఒకదానిపై ఒకటి';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'మూడు వరుసలు';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'పైన ఒకటి, కింద రెండు';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'నాలుగు గడుల గ్రిడ్';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'మూడు పక్కపక్కనే';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'పైన రెండు, కింద ఒకటి';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'ఎడమ ఒకటి, కుడి రెండు';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'ఎడమ రెండు, కుడి ఒకటి';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'పైన ఒకటి, కింద మూడు';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'పిక్చర్ ఇన్ పిక్చర్, ఎడమ పైన';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'పిక్చర్ ఇన్ పిక్చర్, కుడి పైన';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'పిక్చర్ ఇన్ పిక్చర్, ఎడమ కింద';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'పిక్చర్ ఇన్ పిక్చర్, కుడి కింద';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'గడి $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'గడి $number, ఖాళీ';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel =>
+      'గడి నుండి క్లిప్‌ను తీసివేయండి';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'ఖాళీ స్థలం';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'అంచు రంగు';
+
+  @override
+  String get videoEditorLayoutApplying => 'మీ లేఅవుట్‌ను అమర్చుతోంది…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'దశ $step / $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'లేఅవుట్‌ను ఉంచలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'కొన్ని క్లిప్‌లు సరిపోలేదు — అన్ని గడులు నిండిపోయాయి.';
 }

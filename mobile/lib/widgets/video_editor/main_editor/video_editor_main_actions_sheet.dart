@@ -104,6 +104,21 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                   scope.onOpenClipsEditor();
                 },
               ),
+              // A layout's cells are clips on the canvas over a timeline
+              // backdrop; a frames-first stop-motion composition has neither,
+              // so it is not offered there.
+              if (scope.onOpenLayout case final onOpenLayout?
+                  when !isStopMotion)
+                _ItemButton(
+                  icon: .squaresFour,
+                  label: context.l10n.videoEditorLayoutLabel,
+                  semanticLabel:
+                      context.l10n.videoEditorOpenLayoutSemanticLabel,
+                  onTap: () {
+                    Navigator.pop(context);
+                    onOpenLayout();
+                  },
+                ),
               _ItemButton(
                 icon: .waveform,
                 label: context.l10n.videoEditorAudioLabel,

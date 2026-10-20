@@ -456,6 +456,28 @@ class ClipEditorClipDetachRequested extends ClipEditorEvent {
   List<Object?> get props => [clipId, replacement];
 }
 
+// === SPLIT-SCREEN LAYOUT ===
+
+/// Put [clip], the clip a split-screen layout was rendered into, on the
+/// timeline at the seam nearest [playhead].
+///
+/// The layout screen has already rendered it. The widget layer consumes
+/// [ClipSplitScreenLayoutResult] to commit the insertion to editor history.
+class ClipEditorSplitScreenLayoutInserted extends ClipEditorEvent {
+  const ClipEditorSplitScreenLayoutInserted({
+    required this.clip,
+    required this.playhead,
+  });
+
+  final DivineVideoClip clip;
+
+  /// Timeline position the layout joins at.
+  final Duration playhead;
+
+  @override
+  List<Object?> get props => [clip, playhead];
+}
+
 // === FREEZE FRAME ===
 
 /// Hold the frame of the clip with [clipId] at [position] still for a beat,

@@ -13852,4 +13852,101 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'تم التحديد كمقروء';
+
+  @override
+  String get videoEditorLayoutLabel => 'التخطيط';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'ترتيب المقاطع في شاشة مقسّمة';
+
+  @override
+  String get videoEditorLayoutTitle => 'التخطيط';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'إغلاق التخطيط';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'وضع التخطيط';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'جنبًا إلى جنب';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'فوق بعضها';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'ثلاثة صفوف';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'واحد فوق اثنين';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'شبكة من أربعة';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'ثلاثة جنبًا إلى جنب';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'اثنان فوق واحد';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'واحد بجانب اثنين';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'اثنان بجانب واحد';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'واحد فوق ثلاثة';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'صورة داخل صورة، أعلى اليسار';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'صورة داخل صورة، أعلى اليمين';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'صورة داخل صورة، أسفل اليسار';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'صورة داخل صورة، أسفل اليمين';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'الخلية $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'الخلية $number، فارغة';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'إزالة المقطع من الخلية';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'المسافة';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'لون الإطار';
+
+  @override
+  String get videoEditorLayoutApplying => 'جارٍ ترتيب التخطيط…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'الخطوة $step من $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'تعذّر وضع التخطيط. يمكن إعادة المحاولة.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'بعض المقاطع لم تتّسع: كل الخلايا ممتلئة.';
 }

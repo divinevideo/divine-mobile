@@ -13,6 +13,7 @@ import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/l10n/camera_initialization_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/platform_helpers.dart';
+import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_mobile_preview.dart';
@@ -108,9 +109,34 @@ class _StackItems extends StatelessWidget {
             },
           ),
         const VideoRecorderGhostFrame(),
+        if (ClipCropGuide.maybeOf(context) case final guide?)
+          _CropGuide(aspectRatio: guide.aspectRatio),
         const _OverlayGrid(),
         if (enableTapToFocus) const VideoRecorderFocusPoint(),
       ],
+    );
+  }
+}
+
+/// The part of the camera frame the take will be cropped to.
+///
+/// The recording is the whole sensor frame, which the preview covers its box
+/// with — so the crop is cut from the sensor's shape, not the box's, and can
+/// reach past a square preview on one side.
+class _CropGuide extends StatelessWidget {
+  const _CropGuide({required this.aspectRatio});
+
+  final double aspectRatio;
+
+  @override
+  Widget build(BuildContext context) {
+    final sensorAspectRatio = context.select(
+      (VideoRecorderBloc b) => b.state.cameraSensorAspectRatio,
+    );
+    if (sensorAspectRatio <= 0) return const SizedBox.shrink();
+    return ClipCropGuideOverlay(
+      aspectRatio: aspectRatio,
+      contentAspectRatio: sensorAspectRatio,
     );
   }
 }

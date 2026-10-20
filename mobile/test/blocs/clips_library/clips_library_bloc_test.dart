@@ -95,11 +95,13 @@ void main() {
     ClipsLibraryBloc createBloc({
       LibraryClipTypeFilter clipTypeFilter = LibraryClipTypeFilter.all,
       bool allowsMixedClipTypes = false,
+      int? maxSelectedClips,
     }) => ClipsLibraryBloc(
       clipLibraryService: mockClipLibraryService,
       sharedPreferences: sharedPreferences,
       clipTypeFilter: clipTypeFilter,
       allowsMixedClipTypes: allowsMixedClipTypes,
+      maxSelectedClips: maxSelectedClips,
     );
 
     test('initial state is correct', () async {
@@ -628,6 +630,74 @@ void main() {
             (s) => s.selectedClipIds,
             'selectedClipIds',
             equals({'sm1', 'sm2'}),
+          ),
+        ],
+      );
+    });
+
+    group('maxSelectedClips', () {
+      DivineVideoClip pick(String id) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file('/path/to/$id.mp4'),
+        duration: const Duration(seconds: 1),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      final a = pick('a');
+      final b = pick('b');
+      final c = pick('c');
+
+      ClipsLibraryState seedWith(
+        int limit, {
+        Set<String> selected = const {},
+      }) => ClipsLibraryState(
+        status: ClipsLibraryStatus.loaded,
+        clips: [a, b, c],
+        sortedClips: [a, b, c],
+        selectedClipIds: selected,
+        selectedDuration: Duration(seconds: selected.length),
+        maxSelectedClips: limit,
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'swaps the picked clip when there is room for one',
+        seed: () => seedWith(1, selected: {'a'}),
+        build: () => createBloc(maxSelectedClips: 1),
+        act: (bloc) => bloc.add(ClipsLibraryToggleSelection(b)),
+        expect: () => [
+          isA<ClipsLibraryState>()
+              .having((s) => s.selectedClipIds, 'selectedClipIds', {'b'})
+              .having(
+                (s) => s.selectedDuration,
+                'selectedDuration',
+                const Duration(seconds: 1),
+              ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'picks nothing more once the limit is reached',
+        seed: () => seedWith(2, selected: {'a', 'b'}),
+        build: () => createBloc(maxSelectedClips: 2),
+        act: (bloc) => bloc.add(ClipsLibraryToggleSelection(c)),
+        expect: () => const <ClipsLibraryState>[],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'stops a drag selection at the limit',
+        seed: () => seedWith(2),
+        build: () => createBloc(maxSelectedClips: 2),
+        act: (bloc) => bloc
+          ..add(ClipsLibraryDragSelectionStarted(a))
+          ..add(ClipsLibraryDragSelectionExtended(c)),
+        expect: () => [
+          isA<ClipsLibraryState>(),
+          isA<ClipsLibraryState>().having(
+            (s) => s.selectedClipIds,
+            'selectedClipIds',
+            {'a', 'b'},
           ),
         ],
       );
