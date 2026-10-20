@@ -295,6 +295,33 @@ void main() {
       },
     );
 
+    test('same-owner replacement retains rollback ranking after optimistic removal', () async {
+      final bloc = createBloc();
+      bloc.add(const MyFollowingListLoadRequested());
+      load([_a, _b]);
+      await pumpEventQueue();
+      updates.add([_b]);
+      await pumpEventQueue();
+      final retained = bloc.state;
+      await bloc.close();
+      when(() => repository.watchMyFollowingCached()).thenAnswer(
+        (_) => const Stream<CacheResult<FollowingSnapshot>>.empty(),
+      );
+      final replacement = MyFollowingBloc(
+        rankForList: true,
+        followRepository: repository,
+        contentBlocklistRepository: blocklist,
+        rankingSignalsLoader: loader,
+        initialState: retained,
+      );
+      addTearDown(replacement.close);
+      replacement.add(const MyFollowingListLoadRequested());
+      await pumpEventQueue();
+      updates.add([_b, _a]);
+      await pumpEventQueue();
+      expect(replacement.state.followingPubkeys, [_a, _b]);
+    });
+
     test(
       'membership removal keeps a newly unblocked row during pending ranking',
       () async {

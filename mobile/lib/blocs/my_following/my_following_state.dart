@@ -32,7 +32,13 @@ final class MyFollowingState extends Equatable {
     this.eligibilityRevision = 0,
     this.repositoryRevision = 0,
     this.hasLocalFollowEdit = false,
+    this.rankedSnapshot,
   });
+
+  /// Last fully ranked membership, retained across optimistic removals and
+  /// same-owner bloc replacement so a failed edit restores its original order.
+  final ({List<String> order, Map<String, UserRankingSignals> signals})?
+  rankedSnapshot;
 
   /// Live membership revision used to discard older async ranking results.
   final int repositoryRevision;
@@ -94,6 +100,8 @@ final class MyFollowingState extends Equatable {
     int? eligibilityRevision,
     int? repositoryRevision,
     bool? hasLocalFollowEdit,
+    ({List<String> order, Map<String, UserRankingSignals> signals})?
+    rankedSnapshot,
   }) {
     return MyFollowingState(
       status: status ?? this.status,
@@ -107,6 +115,7 @@ final class MyFollowingState extends Equatable {
       eligibilityRevision: eligibilityRevision ?? this.eligibilityRevision,
       repositoryRevision: repositoryRevision ?? this.repositoryRevision,
       hasLocalFollowEdit: hasLocalFollowEdit ?? this.hasLocalFollowEdit,
+      rankedSnapshot: rankedSnapshot ?? this.rankedSnapshot,
     );
   }
 
@@ -123,5 +132,7 @@ final class MyFollowingState extends Equatable {
     eligibilityRevision,
     repositoryRevision,
     hasLocalFollowEdit,
+    rankedSnapshot?.order,
+    rankedSnapshot?.signals,
   ];
 }

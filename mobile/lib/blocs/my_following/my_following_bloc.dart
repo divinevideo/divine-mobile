@@ -83,7 +83,17 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     ContentBlocklistRepository blocklist,
   ) {
     bool eligible(String key) => !blocklist.isBlocked(key);
+    final rankedSnapshot = snapshot.rankedSnapshot;
     return snapshot.copyWith(
+      rankedSnapshot: rankedSnapshot == null
+          ? null
+          : (
+              order: List.unmodifiable(rankedSnapshot.order.where(eligible)),
+              signals: Map.unmodifiable({
+                for (final entry in rankedSnapshot.signals.entries)
+                  if (eligible(entry.key)) entry.key: entry.value,
+              }),
+            ),
       rawFollowingPubkeys: List.unmodifiable(snapshot.rawFollowingPubkeys),
       followingPubkeys: List.unmodifiable(
         snapshot.followingPubkeys.where(eligible),
@@ -101,9 +111,6 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
   final FollowRepository _followRepository;
   final ContentBlocklistRepository _blocklistRepository;
   StreamSubscription<List<String>>? _followingSubscription;
-  // Keep the last ranked membership so a failed optimistic edit can roll back
-  // without re-reading the local stores. This snapshot belongs to this bloc.
-  MyFollowingState? _lastRankedSnapshot;
 
   /// Filter pubkeys by removing blocked users.
   List<String> _filterPubkeys(List<String> pubkeys) =>
@@ -328,15 +335,17 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     // in flight, even though it belongs to another event-handler bucket.
     emit(state.copyWith(repositoryRevision: state.repositoryRevision + 1));
     final revision = state.repositoryRevision;
-    final rankedSnapshot = _lastRankedSnapshot ?? state;
+    final rankedSnapshot =
+        state.rankedSnapshot ??
+        (order: state.smartOrder, signals: state.rankingSignals);
     if (_rankForList &&
         state.isSmartOrderReady &&
-        event.pubkeys.every(rankedSnapshot.rankingSignals.containsKey)) {
+        event.pubkeys.every(rankedSnapshot.signals.containsKey)) {
       // Removing an existing row changes membership, not the retained ranking.
       final keys = event.pubkeys.toSet();
-      final previousOrder = rankedSnapshot.smartOrder.toSet();
+      final previousOrder = rankedSnapshot.order.toSet();
       final smartOrder = [
-        ...rankedSnapshot.smartOrder.where(keys.contains),
+        ...rankedSnapshot.order.where(keys.contains),
         ...event.pubkeys.where(
           (key) =>
               !previousOrder.contains(key) &&
@@ -353,7 +362,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
           followingPubkeys: _filterPubkeys(ordered),
           smartOrder: smartOrder,
           rankingSignals: {
-            for (final entry in rankedSnapshot.rankingSignals.entries)
+            for (final entry in rankedSnapshot.signals.entries)
               if (keys.contains(entry.key)) entry.key: entry.value,
           },
           isRefreshing: false,
@@ -371,8 +380,16 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
 
   void _emitRanked(MyFollowingState next) {
     final first = !state.isSmartOrderReady && next.isSmartOrderReady;
-    if (!emitIfOpen(next)) return;
-    _lastRankedSnapshot = next;
+    if (!emitIfOpen(
+      next.copyWith(
+        rankedSnapshot: (
+          order: List.unmodifiable(next.smartOrder),
+          signals: Map.unmodifiable(next.rankingSignals),
+        ),
+      ),
+    )) {
+      return;
+    }
     if (first && _rankForList) {
       _rankingSignalsLoader!.refreshInBackground(next.followingPubkeys);
     }
