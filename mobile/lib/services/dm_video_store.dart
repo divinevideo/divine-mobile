@@ -350,6 +350,7 @@ class DmVideoStore {
   }
 
   Future<void> _pruneWhileAsked() async {
+    (Object, StackTrace)? unexpected;
     try {
       do {
         _pruneAgain = false;
@@ -361,11 +362,17 @@ class DmVideoStore {
             name: _logName,
             category: LogCategory.video,
           );
+        } on Object catch (error, stackTrace) {
+          // Thrown once the runs asked for meanwhile are done, not instead.
+          unexpected ??= (error, stackTrace);
         }
       } while (_pruneAgain);
     } finally {
       // Cleared before this run completes, so a later ask starts a new run.
       _pruning = null;
+    }
+    if (unexpected case (final error, final stackTrace)) {
+      Error.throwWithStackTrace(error, stackTrace);
     }
   }
 

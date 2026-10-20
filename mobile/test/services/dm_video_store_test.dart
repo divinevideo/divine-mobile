@@ -158,6 +158,7 @@ void main() {
     DmVideoStore createStore({
       int maxBytes = DmVideoStore.defaultMaxBytes,
       Future<bool> Function(String messageId)? isMessageGone,
+      Future<Directory> Function()? rootDirectory,
     }) => DmVideoStore(
       ownerPubkey: _owner,
       fetchVideo: (message, {maxBytes, timeLimit, limitsApply, stillWanted}) {
@@ -171,7 +172,7 @@ void main() {
         frameReads++;
         return readFrame(video);
       },
-      rootDirectory: () async => root,
+      rootDirectory: rootDirectory ?? () async => root,
       now: () => now,
       maxBytes: maxBytes,
       isMessageGone: isMessageGone,
@@ -1519,6 +1520,34 @@ void main() {
           await Future.wait([store.prune(), store.prune(), store.prune()]);
 
           expect(lookups, equals(2));
+        },
+      );
+
+      test(
+        'still runs the prune asked for meanwhile after one fails unexpectedly',
+        () async {
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(_videoMessage()),
+            _plaintext,
+            opened: now,
+          );
+          var rootAsks = 0;
+          final store = createStore(
+            isMessageGone: (_) async => true,
+            rootDirectory: () async {
+              rootAsks++;
+              if (rootAsks == 1) throw StateError('no cache directory');
+              return root;
+            },
+          );
+
+          final first = store.prune();
+          final second = store.prune();
+
+          await expectLater(first, throwsStateError);
+          await expectLater(second, throwsStateError);
+          expect(rootAsks, equals(2));
+          expect(video.existsSync(), isFalse);
         },
       );
 
