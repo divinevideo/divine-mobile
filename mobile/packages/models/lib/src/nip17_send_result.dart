@@ -137,11 +137,16 @@ sealed class NIP17SendResult {
   /// pre-publish crypto build timeouts where retry is still the honest outcome.
   bool get retryablePending => false;
 
-  /// Whether the send reached no relay at all: the device was offline, or no
-  /// relay took the wrap, so nothing was delivered and nothing was rejected.
-  /// Retry sweeps do not count such an attempt against a row's automatic
-  /// retries, the same as a pass skipped while offline (#8516). Always
-  /// `false` for success.
+  /// Whether the send reached no relay at all because of an outage on our
+  /// side: the device was offline, or no relay took the wrap and either it
+  /// went to our own relays or none of ours was connected. Nothing was
+  /// delivered and nothing was rejected, so retry sweeps do not count such an
+  /// attempt against a row's automatic retries, the same as a pass skipped
+  /// while offline (#8516).
+  ///
+  /// A wrap that none of the recipient's own inbox relays took while one of
+  /// ours was connected is not reported here: that attempt counts, or it
+  /// would be resent forever. Always `false` for success.
   bool get reachedNoRelay => false;
 
   /// The `outgoing_dms` row this send left parked for recovery.
