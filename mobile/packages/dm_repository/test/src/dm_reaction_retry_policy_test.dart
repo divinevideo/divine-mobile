@@ -238,6 +238,27 @@ void main() {
         expect(result.reachedNoRelay, isFalse);
       });
 
+      test('in a group is not reported when another recipient was '
+          'delivered', () async {
+        final groupId = await seedGroup();
+        stubWire((invocation) async {
+          final recipient =
+              invocation.namedArguments[#recipientPubkey] as String;
+          if (recipient == _peer) return unreached;
+          final rumor = invocation.namedArguments[#rumorEvent] as Event;
+          return NIP17SendResult.success(
+            rumorEventId: rumor.id,
+            messageEventId: 'wrap-${rumor.id}',
+            recipientPubkey: recipient,
+          );
+        });
+
+        final result = await publishIn(groupId);
+
+        expect(result.success, isFalse);
+        expect(result.reachedNoRelay, isFalse);
+      });
+
       test('in a group is reported when no recipient reached a '
           'relay', () async {
         final groupId = await seedGroup();
