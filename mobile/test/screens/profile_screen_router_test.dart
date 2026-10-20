@@ -398,7 +398,10 @@ void main() {
           expect(shareCalls, hasLength(1));
           expect(
             shareCalls.single['text'],
-            'Check out Alice on Divine!\n\n${expectedUrl ?? 'https://divine.video/profile/$_npub'}',
+            l10n.profileShareText(
+              'Alice',
+              expectedUrl ?? 'https://divine.video/profile/$_npub',
+            ),
           );
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump(const Duration(seconds: 3));
