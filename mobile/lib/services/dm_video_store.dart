@@ -241,10 +241,13 @@ class DmVideoStore {
         return file;
       } on Object catch (error) {
         // A limit it hit before this tap lifted them, or a failure that may
-        // pass, is fetched again in full; anything else would only repeat.
+        // pass, is fetched again in full; anything else would only repeat,
+        // as would storing it at once.
         final again =
             error is DmVideoLimitException ||
-            (error is DmVideoUnavailableException && error.mayPass);
+            (error is DmVideoUnavailableException &&
+                error.mayPass &&
+                error is! DmVideoStorageException);
         if (!again) rethrow;
       }
     }
@@ -731,9 +734,8 @@ class DmVideoStore {
     try {
       attempt.createSync();
     } on FileSystemException catch (error) {
-      throw DmVideoUnavailableException(
+      throw DmVideoStorageException(
         'could not start reading the frame: ${_causeOf(error)}',
-        mayPass: true,
       );
     }
     final frame = await _readFrame(video);
@@ -803,9 +805,8 @@ class DmVideoStore {
       await part.rename(file.path);
     } on FileSystemException catch (error) {
       await _deleteQuietly(part);
-      throw DmVideoUnavailableException(
+      throw DmVideoStorageException(
         'could not store the file: ${_causeOf(error)}',
-        mayPass: true,
       );
     } catch (_) {
       await _deleteQuietly(part);
@@ -891,6 +892,14 @@ class DmVideoStore {
       );
     }
   }
+}
+
+/// Thrown when a kept video or frame could not be written to the device.
+/// Trying again later may work, once there is room; downloading the video
+/// again at once would only fail the same way.
+class DmVideoStorageException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoStorageException] with a diagnostic [message].
+  const DmVideoStorageException(super.message) : super(mayPass: true);
 }
 
 /// A queued download no card wants any more when its turn comes.

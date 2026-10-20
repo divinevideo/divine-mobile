@@ -774,6 +774,32 @@ void main() {
       );
 
       test(
+        'leave a tap with a failure to store the download it took over',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+          // A folder where the video goes makes storing it fail.
+          Directory(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}/x',
+          ).createSync(recursive: true);
+
+          final previewFailure = expectLater(
+            store.previewFor(message, download: true),
+            throwsA(isA<DmVideoStorageException>()),
+          );
+          await pumpEventQueue();
+          final tapped = store.videoFor(message);
+          release.complete(_plaintext);
+
+          await expectLater(tapped, throwsA(isA<DmVideoStorageException>()));
+          expect(fetches, equals(1));
+          await previewFailure;
+        },
+      );
+
+      test(
         'use a video a tap is already fetching, rather than fetching again',
         () async {
           final release = Completer<Uint8List>();
