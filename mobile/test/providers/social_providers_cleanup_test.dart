@@ -2960,7 +2960,7 @@ void main() {
       });
 
       test(
-        'known-owner expiry leaves the active account to its live store',
+        'persisted identity without a live store does not suppress expiry',
         () async {
           await prefs.setString('current_user_pubkey_hex', _pubkeyA);
           final active = keptVideoOf(_pubkeyA);
@@ -2971,7 +2971,7 @@ void main() {
 
           await readCleanupService().onKeptDmVideoSweep!({_pubkeyA, _pubkeyB});
 
-          expect(active.existsSync(), isTrue);
+          expect(active.existsSync(), isFalse);
           expect(inactive.existsSync(), isFalse);
         },
       );

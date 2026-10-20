@@ -91,7 +91,10 @@ class DmVideoStore {
        _isConversationRemoved = isConversationRemoved,
        _findMessageLocation = findMessageLocation,
        _rootDirectory = rootDirectory ?? getApplicationCacheDirectory,
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now {
+    _stores.removeWhere((entry) => entry.target == null);
+    _stores.add(WeakReference(this));
+  }
 
   /// Folder under the cache directory that holds every account's videos.
   static const String dirName = 'dm_videos';
@@ -140,6 +143,9 @@ class DmVideoStore {
   /// store remembers the count it was created at, so a download that lands
   /// after its account was removed cannot write the video back.
   static final Map<String, int> _removals = {};
+  // The static launch sweep must honor real file users, not persisted auth
+  // identity. Weak references do not keep disposed/unreachable stores alive.
+  static final List<WeakReference<DmVideoStore>> _stores = [];
   static const String _logName = 'DmVideoStore';
 
   static Future<Uint8List?> _readCardFrameUntilSettled(File video) =>
@@ -546,11 +552,10 @@ class DmVideoStore {
   /// Runs at launch for every account, so an account the user switched away
   /// from does not keep its videos past [maxIdle]: its store prunes only
   /// while it is the signed-in one.
-  /// The known [activeOwnerPubkey] is left to its live store, which knows
-  /// about native-read and playback leases that this static sweep cannot see.
+  /// Actual file leases and live-store handouts are respected across stores;
+  /// a stale persisted identity cannot suppress expiry of unused files.
   static Future<int> sweepOwners(
     Set<String> keepOwnerPubkeys, {
-    String? activeOwnerPubkey,
     Future<Directory> Function()? rootDirectory,
     DateTime Function()? now,
     Duration maxIdle = defaultMaxIdle,
@@ -560,9 +565,6 @@ class DmVideoStore {
     final dir = Directory('${root.path}/$dirName');
     if (!dir.existsSync()) return 0;
     final keep = keepOwnerPubkeys.map(_safeName).toSet();
-    final active = activeOwnerPubkey == null
-        ? null
-        : _safeName(activeOwnerPubkey);
     final currentTime = (now ?? DateTime.now)();
     var deleted = 0;
     try {
@@ -571,7 +573,6 @@ class DmVideoStore {
         try {
           final owner = entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
           if (keep.contains(owner)) {
-            if (owner == active) continue;
             await _deleteIdleFiles(entity, currentTime, maxIdle);
             continue;
           }
@@ -638,7 +639,7 @@ class DmVideoStore {
       final age = now.difference(file.statSync().modified);
       final isPart = file.path.endsWith(_partSuffix);
       if (age > maxIdle || (isPart && age > _crashedPartAge)) {
-        await _deleteQuietly(file);
+        _deleteUnusedByStores(file);
       }
     }
     // After the files they describe, so marks and records go in the same
@@ -651,7 +652,7 @@ class DmVideoStore {
       if (file.path.endsWith(_frameAttemptSuffix) && !withVideo.contains(id) ||
           file.path.endsWith(_conversationSuffix) &&
               !withContent.contains(id)) {
-        await _deleteQuietly(file);
+        _deleteUnusedByStores(file);
       }
     }
   }
@@ -1119,6 +1120,46 @@ class DmVideoStore {
 
   bool _isInUse(File file) =>
       _handedOut.contains(file.path) || _leases.containsKey(file.path);
+
+  static bool _usedDuringSweep(File file) {
+    _stores.removeWhere((entry) => entry.target == null);
+    for (final entry in _stores) {
+      final store = entry.target;
+      if (store == null) continue;
+      if (store._leases.containsKey(file.path) ||
+          (!store._kept.isClosed && store._handedOut.contains(file.path))) {
+        return true;
+      }
+      if (_isSatellite(file) || file.path.endsWith(_partSuffix)) {
+        final id = _messageIdOf(file);
+        for (final path in store._leases.keys) {
+          final leased = File(path);
+          if (leased.parent.path == file.parent.path &&
+              _messageIdOf(leased) == id) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  static void _deleteUnusedByStores(File file) {
+    // No suspension between checking the live leases and deleting: a native
+    // read cannot acquire its lease in the middle of an asynchronous unlink.
+    if (_usedDuringSweep(file)) return;
+    try {
+      file.deleteSync();
+    } on PathNotFoundException {
+      // Another cleanup already removed it.
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not expire a kept video DM file: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
 
   /// Deletes [file] before anything else can run, and forgets it if it was a
   /// frame.

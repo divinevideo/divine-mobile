@@ -2116,6 +2116,86 @@ void main() {
 
     group('account folders', () {
       test(
+        'a store without file users does not suppress idle expiry',
+        () async {
+          final store = createStore();
+          final idle = keptFile(
+            'unused.mp4',
+            _plaintext,
+            opened: now.subtract(const Duration(days: 31)),
+          );
+
+          await DmVideoStore.sweepOwners(
+            {_owner},
+            rootDirectory: () async => root,
+            now: () => now,
+          );
+
+          expect(idle.existsSync(), isFalse);
+          await store.dispose();
+        },
+      );
+
+      test('handouts suppress expiry only while their store is live', () async {
+        final store = createStore();
+        final video = await store.videoFor(_videoMessage());
+        video.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+        await DmVideoStore.sweepOwners(
+          {_owner},
+          rootDirectory: () async => root,
+          now: () => now,
+        );
+        expect(video.existsSync(), isTrue);
+
+        await store.dispose();
+        await DmVideoStore.sweepOwners(
+          {_owner},
+          rootDirectory: () async => root,
+          now: () => now,
+        );
+        expect(video.existsSync(), isFalse);
+      });
+
+      test(
+        'a disposed store still protects an unsettled native file lease',
+        () async {
+          final message = _videoMessage();
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            opened: now.subtract(const Duration(days: 31)),
+          );
+          final started = Completer<void>();
+          final release = Completer<Uint8List?>();
+          readFrame = (_) {
+            started.complete();
+            return release.future;
+          };
+          final store = createStore();
+          final preview = store.previewFor(message, download: false);
+          await started.future;
+          await store.dispose();
+          try {
+            await DmVideoStore.sweepOwners(
+              {_owner},
+              rootDirectory: () async => root,
+              now: () => now,
+            );
+            expect(video.existsSync(), isTrue);
+          } finally {
+            release.complete(_frame);
+            await preview;
+          }
+          await DmVideoStore.sweepOwners(
+            {_owner},
+            rootDirectory: () async => root,
+            now: () => now,
+          );
+          expect(video.existsSync(), isFalse);
+        },
+      );
+
+      test(
         'the known-owner sweep must not expire a live decoder input',
         () async {
           final message = _videoMessage();
@@ -2136,7 +2216,6 @@ void main() {
           try {
             await DmVideoStore.sweepOwners(
               {_owner},
-              activeOwnerPubkey: _owner,
               rootDirectory: () async => root,
               now: () => now,
             );
