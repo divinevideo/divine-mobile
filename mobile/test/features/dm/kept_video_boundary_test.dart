@@ -63,16 +63,18 @@ void main() {
   late DmVideoStore store;
   late ProVideoEditor originalEditor;
   late PathProviderPlatform originalPaths;
+  late Uint8List fetchedVideo;
 
   setUp(() async {
     root = Directory.systemTemp.createTempSync('kept_dm_boundary_');
     originalEditor = ProVideoEditor.instance;
     originalPaths = PathProviderPlatform.instance;
     ProVideoEditor.instance = _NoopInitEditor();
+    fetchedVideo = Uint8List.fromList([1, 2, 3]);
     store = DmVideoStore(
       ownerPubkey: 'e' * 64,
       fetchVideo: (_, {maxBytes, timeLimit, limitsApply, stillWanted}) async =>
-          Uint8List.fromList([1, 2, 3]),
+          fetchedVideo,
       rootDirectory: () async => root,
       maxBytes: 0,
     );
@@ -284,7 +286,8 @@ void main() {
       }
     });
 
-    test("logs a saved file's size only to a tenth of a megabyte", () async {
+    test("logs a saved file's size only to one significant figure", () async {
+      fetchedVideo = Uint8List(1234567);
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
@@ -306,7 +309,8 @@ void main() {
           .getRecentLogs()
           .map((entry) => entry.message)
           .singleWhere((message) => message.contains('Gal.putVideo'));
-      expect(saveLog, contains('size=0.0 MB'));
+      expect(saveLog, contains('size=1 MB'));
+      expect(saveLog, isNot(contains('1234567')));
     });
 
     test('keeps a name derived from the retained file out of a native '

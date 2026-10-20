@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -324,10 +325,15 @@ class GallerySaveService {
     }
   }
 
-  // A kept video DM's exact length would identify it in support logs (#6522);
-  // a tenth of a megabyte still shows how big a slow save was.
-  static String _roundedSize(int bytes) =>
-      '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  // A kept video DM's exact length would identify it in support logs (#6522),
+  // and so would a fine-grained one for a rare large video; one significant
+  // figure still shows how big a slow save was.
+  static String _roundedSize(int bytes) {
+    final megabytes = bytes / (1024 * 1024);
+    if (megabytes < 1) return '<1 MB';
+    final scale = math.pow(10, (math.log(megabytes) / math.ln10).floor());
+    return '${(megabytes / scale).round() * scale} MB';
+  }
 
   static String _failureKind(Object error) => error is FileSystemException
       ? '${error.runtimeType} (OS code: ${error.osError?.errorCode})'
