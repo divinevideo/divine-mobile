@@ -213,7 +213,8 @@ class DmVideoStore {
       return file;
     }
     await _writeAtomically(file, await _fetchVideo(message));
-    _kept.add(message.id);
+    // An account switch disposes the store while a download can still land.
+    if (!_kept.isClosed) _kept.add(message.id);
     runDetached(
       prune(),
       'prune kept video DMs',

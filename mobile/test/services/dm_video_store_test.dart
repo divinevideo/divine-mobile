@@ -134,6 +134,21 @@ void main() {
         expect(fetches, equals(2));
       });
 
+      test(
+        'still returns a video that lands after the store is disposed',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+
+          final video = store.videoFor(_videoMessage());
+          await store.dispose();
+          release.complete(_plaintext);
+
+          expect((await video).readAsBytesSync(), equals(_plaintext));
+        },
+      );
+
       test('announces each newly kept video', () async {
         final store = createStore();
         final message = _videoMessage();
