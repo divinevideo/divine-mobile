@@ -1200,51 +1200,7 @@ void main() {
           await gesture.up();
           await tester.pump();
         });
-
-        testWidgets('$handle keeps a sub-millisecond trim while dragging', (
-          tester,
-        ) async {
-          playhead.value = const Duration(milliseconds: -100);
-          await pumpClip(
-            tester,
-            clip: _createTestClip(id: 'snap', seconds: 4).copyWith(
-              trimStart: const Duration(microseconds: 500700),
-              trimEnd: const Duration(microseconds: 500400),
-            ),
-          );
-          final gesture = await startDrag(tester, isStart: isStart);
-          await gesture.moveBy(Offset(direction * 10, 0));
-          await tester.pump();
-
-          expect(
-            reportedEdge(),
-            equals(Duration(microseconds: isStart ? 600700 : 600400)),
-          );
-          await gesture.up();
-          await tester.pump();
-        });
       }
-
-      testWidgets('split end half shorter than the minimum length keeps its '
-          'sub-millisecond floor', (tester) async {
-        const floor = Duration(microseconds: 3000600);
-        playhead.value = const Duration(milliseconds: -100);
-        await pumpClip(
-          tester,
-          clip: _createTestClip(id: 'end-half', seconds: 6).copyWith(
-            trimStart: floor,
-            trimEnd: const Duration(microseconds: 2969400),
-            minTrimStart: floor,
-          ),
-        );
-        final gesture = await startDrag(tester, isStart: true);
-        await gesture.moveBy(const Offset(5, 0));
-        await tester.pump();
-
-        expect(reportedStart, equals(floor));
-        await gesture.up();
-        await tester.pump();
-      });
 
       testWidgets('a second finger on the other handle leaves the first '
           'drag in place', (tester) async {

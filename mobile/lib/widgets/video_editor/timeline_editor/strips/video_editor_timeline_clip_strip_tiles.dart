@@ -100,11 +100,6 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   // restart nor clear the drag the first one is still making.
   int _activeDrags = 0;
 
-  // The snap controllers count whole milliseconds; keep each handle's drag
-  // origin at the trims' microsecond precision.
-  Duration _leftOrigin = Duration.zero;
-  Duration _rightOrigin = Duration.zero;
-
   late final _leftSnap = TimelineSnapController(
     direction: SnapEdgeDirection.positive,
     pixelsPerSecond: _sourcePixelsPerSecond,
@@ -173,20 +168,14 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     _snapSourcePosition = _captureSnapSourcePosition();
     // Zoom and the clip's speed can both change between drags.
     final sourcePixelsPerSecond = _sourcePixelsPerSecond;
-    _leftOrigin = widget.clip.trimStart;
-    _rightOrigin = widget.clip.duration - widget.clip.trimEnd;
+    final start = widget.clip.trimStart;
+    final end = widget.clip.duration - widget.clip.trimEnd;
     _leftSnap
       ..pixelsPerSecond = sourcePixelsPerSecond
-      ..begin(
-        _leftOrigin.inMilliseconds,
-        initialExcludeMs: _ownEdgeSnapMs(_leftOrigin),
-      );
+      ..begin(start.inMilliseconds, initialExcludeMs: _ownEdgeSnapMs(start));
     _rightSnap
       ..pixelsPerSecond = sourcePixelsPerSecond
-      ..begin(
-        _rightOrigin.inMilliseconds,
-        initialExcludeMs: _ownEdgeSnapMs(_rightOrigin),
-      );
+      ..begin(end.inMilliseconds, initialExcludeMs: _ownEdgeSnapMs(end));
   }
 
   /// The snap point a handle at [edge] skips until it moves away: the
@@ -219,14 +208,19 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     final clip = widget.clip;
     final trimEnd = _dragTrimEnd ?? clip.trimEnd;
     _leftSnap.accumulate(dx);
-    final rawStart = _leftOrigin + _dxToDuration(_leftSnap.effectiveAccPx);
+    final rawStart =
+        Duration(milliseconds: _leftSnap.originMs) +
+        _dxToDuration(_leftSnap.effectiveAccPx);
 
     // A trim-based split's end half floors its start handle at the split point
     // so it can't be dragged back into the start half's frames.
     final minTrimStart = clip.minTrimStart;
-    final maxTrimStart =
-        clip.duration - trimEnd - TimelineConstants.minTrimDuration;
-    final maximum = maxTrimStart < minTrimStart ? minTrimStart : maxTrimStart;
+    final maxTrimStart = math.max(
+      minTrimStart.inMilliseconds,
+      (clip.duration - trimEnd - TimelineConstants.minTrimDuration)
+          .inMilliseconds,
+    );
+    final maximum = Duration(milliseconds: maxTrimStart);
     var newTrimStart = _snapEdge(
       _leftSnap,
       rawStart,
@@ -249,7 +243,6 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     }
     _leftAtLimit = atLimit;
     if (atLimit && !_leftSnap.isSnapped) {
-      _leftOrigin = newTrimStart;
       _leftSnap.begin(
         newTrimStart.inMilliseconds,
         initialExcludeMs: newTrimStart.inMilliseconds,
@@ -269,9 +262,15 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     final clip = widget.clip;
     final trimStart = _dragTrimStart ?? clip.trimStart;
     _rightSnap.accumulate(-dx);
-    final rawEnd = _rightOrigin - _dxToDuration(_rightSnap.effectiveAccPx);
-    final shortestEnd = trimStart + TimelineConstants.minTrimDuration;
-    final minEnd = shortestEnd < clip.duration ? shortestEnd : clip.duration;
+    final rawEnd =
+        Duration(milliseconds: _rightSnap.originMs) -
+        _dxToDuration(_rightSnap.effectiveAccPx);
+    final minEnd = Duration(
+      milliseconds: math.min(
+        clip.duration.inMilliseconds,
+        (trimStart + TimelineConstants.minTrimDuration).inMilliseconds,
+      ),
+    );
     final visibleEnd = _snapEdge(_rightSnap, rawEnd, minEnd, clip.duration);
     var newTrimEnd = clip.duration - visibleEnd;
     final maxTrimEnd = clip.duration - minEnd;
@@ -291,8 +290,7 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     }
     _rightAtLimit = atLimit;
     if (atLimit && !_rightSnap.isSnapped) {
-      _rightOrigin = clip.duration - newTrimEnd;
-      final endMs = _rightOrigin.inMilliseconds;
+      final endMs = (clip.duration - newTrimEnd).inMilliseconds;
       _rightSnap.begin(endMs, initialExcludeMs: endMs);
     }
     _dragTrimEnd = newTrimEnd;
