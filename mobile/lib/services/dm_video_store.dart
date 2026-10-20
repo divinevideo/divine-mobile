@@ -183,11 +183,16 @@ class DmVideoStore {
 
   /// Frame reads run one at a time too: a crash then marks only the video
   /// being read, and a long thread does not start a native decoder per card.
+  /// Native thumbnail extraction has no confirmed cancellation: a read that
+  /// never replies holds this turn until the store is recreated. Cards keep
+  /// their fallback rather than starting overlapping recovery decoders.
   final _OneAtATime _frameReads = _OneAtATime();
   final Map<String, Future<File?>> _previewsInFlight = {};
 
-  /// Frame reads by message id, shared by every caller asking at once.
-  final Map<String, Future<File?>> _frameReadsInFlight = {};
+  /// Frame reads by message id, shared by every caller asking at once. The
+  /// UI deadline starts at the turn, not while a visible card is queued.
+  final Map<String, ({Future<void> started, Future<File?> settled})>
+  _frameReadsInFlight = {};
 
   /// Whether each caller waiting on a frame still wants it, by preview key.
   final Map<String, List<bool Function()>> _previewWanters = {};
@@ -786,27 +791,46 @@ class DmVideoStore {
       // No card shows it: decode nothing.
       if (!wanted()) return null;
       final id = message.id;
-      return await (_frameReadsInFlight[id] ??= _frameReads
-              .run(() async {
-                // Its turn can come long after the check above: a card closed or
-                // a sender blocked meanwhile must not cost a decode.
-                if (!_frameWanted(id)) return null;
-                // This lease and the queue turn belong to native completion,
-                // independently of a card's deadline or lifetime below.
-                _lease(video);
-                try {
-                  return await _readAndKeepFrame(message, video, preview);
-                } finally {
-                  _release(video);
-                }
-              })
-              .whenComplete(
-                () => _frameReadsInFlight.removeWhere((key, _) => key == id),
-              ))
-          .timeout(dmVideoPreviewTimeout, onTimeout: () => null);
+      final read = _frameReadsInFlight.putIfAbsent(
+        id,
+        () => _queueFrameRead(message, video, preview),
+      );
+      // Preserve interest while queued, as before: a UI deadline only bounds
+      // this card's decode, not its place behind other native reads.
+      await Future.any<void>([read.started, read.settled.then<void>((_) {})]);
+      return await read.settled.timeout(
+        dmVideoPreviewTimeout,
+        onTimeout: () => null,
+      );
     } finally {
       _release(video);
     }
+  }
+
+  ({Future<void> started, Future<File?> settled}) _queueFrameRead(
+    DmMessage message,
+    File video,
+    File preview,
+  ) {
+    final started = Completer<void>();
+    final id = message.id;
+    final settled = _frameReads
+        .run(() async {
+          started.complete();
+          // A closed card or newly blocked sender must not cost a decode.
+          if (!_frameWanted(id)) return null;
+          // The decoder turn and this lease outlive a card's UI deadline.
+          _lease(video);
+          try {
+            return await _readAndKeepFrame(message, video, preview);
+          } finally {
+            _release(video);
+          }
+        })
+        .whenComplete(
+          () => _frameReadsInFlight.removeWhere((key, _) => key == id),
+        );
+    return (started: started.future, settled: settled);
   }
 
   /// Writes [message]'s conversation record in [dir], unless this store knows

@@ -129,19 +129,33 @@ void main() {
           '${root.path}/${DmVideoStore.dirName}/${'e' * 64}/'
           '${DmVideoStore.videoFileNameFor(firstMessage)}',
         );
-        final second = store.previewFor(_message('f'), download: true);
-        await pumpEventQueue();
+        var secondCompleted = false;
+        final second = store.previewFor(_message('f'), download: true).then((
+          frame,
+        ) {
+          secondCompleted = true;
+          return frame;
+        });
+        // Longer than its own decode deadline, entirely spent in the queue.
+        // Waiting for the result with a test deadline does not release it.
+        await second.timeout(
+          const Duration(seconds: 11),
+          onTimeout: () => null,
+        );
         await store.prune();
 
+        File? secondFrame;
         try {
+          expect(secondCompleted, isFalse);
           expect(nativeCalls, 1);
           expect(firstVideo.existsSync(), isTrue);
         } finally {
           nativeReply.complete([
             Uint8List.fromList([7, 8, 9]),
           ]);
-          await second;
+          secondFrame = await second;
         }
+        expect(secondFrame, isNotNull);
         expect(nativeCalls, 2);
         expect(maxActiveNative, 1);
         await store.prune();
