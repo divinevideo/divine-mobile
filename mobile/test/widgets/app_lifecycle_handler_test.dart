@@ -83,6 +83,45 @@ class _FlushTrackingVideoEditorNotifier extends VideoEditorNotifier {
   }
 }
 
+Future<ProviderContainer> _pumpHandler(WidgetTester tester) async {
+  final authService = _MockAuthService();
+  when(() => authService.isAuthenticated).thenReturn(true);
+  when(
+    () => authService.authStateStream,
+  ).thenAnswer((_) => const Stream<AuthState>.empty());
+  final clipLibraryService = _MockClipLibraryService();
+  when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
+  when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+  final draftStorageService = _MockDraftStorageService();
+  when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
+  final nostrClient = _MockNostrClient();
+  when(
+    nostrClient.forceReconnectAll,
+  ).thenAnswer((_) async => ForceReconnectOutcome.completed);
+  when(() => nostrClient.connectedRelayCount).thenReturn(0);
+  when(() => nostrClient.configuredRelayCount).thenReturn(0);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        nostrServiceProvider.overrideWithValue(nostrClient),
+        notificationRefreshCoordinatorProvider.overrideWithValue(null),
+        authServiceProvider.overrideWithValue(authService),
+        videoPublishProvider.overrideWith(_NoopVideoPublishNotifier.new),
+        clipLibraryServiceProvider.overrideWithValue(clipLibraryService),
+        draftStorageServiceProvider.overrideWithValue(draftStorageService),
+      ],
+      child: const MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AppLifecycleHandler(child: SizedBox.shrink()),
+      ),
+    ),
+  );
+  return ProviderScope.containerOf(
+    tester.element(find.byType(AppLifecycleHandler)),
+  );
+}
+
 void main() {
   tearDown(() {
     debugDefaultTargetPlatformOverride = null;
@@ -395,6 +434,31 @@ void main() {
         debugDefaultTargetPlatformOverride = null;
       },
     );
+  });
+
+  group('macOS window focus', () {
+    tearDown(() {
+      BackgroundActivityManager().onAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      );
+    });
+
+    testWidgets('keeps playback paused when focus was lost before mount', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      // Focus left during bootstrap, before the handler was listening.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      final container = await _pumpHandler(tester);
+
+      expect(container.read(playbackEligibleProvider), isFalse);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(container.read(playbackEligibleProvider), isTrue);
+      await tester.pump(const Duration(seconds: 31));
+      debugDefaultTargetPlatformOverride = null;
+    });
   });
 
   group('app badge', () {

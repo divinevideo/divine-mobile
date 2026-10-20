@@ -200,7 +200,7 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
         );
 
       case AppLifecycleState.inactive:
-        if (defaultTargetPlatform == TargetPlatform.macOS) {
+        if (playbackFollowsWindowFocus()) {
           // Focus loss pauses media without rebuilding readiness-gated feeds.
           ref.read(playbackWindowFocusedProvider.notifier).setFocused(false);
         }
