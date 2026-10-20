@@ -98,7 +98,7 @@ void main() {
         'mutes when system volume drops to zero',
         build: buildCubit,
         act: (cubit) => fakeVolumeListener.controller.add(0),
-        expect: () => const [VideoVolumeState(volume: 0)],
+        expect: () => const [VideoVolumeState(volume: 0, mutedBySystem: true)],
       );
 
       blocTest<VideoVolumeCubit, VideoVolumeState>(
@@ -109,7 +109,10 @@ void main() {
           await pumpEventQueue();
           fakeVolumeListener.controller.add(0.5);
         },
-        expect: () => const [VideoVolumeState(volume: 0), VideoVolumeState()],
+        expect: () => const [
+          VideoVolumeState(volume: 0, mutedBySystem: true),
+          VideoVolumeState(),
+        ],
       );
 
       blocTest<VideoVolumeCubit, VideoVolumeState>(
@@ -192,12 +195,34 @@ void main() {
       fakeVolumeListener = _FakeSystemVolumeListener();
       final reopened = buildCubit();
       addTearDown(reopened.close);
-      expect(reopened.state.isMuted, isTrue);
+      expect(
+        reopened.state,
+        const VideoVolumeState(volume: 0, mutedBySystem: true),
+      );
 
       fakeVolumeListener.controller.add(0.7);
       await pumpEventQueue();
       expect(reopened.state.isMuted, isFalse);
       expect(prefs.getDouble('video_playback_volume'), 1.0);
+    });
+
+    test('legacy saved mute stays silent until explicitly unmuted', () async {
+      await prefs.setDouble('video_playback_volume', 0);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      expect(cubit.state, const VideoVolumeState(volume: 0));
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+      expect(cubit.state, const VideoVolumeState(volume: 0));
+      cubit.onPlaybackVolumeChanged(1);
+      expect(cubit.state, const VideoVolumeState());
+    });
+
+    test('mute source participates in state equality', () {
+      expect(
+        const VideoVolumeState(volume: 0),
+        isNot(const VideoVolumeState(volume: 0, mutedBySystem: true)),
+      );
     });
 
     group('close', () {

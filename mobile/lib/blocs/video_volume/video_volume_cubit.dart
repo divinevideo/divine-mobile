@@ -65,9 +65,12 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
     required SharedPreferences sharedPreferences,
     SystemVolumeListener? systemVolumeListener,
   }) : _prefs = sharedPreferences,
-       _mutedBySystem = sharedPreferences.getBool(_systemMutePrefsKey) ?? false,
        super(
          VideoVolumeState(
+           // Legacy saved mutes have no provenance: preserve silence until
+           // the user explicitly unmutes in the app.
+           mutedBySystem:
+               sharedPreferences.getBool(_systemMutePrefsKey) ?? false,
            // Screenshot capture runs must stay silent.
            volume: ScreenshotMode.enabled
                ? 0.0
@@ -96,7 +99,6 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
 
   final SharedPreferences _prefs;
   StreamSubscription<double>? _systemVolumeSubscription;
-  bool _mutedBySystem;
 
   /// Called by the feed player when the user toggles mute or adjusts volume
   /// via the in-app UI.
@@ -108,19 +110,16 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
     // The player echoes volume synchronization through this callback. Ignore
     // unchanged values so a system mute keeps its hardware-unmute behavior.
     if (state.volume == clamped) return;
-    _mutedBySystem = false;
     emit(VideoVolumeState(volume: clamped));
     unawaited(_persist());
   }
 
   void _onSystemVolumeChanged(double systemVolume) {
     if (systemVolume == 0 && state.volume > 0) {
-      _mutedBySystem = true;
       // Device muted → mute video
-      emitIfOpen(const VideoVolumeState(volume: 0));
+      emitIfOpen(const VideoVolumeState(volume: 0, mutedBySystem: true));
       unawaited(_persist());
-    } else if (systemVolume > 0 && _mutedBySystem) {
-      _mutedBySystem = false;
+    } else if (systemVolume > 0 && state.mutedBySystem) {
       // Restore only a system-driven mute, never a saved in-app choice.
       emitIfOpen(const VideoVolumeState());
       unawaited(_persist());
@@ -132,7 +131,7 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
     // previous volume with the next change's mute source.
     await Future.wait([
       _prefs.setDouble(_prefsKey, state.volume),
-      _prefs.setBool(_systemMutePrefsKey, _mutedBySystem),
+      _prefs.setBool(_systemMutePrefsKey, state.mutedBySystem),
     ]);
   }
 
