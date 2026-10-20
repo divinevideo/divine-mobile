@@ -244,8 +244,7 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
       atLimit = true;
     }
 
-    // A snap that lands on the limit has already clicked.
-    if (atLimit && !_leftAtLimit && !_leftSnap.isSnapped) {
+    if (atLimit && !_leftAtLimit) {
       unawaited(HapticFeedback.mediumImpact());
     }
     _leftAtLimit = atLimit;
@@ -287,7 +286,7 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
       atLimit = true;
     }
 
-    if (atLimit && !_rightAtLimit && !_rightSnap.isSnapped) {
+    if (atLimit && !_rightAtLimit) {
       unawaited(HapticFeedback.mediumImpact());
     }
     _rightAtLimit = atLimit;
