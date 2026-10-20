@@ -66,6 +66,7 @@ void main() {
         () => nostrClient.queryEventsDetailed(
           any(),
           requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
         ),
       ).thenAnswer(
         (_) async => (events: <Event>[], timedOut: false, noRelays: false),
@@ -256,6 +257,204 @@ void main() {
       },
     );
 
+    group('review regression boundaries', () {
+      test(
+        'completed subscription reads tolerate terminal refusals after another relay answered',
+        () async {
+          final coordinate = BadgeCoordinate(
+            pubkey: _pubkey(2),
+            identifier: 'daily',
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _event(
+                  id: _eventId(700),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.appSpecificData,
+                  tags: [
+                    ['d', 'divine.badge_subscriptions'],
+                    ['a', coordinate.value],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          expect(await repository.loadSubscriptions(requireComplete: true), {
+            coordinate,
+          });
+        },
+      );
+
+      test(
+        'subscription signing refusal is an expected exception and never publishes',
+        () async {
+          final unsigned = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: preferences,
+            currentPubkey: () => _pubkey(1),
+            signEvent:
+                ({required kind, required content, required tags}) async =>
+                    null,
+          );
+          await expectLater(
+            unsigned.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            ),
+            throwsA(isA<Exception>()),
+          );
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'timed out holder walks do not start deletion or profile reads after awards arrive',
+        () async {
+          final coordinate = BadgeCoordinate(
+            pubkey: _pubkey(2),
+            identifier: 'daily',
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _event(
+                  id: _eventId(701),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.appSpecificData,
+                  tags: [
+                    ['d', 'divine.badge_subscriptions'],
+                    ['a', coordinate.value],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          final started = Completer<void>();
+          final awards = Completer<PagedQueryResult>();
+          final filters = <Filter>[];
+          when(() => nostrClient.readAllEvents(any())).thenAnswer((invocation) {
+            final filter = invocation.positionalArguments.single as Filter;
+            filters.add(filter);
+            if (filter.kinds!.contains(EventKind.badgeAward)) {
+              started.complete();
+              return awards.future;
+            }
+            return Future.value(
+              const PagedQueryResult(events: [], isComplete: true, pages: 1),
+            );
+          });
+          final walk = repository.loadSubscribedHolders(
+            timeout: const Duration(milliseconds: 10),
+          );
+          final expired = expectLater(walk, throwsA(isA<TimeoutException>()));
+          await started.future;
+          await expired;
+          awards.complete(
+            PagedQueryResult(
+              events: [
+                _awardEvent(
+                  id: _eventId(702),
+                  issuerPubkey: coordinate.pubkey,
+                  definitionCoordinate: coordinate.value,
+                  recipients: [_pubkey(10)],
+                ),
+              ],
+              isComplete: true,
+              pages: 1,
+            ),
+          );
+          await pumpEventQueue();
+          expect(filters, hasLength(1));
+        },
+      );
+
+      test(
+        'accepted holder reads exclude malformed awarded pubkeys and retain legacy acceptance',
+        () async {
+          final coordinate = BadgeCoordinate(
+            pubkey: _pubkey(2),
+            identifier: 'daily',
+          );
+          final queriedAuthors = <String>[];
+          when(() => nostrClient.readAllEvents(any())).thenAnswer((
+            invocation,
+          ) async {
+            final filter = invocation.positionalArguments.single as Filter;
+            if (filter.kinds!.contains(EventKind.badgeAward)) {
+              return PagedQueryResult(
+                events: [
+                  _awardEvent(
+                    id: _eventId(703),
+                    issuerPubkey: coordinate.pubkey,
+                    definitionCoordinate: coordinate.value,
+                    recipients: [_pubkey(10), 'invalid-key'],
+                  ),
+                ],
+                isComplete: true,
+                pages: 1,
+              );
+            }
+            if (filter.kinds!.contains(EventKind.profileBadges) ||
+                filter.kinds!.contains(EventKind.badgeSet)) {
+              queriedAuthors.addAll(filter.authors!);
+            }
+            if (filter.kinds!.contains(EventKind.badgeSet)) {
+              return PagedQueryResult(
+                events: [
+                  _event(
+                    id: _eventId(704),
+                    pubkey: _pubkey(10),
+                    kind: EventKind.badgeSet,
+                    tags: [
+                      ['d', 'profile_badges'],
+                      ['a', coordinate.value],
+                      ['e', _eventId(703)],
+                    ],
+                  ),
+                ],
+                isComplete: true,
+                pages: 1,
+              );
+            }
+            return const PagedQueryResult(
+              events: [],
+              isComplete: true,
+              pages: 1,
+            );
+          });
+          expect(await repository.loadAcceptedHolders(coordinate), {
+            _pubkey(10),
+          });
+          expect(queriedAuthors, isNot(contains('invalid-key')));
+        },
+      );
+    });
+
     group('subscription signing ownership', () {
       test(
         'a queued account switch cannot publish a completed subscription read',
@@ -267,6 +466,7 @@ void main() {
             () => nostrClient.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer((_) => pending.future);
           final scoped = BadgeRepository(
@@ -438,6 +638,7 @@ void main() {
         () => nostrClient.queryEventsDetailed(
           any(),
           requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
         ),
       ).thenAnswer(
         (_) async => (events: <Event>[], timedOut: true, noRelays: false),
@@ -646,6 +847,7 @@ void main() {
             () => nostrClient.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer((_) => pending.future);
         }
@@ -682,6 +884,7 @@ void main() {
               () => nostrClient.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).called(2);
           },
@@ -692,6 +895,7 @@ void main() {
             () => nostrClient.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer(
             (_) async => (events: <Event>[], timedOut: true, noRelays: false),
@@ -768,6 +972,7 @@ void main() {
               () => nostrClient.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).thenAnswer(
               (_) async => (
@@ -855,6 +1060,7 @@ void main() {
               () => nostrClient.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).thenAnswer(
               (_) async =>
@@ -1093,6 +1299,7 @@ void main() {
               () => nostrClient.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).thenAnswer((_) async => _emptySubscriptionRead);
             await scoped.loadSubscribedHolders();
@@ -1298,6 +1505,7 @@ void main() {
                 () => nostrClient.queryEventsDetailed(
                   any(),
                   requireAllRelaysSettled: true,
+                  acceptRelayClosedWhenOthersAnswered: true,
                 ),
               ).thenAnswer(
                 (_) async =>
@@ -1348,6 +1556,7 @@ void main() {
               () => nostrClient.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).thenAnswer(
               (_) async =>
@@ -1385,6 +1594,7 @@ void main() {
               () => nostrClient.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).thenAnswer(
               (_) async => (
@@ -1461,6 +1671,7 @@ void main() {
           () => nostrClient.queryEventsDetailed(
             any(),
             requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
           ),
         ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: true, noRelays: false),
@@ -1479,6 +1690,7 @@ void main() {
             () => nostrClient.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer(
             (_) async => (
@@ -1542,6 +1754,7 @@ void main() {
           () => nostrClient.queryEventsDetailed(
             any(),
             requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
           ),
         ).thenAnswer(
           (_) async => (
@@ -3353,29 +3566,32 @@ void main() {
       },
     );
 
-    test('acceptAward throws a StateError when signing fails', () async {
-      final failingRepository = BadgeRepository(
-        nostrClient: nostrClient,
-        signer: () => dismissalSigner,
-        sharedPreferences: preferences,
-        currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async =>
-            null,
-      );
-      final award = _awardEvent(
-        id: _eventId(44),
-        issuerPubkey: _pubkey(2),
-        definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
-        recipients: [_pubkey(1)],
-      );
+    test(
+      'acceptAward throws a BadgeSigningException when signing fails',
+      () async {
+        final failingRepository = BadgeRepository(
+          nostrClient: nostrClient,
+          signer: () => dismissalSigner,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signEvent: ({required kind, required content, required tags}) async =>
+              null,
+        );
+        final award = _awardEvent(
+          id: _eventId(44),
+          issuerPubkey: _pubkey(2),
+          definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
+          recipients: [_pubkey(1)],
+        );
 
-      await expectLater(
-        failingRepository.acceptAward(
-          BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
-        ),
-        throwsA(isA<StateError>()),
-      );
-    });
+        await expectLater(
+          failingRepository.acceptAward(
+            BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
+          ),
+          throwsA(isA<BadgeSigningException>()),
+        );
+      },
+    );
 
     test(
       'acceptAward throws a BadgePublishException when no relay accepts',
@@ -4618,7 +4834,7 @@ void main() {
         );
       });
 
-      test('throws a StateError when signing fails', () async {
+      test('throws a BadgeSigningException when signing fails', () async {
         final unsigned = BadgeRepository(
           nostrClient: nostrClient,
           signer: () => dismissalSigner,
@@ -4637,7 +4853,7 @@ void main() {
             ),
           ),
           throwsA(
-            isA<StateError>().having(
+            isA<BadgeSigningException>().having(
               (error) => error.message,
               'message',
               'Could not sign badge definition event',
@@ -4771,7 +4987,7 @@ void main() {
         );
       });
 
-      test('throws a StateError when signing fails', () async {
+      test('throws a BadgeSigningException when signing fails', () async {
         final unsigned = BadgeRepository(
           nostrClient: nostrClient,
           signer: () => dismissalSigner,
@@ -4787,7 +5003,7 @@ void main() {
             recipientPubkeys: [_pubkey(2)],
           ),
           throwsA(
-            isA<StateError>().having(
+            isA<BadgeSigningException>().having(
               (error) => error.message,
               'message',
               'Could not sign badge award event',
