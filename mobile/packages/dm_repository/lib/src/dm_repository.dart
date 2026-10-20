@@ -10294,6 +10294,9 @@ class DmRepository {
   /// read-state marker publish (#4977).
   /// Returns false without writing when no owner is known or no visible row
   /// exists. An already-read row is a successful, idempotent write.
+  /// The owner check matters: [ConversationsDao.markAsRead] drops its owner
+  /// clause entirely for a null owner, leaving a bare
+  /// `UPDATE ... WHERE id = ?` that would advance any account's cursor.
   Future<bool> markConversationAsRead(String conversationId) async {
     final owner = _ownerPubkey;
     if (owner == null) return false;
@@ -10308,9 +10311,9 @@ class DmRepository {
   /// Mark multiple conversations as read in a single batch.
   ///
   /// Returns true when every distinct requested conversation was found
-  /// (including already-read rows), or the list is empty. Returns false for an
-  /// unknown owner or missing rows. Partial writes still sync their read
-  /// cursors.
+  /// (including already-read rows), or the list is empty. Returns false for
+  /// missing rows, and for an unknown owner without writing — see
+  /// [markConversationAsRead]. Partial writes still sync their read cursors.
   Future<bool> markConversationsAsRead(List<String> conversationIds) async {
     if (conversationIds.isEmpty) return true;
     final owner = _ownerPubkey;
