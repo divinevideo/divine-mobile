@@ -107,6 +107,9 @@ class DmVideoStore {
   final Map<String, Future<File>> _videosInFlight = {};
   final Map<String, Future<File>> _autoDownloadsInFlight = {};
 
+  /// Downloads nobody tapped for that have left the queue and are fetching.
+  final Map<String, Future<File>> _autoFetchesRunning = {};
+
   /// Downloads without a tap on play run one at a time: each holds a whole
   /// video in memory, and a long thread shows many at once.
   Future<void> _autoDownloadQueue = Future<void>.value();
@@ -144,7 +147,9 @@ class DmVideoStore {
       value.replaceAll(RegExp('[^A-Za-z0-9]'), '');
 
   /// [message]'s decrypted video, downloaded and decrypted the first time
-  /// and kept after that. Callers asking at once share one download.
+  /// and kept after that. Callers asking at once share one download, and so
+  /// does a card's download already fetching it; one still waiting in the
+  /// queue is not waited for.
   ///
   /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`) or
   /// a [DmVideoUnavailableException] when the video cannot be stored, naming
@@ -153,9 +158,22 @@ class DmVideoStore {
     final id = message.id;
     // removeWhere, not remove: remove hands back this very future, and
     // whenComplete waits for a future its callback returns.
-    return _videosInFlight[id] ??= _obtainVideo(
+    return _videosInFlight[id] ??= _tapVideoFor(
       message,
     ).whenComplete(() => _videosInFlight.removeWhere((key, _) => key == id));
+  }
+
+  Future<File> _tapVideoFor(DmMessage message) async {
+    final running = _autoFetchesRunning[message.id];
+    if (running != null) {
+      try {
+        return await running;
+      } on Object {
+        // Most likely the automatic limits, which a tap does not have: fetch
+        // it again in full.
+      }
+    }
+    return _obtainVideo(message);
   }
 
   /// [message]'s kept preview frame, read once from its video.
@@ -314,18 +332,24 @@ class DmVideoStore {
   }
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
-  /// for, within their limits. Not shared with [videoFor], which a tap on
-  /// play must not see fail for a limit it does not have.
+  /// for, within their limits, or, when its turn comes, uses the download a
+  /// tap started meanwhile.
   Future<File> _autoVideoFor(DmMessage message) {
     final id = message.id;
     return _autoDownloadsInFlight[id] ??=
-        _inAutoDownloadQueue(
-          () => _obtainVideo(
+        _inAutoDownloadQueue(() {
+          final tapped = _videosInFlight[id];
+          if (tapped != null) return tapped;
+          final fetch = _obtainVideo(
             message,
             maxBytes: autoDownloadMaxBytes,
             timeLimit: autoDownloadTimeLimit,
-          ),
-        ).whenComplete(
+          );
+          _autoFetchesRunning[id] = fetch;
+          return fetch.whenComplete(
+            () => _autoFetchesRunning.removeWhere((key, _) => key == id),
+          );
+        }).whenComplete(
           () => _autoDownloadsInFlight.removeWhere((key, _) => key == id),
         );
   }

@@ -403,6 +403,104 @@ void main() {
         expect(await secondPreview, isNotNull);
       });
 
+      test(
+        'share a download a tap is waiting on, rather than fetching twice',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+
+          final preview = store.previewFor(message, download: true);
+          await pumpEventQueue();
+          expect(fetches, equals(1));
+          final tapped = store.videoFor(message);
+          release.complete(_plaintext);
+
+          expect((await tapped).readAsBytesSync(), equals(_plaintext));
+          expect(await preview, isNotNull);
+          expect(fetches, equals(1));
+        },
+      );
+
+      test(
+        'leave a tap to fetch in full when the download it joined fails on a '
+        'limit',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) =>
+              fetches == 1 ? release.future : Future.value(_plaintext);
+          final store = createStore();
+          final message = _videoMessage();
+
+          final previewFailure = expectLater(
+            store.previewFor(message, download: true),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          await pumpEventQueue();
+          final tapped = store.videoFor(message);
+          release.completeError(
+            const DmVideoUnavailableException('ciphertext exceeds the size'),
+          );
+
+          expect((await tapped).readAsBytesSync(), equals(_plaintext));
+          expect(
+            fetchLimits.map((limits) => limits.maxBytes),
+            equals([DmVideoStore.autoDownloadMaxBytes, null]),
+          );
+          await previewFailure;
+        },
+      );
+
+      test(
+        'use a video a tap is already fetching, rather than fetching again',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+
+          final tapped = store.videoFor(message);
+          await pumpEventQueue();
+          expect(fetches, equals(1));
+          final preview = store.previewFor(message, download: true);
+          await pumpEventQueue();
+          release.complete(_plaintext);
+
+          expect(await preview, isNotNull);
+          expect((await tapped).readAsBytesSync(), equals(_plaintext));
+          expect(fetches, equals(1));
+        },
+      );
+
+      test('never make a tap wait behind them', () async {
+        final blocking = Completer<Uint8List>();
+        final queued = _videoMessage(id: '9' * 64);
+        final fetchedIds = <String>[];
+        fetch = (message) {
+          fetchedIds.add(message.id);
+          return message.id == queued.id
+              ? Future.value(_plaintext)
+              : blocking.future;
+        };
+        final store = createStore();
+
+        final blockingPreview = store.previewFor(
+          _videoMessage(),
+          download: true,
+        );
+        final queuedPreview = store.previewFor(queued, download: true);
+        await pumpEventQueue();
+
+        final tapped = await store.videoFor(queued);
+        expect(tapped.readAsBytesSync(), equals(_plaintext));
+
+        blocking.complete(_plaintext);
+        await blockingPreview;
+        expect(await queuedPreview, isNotNull);
+        expect(fetchedIds.where((id) => id == queued.id), hasLength(1));
+      });
+
       test('are limited in size and time, unlike a tap on play', () async {
         final store = createStore();
 
