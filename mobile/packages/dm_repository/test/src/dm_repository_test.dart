@@ -783,7 +783,10 @@ void main() {
     //
     //   * relay counters      -- interpolated into a log line
     //   * runInTransaction    -- runs the callback inline; on 11 persist paths
-    //   * markAsRead          -- both production call sites are a bare `await`
+    //   * markAsRead          -- the live-send call is a bare `await`;
+    //                            markConversationAsRead reads it, so the
+    //                            read-marker group declares
+    //                            `stubMarkAsReadRowFound`
     //   * queryEventsDetailed -- send/listener inbox resolution catches its
     //                            throw; RC3 re-declares the answered-empty
     //                            decision explicitly in its own group
@@ -1066,6 +1069,15 @@ void main() {
     void stubReadCursorRowMatched() => when(
       () => mockConversationsDao.applyReadCursor(
         any(),
+        any(),
+        ownerPubkey: any(named: 'ownerPubkey'),
+      ),
+    ).thenAnswer((_) async => true);
+
+    // markConversationAsRead schedules a read-marker publish only for a row it
+    // wrote, so a test asserting no marker went out must have found its row.
+    void stubMarkAsReadRowFound() => when(
+      () => mockConversationsDao.markAsRead(
         any(),
         ownerPubkey: any(named: 'ownerPubkey'),
       ),
@@ -14210,6 +14222,7 @@ void main() {
 
     group('read-state marker (#4977)', () {
       setUp(stubReadCursorRowMatched);
+      setUp(stubMarkAsReadRowFound);
 
       final tupleKey = (<String>[
         _validPubkeyA,
