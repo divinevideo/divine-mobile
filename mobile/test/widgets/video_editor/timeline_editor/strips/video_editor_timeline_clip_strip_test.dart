@@ -56,6 +56,7 @@ void main() {
       String? trimmingClipId,
       ClipTrimCallback? onTrimChanged,
       ValueChanged<bool>? onTrimDragChanged,
+      ValueNotifier<Duration>? playheadPosition,
       bool scrollable = true,
       List<NavigatorObserver> navigatorObservers = const <NavigatorObserver>[],
     }) {
@@ -77,6 +78,7 @@ void main() {
         trimmingClipId: trimmingClipId,
         onTrimChanged: onTrimChanged,
         onTrimDragChanged: onTrimDragChanged,
+        playheadPosition: playheadPosition,
         thumbnailManager: thumbnailManager,
         waveformManager: waveformManager,
       );
@@ -883,6 +885,306 @@ void main() {
                 'and dropped the previous deltas.',
           );
         }
+      });
+    });
+
+    group('trim snapping', () {
+      late ValueNotifier<Duration> playhead;
+      late List<String> haptics;
+      late Duration reportedStart;
+      late Duration reportedEnd;
+      late List<bool> dragStates;
+
+      setUp(() {
+        playhead = ValueNotifier(const Duration(milliseconds: 1500));
+        haptics = [];
+        reportedStart = Duration.zero;
+        reportedEnd = Duration.zero;
+        dragStates = [];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+              if (call.method == 'HapticFeedback.vibrate') {
+                haptics.add(call.arguments as String);
+              }
+              return null;
+            });
+      });
+
+      tearDown(() {
+        playhead.dispose();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      Future<void> pumpClip(
+        WidgetTester tester, {
+        DivineVideoClip? clip,
+        List<DivineVideoClip> precedingClips = const [],
+      }) async {
+        clip ??= _createTestClip(
+          id: 'snap',
+          seconds: 4,
+          trimStartMs: 500,
+          trimEndMs: 500,
+        );
+        await tester.pumpWidget(
+          buildWidget(
+            clips: [...precedingClips, clip],
+            pixelsPerSecond: 100,
+            trimmingClipId: clip.id,
+            playheadPosition: playhead,
+            scrollable: false,
+            onTrimDragChanged: dragStates.add,
+            onTrimChanged:
+                ({
+                  required clipId,
+                  required isStart,
+                  required trimStart,
+                  required trimEnd,
+                }) {
+                  reportedStart = trimStart;
+                  reportedEnd = trimEnd;
+                },
+          ),
+        );
+      }
+
+      Future<TestGesture> startDrag(
+        WidgetTester tester, {
+        required bool isStart,
+      }) async {
+        final box = tester.renderObject<RenderBox>(
+          find.byType(TimelineTrimHandles),
+        );
+        final gesture = await tester.startGesture(
+          box.localToGlobal(
+            Offset(isStart ? 2 : box.size.width - 2, box.size.height / 2),
+          ),
+        );
+        // Accept the horizontal gesture before measuring the trim movement.
+        await gesture.moveBy(Offset(isStart ? 20 : -20, 0));
+        await tester.pump();
+        return gesture;
+      }
+
+      for (final isStart in [true, false]) {
+        final handle = isStart ? 'start' : 'end';
+        final direction = isStart ? 1.0 : -1.0;
+
+        Duration reportedEdge() => isStart ? reportedStart : reportedEnd;
+
+        testWidgets('$handle snaps, holds, and breaks free smoothly', (
+          tester,
+        ) async {
+          await pumpClip(tester);
+          final gesture = await startDrag(tester, isStart: isStart);
+          await gesture.moveBy(Offset(direction * 148, 0));
+          await tester.pump();
+
+          expect(reportedEdge(), const Duration(seconds: 2));
+          expect(haptics, ['HapticFeedbackType.selectionClick']);
+
+          await gesture.moveBy(Offset(direction * 6, 0));
+          await tester.pump();
+          expect(reportedEdge(), const Duration(seconds: 2));
+          expect(haptics, hasLength(1));
+
+          await gesture.moveBy(Offset(direction * 6, 0));
+          await tester.pump();
+          expect(reportedEdge(), const Duration(seconds: 2));
+
+          await gesture.moveBy(Offset(direction * 15, 0));
+          await tester.pump();
+          expect(reportedEdge(), const Duration(milliseconds: 2150));
+          expect(haptics, hasLength(1));
+          await gesture.up();
+          await tester.pump();
+          expect(dragStates, [true, false]);
+        });
+
+        for (final outsideMs in [-100, 3100]) {
+          testWidgets('$handle does not snap with playhead at ${outsideMs}ms', (
+            tester,
+          ) async {
+            playhead.value = Duration(milliseconds: outsideMs);
+            await pumpClip(tester);
+            final gesture = await startDrag(tester, isStart: isStart);
+            await gesture.moveBy(Offset(direction * 148, 0));
+            await tester.pump();
+
+            expect(reportedEdge(), const Duration(milliseconds: 1980));
+            expect(haptics, isEmpty);
+            await gesture.up();
+            await tester.pump();
+          });
+        }
+
+        for (final speed in [0.5, 2.0]) {
+          testWidgets('$handle maps the playhead and drag at ${speed}x speed', (
+            tester,
+          ) async {
+            final preceding = _createTestClip(
+              id: 'preceding',
+            ).copyWith(playbackSpeed: 2);
+            final clip = _createTestClip(
+              id: 'snap',
+              seconds: 4,
+              trimStartMs: 500,
+              trimEndMs: 500,
+            ).copyWith(playbackSpeed: speed);
+            const sourceTarget = Duration(microseconds: 2000500);
+            playhead.value =
+                preceding.playbackDuration +
+                clip.sourceDurationToPlaybackDuration(
+                  sourceTarget - clip.trimStart,
+                );
+            await pumpClip(tester, clip: clip, precedingClips: [preceding]);
+            final gesture = await startDrag(tester, isStart: isStart);
+            final sourceDelta = isStart
+                ? sourceTarget - clip.trimStart
+                : clip.duration - clip.trimEnd - sourceTarget;
+            final dragPx = sourceDelta.inMicroseconds / 1000000 / speed * 100;
+            await gesture.moveBy(Offset(direction * (dragPx - 2), 0));
+            await tester.pump();
+
+            expect(
+              reportedEdge(),
+              isStart ? sourceTarget : clip.duration - sourceTarget,
+            );
+            expect(haptics, ['HapticFeedbackType.selectionClick']);
+            await gesture.up();
+            await tester.pump();
+          });
+        }
+
+        testWidgets('$handle keeps its source target across live reflow', (
+          tester,
+        ) async {
+          await pumpClip(tester);
+          final gesture = await startDrag(tester, isStart: isStart);
+          await gesture.moveBy(Offset(direction * 100, 0));
+          await tester.pump();
+          expect(reportedEdge(), const Duration(milliseconds: 1500));
+
+          // Feed a committed trim back, as ClipEditorBloc does mid-gesture.
+          final clip = _createTestClip(id: 'snap', seconds: 4).copyWith(
+            trimStart: reportedStart,
+            trimEnd: reportedEnd,
+          );
+          playhead.value = const Duration(milliseconds: 900);
+          await pumpClip(tester, clip: clip);
+          await gesture.moveBy(Offset(direction * 48, 0));
+          await tester.pump();
+
+          expect(reportedEdge(), const Duration(seconds: 2));
+          expect(haptics, ['HapticFeedbackType.selectionClick']);
+          await gesture.up();
+          await tester.pump();
+        });
+
+        testWidgets('$handle snaps within a trim-based split end half', (
+          tester,
+        ) async {
+          final firstHalf = _createTestClip(
+            id: 'start-half',
+            seconds: 6,
+            trimEndMs: 3000,
+          );
+          final secondHalf = _createTestClip(
+            id: 'end-half',
+            seconds: 6,
+            trimStartMs: 3000,
+          ).copyWith(minTrimStart: const Duration(seconds: 3));
+          playhead.value = const Duration(milliseconds: 4500);
+          await pumpClip(
+            tester,
+            clip: secondHalf,
+            precedingClips: [firstHalf],
+          );
+          final gesture = await startDrag(tester, isStart: isStart);
+          await gesture.moveBy(Offset(direction * 148, 0));
+          await tester.pump();
+
+          expect(
+            reportedEdge(),
+            Duration(milliseconds: isStart ? 4500 : 1500),
+          );
+          expect(haptics, ['HapticFeedbackType.selectionClick']);
+          await gesture.up();
+          await tester.pump();
+        });
+
+        testWidgets('$handle respects minimum length without a false snap', (
+          tester,
+        ) async {
+          playhead.value = Duration(milliseconds: isStart ? 2980 : 20);
+          await pumpClip(tester);
+          final gesture = await startDrag(tester, isStart: isStart);
+          await gesture.moveBy(Offset(direction * 298, 0));
+          await tester.pump();
+
+          expect(reportedEdge(), const Duration(milliseconds: 3440));
+          expect(haptics, ['HapticFeedbackType.mediumImpact']);
+
+          // An overshoot must not consume the movement back from the limit.
+          await gesture.moveBy(Offset(-direction * 10, 0));
+          await tester.pump();
+          expect(reportedEdge(), const Duration(milliseconds: 3340));
+          expect(haptics, hasLength(1));
+          await gesture.up();
+          await tester.pump();
+        });
+
+        testWidgets('$handle captures a fresh target on the next drag', (
+          tester,
+        ) async {
+          await pumpClip(tester);
+          final firstDrag = await startDrag(tester, isStart: isStart);
+          await firstDrag.moveBy(Offset(direction * 148, 0));
+          await tester.pump();
+          expect(reportedEdge(), const Duration(seconds: 2));
+          await firstDrag.up();
+          await tester.pump();
+
+          playhead.value = const Duration(seconds: 1);
+          final nextDrag = await startDrag(tester, isStart: isStart);
+          await nextDrag.moveBy(Offset(direction * (isStart ? 98 : 198), 0));
+          await tester.pump();
+          expect(
+            reportedEdge(),
+            Duration(milliseconds: isStart ? 1500 : 2500),
+          );
+          expect(haptics, [
+            'HapticFeedbackType.selectionClick',
+            'HapticFeedbackType.selectionClick',
+          ]);
+          await nextDrag.up();
+          await tester.pump();
+          expect(dragStates, [true, false, true, false]);
+        });
+      }
+
+      testWidgets('split end half cannot reveal its sibling frames', (
+        tester,
+      ) async {
+        final clip = _createTestClip(
+          id: 'end-half',
+          seconds: 6,
+          trimStartMs: 3000,
+        ).copyWith(minTrimStart: const Duration(seconds: 3));
+        playhead.value = const Duration(milliseconds: -20);
+        await pumpClip(tester, clip: clip);
+        final gesture = await startDrag(tester, isStart: true);
+        await gesture.moveBy(const Offset(-100, 0));
+        await tester.pump();
+
+        expect(reportedStart, const Duration(seconds: 3));
+        expect(haptics, ['HapticFeedbackType.mediumImpact']);
+        await gesture.moveBy(const Offset(10, 0));
+        await tester.pump();
+        expect(reportedStart, const Duration(milliseconds: 3100));
+        await gesture.up();
+        await tester.pump();
       });
     });
 

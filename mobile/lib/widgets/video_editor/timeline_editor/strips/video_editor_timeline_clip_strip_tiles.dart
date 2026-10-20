@@ -48,6 +48,8 @@ class _TrimmableClipTile extends StatefulWidget {
     required this.clip,
     required this.clipWidth,
     required this.pixelsPerSecond,
+    required this.playheadPosition,
+    required this.clipTimelineStart,
     required this.thumbnailNotifier,
     required this.waveformNotifier,
     this.onTrimChanged,
@@ -59,6 +61,8 @@ class _TrimmableClipTile extends StatefulWidget {
   final DivineVideoClip clip;
   final double clipWidth;
   final double pixelsPerSecond;
+  final ValueNotifier<Duration>? playheadPosition;
+  final Duration clipTimelineStart;
   final ValueNotifier<List<StripThumbnail>> thumbnailNotifier;
 
   /// Null while the strip is in a reorder drag — see [_ClipTile].
@@ -80,19 +84,63 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   bool _leftAtLimit = false;
   bool _rightAtLimit = false;
 
-  // Trim values accumulated during the active drag. Handles report incremental
-  // pixel deltas; the result round-trips through ClipEditorBloc and only lands
-  // back on widget.clip a frame later. Reading widget.clip mid-drag would use a
-  // stale base and drop deltas whenever pointer updates outpace rebuilds (e.g.
-  // 120Hz touch sampling emitting 2+ moves per frame), making the handle lag
-  // further behind the finger the longer you drag. Accumulating locally keeps
-  // every delta.
+  // Keep drag state local: multiple pointer updates can arrive before the
+  // trim values round-trip through ClipEditorBloc and rebuild widget.clip.
   Duration? _dragTrimStart;
   Duration? _dragTrimEnd;
+  Duration? _snapSourcePosition;
+
+  late final _leftSnap = TimelineSnapController(
+    direction: SnapEdgeDirection.positive,
+    pixelsPerSecond: widget.pixelsPerSecond,
+  );
+  late final _rightSnap = TimelineSnapController(
+    direction: SnapEdgeDirection.negative,
+    pixelsPerSecond: widget.pixelsPerSecond,
+  );
 
   Duration _dxToDuration(double dx) {
     final seconds = dx / widget.pixelsPerSecond;
-    return Duration(microseconds: (seconds * 1000000).round());
+    return widget.clip.playbackDurationToSourceDuration(
+      Duration(microseconds: (seconds * 1000000).round()),
+    );
+  }
+
+  Duration? _captureSnapSourcePosition() {
+    final playhead = widget.playheadPosition?.value;
+    if (playhead == null) return null;
+    final clip = widget.clip;
+    final localPosition = playhead - widget.clipTimelineStart;
+    if (localPosition < Duration.zero ||
+        localPosition > clip.playbackDuration) {
+      return null;
+    }
+    // The strip reflows and the preview seeks during trimming, so freeze the
+    // source frame before notifying the parent that the drag has started.
+    return clip.trimStart +
+        clip.playbackDurationToSourceDuration(localPosition);
+  }
+
+  Duration _snapEdge(
+    TimelineSnapController controller,
+    Duration rawPosition,
+    Duration minimum,
+    Duration maximum,
+  ) {
+    final target = _snapSourcePosition;
+    final snapPoints = <int>{
+      if (target != null && target >= minimum && target <= maximum)
+        target.inMilliseconds,
+    };
+    final snappedMs = controller.update(
+      rawPosition.inMilliseconds,
+      snapPoints,
+    );
+    // Snap detection uses milliseconds; retain the captured source frame's
+    // precision when a playback-speed conversion lands between milliseconds.
+    if (target != null && snapPoints.contains(snappedMs)) return target;
+    if (snappedMs == rawPosition.inMilliseconds) return rawPosition;
+    return Duration(milliseconds: snappedMs);
   }
 
   void _onDragStart() {
@@ -101,33 +149,60 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     _rightAtLimit = false;
     _dragTrimStart = widget.clip.trimStart;
     _dragTrimEnd = widget.clip.trimEnd;
+    _snapSourcePosition = _captureSnapSourcePosition();
+    final sourcePixelsPerSecond =
+        widget.pixelsPerSecond * widget.clip._playbackScale;
+    final startMs = widget.clip.trimStart.inMilliseconds;
+    final endMs = (widget.clip.duration - widget.clip.trimEnd).inMilliseconds;
+    _leftSnap
+      ..pixelsPerSecond = sourcePixelsPerSecond
+      ..begin(startMs, initialExcludeMs: startMs);
+    _rightSnap
+      ..pixelsPerSecond = sourcePixelsPerSecond
+      ..begin(endMs, initialExcludeMs: endMs);
     widget.onTrimDragChanged?.call(true);
   }
 
   void _onDragEnd() {
     _dragTrimStart = null;
     _dragTrimEnd = null;
+    _snapSourcePosition = null;
+    _leftSnap.reset();
+    _rightSnap.reset();
     widget.onTrimDragChanged?.call(false);
   }
 
   void _onLeftDragUpdate(double dx) {
     final clip = widget.clip;
     final trimEnd = _dragTrimEnd ?? clip.trimEnd;
-    var newTrimStart = (_dragTrimStart ?? clip.trimStart) + _dxToDuration(dx);
+    _leftSnap.accumulate(dx);
+    final rawStart =
+        Duration(milliseconds: _leftSnap.originMs) +
+        _dxToDuration(_leftSnap.effectiveAccPx);
 
     // A trim-based split's end half floors its start handle at the split point
     // so it can't be dragged back into the start half's frames.
     final minTrimStart = clip.minTrimStart;
-    final maxTrimStart =
-        clip.duration - trimEnd - TimelineConstants.minTrimDuration;
+    final maxTrimStart = math.max(
+      minTrimStart.inMilliseconds,
+      (clip.duration - trimEnd - TimelineConstants.minTrimDuration)
+          .inMilliseconds,
+    );
+    final maximum = Duration(milliseconds: maxTrimStart);
+    var newTrimStart = _snapEdge(
+      _leftSnap,
+      rawStart,
+      minTrimStart,
+      maximum,
+    );
 
     var atLimit = false;
 
     if (newTrimStart <= minTrimStart) {
       newTrimStart = minTrimStart;
       atLimit = true;
-    } else if (newTrimStart >= maxTrimStart) {
-      newTrimStart = maxTrimStart;
+    } else if (newTrimStart >= maximum) {
+      newTrimStart = maximum;
       atLimit = true;
     }
 
@@ -135,6 +210,12 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
       unawaited(HapticFeedback.mediumImpact());
     }
     _leftAtLimit = atLimit;
+    if (atLimit && !_leftSnap.isSnapped) {
+      _leftSnap.begin(
+        newTrimStart.inMilliseconds,
+        initialExcludeMs: newTrimStart.inMilliseconds,
+      );
+    }
     _dragTrimStart = newTrimStart;
 
     widget.onTrimChanged?.call(
@@ -148,11 +229,19 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   void _onRightDragUpdate(double dx) {
     final clip = widget.clip;
     final trimStart = _dragTrimStart ?? clip.trimStart;
-    // Dragging right handle left (negative dx) increases trimEnd.
-    var newTrimEnd = (_dragTrimEnd ?? clip.trimEnd) + _dxToDuration(-dx);
-
-    final maxTrimEnd =
-        clip.duration - trimStart - TimelineConstants.minTrimDuration;
+    _rightSnap.accumulate(-dx);
+    final rawEnd =
+        Duration(milliseconds: _rightSnap.originMs) -
+        _dxToDuration(_rightSnap.effectiveAccPx);
+    final minEnd = Duration(
+      milliseconds: math.min(
+        clip.duration.inMilliseconds,
+        (trimStart + TimelineConstants.minTrimDuration).inMilliseconds,
+      ),
+    );
+    final visibleEnd = _snapEdge(_rightSnap, rawEnd, minEnd, clip.duration);
+    var newTrimEnd = clip.duration - visibleEnd;
+    final maxTrimEnd = clip.duration - minEnd;
 
     var atLimit = false;
 
@@ -168,6 +257,10 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
       unawaited(HapticFeedback.mediumImpact());
     }
     _rightAtLimit = atLimit;
+    if (atLimit && !_rightSnap.isSnapped) {
+      final endMs = (clip.duration - newTrimEnd).inMilliseconds;
+      _rightSnap.begin(endMs, initialExcludeMs: endMs);
+    }
     _dragTrimEnd = newTrimEnd;
 
     widget.onTrimChanged?.call(
