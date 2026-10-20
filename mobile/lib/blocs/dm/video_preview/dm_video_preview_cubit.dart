@@ -45,7 +45,8 @@ class DmVideoPreviewState extends Equatable {
 /// yet, unless it is too big to fetch without a tap. Without it, which is how
 /// a message request's card works, only a video already kept is used. Either
 /// way, a card left without a frame picks it up as soon as the user plays the
-/// video and the store keeps it.
+/// video and the store keeps it. Without [decode], for a sender the user
+/// blocked, only a frame read before is shown.
 class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
     with CloseGuardedEmit<DmVideoPreviewState> {
   /// Creates a [DmVideoPreviewCubit] for [message].
@@ -56,9 +57,11 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
     required DmMessage message,
     required DmVideoStore? store,
     required bool download,
+    required bool decode,
   }) : _message = message,
        _store = store,
        _download = download,
+       _decode = decode,
        super(_initialState(store?.knownPreviewPathFor(message)));
 
   static DmVideoPreviewState _initialState(String? knownFramePath) =>
@@ -74,6 +77,7 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
   /// Null when no account is signed in: videos are kept per account.
   final DmVideoStore? _store;
   final bool _download;
+  final bool _decode;
   StreamSubscription<String>? _keptVideos;
 
   /// Reads the frame, downloading the video first when allowed.
@@ -87,6 +91,7 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
       final frame = await store.previewFor(
         _message,
         download: _download,
+        decode: _decode,
         stillWanted: () => !isClosed,
       );
       if (frame != null) {

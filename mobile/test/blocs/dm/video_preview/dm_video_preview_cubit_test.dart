@@ -51,6 +51,7 @@ void main() {
         message: _videoMessage(),
         store: store,
         download: download,
+        decode: true,
       );
 
   void stubPreview(String? path, {required bool download}) {
@@ -100,6 +101,7 @@ void main() {
           () => store.previewFor(
             any(),
             download: true,
+            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).thenAnswer((invocation) async {
@@ -147,6 +149,7 @@ void main() {
           () => store.previewFor(
             any(),
             download: true,
+            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).thenThrow(const SocketException('offline')),
@@ -164,6 +167,7 @@ void main() {
           message: _videoMessage(),
           store: null,
           download: true,
+          decode: true,
         ),
         act: (cubit) => cubit.load(),
         expect: () => const [
@@ -185,6 +189,7 @@ void main() {
           () => store.previewFor(
             any(),
             download: true,
+            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ),
@@ -236,6 +241,7 @@ void main() {
           () => store.previewFor(
             any(),
             download: true,
+            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).thenThrow(const SocketException('offline')),

@@ -103,6 +103,7 @@ void main() {
           () => store.previewFor(
             any(),
             download: true,
+            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).called(1);
@@ -121,6 +122,7 @@ void main() {
           () => store.previewFor(
             any(),
             download: true,
+            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).called(1);
@@ -139,6 +141,7 @@ void main() {
             () => store.previewFor(
               any(),
               download: true,
+              decode: any(named: 'decode'),
               stillWanted: any(named: 'stillWanted'),
             ),
           );
@@ -195,6 +198,7 @@ void main() {
             () => store.previewFor(
               any(),
               download: true,
+              decode: any(named: 'decode'),
               stillWanted: any(named: 'stillWanted'),
             ),
           ).called(1);
@@ -214,6 +218,7 @@ void main() {
             () => store.previewFor(
               any(),
               download: true,
+              decode: any(named: 'decode'),
               stillWanted: any(named: 'stillWanted'),
             ),
           );
@@ -240,6 +245,7 @@ void main() {
             () => store.previewFor(
               any(),
               download: true,
+              decode: any(named: 'decode'),
               stillWanted: any(named: 'stillWanted'),
             ),
           );
@@ -247,6 +253,7 @@ void main() {
             () => store.previewFor(
               any(),
               download: false,
+              decode: false,
               stillWanted: any(named: 'stillWanted'),
             ),
           ).called(1);

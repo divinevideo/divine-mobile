@@ -19,7 +19,8 @@ import 'package:openvine/providers/video_providers.dart';
 /// [accepted] or the user follows the sender, unless the sender is [blocked].
 /// Otherwise nothing downloads until the user plays it: a stranger or a
 /// blocked sender cannot make the device fetch and decode a file, or learn
-/// from their host when the thread was opened.
+/// from their host when the thread was opened. A blocked sender's video is
+/// not decoded for its frame even once kept; only a frame read before shows.
 class DmVideoPreviewScope extends ConsumerWidget {
   /// Creates a [DmVideoPreviewScope] for [message].
   const DmVideoPreviewScope({
@@ -58,13 +59,14 @@ class DmVideoPreviewScope extends ConsumerWidget {
             relationship == FollowRelationship.youFollow ||
             relationship == FollowRelationship.mutual);
     return BlocProvider(
-      // A new account or a newly followed sender starts a fresh read.
-      key: ValueKey((store, message.id, download)),
+      // A new account, a newly followed sender or a block starts a fresh read.
+      key: ValueKey((store, message.id, download, blocked)),
       create: (_) {
         final cubit = DmVideoPreviewCubit(
           message: message,
           store: store,
           download: download,
+          decode: !blocked,
         );
         unawaited(cubit.load());
         return cubit;

@@ -436,6 +436,32 @@ void main() {
         },
       );
 
+      test(
+        'decodes nothing when told not to, showing only a frame read before',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          await store.videoFor(message);
+
+          expect(
+            await store.previewFor(message, download: false, decode: false),
+            isNull,
+          );
+          expect(frameReads, isZero);
+
+          final read = await store.previewFor(message, download: false);
+          expect(
+            (await store.previewFor(
+              message,
+              download: false,
+              decode: false,
+            ))?.path,
+            equals(read!.path),
+          );
+          expect(frameReads, equals(1));
+        },
+      );
+
       test('keeps nothing when no frame can be read', () async {
         readFrame = (_) async => null;
         final store = createStore();

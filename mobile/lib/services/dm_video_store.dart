@@ -217,6 +217,10 @@ class DmVideoStore {
   /// [autoDownloadRetryAfter] when it may pass; a tap on play still fetches
   /// it.
   ///
+  /// When [decode] is false nothing is decoded, only a frame read before is
+  /// returned: for a sender the user blocked, whose file should not reach the
+  /// native decoder without a tap.
+  ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
   /// this frame wants it, as when their cards closed, that work is dropped
@@ -227,14 +231,17 @@ class DmVideoStore {
   Future<File?> previewFor(
     DmMessage message, {
     required bool download,
+    bool decode = true,
     bool Function()? stillWanted,
   }) {
-    final key = '${message.id}|$download';
+    assert(decode || !download, 'a card downloads a video only to decode it');
+    final key = '${message.id}|$download|$decode';
     (_previewWanters[key] ??= []).add(stillWanted ?? _alwaysWanted);
     return _previewsInFlight[key] ??=
         _obtainPreview(
           message,
           download: download,
+          decode: decode,
           wanted: () =>
               _previewWanters[key]?.any((wanted) => wanted()) ?? false,
         ).whenComplete(() {
@@ -487,6 +494,7 @@ class DmVideoStore {
   Future<File?> _obtainPreview(
     DmMessage message, {
     required bool download,
+    required bool decode,
     required bool Function() wanted,
   }) async {
     final dir = await _ownerDirectory();
@@ -496,7 +504,7 @@ class DmVideoStore {
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
-    if (_unreadableFrames.contains(message.id)) return null;
+    if (_unreadableFrames.contains(message.id) || !decode) return null;
 
     final keptVideo = File('${dir.path}/${videoFileNameFor(message)}');
     final declaredBytes = message.fileMetadata?.fileSize;
