@@ -13,6 +13,7 @@ import 'package:models/models.dart' as model;
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -38,6 +39,10 @@ class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
+
+class _MockVideoEditorMainBloc
+    extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
+    implements VideoEditorMainBloc {}
 
 class _MockProImageEditorState extends Mock implements ProImageEditorState {
   @override
@@ -215,6 +220,7 @@ void main() {
       required _MockProImageEditorState editor,
       required _MockTimelineOverlayBloc overlayBloc,
       required ClipEditorState state,
+      VideoEditorMainBloc? mainBloc,
     }) async {
       when(() => bloc.state).thenReturn(state);
       await tester.pumpWidget(
@@ -252,6 +258,10 @@ void main() {
                           BlocProvider<TimelineOverlayBloc>.value(
                             value: overlayBloc,
                           ),
+                          if (mainBloc != null)
+                            BlocProvider<VideoEditorMainBloc>.value(
+                              value: mainBloc,
+                            ),
                         ],
                         child: TimelineClipControls(
                           playheadPosition: ValueNotifier(Duration.zero),
@@ -1142,6 +1152,40 @@ void main() {
         expect(event.overlays, isNotNull);
       },
     );
+
+    // Deleting the piece a split cut off used to leave the playhead where it
+    // was, so the following clips slid under it and the user had to scroll
+    // back to find the cut.
+    testWidgets('delete lands the playhead on the cut before removing the '
+        'clip', (tester) async {
+      final editor = _MockProImageEditorState();
+      final overlayBloc = _MockTimelineOverlayBloc();
+      final mainBloc = _MockVideoEditorMainBloc();
+      stubEditor(editor: editor, overlayBloc: overlayBloc);
+
+      final controls = await pumpWithEditor(
+        tester,
+        editor: editor,
+        overlayBloc: overlayBloc,
+        mainBloc: mainBloc,
+        state: ClipEditorState(
+          clips: [clip('clip-1'), clip('clip-2'), clip('clip-3')],
+          currentClipIndex: 1,
+        ),
+      );
+
+      controls.onDelete!();
+      await tester.pump();
+
+      // The player reloads at the playhead the removal finds, so the move has
+      // to be dispatched first.
+      verifyInOrder([
+        () => mainBloc.add(
+          const VideoEditorPositionChanged(Duration(seconds: 3)),
+        ),
+        () => bloc.add(const ClipEditorClipRemoved('clip-2')),
+      ]);
+    });
 
     // The copy lands next to the clip it was made from, not at the end of the
     // timeline: repeating a clip is the common case, and appending made the

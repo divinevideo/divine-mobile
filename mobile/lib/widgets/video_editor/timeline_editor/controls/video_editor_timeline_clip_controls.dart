@@ -701,6 +701,19 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       markers: overlayBloc.state.timelineMarkers,
     );
 
+    // Land the playhead on the cut the deletion leaves, so the user does not
+    // have to scroll back to find it. Dispatched before the removal: the
+    // player reloads at the playhead the removal finds.
+    final cutPosition = clipDeletionCutPosition(
+      state.clips,
+      removedClipIds: {clipId},
+    );
+    if (cutPosition != null) {
+      context.read<VideoEditorMainBloc>().add(
+        VideoEditorPositionChanged(cutPosition),
+      );
+    }
+
     bloc.add(ClipEditorClipRemoved(clipId));
 
     if (state.currentClipIndex >= state.clips.length - 1) {
