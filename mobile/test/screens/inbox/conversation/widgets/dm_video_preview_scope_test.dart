@@ -11,6 +11,7 @@ import 'package:follow_repository/follow_repository.dart'
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/dm_video_preview_scope.dart';
@@ -67,6 +68,8 @@ void main() {
       ),
     ],
     child: MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: DmVideoPreviewScope(
         message: _videoMessage(),
         accepted: accepted,

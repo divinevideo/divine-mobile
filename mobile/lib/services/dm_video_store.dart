@@ -114,11 +114,11 @@ class DmVideoStore {
   /// on a failure.
   Future<File> videoFor(DmMessage message) {
     final id = message.id;
-    // A block body: `remove` returns this very future, and whenComplete
-    // would wait for it, so an arrow body never completes.
-    return _videosInFlight[id] ??= _obtainVideo(message).whenComplete(() {
-      _videosInFlight.remove(id);
-    });
+    // removeWhere, not remove: remove hands back this very future, and
+    // whenComplete waits for a future its callback returns.
+    return _videosInFlight[id] ??= _obtainVideo(
+      message,
+    ).whenComplete(() => _videosInFlight.removeWhere((key, _) => key == id));
   }
 
   /// [message]'s kept preview frame, read once from its video.
@@ -132,9 +132,9 @@ class DmVideoStore {
         _obtainPreview(
           message,
           download: download,
-        ).whenComplete(() {
-          _previewsInFlight.remove(key);
-        });
+        ).whenComplete(
+          () => _previewsInFlight.removeWhere((pending, _) => pending == key),
+        );
   }
 
   /// Deletes files nobody opened for [maxIdle], then the least recently
