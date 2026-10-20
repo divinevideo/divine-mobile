@@ -2083,6 +2083,24 @@ void main() {
         },
       );
 
+      test(
+        'concurrent stores of one account do not share part-file names',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final message = _videoMessage();
+          final first = createStore().videoFor(message);
+          final second = createStore().videoFor(message);
+          await pumpEventQueue();
+
+          release.complete(_plaintext);
+          final videos = await Future.wait([first, second]);
+
+          expect(videos.map((video) => video.path).toSet(), hasLength(1));
+          expect(videos.first.readAsBytesSync(), _plaintext);
+        },
+      );
+
       test('a store created after the removal keeps videos again', () async {
         await DmVideoStore.deleteOwner(_owner, rootDirectory: () async => root);
 

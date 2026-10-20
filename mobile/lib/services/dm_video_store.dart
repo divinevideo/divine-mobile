@@ -211,7 +211,9 @@ class DmVideoStore {
   /// Downloads nobody tapped for that failed, by message id, with when a card
   /// may fetch it again by itself, or null when the failure will repeat.
   final Map<String, DateTime?> _autoDownloadFailures = {};
-  int _writes = 0;
+  // An account switch can leave a tapped download running in an older store.
+  // Number writes across stores so their sibling part files cannot collide.
+  static int _writes = 0;
   final StreamController<String> _kept = StreamController<String>.broadcast();
 
   /// Ids of messages whose video or late preview frame was just kept, so a
