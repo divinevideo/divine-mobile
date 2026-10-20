@@ -6288,7 +6288,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
-    return 'మీ $emoji ప్రతిచర్యను పంపలేకపోయాము. మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి';
+    return 'మీ $emoji ప్రతిచర్యను పంపడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి';
   }
 
   @override

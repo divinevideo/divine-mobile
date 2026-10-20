@@ -4055,7 +4055,7 @@
     "dmReactionChipOtherA11yLabel": "{name} በ{emoji} ምላሽ ሰጥቷል",
     "dmReactionChipPendingA11yLabel": "ምላሽ በመላክ ላይ፦ {emoji}",
     "dmReactionChipFailedA11yLabel": "ምላሹ አልተሳካም፣ እንደገና ለመሞከር ሁለቴ ንካ",
-    "dmReactionChipUnconfirmedA11yLabel": "የ{emoji} ምላሽዎ አልተላከም። እንደገና ለመሞከር ሁለቴ ይንኩ",
+    "dmReactionChipUnconfirmedA11yLabel": "የ{emoji} ምላሽዎን መላክ አልተቻለም። እንደገና ለመሞከር ሁለቴ ይንኩ",
     "dmReactionChipRetryAnnouncement": "ምላሹን እንደገና በመሞከር ላይ",
     "dmFormatBold": "ደማቅ",
     "dmFormatItalic": "አዘንብል",
