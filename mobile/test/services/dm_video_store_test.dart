@@ -470,6 +470,76 @@ void main() {
       );
 
       test(
+        'reads one frame at a time, so a crash marks only its video',
+        () async {
+          final reads = <Completer<Uint8List?>>[];
+          readFrame = (_) {
+            final read = Completer<Uint8List?>();
+            reads.add(read);
+            return read.future;
+          };
+          final store = createStore();
+          final first = _videoMessage(id: '1' * 64);
+          final second = _videoMessage(id: '2' * 64);
+          await store.videoFor(first);
+          await store.videoFor(second);
+
+          final firstFrame = store.previewFor(first, download: false);
+          final secondFrame = store.previewFor(second, download: false);
+          await pumpEventQueue();
+          expect(reads, hasLength(1));
+
+          reads.single.complete(_frame);
+          expect(await firstFrame, isNotNull);
+          await pumpEventQueue();
+          expect(reads, hasLength(2));
+
+          reads.last.complete(_frame);
+          expect(await secondFrame, isNotNull);
+        },
+      );
+
+      test(
+        'keeps the mark of a frame that could not be read for as long as its '
+        'video stays',
+        () async {
+          readFrame = (_) async => null;
+          final message = _videoMessage();
+          final store = createStore();
+          expect(await store.previewFor(message, download: true), isNull);
+          now = now.add(const Duration(days: 31));
+          await store.videoFor(message);
+
+          await store.prune();
+
+          readFrame = (_) async => _frame;
+          expect(
+            await createStore().previewFor(message, download: true),
+            isNull,
+          );
+          expect(frameReads, equals(1));
+        },
+      );
+
+      test('clears the mark once its video is gone', () async {
+        readFrame = (_) async => null;
+        final message = _videoMessage();
+        final store = createStore();
+        expect(await store.previewFor(message, download: true), isNull);
+        File(
+          '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+        ).deleteSync();
+
+        await store.prune();
+
+        readFrame = (_) async => _frame;
+        expect(
+          await createStore().previewFor(message, download: true),
+          isNotNull,
+        );
+      });
+
+      test(
         'decodes nothing when told not to, showing only a frame read before',
         () async {
           final store = createStore();

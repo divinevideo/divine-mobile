@@ -139,7 +139,11 @@ class DmVideoStore {
 
   /// Downloads without a tap on play run one at a time: each holds a whole
   /// video in memory, and a long thread shows many at once.
-  Future<void> _autoDownloadQueue = Future<void>.value();
+  final _OneAtATime _autoDownloads = _OneAtATime();
+
+  /// Frame reads run one at a time too: a crash then marks only the video
+  /// being read, and a long thread does not start a native decoder per card.
+  final _OneAtATime _frameReads = _OneAtATime();
   final Map<String, Future<File?>> _previewsInFlight = {};
 
   /// Frame reads by message id, shared by every caller asking at once.
@@ -315,6 +319,7 @@ class DmVideoStore {
         .cast<File>()
         .toList();
     final gone = await _goneMessageIds(files);
+    final withVideo = _messageIdsWithVideo(files);
     // Nothing below awaits, so no file can be handed out between the check
     // that it is free and its deletion.
     final now = _now();
@@ -331,9 +336,8 @@ class DmVideoStore {
         _deleteNow(file);
         continue;
       }
-      // Holds no space, and must outlive the read it marks.
       if (file.path.endsWith(_frameAttemptSuffix)) {
-        if (age > maxIdle) _deleteNow(file);
+        if (!withVideo.contains(_messageIdOf(file))) _deleteNow(file);
         continue;
       }
       if (age > maxIdle && !_isInUse(file)) {
@@ -449,15 +453,37 @@ class DmVideoStore {
     DateTime now,
     Duration maxIdle,
   ) async {
-    await for (final entity in dir.list()) {
-      if (entity is! File) continue;
-      final age = now.difference(entity.statSync().modified);
-      final isPart = entity.path.endsWith(_partSuffix);
+    final files = await dir
+        .list()
+        .where((entity) => entity is File)
+        .cast<File>()
+        .toList();
+    final withVideo = _messageIdsWithVideo(files);
+    for (final file in files) {
+      if (file.path.endsWith(_frameAttemptSuffix)) {
+        if (!withVideo.contains(_messageIdOf(file))) {
+          await _deleteQuietly(file);
+        }
+        continue;
+      }
+      final age = now.difference(file.statSync().modified);
+      final isPart = file.path.endsWith(_partSuffix);
       if (age > maxIdle || (isPart && age > _crashedPartAge)) {
-        await _deleteQuietly(entity);
+        await _deleteQuietly(file);
       }
     }
   }
+
+  /// Ids of the messages whose video is among [files]. A frame-read mark
+  /// lives as long as its video: a decode that never finished must not be
+  /// retried while the file that caused it is still here.
+  static Set<String> _messageIdsWithVideo(List<File> files) => {
+    for (final file in files)
+      if (!file.path.endsWith(_partSuffix) &&
+          !file.path.endsWith(_previewSuffix) &&
+          !file.path.endsWith(_frameAttemptSuffix))
+        _messageIdOf(file),
+  };
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
   /// for, within their limits, or, when its turn comes, uses the download a
@@ -468,8 +494,8 @@ class DmVideoStore {
     required bool Function() wanted,
   }) {
     final id = message.id;
-    return _autoDownloadsInFlight[id] ??=
-        _inAutoDownloadQueue(() {
+    return _autoDownloadsInFlight[id] ??= _autoDownloads
+        .run(() {
           final tapped = _videosInFlight[id];
           if (tapped != null) {
             return tapped.then((file) {
@@ -488,16 +514,10 @@ class DmVideoStore {
           return fetch.whenComplete(
             () => _autoFetchesRunning.removeWhere((key, _) => key == id),
           );
-        }).whenComplete(
+        })
+        .whenComplete(
           () => _autoDownloadsInFlight.removeWhere((key, _) => key == id),
         );
-  }
-
-  Future<File> _inAutoDownloadQueue(Future<File> Function() download) {
-    final turn = _autoDownloadQueue.then((_) => download());
-    // The next download waits for this one to settle, failed or not.
-    _autoDownloadQueue = turn.then<void>((_) {}, onError: (Object _) {});
-    return turn;
   }
 
   Future<File> _obtainVideo(
@@ -587,8 +607,9 @@ class DmVideoStore {
       // No card shows it: decode nothing.
       if (!wanted()) return null;
       final id = message.id;
-      return await (_frameReadsInFlight[id] ??=
-          _readAndKeepFrame(message, video, preview).whenComplete(
+      return await (_frameReadsInFlight[id] ??= _frameReads
+          .run(() => _readAndKeepFrame(message, video, preview))
+          .whenComplete(
             () => _frameReadsInFlight.removeWhere((key, _) => key == id),
           ));
     } finally {
@@ -774,4 +795,16 @@ class DmVideoStore {
 /// A queued download no card wants any more when its turn comes.
 class _DownloadDropped implements Exception {
   const _DownloadDropped();
+}
+
+/// Runs tasks one at a time, each once the one before it has settled.
+class _OneAtATime {
+  Future<void> _tail = Future<void>.value();
+
+  Future<T> run<T>(Future<T> Function() task) {
+    final turn = _tail.then((_) => task());
+    // The next task waits for this one to settle, failed or not.
+    _tail = turn.then<void>((_) {}, onError: (Object _) {});
+    return turn;
+  }
 }
