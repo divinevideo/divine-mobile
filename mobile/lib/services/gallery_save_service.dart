@@ -271,13 +271,16 @@ class GallerySaveService {
 
   // The source can be a retained private video, including on desktop where
   // temporary/cache roots need not match a standard sandbox-path pattern.
+  // An iOS file error quotes only the file name, which for a kept video DM
+  // is the private message id.
   static String _nativeDiagnostic(String? message, String? sourcePath) {
-    final text = message ?? 'no native message';
-    return redactFilesystemPaths(
-      sourcePath == null || sourcePath.isEmpty
-          ? text
-          : text.replaceAll(sourcePath, '[REDACTED]'),
-    );
+    var text = message ?? 'no native message';
+    if (sourcePath != null && sourcePath.isNotEmpty) {
+      text = text.replaceAll(sourcePath, '[REDACTED]');
+      final fileName = p.basename(sourcePath);
+      if (fileName.isNotEmpty) text = text.replaceAll(fileName, '[REDACTED]');
+    }
+    return redactFilesystemPaths(text);
   }
 
   static String _failureKind(Object error) => error is FileSystemException

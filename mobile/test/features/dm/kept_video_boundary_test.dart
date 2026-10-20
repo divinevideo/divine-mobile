@@ -213,6 +213,41 @@ void main() {
       );
     }
 
+    test('keeps a retained file name out of a native failure', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      String? fileName;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(galChannel, (call) async {
+            if (call.method != 'putVideo') return true;
+            final args = call.arguments as Map<Object?, Object?>;
+            fileName = File(args['path']! as String).uri.pathSegments.last;
+            throw PlatformException(
+              code: 'UNEXPECTED',
+              message: 'The file “$fileName” couldn’t be opened.',
+            );
+          });
+      final cubit = EncryptedVideoSaveCubit(
+        resolveStore: () => store,
+        gallerySaveService: GallerySaveService(
+          permissionsService: _GrantedPermissions(),
+        ),
+      );
+      addTearDown(cubit.close);
+
+      await cubit.save(_message('a'));
+
+      expect(fileName, isNotNull);
+      expect(cubit.state.status, DmVideoSaveStatus.failed);
+      final logs = LogCaptureService().getRecentLogs();
+      expect(
+        logs.map((entry) => entry.message),
+        contains(contains('couldn’t be opened')),
+      );
+      for (final entry in logs) {
+        expect('${entry.message} ${entry.error}', isNot(contains(fileName)));
+      }
+    });
+
     for (final removeSource in [false, true]) {
       test(
         'redacts desktop fallback ${removeSource ? 'failure' : 'success'}',
