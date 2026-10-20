@@ -1130,6 +1130,52 @@ void main() {
 
         expect(calls, 2);
       });
+
+      test('keeps its one try when the first pass finds a retry of it by hand '
+          'still running', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        var listed = _target(
+          rumorId: 'r1',
+          publishStatus: 'unconfirmed',
+          retriesRanOut: true,
+        );
+        when(repository.retryableReactions).thenAnswer((_) async => [listed]);
+        var inFlight = true;
+        when(
+          () => repository.isAttemptInFlight('r1', removal: false),
+        ).thenAnswer((_) => inFlight);
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer((_) async => _fail('r1'));
+        final service = buildService(now: () => clock);
+
+        await service.sweep();
+        verifyNever(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        );
+
+        // That retry was not confirmed and left the row pending, which no
+        // longer reads as ran out.
+        inFlight = false;
+        listed = _target(rumorId: 'r1', publishStatus: 'pending', createdAt: 0);
+        for (var pass = 0; pass < 3; pass++) {
+          clock = clock.add(const Duration(minutes: 10));
+          await service.sweep();
+        }
+
+        verify(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).called(1);
+      });
     });
 
     group('a retry trigger that arrives mid-pass (#8516)', () {

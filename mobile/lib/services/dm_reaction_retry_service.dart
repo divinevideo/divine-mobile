@@ -494,6 +494,11 @@ class DmReactionRetryService {
       final id = '$phase:${target.rumorId}';
       final attempts = _attempts[id] ?? 0;
 
+      // Once a row's retries have run out, this session treats it so even if
+      // a manual retry has since marked it pending again. Recorded before the
+      // in-flight check, since that manual retry may be what is running now.
+      if (target.retriesRanOut) _ranOut.add(id);
+
       // A retry now would join the running attempt and send nothing, so it
       // must not use up a retry (#10044). That attempt reports its own result.
       // Asked here rather than when the row was listed, since a pass can run
@@ -507,9 +512,6 @@ class DmReactionRetryService {
         continue;
       }
 
-      // Once a row's retries have run out, this session treats it so even if
-      // a manual retry has since marked it pending again.
-      if (target.retriesRanOut) _ranOut.add(id);
       final allowance = _ranOut.contains(id)
           ? _config.retriesOnceRanOut
           : _config.maxRetries;
