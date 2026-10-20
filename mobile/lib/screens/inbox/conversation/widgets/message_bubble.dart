@@ -197,6 +197,7 @@ class MessageBubble extends StatefulWidget {
     this.quotedVideoRef,
     this.fileMetadata,
     this.isClip = false,
+    this.encryptedVideoFramePath,
     this.senderName,
     this.isSenderNameResolving = false,
     super.key,
@@ -270,6 +271,10 @@ class MessageBubble extends StatefulWidget {
   /// Whether the encrypted video is a clip the sender shared from their
   /// library. Labels the [EncryptedVideoCard].
   final bool isClip;
+
+  /// Path of the frame this device read from the encrypted video it keeps,
+  /// shown on the [EncryptedVideoCard]. Null until there is one.
+  final String? encryptedVideoFramePath;
 
   /// Who wrote this message, for a thread where the title does not say: a
   /// group, whose title names the room. Null for a bubble that needs no
@@ -549,6 +554,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                                 fileMetadata: fileMetadata!,
                                 isSent: isSent,
                                 isClip: widget.isClip,
+                                framePath: widget.encryptedVideoFramePath,
                                 onTap: isFailedOwnSend
                                     ? null
                                     : onOpenEncryptedVideo,

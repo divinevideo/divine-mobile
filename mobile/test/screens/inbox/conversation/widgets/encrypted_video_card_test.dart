@@ -3,6 +3,8 @@
 // ABOUTME: network image, because fetching the encrypted thumbnail would reuse
 // ABOUTME: the AES-GCM nonce.
 
+import 'dart:io';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -109,6 +111,71 @@ void main() {
       },
     );
 
+    testWidgets(
+      'shows the frame this device keeps under a play icon, in place of the '
+      'blurhash',
+      (tester) async {
+        const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              framePath: framePath,
+            ),
+          ),
+        );
+
+        final frame = find.byWidgetPredicate(
+          (widget) =>
+              widget is Image &&
+              widget.image is ResizeImage &&
+              (widget.image as ResizeImage).imageProvider is FileImage &&
+              ((widget.image as ResizeImage).imageProvider as FileImage)
+                      .file
+                      .path ==
+                  framePath,
+        );
+        expect(frame, findsOneWidget);
+        expect(find.byType(BlurhashDisplay), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.play,
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'falls back to the blurhash when the kept frame is gone',
+      (tester) async {
+        final missing = '${Directory.systemTemp.path}/no_such_frame.jpg';
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              framePath: missing,
+            ),
+          ),
+        );
+        expect(find.byType(BlurhashDisplay), findsNothing);
+
+        await tester.runAsync(
+          () => precacheImage(
+            FileImage(File(missing)),
+            tester.element(find.byType(EncryptedVideoCard)),
+            onError: (_, _) {},
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+      },
+    );
+
     testWidgets('does not label a plain video as a clip', (tester) async {
       await tester.pumpWidget(
         _host(
@@ -138,6 +205,26 @@ void main() {
         );
       },
     );
+
+    testWidgets('passes the frame it is given to the card', (tester) async {
+      const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
+      await tester.pumpWidget(
+        _host(
+          MessageBubble(
+            message: _videoMessage().content,
+            timestamp: '2:30 PM',
+            isSent: false,
+            fileMetadata: _videoMessage().fileMetadata,
+            encryptedVideoFramePath: framePath,
+          ),
+        ),
+      );
+
+      final card = tester.widget<EncryptedVideoCard>(
+        find.byType(EncryptedVideoCard),
+      );
+      expect(card.framePath, equals(framePath));
+    });
 
     testWidgets('never renders the encrypted file URL as text', (tester) async {
       await tester.pumpWidget(_bubbleFrom(_videoMessage(), isSent: false));

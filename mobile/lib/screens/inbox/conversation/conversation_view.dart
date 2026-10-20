@@ -1826,6 +1826,12 @@ class _MessageList extends StatelessWidget {
       );
     }
 
+    // Once the user has posted here the thread is not a request, so its
+    // videos download as soon as they show.
+    final hasOwnMessage = messages.any(
+      (message) => message.senderPubkey == currentPubkey,
+    );
+
     return ListView.builder(
       reverse: true,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1932,7 +1938,7 @@ class _MessageList extends StatelessWidget {
           DmDeliveryStatus status, {
           DmPeerNameResolution? author,
         }) {
-          final bubble = MessageBubble(
+          Widget bubbleWith({String? encryptedVideoFramePath}) => MessageBubble(
             message: message.content,
             timestamp: LocalizedTimeFormatter.formatMessageTime(
               context.l10n,
@@ -2002,7 +2008,16 @@ class _MessageList extends StatelessWidget {
                         !isSent && ClipProvenanceVerifier.isSupportedPlatform,
                   )
                 : null,
+            encryptedVideoFramePath: encryptedVideoFramePath,
           );
+          final bubble = message.fileMetadata?.isVideo == true
+              ? DmVideoPreviewScope(
+                  message: message,
+                  accepted: isSent || hasOwnMessage,
+                  builder: (_, framePath) =>
+                      bubbleWith(encryptedVideoFramePath: framePath),
+                )
+              : bubbleWith();
           return Column(
             crossAxisAlignment: isSent
                 ? CrossAxisAlignment.end
