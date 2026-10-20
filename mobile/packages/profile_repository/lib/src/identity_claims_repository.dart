@@ -431,7 +431,9 @@ class IdentityClaimsRepository {
   /// leads to a link that can never verify. The whole answer is kept for
   /// [startingPlatform] and [platform].
   ///
-  /// Throws [VerifierClientException] subtypes.
+  /// Throws [VerifierClientException] subtypes when the verifier can't be
+  /// reached or answers with an error, and [FormatException] or [TypeError]
+  /// when its answer can't be read.
   Future<List<VerifierPlatform>> supportedPlatforms() async {
     // Kept before the read stops counting as in flight, so nothing finds the
     // read finished with the older answer still kept.
