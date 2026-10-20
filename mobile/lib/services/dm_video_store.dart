@@ -110,6 +110,7 @@ class DmVideoStore {
   Future<void> _autoDownloadQueue = Future<void>.value();
   final Map<String, Future<File?>> _previewsInFlight = {};
   final Set<String> _partsBeingWritten = {};
+  int _writes = 0;
   final StreamController<String> _kept = StreamController<String>.broadcast();
 
   /// Ids of messages whose video was just kept, so a card waiting for a
@@ -353,7 +354,9 @@ class DmVideoStore {
   /// Writes [bytes] beside [file] and renames it into place, so a reader
   /// never sees half a video and a crash leaves only a part file to prune.
   Future<void> _writeAtomically(File file, Uint8List bytes) async {
-    final part = File('${file.path}$_partSuffix');
+    // Each write its own part file: two reads of the same frame can run at
+    // once, and sharing one would make the second rename fail.
+    final part = File('${file.path}.${_writes++}$_partSuffix');
     _partsBeingWritten.add(part.path);
     try {
       _throwIfOwnerRemoved();

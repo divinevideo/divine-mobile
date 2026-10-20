@@ -224,6 +224,22 @@ void main() {
         expect(fetches, equals(1));
       });
 
+      test('two reads of the same frame at once both succeed', () async {
+        final frameRead = Completer<Uint8List?>();
+        readFrame = (_) => frameRead.future;
+        final store = createStore();
+        final message = _videoMessage();
+        await store.videoFor(message);
+
+        final allowed = store.previewFor(message, download: true);
+        final notAllowed = store.previewFor(message, download: false);
+        await pumpEventQueue();
+        frameRead.complete(_frame);
+
+        expect((await allowed)!.readAsBytesSync(), equals(_frame));
+        expect((await notAllowed)!.readAsBytesSync(), equals(_frame));
+      });
+
       test('downloads nothing when it may not download', () async {
         final store = createStore();
 
