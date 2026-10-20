@@ -96,8 +96,8 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   Duration? _dragTrimEnd;
   Duration? _snapSourcePosition;
 
-  // Both handles share the drag callbacks, so a second finger must neither
-  // restart nor clear the drag the first one is still making.
+  // Both handles share the drag callbacks. A second finger joins the trim
+  // the first one started: it must not restart, clear or re-report it.
   int _activeDrags = 0;
 
   // The snap controllers count whole milliseconds; keep each handle's drag
@@ -160,7 +160,8 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   }
 
   void _onDragStart() {
-    if (_activeDrags++ == 0) _beginDrag();
+    if (_activeDrags++ > 0) return;
+    _beginDrag();
     widget.onTrimDragChanged?.call(true);
   }
 
@@ -204,14 +205,13 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   }
 
   void _onDragEnd() {
-    if (--_activeDrags <= 0) {
-      _activeDrags = 0;
-      _dragTrimStart = null;
-      _dragTrimEnd = null;
-      _snapSourcePosition = null;
-      _leftSnap.reset();
-      _rightSnap.reset();
-    }
+    if (--_activeDrags > 0) return;
+    _activeDrags = 0;
+    _dragTrimStart = null;
+    _dragTrimEnd = null;
+    _snapSourcePosition = null;
+    _leftSnap.reset();
+    _rightSnap.reset();
     widget.onTrimDragChanged?.call(false);
   }
 
