@@ -30286,6 +30286,51 @@ void main() {
       );
 
       test(
+        'does not nudge the sweep when the replay reached no relay (#8516)',
+        () async {
+          when(
+            () => mockOutgoingDmsDao.getById(_rumorEventId),
+          ).thenAnswer((_) async => queuedRow());
+          stubSendRumor(
+            (_, _) async => const NIP17SendResult.failure(
+              'Message not sent: no relay reached',
+              reachedNoRelay: true,
+            ),
+          );
+          final repository = createRepository(
+            outgoingDmsDao: mockOutgoingDmsDao,
+          );
+          final nudges = <void>[];
+          final subscription = repository.retryableOutgoingWork.listen(
+            nudges.add,
+          );
+          addTearDown(subscription.cancel);
+
+          final result = await repository.recoverFullSend(
+            rumorId: _rumorEventId,
+          );
+          await pumpEventQueue();
+
+          expect(result.reachedNoRelay, isTrue);
+          verify(
+            () => mockOutgoingDmsDao.markRecipientWrapStatus(
+              id: _rumorEventId,
+              status: OutgoingWrapStatus.failed,
+              eventId: any(named: 'eventId'),
+              lastError: any(named: 'lastError'),
+            ),
+          ).called(1);
+          expect(
+            nudges,
+            isEmpty,
+            reason:
+                'the sweep made this attempt itself, and a nudge would make '
+                'it again every 30 seconds while the relays are out of reach',
+          );
+        },
+      );
+
+      test(
         'resetRetryBudget zeroes the retry counter before dispatch — an '
         'explicit user Resend re-arms the sweep for a row whose soft '
         'attempts exhausted the budget; the default path never touches it',

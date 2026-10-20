@@ -195,6 +195,29 @@ void main() {
         expect(row?.publishStatus, 'deletion_pending');
       });
 
+      test("leaves the sweep un-nudged on a removal's first attempt", () async {
+        stubConfirmed();
+        final id = (await publish()).rumorId;
+        var nudges = 0;
+        final subscription = reactions.retryableReactionWork.listen(
+          (_) => nudges++,
+        );
+        addTearDown(subscription.cancel);
+        var removalSends = 0;
+        stubWire((_) async {
+          removalSends++;
+          return unreached;
+        });
+
+        await reactions.removeOwn(rumorId: id, targetMessageAuthor: _peer);
+        await pumpEventQueue();
+
+        expect(removalSends, 1);
+        expect(nudges, 0);
+        final row = await reactionsDao.getById(id: id, ownerPubkey: _owner);
+        expect(row?.publishStatus, 'deletion_pending');
+      });
+
       /// A group of the owner, [_peer] and a third member; returns its id.
       Future<String> seedGroup() async {
         const third =
