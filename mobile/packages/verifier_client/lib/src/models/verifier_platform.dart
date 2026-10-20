@@ -16,6 +16,7 @@ class VerifierPlatform extends Equatable {
     required this.key,
     required this.label,
     required this.supported,
+    this.oauth,
   });
 
   /// Parses one entry of the `platforms` map returned by `GET /platforms`.
@@ -24,6 +25,12 @@ class VerifierPlatform extends Equatable {
       key: key,
       label: json['label'] as String? ?? key,
       supported: json['supported'] as bool? ?? false,
+      // Anything but a bool is read as no answer, so a malformed value falls
+      // back to [oauthPlatforms] rather than failing the whole list.
+      oauth: switch (json['oauth']) {
+        final bool value => value,
+        _ => null,
+      },
     );
   }
 
@@ -40,15 +47,29 @@ class VerifierPlatform extends Equatable {
   /// must not be offered even though it appears in the response.
   final bool supported;
 
+  /// Whether the verifier has this platform's sign-in turned on.
+  ///
+  /// Null when the verifier's answer does not say: platforms without a
+  /// sign-in carry no `oauth` key, and nor does a verifier older than the
+  /// flag.
+  final bool? oauth;
+
   /// Whether this platform can be linked through an OAuth login instead of a
   /// proof post.
-  bool get supportsOAuth => oauthPlatforms.contains(key);
+  ///
+  /// Needs a platform the verifier accepts ([supported]), a flow the app can
+  /// start ([oauthPlatforms]), and the verifier not having it turned off
+  /// ([oauth]). When [oauth] is unknown, the first two decide, as they did
+  /// before the verifier said.
+  bool get supportsOAuth =>
+      supported && oauthPlatforms.contains(key) && (oauth ?? true);
 
   /// Platforms the verifier exposes an OAuth flow for.
   ///
   /// Mirrors the switch in
   /// `divine-identify-verification-service/src/routes/auth.ts` — every other
-  /// platform is proof-post only.
+  /// platform is proof-post only. Whether a deployment has one turned on is
+  /// [oauth].
   static const oauthPlatforms = <String>{
     'twitter',
     'bluesky',
@@ -57,5 +78,5 @@ class VerifierPlatform extends Equatable {
   };
 
   @override
-  List<Object?> get props => [key, label, supported];
+  List<Object?> get props => [key, label, supported, oauth];
 }

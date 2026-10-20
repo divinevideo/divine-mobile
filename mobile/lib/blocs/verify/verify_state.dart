@@ -7,17 +7,20 @@ part of 'verify_cubit.dart';
 ///
 /// The ones that link with a single sign-in come first, then the ones that
 /// need a proof post — the cheap route should be the one people see first.
-/// The verifier returns `/platforms` in its own registry order, which carries
-/// no such meaning, so the order is decided here.
+/// Which side a platform is on follows the verifier's answer
+/// ([VerifierPlatform.supportsOAuth]), so a platform whose sign-in is off
+/// moves to the proof-post side; this list orders each side. The verifier
+/// returns `/platforms` in its own registry order, which carries no such
+/// meaning, so the order is decided here.
 ///
 /// A platform missing from this list still shows, after the ones listed.
 const verifyPlatformOrder = <String>[
-  // One tap.
+  // Can link with a sign-in, where the verifier has it on.
   'twitter',
   'bluesky',
   'tiktok',
   'youtube',
-  // Proof post.
+  // Proof post only.
   'discord',
   'telegram',
   'mastodon',
@@ -109,7 +112,8 @@ class VerifyState extends Equatable {
   /// Whether [claim] is the one currently being unlinked.
   bool isRemoving(IdentityClaim claim) => removingKey == keyOf(claim);
 
-  /// Platforms that have no link yet, in [verifyPlatformOrder].
+  /// Platforms that have no link yet: the ones offering a sign-in first,
+  /// each side in [verifyPlatformOrder].
   ///
   /// A platform already linked is filtered out: linking a second account on
   /// the same platform would replace the first, which reads as losing a link
@@ -120,14 +124,19 @@ class VerifyState extends Equatable {
       for (final platform in platforms)
         if (!linked.contains(platform.key.toLowerCase())) platform,
     ];
-    // Anything the order does not name sorts after everything it does, keeping
-    // the verifier's own order among its peers. That tie-break is the arrival
-    // index rather than a reliance on `List.sort` being stable, which Dart
-    // does not promise.
+    // Within each side, anything the order does not name sorts after
+    // everything it does, keeping the verifier's own order among its peers.
+    // That tie-break is the arrival index rather than a reliance on
+    // `List.sort` being stable, which Dart does not promise. [proofSide] is
+    // above every rank a sign-in platform can get, so that side comes first.
+    final proofSide = verifyPlatformOrder.length + offered.length;
     int rank(int arrivalIndex) {
-      final key = offered[arrivalIndex].key.toLowerCase();
-      final index = verifyPlatformOrder.indexOf(key);
-      return index == -1 ? verifyPlatformOrder.length + arrivalIndex : index;
+      final platform = offered[arrivalIndex];
+      final index = verifyPlatformOrder.indexOf(platform.key.toLowerCase());
+      final inSide = index == -1
+          ? verifyPlatformOrder.length + arrivalIndex
+          : index;
+      return platform.supportsOAuth ? inSide : proofSide + inSide;
     }
 
     final indices = List.generate(offered.length, (index) => index)

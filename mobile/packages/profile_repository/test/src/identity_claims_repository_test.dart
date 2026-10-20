@@ -1,6 +1,8 @@
 // ABOUTME: Tests for IdentityClaimsRepository — parseClaims, resolveClaims,
 // ABOUTME: and the persistent verified-claims cache (#3936).
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
@@ -19,6 +21,31 @@ class _MockIdentityEventsDao extends Mock implements IdentityEventsDao {}
 
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
+
+const _twitterOff = VerifierPlatform(
+  key: 'twitter',
+  label: 'Twitter / X',
+  supported: true,
+  oauth: false,
+);
+const _tiktokOff = VerifierPlatform(
+  key: 'tiktok',
+  label: 'TikTok',
+  supported: false,
+  oauth: false,
+);
+const _blueskyOn = VerifierPlatform(
+  key: 'bluesky',
+  label: 'Bluesky',
+  supported: true,
+  oauth: true,
+);
+const _blueskyOff = VerifierPlatform(
+  key: 'bluesky',
+  label: 'Bluesky',
+  supported: true,
+  oauth: false,
+);
 
 int _nowSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -2025,6 +2052,188 @@ void main() {
         final platforms = await repo.supportedPlatforms();
 
         expect(platforms.map((p) => p.key), equals(['github']));
+      });
+    });
+
+    group('startingPlatform', () {
+      test('offers no sign-in before the verifier has answered', () {
+        final platform = repo.startingPlatform('twitter');
+
+        expect(platform.key, equals('twitter'));
+        expect(platform.oauth, isFalse);
+        verifyNever(() => client.fetchPlatforms());
+      });
+
+      test('reads the last answer, unchecked platforms included', () async {
+        when(() => client.fetchPlatforms()).thenAnswer(
+          (_) async => const [_twitterOff, _tiktokOff],
+        );
+        await repo.supportedPlatforms();
+
+        expect(repo.startingPlatform('twitter'), equals(_twitterOff));
+        expect(repo.startingPlatform('tiktok'), equals(_tiktokOff));
+      });
+
+      test('keeps the last answer when a later read fails', () async {
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_blueskyOn]);
+        await repo.supportedPlatforms();
+        when(
+          () => client.fetchPlatforms(),
+        ).thenThrow(const VerifierNetworkException('offline'));
+
+        await expectLater(
+          repo.supportedPlatforms,
+          throwsA(isA<VerifierNetworkException>()),
+        );
+
+        expect(repo.startingPlatform('bluesky'), equals(_blueskyOn));
+      });
+
+      test('offers no sign-in from the last answer while a refresh is in '
+          'flight', () async {
+        // The refresh may turn the sign-in off, and a sign-in started from
+        // the answer before it would be offered past that.
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_blueskyOn]);
+        await repo.supportedPlatforms();
+        final refresh = Completer<List<VerifierPlatform>>();
+        when(() => client.fetchPlatforms()).thenAnswer((_) => refresh.future);
+
+        final list = repo.supportedPlatforms();
+        final during = repo.startingPlatform('bluesky');
+        refresh.complete(const [_blueskyOn]);
+        await list;
+
+        expect(during.key, equals('bluesky'));
+        expect(during.oauth, isFalse);
+        expect(repo.startingPlatform('bluesky'), equals(_blueskyOn));
+      });
+    });
+
+    group('platform', () {
+      test('asks the verifier when it has not answered yet', () async {
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_twitterOff]);
+
+        expect(await repo.platform('twitter'), equals(_twitterOff));
+        verify(() => client.fetchPlatforms()).called(1);
+      });
+
+      test('reuses the answer the list was drawn from', () async {
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_twitterOff]);
+        await repo.supportedPlatforms();
+
+        expect(await repo.platform('twitter'), equals(_twitterOff));
+        verify(() => client.fetchPlatforms()).called(1);
+      });
+
+      test('shares one request with a list load already in flight', () async {
+        final answer = Completer<List<VerifierPlatform>>();
+        when(() => client.fetchPlatforms()).thenAnswer((_) => answer.future);
+
+        final list = repo.supportedPlatforms();
+        final one = repo.platform('twitter');
+        answer.complete(const [_twitterOff]);
+
+        expect(await list, equals(const [_twitterOff]));
+        expect(await one, equals(_twitterOff));
+        verify(() => client.fetchPlatforms()).called(1);
+      });
+
+      test('waits for a refresh in flight rather than reading the answer '
+          'before it', () async {
+        // The verifier turned Bluesky sign-in off since the earlier answer.
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_blueskyOn]);
+        await repo.supportedPlatforms();
+        final refresh = Completer<List<VerifierPlatform>>();
+        when(() => client.fetchPlatforms()).thenAnswer((_) => refresh.future);
+
+        final list = repo.supportedPlatforms();
+        final one = repo.platform('bluesky');
+        refresh.complete(const [_blueskyOff]);
+
+        expect(await list, equals(const [_blueskyOff]));
+        expect(await one, equals(_blueskyOff));
+        verify(() => client.fetchPlatforms()).called(2);
+      });
+
+      test('keeps the earlier answer when the refresh it waited for '
+          'fails', () async {
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_blueskyOn]);
+        await repo.supportedPlatforms();
+        final refresh = Completer<List<VerifierPlatform>>();
+        when(() => client.fetchPlatforms()).thenAnswer((_) => refresh.future);
+
+        final list = repo.supportedPlatforms();
+        final listed = repo.platform('bluesky');
+        final unlisted = repo.platform('youtube');
+        refresh.completeError(const VerifierNetworkException('offline'));
+
+        await expectLater(list, throwsA(isA<VerifierNetworkException>()));
+        expect(await listed, equals(_blueskyOn));
+        // The earlier answer still says the verifier has no such platform.
+        expect((await unlisted).oauth, isFalse);
+      });
+
+      test('offers no sign-in where the answer omits the platform', () async {
+        // The verifier saying it has no such platform, which is not the same
+        // as an answer that never came.
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_twitterOff]);
+
+        final platform = await repo.platform('youtube');
+
+        expect(platform.key, equals('youtube'));
+        expect(platform.oauth, isFalse);
+        expect(platform.supportsOAuth, isFalse);
+      });
+
+      test("leaves sign-in to the app's own list when the verifier can't "
+          'be asked', () async {
+        when(
+          () => client.fetchPlatforms(),
+        ).thenThrow(const VerifierNetworkException('offline'));
+
+        final platform = await repo.platform('twitter');
+
+        expect(platform.key, equals('twitter'));
+        expect(platform.oauth, isNull);
+        expect(platform.supportsOAuth, isTrue);
+      });
+
+      test('lets an answer it cannot read through, rather than offering '
+          'sign-in on it', () async {
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => throw const FormatException('not json'));
+
+        await expectLater(
+          () => repo.platform('twitter'),
+          throwsA(isA<FormatException>()),
+        );
+      });
+
+      test('asks again next time after a failed ask', () async {
+        when(
+          () => client.fetchPlatforms(),
+        ).thenThrow(const VerifierNetworkException('offline'));
+        await repo.platform('twitter');
+        when(
+          () => client.fetchPlatforms(),
+        ).thenAnswer((_) async => const [_twitterOff]);
+
+        expect(await repo.platform('twitter'), equals(_twitterOff));
       });
     });
 

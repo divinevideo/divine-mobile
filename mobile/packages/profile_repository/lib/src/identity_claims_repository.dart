@@ -234,6 +234,15 @@ class IdentityClaimsRepository {
   /// read back in would resurrect the claim that was just removed.
   final Map<String, Set<String>> _lastRemovedKeys = {};
 
+  /// Every entry of the verifier's last `/platforms` answer, unsupported ones
+  /// included. Null until one arrives; a failed read keeps the one before.
+  List<VerifierPlatform>? _lastPlatforms;
+
+  /// The `/platforms` read in flight, shared so the dashboard and a connect
+  /// screen opened over it make one request between them, and the screen
+  /// gets the newer answer rather than the one before it.
+  Future<List<VerifierPlatform>>? _platformsInFlight;
+
   /// Parses NIP-39 identity claims out of the given identity-event tag
   /// list (kind 10011, or kind 0 for pre-migration profiles).
   ///
@@ -419,13 +428,73 @@ class IdentityClaimsRepository {
   /// Lists the platforms the verifier currently accepts claims for.
   ///
   /// Platforms the service reports as unsupported are dropped: offering one
-  /// leads to a link that can never verify.
+  /// leads to a link that can never verify. The whole answer is kept for
+  /// [startingPlatform] and [platform].
   ///
-  /// Throws [VerifierClientException] subtypes.
+  /// Throws [VerifierClientException] subtypes when the verifier can't be
+  /// reached or answers with an error, and [FormatException] or [TypeError]
+  /// when its answer can't be read.
   Future<List<VerifierPlatform>> supportedPlatforms() async {
-    final platforms = await _verifierClient.fetchPlatforms();
+    // Kept before the read stops counting as in flight, so nothing finds the
+    // read finished with the older answer still kept.
+    final platforms = await (_platformsInFlight ??= _verifierClient
+        .fetchPlatforms()
+        .then((platforms) => _lastPlatforms = platforms)
+        .whenComplete(() => _platformsInFlight = null));
     return platforms.where((platform) => platform.supported).toList();
   }
+
+  /// [key]'s entry for a screen to start from without waiting: the one in
+  /// the last `/platforms` answer, or one that offers no sign-in until
+  /// [platform] has heard from the verifier.
+  ///
+  /// While a refresh is in flight the last answer may be about to change, so
+  /// the entry offers no sign-in then either: a sign-in started from it
+  /// could outlive the verifier turning it off.
+  VerifierPlatform startingPlatform(String key) =>
+      (_platformsInFlight == null ? _lastKnownPlatform(key) : null) ??
+      _unlisted(key, oauth: false);
+
+  /// [key]'s entry, asking the verifier first when it hasn't answered yet,
+  /// and waiting for a read already in flight so a refresh isn't read past.
+  ///
+  /// A platform the answer doesn't list offers no sign-in: the verifier has
+  /// no such platform. When the verifier can't be asked, the last answer
+  /// decides; with none, `oauth` is left unknown, so
+  /// [VerifierPlatform.oauthPlatforms] decides, as it did before the verifier
+  /// said. Any other error, such as an answer that can't be read, is thrown,
+  /// and the screen keeps [startingPlatform]'s entry.
+  Future<VerifierPlatform> platform(String key) async {
+    if (_lastPlatforms == null || _platformsInFlight != null) {
+      try {
+        await supportedPlatforms();
+      } on VerifierClientException catch (e) {
+        // A failed refresh leaves the earlier answer, if any, to decide.
+        final decides = _lastPlatforms == null
+            ? 'the app list'
+            : 'the last answer';
+        Log.warning(
+          'Verifier platforms unavailable, so $decides decides '
+          'sign-in for $key: $e',
+          name: 'IdentityClaimsRepository',
+        );
+        if (_lastPlatforms == null) return _unlisted(key, oauth: null);
+      }
+    }
+    return _lastKnownPlatform(key) ?? _unlisted(key, oauth: false);
+  }
+
+  VerifierPlatform? _lastKnownPlatform(String key) {
+    for (final platform in _lastPlatforms ?? const <VerifierPlatform>[]) {
+      if (platform.key == key) return platform;
+    }
+    return null;
+  }
+
+  // Only the key and the sign-in flag matter to the screens that use these:
+  // every label they show comes from the key.
+  static VerifierPlatform _unlisted(String key, {required bool? oauth}) =>
+      VerifierPlatform(key: key, label: key, supported: true, oauth: oauth);
 
   /// Starts [platform]'s sign-in so its owner can confirm it, and returns the
   /// provider page to open, or null when this deployment has no sign-in for it.

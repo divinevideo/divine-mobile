@@ -55,6 +55,28 @@ class _RecordingCrashReporter implements CrashReporter {
   Future<void> setCustomKey(String key, Object value) async {}
 }
 
+/// Hands every error the cubit reports to [onReported], closed or not:
+/// `addError` itself never checks.
+class _ErrorRecordingCubit extends VerifyConnectCubit {
+  _ErrorRecordingCubit({
+    required super.repository,
+    required super.pubkey,
+    required super.platform,
+    required super.launchOAuth,
+    required super.oauthReturnUrl,
+    required super.analytics,
+    required this.onReported,
+  });
+
+  final void Function(Object error) onReported;
+
+  @override
+  void onError(Object error, StackTrace stackTrace) {
+    onReported(error);
+    super.onError(error, stackTrace);
+  }
+}
+
 const _pubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
 const _returnUrl = 'https://divine.video/app/callback';
@@ -216,6 +238,236 @@ void main() {
       ).captured;
       return (captured[0] as IdentityClaim, captured[1] as String?);
     }
+
+    group('loadPlatform', () {
+      // What the screen starts from when no platform list was loaded: sign-in
+      // hidden until the verifier says.
+      const twitterStandIn = VerifierPlatform(
+        key: 'twitter',
+        label: 'twitter',
+        supported: true,
+        oauth: false,
+      );
+      // What the repository answers when the verifier can't be asked: the
+      // app's own list decides.
+      const twitterFallback = VerifierPlatform(
+        key: 'twitter',
+        label: 'twitter',
+        supported: true,
+      );
+      const twitterOff = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: false,
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        "takes the repository's answer for the platform",
+        setUp: () => when(() => repository.platform('bluesky')).thenAnswer(
+          (_) async => const VerifierPlatform(
+            key: 'bluesky',
+            label: 'Bluesky',
+            supported: true,
+            oauth: true,
+          ),
+        ),
+        build: () => build(
+          const VerifierPlatform(
+            key: 'bluesky',
+            label: 'bluesky',
+            supported: true,
+            oauth: false,
+          ),
+        ),
+        act: (cubit) => cubit.loadPlatform(),
+        expect: () => [
+          isA<VerifyConnectState>()
+              .having((s) => s.platform.oauth, 'oauth', isTrue)
+              .having((s) => s.supportsOAuth, 'supportsOAuth', isTrue),
+        ],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'keeps sign-in hidden when the verifier has it off',
+        setUp: () => when(
+          () => repository.platform('twitter'),
+        ).thenAnswer((_) async => twitterOff),
+        build: () => build(twitterStandIn),
+        act: (cubit) => cubit.loadPlatform(),
+        // Pins the answer itself: the stand-in is already "off", so checking
+        // only the flag would pass with the answer ignored.
+        expect: () => [
+          isA<VerifyConnectState>()
+              .having((s) => s.platform, 'platform', twitterOff)
+              .having((s) => s.supportsOAuth, 'supportsOAuth', isFalse),
+        ],
+      );
+
+      test('keeps what was typed while the answer arrives', () async {
+        final answer = Completer<VerifierPlatform>();
+        when(
+          () => repository.platform('twitter'),
+        ).thenAnswer((_) => answer.future);
+        final cubit = build(twitterStandIn);
+        addTearDown(cubit.close);
+
+        final loading = cubit.loadPlatform();
+        cubit.proofChanged('https://x.com/jack/status/1');
+        answer.complete(twitterFallback);
+        await loading;
+
+        expect(cubit.state.proof, equals('https://x.com/jack/status/1'));
+        expect(cubit.state.supportsOAuth, isTrue);
+      });
+
+      test('ignores an answer that arrives after the screen closed', () async {
+        final answer = Completer<VerifierPlatform>();
+        when(
+          () => repository.platform('twitter'),
+        ).thenAnswer((_) => answer.future);
+        final cubit = build(twitterStandIn);
+
+        final loading = cubit.loadPlatform();
+        await cubit.close();
+        answer.complete(twitterFallback);
+
+        await expectLater(loading, completes);
+      });
+
+      group('while an attempt is under way', () {
+        // The platform the screen opened with: sign-in on, from an answer a
+        // refresh then turns off.
+        const twitterOn = VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          oauth: true,
+        );
+
+        test('keeps sign-in on while the browser is open, so its return '
+            'can still be approved', () async {
+          final verifierAnswer = Completer<VerifierPlatform>();
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) => verifierAnswer.future);
+          final browser = Completer<Uri?>();
+          final cubit = build(twitterOn, launchOAuth: (_) => browser.future);
+          addTearDown(cubit.close);
+
+          final loading = cubit.loadPlatform();
+          final signIn = cubit.connectWithOAuth();
+          await pumpEventQueue();
+          expect(cubit.state.status, VerifyConnectStatus.authorizing);
+
+          verifierAnswer.complete(twitterOff);
+          await loading;
+          expect(cubit.state.platform, equals(twitterOn));
+
+          browser.complete(answer(Uri.parse(startedReturnUrl!)));
+          await signIn;
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.platform, equals(twitterOn));
+          expect(cubit.state.supportsOAuth, isTrue);
+        });
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'keeps sign-in on while the returned account waits for approval',
+          setUp: () => when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterOff),
+          build: () => build(twitterOn),
+          act: (cubit) async {
+            await cubit.connectWithOAuth();
+            await cubit.loadPlatform();
+          },
+          skip: 2,
+          expect: () => const <VerifyConnectState>[],
+          verify: (cubit) {
+            expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+            expect(cubit.state.platform, equals(twitterOn));
+          },
+        );
+
+        test('still takes the answer while a proof post is checked', () async {
+          // No sign-in to protect, and a rejected proof comes back to a form
+          // that should follow the newest answer.
+          final verdict = Completer<VerificationResult>();
+          when(
+            () => repository.verifyClaim(any()),
+          ).thenAnswer((_) => verdict.future);
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterOff);
+          final cubit = build(twitterOn);
+          addTearDown(cubit.close);
+
+          cubit.proofChanged('https://x.com/jack/status/1');
+          final checking = cubit.submitProof();
+          expect(cubit.state.status, VerifyConnectStatus.verifying);
+          await cubit.loadPlatform();
+          verdict.complete(_result(verified: false, platform: 'twitter'));
+          await checking;
+
+          expect(cubit.state.platform, equals(twitterOff));
+        });
+      });
+
+      // Plain tests rather than blocTest: blocTest counts an error thrown out
+      // of act as reported, which is the very thing these rule out.
+      group('when the answer cannot be read', () {
+        late Completer<VerifierPlatform> verifierAnswer;
+        late List<Object> reported;
+
+        setUp(() {
+          verifierAnswer = Completer<VerifierPlatform>();
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) => verifierAnswer.future);
+          reported = [];
+        });
+
+        _ErrorRecordingCubit buildRecording() => _ErrorRecordingCubit(
+          repository: repository,
+          pubkey: _pubkey,
+          platform: twitterStandIn,
+          oauthReturnUrl: _returnUrl,
+          analytics: analytics,
+          launchOAuth: (_) async => null,
+          onReported: reported.add,
+        );
+
+        for (final error in <Object>[
+          const FormatException('not json'),
+          TypeError(),
+        ]) {
+          test('keeps the platform it opened with and reports the '
+              '${error.runtimeType}', () async {
+            final cubit = buildRecording();
+            addTearDown(cubit.close);
+
+            final loading = cubit.loadPlatform();
+            verifierAnswer.completeError(error);
+
+            await expectLater(loading, completes);
+            expect(cubit.state.platform, equals(twitterStandIn));
+            expect(reported, equals([same(error)]));
+          });
+
+          test('reports nothing for a ${error.runtimeType} that arrives '
+              'after the screen closed', () async {
+            final cubit = buildRecording();
+
+            final loading = cubit.loadPlatform();
+            await cubit.close();
+            verifierAnswer.completeError(error);
+
+            await expectLater(loading, completes);
+            expect(reported, isEmpty);
+          });
+        }
+      });
+    });
 
     group('submitProof', () {
       blocTest<VerifyConnectCubit, VerifyConnectState>(

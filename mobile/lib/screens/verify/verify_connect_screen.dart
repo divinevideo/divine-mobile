@@ -15,9 +15,10 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
-import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Route host for linking a single platform.
 class VerifyConnectPage extends ConsumerWidget {
@@ -62,24 +63,30 @@ class VerifyConnectPage extends ConsumerWidget {
       );
     }
 
-    final platform = VerifierPlatform(
-      key: platformKey,
-      label: verifyPlatformLabel(platformKey),
-      supported: true,
-    );
-
     return BlocProvider(
       key: ValueKey((repository, pubkey, platformKey)),
-      create: (_) => VerifyConnectCubit(
-        repository: repository,
-        pubkey: pubkey,
-        platform: platform,
-        launchOAuth: launchAppOAuth,
-        oauthReturnUrl: appOAuthCallbackUrl,
-        // A plain Provider whose identity never changes, so it is read rather
-        // than watched and stays out of the ValueKey above.
-        analytics: ref.read(analyticsEventSinkProvider),
-      ),
+      create: (_) {
+        // Starts from the answer the platform list was drawn from, so this
+        // screen offers the sign-in the list did. While that answer is being
+        // refreshed it offers none until loadPlatform has the new one.
+        final cubit = VerifyConnectCubit(
+          repository: repository,
+          pubkey: pubkey,
+          platform: repository.startingPlatform(platformKey),
+          launchOAuth: launchAppOAuth,
+          oauthReturnUrl: appOAuthCallbackUrl,
+          // A plain Provider whose identity never changes, so it is read
+          // rather than watched and stays out of the ValueKey above.
+          analytics: ref.read(analyticsEventSinkProvider),
+        );
+        runDetached(
+          cubit.loadPlatform(),
+          'load whether sign-in is on',
+          logName: 'VerifyConnectPage',
+          category: LogCategory.auth,
+        );
+        return cubit;
+      },
       child: VerifyConnectView(
         npub: NostrKeyUtils.encodePubKey(pubkey),
         oauthAvailable: oauthUsable,
