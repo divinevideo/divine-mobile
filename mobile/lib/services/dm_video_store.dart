@@ -193,11 +193,11 @@ class DmVideoStore {
       final stat = entity.statSync();
       final age = now.difference(stat.modified);
       if (entity.path.endsWith(_partSuffix)) {
-        if (age > _mayBeInUseFor) _deleteQuietly(entity);
+        if (age > _mayBeInUseFor) await _deleteQuietly(entity);
         continue;
       }
       if (age > maxIdle) {
-        _deleteKept(entity);
+        await _deleteKept(entity);
         continue;
       }
       kept.add((file: entity, opened: stat.modified, size: stat.size));
@@ -211,7 +211,7 @@ class DmVideoStore {
       if (total <= maxBytes || now.difference(entry.opened) < _mayBeInUseFor) {
         break;
       }
-      _deleteKept(entry.file);
+      await _deleteKept(entry.file);
       total -= entry.size;
     }
   }
@@ -256,7 +256,7 @@ class DmVideoStore {
       if (keep.contains(
         entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
       )) {
-        _deleteIdleFiles(entity, currentTime, maxIdle);
+        await _deleteIdleFiles(entity, currentTime, maxIdle);
         continue;
       }
       await entity.delete(recursive: true);
@@ -268,17 +268,17 @@ class DmVideoStore {
   /// Deletes files in [dir] unopened for [maxIdle], and part files older than
   /// [_mayBeInUseFor]: a younger one may be a download the signed-in
   /// account's store is still writing.
-  static void _deleteIdleFiles(
+  static Future<void> _deleteIdleFiles(
     Directory dir,
     DateTime now,
     Duration maxIdle,
-  ) {
-    for (final entity in dir.listSync()) {
+  ) async {
+    await for (final entity in dir.list()) {
       if (entity is! File) continue;
       final age = now.difference(entity.statSync().modified);
       final isPart = entity.path.endsWith(_partSuffix);
       if (age > maxIdle || (isPart && age > _mayBeInUseFor)) {
-        _deleteQuietly(entity);
+        await _deleteQuietly(entity);
       }
     }
   }
@@ -316,7 +316,7 @@ class DmVideoStore {
       '${(await _ownerDirectory()).path}/${videoFileNameFor(message)}',
     );
     if (file.existsSync()) {
-      _markOpened(file);
+      await _markOpened(file);
       return file;
     }
     await _writeAtomically(
@@ -341,7 +341,7 @@ class DmVideoStore {
     final dir = await _ownerDirectory();
     final preview = File('${dir.path}/${_previewFileNameFor(message)}');
     if (preview.existsSync()) {
-      _markOpened(preview);
+      await _markOpened(preview);
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
@@ -383,7 +383,7 @@ class DmVideoStore {
       _throwIfOwnerRemoved();
       await part.rename(file.path);
     } catch (_) {
-      _deleteQuietly(part);
+      await _deleteQuietly(part);
       rethrow;
     }
   }
@@ -397,9 +397,9 @@ class DmVideoStore {
   }
 
   /// Records that [file] was opened now, which keeps [prune] off it.
-  void _markOpened(File file) {
+  Future<void> _markOpened(File file) async {
     try {
-      file.setLastModifiedSync(_now());
+      await file.setLastModified(_now());
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not mark a kept video DM file as opened: ${error.osError}',
@@ -409,14 +409,14 @@ class DmVideoStore {
     }
   }
 
-  void _deleteKept(File file) {
-    _deleteQuietly(file);
+  Future<void> _deleteKept(File file) async {
+    await _deleteQuietly(file);
     _knownPreviews.removeWhere((_, path) => path == file.path);
   }
 
-  static void _deleteQuietly(File file) {
+  static Future<void> _deleteQuietly(File file) async {
     try {
-      if (file.existsSync()) file.deleteSync();
+      if (file.existsSync()) await file.delete();
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not delete a kept video DM file: ${error.osError}',
