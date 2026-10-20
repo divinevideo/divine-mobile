@@ -18,6 +18,7 @@ import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_state.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
@@ -322,6 +323,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   _MockVideoPlaybackStatusCubit? videoPlaybackStatusCubit,
   _MockFeedAutoAdvanceCubit? feedAutoAdvanceCubit,
   FeedImmersiveCubit? feedImmersiveCubit,
+  CodecHeavySurfaceCubit? codecHeavySurfaceCubit,
   _MockVideoVolumeCubit? videoVolumeCubit,
   VideoModerationStatusService? moderationService,
   MediaAuthInterceptor? mediaAuthInterceptor,
@@ -331,6 +333,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   MockAuthService? authService,
   bool isActive = true,
   bool appForeground = true,
+  bool releaseNeighboursWhenInactive = false,
   bool hasMore = false,
   bool isLoadingMore = false,
   void Function(VideoEvent, int)? onActiveVideoChanged,
@@ -356,6 +359,7 @@ Future<ProviderContainer> _pumpFeedVideos(
     videos: list,
     onNearEnd: () {},
     isActive: isActive,
+    releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
     hasMore: hasMore,
     isLoadingMore: isLoadingMore,
     onActiveVideoChanged: onActiveVideoChanged,
@@ -385,6 +389,10 @@ Future<ProviderContainer> _pumpFeedVideos(
         supportedLocales: AppLocalizations.supportedLocales,
         home: MultiBlocProvider(
           providers: [
+            if (codecHeavySurfaceCubit != null)
+              BlocProvider<CodecHeavySurfaceCubit>.value(
+                value: codecHeavySurfaceCubit,
+              ),
             BlocProvider<FeedAutoAdvanceCubit>.value(
               value: mockAutoAdvanceCubit,
             ),
@@ -2444,6 +2452,95 @@ void main() {
       container.read(playbackWindowFocusedProvider.notifier).setFocused(true);
       await tester.pump();
       expect(tester.widget<InfiniteVideoFeed>(finder).isActive, isTrue);
+    });
+
+    testWidgets('keeps neighbours warm only for a focus-only pause', (
+      tester,
+    ) async {
+      final container = await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        releaseNeighboursWhenInactive: true,
+      );
+      final finder = find.byType(InfiniteVideoFeed);
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+      await tester.pump();
+
+      expect(tester.widget<InfiniteVideoFeed>(finder).isActive, isFalse);
+      expect(
+        tester.widget<InfiniteVideoFeed>(finder).releaseNeighboursWhenInactive,
+        isFalse,
+      );
+
+      // Losing foreground while already unfocused must still release them.
+      container.read(appForegroundProvider.notifier).setForeground(false);
+      await tester.pump();
+      expect(
+        tester.widget<InfiniteVideoFeed>(finder).releaseNeighboursWhenInactive,
+        isTrue,
+      );
+    });
+
+    testWidgets('covering an unfocused feed still releases neighbours', (
+      tester,
+    ) async {
+      final container = await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        releaseNeighboursWhenInactive: true,
+      );
+      final finder = find.byType(InfiniteVideoFeed);
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+      await tester.pump();
+      final state = tester.state<FeedVideosState>(find.byType(FeedVideos));
+      state.didPushNext();
+      await tester.pump();
+      expect(
+        tester.widget<InfiniteVideoFeed>(finder).releaseNeighboursWhenInactive,
+        isTrue,
+        reason: 'A covered route must release even while unfocused',
+      );
+    });
+
+    testWidgets('codec-heavy surfaces still drain an unfocused feed', (
+      tester,
+    ) async {
+      final codecCubit = CodecHeavySurfaceCubit();
+      addTearDown(codecCubit.close);
+      final container = await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        codecHeavySurfaceCubit: codecCubit,
+        releaseNeighboursWhenInactive: true,
+      );
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+      await tester.pump();
+      codecCubit.enter();
+      await tester.pump();
+
+      final feed = tester.widget<InfiniteVideoFeed>(
+        find.byType(InfiniteVideoFeed),
+      );
+      expect(feed.isActive, isFalse);
+      expect(feed.releaseCurrentWhenInactive, isTrue);
+    });
+
+    testWidgets('an inactive feed still releases neighbours while unfocused', (
+      tester,
+    ) async {
+      final container = await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        isActive: false,
+        releaseNeighboursWhenInactive: true,
+      );
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+      await tester.pump();
+      final feed = tester.widget<InfiniteVideoFeed>(
+        find.byType(InfiniteVideoFeed),
+      );
+      expect(feed.isActive, isFalse);
+      expect(feed.releaseNeighboursWhenInactive, isTrue);
     });
 
     testWidgets('pauses InfiniteVideoFeed while app is backgrounded', (

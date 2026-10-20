@@ -21,6 +21,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
 import 'package:openvine/providers/playback_eligibility_provider.dart';
@@ -267,6 +268,14 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     final playbackEligible = ref.watch(playbackEligibleProvider);
     final isFeedActive =
         widget.isActive && _routeAllowsPlayback && playbackEligible;
+    // A focus-only pause leaves the visible feed warm for the next swipe.
+    // Route/tab changes and actual backgrounding still apply its release policy,
+    // including when they happen after focus has already been lost.
+    final focusOnlyPause =
+        widget.isActive &&
+        _routeAllowsPlayback &&
+        ref.watch(appForegroundProvider) &&
+        !playbackEligible;
     // Rebuild when a community-label prefetch resolves, and when the
     // kill-switch flips, so InfiniteVideoFeed re-syncs the autoplay gate from
     // didUpdateWidget. The package captures the gate answer per rebuild
@@ -318,7 +327,8 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         key: _feedKey,
         videos: widget.videos,
         isActive: isFeedActive,
-        releaseNeighboursWhenInactive: widget.releaseNeighboursWhenInactive,
+        releaseNeighboursWhenInactive:
+            widget.releaseNeighboursWhenInactive && !focusOnlyPause,
         releaseCurrentWhenInactive: codecHeavySurfaceActive,
         // mediaCacheProvider is a keepAlive singleton; identity is stable for
         // the app lifetime, so ref.read is safe here. See
