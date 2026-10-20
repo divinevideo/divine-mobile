@@ -80,8 +80,10 @@ class DmVideoStore {
 
   static const String _partSuffix = '.part';
 
-  /// Age past which [sweepOwners] treats a part file as left by a crash.
-  static const Duration _crashedPartAge = Duration(hours: 1);
+  /// How long a file may still be in use after it was written or opened: a
+  /// part file being written, or a video playing or being saved. Pruning
+  /// leaves such a file alone.
+  static const Duration _mayBeInUseFor = Duration(hours: 1);
 
   /// How many times each account's videos were deleted by [deleteOwner]. A
   /// store remembers the count it was created at, so a download that lands
@@ -109,7 +111,6 @@ class DmVideoStore {
   /// video in memory, and a long thread shows many at once.
   Future<void> _autoDownloadQueue = Future<void>.value();
   final Map<String, Future<File?>> _previewsInFlight = {};
-  final Set<String> _partsBeingWritten = {};
   int _writes = 0;
   final StreamController<String> _kept = StreamController<String>.broadcast();
 
@@ -171,18 +172,24 @@ class DmVideoStore {
 
   /// Deletes files nobody opened for [maxIdle], then the least recently
   /// opened ones until this account's files fit in [maxBytes].
+  ///
+  /// A file opened in the last hour is never deleted to fit, since it may be
+  /// playing or being saved, so the files can stay over [maxBytes] until it
+  /// ages. Part files are deleted only once old enough to be a crash's.
   Future<void> prune() async {
     final dir = await _ownerDirectory();
     if (!dir.existsSync()) return;
-    final cutoff = _now().subtract(maxIdle);
+    final now = _now();
     final kept = <({File file, DateTime opened, int size})>[];
     await for (final entity in dir.list()) {
-      if (entity is! File || _partsBeingWritten.contains(entity.path)) {
+      if (entity is! File) continue;
+      final stat = entity.statSync();
+      final age = now.difference(stat.modified);
+      if (entity.path.endsWith(_partSuffix)) {
+        if (age > _mayBeInUseFor) _deleteQuietly(entity);
         continue;
       }
-      final stat = entity.statSync();
-      // A part file not being written was left by a crash mid-write.
-      if (entity.path.endsWith(_partSuffix) || stat.modified.isBefore(cutoff)) {
+      if (age > maxIdle) {
         _deleteQuietly(entity);
         continue;
       }
@@ -193,7 +200,10 @@ class DmVideoStore {
     if (total <= maxBytes) return;
     kept.sort((a, b) => a.opened.compareTo(b.opened));
     for (final entry in kept) {
-      if (total <= maxBytes) break;
+      // Sorted oldest first, so every file after this one is in use too.
+      if (total <= maxBytes || now.difference(entry.opened) < _mayBeInUseFor) {
+        break;
+      }
       _deleteQuietly(entry.file);
       total -= entry.size;
     }
@@ -249,7 +259,7 @@ class DmVideoStore {
   }
 
   /// Deletes files in [dir] unopened for [maxIdle], and part files older than
-  /// [_crashedPartAge]: a younger one may be a download the signed-in
+  /// [_mayBeInUseFor]: a younger one may be a download the signed-in
   /// account's store is still writing.
   static void _deleteIdleFiles(
     Directory dir,
@@ -260,7 +270,7 @@ class DmVideoStore {
       if (entity is! File) continue;
       final age = now.difference(entity.statSync().modified);
       final isPart = entity.path.endsWith(_partSuffix);
-      if (age > maxIdle || (isPart && age > _crashedPartAge)) {
+      if (age > maxIdle || (isPart && age > _mayBeInUseFor)) {
         _deleteQuietly(entity);
       }
     }
@@ -357,7 +367,6 @@ class DmVideoStore {
     // Each write its own part file: two reads of the same frame can run at
     // once, and sharing one would make the second rename fail.
     final part = File('${file.path}.${_writes++}$_partSuffix');
-    _partsBeingWritten.add(part.path);
     try {
       _throwIfOwnerRemoved();
       await part.parent.create(recursive: true);
@@ -367,8 +376,6 @@ class DmVideoStore {
     } catch (_) {
       _deleteQuietly(part);
       rethrow;
-    } finally {
-      _partsBeingWritten.remove(part.path);
     }
   }
 

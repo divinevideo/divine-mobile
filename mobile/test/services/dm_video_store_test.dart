@@ -393,17 +393,60 @@ void main() {
         expect(file.existsSync(), isTrue);
       });
 
-      test('clears a write a crash left unfinished', () async {
-        final unfinished = keptFile(
-          '${'a' * 64}.mp4.part',
+      test('clears a part file a crash left', () async {
+        final crashed = keptFile(
+          '${'a' * 64}.mp4.0.part',
           const [1],
-          opened: now,
+          opened: now.subtract(const Duration(hours: 2)),
         );
 
         await createStore().prune();
 
-        expect(unfinished.existsSync(), isFalse);
+        expect(crashed.existsSync(), isFalse);
       });
+
+      test(
+        'leaves a part file younger than an hour: it may still be written',
+        () async {
+          final writing = keptFile(
+            '${'a' * 64}.mp4.0.part',
+            const [1],
+            opened: now,
+          );
+
+          await createStore().prune();
+
+          expect(writing.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        'never trims a video opened within the last hour to fit the cap, as '
+        'it may be playing',
+        () async {
+          final playing = keptFile(
+            'playing.mp4',
+            const [1, 2, 3, 4],
+            opened: now.subtract(const Duration(minutes: 30)),
+          );
+          final newer = keptFile(
+            'newer.mp4',
+            const [1, 2, 3, 4],
+            opened: now.subtract(const Duration(minutes: 5)),
+          );
+          final stale = keptFile(
+            'stale.mp4',
+            const [1, 2, 3, 4],
+            opened: now.subtract(const Duration(hours: 2)),
+          );
+
+          await createStore(maxBytes: 4).prune();
+
+          expect(stale.existsSync(), isFalse);
+          expect(playing.existsSync(), isTrue);
+          expect(newer.existsSync(), isTrue);
+        },
+      );
     });
 
     group('account folders', () {
