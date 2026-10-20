@@ -288,6 +288,9 @@ class _ExploreViewState extends ConsumerState<ExploreView>
     final appsAvailable =
         nostrAppsSandboxSupported &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.integratedApps));
+    final liveEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.livestreamingBeta),
+    );
 
     final featuredTab = context.select(
       (FeaturedTabsCubit cubit) => cubit.state.tab,
@@ -297,6 +300,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
     _tabs.updateAvailability(
       classicsAvailable: classicsAvailable,
       forYouAvailable: forYouAvailable,
+      liveAvailable: liveEnabled,
       appsAvailable: appsAvailable,
       featuredTab: featuredTab,
     );

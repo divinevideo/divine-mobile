@@ -6,6 +6,9 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 
 void main() {
   group('FeatureFlag enum', () {
+    test('livestream flag stays available', () {
+      expect(FeatureFlag.livestreamingBeta.displayName, 'Livestream');
+    });
     test('should have display names', () {
       expect(FeatureFlag.debugTools.displayName, equals('Debug Tools'));
     });
