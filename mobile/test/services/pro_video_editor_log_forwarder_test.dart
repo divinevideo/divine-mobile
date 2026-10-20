@@ -44,6 +44,33 @@ void main() {
   });
 
   group('ProVideoEditorLogForwarder.forwardEntry', () {
+    test('redacts sandbox paths in local logs at every native level', () {
+      const path =
+          '/data/user/0/co.openvine.app/cache/dm_videos/owner/message.mp4';
+      for (final level in NativeLogLevel.values) {
+        final tag = 'pve-private-path-${level.name}';
+        ProVideoEditorLogForwarder.forwardEntry(
+          entry(
+            level,
+            'Cannot decode $path',
+            tag: tag,
+            stackTrace: 'Caused by: cannot open $path',
+          ),
+        );
+
+        final logged = LogCaptureService().getRecentLogs().lastWhere(
+          (entry) => entry.name == tag,
+        );
+        expect(logged.message, contains('Cannot decode'));
+        expect(logged.message, isNot(contains(path)));
+        expect(logged.message, contains('[REDACTED]'));
+        if (level == NativeLogLevel.error) {
+          expect(logged.stackTrace.toString(), contains('Caused by:'));
+          expect(logged.stackTrace.toString(), isNot(contains(path)));
+        }
+      }
+    });
+
     test('preserves native failure and cause chain in crash breadcrumbs', () {
       final reporter = _RecordingCrashReporter();
       const stack =

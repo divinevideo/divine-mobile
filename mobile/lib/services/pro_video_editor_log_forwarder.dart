@@ -50,44 +50,44 @@ class ProVideoEditorLogForwarder {
     CrashReporter crashReporter = const SilentCrashReporter(),
   }) {
     if (entry.message.isEmpty) return;
-    final name = (entry.tag?.isNotEmpty ?? false)
-        ? entry.tag!
-        : 'ProVideoEditorNative';
+    final name = redactFilesystemPaths(
+      (entry.tag?.isNotEmpty ?? false) ? entry.tag! : 'ProVideoEditorNative',
+    );
+    // Redact before either sink: the local capture also retains native logs.
+    final message = redactFilesystemPaths(entry.message);
+    final stack = entry.stackTrace == null
+        ? null
+        : redactFilesystemPaths(entry.stackTrace!);
     // The final render owns the non-fatal report. Native fallback attempts
     // contribute context without each becoming a separate crash issue.
     if (entry.level == NativeLogLevel.warning ||
         entry.level == NativeLogLevel.error) {
-      final stack = entry.stackTrace;
       // A native message can quote a file's path, and a kept video DM's path
       // names the account and the message.
       crashReporter.log(
         sanitizeForCrashReport(
-          redactFilesystemPaths(
-            '[$name] ${entry.message}'
-            '${stack == null || stack.isEmpty ? '' : '\n$stack'}',
-          ),
+          '[$name] $message'
+          '${stack == null || stack.isEmpty ? '' : '\n$stack'}',
         ),
       );
     }
     switch (entry.level) {
       case NativeLogLevel.error:
         Log.error(
-          entry.message,
+          message,
           name: name,
           category: LogCategory.video,
-          stackTrace: entry.stackTrace == null
-              ? null
-              : StackTrace.fromString(entry.stackTrace!),
+          stackTrace: stack == null ? null : StackTrace.fromString(stack),
         );
       case NativeLogLevel.warning:
-        Log.warning(entry.message, name: name, category: LogCategory.video);
+        Log.warning(message, name: name, category: LogCategory.video);
       case NativeLogLevel.debug:
-        Log.debug(entry.message, name: name, category: LogCategory.video);
+        Log.debug(message, name: name, category: LogCategory.video);
       case NativeLogLevel.verbose:
-        Log.verbose(entry.message, name: name, category: LogCategory.video);
+        Log.verbose(message, name: name, category: LogCategory.video);
       case NativeLogLevel.info:
       case NativeLogLevel.none:
-        Log.info(entry.message, name: name, category: LogCategory.video);
+        Log.info(message, name: name, category: LogCategory.video);
     }
   }
 }
