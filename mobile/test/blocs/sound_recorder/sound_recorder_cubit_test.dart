@@ -24,6 +24,7 @@ class _FakeRecorder implements VoiceOverRecorderService {
   final _levels = StreamController<double>.broadcast();
   bool throwOnStart = false;
   String? path;
+  DateTime now = DateTime(2026);
 
   @override
   Stream<double> get amplitudeStream => _levels.stream;
@@ -43,6 +44,7 @@ class _FakeRecorder implements VoiceOverRecorderService {
   Future<void> dispose() => _levels.close();
 
   Future<void> emitLevel(double level) async {
+    now = now.add(SoundRecorderCubit.amplitudeInterval);
     _levels.add(level);
     await pumpEventQueue();
   }
@@ -75,6 +77,7 @@ void main() {
         audioSessionService: audioSession,
         recorder: recorder,
         scratchDirectoryProvider: () async => scratch,
+        now: () => recorder.now,
         maxDuration: maxDuration ?? SoundRecorderCubit.defaultMaxDuration,
       );
       addTearDown(cubit.close);
@@ -135,6 +138,38 @@ void main() {
     });
 
     group('stop', () {
+      test(
+        'uses elapsed clock time instead of counting meter samples',
+        () async {
+          final cubit = build();
+          await cubit.start();
+          recorder.now = recorder.now.add(const Duration(seconds: 20));
+
+          await recorder.emitLevel(0.5);
+
+          expect(
+            cubit.state.elapsed,
+            const Duration(seconds: 20) + SoundRecorderCubit.amplitudeInterval,
+          );
+        },
+      );
+
+      testWidgets(
+        'enforces the length limit even when no meter samples arrive',
+        (tester) async {
+          final cubit = build(maxDuration: const Duration(seconds: 1));
+          await cubit.start();
+          expect(cubit.state.isRecording, isTrue);
+
+          await tester.pump(const Duration(seconds: 1));
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+
+          expect(cubit.state.isActive, isFalse);
+          expect(audioSession.resetCount, 1);
+        },
+      );
+
       test('hands the finished file over and resets the session', () async {
         final cubit = build();
         await cubit.start();

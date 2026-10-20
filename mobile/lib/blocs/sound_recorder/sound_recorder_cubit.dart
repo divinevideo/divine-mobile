@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc/bloc.dart';
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/services/haptic_service.dart';
@@ -38,12 +39,14 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     required AudioSessionService audioSessionService,
     VoiceOverRecorderService? recorder,
     Future<Directory> Function()? scratchDirectoryProvider,
+    DateTime Function()? now,
     Duration maxDuration = defaultMaxDuration,
   }) : _permissionsService = permissionsService,
        _audioSessionService = audioSessionService,
        _recorder = recorder ?? RecordVoiceOverRecorderService(),
        _scratchDirectoryProvider =
            scratchDirectoryProvider ?? _defaultScratchDirectory,
+       _now = now ?? clock.now,
        super(SoundRecorderState(maxDuration: maxDuration));
 
   /// Length at which a recording stops on its own, so a recorder left running
@@ -64,8 +67,11 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   final AudioSessionService _audioSessionService;
   final VoiceOverRecorderService _recorder;
   final Future<Directory> Function() _scratchDirectoryProvider;
+  final DateTime Function() _now;
 
   StreamSubscription<double>? _amplitudeSubscription;
+  Timer? _durationLimit;
+  late DateTime _startedAt;
 
   // Recorder bookkeeping the UI never renders, kept off the state like
   // VoiceOverCubit's: the file being written, and a latch that stops a double
@@ -200,6 +206,18 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       return;
     }
 
+    _startedAt = _now();
+    _durationLimit = Timer(state.maxDuration, () {
+      // Meter samples can stall independently of native capture. The length
+      // limit must not depend on the number of samples delivered to Dart.
+      emitIfOpen(state.copyWith(elapsed: state.maxDuration));
+      runDetached(
+        stop(),
+        'stop a recording at its length limit',
+        logName: _logName,
+        category: LogCategory.video,
+      );
+    });
     emitIfOpen(
       state.copyWith(
         status: SoundRecorderStatus.recording,
@@ -218,7 +236,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     if (bars.length > _maxWaveformBars) {
       bars.removeRange(0, bars.length - _maxWaveformBars);
     }
-    final elapsed = state.elapsed + amplitudeInterval;
+    final elapsed = _now().difference(_startedAt);
     emitIfOpen(state.copyWith(waveformBars: bars, elapsed: elapsed));
     if (elapsed >= state.maxDuration) {
       runDetached(
@@ -231,6 +249,8 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   }
 
   Future<void> _stopMetering() async {
+    _durationLimit?.cancel();
+    _durationLimit = null;
     await _amplitudeSubscription?.cancel();
     _amplitudeSubscription = null;
   }
