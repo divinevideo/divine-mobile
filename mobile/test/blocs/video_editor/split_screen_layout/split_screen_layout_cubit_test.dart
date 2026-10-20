@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/painting.dart' show Alignment;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
@@ -11,6 +12,7 @@ import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_lay
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/video_editor/split_screen_layout_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
@@ -36,6 +38,7 @@ class _FakeRender {
       [];
   final List<String?> cleanedUp = [];
   bool fail = false;
+  Object? error;
 
   SplitScreenLayoutCubit cubit({SplitScreenBakeChromaKeyFn? bake}) =>
       SplitScreenLayoutCubit(
@@ -50,6 +53,7 @@ class _FakeRender {
               required taskId,
             }) async {
               calls.add((cells: cells, background: backgroundColor));
+              if (error case final error?) throw error;
               return fail ? null : _clip('layout', seconds: 3);
             },
         deferFileCleanup: cleanedUp.addAll,
@@ -261,6 +265,38 @@ void main() {
         expect(cubit.state.canApply, isTrue);
         addTearDown(cubit.close);
       });
+
+      blocTest<SplitScreenLayoutCubit, SplitScreenLayoutState>(
+        'reports a broken invariant in the render for a crash report',
+        build: () {
+          renders.error = StateError('impossible');
+          return renders.cubit()..clipsPicked([_clip('a')]);
+        },
+        act: (cubit) => cubit.apply(),
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (error) => error.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
+      );
+
+      blocTest<SplitScreenLayoutCubit, SplitScreenLayoutState>(
+        'keeps an expected render failure out of crash reports',
+        build: () {
+          renders.error = Exception('encoder busy');
+          return renders.cubit()..clipsPicked([_clip('a')]);
+        },
+        act: (cubit) => cubit.apply(),
+        errors: () => [
+          isA<Exception>().having(
+            (error) => error is ReportableError,
+            'is reportable',
+            isFalse,
+          ),
+        ],
+      );
 
       test('blocks the layout while a recorded key is being baked', () async {
         final baked = Completer<DivineVideoClip>();

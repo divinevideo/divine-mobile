@@ -324,13 +324,10 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
     } catch (e, stackTrace) {
       cleanUp(written);
       if (isClosed) return;
-      final error = switch (e) {
-        StateError() ||
-        TypeError() ||
-        RangeError() => Reportable(e, context: 'SplitScreenLayoutCubit.apply'),
-        _ => e,
-      };
-      addError(error, stackTrace);
+      addError(
+        asReportableError(e, context: 'SplitScreenLayoutCubit.apply') ?? e,
+        stackTrace,
+      );
       Log.error(
         '❌ Failed to render the split-screen layout: $e',
         name: 'SplitScreenLayoutCubit',
