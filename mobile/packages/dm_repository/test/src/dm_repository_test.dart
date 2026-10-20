@@ -729,6 +729,24 @@ const _giftWrapEventId2 =
 const _secondTargetRumorId =
     '16789012345678901234567890abcdef1234567890123456789012ab12c3d4e5';
 
+/// Runs [future] to completion under [async], firing zero-delay timers, and
+/// returns its value.
+T _resolve<T>(FakeAsync async, Future<T> future) {
+  late T value;
+  var done = false;
+  unawaited(
+    future.then((v) {
+      value = v;
+      done = true;
+    }),
+  );
+  async
+    ..flushMicrotasks()
+    ..elapse(Duration.zero);
+  expect(done, isTrue, reason: 'the future did not complete with a value');
+  return value;
+}
+
 void main() {
   group(DmRepository, () {
     late _MockNostrClient mockNostrClient;
@@ -14192,16 +14210,11 @@ void main() {
           final repository = createRepository(
             readMarkerDebounceDelay: Duration.zero,
           );
-          bool? result;
-          unawaited(
-            repository.markConversationAsRead(conversationId).then((value) {
-              result = value;
-            }),
+
+          expect(
+            _resolve(async, repository.markConversationAsRead(conversationId)),
+            isFalse,
           );
-          async
-            ..flushMicrotasks()
-            ..elapse(Duration.zero);
-          expect(result, isFalse);
           verifyNever(
             () => mockMessageService.publishSelfApplicationMarker(
               content: any(named: 'content'),
@@ -14212,55 +14225,73 @@ void main() {
         });
       });
 
-      for (final matched in [0, 1]) {
-        test('a partial batch with $matched rows syncs only actual writes', () {
-          fakeAsync((async) {
-            when(
-              () => mockConversationsDao.markMultipleAsRead(
-                any(),
-                ownerPubkey: any(named: 'ownerPubkey'),
-              ),
-            ).thenAnswer((_) async => matched);
-            when(
-              () => mockConversationsDao.getAllConversations(
-                ownerPubkey: any(named: 'ownerPubkey'),
-              ),
-            ).thenAnswer((_) async => [readConversation(cursor: 1700000200)]);
-            final repository = createRepository(
-              readMarkerDebounceDelay: Duration.zero,
-            );
-            bool? result;
-            unawaited(
-              repository
-                  .markConversationsAsRead([conversationId, 'missing'])
-                  .then((value) {
-                    result = value;
-                  }),
-            );
-            async
-              ..flushMicrotasks()
-              ..elapse(Duration.zero);
-            expect(result, isFalse);
-            if (matched == 0) {
-              verifyNever(
-                () => mockMessageService.publishSelfApplicationMarker(
-                  content: any(named: 'content'),
-                  tags: any(named: 'tags'),
-                  eventKind: any(named: 'eventKind'),
-                ),
-              );
-            } else {
-              verify(
-                () => mockMessageService.publishSelfApplicationMarker(
-                  content: any(named: 'content'),
-                  tags: any(named: 'tags'),
-                  eventKind: any(named: 'eventKind'),
-                ),
-              ).called(1);
-            }
-          });
+      test('a batch that finds no requested row publishes no read marker', () {
+        fakeAsync((async) {
+          when(
+            () => mockConversationsDao.markMultipleAsRead(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => 0);
+          when(
+            () => mockConversationsDao.getAllConversations(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [readConversation(cursor: 1700000200)]);
+          final repository = createRepository(
+            readMarkerDebounceDelay: Duration.zero,
+          );
+
+          expect(
+            _resolve(
+              async,
+              repository.markConversationsAsRead([conversationId, 'missing']),
+            ),
+            isFalse,
+          );
+          verifyNever(
+            () => mockMessageService.publishSelfApplicationMarker(
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              eventKind: any(named: 'eventKind'),
+            ),
+          );
         });
-      }
+      });
+
+      test('a partial batch reports failure and still publishes a marker', () {
+        fakeAsync((async) {
+          when(
+            () => mockConversationsDao.markMultipleAsRead(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => 1);
+          when(
+            () => mockConversationsDao.getAllConversations(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [readConversation(cursor: 1700000200)]);
+          final repository = createRepository(
+            readMarkerDebounceDelay: Duration.zero,
+          );
+
+          expect(
+            _resolve(
+              async,
+              repository.markConversationsAsRead([conversationId, 'missing']),
+            ),
+            isFalse,
+          );
+          verify(
+            () => mockMessageService.publishSelfApplicationMarker(
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              eventKind: any(named: 'eventKind'),
+            ),
+          ).called(1);
+        });
+      });
 
       test(
         'reading a conversation publishes a debounced self-only read marker '
