@@ -421,6 +421,23 @@ void main() {
         finish.complete('out.mp4');
         await render;
       });
+
+      test('does not repeat the state the render started in', () async {
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        // A render that starts while observers hear about a change is then
+        // told the state it already opened in.
+        moveThrough(const [
+          AppLifecycleState.resumed,
+          AppLifecycleState.inactive,
+        ]);
+
+        expect(statesIn(readOnlyMarker()), equals(['resumed', 'inactive']));
+
+        finish.complete('out.mp4');
+        await render;
+      });
     });
 
     group('initialize', () {
