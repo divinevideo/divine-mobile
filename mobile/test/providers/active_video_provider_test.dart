@@ -7,6 +7,7 @@ import 'package:models/models.dart';
 import 'package:openvine/providers/active_video_provider.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/state/video_feed_state.dart';
@@ -47,6 +48,18 @@ void main() {
         const RouteContext(type: RouteType.explore, videoIndex: 0),
       );
 
+      expect(container.read(activeVideoIdProvider), video.stableId);
+    });
+
+    test('focus loss pauses legacy playback without backgrounding the app', () {
+      final container = containerFor(
+        const RouteContext(type: RouteType.explore, videoIndex: 0),
+      );
+      expect(container.read(activeVideoIdProvider), video.stableId);
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+      expect(container.read(activeVideoIdProvider), isNull);
+      expect(container.read(appForegroundProvider), isTrue);
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(true);
       expect(container.read(activeVideoIdProvider), video.stableId);
     });
 

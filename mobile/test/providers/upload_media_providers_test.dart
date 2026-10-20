@@ -10,6 +10,7 @@ import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/shell_obscured_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
@@ -97,6 +98,18 @@ void main() {
       container.read(appForegroundProvider.notifier).setForeground(false);
 
       expect(container.read(uploadBackpressureActiveProvider), isFalse);
+    });
+
+    test('stops yielding while the home feed is paused by window focus', () {
+      container.read(activeBranchIndexProvider.notifier).state = 0;
+      expect(container.read(uploadBackpressureActiveProvider), isTrue);
+
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+      expect(container.read(appForegroundProvider), isTrue);
+      expect(container.read(uploadBackpressureActiveProvider), isFalse);
+
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(true);
+      expect(container.read(uploadBackpressureActiveProvider), isTrue);
     });
 
     test('is active for route-driven playback outside the home feed', () {
