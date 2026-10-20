@@ -6,11 +6,23 @@ import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
+import 'package:openvine/services/dm_video_preview.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+// Not exported from pro_video_editor's barrel. Imported by path so the test
+// can subclass MethodChannelProVideoEditor without its EventChannel setup.
+import 'package:pro_video_editor/core/platform/native_method_channel.dart';
+import 'package:pro_video_editor/core/platform/platform_interface.dart';
+
+class _NoopInitProVideoEditor extends MethodChannelProVideoEditor {
+  @override
+  Stream<dynamic> initializeStream() => const Stream.empty();
+}
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -69,11 +81,53 @@ void main() {
     ciphertextSize: file.lengthSync(),
   );
 
-  DmVideoSendService createService() => DmVideoSendService(
-    dmRepository: dmRepository,
-    blossom: blossom,
-    encryption: encryption,
-  );
+  DmVideoSendService createService({DmVideoPreviewReader? readPreview}) =>
+      DmVideoSendService(
+        dmRepository: dmRepository,
+        blossom: blossom,
+        encryption: encryption,
+        readPreview:
+            readPreview ?? (_) async => (blurhash: null, dimensions: null),
+      );
+
+  /// Stubs a successful encrypt and upload of [videoFile], and captures the
+  /// metadata the service hands to [DmRepository.sendFileMessage].
+  List<DmFileMetadata> stubSuccessfulSend(
+    File videoFile, {
+    void Function()? onEncrypt,
+  }) {
+    final ciphertext = ciphertextFile();
+    when(() => encryption.encryptFile(videoFile)).thenAnswer((_) async {
+      onEncrypt?.call();
+      return encryptedVideo(ciphertext);
+    });
+    when(
+      () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
+    ).thenAnswer(
+      (_) async => const BlossomUploadResult(
+        success: true,
+        videoId: _ciphertextHash,
+        url: _fileUrl,
+      ),
+    );
+    final sent = <DmFileMetadata>[];
+    when(
+      () => dmRepository.sendFileMessage(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        fileUrl: any(named: 'fileUrl'),
+        fileMetadata: any(named: 'fileMetadata'),
+        extraTags: any(named: 'extraTags'),
+      ),
+    ).thenAnswer((invocation) async {
+      sent.add(invocation.namedArguments[#fileMetadata] as DmFileMetadata);
+      return NIP17SendResult.success(
+        rumorEventId: 'rumor-1',
+        messageEventId: 'wrap-1',
+        recipientPubkey: _recipientPubkey,
+      );
+    });
+    return sent;
+  }
 
   group(DmVideoSendService, () {
     test(
@@ -205,6 +259,137 @@ void main() {
           ],
         ),
       ).called(1);
+    });
+
+    group('preview', () {
+      late File videoFile;
+
+      setUp(() {
+        videoFile = File('${tempDir.path}/clip.mp4')
+          ..writeAsBytesSync(const [9, 9, 9]);
+      });
+
+      test(
+        'sends the blurhash and size read from the video, so the recipient '
+        'sees a preview instead of a blank card',
+        () async {
+          final sent = stubSuccessfulSend(videoFile);
+          final readFrom = <String>[];
+
+          final result =
+              await createService(
+                readPreview: (file) async {
+                  readFrom.add(file.path);
+                  return (
+                    blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
+                    dimensions: '1080x1920',
+                  );
+                },
+              ).sendVideo(
+                recipientPubkey: _recipientPubkey,
+                videoFile: videoFile,
+                mimeType: 'video/mp4',
+              );
+
+          expect(result.success, isTrue);
+          expect(readFrom, equals([videoFile.path]));
+          expect(sent.single.blurhash, 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH');
+          expect(sent.single.dimensions, '1080x1920');
+          expect(sent.single.thumbnailUrl, isNull);
+        },
+      );
+
+      test(
+        'reads the preview once the file is encrypted, so encryption does not '
+        'use up its time limit',
+        () async {
+          // Encryption runs on this isolate and holds it for seconds on a
+          // large file, which would expire a deadline started before it.
+          final order = <String>[];
+          final sent = stubSuccessfulSend(
+            videoFile,
+            onEncrypt: () => order.add('encrypt'),
+          );
+
+          final result =
+              await createService(
+                readPreview: (_) async {
+                  order.add('preview');
+                  return (blurhash: null, dimensions: null);
+                },
+              ).sendVideo(
+                recipientPubkey: _recipientPubkey,
+                videoFile: videoFile,
+                mimeType: 'video/mp4',
+              );
+
+          expect(result.success, isTrue);
+          expect(sent, hasLength(1));
+          expect(order, equals(['encrypt', 'preview']));
+        },
+      );
+
+      test('keeps a blurhash and size the caller already has', () async {
+        final sent = stubSuccessfulSend(videoFile);
+
+        final result =
+            await createService(
+              readPreview: (_) async =>
+                  (blurhash: 'L00000fQfQfQfQfQfQfQfQfQfQfQ', dimensions: '1x1'),
+            ).sendVideo(
+              recipientPubkey: _recipientPubkey,
+              videoFile: videoFile,
+              mimeType: 'video/mp4',
+              blurhash: 'LEHV6nWB2yk8',
+              dimensions: '1080x1080',
+            );
+
+        expect(result.success, isTrue);
+        expect(sent.single.blurhash, 'LEHV6nWB2yk8');
+        expect(sent.single.dimensions, '1080x1080');
+      });
+
+      test('reads the preview from the video when none is injected', () async {
+        final sent = stubSuccessfulSend(videoFile);
+        final originalProVideoEditor = ProVideoEditor.instance;
+        ProVideoEditor.instance = _NoopInitProVideoEditor();
+        const channel = MethodChannel('pro_video_editor');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              return switch (call.method) {
+                'getThumbnails' => [
+                  img.encodePng(
+                    img.fill(
+                      img.Image(width: 16, height: 16),
+                      color: img.ColorRgb8(255, 0, 0),
+                    ),
+                  ),
+                ],
+                'getMetadata' => const {'width': 1080, 'height': 1920},
+                _ => null,
+              };
+            });
+        addTearDown(() {
+          ProVideoEditor.instance = originalProVideoEditor;
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, null);
+        });
+
+        final result =
+            await DmVideoSendService(
+              dmRepository: dmRepository,
+              blossom: blossom,
+              encryption: encryption,
+            ).sendVideo(
+              recipientPubkey: _recipientPubkey,
+              videoFile: videoFile,
+              mimeType: 'video/mp4',
+            );
+
+        expect(result.success, isTrue);
+        expect(sent.single.blurhash, isNotNull);
+        expect(sent.single.dimensions, '1080x1920');
+      });
     });
 
     test('upload failure skips sendFileMessage and still cleans up', () async {

@@ -29,6 +29,23 @@ class _MockDmVideoDecryptor extends Mock implements DmVideoDecryptor {}
 
 class _MockGallerySaveService extends Mock implements GallerySaveService {}
 
+/// Native player events the test sends once the controller is listening.
+class _PlayerEvents extends MockStreamHandler {
+  MockStreamHandlerEventSink? _sink;
+
+  @override
+  void onListen(Object? arguments, MockStreamHandlerEventSink events) {
+    _sink = events;
+  }
+
+  @override
+  void onCancel(Object? arguments) {
+    _sink = null;
+  }
+
+  void emit(Map<Object?, Object?> state) => _sink!.success(state);
+}
+
 DmFileMetadata _videoMetadata() => DmFileMetadata(
   fileType: 'video/mp4',
   encryptionAlgorithm: 'aes-gcm',
@@ -183,6 +200,156 @@ void main() {
       expect(
         find.text(AppLocalizationsEn().dmVideoUnavailable),
         findsOneWidget,
+      );
+    });
+
+    group('playback', () {
+      late _PlayerEvents events;
+      late List<MethodCall> playerCalls;
+
+      /// Opens the page on a decrypted clip and waits for the player.
+      Future<void> openPlayer(WidgetTester tester) async {
+        stubDelete();
+        stubDecrypt(() async {
+          File(expectedClipPath())
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(const [1, 2, 3]);
+          return expectedClipPath();
+        });
+        events = _PlayerEvents();
+        playerCalls = [];
+        installMockDivineVideoPlayer(
+          onMethodCall: (call) async {
+            playerCalls.add(call);
+            return null;
+          },
+          streamHandler: events,
+        );
+
+        await tester.pumpWidget(host());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.byType(DivineVideoPlayer), findsOneWidget);
+      }
+
+      testWidgets('loops the clip, as every Divine video does', (tester) async {
+        await openPlayer(tester);
+
+        final looping = playerCalls.where((c) => c.method == 'setLooping');
+        expect(looping, hasLength(1));
+        expect(looping.single.arguments, equals({'looping': true}));
+      });
+
+      testWidgets('keeps the clip in its own shape instead of stretching it', (
+        tester,
+      ) async {
+        await openPlayer(tester);
+
+        events.emit(const {
+          'status': 'playing',
+          'isFirstFrameRendered': true,
+          'videoWidth': 1080,
+          'videoHeight': 1920,
+        });
+        await tester.pump();
+
+        final size = tester.getSize(find.byType(DivineVideoPlayer));
+        expect(size.width / size.height, closeTo(9 / 16, 0.01));
+      });
+
+      testWidgets(
+        'keeps a portrait clip stored sideways in portrait, as Android reports '
+        'it',
+        (tester) async {
+          await openPlayer(tester);
+
+          // Android reports the displayed size alongside the rotation it
+          // still applies to the texture itself.
+          events.emit(const {
+            'status': 'playing',
+            'isFirstFrameRendered': true,
+            'videoWidth': 1080,
+            'videoHeight': 1920,
+            'rotationDegrees': 90,
+          });
+          await tester.pump();
+
+          final size = tester.getSize(find.byType(DivineVideoPlayer));
+          expect(size.width / size.height, closeTo(9 / 16, 0.01));
+        },
+      );
+
+      testWidgets('allows for non-square pixels', (tester) async {
+        await openPlayer(tester);
+
+        events.emit(const {
+          'status': 'playing',
+          'isFirstFrameRendered': true,
+          'videoWidth': 1440,
+          'videoHeight': 1920,
+          'pixelWidthHeightRatio': 0.75,
+        });
+        await tester.pump();
+
+        final size = tester.getSize(find.byType(DivineVideoPlayer));
+        expect(size.width / size.height, closeTo(9 / 16, 0.01));
+      });
+
+      testWidgets(
+        'tells the viewer the video could not be opened when the player fails '
+        'after starting, instead of leaving a black screen',
+        (tester) async {
+          await openPlayer(tester);
+
+          events
+            ..emit(const {'status': 'error', 'errorMessage': 'decode'})
+            ..emit(const {'status': 'error', 'errorMessage': 'decode'});
+          await tester.pump(const Duration(seconds: 3));
+          await tester.pump();
+
+          expect(find.byType(DivineVideoPlayer), findsNothing);
+          expect(
+            find.text(AppLocalizationsEn().dmVideoUnavailable),
+            findsOneWidget,
+          );
+          verify(() => decryptor.deleteClip(expectedClipPath())).called(1);
+        },
+      );
+    });
+
+    group('player recovery', () {
+      testWidgets(
+        'keeps playing when the player recovers from a decoder error, as '
+        'Android retries one',
+        (tester) async {
+          stubDelete();
+          stubDecrypt(() async {
+            File(expectedClipPath())
+              ..createSync(recursive: true)
+              ..writeAsBytesSync(const [1, 2, 3]);
+            return expectedClipPath();
+          });
+          final events = _PlayerEvents();
+          installMockDivineVideoPlayer(streamHandler: events);
+          await tester.pumpWidget(host());
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          events.emit(const {'status': 'error', 'errorMessage': 'decoder'});
+          await tester.pump(const Duration(milliseconds: 700));
+          events.emit(const {
+            'status': 'playing',
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump(const Duration(seconds: 5));
+
+          expect(find.byType(DivineVideoPlayer), findsOneWidget);
+          expect(
+            find.text(AppLocalizationsEn().dmVideoUnavailable),
+            findsNothing,
+          );
+          verifyNever(() => decryptor.deleteClip(any()));
+        },
       );
     });
 

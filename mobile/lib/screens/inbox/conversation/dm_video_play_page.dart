@@ -8,7 +8,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart';
+import 'package:models/models.dart' show DmMessage;
 import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
@@ -245,8 +245,9 @@ class _Unavailable extends StatelessWidget {
   }
 }
 
-/// Plays the decrypted clip. Owns the native player controller; a player
-/// failure is reported to the cubit, which deletes the clip.
+/// Plays the decrypted clip on a loop, in its own shape. Owns the native
+/// player controller; a player failure, at start or later, is reported to the
+/// cubit, which deletes the clip.
 class _Player extends StatefulWidget {
   const _Player();
 
@@ -255,7 +256,17 @@ class _Player extends StatefulWidget {
 }
 
 class _PlayerState extends State<_Player> {
+  /// How long the player may stay in error before the page gives up. Android
+  /// re-prepares after a decoder error, up to twice 350 ms apart, and reports
+  /// the error meanwhile; a player that recovers must keep playing.
+  static const _errorGrace = Duration(seconds: 3);
+
   DivineVideoPlayerController? _controller;
+  StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
+  Timer? _errorGraceTimer;
+
+  /// Width over height as the clip displays; null until the player knows.
+  double? _aspectRatio;
 
   @override
   void initState() {
@@ -272,6 +283,7 @@ class _PlayerState extends State<_Player> {
     try {
       await controller.initialize();
       await controller.setSource(VideoClip.file(path));
+      await controller.setLooping(looping: true);
       await controller.play();
     } catch (error, stackTrace) {
       await controller.dispose();
@@ -285,10 +297,47 @@ class _PlayerState extends State<_Player> {
       return;
     }
     setState(() => _controller = controller);
+    _stateSubscription = controller.stateStream.listen(_onPlayerState);
+    _onPlayerState(controller.state);
+  }
+
+  /// A failure after start would otherwise leave the texture black forever.
+  void _onPlayerState(DivineVideoPlayerState state) {
+    if (!mounted) return;
+    if (state.status == PlaybackStatus.error) {
+      _errorGraceTimer ??= Timer(_errorGrace, _failIfStillInError);
+      return;
+    }
+    _errorGraceTimer?.cancel();
+    _errorGraceTimer = null;
+    // Already the displayed shape: the player reports the size after rotation
+    // and pixel aspect, and rotates the texture itself.
+    final aspectRatio = state.aspectRatio;
+    if (aspectRatio > 0 && aspectRatio != _aspectRatio) {
+      setState(() => _aspectRatio = aspectRatio);
+    }
+  }
+
+  /// Reports the failure once and stops listening, so a player that sends
+  /// the error again does not report it twice.
+  void _failIfStillInError() {
+    _errorGraceTimer = null;
+    final state = _controller?.state;
+    if (!mounted || state == null || state.status != PlaybackStatus.error) {
+      return;
+    }
+    unawaited(_stateSubscription?.cancel());
+    _stateSubscription = null;
+    context.read<DmVideoPlaybackCubit>().playbackFailed(
+      _PlayerFailure(state.errorMessage),
+      StackTrace.current,
+    );
   }
 
   @override
   void dispose() {
+    _errorGraceTimer?.cancel();
+    unawaited(_stateSubscription?.cancel());
     final controller = _controller;
     if (controller != null) unawaited(controller.dispose());
     super.dispose();
@@ -300,6 +349,20 @@ class _PlayerState extends State<_Player> {
     if (controller == null) {
       return const DivineCircularProgressIndicator(color: VineTheme.whiteText);
     }
-    return DivineVideoPlayer(controller: controller);
+    final player = DivineVideoPlayer(controller: controller);
+    final aspectRatio = _aspectRatio;
+    if (aspectRatio == null) return player;
+    return AspectRatio(aspectRatio: aspectRatio, child: player);
   }
+}
+
+/// The native player reported an error after playback started.
+class _PlayerFailure implements Exception {
+  const _PlayerFailure(this.message);
+
+  /// The player's diagnostic text, when it gave one.
+  final String? message;
+
+  @override
+  String toString() => 'Video player failed: ${message ?? 'unknown error'}';
 }

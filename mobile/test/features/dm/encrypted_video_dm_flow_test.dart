@@ -154,10 +154,13 @@ void main() {
     File writePlaintextVideo(String name, Uint8List bytes) =>
         File('${tempDir.path}/$name')..writeAsBytesSync(bytes);
 
+    // The preview reader decodes a frame through a platform plugin, which this
+    // crypto round trip does not need.
     DmVideoSendService createSendService() => DmVideoSendService(
       dmRepository: dmRepository,
       blossom: blossom,
       encryption: DmVideoEncryption(),
+      readPreview: (_) async => (blurhash: null, dimensions: null),
     );
 
     test(
