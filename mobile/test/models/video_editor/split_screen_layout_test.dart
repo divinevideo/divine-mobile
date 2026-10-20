@@ -51,6 +51,50 @@ void main() {
         expect(1 - cells[2].bottom, closeTo(vertical, 1e-9));
       });
 
+      test('gives three columns the same width with a gap', () {
+        const gap = SplitScreenLayoutGeometry.maxGap;
+        final cells = SplitScreenLayoutPreset.threeColumns.cellRects(
+          aspectRatio: _vertical,
+          gap: gap,
+        );
+
+        expect(cells[1].width, closeTo(cells[0].width, 1e-9));
+        expect(cells[2].width, closeTo(cells[0].width, 1e-9));
+        expect(cells[0].left, closeTo(gap, 1e-9));
+        expect(cells[1].left - cells[0].right, closeTo(gap, 1e-9));
+        expect(cells[2].left - cells[1].right, closeTo(gap, 1e-9));
+        expect(1 - cells[2].right, closeTo(gap, 1e-9));
+      });
+
+      test('gives cells with the same share of the frame the same size', () {
+        for (final preset in SplitScreenLayoutPreset.values) {
+          final shares = preset.cellRects(aspectRatio: _vertical, gap: 0);
+          final cells = preset.cellRects(
+            aspectRatio: _vertical,
+            gap: SplitScreenLayoutGeometry.maxGap,
+          );
+          for (var i = 0; i < cells.length; i++) {
+            for (var j = i + 1; j < cells.length; j++) {
+              final reason = '${preset.name}: cells $i and $j';
+              if ((shares[i].width - shares[j].width).abs() < 1e-9) {
+                expect(
+                  cells[i].width,
+                  closeTo(cells[j].width, 1e-9),
+                  reason: reason,
+                );
+              }
+              if ((shares[i].height - shares[j].height).abs() < 1e-9) {
+                expect(
+                  cells[i].height,
+                  closeTo(cells[j].height, 1e-9),
+                  reason: reason,
+                );
+              }
+            }
+          }
+        }
+      });
+
       test('caps a gap past the largest the slider offers', () {
         final capped = SplitScreenLayoutPreset.stacked.cellRects(
           aspectRatio: _vertical,

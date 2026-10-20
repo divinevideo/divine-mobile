@@ -172,19 +172,18 @@ enum SplitScreenLayoutPreset {
     ];
   }
 
-  /// [unit] scaled into [frame] and pulled in by [spacing] on the frame's
-  /// edges and half of it on edges it shares with another cell, so two
-  /// neighbours end up [spacing] apart.
-  static Rect _inset(Rect unit, Size frame, double spacing) {
-    double edge(double fraction) =>
-        fraction <= 0 || fraction >= 1 ? spacing : spacing / 2;
-    return Rect.fromLTRB(
-      unit.left * frame.width + edge(unit.left),
-      unit.top * frame.height + edge(unit.top),
-      unit.right * frame.width - edge(unit.right),
-      unit.bottom * frame.height - edge(unit.bottom),
-    );
-  }
+  /// [unit] scaled into [frame] with [spacing] between two neighbours and
+  /// between a cell and the frame's edge.
+  ///
+  /// Every cell gives up the same [spacing], whichever of its edges are
+  /// shared, so cells that take the same share of the frame come out the
+  /// same size: the three columns of a three-way split are equally wide.
+  static Rect _inset(Rect unit, Size frame, double spacing) => Rect.fromLTRB(
+    unit.left * (frame.width - spacing) + spacing,
+    unit.top * (frame.height - spacing) + spacing,
+    unit.right * (frame.width - spacing),
+    unit.bottom * (frame.height - spacing),
+  );
 
   /// The picture-in-picture window, [corner] of the frame.
   static Rect _pictureInPictureWindow(
