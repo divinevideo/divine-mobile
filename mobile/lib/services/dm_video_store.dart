@@ -188,6 +188,10 @@ class DmVideoStore {
   /// Paths of the frames this store read or found, by message id.
   final Map<String, String> _knownPreviews = {};
 
+  /// What each message's conversation record says, by message id, once this
+  /// store wrote it or found it current.
+  final Map<String, String> _currentRecords = {};
+
   /// Ids of messages whose frame could not be read this session. The mark
   /// beside the video keeps the read from being tried in later sessions too.
   final Set<String> _unreadableFrames = {};
@@ -669,6 +673,7 @@ class DmVideoStore {
     _lease(file);
     if (file.existsSync()) {
       await _markOpened(file);
+      await _recordConversationQuietly(message, file.parent);
       return file;
     }
     try {
@@ -684,12 +689,7 @@ class DmVideoStore {
         throw const DmVideoWithdrawnException();
       }
       // Written first, so a video is never kept without it.
-      await _writeAtomically(
-        File(
-          '${file.parent.path}/${_safeName(message.id)}$_conversationSuffix',
-        ),
-        utf8.encode('${message.conversationId}\n${message.createdAt}'),
-      );
+      await _recordConversation(message, file.parent, force: true);
       await _writeAtomically(file, plaintext);
     } on Object {
       _release(file);
@@ -716,6 +716,7 @@ class DmVideoStore {
     final preview = File('${dir.path}/${_previewFileNameFor(message)}');
     if (preview.existsSync()) {
       await _markOpened(preview);
+      await _recordConversationQuietly(message, dir);
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
@@ -727,6 +728,7 @@ class DmVideoStore {
     if (keptVideo.existsSync()) {
       _lease(keptVideo);
       video = keptVideo;
+      await _recordConversationQuietly(message, dir);
     } else if (download &&
         _mayAutoDownload(message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
@@ -771,6 +773,54 @@ class DmVideoStore {
           ));
     } finally {
       _release(video);
+    }
+  }
+
+  /// Writes [message]'s conversation record in [dir], unless this store knows
+  /// it already says the same or, without [force], finds that it does: a
+  /// repair can move a message to another conversation after its video was
+  /// kept, and a removal must still find the video.
+  ///
+  /// Throws a [DmVideoStorageException] when the record cannot be written.
+  Future<void> _recordConversation(
+    DmMessage message,
+    Directory dir, {
+    bool force = false,
+  }) async {
+    final content = '${message.conversationId}\n${message.createdAt}';
+    final record = File(
+      '${dir.path}/${_safeName(message.id)}$_conversationSuffix',
+    );
+    if (force ||
+        (_currentRecords[message.id] != content &&
+            await _readQuietly(record) != content)) {
+      await _writeAtomically(record, utf8.encode(content));
+    }
+    _currentRecords[message.id] = content;
+  }
+
+  /// [_recordConversation], logging rather than throwing: a video or frame
+  /// already kept is still handed out when its record cannot be written.
+  Future<void> _recordConversationQuietly(
+    DmMessage message,
+    Directory dir,
+  ) async {
+    try {
+      await _recordConversation(message, dir);
+    } on DmVideoUnavailableException catch (error) {
+      Log.warning(
+        "Could not record a kept video DM's conversation: ${error.message}",
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  static Future<String?> _readQuietly(File file) async {
+    try {
+      return await file.readAsString();
+    } on FileSystemException {
+      return null;
     }
   }
 

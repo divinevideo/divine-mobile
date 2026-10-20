@@ -1599,6 +1599,43 @@ void main() {
       );
 
       test(
+        "moves a kept video's record when a card shows its message in another "
+        'conversation',
+        () async {
+          final store = createStore(
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'moved',
+          );
+          await store.videoFor(_videoMessage(conversationId: 'misfiled'));
+
+          await store.previewFor(
+            _videoMessage(conversationId: 'moved'),
+            download: false,
+          );
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
+        "moves a kept video's record when a tap plays its message from "
+        'another conversation',
+        () async {
+          final store = createStore(
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'moved',
+          );
+          await store.videoFor(_videoMessage(conversationId: 'misfiled'));
+
+          await store.videoFor(_videoMessage(conversationId: 'moved'));
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
         'deletes a conversation record and a frame-read mark once their video '
         'is gone',
         () async {
