@@ -111,6 +111,9 @@ class DmVideoStore {
   /// video in memory, and a long thread shows many at once.
   Future<void> _autoDownloadQueue = Future<void>.value();
   final Map<String, Future<File?>> _previewsInFlight = {};
+
+  /// Paths of the frames this store read or found, by message id.
+  final Map<String, String> _knownPreviews = {};
   int _writes = 0;
   final StreamController<String> _kept = StreamController<String>.broadcast();
 
@@ -170,6 +173,10 @@ class DmVideoStore {
         );
   }
 
+  /// The path of [message]'s frame when this store already read or found it,
+  /// known without the disk so a card built again shows it at once.
+  String? knownPreviewPathFor(DmMessage message) => _knownPreviews[message.id];
+
   /// Deletes files nobody opened for [maxIdle], then the least recently
   /// opened ones until this account's files fit in [maxBytes].
   ///
@@ -190,7 +197,7 @@ class DmVideoStore {
         continue;
       }
       if (age > maxIdle) {
-        _deleteQuietly(entity);
+        _deleteKept(entity);
         continue;
       }
       kept.add((file: entity, opened: stat.modified, size: stat.size));
@@ -204,7 +211,7 @@ class DmVideoStore {
       if (total <= maxBytes || now.difference(entry.opened) < _mayBeInUseFor) {
         break;
       }
-      _deleteQuietly(entry.file);
+      _deleteKept(entry.file);
       total -= entry.size;
     }
   }
@@ -335,6 +342,7 @@ class DmVideoStore {
     final preview = File('${dir.path}/${_previewFileNameFor(message)}');
     if (preview.existsSync()) {
       _markOpened(preview);
+      _knownPreviews[message.id] = preview.path;
       return preview;
     }
 
@@ -353,6 +361,7 @@ class DmVideoStore {
     final frame = await _readFrame(video);
     if (frame == null || frame.isEmpty) return null;
     await _writeAtomically(preview, frame);
+    _knownPreviews[message.id] = preview.path;
     return preview;
   }
 
@@ -398,6 +407,11 @@ class DmVideoStore {
         category: LogCategory.video,
       );
     }
+  }
+
+  void _deleteKept(File file) {
+    _deleteQuietly(file);
+    _knownPreviews.removeWhere((_, path) => path == file.path);
   }
 
   static void _deleteQuietly(File file) {

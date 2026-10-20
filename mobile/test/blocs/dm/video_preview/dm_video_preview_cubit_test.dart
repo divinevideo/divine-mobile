@@ -60,6 +60,35 @@ void main() {
   }
 
   group(DmVideoPreviewCubit, () {
+    group('initial state', () {
+      test('is loading while the store knows no frame', () {
+        final cubit = createCubit(download: true);
+        addTearDown(cubit.close);
+
+        expect(cubit.state, equals(const DmVideoPreviewState()));
+      });
+
+      test(
+        'shows a frame the store already knows, so a card built again does '
+        'not flash its blurhash first',
+        () {
+          when(() => store.knownPreviewPathFor(any())).thenReturn(_framePath);
+          final cubit = createCubit(download: false);
+          addTearDown(cubit.close);
+
+          expect(
+            cubit.state,
+            equals(
+              const DmVideoPreviewState(
+                status: DmVideoPreviewStatus.ready,
+                framePath: _framePath,
+              ),
+            ),
+          );
+        },
+      );
+    });
+
     group('load', () {
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows the frame the store keeps, downloading the video if needed',

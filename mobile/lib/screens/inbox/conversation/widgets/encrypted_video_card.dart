@@ -70,13 +70,9 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
         ? null
         : metadataBlurhash;
     final framePath = widget.framePath;
-    final preview = framePath != null
-        ? _PreviewSurface(
-            child: _KeptFrame(path: framePath, blurhash: blurhash),
-          )
-        : blurhash != null
-        ? _PreviewSurface(child: _Blurhash(blurhash: blurhash))
-        : const _EncryptedVideoPlaceholderCard();
+    final preview = framePath == null && blurhash == null
+        ? const _EncryptedVideoPlaceholderCard()
+        : _PreviewSurface(blurhash: blurhash, framePath: framePath);
     final card = widget.isClip
         ? Stack(
             children: [
@@ -125,14 +121,21 @@ class _EncryptedVideoPlaceholderCard extends StatelessWidget {
   }
 }
 
-/// A preview filling the card, with a play icon over it.
+/// A preview filling the card, with a play icon over it: the kept frame over
+/// the blurhash, or over the card colour when there is no blurhash.
+///
+/// The layer under the frame shows while the frame decodes and when its file
+/// is gone, so the card never goes blank.
 class _PreviewSurface extends StatelessWidget {
-  const _PreviewSurface({required this.child});
+  const _PreviewSurface({required this.blurhash, required this.framePath});
 
-  final Widget child;
+  final String? blurhash;
+  final String? framePath;
 
   @override
   Widget build(BuildContext context) {
+    final blurhash = this.blurhash;
+    final framePath = this.framePath;
     return ClipRRect(
       borderRadius: BorderRadius.circular(encryptedVideoCardRadius),
       child: SizedBox(
@@ -141,7 +144,13 @@ class _PreviewSurface extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Positioned.fill(child: child),
+            Positioned.fill(
+              child: blurhash != null
+                  ? _Blurhash(blurhash: blurhash)
+                  : ColoredBox(color: context.vineColors.card),
+            ),
+            if (framePath != null)
+              Positioned.fill(child: _KeptFrame(path: framePath)),
             const _PreviewPlayBadge(),
           ],
         ),
@@ -166,29 +175,24 @@ class _Blurhash extends StatelessWidget {
   }
 }
 
-/// The frame this device kept, decoded at the card's size. Falls back to the
-/// blurhash, or the card colour, when the file is gone: the system can clear
-/// the cache it lives in.
+/// The frame this device kept, decoded at the card's size. Draws nothing
+/// until it decodes, or when the file is gone (the system can clear the cache
+/// it lives in), so the layer under it shows.
 class _KeptFrame extends StatelessWidget {
-  const _KeptFrame({required this.path, required this.blurhash});
+  const _KeptFrame({required this.path});
 
   final String path;
-  final String? blurhash;
 
   @override
   Widget build(BuildContext context) {
-    final blurhash = this.blurhash;
     return Image.file(
       File(path),
       fit: BoxFit.cover,
       cacheWidth:
           (encryptedVideoCardWidth * MediaQuery.devicePixelRatioOf(context))
               .round(),
-      gaplessPlayback: true,
       excludeFromSemantics: true,
-      errorBuilder: (context, _, _) => blurhash != null
-          ? _Blurhash(blurhash: blurhash)
-          : ColoredBox(color: context.vineColors.card),
+      errorBuilder: (_, _, _) => const SizedBox.shrink(),
     );
   }
 }

@@ -267,6 +267,33 @@ void main() {
         },
       );
 
+      test(
+        'remembers a frame it read, so a card built again can show it at once',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          expect(store.knownPreviewPathFor(message), isNull);
+
+          final preview = await store.previewFor(message, download: true);
+
+          expect(store.knownPreviewPathFor(message), equals(preview!.path));
+        },
+      );
+
+      test(
+        'remembers a frame an earlier session kept once it finds it',
+        () async {
+          final message = _videoMessage();
+          final kept = await createStore().previewFor(message, download: true);
+          final store = createStore();
+          expect(store.knownPreviewPathFor(message), isNull);
+
+          await store.previewFor(message, download: false);
+
+          expect(store.knownPreviewPathFor(message), equals(kept!.path));
+        },
+      );
+
       test('keeps nothing when no frame can be read', () async {
         readFrame = (_) async => null;
         final store = createStore();
@@ -380,6 +407,18 @@ void main() {
           expect(newest.existsSync(), isTrue);
         },
       );
+
+      test('forgets a frame it deleted, so no card starts from it', () async {
+        final store = createStore();
+        final message = _videoMessage();
+        final preview = await store.previewFor(message, download: true);
+        preview!.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+        await store.prune();
+
+        expect(preview.existsSync(), isFalse);
+        expect(store.knownPreviewPathFor(message), isNull);
+      });
 
       test('opening a kept video keeps it from expiring', () async {
         final store = createStore();

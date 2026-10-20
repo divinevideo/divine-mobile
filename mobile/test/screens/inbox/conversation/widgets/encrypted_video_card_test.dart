@@ -4,6 +4,7 @@
 // ABOUTME: the AES-GCM nonce.
 
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +38,23 @@ DmMessage _videoMessage({String? blurhash = _blurhash}) => DmMessage(
   messageKind: 15,
   fileMetadata: _videoMetadata(blurhash: blurhash),
 );
+
+/// Writes a small PNG standing in for a kept frame and returns its path. The
+/// engine encodes it, so this runs on the real event loop.
+Future<String> _writeKeptFrame() async {
+  final recorder = ui.PictureRecorder();
+  ui.Canvas(recorder).drawRect(
+    const Rect.fromLTWH(0, 0, 4, 4),
+    ui.Paint()..color = const Color(0xFF27C58B),
+  );
+  final image = await recorder.endRecording().toImage(4, 4);
+  final png = await image.toByteData(format: ui.ImageByteFormat.png);
+  image.dispose();
+  final dir = Directory.systemTemp.createTempSync('encrypted_video_card_');
+  final file = File('${dir.path}/frame.png')
+    ..writeAsBytesSync(png!.buffer.asUint8List());
+  return file.path;
+}
 
 Widget _host(Widget child) => MaterialApp(
   localizationsDelegates: appLocalizationsDelegates,
@@ -112,8 +130,8 @@ void main() {
     );
 
     testWidgets(
-      'shows the frame this device keeps under a play icon, in place of the '
-      'blurhash',
+      'keeps the blurhash showing while the kept frame decodes, so the card '
+      'never goes blank',
       (tester) async {
         const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
         await tester.pumpWidget(
@@ -126,22 +144,17 @@ void main() {
           ),
         );
 
-        final frame = find.byWidgetPredicate(
-          (widget) =>
-              widget is Image &&
-              widget.image is ResizeImage &&
-              (widget.image as ResizeImage).imageProvider is FileImage &&
-              ((widget.image as ResizeImage).imageProvider as FileImage)
-                      .file
-                      .path ==
-                  framePath,
-        );
-        expect(frame, findsOneWidget);
-        expect(find.byType(BlurhashDisplay), findsNothing);
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
         expect(
           find.byWidgetPredicate(
             (widget) =>
-                widget is DivineIcon && widget.icon == DivineIconName.play,
+                widget is Image &&
+                widget.image is ResizeImage &&
+                (widget.image as ResizeImage).imageProvider is FileImage &&
+                ((widget.image as ResizeImage).imageProvider as FileImage)
+                        .file
+                        .path ==
+                    framePath,
           ),
           findsOneWidget,
         );
@@ -149,7 +162,47 @@ void main() {
     );
 
     testWidgets(
-      'falls back to the blurhash when the kept frame is gone',
+      'draws the kept frame over the blurhash, under a play icon, once it '
+      'decodes',
+      (tester) async {
+        await tester.runAsync(() async {
+          final framePath = await _writeKeptFrame();
+          addTearDown(
+            () => File(framePath).parent.deleteSync(recursive: true),
+          );
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: framePath,
+              ),
+            ),
+          );
+          final frame = tester.element(find.byType(Image));
+          await precacheImage((frame.widget as Image).image, frame);
+        });
+        await tester.pump();
+
+        // A Stack paints each child over the ones before it.
+        expect(
+          find
+              .byWidgetPredicate(
+                (widget) =>
+                    widget is BlurhashDisplay ||
+                    (widget is RawImage && widget.image != null) ||
+                    (widget is DivineIcon &&
+                        widget.icon == DivineIconName.play),
+              )
+              .evaluate()
+              .map((element) => element.widget.runtimeType),
+          orderedEquals([BlurhashDisplay, RawImage, DivineIcon]),
+        );
+      },
+    );
+
+    testWidgets(
+      'keeps showing the blurhash when the kept frame is gone',
       (tester) async {
         final missing = '${Directory.systemTemp.path}/no_such_frame.jpg';
         await tester.pumpWidget(
@@ -161,7 +214,6 @@ void main() {
             ),
           ),
         );
-        expect(find.byType(BlurhashDisplay), findsNothing);
 
         await tester.runAsync(
           () => precacheImage(
@@ -173,6 +225,9 @@ void main() {
         await tester.pump();
 
         expect(find.byType(BlurhashDisplay), findsOneWidget);
+        // The failed frame draws nothing over it, not even a broken-image box.
+        expect(find.byType(RawImage), findsNothing);
+        expect(find.byType(Placeholder), findsNothing);
       },
     );
 

@@ -49,6 +49,9 @@ class DmVideoPreviewState extends Equatable {
 class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
     with CloseGuardedEmit<DmVideoPreviewState> {
   /// Creates a [DmVideoPreviewCubit] for [message].
+  ///
+  /// It starts with a frame [store] already knows, so a card built again,
+  /// such as one scrolled back into view, shows it from its first frame.
   DmVideoPreviewCubit({
     required DmMessage message,
     required DmVideoStore? store,
@@ -56,7 +59,15 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
   }) : _message = message,
        _store = store,
        _download = download,
-       super(const DmVideoPreviewState());
+       super(_initialState(store?.knownPreviewPathFor(message)));
+
+  static DmVideoPreviewState _initialState(String? knownFramePath) =>
+      knownFramePath == null
+      ? const DmVideoPreviewState()
+      : DmVideoPreviewState(
+          status: DmVideoPreviewStatus.ready,
+          framePath: knownFramePath,
+        );
 
   final DmMessage _message;
 
