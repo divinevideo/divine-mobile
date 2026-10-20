@@ -157,11 +157,11 @@ final class OutgoingDmRetryServiceProvider
 }
 
 String _$outgoingDmRetryServiceHash() =>
-    r'2a99dc230c6632a3e80d2c797153b5da9715a010';
+    r'f207d64b424afeb715ca1e6ea933a6fc7b544775';
 
 /// Auto-sweep service that re-drives undelivered DM reactions and removals
 /// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]
-/// on app-foreground transitions, connectivity changes, and an in-session
+/// on app-foreground transitions, a relay connecting, and an in-session
 /// follow-up heartbeat while retryable work remains.
 ///
 /// Gives reactions the durable delivery that DM messages already get from
@@ -179,7 +179,7 @@ final dmReactionRetryServiceProvider = DmReactionRetryServiceProvider._();
 
 /// Auto-sweep service that re-drives undelivered DM reactions and removals
 /// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]
-/// on app-foreground transitions, connectivity changes, and an in-session
+/// on app-foreground transitions, a relay connecting, and an in-session
 /// follow-up heartbeat while retryable work remains.
 ///
 /// Gives reactions the durable delivery that DM messages already get from
@@ -202,7 +202,7 @@ final class DmReactionRetryServiceProvider
     with $Provider<DmReactionRetryService?> {
   /// Auto-sweep service that re-drives undelivered DM reactions and removals
   /// via [DmReactionsRepository.retry] and [DmReactionsRepository.retryDeletion]
-  /// on app-foreground transitions, connectivity changes, and an in-session
+  /// on app-foreground transitions, a relay connecting, and an in-session
   /// follow-up heartbeat while retryable work remains.
   ///
   /// Gives reactions the durable delivery that DM messages already get from
@@ -249,7 +249,7 @@ final class DmReactionRetryServiceProvider
 }
 
 String _$dmReactionRetryServiceHash() =>
-    r'b987691a076907de474383432a578a7dc117b55d';
+    r'def135c02bb7b958a9254ce3f16a7c8472c3c66e';
 
 /// Auto-sweep service for the durable `pending_view_events` queue.
 

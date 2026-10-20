@@ -26782,6 +26782,39 @@ void main() {
           );
         });
 
+        test(
+          'does not fire when a send reached no relay, and says so (#8516)',
+          () async {
+            stubSendRumor(
+              (_, _) async => const NIP17SendResult.failure(
+                'Message not sent: no relay reached',
+                reachedNoRelay: true,
+              ),
+            );
+            final repository = createRepository(
+              outgoingDmsDao: mockOutgoingDmsDao,
+            );
+            late NIP17SendResult result;
+
+            final events = await collectedEvents(repository, () async {
+              result = await repository.sendMessage(
+                recipientPubkey: _validPubkeyB,
+                content: 'no relay',
+              );
+            });
+
+            expect(
+              events,
+              isEmpty,
+              reason:
+                  'a relay connecting wakes the sweep for it; a nudge would '
+                  'retry it every 30 seconds while the relays are out of '
+                  'reach',
+            );
+            expect(result.reachedNoRelay, isTrue);
+          },
+        );
+
         test('fires when a send hard-fails', () async {
           stubSendRumor(
             (_, _) async => const NIP17SendResult.failure('relay refused'),
@@ -30335,6 +30368,51 @@ void main() {
               onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
+        },
+      );
+
+      test(
+        'does not nudge the sweep when the replay reached no relay (#8516)',
+        () async {
+          when(
+            () => mockOutgoingDmsDao.getById(_rumorEventId),
+          ).thenAnswer((_) async => queuedRow());
+          stubSendRumor(
+            (_, _) async => const NIP17SendResult.failure(
+              'Message not sent: no relay reached',
+              reachedNoRelay: true,
+            ),
+          );
+          final repository = createRepository(
+            outgoingDmsDao: mockOutgoingDmsDao,
+          );
+          final nudges = <void>[];
+          final subscription = repository.retryableOutgoingWork.listen(
+            nudges.add,
+          );
+          addTearDown(subscription.cancel);
+
+          final result = await repository.recoverFullSend(
+            rumorId: _rumorEventId,
+          );
+          await pumpEventQueue();
+
+          expect(result.reachedNoRelay, isTrue);
+          verify(
+            () => mockOutgoingDmsDao.markRecipientWrapStatus(
+              id: _rumorEventId,
+              status: OutgoingWrapStatus.failed,
+              eventId: any(named: 'eventId'),
+              lastError: any(named: 'lastError'),
+            ),
+          ).called(1);
+          expect(
+            nudges,
+            isEmpty,
+            reason:
+                'the sweep made this attempt itself, and a nudge would make '
+                'it again every 30 seconds while the relays are out of reach',
+          );
         },
       );
 

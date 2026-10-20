@@ -3996,6 +3996,15 @@
   "@dmReactionChipFailedA11yLabel": {
     "description": "Screen-reader label for a reaction chip whose publish failed."
   },
+  "dmReactionChipUnconfirmedA11yLabel": "Couldn't send your {emoji} reaction. Double tap to try again",
+  "@dmReactionChipUnconfirmedA11yLabel": {
+    "description": "Screen-reader label for the current account's reaction whose automatic retries ran out without a relay confirming it. Double-tapping retries sending it.",
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
   "dmReactionChipRetryAnnouncement": "Retrying reaction",
   "@dmReactionChipRetryAnnouncement": {
     "description": "Live-region announcement on chip retry."

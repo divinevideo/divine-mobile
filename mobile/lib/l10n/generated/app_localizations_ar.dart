@@ -6070,6 +6070,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'فشل التفاعل، انقر مرتين لإعادة المحاولة';
 
   @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'تعذّر إرسال تفاعلك $emoji. النقر مرتين يعيد المحاولة';
+  }
+
+  @override
   String get dmReactionChipRetryAnnouncement => 'جارٍ إعادة محاولة التفاعل';
 
   @override

@@ -3955,6 +3955,7 @@
     "dmReactionChipOtherA11yLabel": "تفاعل {name} بـ {emoji}",
     "dmReactionChipPendingA11yLabel": "جارٍ إرسال التفاعل: {emoji}",
     "dmReactionChipFailedA11yLabel": "فشل التفاعل، انقر مرتين لإعادة المحاولة",
+    "dmReactionChipUnconfirmedA11yLabel": "تعذّر إرسال تفاعلك {emoji}. النقر مرتين يعيد المحاولة",
     "dmReactionChipRetryAnnouncement": "جارٍ إعادة محاولة التفاعل",
     "dmFormatBold": "عريض",
     "dmFormatItalic": "مائل",

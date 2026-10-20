@@ -10417,6 +10417,12 @@ abstract class AppLocalizations {
   /// **'Reaction failed, double tap to retry'**
   String get dmReactionChipFailedA11yLabel;
 
+  /// Screen-reader label for the current account's reaction whose automatic retries ran out without a relay confirming it. Double-tapping retries sending it.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send your {emoji} reaction. Double tap to try again'**
+  String dmReactionChipUnconfirmedA11yLabel(String emoji);
+
   /// Live-region announcement on chip retry.
   ///
   /// In en, this message translates to:

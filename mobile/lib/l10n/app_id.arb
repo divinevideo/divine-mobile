@@ -3955,6 +3955,7 @@
     "dmReactionChipOtherA11yLabel": "{name} bereaksi dengan {emoji}",
     "dmReactionChipPendingA11yLabel": "Mengirim reaksi: {emoji}",
     "dmReactionChipFailedA11yLabel": "Reaksi gagal, ketuk dua kali untuk mencoba lagi",
+    "dmReactionChipUnconfirmedA11yLabel": "Reaksi {emoji} kamu tidak dapat dikirim. Ketuk dua kali untuk mencoba lagi",
     "dmReactionChipRetryAnnouncement": "Mencoba reaksi lagi",
     "dmFormatBold": "Tebal",
     "dmFormatItalic": "Miring",

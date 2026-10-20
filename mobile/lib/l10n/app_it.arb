@@ -3955,6 +3955,7 @@
     "dmReactionChipOtherA11yLabel": "{name} ha reagito con {emoji}",
     "dmReactionChipPendingA11yLabel": "Invio della reazione: {emoji}",
     "dmReactionChipFailedA11yLabel": "Reazione non riuscita, tocca due volte per riprovare",
+    "dmReactionChipUnconfirmedA11yLabel": "Non è stato possibile inviare la tua reazione {emoji}. Tocca due volte per riprovare",
     "dmReactionChipRetryAnnouncement": "Nuovo tentativo per la reazione",
     "dmFormatBold": "Grassetto",
     "dmFormatItalic": "Corsivo",

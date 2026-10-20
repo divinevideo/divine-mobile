@@ -3955,6 +3955,7 @@
     "dmReactionChipOtherA11yLabel": "{name} reageerde met {emoji}",
     "dmReactionChipPendingA11yLabel": "Reactie versturen: {emoji}",
     "dmReactionChipFailedA11yLabel": "Reactie mislukt, dubbeltik om opnieuw te proberen",
+    "dmReactionChipUnconfirmedA11yLabel": "Je reactie {emoji} kon niet worden verstuurd. Dubbeltik om het opnieuw te proberen",
     "dmReactionChipRetryAnnouncement": "Reactie opnieuw proberen",
     "dmFormatBold": "Vet",
     "dmFormatItalic": "Cursief",

@@ -197,7 +197,11 @@ class _ReactorRow extends ConsumerWidget {
         ? UserProfile.defaultDisplayNameFor(reaction.reactorPubkey)
         : name;
 
-    final isFailed = reaction.publishStatus == DmReactionPublishStatus.failed;
+    // An own reaction no relay confirmed once its retries ran out is retried
+    // like a failed one (#8516).
+    final isFailed =
+        reaction.publishStatus == DmReactionPublishStatus.failed ||
+        reaction.publishStatus == DmReactionPublishStatus.unconfirmed;
     final isPending = reaction.publishStatus == DmReactionPublishStatus.pending;
     final isRemovalRefused =
         reaction.publishStatus == DmReactionPublishStatus.removalRefused;
@@ -222,6 +226,8 @@ class _ReactorRow extends ConsumerWidget {
           context.l10n.dmReactionChipPendingA11yLabel(reaction.emoji),
         DmReactionPublishStatus.failed =>
           context.l10n.dmReactionChipFailedA11yLabel,
+        DmReactionPublishStatus.unconfirmed =>
+          context.l10n.dmReactionChipUnconfirmedA11yLabel(reaction.emoji),
         DmReactionPublishStatus.removalRefused =>
           context.l10n.dmReactionRemovalRefusedA11yLabel(reaction.emoji),
         _ => context.l10n.dmReactionChipOwnA11yLabel(reaction.emoji),

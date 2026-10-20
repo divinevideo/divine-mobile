@@ -4079,6 +4079,7 @@
     "dmReactionChipOtherA11yLabel": "{name} реагира с {emoji}",
     "dmReactionChipPendingA11yLabel": "Изпращане на реакция: {emoji}",
     "dmReactionChipFailedA11yLabel": "Реакцията не мина, докосни два пъти за нов опит",
+    "dmReactionChipUnconfirmedA11yLabel": "Реакцията ти {emoji} не можа да се изпрати. Докосни два пъти за нов опит",
     "dmReactionChipRetryAnnouncement": "Нов опит за реакцията",
     "dmFormatBold": "Получер",
     "dmFormatItalic": "Курсив",

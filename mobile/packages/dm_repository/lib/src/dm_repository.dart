@@ -6687,6 +6687,7 @@ class DmRepository {
         outgoingDao: outgoingDao,
         rumorId: rumor.id,
         errorMessage: result.error ?? 'Unknown publish failure',
+        reachedNoRelay: result.reachedNoRelay,
       );
       // Make a brand-new thread visible so the user can find the red bubble
       // to retry or delete it. A blocked result is handled terminally above
@@ -6726,6 +6727,7 @@ class DmRepository {
           result.error,
           retryablePending: result.retryablePending,
           queuedRumorId: rumorId,
+          reachedNoRelay: result.reachedNoRelay,
         ),
       };
 
@@ -7521,6 +7523,7 @@ class DmRepository {
         outgoingDao: dao,
         rumorId: rumorId,
         errorMessage: result.error ?? 'Unknown publish failure',
+        reachedNoRelay: result.reachedNoRelay,
       );
     }
 
@@ -8025,6 +8028,7 @@ class DmRepository {
     required OutgoingDmsDao outgoingDao,
     required String rumorId,
     required String errorMessage,
+    bool reachedNoRelay = false,
   }) async {
     try {
       await outgoingDao.markRecipientWrapStatus(
@@ -8053,8 +8057,10 @@ class DmRepository {
       // queue row stays retryable and the next sweep can pick it up.
     } finally {
       // Whether the marks landed or threw, the row is still retryable —
-      // nudge the sweep so it converges without a foreground flip.
-      _notifyRetryableWork();
+      // nudge the sweep so it converges without a foreground flip. A send
+      // that reached no relay waits for one to connect instead: a nudge would
+      // retry it every 30 seconds while the relays stay out of reach (#8516).
+      if (!reachedNoRelay) _notifyRetryableWork();
     }
   }
 
@@ -8830,6 +8836,7 @@ class DmRepository {
             outgoingDao: outgoingDao,
             rumorId: queueIds[i],
             errorMessage: result.error ?? 'Unknown publish failure',
+            reachedNoRelay: result.reachedNoRelay,
           );
           results[i] = _stampQueuedRow(result, queueIds[i]);
         }

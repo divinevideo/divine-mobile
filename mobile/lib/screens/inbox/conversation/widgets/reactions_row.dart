@@ -196,8 +196,11 @@ class _ReactionPill extends StatelessWidget {
     final hasOwn = ownReaction != null;
     final isOwnPending =
         ownReaction?.publishStatus == DmReactionPublishStatus.pending;
+    // An own reaction no relay confirmed once its retries ran out shows like a
+    // failed one, with a retry (#8516).
     final isOwnFailed =
-        ownReaction?.publishStatus == DmReactionPublishStatus.failed;
+        ownReaction?.publishStatus == DmReactionPublishStatus.failed ||
+        ownReaction?.publishStatus == DmReactionPublishStatus.unconfirmed;
     final isOwnRemovalRefused =
         removalEnabled &&
         ownReaction?.publishStatus == DmReactionPublishStatus.removalRefused;

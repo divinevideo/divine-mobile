@@ -1874,6 +1874,178 @@ void main() {
       );
     });
 
+    group('a retry trigger that arrives mid-pass (#8516)', () {
+      test('runs one more pass once the current one ends', () async {
+        final triggers = StreamController<void>.broadcast();
+        addTearDown(triggers.close);
+        final gate = Completer<NIP17SendResult>();
+        var listings = 0;
+        when(
+          () => dao.getRetryableForOwner(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        ).thenAnswer((_) async {
+          listings++;
+          return listings == 1
+              ? [
+                  _row(
+                    id: 'rumor-mid-pass',
+                    recipient: OutgoingWrapStatus.failed,
+                    self: OutgoingWrapStatus.failed,
+                  ),
+                ]
+              : [];
+        });
+        when(
+          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+        ).thenAnswer((_) => gate.future);
+        final service = buildService(retryTriggerStream: triggers.stream);
+        await service.initialize();
+        addTearDown(service.dispose);
+
+        triggers.add(null);
+        await pumpEventQueue();
+        expect(service.isSweeping, isTrue);
+        triggers.add(null);
+        await pumpEventQueue();
+        gate.complete(
+          const NIP17SendResult.failure(
+            'Message not sent: no relay reached',
+            reachedNoRelay: true,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(listings, 2);
+      });
+    });
+
+    group('a send that reached no relay (#8516)', () {
+      const unreached = NIP17SendResult.failure(
+        'Message not sent: no relay reached',
+        reachedNoRelay: true,
+      );
+
+      void stubFailedRow(String id) {
+        when(
+          () => dao.getRetryableForOwner(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            _row(
+              id: id,
+              recipient: OutgoingWrapStatus.failed,
+              self: OutgoingWrapStatus.failed,
+              retryCount: 1,
+              lastAttemptAt: DateTime.utc(2025),
+            ),
+          ],
+        );
+      }
+
+      test('does not use up a full send retry', () async {
+        stubFailedRow('rumor-unreached');
+        when(
+          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+        ).thenAnswer((_) async => unreached);
+
+        await buildService().sweep();
+
+        verify(
+          () => dmRepository.recoverFullSend(rumorId: 'rumor-unreached'),
+        ).called(1);
+        verifyNever(() => dao.incrementRetry(any()));
+      });
+
+      test('does not use up an interrupted send retry', () async {
+        final now = DateTime.utc(2026, 5, 10, 12);
+        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+          (_) async => [
+            _row(
+              id: 'interrupted-unreached',
+              recipient: OutgoingWrapStatus.pending,
+              self: OutgoingWrapStatus.pending,
+              queuedAt: now.subtract(const Duration(minutes: 5)),
+            ),
+          ],
+        );
+        when(
+          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+        ).thenAnswer((_) async => unreached);
+
+        await buildService(now: () => now).sweep();
+
+        verify(
+          () => dmRepository.recoverFullSend(rumorId: 'interrupted-unreached'),
+        ).called(1);
+        verifyNever(() => dao.incrementRetry(any()));
+      });
+
+      test('arms no follow-up pass for it', () {
+        fakeAsync((async) {
+          stubFailedRow('rumor-unreached');
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => unreached);
+          final service = buildService(
+            now: async.getClock(DateTime.utc(2026, 5, 10, 12)).now,
+          );
+          unawaited(service.initialize());
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'a relay connecting wakes it, not the 30-second follow-up',
+          );
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
+
+      test('arms no follow-up pass for an interrupted send', () {
+        fakeAsync((async) {
+          when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+            (_) async => [
+              _row(
+                id: 'interrupted-unreached',
+                recipient: OutgoingWrapStatus.pending,
+                self: OutgoingWrapStatus.pending,
+                queuedAt: DateTime.utc(2026, 5, 10, 11, 55),
+              ),
+            ],
+          );
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => unreached);
+          final service = buildService(
+            now: async.getClock(DateTime.utc(2026, 5, 10, 12)).now,
+          );
+          unawaited(service.initialize());
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          verify(
+            () =>
+                dmRepository.recoverFullSend(rumorId: 'interrupted-unreached'),
+          ).called(1);
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'a relay connecting wakes it, not the 30-second follow-up',
+          );
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
+    });
+
     group('interrupted-send recovery (pending:pending)', () {
       // The retry service's third arm — fulfils epic #3912's "outgoing
       // DM survives the app being killed mid-send" acceptance criterion.

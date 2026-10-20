@@ -6287,6 +6287,11 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రతిచర్య విఫలమైంది, మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి';
 
   @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'మీ $emoji ప్రతిచర్యను పంపడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి';
+  }
+
+  @override
   String get dmReactionChipRetryAnnouncement =>
       'ప్రతిచర్యను మళ్లీ ప్రయత్నిస్తోంది';
 

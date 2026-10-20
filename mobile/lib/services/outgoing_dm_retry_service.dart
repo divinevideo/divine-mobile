@@ -64,7 +64,9 @@ class OutgoingDmRetryConfig {
 /// **Per-row backoff:** rows whose `lastAttemptAt + backoff(retryCount)`
 /// is in the future are skipped this pass. `incrementRetry` is called
 /// only on a real publish failure so transient repo-not-ready states
-/// don't burn the retry budget.
+/// don't burn the retry budget. A send that reached no relay is not a
+/// real failure either: it is not charged, and it waits for a relay to
+/// connect rather than the follow-up timer (#8516).
 ///
 /// **Scope:** three sweep arms run on each trigger:
 ///
@@ -120,9 +122,10 @@ class OutgoingDmRetryService {
   final Stream<bool> _appForegroundStream;
 
   /// Fires a sweep on each event, independent of foreground transitions.
-  /// Wired to connectivity/relay-reconnection so a message queued during a
-  /// brief network drop is re-driven the moment the network returns — without
-  /// waiting for the user to background and re-foreground the app.
+  /// Wired to connectivity/relay-reconnection and to a relay connecting, so a
+  /// message queued while no relay could be reached is re-driven as soon as
+  /// one can take it — without waiting for the user to background and
+  /// re-foreground the app.
   final Stream<void>? _retryTriggerStream;
 
   /// Connectivity probe (same contract as `NIP17MessageService`'s). When it
@@ -202,6 +205,11 @@ class OutgoingDmRetryService {
   /// follow-up timer instead of stranding until the next external trigger.
   bool _nudgedDuringSweep = false;
 
+  /// The retry trigger fired while a sweep was running. A relay that
+  /// connected mid-pass may be what an earlier row in that pass was waiting
+  /// for, so one more pass runs as soon as this one ends (#8516).
+  bool _triggeredDuringSweep = false;
+
   /// Per-rumor attempt count and last-attempt time for the message-deletion
   /// pass. Session-scoped: entries are pruned each sweep as rows settle.
   final Map<String, int> _deletionAttempts = {};
@@ -225,9 +233,9 @@ class OutgoingDmRetryService {
       }
     });
 
-    _retryTriggerSubscription = _retryTriggerStream?.listen((_) {
-      unawaited(sweep());
-    });
+    _retryTriggerSubscription = _retryTriggerStream?.listen(
+      (_) => _onRetryTrigger(),
+    );
 
     // The send path nudges when it leaves a retryable row behind (soft
     // unconfirmed, hard failure, partial delivery). Without this the 30s
@@ -264,6 +272,7 @@ class OutgoingDmRetryService {
     _followUpTimer?.cancel();
     _followUpTimer = null;
     _nudgedDuringSweep = false;
+    _triggeredDuringSweep = false;
     _consecutiveTopLevelFaults = 0;
     await _foregroundSubscription?.cancel();
     _foregroundSubscription = null;
@@ -317,6 +326,7 @@ class OutgoingDmRetryService {
       var processedFullSend = 0;
       var failedFullSend = 0;
       var blockedFullSend = 0;
+      var notSentFullSend = 0;
       var skippedBackoff = 0;
       var abortedNotReady = false;
 
@@ -445,6 +455,10 @@ class OutgoingDmRetryService {
               // again here double-charged every soft attempt and halved
               // the effective retry budget.
               failedFullSend++;
+            } else if (result.reachedNoRelay) {
+              // Nothing reached a relay: not charged, and a relay connecting
+              // wakes the sweep for it, not the follow-up heartbeat (#8516).
+              notSentFullSend++;
             } else {
               // Publish failed again. recoverFullSend already
               // re-marked both wraps failed with the new error via
@@ -496,6 +510,7 @@ class OutgoingDmRetryService {
       var processedInterrupted = 0;
       var failedInterrupted = 0;
       var blockedInterrupted = 0;
+      var notSentInterrupted = 0;
       var exhaustedInterrupted = 0;
       var skippedInterruptedTooYoung = 0;
       if (!abortedNotReady) {
@@ -564,6 +579,9 @@ class OutgoingDmRetryService {
               // Soft-unconfirmed: the repo already bumped the counter via
               // _finalizeAfterRecipientUnconfirmed — no double charge.
               failedInterrupted++;
+            } else if (result.reachedNoRelay) {
+              // Same as the failed-send arm: not charged (#8516).
+              notSentInterrupted++;
             } else {
               await _dao.incrementRetry(row.id);
               failedInterrupted++;
@@ -615,9 +633,11 @@ class OutgoingDmRetryService {
         'full-send-recovered=$processedFullSend '
         'full-send-failed=$failedFullSend '
         'full-send-blocked=$blockedFullSend '
+        'full-send-not-sent=$notSentFullSend '
         'interrupted-recovered=$processedInterrupted '
         'interrupted-failed=$failedInterrupted '
         'interrupted-blocked=$blockedInterrupted '
+        'interrupted-not-sent=$notSentInterrupted '
         'interrupted-exhausted=$exhaustedInterrupted '
         'skipped-backoff=$skippedBackoff '
         'skipped-interrupted-too-young=$skippedInterruptedTooYoung '
@@ -694,7 +714,19 @@ class OutgoingDmRetryService {
         _nudgedDuringSweep = false;
         _armFollowUpIfIdle();
       }
+      if (_triggeredDuringSweep) {
+        _triggeredDuringSweep = false;
+        if (_isInitialized) unawaited(sweep());
+      }
     }
+  }
+
+  void _onRetryTrigger() {
+    if (_isSweeping) {
+      _triggeredDuringSweep = true;
+      return;
+    }
+    unawaited(sweep());
   }
 
   /// One pass over the delete-for-everyone requests that no relay has

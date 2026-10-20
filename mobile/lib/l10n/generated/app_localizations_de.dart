@@ -6180,6 +6180,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Reaktion fehlgeschlagen, doppelt tippen zum Wiederholen';
 
   @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'Deine Reaktion $emoji konnte nicht gesendet werden. Doppelt tippen zum Wiederholen';
+  }
+
+  @override
   String get dmReactionChipRetryAnnouncement => 'Reaktion wird wiederholt';
 
   @override
