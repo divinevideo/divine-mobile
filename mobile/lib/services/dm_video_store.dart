@@ -28,6 +28,8 @@ typedef DmVideoFetcher = Future<Uint8List> Function(
 });
 
 /// Reads the preview frame of a decrypted video, or null when it cannot.
+/// Completes only once the decoder no longer reads the file, not on a UI
+/// timeout: the store owns serialization and the file lease until completion.
 typedef DmVideoFrameReader = Future<Uint8List?> Function(File video);
 
 /// The [DmVideoStore] of the account signed in now, or null when none is.
@@ -59,9 +61,10 @@ class DmVideoStore {
   /// sent, which [prune] asks too, from a record kept beside each video: the
   /// message's row can be missing, as after an account switch.
   ///
-  /// [readFrame] defaults to [readDmVideoCardFrame], [rootDirectory] to the
-  /// app's cache directory and [now] to the wall clock; they exist so tests
-  /// can inject fakes.
+  /// [readFrame] defaults to [readDmVideoCardFrame] without its own timeout:
+  /// the store bounds the UI wait separately from native completion.
+  /// [rootDirectory] defaults to the app's cache directory and [now] to the
+  /// wall clock; they exist so tests can inject fakes.
   DmVideoStore({
     required String ownerPubkey,
     required DmVideoFetcher fetchVideo,
@@ -76,7 +79,7 @@ class DmVideoStore {
   }) : _ownerPubkey = ownerPubkey,
        _removalsAtCreation = _removals[_safeName(ownerPubkey)] ?? 0,
        _fetchVideo = fetchVideo,
-       _readFrame = readFrame ?? readDmVideoCardFrame,
+       _readFrame = readFrame ?? _readCardFrameUntilSettled,
        _isMessageGone = isMessageGone,
        _isConversationRemoved = isConversationRemoved,
        _rootDirectory = rootDirectory ?? getApplicationCacheDirectory,
@@ -129,6 +132,9 @@ class DmVideoStore {
   /// after its account was removed cannot write the video back.
   static final Map<String, int> _removals = {};
   static const String _logName = 'DmVideoStore';
+
+  static Future<Uint8List?> _readCardFrameUntilSettled(File video) =>
+      readDmVideoCardFrame(video, timeout: null);
 
   /// How long a file may go unopened before [prune] deletes it.
   final Duration maxIdle;
@@ -203,8 +209,8 @@ class DmVideoStore {
   int _writes = 0;
   final StreamController<String> _kept = StreamController<String>.broadcast();
 
-  /// Ids of messages whose video was just kept, so a card waiting for a
-  /// video it may not download itself can show its frame once it is played.
+  /// Ids of messages whose video or late preview frame was just kept, so a
+  /// waiting card can pick it up without another download or decode.
   Stream<String> get kept => _kept.stream;
 
   /// File name of [message]'s kept video.
@@ -781,15 +787,23 @@ class DmVideoStore {
       if (!wanted()) return null;
       final id = message.id;
       return await (_frameReadsInFlight[id] ??= _frameReads
-          .run(() async {
-            // Its turn can come long after the check above: a card closed or
-            // a sender blocked meanwhile must not cost a decode.
-            if (!_frameWanted(id)) return null;
-            return _readAndKeepFrame(message, video, preview);
-          })
-          .whenComplete(
-            () => _frameReadsInFlight.removeWhere((key, _) => key == id),
-          ));
+              .run(() async {
+                // Its turn can come long after the check above: a card closed or
+                // a sender blocked meanwhile must not cost a decode.
+                if (!_frameWanted(id)) return null;
+                // This lease and the queue turn belong to native completion,
+                // independently of a card's deadline or lifetime below.
+                _lease(video);
+                try {
+                  return await _readAndKeepFrame(message, video, preview);
+                } finally {
+                  _release(video);
+                }
+              })
+              .whenComplete(
+                () => _frameReadsInFlight.removeWhere((key, _) => key == id),
+              ))
+          .timeout(dmVideoPreviewTimeout, onTimeout: () => null);
     } finally {
       _release(video);
     }
@@ -868,8 +882,8 @@ class DmVideoStore {
     }
     final frame = await _readFrame(video);
     if (frame == null || frame.isEmpty) {
-      // The mark stays: the reader gives up on its timeout while the native
-      // decoder may run on, and a decode that never ends is not retried.
+      // The mark stays when the decoder cannot produce a frame. A decode
+      // that never settles also leaves its mark, even across an app restart.
       _unreadableFrames.add(message.id);
       return null;
     }
@@ -879,6 +893,9 @@ class DmVideoStore {
       _deleteNow(attempt);
     }
     _knownPreviews[message.id] = preview.path;
+    // A card may have reached its UI deadline and now waits on this stream.
+    // Its late native reply still supplies a frame without another decode.
+    if (!_kept.isClosed) _kept.add(message.id);
     return preview;
   }
 

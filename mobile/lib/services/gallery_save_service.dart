@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -99,7 +100,7 @@ class GallerySaveService {
       final file = File(resolvedPath);
       if (!file.existsSync()) {
         Log.warning(
-          'Cannot save to gallery: file does not exist at $resolvedPath',
+          'Cannot save to gallery: file does not exist',
           name: 'GallerySaveService',
           category: LogCategory.video,
         );
@@ -127,7 +128,7 @@ class GallerySaveService {
       // Without album, it only needs photosAddOnly permission
       Log.info(
         'saveVideoToGallery calling Gal.putVideo: '
-        'path=$resolvedPath size=${file.lengthSync()} '
+        'size=${file.lengthSync()} '
         'platform=$defaultTargetPlatform',
         name: 'GallerySaveService',
         category: LogCategory.video,
@@ -159,7 +160,7 @@ class GallerySaveService {
       // description on iOS) is all that survives of the real cause.
       Log.warning(
         'Failed to save video to gallery: ${e.type.name} '
-        '(native: ${e.platformException.message})',
+        '(native: ${_nativeDiagnostic(e.platformException.message, resolvedPath)})',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
@@ -172,7 +173,7 @@ class GallerySaveService {
       return GallerySaveFailure('Gallery error: ${e.type.name}');
     } catch (e) {
       Log.warning(
-        'Unexpected error saving video to gallery: $e',
+        'Unexpected error saving video to gallery: ${_failureKind(e)}',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
@@ -182,7 +183,7 @@ class GallerySaveService {
         return _saveToDownloads(resolvedPath);
       }
 
-      return GallerySaveFailure('Unexpected error: $e');
+      return GallerySaveFailure('Unexpected error: ${_failureKind(e)}');
     }
   }
 
@@ -250,7 +251,7 @@ class GallerySaveService {
       await File(filePath).copy(destPath);
 
       Log.info(
-        'Video saved to Downloads: $destPath',
+        'Video saved to Downloads successfully',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
@@ -258,11 +259,28 @@ class GallerySaveService {
       return const GallerySaveSuccess();
     } catch (e) {
       Log.warning(
-        'Failed to save to Downloads: $e',
+        'Failed to save to Downloads: ${_failureKind(e)}',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
-      return GallerySaveFailure('Could not save to Downloads: $e');
+      return GallerySaveFailure(
+        'Could not save to Downloads: ${_failureKind(e)}',
+      );
     }
   }
+
+  // The source can be a retained private video, including on desktop where
+  // temporary/cache roots need not match a standard sandbox-path pattern.
+  static String _nativeDiagnostic(String? message, String? sourcePath) {
+    final text = message ?? 'no native message';
+    return redactFilesystemPaths(
+      sourcePath == null || sourcePath.isEmpty
+          ? text
+          : text.replaceAll(sourcePath, '[REDACTED]'),
+    );
+  }
+
+  static String _failureKind(Object error) => error is FileSystemException
+      ? '${error.runtimeType} (OS code: ${error.osError?.errorCode})'
+      : '${error.runtimeType}';
 }

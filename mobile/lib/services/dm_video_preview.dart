@@ -82,11 +82,13 @@ Future<DmVideoPreview> readDmVideoPreview(
 Future<T?> _readPart<T extends Object>(
   String part,
   Future<T?> Function() read,
-  Duration timeout,
+  Duration? timeout,
   CrashReporter reporter,
 ) async {
   try {
-    return await read().timeout(
+    final pending = read();
+    if (timeout == null) return await pending;
+    return await pending.timeout(
       timeout,
       onTimeout: () {
         Log.warning(
@@ -124,11 +126,13 @@ Future<T?> _readPart<T extends Object>(
 
 /// Reads the frame [video]'s card shows, cropped to [dmVideoCardFrameSize].
 ///
-/// Null when the frame fails or takes longer than [timeout]. Never throws; it
-/// logs and reports like [readDmVideoPreview].
+/// Null when the frame fails or takes longer than [timeout]. With a null
+/// timeout, waits for the native reply: a caller owning the decoder and file
+/// must not release them merely because its UI stopped waiting. Never throws;
+/// it logs and reports like [readDmVideoPreview].
 Future<Uint8List?> readDmVideoCardFrame(
   File video, {
-  Duration timeout = dmVideoPreviewTimeout,
+  Duration? timeout = dmVideoPreviewTimeout,
   CrashReporter? reporter,
 }) => _readPart(
   'card frame',
