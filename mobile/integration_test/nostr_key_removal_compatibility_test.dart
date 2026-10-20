@@ -1,5 +1,5 @@
-// ABOUTME: Native iOS Keychain proof for account-owned login record removal.
-// ABOUTME: Covers both accessibility histories without touching app login keys.
+// ABOUTME: Native storage proof for account-owned login record removal.
+// ABOUTME: Covers local and public-only records without touching app login keys.
 
 import 'dart:io';
 
@@ -12,29 +12,31 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  group('iOS owned login record removal', () {
+  group('Native owned login record removal', () {
     for (final accessibility in [
       KeychainAccessibility.first_unlock,
-      KeychainAccessibility.first_unlock_this_device,
+      if (Platform.isIOS) KeychainAccessibility.first_unlock_this_device,
     ]) {
       final history = accessibility == KeychainAccessibility.first_unlock
           ? 'current'
           : 'legacy';
       for (final foreignPrimary in [false, true]) {
         final primary = foreignPrimary ? 'foreign' : 'owned';
-        testWidgets('removes $history records with $primary primary', (
-          _,
-        ) async {
-          expect(
-            Platform.isIOS,
-            isTrue,
-            reason: 'Requires native iOS Keychain',
-          );
-          await _verifyOwnedRemoval(
-            accessibility: accessibility,
-            foreignPrimary: foreignPrimary,
-          );
-        });
+        for (final publicOnly in [false, true]) {
+          testWidgets('removes $history records with $primary primary '
+              '(publicOnly=$publicOnly)', (_) async {
+            expect(
+              Platform.isIOS || Platform.isAndroid,
+              isTrue,
+              reason: 'Requires native iOS or Android secure storage',
+            );
+            await _verifyOwnedRemoval(
+              accessibility: accessibility,
+              foreignPrimary: foreignPrimary,
+              publicOnly: publicOnly,
+            );
+          });
+        }
       }
     }
   });
@@ -43,18 +45,21 @@ void main() {
 Future<void> _verifyOwnedRemoval({
   required KeychainAccessibility accessibility,
   required bool foreignPrimary,
+  required bool publicOnly,
 }) async {
   // The service and IDs belong only to this invocation. Never use the app's
   // shared PRIMARY/identity slots or deleteAll to prepare or clean this test.
   final service =
       'divine.owned-removal.integration.${DateTime.now().microsecondsSinceEpoch}';
   final current = FlutterSecureStorage(
+    aOptions: AndroidOptions(preferencesKeyPrefix: service),
     iOptions: IOSOptions(
       accountName: service,
       accessibility: KeychainAccessibility.first_unlock,
     ),
   );
   final legacy = FlutterSecureStorage(
+    aOptions: AndroidOptions(preferencesKeyPrefix: service),
     iOptions: IOSOptions(
       accountName: service,
       accessibility: KeychainAccessibility.first_unlock_this_device,
@@ -78,7 +83,9 @@ Future<void> _verifyOwnedRemoval({
   );
   addTearDown(alice.dispose);
   addTearDown(bob.dispose);
-  final ownedRecord = _record(alice);
+  final publicAlice = SecureKeyContainer.fromPublicKey(alice.publicKeyHex);
+  addTearDown(publicAlice.dispose);
+  final ownedRecord = _record(publicOnly ? publicAlice : alice);
   final primaryRecord = foreignPrimary ? _record(bob) : ownedRecord;
   final seeded = accessibility == KeychainAccessibility.first_unlock
       ? current
@@ -95,7 +102,7 @@ Future<void> _verifyOwnedRemoval({
   }
 
   final platformStorage = PlatformSecureStorage.forPlatform(
-    TargetPlatform.iOS,
+    Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android,
     fallbackStorage: current,
     legacyStorage: legacy,
   );

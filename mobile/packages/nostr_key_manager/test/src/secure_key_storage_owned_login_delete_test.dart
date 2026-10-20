@@ -372,6 +372,146 @@ void main() {
     );
   });
 
+  group('Public-only login records', () {
+    for (final (backend, nativeBackend, androidFallback) in [
+      ('iOS fallback', false, false),
+      ('Android native', true, false),
+      ('Android fallback', false, true),
+    ]) {
+      group(backend, () {
+        late SecureKeyContainer publicAlice;
+        late SecureKeyContainer publicBob;
+
+        void seed(String key, SecureKeyContainer container) {
+          if (nativeBackend) {
+            nativeRecords[key] = nativeRecord(container);
+          } else {
+            for (final slot in [current, legacy]) {
+              fallbackRecords[fallbackId(slot, key)] = rawRecord(container);
+            }
+          }
+        }
+
+        setUp(() {
+          useNative = nativeBackend || androidFallback;
+          missingNativeCapabilities = androidFallback;
+          missingNativeInitialization = androidFallback;
+          missingNativeReadMethods = androidFallback;
+          publicAlice = SecureKeyContainer.fromPublicKey(alice.publicKeyHex);
+          publicBob = SecureKeyContainer.fromPublicKey(bob.publicKeyHex);
+        });
+
+        tearDown(() {
+          publicAlice.dispose();
+          publicBob.dispose();
+        });
+
+        test('removes owned archive and verifies completed logout', () async {
+          seed(aliceSaved, publicAlice);
+          // An existing public-only archive is not proof of completed removal.
+          await expectLater(
+            captureLogout(),
+            throwsA(isA<PlatformSecureStorageException>()),
+          );
+          await removeAlice();
+          expect(fallbackRecords, isEmpty);
+          expect(nativeRecords, isEmpty);
+          expect(deletes, isNotEmpty);
+          final proof = await captureLogout();
+          await proof.verifyUnchanged();
+          // Reappearance invalidates the completed-removal proof.
+          seed(aliceSaved, publicAlice);
+          await expectLater(
+            proof.verifyUnchanged(),
+            throwsA(isA<PlatformSecureStorageException>()),
+          );
+        });
+
+        test('preserves foreign public-only primary byte for byte', () async {
+          seed(primary, publicBob);
+          seed(aliceSaved, publicAlice);
+          await removeAlice();
+          if (nativeBackend) {
+            expect(nativeRecords, {primary: nativeRecord(publicBob)});
+          } else {
+            expect(fallbackRecords, {
+              for (final slot in [current, legacy])
+                fallbackId(slot, primary): rawRecord(publicBob),
+            });
+          }
+          final proof = await captureLogout();
+          await proof.verifyUnchanged();
+        });
+
+        test(
+          'refuses a foreign public-only archive at owned coordinate',
+          () async {
+            seed(primary, alice);
+            seed(aliceSaved, publicBob);
+            await expectLater(
+              removeAlice(),
+              throwsA(isA<PlatformSecureStorageException>()),
+            );
+            expect(deletes, isEmpty);
+          },
+        );
+
+        for (final invalid in [
+          'missing-pubkey',
+          'invalid-pubkey',
+          'missing-npub',
+          'mismatched-npub',
+        ]) {
+          test('refuses public-only archive with $invalid', () async {
+            seed(primary, alice);
+            final fields = nativeRecord(publicAlice)..remove('success');
+            switch (invalid) {
+              case 'missing-pubkey':
+                fields.remove('publicKeyHex');
+              case 'invalid-pubkey':
+                fields['publicKeyHex'] = 'invalid-public-key';
+              case 'missing-npub':
+                fields.remove('npub');
+              case 'mismatched-npub':
+                fields['npub'] = bob.npub;
+            }
+            if (nativeBackend) {
+              nativeRecords[aliceSaved] = {'success': true, ...fields};
+            } else {
+              fallbackRecords[fallbackId(current, aliceSaved)] = fields.entries
+                  .map((entry) => '${entry.key}:${entry.value}')
+                  .join('|');
+            }
+            await expectLater(
+              removeAlice(),
+              throwsA(isA<PlatformSecureStorageException>()),
+            );
+            expect(deletes, isEmpty);
+          });
+        }
+
+        test(
+          'rejects acknowledged deletion that retains public-only archive',
+          () async {
+            seed(aliceSaved, publicAlice);
+            silentlyRetained = nativeBackend
+                ? aliceSaved
+                : fallbackId(current, aliceSaved);
+            await expectLater(
+              removeAlice(),
+              throwsA(isA<PlatformSecureStorageException>()),
+            );
+            expect(deletes, isNotEmpty);
+            await expectLater(
+              captureLogout(),
+              throwsA(isA<PlatformSecureStorageException>()),
+            );
+          },
+        );
+      });
+    }
+  });
+
   group('Fallback owner-proven removal', () {
     test(
       'removes all four verified copies and proves they stayed absent',

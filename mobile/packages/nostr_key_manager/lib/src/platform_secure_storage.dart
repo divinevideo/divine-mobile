@@ -635,7 +635,8 @@ class PlatformSecureStorage {
     }
   }
 
-  /// Removes only records whose private key proves [ownerPubkey] ownership.
+  /// Removes private-key records proven to belong to [ownerPubkey], and
+  /// public-only records whose public key and npub consistently name it.
   ///
   /// Current and legacy slots are inspected before any deletion. Malformed,
   /// contradictory, or unavailable records refuse the operation. Foreign
@@ -967,10 +968,31 @@ class PlatformSecureStorage {
     }
     SecureKeyContainer? container;
     try {
-      container = SecureKeyContainer.fromPrivateKeyHex(privateKey);
-      final pubkey = container.publicKeyHex;
       final storedPubkey = fields['publicKeyHex'];
       final storedNpub = fields['npub'];
+      if (privateKey.isEmpty) {
+        // Remote signers archive only public identity metadata. There is no
+        // secret to derive ownership from, so require both canonical public
+        // encodings instead. Missing or contradictory evidence stays refused.
+        if (storedPubkey is! String ||
+            !RegExp(r'^[0-9a-f]{64}$').hasMatch(storedPubkey) ||
+            storedNpub is! String) {
+          throw const PlatformSecureStorageException(
+            'Stored public identity could not be verified',
+            code: 'key_record_unverified',
+          );
+        }
+        container = SecureKeyContainer.fromPublicKey(storedPubkey);
+        if (storedNpub != container.npub) {
+          throw const PlatformSecureStorageException(
+            'Stored public identity encodings contradict each other',
+            code: 'key_record_unverified',
+          );
+        }
+        return container.publicKeyHex;
+      }
+      container = SecureKeyContainer.fromPrivateKeyHex(privateKey);
+      final pubkey = container.publicKeyHex;
       if ((storedPubkey != null && storedPubkey != pubkey) ||
           (storedNpub != null && storedNpub != container.npub)) {
         throw const PlatformSecureStorageException(

@@ -265,6 +265,63 @@ void main() {
   }
 
   group('ownerless sign out ownership', () {
+    for (final retryRemoval in [false, true]) {
+      test('Keycast public-only archive removal completes '
+          '(retry=$retryRemoval)', () async {
+        final oauth = _OAuth();
+        when(oauth.logout).thenAnswer((_) async {});
+        final auth = subject(oauthClient: oauth);
+        final identity = SecureKeyContainer.fromPrivateKeyHex('3' * 64);
+        addTearDown(identity.dispose);
+        final owner = identity.publicKeyHex;
+        final archive = 'saved_identity_${identity.npub}';
+        await auth.signInWithDivineOAuth(
+          KeycastSession(
+            bunkerUrl: 'https://keycast.example.invalid',
+            accessToken: 'synthetic-owned-token',
+            userPubkey: owner,
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          ),
+        );
+        expect(auth.authState, AuthState.authenticated);
+        expect(native[primaryKey], isNull);
+        expect(
+          native[archive],
+          'privateKeyHex:|publicKeyHex:$owner|npub:${identity.npub}',
+        );
+        if (retryRemoval) {
+          ignoredDelete = archive;
+          await expectLater(
+            auth.signOut(deleteKeys: true, abortOnKeyDeletionFailure: true),
+            throwsA(isA<PlatformSecureStorageException>()),
+          );
+          expect(native[archive], isNotNull);
+          expect(
+            AccountActivationCoordinator.forPreferences(prefs)
+                .hasUnresolvedActivation,
+            isTrue,
+          );
+          ignoredDelete = null;
+        }
+        await auth.signOut(deleteKeys: true, abortOnKeyDeletionFailure: true);
+        expect(native[archive], isNull);
+        expect(legacyNative[archive], isNull);
+        expect(native['keycast_session'], isNull);
+        expect(auth.authState, AuthState.unauthenticated);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isFalse,
+        );
+        await auth.signOut(deleteKeys: true, abortOnKeyDeletionFailure: true);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isFalse,
+        );
+      });
+    }
+
     for (final deleteKeys in [false, true]) {
       test(
         'repeated verified sign out preserves signed-out list authority '
