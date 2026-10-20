@@ -1275,6 +1275,51 @@ void main() {
       );
 
       test(
+        "deletes a gone message's video and frame once the read that held "
+        'them ends',
+        () async {
+          final read = Completer<Uint8List?>();
+          final reading = Completer<void>();
+          readFrame = (_) {
+            reading.complete();
+            return read.future;
+          };
+          final message = _videoMessage();
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            opened: now,
+          );
+          var gone = false;
+          var readEnded = false;
+          final askedAfterRead = Completer<void>();
+          final store = createStore(
+            isMessageGone: (_) async {
+              if (readEnded && !askedAfterRead.isCompleted) {
+                askedAfterRead.complete();
+              }
+              return gone;
+            },
+          );
+          final preview = store.previewFor(message, download: false);
+          await reading.future;
+          gone = true;
+          await store.prune();
+          expect(video.existsSync(), isTrue);
+
+          readEnded = true;
+          read.complete(_frame);
+          await preview;
+          // The prune the release starts asks once it has listed the folder;
+          // what follows it does not wait on anything.
+          await askedAfterRead.future;
+          await pumpEventQueue();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
         "keeps a gone message's video while a card reads the frame of a "
         "tap's download",
         () async {

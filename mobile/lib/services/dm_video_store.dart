@@ -146,6 +146,10 @@ class DmVideoStore {
   /// Never pruned until released.
   final Map<String, int> _leases = {};
 
+  /// Files of gone messages a prune left because they were leased, pruned
+  /// again once their last lease is released.
+  final Set<String> _goneWhileLeased = {};
+
   /// Downloads without a tap on play run one at a time: each holds a whole
   /// video in memory, and a long thread shows many at once.
   final _OneAtATime _autoDownloads = _OneAtATime();
@@ -353,11 +357,14 @@ class DmVideoStore {
         continue;
       }
       // Even a video played this session goes: its sender took it back, or
-      // the user removed it. Only a read or a hand-out under way holds it.
-      if (gone.contains(_messageIdOf(file)) &&
-          !_leases.containsKey(file.path)) {
-        _deleteNow(file);
-        continue;
+      // the user removed it. Only a read or a hand-out under way holds it,
+      // and its release prunes again.
+      if (gone.contains(_messageIdOf(file))) {
+        if (!_leases.containsKey(file.path)) {
+          _deleteNow(file);
+          continue;
+        }
+        _goneWhileLeased.add(file.path);
       }
       if (file.path.endsWith(_frameAttemptSuffix)) {
         if (!withVideo.contains(_messageIdOf(file))) _deleteNow(file);
@@ -805,8 +812,16 @@ class DmVideoStore {
     if (count == null) return;
     if (count > 1) {
       _leases[file.path] = count - 1;
-    } else {
-      _leases.remove(file.path);
+      return;
+    }
+    _leases.remove(file.path);
+    if (_goneWhileLeased.remove(file.path)) {
+      runDetached(
+        prune(),
+        'prune a released kept video DM whose message is gone',
+        logName: _logName,
+        category: LogCategory.video,
+      );
     }
   }
 
