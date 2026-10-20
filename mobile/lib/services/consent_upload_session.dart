@@ -3,6 +3,11 @@
 import 'package:http/http.dart' as http;
 import 'package:openvine/services/consent_upload.dart';
 
+/// Expected lifecycle or retry-input rejection, rather than an app invariant.
+class ConsentUploadInvalidatedException implements Exception {
+  const ConsentUploadInvalidatedException();
+}
+
 /// One form's upload lifetime. A timed-out attempt keeps its transport and body.
 class ConsentUploadSession {
   ConsentUpload? _upload;
@@ -17,7 +22,7 @@ class ConsentUploadSession {
     required String videoPath,
     required String? pubkey,
   }) async {
-    if (_disposed) throw StateError('Consent submission is closed');
+    if (_disposed) throw const ConsentUploadInvalidatedException();
     final binding = (
       url: url,
       email: email,
@@ -26,7 +31,7 @@ class ConsentUploadSession {
     );
     if (_binding != null && _binding != binding) {
       if (_binding!.pubkey != pubkey) await dispose();
-      throw StateError('Consent submission inputs cannot change during retry');
+      throw const ConsentUploadInvalidatedException();
     }
     _binding = binding;
   }
@@ -49,7 +54,7 @@ class ConsentUploadSession {
   ) async {
     try {
       final upload = _upload ??= await prepare();
-      if (_disposed) throw StateError('Consent submission is closed');
+      if (_disposed) throw const ConsentUploadInvalidatedException();
       return await transmit(upload);
     } finally {
       _pending = null;
