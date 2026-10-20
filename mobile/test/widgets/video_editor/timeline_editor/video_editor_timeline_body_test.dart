@@ -258,7 +258,7 @@ void main() {
       await gesture.moveBy(const Offset(198, 0));
       await tester.pump();
 
-      expect(reportedStart, const Duration(seconds: 2));
+      expect(reportedStart, equals(const Duration(seconds: 2)));
       await gesture.up();
       await tester.pump();
     });

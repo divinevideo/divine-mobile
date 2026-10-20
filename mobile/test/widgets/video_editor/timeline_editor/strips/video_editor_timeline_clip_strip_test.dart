@@ -981,25 +981,25 @@ void main() {
           await gesture.moveBy(Offset(direction * 148, 0));
           await tester.pump();
 
-          expect(reportedEdge(), const Duration(seconds: 2));
-          expect(haptics, ['HapticFeedbackType.selectionClick']);
+          expect(reportedEdge(), equals(const Duration(seconds: 2)));
+          expect(haptics, equals(['HapticFeedbackType.selectionClick']));
 
           await gesture.moveBy(Offset(direction * 6, 0));
           await tester.pump();
-          expect(reportedEdge(), const Duration(seconds: 2));
+          expect(reportedEdge(), equals(const Duration(seconds: 2)));
           expect(haptics, hasLength(1));
 
           await gesture.moveBy(Offset(direction * 6, 0));
           await tester.pump();
-          expect(reportedEdge(), const Duration(seconds: 2));
+          expect(reportedEdge(), equals(const Duration(seconds: 2)));
 
           await gesture.moveBy(Offset(direction * 15, 0));
           await tester.pump();
-          expect(reportedEdge(), const Duration(milliseconds: 2150));
+          expect(reportedEdge(), equals(const Duration(milliseconds: 2150)));
           expect(haptics, hasLength(1));
           await gesture.up();
           await tester.pump();
-          expect(dragStates, [true, false]);
+          expect(dragStates, equals([true, false]));
         });
 
         for (final outsideMs in [-100, 3100]) {
@@ -1012,7 +1012,7 @@ void main() {
             await gesture.moveBy(Offset(direction * 148, 0));
             await tester.pump();
 
-            expect(reportedEdge(), const Duration(milliseconds: 1980));
+            expect(reportedEdge(), equals(const Duration(milliseconds: 1980)));
             expect(haptics, isEmpty);
             await gesture.up();
             await tester.pump();
@@ -1049,9 +1049,9 @@ void main() {
 
             expect(
               reportedEdge(),
-              isStart ? sourceTarget : clip.duration - sourceTarget,
+              equals(isStart ? sourceTarget : clip.duration - sourceTarget),
             );
-            expect(haptics, ['HapticFeedbackType.selectionClick']);
+            expect(haptics, equals(['HapticFeedbackType.selectionClick']));
             await gesture.up();
             await tester.pump();
           });
@@ -1064,7 +1064,7 @@ void main() {
           final gesture = await startDrag(tester, isStart: isStart);
           await gesture.moveBy(Offset(direction * 100, 0));
           await tester.pump();
-          expect(reportedEdge(), const Duration(milliseconds: 1500));
+          expect(reportedEdge(), equals(const Duration(milliseconds: 1500)));
 
           // Feed a committed trim back, as ClipEditorBloc does mid-gesture.
           final clip = _createTestClip(id: 'snap', seconds: 4).copyWith(
@@ -1076,8 +1076,8 @@ void main() {
           await gesture.moveBy(Offset(direction * 48, 0));
           await tester.pump();
 
-          expect(reportedEdge(), const Duration(seconds: 2));
-          expect(haptics, ['HapticFeedbackType.selectionClick']);
+          expect(reportedEdge(), equals(const Duration(seconds: 2)));
+          expect(haptics, equals(['HapticFeedbackType.selectionClick']));
           await gesture.up();
           await tester.pump();
         });
@@ -1107,9 +1107,9 @@ void main() {
 
           expect(
             reportedEdge(),
-            Duration(milliseconds: isStart ? 4500 : 1500),
+            equals(Duration(milliseconds: isStart ? 4500 : 1500)),
           );
-          expect(haptics, ['HapticFeedbackType.selectionClick']);
+          expect(haptics, equals(['HapticFeedbackType.selectionClick']));
           await gesture.up();
           await tester.pump();
         });
@@ -1123,13 +1123,13 @@ void main() {
           await gesture.moveBy(Offset(direction * 298, 0));
           await tester.pump();
 
-          expect(reportedEdge(), const Duration(milliseconds: 3440));
-          expect(haptics, ['HapticFeedbackType.mediumImpact']);
+          expect(reportedEdge(), equals(const Duration(milliseconds: 3440)));
+          expect(haptics, equals(['HapticFeedbackType.mediumImpact']));
 
           // An overshoot must not consume the movement back from the limit.
           await gesture.moveBy(Offset(-direction * 10, 0));
           await tester.pump();
-          expect(reportedEdge(), const Duration(milliseconds: 3340));
+          expect(reportedEdge(), equals(const Duration(milliseconds: 3340)));
           expect(haptics, hasLength(1));
           await gesture.up();
           await tester.pump();
@@ -1142,7 +1142,7 @@ void main() {
           final firstDrag = await startDrag(tester, isStart: isStart);
           await firstDrag.moveBy(Offset(direction * 148, 0));
           await tester.pump();
-          expect(reportedEdge(), const Duration(seconds: 2));
+          expect(reportedEdge(), equals(const Duration(seconds: 2)));
           await firstDrag.up();
           await tester.pump();
 
@@ -1152,15 +1152,18 @@ void main() {
           await tester.pump();
           expect(
             reportedEdge(),
-            Duration(milliseconds: isStart ? 1500 : 2500),
+            equals(Duration(milliseconds: isStart ? 1500 : 2500)),
           );
-          expect(haptics, [
-            'HapticFeedbackType.selectionClick',
-            'HapticFeedbackType.selectionClick',
-          ]);
+          expect(
+            haptics,
+            equals([
+              'HapticFeedbackType.selectionClick',
+              'HapticFeedbackType.selectionClick',
+            ]),
+          );
           await nextDrag.up();
           await tester.pump();
-          expect(dragStates, [true, false, true, false]);
+          expect(dragStates, equals([true, false, true, false]));
         });
 
         testWidgets('$handle drags freely off a playhead parked on it', (
@@ -1305,11 +1308,11 @@ void main() {
         await gesture.moveBy(const Offset(-100, 0));
         await tester.pump();
 
-        expect(reportedStart, const Duration(seconds: 3));
-        expect(haptics, ['HapticFeedbackType.mediumImpact']);
+        expect(reportedStart, equals(const Duration(seconds: 3)));
+        expect(haptics, equals(['HapticFeedbackType.mediumImpact']));
         await gesture.moveBy(const Offset(10, 0));
         await tester.pump();
-        expect(reportedStart, const Duration(milliseconds: 3100));
+        expect(reportedStart, equals(const Duration(milliseconds: 3100)));
         await gesture.up();
         await tester.pump();
       });
