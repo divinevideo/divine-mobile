@@ -165,6 +165,12 @@ class _LayoutCellState extends State<_LayoutCell> {
     );
     final cubit = context.read<SplitScreenLayoutCubit>();
     final number = '${index + 1}';
+    // An empty cell and a missing poster are app surfaces, so the ring
+    // follows the appearance there; over footage the brand green reads in
+    // both.
+    final ring = cell == null || cell.clip.thumbnailPath == null
+        ? context.vineColors.accentBrand
+        : VineTheme.primary;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -229,9 +235,7 @@ class _LayoutCellState extends State<_LayoutCell> {
                         borderRadius: widget.borderRadius,
                         border: Border.all(
                           width: 2,
-                          color: isSelected
-                              ? VineTheme.primary
-                              : VineTheme.transparent,
+                          color: isSelected ? ring : VineTheme.transparent,
                         ),
                       ),
                     ),

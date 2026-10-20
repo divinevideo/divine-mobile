@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the split-screen layout preview: reframing one cell
-// ABOUTME: leaves the others as they were, and a broken poster stays blank
+// ABOUTME: leaves the others alone, posters and rings read in both modes
 
 import 'dart:async';
 import 'dart:io';
@@ -17,6 +17,8 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+
+import '../../../helpers/contrast.dart';
 
 DivineVideoClip _clip(String id) => DivineVideoClip(
   id: id,
@@ -52,8 +54,9 @@ void main() {
 
     Future<SplitScreenLayoutCubit> pump(
       WidgetTester tester,
-      List<DivineVideoClip> clips,
-    ) async {
+      List<DivineVideoClip> clips, {
+      ThemeData? theme,
+    }) async {
       final cubit = SplitScreenLayoutCubit(
         aspectRatio: model.AspectRatio.vertical,
         borderColor: VineTheme.backgroundColor,
@@ -61,7 +64,7 @@ void main() {
       addTearDown(cubit.close);
       await tester.pumpWidget(
         MaterialApp(
-          theme: VineTheme.theme,
+          theme: theme ?? VineTheme.theme,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -99,6 +102,62 @@ void main() {
       expect(cubit.state.cells.first!.zoom, 2);
       expect(identical(tester.widget(second), before), isTrue);
     });
+
+    for (final (name, theme) in [
+      ('dark', VineTheme.theme),
+      ('light', VineTheme.lightTheme),
+    ]) {
+      for (final (kind, clips, label) in [
+        (
+          'an empty',
+          <DivineVideoClip>[],
+          l10n.videoEditorLayoutCellEmptySemanticLabel('1'),
+        ),
+        (
+          'a posterless',
+          [_clip('a')],
+          l10n.videoEditorLayoutCellSemanticLabel('1'),
+        ),
+      ]) {
+        testWidgets('rings $kind selected cell at 3:1 or more in $name mode', (
+          tester,
+        ) async {
+          final cubit = await pump(tester, clips, theme: theme);
+          cubit.cellSelected(0);
+          await tester.pumpAndSettle();
+          final cell = find.byWidgetPredicate(
+            (widget) => widget is Semantics && widget.properties.label == label,
+          );
+          final ring =
+              (tester
+                              .widget<AnimatedContainer>(
+                                find.descendant(
+                                  of: cell,
+                                  matching: find.byType(AnimatedContainer),
+                                ),
+                              )
+                              .decoration!
+                          as BoxDecoration)
+                      .border!
+                  as Border;
+          final fill = tester
+              .widget<ColoredBox>(
+                find.descendant(of: cell, matching: find.byType(ColoredBox)),
+              )
+              .color;
+          // An empty cell is translucent over the layout's border colour.
+          final ground = Color.alphaBlend(fill, cubit.state.borderColor);
+          final ratio = contrastRatio(ring.top.color, ground);
+
+          expect(cubit.state.selectedCellIndex, 0);
+          expect(
+            ratio,
+            greaterThanOrEqualTo(3),
+            reason: '$kind cell, $name: ${ratio.toStringAsFixed(2)}:1',
+          );
+        });
+      }
+    }
 
     testWidgets('moves the cells when the gap or the layout changes', (
       tester,
