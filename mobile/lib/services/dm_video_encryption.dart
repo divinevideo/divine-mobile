@@ -18,6 +18,34 @@ const int dmVideoMaxPlaintextBytes = 100 * 1024 * 1024;
 /// plus the 16-byte GCM tag appended by [FileEncryption].
 const int dmVideoMaxCiphertextBytes = dmVideoMaxPlaintextBytes + 16;
 
+/// Video MIME types an encrypted video DM carries, keyed by file extension.
+///
+/// The sender labels a picked file from its extension and the receiver names
+/// the decrypted clip from that label, so both directions read this one table.
+const Map<String, String> dmVideoMimeTypesByExtension = {
+  'mp4': 'video/mp4',
+  'mov': 'video/quicktime',
+  'm4v': 'video/x-m4v',
+  'webm': 'video/webm',
+  'avi': 'video/x-msvideo',
+  'mkv': 'video/x-matroska',
+  '3gp': 'video/3gpp',
+};
+
+/// File extension for a decrypted clip whose plaintext is [mimeType].
+///
+/// iOS picks the container parser from the extension and refuses a name built
+/// from the MIME subtype, such as `.quicktime`. An unknown type gets `mp4`,
+/// the format Divine itself sends.
+String dmVideoFileExtensionFor(String mimeType) {
+  final normalized = mimeType.toLowerCase();
+  for (final MapEntry(key: extension, value: type)
+      in dmVideoMimeTypesByExtension.entries) {
+    if (type == normalized) return extension;
+  }
+  return 'mp4';
+}
+
 /// Thrown by [DmVideoEncryption.encryptFile] when the file exceeds
 /// [dmVideoMaxPlaintextBytes].
 class DmVideoTooLargeException implements Exception {

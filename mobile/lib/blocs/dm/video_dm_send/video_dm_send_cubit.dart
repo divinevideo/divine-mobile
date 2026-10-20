@@ -17,19 +17,11 @@ import 'package:openvine/services/dm_video_send_service.dart';
 const int videoDmMaxMegabytes = dmVideoMaxPlaintextBytes ~/ (1024 * 1024);
 
 /// Maps a picked file's extension to the plaintext MIME type recorded in the
-/// kind 15 metadata. Defaults to `video/mp4`, the format the gallery picker
-/// returns on both platforms.
+/// kind 15 metadata, through [dmVideoMimeTypesByExtension]. Defaults to
+/// `video/mp4`, the format Divine itself sends.
 String videoDmMimeTypeFor(String path) {
   final extension = path.split('.').last.toLowerCase();
-  return switch (extension) {
-    'mov' => 'video/quicktime',
-    'm4v' => 'video/x-m4v',
-    'webm' => 'video/webm',
-    'avi' => 'video/x-msvideo',
-    'mkv' => 'video/x-matroska',
-    '3gp' => 'video/3gpp',
-    _ => 'video/mp4',
-  };
+  return dmVideoMimeTypesByExtension[extension] ?? 'video/mp4';
 }
 
 /// How a [VideoDmSendCubit.sendClips] call ended.

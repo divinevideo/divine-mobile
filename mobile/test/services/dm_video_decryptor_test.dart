@@ -308,5 +308,33 @@ void main() {
       // Deleting again is a no-op rather than a throw.
       decryptor.deleteClip(path);
     });
+
+    group('clipFileNameFor', () {
+      // iOS picks the container parser from the file extension and refuses a
+      // clip named after the MIME subtype, such as `.quicktime`.
+      const extensionsByFileType = {
+        'video/mp4': 'mp4',
+        'video/quicktime': 'mov',
+        'video/QuickTime': 'mov',
+        'video/x-m4v': 'm4v',
+        'video/webm': 'webm',
+        'video/x-msvideo': 'avi',
+        'video/x-matroska': 'mkv',
+        'video/3gpp': '3gp',
+        'video/x-unknown': 'mp4',
+      };
+
+      for (final MapEntry(key: fileType, value: extension)
+          in extensionsByFileType.entries) {
+        test('names a $fileType clip with the .$extension extension', () {
+          final message = _videoMessage(fileHash: '', fileType: fileType);
+
+          expect(
+            DmVideoDecryptor.clipFileNameFor(message),
+            equals('dm_video_${'a' * 64}_0.$extension'),
+          );
+        });
+      }
+    });
   });
 }
