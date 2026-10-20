@@ -563,5 +563,23 @@ void main() {
         ),
       );
     });
+
+    test('names when the native cancel came back', () {
+      final summary = summarizeMarker(const {
+        'kind': 'video',
+        'elapsedMs': 4310,
+        'cancelRequestedAtMs': 4012,
+        'cancelReturnedAtMs': 4013,
+        'details': {'segments': 1},
+      });
+
+      expect(
+        summary,
+        equals(
+          'kind=video elapsedMs=4310 cancelRequestedAtMs=4012 '
+          'cancelReturnedAtMs=4013 segments=1',
+        ),
+      );
+    });
   });
 }
