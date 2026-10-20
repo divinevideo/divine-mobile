@@ -199,9 +199,9 @@ class DmVideoStore {
       value.replaceAll(RegExp('[^A-Za-z0-9]'), '');
 
   /// [message]'s decrypted video, downloaded and decrypted the first time
-  /// and kept after that. Callers asking at once share one download, and so
-  /// does a card's download already fetching it; one still waiting in the
-  /// queue is not waited for.
+  /// and kept after that. Callers asking at once share one download. A card's
+  /// download already fetching it is taken over, free of its limits; one
+  /// still waiting in the queue is not waited for.
   ///
   /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`) or
   /// a [DmVideoUnavailableException] when the video cannot be stored, naming
