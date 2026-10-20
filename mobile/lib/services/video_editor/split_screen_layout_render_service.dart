@@ -159,6 +159,10 @@ abstract final class SplitScreenLayoutRenderService {
             layers: layers,
           ),
           imageLayers: holds,
+          // Without an explicit scale, iOS and macOS resize a composition by
+          // its first cell's source size; the cells and held frames are
+          // placed in canvas pixels, so the output must stay at the canvas.
+          transform: const ExportTransform(scaleX: 1, scaleY: 1),
           qualityConfig: VideoQualityConfig.custom(
             bitrate: VideoEditorConstants.quality.bitrate,
             resolution: canvas,

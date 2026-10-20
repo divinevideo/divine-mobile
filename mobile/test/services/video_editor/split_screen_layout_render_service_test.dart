@@ -192,6 +192,42 @@ void main() {
       expect(layer.mask, isNotNull);
     });
 
+    test(
+      'keeps the output at the canvas size whatever its first clip',
+      () async {
+        // A vertical first clip on a square canvas: the plugin would otherwise
+        // scale the composition by 1080 / 1920.
+        expect(editor.resolution.aspectRatio, isNot(1));
+        await expectLater(
+          SplitScreenLayoutRenderService.render(
+            cells: [
+              (
+                clip: _clip('a'),
+                rect: const ui.Rect.fromLTRB(0, 0, 0.5, 1),
+                alignment: Alignment.center,
+                zoom: 1,
+              ),
+              (
+                clip: _clip('b'),
+                rect: const ui.Rect.fromLTRB(0.5, 0, 1, 1),
+                alignment: Alignment.center,
+                zoom: 1,
+              ),
+            ],
+            aspectRatio: model.AspectRatio.square,
+            backgroundColor: const ui.Color(0xFFFF0000),
+            taskId: 'layout',
+          ),
+          throwsA(isA<_Rendered>()),
+        );
+
+        final request = await editor.tasks.single.toAsyncMap();
+
+        expect(request['scaleX'], 1);
+        expect(request['scaleY'], 1);
+      },
+    );
+
     test('leaves a green-screen clip as its file was keyed', () async {
       final keyed = _clip(
         'a',
