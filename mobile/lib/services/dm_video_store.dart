@@ -265,6 +265,9 @@ class DmVideoStore {
   Future<void> dispose() => _kept.close();
 
   /// Deletes every video kept for [ownerPubkey].
+  ///
+  /// Throws a [DmVideoUnavailableException] naming the cause, but not the
+  /// folder, when they cannot all be deleted.
   static Future<void> deleteOwner(
     String ownerPubkey, {
     Future<Directory> Function()? rootDirectory,
@@ -273,14 +276,20 @@ class DmVideoStore {
     _removals.update(owner, (count) => count + 1, ifAbsent: () => 1);
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
     final dir = Directory('${root.path}/$dirName/$owner');
-    if (dir.existsSync()) await dir.delete(recursive: true);
+    try {
+      if (dir.existsSync()) await dir.delete(recursive: true);
+    } on FileSystemException catch (error) {
+      throw DmVideoUnavailableException(
+        'could not delete the kept videos: ${_causeOf(error)}',
+      );
+    }
   }
 
   /// Deletes the videos kept for every account not in [keepOwnerPubkeys],
   /// and in the kept accounts' folders whatever nobody opened for [maxIdle]
   /// and part files a crash left. Returns how many accounts' videos it
-  /// deleted. A folder that cannot be read is logged, without its path, and
-  /// left.
+  /// deleted. A folder that cannot be read or deleted is logged, without its
+  /// path, and left for the next sweep; the others are still swept.
   ///
   /// Runs at launch for every account, so an account the user switched away
   /// from does not keep its videos past [maxIdle]: its store prunes only
@@ -300,14 +309,23 @@ class DmVideoStore {
     try {
       await for (final entity in dir.list()) {
         if (entity is! Directory) continue;
-        if (keep.contains(
-          entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
-        )) {
-          await _deleteIdleFiles(entity, currentTime, maxIdle);
-          continue;
+        try {
+          if (keep.contains(
+            entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
+          )) {
+            await _deleteIdleFiles(entity, currentTime, maxIdle);
+            continue;
+          }
+          await entity.delete(recursive: true);
+          deleted++;
+        } on FileSystemException catch (error) {
+          Log.warning(
+            "Could not sweep one account's kept video DMs: "
+            '${_causeOf(error)}',
+            name: _logName,
+            category: LogCategory.video,
+          );
         }
-        await entity.delete(recursive: true);
-        deleted++;
       }
     } on FileSystemException catch (error) {
       Log.warning(

@@ -65,6 +65,62 @@ class _UnreadableDirectory implements Directory {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// A folder that exists, may hold [children], and cannot be deleted.
+class _UndeletableDirectory implements Directory {
+  _UndeletableDirectory(this.path, {this.children = const []});
+
+  @override
+  final String path;
+
+  final List<FileSystemEntity> children;
+
+  @override
+  Uri get uri => Uri.directory(path);
+
+  @override
+  bool existsSync() => true;
+
+  @override
+  Stream<FileSystemEntity> list({
+    bool recursive = false,
+    bool followLinks = true,
+  }) => Stream.fromIterable(children);
+
+  @override
+  Future<FileSystemEntity> delete({bool recursive = false}) => Future.error(
+    FileSystemException(
+      'Deletion failed',
+      path,
+      const OSError('Directory not empty', 66),
+    ),
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A folder that records its deletion.
+class _DeletableDirectory implements Directory {
+  _DeletableDirectory(this.path);
+
+  @override
+  final String path;
+
+  bool deleted = false;
+
+  @override
+  Uri get uri => Uri.directory(path);
+
+  @override
+  Future<FileSystemEntity> delete({bool recursive = false}) async {
+    deleted = true;
+    return this;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 /// Everything logged since the last clear, error text included.
 List<String> _loggedLines() => [
   for (final entry in LogCaptureService().getRecentLogs())
@@ -800,6 +856,50 @@ void main() {
           expect(deleted, isZero);
           expect(_loggedLines(), contains(contains('Permission denied')));
           expect(_loggedLines(), everyElement(isNot(contains(root.path))));
+        },
+      );
+
+      test(
+        "deleteOwner reports a folder it cannot delete without the folder's "
+        'path',
+        () async {
+          await expectLater(
+            IOOverrides.runZoned(
+              () => DmVideoStore.deleteOwner(
+                _owner,
+                rootDirectory: () async => root,
+              ),
+              createDirectory: _UndeletableDirectory.new,
+            ),
+            throwsA(
+              isA<DmVideoUnavailableException>().having(
+                (error) => error.toString(),
+                'description',
+                isNot(contains(root.path)),
+              ),
+            ),
+          );
+        },
+      );
+
+      test(
+        'sweepOwners goes on past a folder it cannot delete',
+        () async {
+          final stuck = _UndeletableDirectory('${root.path}/stuck');
+          final gone = _DeletableDirectory('${root.path}/gone');
+
+          final deleted = await IOOverrides.runZoned(
+            () => DmVideoStore.sweepOwners(
+              {_owner},
+              rootDirectory: () async => root,
+              now: () => now,
+            ),
+            createDirectory: (path) =>
+                _UndeletableDirectory(path, children: [stuck, gone]),
+          );
+
+          expect(gone.deleted, isTrue);
+          expect(deleted, equals(1));
         },
       );
 
