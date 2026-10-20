@@ -49,6 +49,10 @@ internal class LoopDeclickRenderersFactory(
             .setEnableFloatOutput(false)
             .setEnableAudioOutputPlaybackParameters(enableAudioTrackPlaybackParams)
             .setAudioProcessors(listOfNotNull(clipEqualizer, declickProcessor).toTypedArray())
+            // A track that waits for a full buffer deadlocks the player when
+            // less audio than that is left before the next clip; see
+            // [EarlyStartAudioOutputProvider].
+            .setAudioOutputProvider(EarlyStartAudioOutputProvider(context))
             .build()
         return LoopDeclickAudioSink(sink, declickProcessor)
     }
