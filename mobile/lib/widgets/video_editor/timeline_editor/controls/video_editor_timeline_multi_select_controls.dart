@@ -1,10 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 
 /// Action bar shown while the timeline is in multi-select mode.
 ///
@@ -66,9 +68,22 @@ class TimelineMultiSelectControls extends StatelessWidget {
   }
 
   void _delete(BuildContext context) {
+    final bloc = context.read<ClipEditorBloc>();
+    // Land the playhead on the first cut the deletion leaves. Dispatched
+    // before the removal: the player reloads at the playhead the removal
+    // finds.
+    final cutPosition = clipDeletionCutPosition(
+      bloc.state.clips,
+      removedClipIds: bloc.state.selectedClipIds,
+    );
+    if (cutPosition != null) {
+      context.read<VideoEditorMainBloc>().add(
+        VideoEditorPositionChanged(cutPosition),
+      );
+    }
     // The bloc owns the clip-list mutation; the scaffold's removed-result
     // listener rebases markers and commits the new list to editor history.
-    context.read<ClipEditorBloc>().add(const ClipEditorSelectedClipsRemoved());
+    bloc.add(const ClipEditorSelectedClipsRemoved());
   }
 }
 

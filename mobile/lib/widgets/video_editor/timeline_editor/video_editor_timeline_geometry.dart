@@ -348,6 +348,26 @@ DivineVideoClip? clipAtTimelinePosition(
   return null;
 }
 
+/// The timeline position of the cut that deleting [removedClipIds] from
+/// [clips] leaves behind: where the first removed clip started, which is
+/// where the clips on either side of it meet afterwards.
+///
+/// Every clip before the first removed one stays, so the position is the
+/// same before and after the deletion. Returns `null` when no clip in
+/// [clips] is removed, or when none would remain.
+Duration? clipDeletionCutPosition(
+  List<DivineVideoClip> clips, {
+  required Set<String> removedClipIds,
+}) {
+  if (clips.every((clip) => removedClipIds.contains(clip.id))) return null;
+  var cursor = Duration.zero;
+  for (final clip in clips) {
+    if (removedClipIds.contains(clip.id)) return cursor;
+    cursor += clip.playbackDuration;
+  }
+  return null;
+}
+
 _TimelineMarkerAnchor? _timelineMarkerAnchorForPosition(
   List<DivineVideoClip> clips,
   Duration marker,

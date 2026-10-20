@@ -138,7 +138,9 @@ class VideoEditorAuditionEnded extends VideoEditorMainEvent {
   const VideoEditorAuditionEnded();
 }
 
-/// Triggered when the video player reports a new playback position.
+/// Triggered when the video player reports a new playback position, or when
+/// an edit puts the playhead somewhere new (a clip deletion lands it on the
+/// cut it leaves; the player then reloads there).
 class VideoEditorPositionChanged extends VideoEditorMainEvent {
   const VideoEditorPositionChanged(this.position);
 
