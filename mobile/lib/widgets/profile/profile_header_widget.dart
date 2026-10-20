@@ -282,7 +282,6 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
         effectiveProfile?.picture?.isNotEmpty == true ||
         effectiveProfile?.about?.isNotEmpty == true ||
         effectiveProfile?.nip05?.isNotEmpty == true;
-    final nip05 = effectiveProfile?.shortDisplayNip05;
     final about = effectiveProfile?.about;
     final profileColor = effectiveProfile?.profileBackgroundColor;
     final authService = ref.watch(authServiceProvider);
@@ -436,7 +435,6 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                   child: _ProfileNameAndBio(
                     profile: effectiveProfile,
                     userIdHex: widget.userIdHex,
-                    nip05: nip05,
                     about: about,
                     displayNameHint: displayNameHint,
                     isVanished: isVanished,

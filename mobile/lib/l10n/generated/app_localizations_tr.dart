@@ -467,8 +467,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileInvalidId => 'Geçersiz profil kimliği';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return '$displayName adlı kişiye Divine\'de göz at!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return '$displayName adlı kişiye Divine\'de göz at!\n\n$url';
   }
 
   @override

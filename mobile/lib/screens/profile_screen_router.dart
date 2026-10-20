@@ -25,6 +25,7 @@ import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
+import 'package:openvine/utils/profile_share_url.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
@@ -196,11 +197,14 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
           ?.getCachedProfile(pubkey: userIdHex);
       final displayName = profile?.bestDisplayName ?? 'User';
 
-      // Convert hex pubkey to npub format for sharing
-      final npub = NostrKeyUtils.encodePubKey(userIdHex);
-
-      // Create share text with divine.video URL format
-      final shareText = shareTextFn(displayName, npub);
+      if (!mounted) return;
+      final profileUrl = await resolveProfileShareUrl(
+        ref,
+        pubkey: userIdHex,
+        profile: profile,
+      );
+      if (!mounted) return;
+      final shareText = shareTextFn(displayName, profileUrl);
 
       final result = await showShareSheetAtOrigin(
         ShareParams(text: shareText, subject: shareSubjectFn(displayName)),

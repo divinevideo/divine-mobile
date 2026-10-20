@@ -4,7 +4,6 @@ class _ProfileNameAndBio extends StatelessWidget {
   const _ProfileNameAndBio({
     required this.profile,
     required this.userIdHex,
-    required this.nip05,
     required this.about,
     required this.isOwnProfile,
     required this.monetizationLinks,
@@ -15,7 +14,6 @@ class _ProfileNameAndBio extends StatelessWidget {
 
   final UserProfile? profile;
   final String userIdHex;
-  final String? nip05;
   final String? about;
   final bool isOwnProfile;
 
@@ -58,7 +56,7 @@ class _ProfileNameAndBio extends StatelessWidget {
               Skeleton.keep(
                 child: _UniqueIdentifier(
                   userIdHex: userIdHex,
-                  nip05: nip05,
+                  profile: profile,
                   isOwnProfile: isOwnProfile,
                   accentColor: accentColor,
                 ),
@@ -738,18 +736,19 @@ class _VerifiedAccountsBlock extends StatelessWidget {
 
 /// Unique identifier display (NIP-05 or full npub with ellipsis).
 /// Uses profile accent color when available, falls back to vineGreen.
-/// Shows warning for failed NIP-05 verification on own profile.
+/// Shows your own Divine username as its `username.divine.video` domain.
 /// Hides unverified NIP-05s for other profiles (potential impersonation).
+/// Tapping copies the subdomain URL only once the claim verifies.
 class _UniqueIdentifier extends ConsumerWidget {
   const _UniqueIdentifier({
     required this.userIdHex,
-    required this.nip05,
+    required this.profile,
     required this.isOwnProfile,
     this.accentColor,
   });
 
   final String userIdHex;
-  final String? nip05;
+  final UserProfile? profile;
   final bool isOwnProfile;
 
   /// Optional accent color (from profile color) for the link text and icon.
@@ -757,14 +756,20 @@ class _UniqueIdentifier extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasNip05 = nip05 != null && nip05!.isNotEmpty;
+    final nip05 = profile?.displayNip05;
+    final showProfileDomain = isOwnProfile && profile?.divineUsername != null;
+    final hasNip05 = nip05 != null && nip05.isNotEmpty;
     final npub = NostrKeyUtils.encodePubKey(userIdHex);
     final linkColor = context.vineColors.accentPositive;
 
     // Watch NIP-05 verification status
     final verificationStatus = hasNip05
         ? ref
-              .watch(nip05VerificationProvider(userIdHex))
+              .watch(
+                nip05ClaimVerificationProvider(
+                  Nip05Claim(pubkey: userIdHex, nip05: profile!.nip05!),
+                ),
+              )
               .whenOrNull(data: (status) => status)
         : null;
 
@@ -772,37 +777,48 @@ class _UniqueIdentifier extends ConsumerWidget {
         verificationStatus == Nip05VerificationStatus.failed;
 
     // For other profiles: hide unverified NIP-05s (show npub instead)
-    // For own profile: show with warning so user knows there's an issue
+    // For own profile: keep showing the claim, even when it failed
     final String displayText;
     if (hasNip05) {
       if (verificationFailed && !isOwnProfile) {
         // Don't show unverified NIP-05s for other users - potential impersonation
         displayText = truncateNpubForDisplay(npub);
       } else {
-        displayText = nip05!;
+        displayText = showProfileDomain
+            ? nip05.substring(1)
+            : profile!.shortDisplayNip05!;
       }
     } else {
       displayText = truncateNpubForDisplay(npub);
     }
 
-    return GestureDetector(
-      onTap: () {
-        final verifiedNip05 = hasNip05 && !verificationFailed ? nip05 : null;
-        final profileUrl = buildProfileUrl(verifiedNip05, npub);
-        _runProfileDetached(
-          ClipboardUtils.copy(
-            context,
-            profileUrl,
-            message: context.l10n.profileLinkCopied,
+    return Semantics(
+      button: true,
+      hint: context.l10n.authCopyUrl,
+      child: GestureDetector(
+        onTap: () {
+          final verifiedNip05 =
+              verificationStatus == Nip05VerificationStatus.verified
+              ? nip05
+              : null;
+          final profileUrl = buildProfileUrl(verifiedNip05, npub);
+          _runProfileDetached(
+            ClipboardUtils.copy(
+              context,
+              profileUrl,
+              message: context.l10n.profileLinkCopied,
+            ),
+            'copy profile link',
+          );
+        },
+        child: Text(
+          displayText,
+          style: VineTheme.bodyMediumFont(color: linkColor).copyWith(
+            decoration: showProfileDomain ? TextDecoration.underline : null,
           ),
-          'copy profile link',
-        );
-      },
-      child: Text(
-        displayText,
-        style: VineTheme.bodyMediumFont(color: linkColor),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
@@ -821,26 +837,6 @@ const int profileNpubMaxChars = 16;
 String truncateNpubForDisplay(String npub) {
   if (npub.length <= profileNpubMaxChars) return npub;
   return '${npub.substring(0, profileNpubMaxChars)}...';
-}
-
-/// Build a shareable profile URL.
-///
-/// If the user has a `.divine.video` NIP-05 subdomain (e.g. `_@thomas.divine.video`),
-/// returns `https://thomas.divine.video`. Otherwise falls back to
-/// `https://divine.video/profile/{npub}`.
-@visibleForTesting
-String buildProfileUrl(String? nip05, String npub) {
-  if (nip05 != null && nip05.isNotEmpty) {
-    // NIP-05 format: `_@username.divine.video` or `user@domain.com`
-    final atIndex = nip05.indexOf('@');
-    if (atIndex != -1) {
-      final domain = nip05.substring(atIndex + 1);
-      if (domain.endsWith('.divine.video')) {
-        return 'https://$domain';
-      }
-    }
-  }
-  return 'https://divine.video/profile/$npub';
 }
 
 /// About/bio text display with expandable "Show more/less" functionality.

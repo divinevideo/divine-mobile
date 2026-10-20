@@ -524,8 +524,8 @@ class AppLocalizationsAm extends AppLocalizations {
   String get profileInvalidId => 'ልክ ያልሆነ የመገለጫ መታወቂያ';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return '$displayName በDivine ላይ ይመልከቱ!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return '$displayName በDivine ላይ ይመልከቱ!\n\n$url';
   }
 
   @override

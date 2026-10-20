@@ -165,7 +165,7 @@ final class Nip05VerificationProvider
   }
 }
 
-String _$nip05VerificationHash() => r'93e2b80af173c9aef9b7c58beb6e518eebba984c';
+String _$nip05VerificationHash() => r'e5271b00e94db827e49dac427bfba83761ee429e';
 
 /// Provider that returns the NIP-05 verification status for a pubkey.
 ///
@@ -290,7 +290,7 @@ final class Nip05VerificationStreamProvider
 }
 
 String _$nip05VerificationStreamHash() =>
-    r'b626adfe8d189ac30b5b1427cc022d94e2e75cfc';
+    r'79083e2420d811232c371bf349d31402a8c359a4';
 
 /// Stream provider for reactive NIP-05 verification updates.
 ///

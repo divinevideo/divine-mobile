@@ -194,13 +194,13 @@
   "contentFiltersFilterOut": "过滤",
   "profileBlockedAccountNotAvailable": "该账号不可用",
   "profileInvalidId": "无效的个人资料 ID",
-  "profileShareText": "快来 Divine 看看 {displayName}！\n\nhttps://divine.video/profile/{npub}",
+  "profileShareText": "快来 Divine 看看 {displayName}！\n\n{url}",
   "@profileShareText": {
     "placeholders": {
       "displayName": {
         "type": "String"
       },
-      "npub": {
+      "url": {
         "type": "String"
       }
     }

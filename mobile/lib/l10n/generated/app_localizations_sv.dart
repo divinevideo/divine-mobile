@@ -517,8 +517,8 @@ class AppLocalizationsSv extends AppLocalizations {
   String get profileInvalidId => 'Ogiltigt profil-ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Kolla in $displayName på Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Kolla in $displayName på Divine!\n\n$url';
   }
 
   @override

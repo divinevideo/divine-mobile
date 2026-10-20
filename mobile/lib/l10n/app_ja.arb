@@ -184,13 +184,13 @@
     "contentPreferencesUnknownMicrophone": "不明なマイク",
     "profileBlockedAccountNotAvailable": "このアカウントは見れないよ",
     "profileInvalidId": "無効なプロフィール ID",
-    "profileShareText": "Divine の {displayName} をチェックしてみて!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "Divine の {displayName} をチェックしてみて!\n\n{url}",
     "@profileShareText": {
         "placeholders": {
             "displayName": {
                 "type": "String"
             },
-            "npub": {
+            "url": {
                 "type": "String"
             }
         }

@@ -184,13 +184,13 @@
     "contentPreferencesUnknownMicrophone": "Bilinmeyen Mikrofon",
     "profileBlockedAccountNotAvailable": "Bu hesap kullanılamıyor",
     "profileInvalidId": "Geçersiz profil kimliği",
-    "profileShareText": "{displayName} adlı kişiye Divine'de göz at!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "{displayName} adlı kişiye Divine'de göz at!\n\n{url}",
     "@profileShareText": {
         "placeholders": {
             "displayName": {
                 "type": "String"
             },
-            "npub": {
+            "url": {
                 "type": "String"
             }
         }

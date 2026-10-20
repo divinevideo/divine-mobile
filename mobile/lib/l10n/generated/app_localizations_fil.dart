@@ -501,8 +501,8 @@ class AppLocalizationsFil extends AppLocalizations {
   String get profileInvalidId => 'Invalid ang profile ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Tingnan si $displayName sa Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Tingnan si $displayName sa Divine!\n\n$url';
   }
 
   @override

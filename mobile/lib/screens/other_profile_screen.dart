@@ -31,6 +31,7 @@ import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
+import 'package:openvine/utils/profile_share_url.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
@@ -231,8 +232,14 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
           .read(profileRepositoryProvider)
           ?.getCachedProfile(pubkey: widget.pubkey);
       final displayName = profile?.bestDisplayName ?? fallbackName;
-      final npub = NostrKeyUtils.encodePubKey(widget.pubkey);
-      final shareText = shareTextFn(displayName, npub);
+      if (!mounted) return;
+      final profileUrl = await resolveProfileShareUrl(
+        ref,
+        pubkey: widget.pubkey,
+        profile: profile,
+      );
+      if (!mounted) return;
+      final shareText = shareTextFn(displayName, profileUrl);
 
       await showShareSheetAtOrigin(
         ShareParams(text: shareText, subject: shareSubjectFn(displayName)),

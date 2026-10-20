@@ -446,8 +446,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profileInvalidId => '잘못된 프로필 ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Divine에서 $displayName님을 확인해보세요!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Divine에서 $displayName님을 확인해보세요!\n\n$url';
   }
 
   @override

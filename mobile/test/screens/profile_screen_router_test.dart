@@ -8,6 +8,7 @@ import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -21,12 +22,13 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
-import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
@@ -235,6 +237,9 @@ void main() {
       required String location,
       required String path,
       MockGoRouter? navigation,
+      UserProfile? sharedProfile,
+      Nip05VerificationStatus verificationStatus =
+          Nip05VerificationStatus.verified,
     }) async {
       const profile = ProfileScreenRouter();
       final router = GoRouter(
@@ -262,10 +267,19 @@ void main() {
       when(() => authService.hasExpiredOAuthSession).thenReturn(false);
       when(() => authService.isRpcUpgradeInProgress).thenReturn(false);
 
+      final profileRepository = createMockProfileRepository();
+      when(() => profileRepository.getCachedProfile(pubkey: _authorPubkeyHex))
+          .thenAnswer((_) async => sharedProfile);
+
       await tester.pumpWidget(
         testProviderScope(
           mockAuthService: authService,
+          mockProfileRepository: profileRepository,
           additionalOverrides: [
+            if (sharedProfile?.nip05 case final String claim)
+              nip05ClaimVerificationProvider(
+                Nip05Claim(pubkey: _authorPubkeyHex, nip05: claim),
+              ).overrideWith((ref) async => verificationStatus),
             videosRepositoryProvider.overrideWithValue(videosRepository),
             videoEventServiceProvider.overrideWithValue(videoEventService),
             contentBlocklistRepositoryProvider.overrideWithValue(
@@ -319,6 +333,81 @@ void main() {
       final content = tester.element(find.byType(FullscreenFeedContent));
       return content.read<FullscreenFeedBloc>();
     }
+
+    group('Share profile URL', () {
+      setUp(stubProfileDependencies);
+
+      for (final (nip05, status, expectedUrl) in [
+        (
+          '_@alice.divine.video',
+          Nip05VerificationStatus.verified,
+          'https://alice.divine.video',
+        ),
+        (
+          'alice@divine.video',
+          Nip05VerificationStatus.verified,
+          'https://alice.divine.video',
+        ),
+        (
+          'alice@openvine.co',
+          Nip05VerificationStatus.verified,
+          'https://alice.divine.video',
+        ),
+        (null, Nip05VerificationStatus.none, null),
+        ('alice@example.com', Nip05VerificationStatus.verified, null),
+        ('_@alice.divine.video', Nip05VerificationStatus.failed, null),
+        ('_@alice.divine.video', Nip05VerificationStatus.error, null),
+      ]) {
+        testWidgets('shares the correct URL for $nip05 with $status', (
+          tester,
+        ) async {
+          final shareCalls = <Map<Object?, Object?>>[];
+          const channel = MethodChannel('dev.fluttercommunity.plus/share');
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            (call) async {
+              shareCalls.add(call.arguments as Map<Object?, Object?>);
+              return 'com.apple.UIKit.activity.CopyToPasteboard';
+            },
+          );
+          addTearDown(() {
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              channel,
+              null,
+            );
+          });
+          await pumpProfileRoute(
+            tester,
+            location: ProfileScreenRouter.pathForNpub(_npub),
+            path: ProfileScreenRouter.pathWithNpub,
+            sharedProfile: UserProfile(
+              pubkey: _authorPubkeyHex,
+              nip05: nip05,
+              displayName: 'Alice',
+              rawData: const {},
+              createdAt: DateTime(2026),
+              eventId: 'c' * 64,
+            ),
+            verificationStatus: status,
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.bySemanticsLabel(l10n.profileShareLabel));
+          await tester.pump();
+          await tester.pump();
+
+          expect(shareCalls, hasLength(1));
+          expect(
+            shareCalls.single['text'],
+            l10n.profileShareText(
+              'Alice',
+              expectedUrl ?? 'https://divine.video/profile/$_npub',
+            ),
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(seconds: 3));
+        });
+      }
+    });
 
     group('Library button', () {
       setUp(stubProfileDependencies);

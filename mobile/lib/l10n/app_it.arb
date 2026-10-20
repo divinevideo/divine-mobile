@@ -184,13 +184,13 @@
     "contentPreferencesUnknownMicrophone": "Microfono sconosciuto",
     "profileBlockedAccountNotAvailable": "Questo account non è disponibile",
     "profileInvalidId": "ID profilo non valido",
-    "profileShareText": "Dai un'occhiata a {displayName} su Divine!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "Dai un'occhiata a {displayName} su Divine!\n\n{url}",
     "@profileShareText": {
         "placeholders": {
             "displayName": {
                 "type": "String"
             },
-            "npub": {
+            "url": {
                 "type": "String"
             }
         }

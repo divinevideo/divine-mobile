@@ -330,7 +330,7 @@ MockProfileRepository createMockProfileRepository() {
 MockNip05VerificationService createMockNip05VerificationService() {
   final mockService = MockNip05VerificationService();
 
-  when(() => mockService.getCachedStatus(any())).thenReturn(null);
+  when(() => mockService.getCachedStatus(any(), any())).thenReturn(null);
   when(() => mockService.getVerificationStatus(any(), any()))
       .thenAnswer((_) async => Nip05VerificationStatus.none);
   when(() => mockService.addListener(any())).thenReturn(null);

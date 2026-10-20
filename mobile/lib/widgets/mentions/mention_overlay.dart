@@ -105,8 +105,8 @@ class _MentionSuggestionItem extends ConsumerWidget {
     final verificationStatus = rawNip05 != null && rawNip05.isNotEmpty
         ? ref
               .watch(
-                mentionNip05VerificationProvider(
-                  MentionNip05Claim(pubkey: suggestion.pubkey, nip05: rawNip05),
+                nip05ClaimVerificationProvider(
+                  Nip05Claim(pubkey: suggestion.pubkey, nip05: rawNip05),
                 ),
               )
               .whenOrNull(data: (status) => status)
