@@ -107,12 +107,16 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
 
   late final _leftSnap = TimelineSnapController(
     direction: SnapEdgeDirection.positive,
-    pixelsPerSecond: widget.pixelsPerSecond,
+    pixelsPerSecond: _sourcePixelsPerSecond,
   );
   late final _rightSnap = TimelineSnapController(
     direction: SnapEdgeDirection.negative,
-    pixelsPerSecond: widget.pixelsPerSecond,
+    pixelsPerSecond: _sourcePixelsPerSecond,
   );
+
+  /// The timeline scale in source time, which trims are measured in.
+  double get _sourcePixelsPerSecond =>
+      widget.pixelsPerSecond * widget.clip._playbackScale;
 
   Duration _dxToDuration(double dx) {
     final seconds = dx / widget.pixelsPerSecond;
@@ -167,8 +171,8 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     _dragTrimStart = widget.clip.trimStart;
     _dragTrimEnd = widget.clip.trimEnd;
     _snapSourcePosition = _captureSnapSourcePosition();
-    final sourcePixelsPerSecond =
-        widget.pixelsPerSecond * widget.clip._playbackScale;
+    // Zoom and the clip's speed can both change between drags.
+    final sourcePixelsPerSecond = _sourcePixelsPerSecond;
     _leftOrigin = widget.clip.trimStart;
     _rightOrigin = widget.clip.duration - widget.clip.trimEnd;
     _leftSnap
