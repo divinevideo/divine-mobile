@@ -450,7 +450,8 @@ void main() {
       );
 
       test(
-        'tries a frame that cannot be read only once a session',
+        'never tries again a frame that could not be read, even in a later '
+        'session: the reader gives up while the decoder may still run',
         () async {
           readFrame = (_) async => null;
           final message = _videoMessage();
@@ -460,8 +461,11 @@ void main() {
           await store.previewFor(message, download: true);
           expect(frameReads, equals(1));
 
-          await createStore().previewFor(message, download: true);
-          expect(frameReads, equals(2));
+          expect(
+            await createStore().previewFor(message, download: true),
+            isNull,
+          );
+          expect(frameReads, equals(1));
         },
       );
 
@@ -491,7 +495,7 @@ void main() {
         },
       );
 
-      test('keeps nothing when no frame can be read', () async {
+      test('keeps no frame when none can be read', () async {
         readFrame = (_) async => null;
         final store = createStore();
         final message = _videoMessage();
@@ -500,8 +504,12 @@ void main() {
 
         expect(preview, isNull);
         expect(
-          ownerDir().listSync().map((entity) => entity.path),
-          equals(['${ownerDir().path}/${'a' * 64}.mp4']),
+          File('${ownerDir().path}/${'a' * 64}.mp4').existsSync(),
+          isTrue,
+        );
+        expect(
+          ownerDir().listSync().where((entity) => entity.path.endsWith('.jpg')),
+          isEmpty,
         );
       });
     });

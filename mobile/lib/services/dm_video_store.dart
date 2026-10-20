@@ -93,8 +93,9 @@ class DmVideoStore {
 
   static const String _partSuffix = '.part';
 
-  /// Beside a video while its frame is read, so a read that never finishes,
-  /// as when the decoder crashes the app, is not tried again.
+  /// Beside a video from the start of its frame read until a frame is kept,
+  /// so a read that fails or never finishes, as when the decoder crashes the
+  /// app, is not tried again.
   static const String _frameAttemptSuffix = '.frame-attempt';
 
   /// Age past which a part file is taken as left by a crash: a younger one
@@ -150,8 +151,8 @@ class DmVideoStore {
   /// Paths of the frames this store read or found, by message id.
   final Map<String, String> _knownPreviews = {};
 
-  /// Ids of messages whose frame could not be read. Each read is a native
-  /// decode that can run to its timeout, so it is tried once a session.
+  /// Ids of messages whose frame could not be read this session. The mark
+  /// beside the video keeps the read from being tried in later sessions too.
   final Set<String> _unreadableFrames = {};
 
   /// Downloads nobody tapped for that failed, by message id, with when a card
@@ -226,8 +227,8 @@ class DmVideoStore {
   /// When it is true the video is fetched in turn with other such downloads,
   /// within [autoDownloadMaxBytes] and [autoDownloadTimeLimit]; one declared
   /// bigger is not fetched. Null when there is no video to read or no frame
-  /// can be read from it; a frame that cannot be read is not tried again
-  /// until the next session. A download that failed is not tried again by
+  /// can be read from it; a frame that could not be read, or whose read never
+  /// finished, is not tried again. A download that failed is not tried again by
   /// itself this session when the failure will repeat, nor for
   /// [autoDownloadRetryAfter] when it may pass; a tap on play still fetches
   /// it.
@@ -602,18 +603,20 @@ class DmVideoStore {
         mayPass: true,
       );
     }
+    final frame = await _readFrame(video);
+    if (frame == null || frame.isEmpty) {
+      // The mark stays: the reader gives up on its timeout while the native
+      // decoder may run on, and a decode that never ends is not retried.
+      _unreadableFrames.add(message.id);
+      return null;
+    }
     try {
-      final frame = await _readFrame(video);
-      if (frame == null || frame.isEmpty) {
-        _unreadableFrames.add(message.id);
-        return null;
-      }
       await _writeAtomically(preview, frame);
-      _knownPreviews[message.id] = preview.path;
-      return preview;
     } finally {
       _deleteNow(attempt);
     }
+    _knownPreviews[message.id] = preview.path;
+    return preview;
   }
 
   /// Ids of the messages behind [files] that are gone. A lookup that fails
