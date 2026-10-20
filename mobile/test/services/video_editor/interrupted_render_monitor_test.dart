@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -596,6 +597,22 @@ void main() {
         editor.renders['seam']!.complete('second.mp4');
         expect(await restart, equals('second.mp4'));
         expect(markerFiles(), isEmpty);
+      });
+
+      test('notes the return of a cancel the platform answers with an '
+          'error', () async {
+        final finish = Completer<String>();
+        final render = await startRender(finish, taskId: 'seam');
+        ProVideoEditor.instance = _FakeProVideoEditor(
+          onCancel: (_) => throw PlatformException(code: 'TASK_NOT_FOUND'),
+        );
+
+        await VideoEditorRenderService.cancelTask('seam');
+
+        expect(readMarker('seam'), contains('cancelReturnedAtMs'));
+
+        finish.complete('out.mp4');
+        await render;
       });
 
       test('leaves the marker of the render beside the cancelled one '
