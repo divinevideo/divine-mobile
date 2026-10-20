@@ -23,6 +23,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/strips/clip_wavefo
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_transition_buttons.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/timeline_snap_controller.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 
 part 'video_editor_timeline_clip_strip_tiles.dart';
 
@@ -963,12 +964,7 @@ class _TrimmingClipPositions extends StatelessWidget {
                 clipWidth: layout.widths[i],
                 pixelsPerSecond: pixelsPerSecond,
                 playheadPosition: playheadPosition,
-                clipTimelineStart: orderedClips
-                    .take(i)
-                    .fold(
-                      Duration.zero,
-                      (start, clip) => start + clip.playbackDuration,
-                    ),
+                clips: orderedClips,
                 thumbnailNotifier: thumbnails[orderedClips[i].id],
                 waveformNotifier: isReordering
                     ? null

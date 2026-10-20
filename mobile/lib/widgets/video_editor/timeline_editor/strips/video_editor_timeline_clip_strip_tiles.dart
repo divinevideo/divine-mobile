@@ -53,7 +53,7 @@ class _TrimmableClipTile extends StatefulWidget {
     required this.clipWidth,
     required this.pixelsPerSecond,
     required this.playheadPosition,
-    required this.clipTimelineStart,
+    required this.clips,
     required this.thumbnailNotifier,
     required this.waveformNotifier,
     this.onTrimChanged,
@@ -66,7 +66,9 @@ class _TrimmableClipTile extends StatefulWidget {
   final double clipWidth;
   final double pixelsPerSecond;
   final ValueNotifier<Duration>? playheadPosition;
-  final Duration clipTimelineStart;
+
+  /// Every clip in timeline order, which places [playheadPosition] in [clip].
+  final List<DivineVideoClip> clips;
   final ValueNotifier<List<StripThumbnail>> thumbnailNotifier;
 
   /// Null while the strip is in a reorder drag — see [_ClipTile].
@@ -122,16 +124,13 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   Duration? _captureSnapSourcePosition() {
     final playhead = widget.playheadPosition?.value;
     if (playhead == null) return null;
-    final clip = widget.clip;
-    final localPosition = playhead - widget.clipTimelineStart;
-    if (localPosition < Duration.zero ||
-        localPosition > clip.playbackDuration) {
-      return null;
-    }
     // The strip reflows and the preview seeks during trimming, so freeze the
     // source frame before notifying the parent that the drag has started.
-    return clip.trimStart +
-        clip.playbackDurationToSourceDuration(localPosition);
+    return timelinePositionToClipSourcePosition(
+      widget.clips,
+      clipId: widget.clip.id,
+      position: playhead,
+    );
   }
 
   Duration _snapEdge(
