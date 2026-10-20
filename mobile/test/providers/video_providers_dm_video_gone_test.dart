@@ -95,4 +95,61 @@ void main() {
       expect(await dmVideoMessageGone(db, 'f' * 64)(messageId), isFalse);
     });
   });
+
+  group('dmVideoMessageChanges', () {
+    final owner = 'e' * 64;
+    final messageId = 'a' * 64;
+    const conversationId = 'conversation';
+    late AppDatabase db;
+
+    setUp(() => db = AppDatabase.test(NativeDatabase.memory()));
+
+    tearDown(() => db.close());
+
+    Future<void> insertVideoMessage() => db.directMessagesDao.insertMessage(
+      id: messageId,
+      conversationId: conversationId,
+      senderPubkey: 'b' * 64,
+      content: 'https://media.example/blob',
+      createdAt: 1757385263,
+      giftWrapId: 'c' * 64,
+      messageKind: 15,
+      ownerPubkey: owner,
+    );
+
+    test(
+      'stays quiet for a new message and speaks up for a retraction',
+      () async {
+        var changes = 0;
+        final subscription = dmVideoMessageChanges(
+          db,
+        ).listen((_) => changes++);
+        addTearDown(subscription.cancel);
+
+        await insertVideoMessage();
+        await pumpEventQueue();
+        expect(changes, isZero);
+
+        await db.directMessagesDao.markMessageDeleted(
+          messageId,
+          ownerPubkey: owner,
+        );
+        await pumpEventQueue();
+        expect(changes, equals(1));
+      },
+    );
+
+    test('speaks up when a conversation is removed', () async {
+      await insertVideoMessage();
+      final changed = dmVideoMessageChanges(db).first;
+
+      await db.removedMessageIdsDao.captureForConversations(
+        conversationIds: [conversationId],
+        ownerPubkey: owner,
+        removedAt: 1757385300,
+      );
+
+      await expectLater(changed, completes);
+    });
+  });
 }

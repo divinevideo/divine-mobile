@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:db_client/db_client.dart';
+import 'package:drift/drift.dart' show TableUpdateQuery, UpdateKind;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
@@ -62,6 +63,7 @@ import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:stream_transform/stream_transform.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -489,12 +491,27 @@ final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
 final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
   final owner = ref.watch(currentAccountIdProvider);
   if (owner == null || owner.isEmpty) return null;
+  final db = ref.watch(databaseProvider);
   final store = DmVideoStore(
     ownerPubkey: owner,
     fetchVideo: ref.watch(dmVideoDecryptorProvider).decrypt,
-    isMessageGone: dmVideoMessageGone(ref.watch(databaseProvider), owner),
+    isMessageGone: dmVideoMessageGone(db, owner),
   );
-  ref.onDispose(() => unawaited(store.dispose()));
+  // A retracted or removed message's video goes soon after, not only at the
+  // next launch.
+  final goneCleanup = dmVideoMessageChanges(db)
+      .debounce(DmVideoStore.goneCleanupDelay)
+      .listen(
+        (_) => runProviderDetached(
+          store.prune(),
+          'prune kept video DMs after a message went',
+          logName: 'DmVideoStore',
+        ),
+      );
+  ref.onDispose(() {
+    unawaited(goneCleanup.cancel());
+    unawaited(store.dispose());
+  });
   runProviderDetached(
     store.prune(),
     'prune kept video DMs',
@@ -518,6 +535,24 @@ Future<bool> Function(String messageId) dmVideoMessageGone(
   return removed ||
       await db.directMessagesDao.isRetracted(messageId, ownerPubkey: owner);
 };
+
+/// Writes that can make a kept video's message gone: a retraction marks its
+/// row, an update, and removing its conversation records its id, an insert.
+/// A new message is neither.
+Stream<void> dmVideoMessageChanges(AppDatabase db) => db
+    .tableUpdates(
+      TableUpdateQuery.allOf([
+        TableUpdateQuery.onTable(
+          db.directMessages,
+          limitUpdateKind: UpdateKind.update,
+        ),
+        TableUpdateQuery.onTable(
+          db.removedMessageIds,
+          limitUpdateKind: UpdateKind.insert,
+        ),
+      ]),
+    )
+    .map((_) {});
 
 /// Gallery picker used to choose a video to attach to a DM.
 ///
