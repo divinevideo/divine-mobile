@@ -525,7 +525,7 @@ class PushNotificationService {
 
     final outcomeDetails =
         'eventId=${event.id}, relay=$relayUrl, acceptedBy=${outcome.acceptedBy}, '
-        'rejectedBy=${outcome.rejectedBy}, '
+        'rejectedBy=${outcome.rejectionCategories}, '
         'noResponseFrom=${outcome.noResponseFrom}, '
         'unreachableTargets=${outcome.unreachableTargets}';
 

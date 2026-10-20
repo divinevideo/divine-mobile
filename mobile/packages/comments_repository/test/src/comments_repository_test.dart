@@ -2482,7 +2482,7 @@ void main() {
               isA<DeleteCommentFailedException>().having(
                 (e) => e.message,
                 'message',
-                contains('blocked: not allowed'),
+                contains('blocked'),
               ),
             ),
           );

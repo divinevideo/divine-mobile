@@ -79,6 +79,18 @@ final RegExp _relayNoticeSigningMaterial = RegExp(
   r'\b(?:nsec1|ncryptsec1)[a-z0-9]+\b',
   caseSensitive: false,
 );
+// Addresses a relay can see and echo back. IPv6 needs `::` or at least four
+// groups, so a clock time like 12:30:45 stays readable. A colon beside the
+// address is punctuation unless a group follows it, so `ip:2001:db8::4` and
+// `2001:db8::4: slow down` are caught too. IPv4 runs first, so an
+// IPv4-mapped IPv6 address loses all four of its octets.
+final RegExp _relayNoticeIpv4 = RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b');
+final RegExp _relayNoticeIpv6 = RegExp(
+  r'(?<![0-9a-z])(?:(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}|'
+  r'(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?::'
+  r'(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?)(?![0-9a-z]|:[0-9a-z:])',
+  caseSensitive: false,
+);
 final RegExp _relayNoticeAuthorization = RegExp(
   r'\bauthorization\s*([:=])\s*[^\s,;]+(?:\s+[^\s,;]+)?',
   caseSensitive: false,
@@ -89,8 +101,8 @@ final RegExp _relayNoticeCredential = RegExp(
 );
 
 /// Makes relay-controlled text, such as a NOTICE body, safe and bounded for
-/// support logs. An AUTH `OK` rejection is reduced to its category instead;
-/// see [relayRefusalCategoryForDiagnostics].
+/// support logs. A refused `OK`, AUTH included, is reduced to its category
+/// instead; see [relayRefusalCategoryForDiagnostics].
 ///
 /// Public Nostr identifiers are deliberately retained in full. When the
 /// length boundary lands inside the final token, that whole token is omitted
@@ -99,6 +111,8 @@ String relayNoticeForDiagnostics(String message) {
   var sanitized = message
       .replaceAll(_relayNoticeControls, ' ')
       .replaceAll(_relayNoticeSigningMaterial, _redactedRelayNoticeValue)
+      .replaceAll(_relayNoticeIpv4, _redactedRelayNoticeValue)
+      .replaceAll(_relayNoticeIpv6, _redactedRelayNoticeValue)
       .replaceAllMapped(
         _relayNoticeAuthorization,
         (match) => 'authorization${match.group(1)}$_redactedRelayNoticeValue',
@@ -125,10 +139,10 @@ String relayNoticeForDiagnostics(String message) {
 /// `CLOSED` examples.
 ///
 /// One vocabulary for every path that reduces a relay refusal to a category:
-/// `CLOSED` settlement, `QueryResult.closedRelayReasons`, and the NIP-42 `OK`
-/// rejection diagnostic. A second copy drifts silently, and a prefix missing
-/// from one of them reads as `other` — which callers treat as an unclassified
-/// refusal.
+/// `CLOSED` settlement, `QueryResult.closedRelayReasons`, the NIP-42 `OK`
+/// rejection diagnostic, and the `OK` settlement diagnostic for a refused
+/// publish. A second copy drifts silently, and a prefix missing from one of
+/// them reads as `other` — which callers treat as an unclassified refusal.
 const Set<String> relayRefusalPrefixes = {
   'auth-required',
   'blocked',

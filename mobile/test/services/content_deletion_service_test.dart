@@ -356,7 +356,7 @@ void main() {
 
           expect(result.success, isFalse);
           expect(result.failureKind, equals(DeleteFailureKind.relayRejected));
-          expect(result.error, contains('blocked: policy'));
+          expect(result.error, contains('blocked'));
           expect(service.hasBeenDeleted(video.id), isFalse);
           expect(service.deletionHistory, isEmpty);
           verifyNever(() => mockProfileStatsDao.deleteStats(any()));
@@ -484,7 +484,7 @@ void main() {
 
           expect(result.success, isFalse);
           expect(result.failureKind, equals(DeleteFailureKind.relayRejected));
-          expect(result.error, contains('blocked: policy'));
+          expect(result.error, contains('blocked'));
           expect(service.hasBeenDeleted(video.id), isFalse);
           expect(service.deletionHistory, isEmpty);
         },

@@ -7650,6 +7650,57 @@ void main() {
         noResponseFrom: const [],
       );
 
+      /// Answers every publish with [relay] refusing in words that carry the
+      /// client's address, the way a relay can echo it back.
+      void stubPublishRefusedBy(
+        String relay, {
+        List<String> acceptedBy = const [],
+      }) {
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: 'eid',
+            acceptedBy: acceptedBy,
+            rejectedBy: {relay: 'blocked: kind not allowed from 203.0.113.9'},
+            noResponseFrom: const [],
+          ),
+        );
+      }
+
+      /// The one warning naming [relay] carries the refusal category and none
+      /// of the relay's own text.
+      void expectCategoryOnlyWarningFor(String relay) {
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) => e.level == LogLevel.warning && e.message.contains(relay),
+            )
+            .map((e) => e.message)
+            .toList();
+        expect(warnings, hasLength(1));
+        expect(warnings.single, contains('blocked'));
+        expect(warnings.single, isNot(contains('203.0.113.9')));
+        expect(warnings.single, isNot(contains('kind not allowed')));
+      }
+
+      test(
+        'logs only the refusal category when the advertised relay refuses',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          stubPublishRefusedBy('wss://relay.divine.video');
+
+          await createRepository(
+            syncState: _FakeDmSyncState(),
+          ).ensureDmRelayListPublished();
+
+          expectCategoryOnlyWarningFor('wss://relay.divine.video');
+        },
+      );
+
       test(
         'publishes a kind-10050 advertising the injected stable relay when '
         'absent, and leaves recording it to a later read (#8433)',
@@ -7780,6 +7831,21 @@ void main() {
               ),
             ).captured;
             expect(captured.single, [divine, discovery]);
+          },
+        );
+
+        test(
+          'logs only the refusal category when a discovery relay refuses',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            stubPublishRefusedBy(discovery, acceptedBy: const [divine]);
+
+            await createRepository(
+              syncState: _FakeDmSyncState(),
+              dmInboxDiscoveryRelays: const [discovery],
+            ).ensureDmRelayListPublished();
+
+            expectCategoryOnlyWarningFor(discovery);
           },
         );
       });
@@ -8348,6 +8414,26 @@ void main() {
             expect(sent?.id, list.id);
             expect(sentTo, ['wss://relay.divine.video']);
             expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
+          'logs only the refusal category when the re-send is refused',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            stubOwnInboxByLeg(
+              pool: answeredList([
+                existingInbox(const ['wss://relay.divine.video']),
+              ]),
+              advertised: answeredList(const <Event>[]),
+            );
+            stubPublishRefusedBy('wss://relay.divine.video');
+
+            await createRepository(
+              syncState: _FakeDmSyncState(),
+            ).ensureDmRelayListPublished();
+
+            expectCategoryOnlyWarningFor('wss://relay.divine.video');
           },
         );
 

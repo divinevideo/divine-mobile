@@ -5973,8 +5973,8 @@ class DmRepository {
       if (!outcome.acceptedBy.contains(relayUrl)) {
         Log.warning(
           'kind-10050 publish: $relayUrl did not accept '
-          '(${outcome.rejectedBy[relayUrl] ?? 'no response'}) — will retry '
-          'next login',
+          '(${outcome.rejectionCategories[relayUrl] ?? 'no response'}) — '
+          'will retry next login',
           category: LogCategory.system,
         );
         return;
@@ -5985,7 +5985,8 @@ class DmRepository {
         // changing its kind policy is visible in a bug report, never retried.
         Log.warning(
           'kind-10050 discovery publish to $url did not land '
-          '(${outcome.rejectedBy[url] ?? 'no response'}) — not retried',
+          '(${outcome.rejectionCategories[url] ?? 'no response'}) — '
+          'not retried',
           category: LogCategory.system,
         );
       }
@@ -6020,8 +6021,8 @@ class DmRepository {
     if (!outcome.acceptedBy.contains(relayUrl)) {
       Log.warning(
         'kind-10050 re-send to $relayUrl did not land '
-        '(${outcome.rejectedBy[relayUrl] ?? 'no response'}) — will retry next '
-        'login',
+        '(${outcome.rejectionCategories[relayUrl] ?? 'no response'}) — '
+        'will retry next login',
         category: LogCategory.system,
       );
       return;
