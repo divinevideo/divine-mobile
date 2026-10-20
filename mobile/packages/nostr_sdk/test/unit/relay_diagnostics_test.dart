@@ -561,6 +561,38 @@ void main() {
       expect(settlement.message, contains('closed-live-subscription-id'));
     });
 
+    test('remembers only the 64 most recently released ids', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      for (var i = 0; i <= 64; i++) {
+        final subscription = Subscription(
+          const [
+            {
+              'kinds': [1],
+            },
+          ],
+          (_) {},
+          id: 'released-query-$i',
+        );
+        expect(
+          await nostr.relayPool.relayDoQuery(relay, subscription, false),
+          isTrue,
+        );
+        nostr.relayPool.unsubscribe(subscription.id);
+      }
+
+      await relay.deliver(['EOSE', 'released-query-0']);
+      await relay.deliver(['EOSE', 'released-query-1']);
+
+      final settlements = diagnostics
+          .where((entry) => entry.message.startsWith('Relay settled request'))
+          .map((entry) => entry.message)
+          .toList();
+      expect(settlements, hasLength(2));
+      expect(settlements.first, contains('<unknown subscription id>'));
+      expect(settlements.last, contains('released-query-1'));
+    });
+
     test('a throwing diagnostics sink cannot break relay behavior', () async {
       final throwingNostr = Nostr(
         LocalNostrSigner(
