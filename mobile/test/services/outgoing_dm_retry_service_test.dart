@@ -2007,6 +2007,43 @@ void main() {
           async.flushMicrotasks();
         });
       });
+
+      test('arms no follow-up pass for an interrupted send', () {
+        fakeAsync((async) {
+          when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+            (_) async => [
+              _row(
+                id: 'interrupted-unreached',
+                recipient: OutgoingWrapStatus.pending,
+                self: OutgoingWrapStatus.pending,
+                queuedAt: DateTime.utc(2026, 5, 10, 11, 55),
+              ),
+            ],
+          );
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => unreached);
+          final service = buildService(
+            now: async.getClock(DateTime.utc(2026, 5, 10, 12)).now,
+          );
+          unawaited(service.initialize());
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          verify(
+            () =>
+                dmRepository.recoverFullSend(rumorId: 'interrupted-unreached'),
+          ).called(1);
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'a relay connecting wakes it, not the 30-second follow-up',
+          );
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
     });
 
     group('interrupted-send recovery (pending:pending)', () {
