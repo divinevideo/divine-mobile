@@ -54,9 +54,13 @@ class DmVideoDecryptor {
   /// The receive path fetches a URL chosen by the sender, so the client is
   /// given finite timeouts. A caller-injected client that already set a
   /// timeout keeps it.
-  DmVideoDecryptor({Dio? dio, FileEncryption? encryption})
-    : _dio = dio ?? Dio(),
-      _encryption = encryption ?? FileEncryption() {
+  DmVideoDecryptor({
+    Dio? dio,
+    FileEncryption? encryption,
+    Duration wantedCheckInterval = const Duration(seconds: 1),
+  }) : _dio = dio ?? Dio(),
+       _encryption = encryption ?? FileEncryption(),
+       _wantedCheckInterval = wantedCheckInterval {
     _dio.options
       ..connectTimeout ??= connectTimeout
       ..receiveTimeout ??= receiveTimeout;
@@ -78,6 +82,10 @@ class DmVideoDecryptor {
 
   final Dio _dio;
   final FileEncryption _encryption;
+
+  /// How often a download whose caller may stop wanting it asks again, so a
+  /// stalled one, which reports no progress, still stops.
+  final Duration _wantedCheckInterval;
 
   /// Downloads, verifies, and decrypts [message]'s video, returning the
   /// plaintext.
@@ -122,6 +130,9 @@ class DmVideoDecryptor {
       timeLimit: timeLimit,
       stillWanted: stillWanted,
     );
+    if (stillWanted != null && !stillWanted()) {
+      throw const DmVideoWithdrawnException();
+    }
 
     return compute(_verifyAndDecrypt, (
       ciphertext: ciphertext,
@@ -155,6 +166,13 @@ class DmVideoDecryptor {
         : Timer(timeLimit, () {
             outlasted = true;
             cancelToken.cancel('encrypted video download took too long');
+          });
+    final wantedCheck = stillWanted == null
+        ? null
+        : Timer.periodic(_wantedCheckInterval, (_) {
+            if (stillWanted()) return;
+            unwanted = true;
+            cancelToken.cancel('encrypted video no longer wanted');
           });
     late final Response<List<int>> response;
     try {
@@ -225,6 +243,7 @@ class DmVideoDecryptor {
       );
     } finally {
       deadline?.cancel();
+      wantedCheck?.cancel();
     }
 
     final data = response.data;

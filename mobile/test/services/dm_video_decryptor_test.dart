@@ -354,6 +354,63 @@ void main() {
       );
     });
 
+    test(
+      'decrypts nothing of a download nobody wants by the time it lands',
+      () async {
+        var wanted = true;
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer((_) async {
+          wanted = false;
+          return Response<List<int>>(
+            requestOptions: RequestOptions(path: _videoUrl),
+            statusCode: 200,
+            data: const [1, 2, 3],
+          );
+        });
+
+        await expectLater(
+          DmVideoDecryptor(
+            dio: dio,
+            encryption: _IsolateNamingEncryption(),
+          ).decrypt(_videoMessage(fileHash: ''), stillWanted: () => wanted),
+          throwsA(isA<DmVideoWithdrawnException>()),
+        );
+      },
+    );
+
+    test('stops a stalled download its caller no longer wants', () async {
+      var wanted = true;
+      when(
+        () => dio.get<List<int>>(
+          _videoUrl,
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+          onReceiveProgress: any(named: 'onReceiveProgress'),
+        ),
+      ).thenAnswer((invocation) async {
+        final token = invocation.namedArguments[#cancelToken] as CancelToken;
+        wanted = false;
+        throw await token.whenCancel;
+      });
+
+      await expectLater(
+        DmVideoDecryptor(
+          dio: dio,
+          wantedCheckInterval: const Duration(milliseconds: 10),
+        ).decrypt(
+          _videoMessage(fileHash: 'ab' * 32),
+          stillWanted: () => wanted,
+        ),
+        throwsA(isA<DmVideoWithdrawnException>()),
+      );
+    });
+
     test('rejects ciphertext whose hash does not match the x tag', () async {
       final produced = await FileEncryption().encrypt(
         Uint8List.fromList([1, 2, 3, 4, 5]),

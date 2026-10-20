@@ -870,31 +870,34 @@ void main() {
         expect(await first, isNotNull);
       });
 
-      test('read no frame of a video nobody wants any more', () async {
-        final release = Completer<Uint8List>();
-        fetch = (_) => release.future;
-        final store = createStore();
-        final message = _videoMessage();
-        var wanted = true;
+      test(
+        'keep nothing of a download nobody wants by the time it lands',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+          var wanted = true;
 
-        final preview = store.previewFor(
-          message,
-          download: true,
-          stillWanted: () => wanted,
-        );
-        await pumpEventQueue();
-        wanted = false;
-        release.complete(_plaintext);
+          final preview = store.previewFor(
+            message,
+            download: true,
+            stillWanted: () => wanted,
+          );
+          await pumpEventQueue();
+          wanted = false;
+          release.complete(_plaintext);
 
-        expect(await preview, isNull);
-        expect(frameReads, isZero);
-        expect(
-          File(
-            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
-          ).existsSync(),
-          isTrue,
-        );
-      });
+          expect(await preview, isNull);
+          expect(frameReads, isZero);
+          expect(
+            File(
+              '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+            ).existsSync(),
+            isFalse,
+          );
+        },
+      );
 
       test(
         'let the download stop once nobody wants it, unless a tap waits',

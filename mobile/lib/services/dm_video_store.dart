@@ -547,15 +547,17 @@ class DmVideoStore {
       return file;
     }
     try {
-      await _writeAtomically(
-        file,
-        await _fetchVideo(
-          message,
-          maxBytes: maxBytes,
-          timeLimit: timeLimit,
-          stillWanted: stillWanted,
-        ),
+      final plaintext = await _fetchVideo(
+        message,
+        maxBytes: maxBytes,
+        timeLimit: timeLimit,
+        stillWanted: stillWanted,
       );
+      // Landed after every card let go of it: keep no plaintext.
+      if (stillWanted != null && !stillWanted()) {
+        throw const DmVideoWithdrawnException();
+      }
+      await _writeAtomically(file, plaintext);
     } on Object {
       _release(file);
       rethrow;
