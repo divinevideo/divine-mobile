@@ -257,17 +257,37 @@ void main() {
         expect(size.width / size.height, closeTo(9 / 16, 0.01));
       });
 
-      testWidgets('shapes a clip stored sideways by its display rotation', (
-        tester,
-      ) async {
+      testWidgets(
+        'keeps a portrait clip stored sideways in portrait, as Android reports '
+        'it',
+        (tester) async {
+          await openPlayer(tester);
+
+          // Android reports the displayed size alongside the rotation it
+          // still applies to the texture itself.
+          events.emit(const {
+            'status': 'playing',
+            'isFirstFrameRendered': true,
+            'videoWidth': 1080,
+            'videoHeight': 1920,
+            'rotationDegrees': 90,
+          });
+          await tester.pump();
+
+          final size = tester.getSize(find.byType(DivineVideoPlayer));
+          expect(size.width / size.height, closeTo(9 / 16, 0.01));
+        },
+      );
+
+      testWidgets('allows for non-square pixels', (tester) async {
         await openPlayer(tester);
 
         events.emit(const {
           'status': 'playing',
           'isFirstFrameRendered': true,
-          'videoWidth': 1920,
-          'videoHeight': 1080,
-          'rotationDegrees': 90,
+          'videoWidth': 1440,
+          'videoHeight': 1920,
+          'pixelWidthHeightRatio': 0.75,
         });
         await tester.pump();
 

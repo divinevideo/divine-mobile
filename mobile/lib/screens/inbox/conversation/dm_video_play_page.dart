@@ -305,19 +305,12 @@ class _PlayerState extends State<_Player> {
       );
       return;
     }
-    final aspectRatio = _displayAspectRatio(state);
-    if (aspectRatio != null && aspectRatio != _aspectRatio) {
+    // Already the displayed shape: the player reports the size after rotation
+    // and pixel aspect, and rotates the texture itself.
+    final aspectRatio = state.aspectRatio;
+    if (aspectRatio > 0 && aspectRatio != _aspectRatio) {
       setState(() => _aspectRatio = aspectRatio);
     }
-  }
-
-  /// The player rotates a clip stored at 90 or 270 degrees, so its displayed
-  /// shape swaps the stored width and height.
-  static double? _displayAspectRatio(DivineVideoPlayerState state) {
-    final width = state.videoWidth;
-    final height = state.videoHeight;
-    if (width <= 0 || height <= 0) return null;
-    return state.rotationDegrees % 180 == 0 ? width / height : height / width;
   }
 
   @override
