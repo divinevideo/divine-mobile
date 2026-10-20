@@ -10299,13 +10299,27 @@ class DmRepository {
   /// `UPDATE ... WHERE id = ?` that would advance any account's cursor.
   Future<bool> markConversationAsRead(String conversationId) async {
     final owner = _ownerPubkey;
-    if (owner == null) return false;
+    if (owner == null) {
+      Log.warning(
+        'Mark as read skipped: no account owns this repository',
+        category: LogCategory.system,
+      );
+      return false;
+    }
     final written = await _conversationsDao.markAsRead(
       conversationId,
       ownerPubkey: owner,
     );
-    if (written) _scheduleReadMarkerPublish();
-    return written;
+    if (!written) {
+      // Info, not warning: opening a thread that has no row yet lands here.
+      Log.info(
+        'Mark as read found no conversation row for $conversationId',
+        category: LogCategory.system,
+      );
+      return false;
+    }
+    _scheduleReadMarkerPublish();
+    return true;
   }
 
   /// Mark multiple conversations as read in a single batch.
@@ -10317,14 +10331,25 @@ class DmRepository {
   Future<bool> markConversationsAsRead(List<String> conversationIds) async {
     if (conversationIds.isEmpty) return true;
     final owner = _ownerPubkey;
-    if (owner == null) return false;
+    if (owner == null) {
+      Log.warning(
+        'Batch mark as read skipped: no account owns this repository',
+        category: LogCategory.system,
+      );
+      return false;
+    }
     final ids = conversationIds.toSet().toList();
     final written = await _conversationsDao.markMultipleAsRead(
       ids,
       ownerPubkey: owner,
     );
     if (written > 0) _scheduleReadMarkerPublish();
-    return written == ids.length;
+    if (written == ids.length) return true;
+    Log.warning(
+      'Batch mark as read found $written of ${ids.length} conversations',
+      category: LogCategory.system,
+    );
+    return false;
   }
 
   /// Put a conversation aside locally, retaining messages and acceptance state.

@@ -14163,6 +14163,49 @@ void main() {
           ),
         ).called(1);
       });
+
+      test('logs a warning when uninitialized', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        final repository = createRepository(userPubkey: '');
+
+        expect(await repository.markConversationAsRead('any-conv'), isFalse);
+
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.warning &&
+                  e.message.contains('Mark as read skipped'),
+            )
+            .toList();
+        expect(warnings, hasLength(1));
+      });
+
+      test('logs the conversation id when no row exists', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        const convId = 'missing-conversation-id';
+        when(
+          () => mockConversationsDao.markAsRead(
+            convId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => false);
+        final repository = createRepository();
+
+        expect(await repository.markConversationAsRead(convId), isFalse);
+
+        final infos = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.info &&
+                  e.message.contains('no conversation row for $convId'),
+            )
+            .toList();
+        expect(infos, hasLength(1));
+      });
     });
 
     group('read-state marker (#4977)', () {
@@ -15231,6 +15274,52 @@ void main() {
             ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).called(1);
+      });
+
+      test('logs a warning when uninitialized', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        final repository = createRepository(userPubkey: '');
+
+        expect(await repository.markConversationsAsRead(['a', 'b']), isFalse);
+
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.warning &&
+                  e.message.contains('Batch mark as read skipped'),
+            )
+            .toList();
+        expect(warnings, hasLength(1));
+      });
+
+      test('logs how many conversations a partial batch found', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        when(
+          () => mockConversationsDao.markMultipleAsRead(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => 1);
+        final repository = createRepository();
+        addTearDown(repository.stopListening);
+
+        expect(
+          await repository.markConversationsAsRead(['a', 'b', 'b']),
+          isFalse,
+        );
+
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.warning &&
+                  e.message.contains('Batch mark as read found 1 of 2'),
+            )
+            .toList();
+        expect(warnings, hasLength(1));
       });
     });
 
