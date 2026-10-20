@@ -1198,6 +1198,23 @@ void main() {
           await tester.pump();
         });
 
+        testWidgets('$handle gives one haptic for a snap onto its limit', (
+          tester,
+        ) async {
+          // The playhead sits exactly the minimum clip length from the
+          // other edge, so the snap target is also the trim limit.
+          playhead.value = Duration(milliseconds: isStart ? 2940 : 60);
+          await pumpClip(tester);
+          final gesture = await startDrag(tester, isStart: isStart);
+          await gesture.moveBy(Offset(direction * 292, 0));
+          await tester.pump();
+
+          expect(reportedEdge(), equals(const Duration(milliseconds: 3440)));
+          expect(haptics, equals(['HapticFeedbackType.selectionClick']));
+          await gesture.up();
+          await tester.pump();
+        });
+
         testWidgets('$handle keeps a sub-millisecond trim while dragging', (
           tester,
         ) async {
