@@ -13,8 +13,8 @@ import 'package:nostr_client/nostr_client.dart';
 /// it listens; a broadcast stream does not replay, which is what [initial]
 /// stands in for.
 ///
-/// Retry sweeps wake on this rather than on the phone's network change
-/// (#8516): it also fires when a relay server comes back while the phone
+/// The DM retry sweeps wake on this (#8516). Unlike the phone's network
+/// change, it also fires when a relay server comes back while the phone
 /// stayed online, and only once a relay can actually take a send.
 Stream<void> relayConnectedTransitions(
   Stream<Map<String, RelayConnectionStatus>> statuses, {
