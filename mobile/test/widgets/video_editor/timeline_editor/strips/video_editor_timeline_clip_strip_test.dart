@@ -1170,19 +1170,19 @@ void main() {
           tester,
         ) async {
           // A released trim parks the playhead on the handle, and the
-          // timeline reports it in whole milliseconds: at 4x speed that
-          // reads 2-3ms of source away from the edge.
+          // timeline reports it in whole milliseconds: here 1ms of source
+          // away from the edge, in the neighbouring millisecond.
           final clip = _createTestClip(
             id: 'snap',
             seconds: 4,
             trimStartMs: 500,
             trimEndMs: isStart ? 500 : 501,
-          ).copyWith(playbackSpeed: 4);
+          ).copyWith(playbackSpeed: 2);
           final preceding = _createTestClip(
             id: 'preceding',
             trimEndMs: 999,
           ).copyWith(playbackSpeed: 2);
-          playhead.value = Duration(milliseconds: isStart ? 501 : 749);
+          playhead.value = Duration(milliseconds: isStart ? 501 : 1499);
           await pumpClip(
             tester,
             clip: clip,
@@ -1194,7 +1194,7 @@ void main() {
 
           expect(
             reportedEdge(),
-            equals(Duration(milliseconds: isStart ? 580 : 581)),
+            equals(Duration(milliseconds: isStart ? 540 : 541)),
           );
           expect(haptics, isEmpty);
           await gesture.up();
