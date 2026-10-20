@@ -68,6 +68,28 @@ final accountEnforcementDevOverrideProvider =
       AccountEnforcementDevOverride.new,
     );
 
+/// Accounts already shown their age-review closure on launch this session.
+///
+/// In memory on purpose: the notice comes back on the next cold launch, but a
+/// resume refetch in the same session must not push it again
+/// (support-trust-safety#260).
+class AgeReviewClosureLaunchShown extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  /// Records [pubkey] and returns whether this is its first showing.
+  bool markShown(String pubkey) {
+    if (state.contains(pubkey)) return false;
+    state = {...state, pubkey};
+    return true;
+  }
+}
+
+final ageReviewClosureLaunchShownProvider =
+    NotifierProvider<AgeReviewClosureLaunchShown, Set<String>>(
+      AgeReviewClosureLaunchShown.new,
+    );
+
 final activeEnforcementPubkeyProvider = Provider<String?>((ref) {
   final authState = ref.watch(currentAuthStateProvider);
   if (authState != AuthState.authenticated) return null;

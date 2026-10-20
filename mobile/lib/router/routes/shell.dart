@@ -20,6 +20,7 @@ import 'package:openvine/screens/liked_videos_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/profile_unavailable_pins_screen.dart';
 import 'package:openvine/startup/app_side_effects.dart';
+import 'package:openvine/widgets/age_review_closure_launch_notice.dart';
 
 List<RouteBase> shellRoutes() {
   return [
@@ -55,15 +56,19 @@ List<RouteBase> shellRoutes() {
         // inside AppShell so the shell widget stays pure chrome — see
         // AppShellSideEffects for the membership rule.
         child: AppShellSideEffects(
-          // Provided above AppShell so both consumers can reach the same
-          // instance: VineBottomNav (inside AppShell) signals a home-tab retap
-          // and renders the refresh spinner; VideoFeedView (inside the home
-          // branch) listens and performs the refresh.
-          child: BlocProvider<HomeFeedRetapCubit>(
-            create: (_) => HomeFeedRetapCubit(),
-            child: AppShell(
-              currentIndex: navigationShell.currentIndex,
-              child: navigationShell,
+          // Explains an age-review closure as soon as a closed account opens
+          // the app, instead of waiting for a rejected post.
+          child: AgeReviewClosureLaunchNotice(
+            // Provided above AppShell so both consumers can reach the same
+            // instance: VineBottomNav (inside AppShell) signals a home-tab
+            // retap and renders the refresh spinner; VideoFeedView (inside the
+            // home branch) listens and performs the refresh.
+            child: BlocProvider<HomeFeedRetapCubit>(
+              create: (_) => HomeFeedRetapCubit(),
+              child: AppShell(
+                currentIndex: navigationShell.currentIndex,
+                child: navigationShell,
+              ),
             ),
           ),
         ),

@@ -12,6 +12,7 @@ import 'package:openvine/router/routes/shell.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/startup/app_side_effects.dart';
+import 'package:openvine/widgets/age_review_closure_launch_notice.dart';
 
 class _FakeGoRouterState extends Fake implements GoRouterState {
   @override
@@ -105,11 +106,14 @@ void main() {
       // content so AppShell itself stays pure chrome (see app_side_effects.dart).
       expect(transitionPage.child, isA<AppShellSideEffects>());
       final sideEffects = transitionPage.child as AppShellSideEffects;
+      // A closed account is told why on launch (support-trust-safety#260).
+      expect(sideEffects.child, isA<AgeReviewClosureLaunchNotice>());
+      final closureNotice = sideEffects.child as AgeReviewClosureLaunchNotice;
       // The retap cubit wraps AppShell so the bottom nav and the home
       // branch's feed share one instance (see shell.dart).
-      expect(sideEffects.child, isA<BlocProvider<HomeFeedRetapCubit>>());
+      expect(closureNotice.child, isA<BlocProvider<HomeFeedRetapCubit>>());
       final retapProvider =
-          sideEffects.child as BlocProvider<HomeFeedRetapCubit>;
+          closureNotice.child as BlocProvider<HomeFeedRetapCubit>;
       expect(retapProvider.child, isA<AppShell>());
     });
   });
