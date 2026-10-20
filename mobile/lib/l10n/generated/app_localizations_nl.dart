@@ -11784,6 +11784,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Geaccepteerde badgehouders';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw.';
+
+  @override
   String get badgesLoadError => 'Badges konden niet geladen worden';
 
   @override

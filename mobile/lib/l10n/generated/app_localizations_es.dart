@@ -11860,6 +11860,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Personas que aceptaron la insignia';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo.';
+
+  @override
   String get badgesLoadError => 'No se pudieron cargar las insignias';
 
   @override

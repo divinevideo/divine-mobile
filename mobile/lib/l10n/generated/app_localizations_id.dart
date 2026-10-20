@@ -11634,6 +11634,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Langganan lencana kamu tidak dapat dimuat. Coba lagi.';
+
+  @override
   String get badgesLoadError => 'Gagal memuat badge';
 
   @override

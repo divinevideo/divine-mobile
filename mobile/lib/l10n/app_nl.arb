@@ -6201,5 +6201,6 @@
   "peopleListsSearchConnectionsHint": "Zoek in volgers en mensen die je volgt",
   "badgeSubscribedAction": "Volgend",
   "badgeSubscribeAction": "Badge volgen",
-  "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders"
+  "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders",
+  "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw."
 }

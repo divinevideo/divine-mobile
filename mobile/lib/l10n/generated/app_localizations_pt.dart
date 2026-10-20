@@ -11836,6 +11836,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Pessoas que aceitaram o emblema';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Não foi possível carregar suas assinaturas de emblemas. Tente novamente.';
+
+  @override
   String get badgesLoadError => 'Não foi possível carregar as badges';
 
   @override

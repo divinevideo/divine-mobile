@@ -11155,6 +11155,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'バッジを承認した人';
 
   @override
+  String get badgeSubscriptionLoadError => 'バッジの購読を読み込めませんでした。もう一度お試しください。';
+
+  @override
   String get badgesLoadError => 'バッジの読み込みに失敗';
 
   @override

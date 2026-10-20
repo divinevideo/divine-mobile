@@ -8984,6 +8984,8 @@
   "badgeSubscribeAction": "Subscribe to badge",
   "badgeSubscribedAction": "Subscribed",
   "badgeAcceptedHoldersTitle": "Accepted holders",
+  "badgeSubscriptionLoadError": "Could not load your badge subscriptions. Try again.",
+  "@badgeSubscriptionLoadError": {"description": "Shown when badge subscription preferences could not be read; retry reloads only subscriptions."},
   "badgesLoadError": "Could not load badges",
   "badgesUpdateError": "Could not update badge",
   "badgesAwardedEmptyTitle": "No badge awards yet",

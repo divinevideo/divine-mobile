@@ -11737,6 +11737,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Personer som godkänt märket';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Det gick inte att läsa in dina märkprenumerationer. Försök igen.';
+
+  @override
   String get badgesLoadError => 'Kunde inte ladda märken';
 
   @override

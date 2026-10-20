@@ -11733,6 +11733,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Langganan lencana anda tidak dapat dimuatkan. Cuba lagi.';
+
+  @override
   String get badgesLoadError => 'Tidak dapat memuatkan lencana';
 
   @override

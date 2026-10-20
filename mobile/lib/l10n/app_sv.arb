@@ -6201,5 +6201,6 @@
   "peopleListsSearchConnectionsHint": "Sök bland följare och personer du följer",
   "badgeSubscribedAction": "Prenumererar",
   "badgeSubscribeAction": "Prenumerera på märket",
-  "badgeAcceptedHoldersTitle": "Personer som godkänt märket"
+  "badgeAcceptedHoldersTitle": "Personer som godkänt märket",
+  "badgeSubscriptionLoadError": "Det gick inte att läsa in dina märkprenumerationer. Försök igen."
 }

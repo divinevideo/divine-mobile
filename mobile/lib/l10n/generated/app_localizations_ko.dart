@@ -11173,6 +11173,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => '배지를 수락한 사람';
 
   @override
+  String get badgeSubscriptionLoadError => '배지 구독을 불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get badgesLoadError => '배지를 불러오지 못했어요';
 
   @override

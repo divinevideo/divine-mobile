@@ -11819,6 +11819,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Mga tumanggap ng badge';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Hindi ma-load ang iyong mga subscription sa badge. Subukan muli.';
+
+  @override
   String get badgesLoadError => 'Hindi na-load ang mga badge';
 
   @override

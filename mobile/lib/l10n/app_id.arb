@@ -6201,5 +6201,6 @@
   "peopleListsSearchConnectionsHint": "Cari pengikut dan yang diikuti",
   "badgeSubscribedAction": "Diikuti",
   "badgeSubscribeAction": "Ikuti lencana",
-  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima"
+  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscriptionLoadError": "Langganan lencana kamu tidak dapat dimuat. Coba lagi."
 }

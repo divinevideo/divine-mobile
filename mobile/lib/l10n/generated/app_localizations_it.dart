@@ -11880,6 +11880,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Persone che hanno accettato il badge';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Impossibile caricare i tuoi abbonamenti ai badge. Riprova.';
+
+  @override
   String get badgesLoadError => 'Impossibile caricare i badge';
 
   @override

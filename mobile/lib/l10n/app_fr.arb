@@ -6201,5 +6201,6 @@
   "peopleListsSearchConnectionsHint": "Rechercher parmi les abonnés et les abonnements",
   "badgeSubscribedAction": "Abonné",
   "badgeSubscribeAction": "S’abonner au badge",
-  "badgeAcceptedHoldersTitle": "Titulaires ayant accepté le badge"
+  "badgeAcceptedHoldersTitle": "Titulaires ayant accepté le badge",
+  "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie."
 }

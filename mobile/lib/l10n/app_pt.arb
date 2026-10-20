@@ -6201,5 +6201,6 @@
   "peopleListsSearchConnectionsHint": "Buscar seguidores e pessoas que você segue",
   "badgeSubscribedAction": "A seguir",
   "badgeSubscribeAction": "Seguir emblema",
-  "badgeAcceptedHoldersTitle": "Pessoas que aceitaram o emblema"
+  "badgeAcceptedHoldersTitle": "Pessoas que aceitaram o emblema",
+  "badgeSubscriptionLoadError": "Não foi possível carregar suas assinaturas de emblemas. Tente novamente."
 }

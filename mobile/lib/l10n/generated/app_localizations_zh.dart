@@ -11027,6 +11027,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => '已接受徽章的人';
 
   @override
+  String get badgeSubscriptionLoadError => '无法加载你的徽章订阅。请重试。';
+
+  @override
   String get badgesLoadError => '徽章加载失败';
 
   @override

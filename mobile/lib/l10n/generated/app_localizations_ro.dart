@@ -11979,6 +11979,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Persoane care au acceptat insigna';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou.';
+
+  @override
   String get badgesLoadError => 'N-am putut încărca insignele';
 
   @override

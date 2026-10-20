@@ -5838,6 +5838,7 @@
   "badgeSubscribeAction": "Langgan lencana",
   "badgeSubscribedAction": "Melanggan",
   "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscriptionLoadError": "Langganan lencana anda tidak dapat dimuatkan. Cuba lagi.",
   "badgesLoadError": "Tidak dapat memuatkan lencana",
   "badgesUpdateError": "Tidak dapat mengemas kini lencana",
   "badgesAwardedEmptyTitle": "Belum ada anugerah lencana",
