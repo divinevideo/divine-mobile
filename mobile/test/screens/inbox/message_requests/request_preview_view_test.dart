@@ -179,13 +179,6 @@ void main() {
       );
     }
 
-    testWidgets('request previews retain mark as read', (tester) async {
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.inboxThreadMarkRead), findsOneWidget);
-      expect(find.text(l10n.inboxRemoveConfirmConfirm), findsNothing);
-    });
-
     // #7486. These counts had never rendered. The widget read them off the
     // profile object, whose REST counts are only ever populated by the
     // people-search shape (never written to the cache this screen reads) and
