@@ -165,6 +165,44 @@ void main() {
     );
 
     test(
+      'retry after timed-out transport succeeds does not upload or sign again',
+      () async {
+        final session = ConsentUploadSession();
+        addTearDown(session.dispose);
+        final response = Completer<http.Response>();
+        final auth = _RecordingNip98AuthService();
+        var sends = 0;
+        final api = ApiService(
+          relayManagerBaseUrl: 'https://api.test',
+          appVersion: 'test',
+          uploadTimeout: const Duration(milliseconds: 30),
+          authService: auth,
+          client: MockClient((request) async {
+            sends++;
+            return response.future;
+          }),
+        );
+        Future<void> submit() => api.submitMinorAccountReviewParentConsent(
+          caseId: 'case-123',
+          email: 'parent@example.com',
+          videoPath: clip.path,
+          session: session,
+        );
+        await expectLater(submit(), throwsA(isA<ApiException>()));
+        // Join only to observe the original transport settling before Retry.
+        final settled = session.send(
+          prepare: () => throw StateError('must reuse pending upload'),
+          transmit: (_) => throw StateError('must reuse pending transport'),
+        );
+        response.complete(http.Response('', 201));
+        await settled;
+        await submit();
+        expect(sends, 1);
+        expect(auth.createCount, 1);
+      },
+    );
+
+    test(
       'signs the exact binary multipart snapshot sent to the server',
       () async {
         final originalVideo = [0, 128, 255, 13, 10, 1];

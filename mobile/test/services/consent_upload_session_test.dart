@@ -57,40 +57,95 @@ void main() {
       },
     );
 
-    test('switching account disposes the previous account snapshot', () async {
-      final session = ConsentUploadSession();
-      final uri = Uri.parse('https://api.test');
-      const firstOwner =
-          '0000000000000000000000000000000000000000000000000000000000000001';
-      const secondOwner =
-          '0000000000000000000000000000000000000000000000000000000000000002';
-      await session.bind(
-        url: uri,
-        email: 'parent@example.com',
-        videoPath: '/clip.mp4',
-        pubkey: firstOwner,
+    for (final statusCode in [200, 201, 204]) {
+      test(
+        'accepted $statusCode releases bytes and reuses its result',
+        () async {
+          final session = ConsentUploadSession();
+          addTearDown(session.dispose);
+          final upload = await ConsentUpload.prepare(
+            http.MultipartRequest('POST', Uri.parse('https://api.test'))
+              ..fields['email'] = 'parent@example.com',
+          );
+          var sends = 0;
+          Future<http.Response> send() => session.send(
+            prepare: () async => upload,
+            transmit: (_) async {
+              sends++;
+              return http.Response('', statusCode);
+            },
+          );
+          expect((await send()).statusCode, statusCode);
+          expect((await send()).statusCode, statusCode);
+          expect(sends, 1);
+          await expectLater(
+            upload.request.finalize().toBytes(),
+            throwsA(isA<FileSystemException>()),
+          );
+          await session.dispose();
+          expect(send, throwsStateError);
+        },
       );
-      final upload = await ConsentUpload.prepare(
-        http.MultipartRequest('POST', uri)
-          ..fields['email'] = 'parent@example.com',
-      );
-      await session.send(
-        prepare: () async => upload,
-        transmit: (_) async => http.Response('', 503),
-      );
-      await expectLater(
-        session.bind(
+    }
+
+    for (final statusCode in [202, 503]) {
+      test('unaccepted $statusCode keeps the snapshot retryable', () async {
+        final session = ConsentUploadSession();
+        addTearDown(session.dispose);
+        final upload = await ConsentUpload.prepare(
+          http.MultipartRequest('POST', Uri.parse('https://api.test')),
+        );
+        var sends = 0;
+        Future<http.Response> send() => session.send(
+          prepare: () async => upload,
+          transmit: (body) async {
+            sends++;
+            expect(await body.request.finalize().toBytes(), isNotEmpty);
+            return http.Response('', sends == 1 ? statusCode : 201);
+          },
+        );
+        expect((await send()).statusCode, statusCode);
+        expect((await send()).statusCode, 201);
+        expect(sends, 2);
+      });
+    }
+
+    for (final statusCode in [201, 503]) {
+      test('switching account invalidates a $statusCode submission', () async {
+        final session = ConsentUploadSession();
+        final uri = Uri.parse('https://api.test');
+        const firstOwner =
+            '0000000000000000000000000000000000000000000000000000000000000001';
+        const secondOwner =
+            '0000000000000000000000000000000000000000000000000000000000000002';
+        await session.bind(
           url: uri,
           email: 'parent@example.com',
           videoPath: '/clip.mp4',
-          pubkey: secondOwner,
-        ),
-        throwsA(isA<ConsentUploadInvalidatedException>()),
-      );
-      await expectLater(
-        upload.request.finalize().toBytes(),
-        throwsA(isA<FileSystemException>()),
-      );
-    });
+          pubkey: firstOwner,
+        );
+        final upload = await ConsentUpload.prepare(
+          http.MultipartRequest('POST', uri)
+            ..fields['email'] = 'parent@example.com',
+        );
+        await session.send(
+          prepare: () async => upload,
+          transmit: (_) async => http.Response('', statusCode),
+        );
+        await expectLater(
+          session.bind(
+            url: uri,
+            email: 'parent@example.com',
+            videoPath: '/clip.mp4',
+            pubkey: secondOwner,
+          ),
+          throwsA(isA<ConsentUploadInvalidatedException>()),
+        );
+        await expectLater(
+          upload.request.finalize().toBytes(),
+          throwsA(isA<FileSystemException>()),
+        );
+      });
+    }
   });
 }

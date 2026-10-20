@@ -12,6 +12,7 @@ class ConsentUploadInvalidatedException implements Exception {
 class ConsentUploadSession {
   ConsentUpload? _upload;
   Future<http.Response>? _pending;
+  http.Response? _completed;
   bool _disposed = false;
   ({Uri url, String email, String videoPath, String? pubkey})? _binding;
 
@@ -39,12 +40,14 @@ class ConsentUploadSession {
   /// Case resolved by the repository on the first attempt, retained for retries.
   String? caseId;
 
-  /// Reuses an outstanding transport, or signs and sends the retained snapshot.
+  /// Reuses an outstanding transport or accepted result before sending again.
   Future<http.Response> send({
     required Future<ConsentUpload> Function() prepare,
     required Future<http.Response> Function(ConsentUpload) transmit,
   }) {
     if (_disposed) throw StateError('Consent submission is closed');
+    final completed = _completed;
+    if (completed != null) return Future.value(completed);
     return _pending ??= _send(prepare, transmit);
   }
 
@@ -55,7 +58,16 @@ class ConsentUploadSession {
     try {
       final upload = _upload ??= await prepare();
       if (_disposed) throw const ConsentUploadInvalidatedException();
-      return await transmit(upload);
+      final response = await transmit(upload);
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        // The caller may already have timed out. Keep the accepted result so
+        // Retry shows success without uploading again, and release the video.
+        if (!_disposed) _completed = response;
+        await _discard();
+      }
+      return response;
     } finally {
       _pending = null;
       if (_disposed) await _discard();
@@ -66,6 +78,7 @@ class ConsentUploadSession {
   Future<void> dispose() async {
     _disposed = true;
     _binding = null;
+    _completed = null;
     caseId = null;
     if (_pending == null) await _discard();
   }
