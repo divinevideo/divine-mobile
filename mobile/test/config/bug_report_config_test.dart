@@ -30,17 +30,15 @@ const _deepLinkLogLine =
 void main() {
   group('redactFilesystemPaths', () {
     test('redacts a sandbox path and leaves everything else', () {
-      const nsec =
-          'nsec1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq';
       final redacted = redactFilesystemPaths(
         'setDataSource failed: '
         '/data/user/0/co.openvine.app/cache/dm_videos/owner/message.mp4 '
-        'for $nsec',
+        'Caused by: OSStatus -12847',
       );
 
       expect(redacted, isNot(contains('dm_videos')));
       expect(redacted, contains('setDataSource failed: [REDACTED]'));
-      expect(redacted, contains(nsec));
+      expect(redacted, contains('Caused by: OSStatus -12847'));
     });
   });
 
