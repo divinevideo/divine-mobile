@@ -212,6 +212,8 @@ void main() {
       Future<bool> Function(String conversationId, int sentAt)?
       isConversationRemoved,
       Future<Directory> Function()? rootDirectory,
+      Duration frameTurnLimit = DmVideoStore.defaultFrameTurnLimit,
+      Duration frameDeadline = DmVideoStore.defaultFrameDeadline,
     }) => DmVideoStore(
       ownerPubkey: _owner,
       fetchVideo: (message, {maxBytes, timeLimit, limitsApply, stillWanted}) {
@@ -230,6 +232,8 @@ void main() {
       maxBytes: maxBytes,
       isMessageGone: isMessageGone,
       isConversationRemoved: isConversationRemoved,
+      frameTurnLimit: frameTurnLimit,
+      frameDeadline: frameDeadline,
     );
 
     Directory ownerDir([String? owner]) =>
@@ -554,6 +558,52 @@ void main() {
 
           reads.last.complete(_frame);
           expect(await secondFrame, isNotNull);
+        },
+      );
+
+      test(
+        'lets the next frame read start once a decode has run for the turn '
+        'limit, keeping its video leased until it returns',
+        () async {
+          final firstDecode = Completer<Uint8List?>();
+          final secondReadStarted = Completer<void>();
+          final first = _videoMessage(id: '1' * 64);
+          final second = _videoMessage(id: '2' * 64);
+          readFrame = (video) {
+            if (video.path.contains(first.id)) return firstDecode.future;
+            secondReadStarted.complete();
+            return Future.value(_frame);
+          };
+          var firstGone = false;
+          final store = createStore(
+            frameTurnLimit: const Duration(milliseconds: 1),
+            frameDeadline: const Duration(milliseconds: 1),
+            isMessageGone: (id) async => firstGone && id == first.id,
+          );
+          final firstVideo = keptFile(
+            DmVideoStore.videoFileNameFor(first),
+            _plaintext,
+            opened: now,
+          );
+          keptFile(
+            DmVideoStore.videoFileNameFor(second),
+            _plaintext,
+            opened: now,
+          );
+
+          expect(await store.previewFor(first, download: false), isNull);
+          final secondFrame = store.previewFor(second, download: false);
+          await secondReadStarted.future.timeout(const Duration(seconds: 5));
+          expect(await secondFrame, isNotNull);
+
+          firstGone = true;
+          await store.prune();
+          expect(firstVideo.existsSync(), isTrue);
+
+          firstDecode.complete();
+          await pumpEventQueue();
+          await store.prune();
+          expect(firstVideo.existsSync(), isFalse);
         },
       );
 

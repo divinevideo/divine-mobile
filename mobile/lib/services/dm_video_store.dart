@@ -83,6 +83,8 @@ class DmVideoStore {
     DateTime Function()? now,
     this.maxIdle = defaultMaxIdle,
     this.maxBytes = defaultMaxBytes,
+    this.frameTurnLimit = defaultFrameTurnLimit,
+    this.frameDeadline = defaultFrameDeadline,
   }) : _ownerPubkey = ownerPubkey,
        _removalsAtCreation = _removals[_safeName(ownerPubkey)] ?? 0,
        _fetchVideo = fetchVideo,
@@ -121,6 +123,15 @@ class DmVideoStore {
   /// that may pass, such as a dropped connection.
   static const Duration autoDownloadRetryAfter = Duration(minutes: 2);
 
+  /// Longest a frame read keeps the decoder from the next one. A decode that
+  /// outlasts it keeps its video leased until it returns, but the next read
+  /// starts beside it: a native call that never replies must not leave
+  /// every other card on its fallback until the store is rebuilt.
+  static const Duration defaultFrameTurnLimit = Duration(seconds: 60);
+
+  /// How long a card waits for its frame by default; see [frameDeadline].
+  static const Duration defaultFrameDeadline = dmVideoPreviewTimeout;
+
   static const String _partSuffix = '.part';
   static const String _legacyPlaybackDirName = 'dm_video_playback';
 
@@ -156,6 +167,14 @@ class DmVideoStore {
 
   /// Upper bound, in bytes, on this account's kept files.
   final int maxBytes;
+
+  /// How long a frame read may keep the decoder; see
+  /// [defaultFrameTurnLimit].
+  final Duration frameTurnLimit;
+
+  /// How long a card waits for its frame once its decode starts. The
+  /// decode runs on past it; a frame that arrives later is still kept.
+  final Duration frameDeadline;
 
   final String _ownerPubkey;
   final int _removalsAtCreation;
@@ -201,8 +220,8 @@ class DmVideoStore {
   /// Frame reads run one at a time too: a crash then marks only the video
   /// being read, and a long thread does not start a native decoder per card.
   /// The getThumbnails call used here has no confirmed cancellation: a read
-  /// that never replies holds this turn until the store is recreated. Cards keep
-  /// their fallback rather than starting overlapping recovery decoders.
+  /// that never replies holds this turn for [frameTurnLimit], then the next
+  /// read starts beside it, while its file stays leased until it replies.
   final _OneAtATime _frameReads = _OneAtATime();
   final Map<String, Future<File?>> _previewsInFlight = {};
 
@@ -846,7 +865,7 @@ class DmVideoStore {
       // this card's decode, not its place behind other native reads.
       await Future.any<void>([read.started, read.settled.then<void>((_) {})]);
       return await read.settled.timeout(
-        dmVideoPreviewTimeout,
+        frameDeadline,
         onTimeout: () => null,
       );
     } finally {
@@ -860,23 +879,42 @@ class DmVideoStore {
     File preview,
   ) {
     final started = Completer<void>();
+    final read = Completer<File?>();
     final id = message.id;
-    final settled = _frameReads
-        .run(() async {
-          started.complete();
-          // A closed card or newly blocked sender must not cost a decode.
-          if (!_frameWanted(id)) return null;
-          // The decoder turn and this lease outlive a card's UI deadline.
-          _lease(video);
-          try {
-            return await _readAndKeepFrame(message, video, preview);
-          } finally {
-            _release(video);
-          }
-        })
-        .whenComplete(
-          () => _frameReadsInFlight.removeWhere((key, _) => key == id),
-        );
+    unawaited(
+      _frameReads.run(() async {
+        started.complete();
+        // A closed card or newly blocked sender must not cost a decode.
+        if (!_frameWanted(id)) {
+          read.complete();
+          return;
+        }
+        // The lease outlives a card's UI deadline and the turn: it ends only
+        // when the decoder is done with the file.
+        _lease(video);
+        final decoding = _readAndKeepFrame(
+          message,
+          video,
+          preview,
+        ).whenComplete(() => _release(video));
+        read.complete(decoding);
+        await decoding
+            .then<void>((_) {}, onError: (Object _) {})
+            .timeout(
+              frameTurnLimit,
+              onTimeout: () => Log.warning(
+                'A video DM frame decode still ran '
+                '${frameTurnLimit.inSeconds} s after it started; the next '
+                'frame read no longer waits for it',
+                name: _logName,
+                category: LogCategory.video,
+              ),
+            );
+      }),
+    );
+    final settled = read.future.whenComplete(
+      () => _frameReadsInFlight.removeWhere((key, _) => key == id),
+    );
     return (started: started.future, settled: settled);
   }
 
