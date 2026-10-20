@@ -169,9 +169,6 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
   /// client cache is the fallback — matching `video_providers.dart` and
   /// `ProfileVideosGrid`.
   String? _resolveViewerPubkey() {
-    // Identity gating for UI, so the auth state is the right rebuild trigger:
-    // signing readiness (`nostrSessionProvider`) is a different question.
-    ref.watch(currentAuthStateProvider);
     final authService = ref.read(authServiceProvider);
     // Sign-out queues the client replacement, so the outgoing client can still
     // hand back its cached key on a rebuild. Neither identity source is
@@ -193,10 +190,12 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
 
   @override
   Widget build(BuildContext context) {
-    final viewerPubkey = _resolveViewerPubkey();
+    // Identity gating for UI, so auth state remains the rebuild trigger.
+    ref.watch(currentAuthStateProvider);
     return VideoGridFilter(
       videos: widget.videos,
-      builder: (context, videos) => _buildGrid(context, videos, viewerPubkey),
+      builder: (context, videos) =>
+          _buildGrid(context, videos, _resolveViewerPubkey()),
     );
   }
 

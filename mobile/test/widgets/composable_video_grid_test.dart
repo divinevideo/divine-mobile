@@ -135,6 +135,7 @@ List<Override> _gridOverrides(
   broken_tracker.BrokenVideoTracker tracker, {
   MockNostrClient? nostrService,
   MockAuthService? authService,
+  Future<broken_tracker.BrokenVideoTracker>? trackerFuture,
   SubscribedListVideoCache? subscribedListCache,
   List<Override> extra = const [],
 }) => [
@@ -143,7 +144,9 @@ List<Override> _gridOverrides(
   nostrServiceProvider.overrideWithValue(
     nostrService ?? createMockNostrService(),
   ),
-  brokenVideoTrackerProvider.overrideWith((ref) async => tracker),
+  brokenVideoTrackerProvider.overrideWith(
+    (ref) => trackerFuture ?? Future.value(tracker),
+  ),
   subscribedListVideoCacheProvider.overrideWithValue(subscribedListCache),
   userProfileReactiveProvider.overrideWith((ref, pubkey) => Stream.value(null)),
   ...extra,
@@ -1468,6 +1471,53 @@ void main() {
                 'silently does nothing.',
           );
           handle.dispose();
+        },
+      );
+
+      testWidgets(
+        'resolves current ownership when the broken tracker finishes loading',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          try {
+            final tracker = Completer<broken_tracker.BrokenVideoTracker>();
+            final auth = createMockAuthService();
+            when(() => auth.currentPublicKeyHex).thenReturn(null);
+            when(() => auth.authState).thenReturn(AuthState.unauthenticated);
+            when(() => auth.isAuthenticated).thenReturn(false);
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: _gridOverrides(
+                  mockTracker,
+                  authService: auth,
+                  trackerFuture: tracker.future,
+                ),
+                child: MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(
+                    body: ComposableVideoGrid(
+                      videos: [videoBy(_ownPubkey)],
+                      onVideoTap: (_, _) {},
+                    ),
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+            when(() => auth.currentPublicKeyHex).thenReturn(_ownPubkey);
+            when(() => auth.authState).thenReturn(AuthState.authenticated);
+            when(() => auth.isAuthenticated).thenReturn(true);
+            tracker.complete(mockTracker);
+            await tester.pumpAndSettle();
+            expect(
+              tileNode(tester)
+                  .getSemanticsData()
+                  .hasAction(SemanticsAction.longPress),
+              isTrue,
+            );
+          } finally {
+            handle.dispose();
+          }
         },
       );
 
