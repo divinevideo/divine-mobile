@@ -2014,6 +2014,7 @@ class _MessageList extends StatelessWidget {
               ? DmVideoPreviewScope(
                   message: message,
                   accepted: isSent || hasOwnMessage,
+                  blocked: blockedPubkeys.contains(message.senderPubkey),
                   builder: (_, framePath) =>
                       bubbleWith(encryptedVideoFramePath: framePath),
                 )

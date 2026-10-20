@@ -16,14 +16,16 @@ import 'package:openvine/providers/video_providers.dart';
 /// Builds a video DM's bubble with the frame this device keeps for it.
 ///
 /// The video downloads as soon as the bubble shows when the conversation is
-/// [accepted] or the user follows the sender. Otherwise it is a message
-/// request, and nothing downloads until the user plays it: a stranger cannot
-/// make the device fetch and decode a file.
+/// [accepted] or the user follows the sender, unless the sender is [blocked].
+/// Otherwise nothing downloads until the user plays it: a stranger or a
+/// blocked sender cannot make the device fetch and decode a file, or learn
+/// from their host when the thread was opened.
 class DmVideoPreviewScope extends ConsumerWidget {
   /// Creates a [DmVideoPreviewScope] for [message].
   const DmVideoPreviewScope({
     required this.message,
     required this.accepted,
+    required this.blocked,
     required this.builder,
     super.key,
   });
@@ -34,6 +36,10 @@ class DmVideoPreviewScope extends ConsumerWidget {
   /// Whether the message is the user's own or the user has posted in this
   /// conversation.
   final bool accepted;
+
+  /// Whether the user blocked or muted the sender. Overrides [accepted] and
+  /// following: a thread reached from the Blocked chip is still readable.
+  final bool blocked;
 
   /// Builds the bubble with the frame's path, null until there is one.
   final Widget Function(BuildContext context, String? framePath) builder;
@@ -46,9 +52,10 @@ class DmVideoPreviewScope extends ConsumerWidget {
         .asData
         ?.value;
     final download =
-        accepted ||
-        relationship == FollowRelationship.youFollow ||
-        relationship == FollowRelationship.mutual;
+        !blocked &&
+        (accepted ||
+            relationship == FollowRelationship.youFollow ||
+            relationship == FollowRelationship.mutual);
     return BlocProvider(
       // A new account or a newly followed sender starts a fresh read.
       key: ValueKey((store, message.id, download)),

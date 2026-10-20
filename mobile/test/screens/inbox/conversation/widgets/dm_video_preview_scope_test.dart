@@ -58,6 +58,7 @@ void main() {
 
   Widget host({
     required bool accepted,
+    bool blocked = false,
     FollowRelationship relationship = FollowRelationship.none,
     List<String?>? framePaths,
   }) => ProviderScope(
@@ -73,6 +74,7 @@ void main() {
       home: DmVideoPreviewScope(
         message: _videoMessage(),
         accepted: accepted,
+        blocked: blocked,
         builder: (context, framePath) {
           framePaths?.add(framePath);
           return Text(framePath ?? 'no frame');
@@ -109,6 +111,27 @@ void main() {
         (tester) async {
           await tester.pumpWidget(
             host(accepted: false, relationship: FollowRelationship.followsYou),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => store.previewFor(any(), download: true));
+          verify(() => store.previewFor(any(), download: false)).called(1);
+        },
+      );
+    });
+
+    group('blocked senders', () {
+      testWidgets(
+        'never downloads by itself from a blocked or muted sender, even in a '
+        'chat the user posted in or from someone they follow',
+        (tester) async {
+          await tester.pumpWidget(
+            host(
+              accepted: true,
+              blocked: true,
+              relationship: FollowRelationship.youFollow,
+            ),
           );
           await tester.pump();
           await tester.pump();
