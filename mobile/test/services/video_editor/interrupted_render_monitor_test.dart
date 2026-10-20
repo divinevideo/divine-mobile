@@ -39,11 +39,25 @@ class _FakeProVideoEditor extends ProVideoEditor {
 
   final void Function(String taskId) onCancel;
 
+  /// The result of each render started through [renderVideoToFile], by id.
+  final renders = <String, Completer<String>>{};
+
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
 
   @override
-  Future<void> cancel(String taskId) async => onCancel(taskId);
+  Future<String> renderVideoToFile(
+    String filePath,
+    VideoRenderData value, {
+    NativeLogLevel? nativeLogLevel,
+  }) => (renders[value.id] = Completer<String>()).future;
+
+  /// Answers a cancelled render as the plugin does, before the cancel.
+  @override
+  Future<void> cancel(String taskId) async {
+    onCancel(taskId);
+    renders.remove(taskId)?.completeError(const RenderCanceledException());
+  }
 }
 
 /// The first 24 bytes of a PNG of [width] x [height]: all the monitor reads.
@@ -359,6 +373,43 @@ void main() {
 
         finish.complete('out.mp4');
         await render;
+      });
+
+      test('lands in the marker of a render a restart under the same id '
+          'displaces', () async {
+        addTearDown(
+          VideoEditorRenderService.resetActiveNativeTaskIdsForTesting,
+        );
+        Map<String, Object?>? markerAtPlatformCall;
+        final editor = _FakeProVideoEditor(
+          onCancel: (_) => markerAtPlatformCall = readMarker('seam'),
+        );
+        ProVideoEditor.instance = editor;
+        final task = VideoRenderData(
+          id: 'seam',
+          videoSegments: [VideoSegment(video: EditorVideo.file('/a.mp4'))],
+        );
+
+        final displaced = VideoEditorRenderService.renderNativeVideoToFile(
+          'first.mp4',
+          task,
+        );
+        await pumpEventQueue();
+        final restart = VideoEditorRenderService.renderNativeVideoToFile(
+          'second.mp4',
+          task,
+        );
+
+        expect(
+          markerAtPlatformCall,
+          containsPair('cancelRequestedAtMs', isA<int>()),
+        );
+        await expectLater(displaced, throwsA(isA<RenderCanceledException>()));
+
+        await pumpEventQueue();
+        editor.renders['seam']!.complete('second.mp4');
+        expect(await restart, equals('second.mp4'));
+        expect(markerFiles(), isEmpty);
       });
     });
 
