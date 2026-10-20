@@ -47,10 +47,11 @@ class DmVideoPreviewScope extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(dmVideoStoreProvider);
+    // `value`, not `asData`: while the relationship reloads it keeps the
+    // previous answer, so the preview is not torn down and started again.
     final relationship = ref
         .watch(followRelationshipProvider(message.senderPubkey))
-        .asData
-        ?.value;
+        .value;
     final download =
         !blocked &&
         (accepted ||

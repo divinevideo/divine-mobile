@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart'
     show FollowRelationship;
@@ -18,6 +19,9 @@ import 'package:openvine/screens/inbox/conversation/widgets/dm_video_preview_sco
 import 'package:openvine/services/dm_video_store.dart';
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
+
+/// Stands in for the follower cache the real follow relationship watches.
+final _followerCache = StateProvider<int>((ref) => 0);
 
 const _framePath = '/kept/dm_videos/owner/clip.preview.jpg';
 final String _sender = 'b' * 64;
@@ -117,6 +121,62 @@ void main() {
 
           verifyNever(() => store.previewFor(any(), download: true));
           verify(() => store.previewFor(any(), download: false)).called(1);
+        },
+      );
+    });
+
+    group('follow state', () {
+      testWidgets(
+        'keeps one preview while the follow state reloads, instead of '
+        'starting over',
+        (tester) async {
+          final relationships = <StreamController<FollowRelationship>>[];
+          addTearDown(() async {
+            for (final controller in relationships) {
+              await controller.close();
+            }
+          });
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                dmVideoStoreProvider.overrideWithValue(store),
+                followRelationshipProvider.overrideWith((ref, pubkey) {
+                  ref.watch(_followerCache);
+                  final controller = StreamController<FollowRelationship>();
+                  relationships.add(controller);
+                  return controller.stream;
+                }),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: DmVideoPreviewScope(
+                  message: _videoMessage(),
+                  accepted: false,
+                  blocked: false,
+                  builder: (context, framePath) =>
+                      Text(framePath ?? 'no frame'),
+                ),
+              ),
+            ),
+          );
+          relationships.single.add(FollowRelationship.youFollow);
+          await tester.pump();
+          await tester.pump();
+          verify(() => store.previewFor(any(), download: true)).called(1);
+
+          // The follower cache lands, so the relationship rebuilds and has
+          // not answered yet.
+          ProviderScope.containerOf(
+            tester.element(find.byType(DmVideoPreviewScope)),
+          ).read(_followerCache.notifier).state++;
+          await tester.pump();
+          await tester.pump();
+          relationships.last.add(FollowRelationship.youFollow);
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => store.previewFor(any(), download: true));
         },
       );
     });
