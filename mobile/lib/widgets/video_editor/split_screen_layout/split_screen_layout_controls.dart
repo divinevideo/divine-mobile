@@ -131,7 +131,7 @@ class _PresetTile extends StatelessWidget {
             borderRadius: .circular(16),
             border: .all(
               width: 2,
-              color: isSelected ? VineTheme.primary : colors.outlineMuted,
+              color: isSelected ? colors.accentBrand : colors.outlineMuted,
             ),
           ),
           child: Center(
@@ -143,7 +143,9 @@ class _PresetTile extends StatelessWidget {
                     aspectRatio: frameAspectRatio,
                     gap: _iconGap,
                   ),
-                  color: isSelected ? VineTheme.primary : colors.onSurfaceMuted,
+                  color: isSelected
+                      ? colors.accentBrand
+                      : colors.onSurfaceMuted,
                 ),
               ),
             ),
