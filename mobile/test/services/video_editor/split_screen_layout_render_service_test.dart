@@ -11,6 +11,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/video_editor/split_screen_layout_render_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -188,6 +189,23 @@ void main() {
       );
       expect(transform.fit, SegmentFit.fill);
       expect(layer.mask, isNotNull);
+    });
+
+    test('leaves a green-screen clip as its file was keyed', () async {
+      final keyed = _clip(
+        'a',
+      ).copyWith(chromaKey: const ClipChromaKey(key: ChromaKey()));
+      expect(keyed.chromaKey, isNotNull);
+
+      final task = await renderSideBySide([
+        (clip: keyed, zoom: 1),
+        (clip: _clip('b'), zoom: 1),
+      ]);
+
+      expect(task.composition!.layers.map((layer) => layer.chromaKey), [
+        null,
+        null,
+      ]);
     });
 
     test('holds a shorter cell on its last frame until the end', () async {

@@ -276,8 +276,9 @@ abstract final class SplitScreenLayoutRenderService {
           ).shift(cellRect.topLeft);
 
     final clip = cell.clip;
+    // No chromaKey: a clip's key is burned into its file already, the way
+    // the export never keys a timeline clip again.
     return VideoLayer(
-      chromaKey: clip.chromaKey?.key,
       mask: centred ? null : await _matte(crop, footage.size),
       clips: [
         VideoSegment(
