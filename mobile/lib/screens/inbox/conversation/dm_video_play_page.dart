@@ -256,8 +256,14 @@ class _Player extends StatefulWidget {
 }
 
 class _PlayerState extends State<_Player> {
+  /// How long the player may stay in error before the page gives up. Android
+  /// re-prepares after a decoder error, up to twice 350 ms apart, and reports
+  /// the error meanwhile; a player that recovers must keep playing.
+  static const _errorGrace = Duration(seconds: 3);
+
   DivineVideoPlayerController? _controller;
   StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
+  Timer? _errorGraceTimer;
 
   /// Width over height as the clip displays; null until the player knows.
   double? _aspectRatio;
@@ -299,12 +305,11 @@ class _PlayerState extends State<_Player> {
   void _onPlayerState(DivineVideoPlayerState state) {
     if (!mounted) return;
     if (state.status == PlaybackStatus.error) {
-      context.read<DmVideoPlaybackCubit>().playbackFailed(
-        _PlayerFailure(state.errorMessage),
-        StackTrace.current,
-      );
+      _errorGraceTimer ??= Timer(_errorGrace, _failIfStillInError);
       return;
     }
+    _errorGraceTimer?.cancel();
+    _errorGraceTimer = null;
     // Already the displayed shape: the player reports the size after rotation
     // and pixel aspect, and rotates the texture itself.
     final aspectRatio = state.aspectRatio;
@@ -313,8 +318,25 @@ class _PlayerState extends State<_Player> {
     }
   }
 
+  /// Reports the failure once and stops listening, so a player that sends
+  /// the error again does not report it twice.
+  void _failIfStillInError() {
+    _errorGraceTimer = null;
+    final state = _controller?.state;
+    if (!mounted || state == null || state.status != PlaybackStatus.error) {
+      return;
+    }
+    unawaited(_stateSubscription?.cancel());
+    _stateSubscription = null;
+    context.read<DmVideoPlaybackCubit>().playbackFailed(
+      _PlayerFailure(state.errorMessage),
+      StackTrace.current,
+    );
+  }
+
   @override
   void dispose() {
+    _errorGraceTimer?.cancel();
     unawaited(_stateSubscription?.cancel());
     final controller = _controller;
     if (controller != null) unawaited(controller.dispose());

@@ -301,7 +301,10 @@ void main() {
         (tester) async {
           await openPlayer(tester);
 
-          events.emit(const {'status': 'error', 'errorMessage': 'decode'});
+          events
+            ..emit(const {'status': 'error', 'errorMessage': 'decode'})
+            ..emit(const {'status': 'error', 'errorMessage': 'decode'});
+          await tester.pump(const Duration(seconds: 3));
           await tester.pump();
 
           expect(find.byType(DivineVideoPlayer), findsNothing);
@@ -310,6 +313,42 @@ void main() {
             findsOneWidget,
           );
           verify(() => decryptor.deleteClip(expectedClipPath())).called(1);
+        },
+      );
+    });
+
+    group('player recovery', () {
+      testWidgets(
+        'keeps playing when the player recovers from a decoder error, as '
+        'Android retries one',
+        (tester) async {
+          stubDelete();
+          stubDecrypt(() async {
+            File(expectedClipPath())
+              ..createSync(recursive: true)
+              ..writeAsBytesSync(const [1, 2, 3]);
+            return expectedClipPath();
+          });
+          final events = _PlayerEvents();
+          installMockDivineVideoPlayer(streamHandler: events);
+          await tester.pumpWidget(host());
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          events.emit(const {'status': 'error', 'errorMessage': 'decoder'});
+          await tester.pump(const Duration(milliseconds: 700));
+          events.emit(const {
+            'status': 'playing',
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump(const Duration(seconds: 5));
+
+          expect(find.byType(DivineVideoPlayer), findsOneWidget);
+          expect(
+            find.text(AppLocalizationsEn().dmVideoUnavailable),
+            findsNothing,
+          );
+          verifyNever(() => decryptor.deleteClip(any()));
         },
       );
     });
