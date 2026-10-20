@@ -14,6 +14,7 @@ import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_lay
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -97,6 +98,31 @@ void main() {
 
       expect(cubit.state.cells.first!.zoom, 2);
       expect(identical(tester.widget(second), before), isTrue);
+    });
+
+    testWidgets('moves the cells when the gap or the layout changes', (
+      tester,
+    ) async {
+      final cubit = await pump(tester, [_clip('a'), _clip('b')]);
+      final first = find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label ==
+                l10n.videoEditorLayoutCellSemanticLabel('1'),
+      );
+      final sideBySide = tester.getRect(first);
+
+      cubit.gapChanged(SplitScreenLayoutGeometry.maxGap);
+      await tester.pump();
+      final withGap = tester.getRect(first);
+
+      cubit.presetSelected(SplitScreenLayoutPreset.stacked);
+      await tester.pump();
+      final stacked = tester.getRect(first);
+
+      expect(withGap, isNot(sideBySide));
+      expect(withGap.width, lessThan(sideBySide.width));
+      expect(stacked.width, greaterThan(withGap.width));
     });
 
     testWidgets('labels a filled cell with how long its clip plays', (
