@@ -11923,6 +11923,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Titulaires ayant accepté le badge';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Impossible de charger tes abonnements aux badges. Réessaie.';
+
+  @override
   String get badgesLoadError => 'Impossible de charger les badges';
 
   @override

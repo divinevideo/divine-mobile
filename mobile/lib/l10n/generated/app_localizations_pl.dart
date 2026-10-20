@@ -11975,6 +11975,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Osoby, które przyjęły odznakę';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie.';
+
+  @override
   String get badgesLoadError => 'Nie udało się wczytać odznak';
 
   @override

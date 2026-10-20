@@ -11657,6 +11657,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Rozeti kabul edenler';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Rozet aboneliklerin yüklenemedi. Tekrar dene.';
+
+  @override
   String get badgesLoadError => 'Rozetler yüklenemedi';
 
   @override

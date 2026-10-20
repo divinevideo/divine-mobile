@@ -11881,6 +11881,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Personen mit angenommenem Abzeichen';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Deine Abzeichen-Abonnements konnten nicht geladen werden. Versuche es erneut.';
+
+  @override
   String get badgesLoadError => 'Badges konnten nicht geladen werden';
 
   @override
