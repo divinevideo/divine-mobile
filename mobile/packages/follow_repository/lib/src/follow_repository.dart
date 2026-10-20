@@ -1828,7 +1828,6 @@ class FollowRepository {
       final filter = <String, dynamic>{
         'kinds': <int>[EventKind.contactList],
         '#p': <String>[pubkey],
-        'limit': 5000,
       };
       relay.pendingMessages.add(<dynamic>['REQ', subscriptionId, filter]);
 

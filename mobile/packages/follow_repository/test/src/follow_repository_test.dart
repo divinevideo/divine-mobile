@@ -147,6 +147,29 @@ class _FakeRelay extends RelayBase {
   }
 }
 
+/// Scripts an indexer that honors the limit in the repository's actual REQ.
+class _LimitRespectingFollowerIndexer extends _FakeRelay {
+  _LimitRespectingFollowerIndexer(super.url, super.relayStatus);
+
+  static const followerCount = 10000;
+
+  @override
+  Future<bool> doConnect() async {
+    final request = pendingMessages.first;
+    final filter = request[2] as Map<String, dynamic>;
+    final limit = filter['limit'] as int? ?? followerCount;
+    for (var i = 1; i <= followerCount && i <= limit; i++) {
+      await onMessage?.call(this, [
+        'EVENT',
+        request[1],
+        {'pubkey': i.toRadixString(16).padLeft(64, '0')},
+      ]);
+    }
+    await onMessage?.call(this, ['EOSE', request[1]]);
+    return true;
+  }
+}
+
 class _FakeContactList extends Fake implements ContactList {}
 
 /// A [FakeCacheDao] whose [delete] always throws, to exercise the non-fatal
@@ -6476,6 +6499,51 @@ void main() {
         },
       );
     });
+
+    test(
+      'indexer count read does not cap and overwrite a known large audience',
+      () async {
+        var persistedFollowers = _LimitRespectingFollowerIndexer.followerCount;
+        final statsDao = _MockProfileStatsDao();
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(false);
+        when(() => statsDao.getStatsRaw(testTargetPubkey)).thenAnswer(
+          (_) async => ProfileStatRow(
+            pubkey: testTargetPubkey,
+            followerCount: persistedFollowers,
+            followingCount: 0,
+            cachedAt: DateTime.now(),
+          ),
+        );
+        when(
+          () => statsDao.upsertStats(
+            pubkey: any(named: 'pubkey'),
+            followerCount: any(named: 'followerCount'),
+            followingCount: any(named: 'followingCount'),
+          ),
+        ).thenAnswer((call) async {
+          persistedFollowers = call.namedArguments[#followerCount] as int;
+        });
+        repository = FollowRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: api,
+          profileStatsDao: statsDao,
+          indexerRelayUrls: const ['wss://followers.example'],
+          relayFactory: _LimitRespectingFollowerIndexer.new,
+          queryContactList:
+              ({
+                required eventStream,
+                required pubkey,
+                fallbackTimeoutSeconds = 10,
+              }) async => null,
+        );
+        final stats = await repository.getFollowerStats(testTargetPubkey);
+        expect(
+          (visible: stats.followers, persisted: persistedFollowers),
+          (visible: 10000, persisted: 10000),
+        );
+      },
+    );
 
     group('indexer relay queries', () {
       const indexerUrl = 'wss://fake-indexer.test';
