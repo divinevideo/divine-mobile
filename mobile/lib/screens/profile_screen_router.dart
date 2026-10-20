@@ -16,7 +16,6 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
@@ -26,6 +25,7 @@ import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
+import 'package:openvine/utils/profile_share_url.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
@@ -197,24 +197,13 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
           ?.getCachedProfile(pubkey: userIdHex);
       final displayName = profile?.bestDisplayName ?? 'User';
 
-      // Convert hex pubkey to npub format for sharing
-      final npub = NostrKeyUtils.encodePubKey(userIdHex);
-
       if (!mounted) return;
-      final verificationStatus = profile?.divineUsername == null
-          ? Nip05VerificationStatus.none
-          : await ref.read(
-              nip05ClaimVerificationProvider(
-                Nip05Claim(pubkey: userIdHex, nip05: profile!.nip05!),
-              ).future,
-            );
-      if (!mounted) return;
-      final profileUrl = buildProfileUrl(
-        verificationStatus == Nip05VerificationStatus.verified
-            ? profile?.displayNip05
-            : null,
-        npub,
+      final profileUrl = await resolveProfileShareUrl(
+        ref,
+        pubkey: userIdHex,
+        profile: profile,
       );
+      if (!mounted) return;
       final shareText = shareTextFn(displayName, profileUrl);
 
       final result = await showShareSheetAtOrigin(

@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
@@ -22,7 +21,6 @@ import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.da
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -33,6 +31,7 @@ import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
+import 'package:openvine/utils/profile_share_url.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
@@ -233,22 +232,13 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
           .read(profileRepositoryProvider)
           ?.getCachedProfile(pubkey: widget.pubkey);
       final displayName = profile?.bestDisplayName ?? fallbackName;
-      final npub = NostrKeyUtils.encodePubKey(widget.pubkey);
       if (!mounted) return;
-      final verificationStatus = profile?.divineUsername == null
-          ? Nip05VerificationStatus.none
-          : await ref.read(
-              nip05ClaimVerificationProvider(
-                Nip05Claim(pubkey: widget.pubkey, nip05: profile!.nip05!),
-              ).future,
-            );
-      if (!mounted) return;
-      final profileUrl = buildProfileUrl(
-        verificationStatus == Nip05VerificationStatus.verified
-            ? profile?.displayNip05
-            : null,
-        npub,
+      final profileUrl = await resolveProfileShareUrl(
+        ref,
+        pubkey: widget.pubkey,
+        profile: profile,
       );
+      if (!mounted) return;
       final shareText = shareTextFn(displayName, profileUrl);
 
       await showShareSheetAtOrigin(
