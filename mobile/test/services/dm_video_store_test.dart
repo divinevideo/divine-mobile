@@ -608,6 +608,37 @@ void main() {
       );
 
       test(
+        'keeps a frame that arrives after its card stopped waiting, and says '
+        'so, so the card shows it without another decode',
+        () async {
+          final decode = Completer<Uint8List?>();
+          readFrame = (_) => decode.future;
+          final message = _videoMessage();
+          keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            opened: now,
+          );
+          final store = createStore(
+            frameDeadline: const Duration(milliseconds: 1),
+          );
+          final announced = <String>[];
+          final subscription = store.kept.listen(announced.add);
+          addTearDown(subscription.cancel);
+
+          expect(await store.previewFor(message, download: false), isNull);
+          expect(announced, isEmpty);
+
+          decode.complete(_frame);
+          await pumpEventQueue();
+
+          expect(announced, equals([message.id]));
+          expect(await store.previewFor(message, download: false), isNotNull);
+          expect(frameReads, equals(1));
+        },
+      );
+
+      test(
         'skips a queued frame read once no card waiting for it wants it',
         () async {
           final firstRead = Completer<Uint8List?>();
