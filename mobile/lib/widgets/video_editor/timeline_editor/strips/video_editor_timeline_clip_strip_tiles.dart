@@ -94,6 +94,10 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   Duration? _dragTrimEnd;
   Duration? _snapSourcePosition;
 
+  // Both handles share the drag callbacks, so a second finger must neither
+  // restart nor clear the drag the first one is still making.
+  int _activeDrags = 0;
+
   late final _leftSnap = TimelineSnapController(
     direction: SnapEdgeDirection.positive,
     pixelsPerSecond: widget.pixelsPerSecond,
@@ -148,6 +152,11 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   }
 
   void _onDragStart() {
+    if (_activeDrags++ == 0) _beginDrag();
+    widget.onTrimDragChanged?.call(true);
+  }
+
+  void _beginDrag() {
     // Re-arm the at-limit haptic: a previous drag may have ended at a limit.
     _leftAtLimit = false;
     _rightAtLimit = false;
@@ -164,7 +173,6 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     _rightSnap
       ..pixelsPerSecond = sourcePixelsPerSecond
       ..begin(end.inMilliseconds, initialExcludeMs: _ownEdgeSnapMs(end));
-    widget.onTrimDragChanged?.call(true);
   }
 
   /// The snap point a handle at [edge] skips until it moves away: the
@@ -182,11 +190,14 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
   }
 
   void _onDragEnd() {
-    _dragTrimStart = null;
-    _dragTrimEnd = null;
-    _snapSourcePosition = null;
-    _leftSnap.reset();
-    _rightSnap.reset();
+    if (--_activeDrags <= 0) {
+      _activeDrags = 0;
+      _dragTrimStart = null;
+      _dragTrimEnd = null;
+      _snapSourcePosition = null;
+      _leftSnap.reset();
+      _rightSnap.reset();
+    }
     widget.onTrimDragChanged?.call(false);
   }
 
