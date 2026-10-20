@@ -904,7 +904,15 @@ class NIP17MessageService {
         return NIP17SendResult.failure(
           errorMsg,
           retryablePending: softUnconfirmed,
-          reachedNoRelay: reachedNoRelay,
+          // Retry sweeps leave an attempt that reached no relay uncounted, as
+          // an outage on our side. Inbox relays the recipient names that
+          // cannot be reached while our own relays are connected are not
+          // that: the attempt counts, or it would be resent forever (#8516).
+          reachedNoRelay:
+              reachedNoRelay &&
+              (targetRelays == null ||
+                  targetRelays.isEmpty ||
+                  _nostrService.connectedRelayCount == 0),
         );
       }
 
