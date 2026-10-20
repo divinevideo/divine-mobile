@@ -82,6 +82,9 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// A pending or refused own retraction is deliberately visible even though
   /// `is_deleted` is already true. The message disappears only after every
   /// recipient confirms the deletion.
+  ///
+  /// Never NULL, so [isRetracted] can negate it: a status that is NULL makes
+  /// `IN` NULL, and NOT NULL is NULL too.
   Expression<bool> _visibleInThread(
     $DirectMessagesTable t,
     String? ownerPubkey,
@@ -89,6 +92,7 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     final uncertainOwnRetraction = ownerPubkey == null
         ? const Constant(false)
         : t.senderPubkey.equals(ownerPubkey) &
+              t.deletionPublishStatus.isNotNull() &
               t.deletionPublishStatus.isIn([deletionPending, deletionBlocked]);
     return t.isDeleted.equals(false) | uncertainOwnRetraction;
   }

@@ -1157,6 +1157,33 @@ void main() {
         },
       );
 
+      test(
+        'agrees with the thread for your own message deleted with no '
+        'delivery status',
+        () async {
+          await insertMessage(sender: 'pubkey_alice');
+          await dao.markMessageDeleted(
+            'msg_retracted',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(
+            await dao.getMessagesForConversation(
+              conversationId1,
+              ownerPubkey: 'pubkey_alice',
+            ),
+            isEmpty,
+          );
+          expect(
+            await dao.isRetracted(
+              'msg_retracted',
+              ownerPubkey: 'pubkey_alice',
+            ),
+            isTrue,
+          );
+        },
+      );
+
       test('is false for a message still shown', () async {
         await insertMessage(sender: 'pubkey_bob');
 
