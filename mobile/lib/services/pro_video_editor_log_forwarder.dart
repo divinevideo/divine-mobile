@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -57,10 +58,14 @@ class ProVideoEditorLogForwarder {
     if (entry.level == NativeLogLevel.warning ||
         entry.level == NativeLogLevel.error) {
       final stack = entry.stackTrace;
+      // A native message can quote a file's path, and a kept video DM's path
+      // names the account and the message.
       crashReporter.log(
         sanitizeForCrashReport(
-          '[$name] ${entry.message}'
-          '${stack == null || stack.isEmpty ? '' : '\n$stack'}',
+          redactFilesystemPaths(
+            '[$name] ${entry.message}'
+            '${stack == null || stack.isEmpty ? '' : '\n$stack'}',
+          ),
         ),
       );
     }

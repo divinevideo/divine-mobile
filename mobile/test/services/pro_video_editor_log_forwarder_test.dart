@@ -67,6 +67,32 @@ void main() {
       expect(reporter.breadcrumbs.single, contains(stack));
     });
 
+    test(
+      'keeps file paths, which name the account and the message, out of '
+      'crash reports',
+      () {
+        final reporter = _RecordingCrashReporter();
+        const path =
+            '/data/user/0/co.openvine.app/cache/dm_videos/owner/message.mp4';
+        const containerPath =
+            '/var/mobile/Containers/Data/Application/APP/Library/Caches/'
+            'dm_videos/owner/message.mov';
+        ProVideoEditorLogForwarder.forwardEntry(
+          entry(
+            NativeLogLevel.error,
+            'setDataSource failed: $path',
+            stackTrace: 'Caused by: cannot open $containerPath',
+          ),
+          crashReporter: reporter,
+        );
+
+        final breadcrumb = reporter.breadcrumbs.single;
+        expect(breadcrumb, isNot(contains('dm_videos')));
+        expect(breadcrumb, contains('setDataSource failed'));
+        expect(breadcrumb, contains('Caused by: cannot open'));
+      },
+    );
+
     test('sanitizes the message, tag and cause before crash reporting', () {
       final reporter = _RecordingCrashReporter();
       // Synthetic identifiers exercise the shared crash-report sanitizer.
