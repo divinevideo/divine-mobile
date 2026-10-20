@@ -27,6 +27,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     required SharedPreferences sharedPreferences,
     this.clipTypeFilter = LibraryClipTypeFilter.all,
     bool allowsMixedClipTypes = false,
+    bool allowsMixedAspectRatios = false,
     int? maxSelectedClips,
   }) : _clipLibraryService = clipLibraryService,
        _sharedPreferences = sharedPreferences,
@@ -35,6 +36,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
            clipSort: _readPersistedSort(sharedPreferences),
            gridColumnCount: _readPersistedGridColumns(sharedPreferences),
            allowsMixedClipTypes: allowsMixedClipTypes,
+           allowsMixedAspectRatios: allowsMixedAspectRatios,
            maxSelectedClips: maxSelectedClips,
          ),
        ) {
@@ -346,13 +348,14 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     final selectedIds = Set<String>.from(drag.baseSelectedClipIds);
     final limit = state.maxSelectedClips;
     // Both constraints tighten as the range grows: with nothing selected yet,
-    // the first clip the drag picks up is what the rest has to match. The
-    // type constraint is off entirely where mixing is allowed.
+    // the first clip the drag picks up is what the rest has to match. Each
+    // is off entirely where the picker allows mixing.
     final mixTypes = state.allowsMixedClipTypes;
+    final mixShapes = state.allowsMixedAspectRatios;
     var isStopMotion = mixTypes
         ? null
         : state.stopMotionTypeOf(drag.baseSelectedClipIds);
-    var aspectRatio = drag.targetAspectRatio;
+    var aspectRatio = mixShapes ? null : drag.targetAspectRatio;
     final step = focusIndex >= anchorIndex ? 1 : -1;
 
     for (var i = anchorIndex; ; i += step) {
@@ -366,7 +369,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
                 aspectRatio == clip.targetAspectRatio.value)) {
           selectedIds.add(clip.id);
           if (!mixTypes) isStopMotion ??= clip.isStopMotion;
-          aspectRatio ??= clip.targetAspectRatio.value;
+          if (!mixShapes) aspectRatio ??= clip.targetAspectRatio.value;
         }
       }
       if (i == focusIndex) break;

@@ -287,6 +287,7 @@ final class ClipsLibraryState extends Equatable {
     this.lastOrganizeResult,
     this.dragSelection,
     this.allowsMixedClipTypes = false,
+    this.allowsMixedAspectRatios = false,
     this.maxSelectedClips,
   });
 
@@ -369,6 +370,14 @@ final class ClipsLibraryState extends Equatable {
   /// clip cannot enter the frame-first stop-motion editor, so a mixed
   /// selection would have nowhere to go. Fixed for the bloc's lifetime.
   final bool allowsMixedClipTypes;
+
+  /// Whether one selection may hold clips of different shapes.
+  ///
+  /// On for a picker that crops every picked clip to fit afterwards — a
+  /// split-screen layout's cells. Without it a drag that starts with nothing
+  /// to match takes its shape from the first clip it picks up. Fixed for the
+  /// bloc's lifetime.
+  final bool allowsMixedAspectRatios;
 
   /// The most clips a selection may hold, or `null` for no limit. Set for a
   /// picker that has room for only so many — a split-screen layout's free
@@ -507,6 +516,7 @@ final class ClipsLibraryState extends Equatable {
           ? null
           : (dragSelection ?? this.dragSelection),
       allowsMixedClipTypes: allowsMixedClipTypes,
+      allowsMixedAspectRatios: allowsMixedAspectRatios,
       maxSelectedClips: maxSelectedClips,
     );
   }
@@ -532,6 +542,7 @@ final class ClipsLibraryState extends Equatable {
     lastOrganizeResult,
     dragSelection,
     allowsMixedClipTypes,
+    allowsMixedAspectRatios,
     maxSelectedClips,
   ];
 }

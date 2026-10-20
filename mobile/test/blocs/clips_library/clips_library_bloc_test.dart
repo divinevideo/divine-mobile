@@ -95,12 +95,14 @@ void main() {
     ClipsLibraryBloc createBloc({
       LibraryClipTypeFilter clipTypeFilter = LibraryClipTypeFilter.all,
       bool allowsMixedClipTypes = false,
+      bool allowsMixedAspectRatios = false,
       int? maxSelectedClips,
     }) => ClipsLibraryBloc(
       clipLibraryService: mockClipLibraryService,
       sharedPreferences: sharedPreferences,
       clipTypeFilter: clipTypeFilter,
       allowsMixedClipTypes: allowsMixedClipTypes,
+      allowsMixedAspectRatios: allowsMixedAspectRatios,
       maxSelectedClips: maxSelectedClips,
     );
 
@@ -730,6 +732,7 @@ void main() {
         Set<String> selectedClipIds = const {},
         Set<String> disabledClipIds = const {},
         bool allowsMixedClipTypes = false,
+        bool allowsMixedAspectRatios = false,
       }) => ClipsLibraryState(
         status: ClipsLibraryStatus.loaded,
         clips: clips,
@@ -737,6 +740,7 @@ void main() {
         selectedClipIds: selectedClipIds,
         disabledClipIds: disabledClipIds,
         allowsMixedClipTypes: allowsMixedClipTypes,
+        allowsMixedAspectRatios: allowsMixedAspectRatios,
       );
 
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
@@ -911,6 +915,49 @@ void main() {
             (s) => s.selectedClipIds.toList(),
             'selectedClipIds',
             equals(['a', 'c']),
+          ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'takes the shape from the first clip picked up when none is set',
+        seed: () => seedWith([a, gridClip('sq', aspectRatio: .square), c]),
+        build: createBloc,
+        act: (bloc) => bloc
+          ..add(ClipsLibraryDragSelectionStarted(a))
+          ..add(ClipsLibraryDragSelectionExtended(c)),
+        expect: () => [
+          isA<ClipsLibraryState>(),
+          isA<ClipsLibraryState>().having(
+            (s) => s.selectedClipIds.toList(),
+            'selectedClipIds',
+            equals(['a', 'c']),
+          ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'picks up every shape along the range when mixing shapes is allowed, '
+        'whatever shape the drag was given',
+        seed: () => seedWith(
+          [a, gridClip('sq', aspectRatio: .square), c],
+          allowsMixedAspectRatios: true,
+        ),
+        build: () => createBloc(allowsMixedAspectRatios: true),
+        act: (bloc) => bloc
+          ..add(
+            ClipsLibraryDragSelectionStarted(
+              a,
+              targetAspectRatio: model.AspectRatio.square.value,
+            ),
+          )
+          ..add(ClipsLibraryDragSelectionExtended(c)),
+        expect: () => [
+          isA<ClipsLibraryState>(),
+          isA<ClipsLibraryState>().having(
+            (s) => s.selectedClipIds.toList(),
+            'selectedClipIds',
+            equals(['a', 'sq', 'c']),
           ),
         ],
       );

@@ -149,7 +149,6 @@ class LibraryScreen extends ConsumerWidget {
       tabsMode: tabsMode,
       editorClips: editorClips,
       scrollController: scrollController,
-      anyAspectRatio: cropGuideAspectRatio != null,
     );
 
     return MultiBlocProvider(
@@ -159,6 +158,7 @@ class LibraryScreen extends ConsumerWidget {
             clipLibraryService,
             clipTypeFilter,
             allowsMixedClipTypes,
+            cropGuideAspectRatio != null,
             maxSelectedClips,
           )),
           create: (_) {
@@ -170,6 +170,7 @@ class LibraryScreen extends ConsumerWidget {
               sharedPreferences: ref.read(sharedPreferencesProvider),
               clipTypeFilter: clipTypeFilter,
               allowsMixedClipTypes: allowsMixedClipTypes,
+              allowsMixedAspectRatios: cropGuideAspectRatio != null,
               maxSelectedClips: maxSelectedClips,
             )..add(
               ClipsLibraryLoadRequested(
@@ -215,7 +216,6 @@ class _LibraryView extends ConsumerStatefulWidget {
     required this.tabsMode,
     required this.editorClips,
     required this.scrollController,
-    required this.anyAspectRatio,
   });
 
   final int initialTabIndex;
@@ -224,10 +224,6 @@ class _LibraryView extends ConsumerStatefulWidget {
 
   final List<DivineVideoClip> editorClips;
   final ScrollController? scrollController;
-
-  /// Whether clips of every shape can be picked — see
-  /// [LibraryScreen.cropGuideAspectRatio].
-  final bool anyAspectRatio;
 
   @override
   ConsumerState<_LibraryView> createState() => _LibraryViewState();
@@ -745,7 +741,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
           // shows no marked clip and the state is indistinguishable from
           // having selected nothing at all.
           final selectedCount = clipsState.selectedClipIds.length;
-          final targetAspectRatio = widget.anyAspectRatio
+          final targetAspectRatio = clipsState.allowsMixedAspectRatios
               ? null
               : libraryTargetAspectRatioForSelection(
                   selectionMode: widget.selectionMode,

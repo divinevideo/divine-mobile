@@ -196,12 +196,14 @@ void main() {
       ValueListenable<bool>? libraryVisible,
       List<Override> extraOverrides = const [],
       bool routed = false,
+      double? cropGuideAspectRatio,
     }) {
       final library = LibraryScreen(
         selectionMode: selectionMode,
         initialTabIndex: initialTabIndex,
         tabsMode: tabsMode,
         editorClips: editorClips,
+        cropGuideAspectRatio: cropGuideAspectRatio,
       );
       final GoRouter? router;
       if (routed) {
@@ -1924,6 +1926,74 @@ void main() {
         expect(find.text(en.libraryTabDrafts), findsNothing);
         expect(find.text(en.libraryTabClips), findsNothing);
       }, skip: !kIsWeb);
+    });
+
+    group('crop guide', () {
+      DivineVideoClip shaped(String id, models.AspectRatio aspectRatio) =>
+          DivineVideoClip(
+            id: id,
+            video: EditorVideo.file('/test/$id.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: aspectRatio,
+            originalAspectRatio: aspectRatio.value,
+            thumbnailPath: '/test/$id.jpg',
+            ghostFramePath: '/test/${id}_ghost.jpg',
+          );
+
+      /// Taps a vertical clip and then a square one in the picker, and
+      /// returns what ended up selected.
+      Future<Set<String>> pickVerticalThenSquare(
+        WidgetTester tester, {
+        double? cropGuideAspectRatio,
+      }) async {
+        final vertical = shaped('vertical', models.AspectRatio.vertical);
+        final square = shaped('square', models.AspectRatio.square);
+        when(
+          () => mockClipLibraryService.getAllClips(),
+        ).thenAnswer((_) async => [vertical, square]);
+        when(
+          () => mockClipLibraryService.recoverMissingAssets(any()),
+        ).thenAnswer((_) async => [vertical, square]);
+        await tester.pumpWidget(
+          buildWidget(
+            selectionMode: true,
+            initialTabIndex: 1,
+            cropGuideAspectRatio: cropGuideAspectRatio,
+          ),
+        );
+        await tester.pumpAndSettle();
+        Finder cardOf(DivineVideoClip clip) => find.byWidgetPredicate(
+          (widget) =>
+              widget is VideoClipThumbnailCard && widget.clip.id == clip.id,
+        );
+
+        await tester.tap(cardOf(vertical));
+        await tester.pumpAndSettle();
+        await tester.tap(cardOf(square));
+        await tester.pumpAndSettle();
+
+        return tester
+            .element(find.byType(ClipsTab))
+            .read<ClipsLibraryBloc>()
+            .state
+            .selectedClipIds;
+      }
+
+      testWidgets('lets a picker with a crop guide pick two shapes', (
+        tester,
+      ) async {
+        expect(
+          await pickVerticalThenSquare(tester, cropGuideAspectRatio: 1),
+          {'vertical', 'square'},
+        );
+      });
+
+      testWidgets('keeps a second shape out without a crop guide', (
+        tester,
+      ) async {
+        expect(await pickVerticalThenSquare(tester), {'vertical'});
+      });
     });
   });
 }
