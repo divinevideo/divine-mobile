@@ -236,6 +236,133 @@ void main() {
     });
   });
 
+  group('refreshFollowingForFeed', () {
+    test(
+      'adopts relay follows without dropping a pending local follow',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        await repository.initialize();
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+        );
+        await repository.follow(creatorPubkey);
+        final remoteCreator = 'd' * 64;
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [
+              Event(ownerPubkey, EventKind.contactList, [
+                ['p', remoteCreator],
+              ], ''),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        expect(await repository.refreshFollowingForFeed(), isTrue);
+        expect(repository.followingPubkeys, [remoteCreator, creatorPubkey]);
+      },
+    );
+
+    test('without keys it stays unknown without querying relays', () async {
+      when(() => nostrClient.hasKeys).thenReturn(false);
+      expect(await repository.refreshFollowingForFeed(), isFalse);
+      verifyNever(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
+        ),
+      );
+    });
+
+    for (final (timedOut, noRelays) in [
+      (false, false),
+      (true, false),
+      (false, true),
+    ]) {
+      test(
+        'empty detailed read: timedOut $timedOut, noRelays $noRelays',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          await repository.initialize();
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                (events: <Event>[], timedOut: timedOut, noRelays: noRelays),
+          );
+          expect(
+            await repository.refreshFollowingForFeed(),
+            !timedOut && !noRelays,
+          );
+          verify(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+          expect(repository.followingPubkeys, isEmpty);
+          expect(repository.isFollowingConfirmedByRelay, isFalse);
+        },
+      );
+    }
+    for (final transition in ['changed account', 'signed out', 'disposed']) {
+      test(
+        'ignores a completed read after $transition',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          await repository.initialize();
+          final result =
+              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) => result.future);
+          final pending = repository.refreshFollowingForFeed();
+          switch (transition) {
+            case 'changed account':
+              when(() => nostrClient.publicKey).thenReturn('c' * 64);
+            case 'signed out':
+              when(() => nostrClient.hasKeys).thenReturn(false);
+            case 'disposed':
+              await repository.dispose();
+          }
+          result.complete((
+            events: [
+              Event(ownerPubkey, EventKind.contactList, const [
+                ['p', creatorPubkey],
+              ], ''),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ));
+          expect(await pending, isFalse);
+          expect(repository.followingPubkeys, isEmpty);
+        },
+      );
+    }
+  });
+
   group('isFollowingConfirmedByRelay', () {
     test('is false when the relay returned no contact list', () async {
       await repository.initialize();
