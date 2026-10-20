@@ -209,7 +209,7 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
             setState(() => _tickersEnabled = false);
           }
         } else {
-          // Desktop inactive is common during menu/window focus changes.
+          // Other desktop platforms retain playback during focus changes.
           Log.debug(
             '📱 App became inactive (desktop focus change) - keeping videos active',
             name: 'AppLifecycleHandler',
@@ -292,4 +292,6 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 }
 
 bool _inactiveDisablesForegroundPlayback(TargetPlatform platform) =>
-    platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+    platform == TargetPlatform.android ||
+    platform == TargetPlatform.iOS ||
+    platform == TargetPlatform.macOS;

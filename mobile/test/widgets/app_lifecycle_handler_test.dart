@@ -300,6 +300,74 @@ void main() {
       await tester.pump(const Duration(seconds: 31));
       debugDefaultTargetPlatformOverride = null;
     });
+
+    testWidgets('treats inactive as non-foreground on macOS after unlock', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      final authService = _MockAuthService();
+      addTearDown(() {
+        BackgroundActivityManager().onAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+      });
+
+      when(() => authService.isAuthenticated).thenReturn(true);
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => const Stream<AuthState>.empty());
+      final clipLibraryService = _MockClipLibraryService();
+      when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
+      when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      final draftStorageService = _MockDraftStorageService();
+      when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
+
+      final nostrClient = _MockNostrClient();
+      when(nostrClient.forceReconnectAll).thenAnswer(
+        (_) async => ForceReconnectOutcome.completed,
+      );
+      when(() => nostrClient.connectedRelayCount).thenReturn(0);
+      when(() => nostrClient.configuredRelayCount).thenReturn(0);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            nostrServiceProvider.overrideWithValue(nostrClient),
+            notificationRefreshCoordinatorProvider.overrideWithValue(null),
+            authServiceProvider.overrideWithValue(authService),
+            videoPublishProvider.overrideWith(_NoopVideoPublishNotifier.new),
+            clipLibraryServiceProvider.overrideWithValue(clipLibraryService),
+            draftStorageServiceProvider.overrideWithValue(draftStorageService),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AppLifecycleHandler(child: SizedBox.shrink()),
+          ),
+        ),
+      );
+
+      final context = tester.element(find.byType(AppLifecycleHandler));
+      final container = ProviderScope.containerOf(context);
+      expect(container.read(appForegroundProvider), isTrue);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+
+      expect(container.read(appForegroundProvider), isFalse);
+
+      // Unlocking while another app has focus leaves Divine inactive.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      expect(container.read(appForegroundProvider), isFalse);
+      // Playback becomes eligible again only when Divine regains focus.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(container.read(appForegroundProvider), isTrue);
+      await tester.pump(const Duration(seconds: 31));
+      debugDefaultTargetPlatformOverride = null;
+    });
   });
 
   group('app badge', () {

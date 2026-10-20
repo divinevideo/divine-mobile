@@ -104,9 +104,12 @@ void main() {
       blocTest<VideoVolumeCubit, VideoVolumeState>(
         'unmutes when system volume rises above zero',
         build: buildCubit,
-        seed: () => const VideoVolumeState(volume: 0),
-        act: (cubit) => fakeVolumeListener.controller.add(0.5),
-        expect: () => const [VideoVolumeState()],
+        act: (cubit) async {
+          fakeVolumeListener.controller.add(0);
+          await pumpEventQueue();
+          fakeVolumeListener.controller.add(0.5);
+        },
+        expect: () => const [VideoVolumeState(volume: 0), VideoVolumeState()],
       );
 
       blocTest<VideoVolumeCubit, VideoVolumeState>(
@@ -138,7 +141,7 @@ void main() {
         final cubit = buildCubit();
         addTearDown(cubit.close);
 
-        cubit.onPlaybackVolumeChanged(0);
+        fakeVolumeListener.controller.add(0);
         await pumpEventQueue();
 
         fakeVolumeListener.controller.add(0.7);
@@ -146,6 +149,38 @@ void main() {
 
         expect(prefs.getDouble('video_playback_volume'), equals(1.0));
       });
+    });
+
+    test('restored app mute survives system volume notifications', () async {
+      final first = buildCubit();
+      first.onPlaybackVolumeChanged(0);
+      await pumpEventQueue();
+      await first.close();
+
+      fakeVolumeListener = _FakeSystemVolumeListener();
+      final reopened = buildCubit();
+      addTearDown(reopened.close);
+      expect(reopened.state.isMuted, isTrue);
+
+      fakeVolumeListener.controller.add(0.7);
+      fakeVolumeListener.controller.add(0);
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+
+      expect(reopened.state.isMuted, isTrue);
+      expect(prefs.getDouble('video_playback_volume'), 0.0);
+    });
+
+    test('explicit mute overrides an existing system mute', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      fakeVolumeListener.controller.add(0);
+      await pumpEventQueue();
+      cubit.onPlaybackVolumeChanged(0);
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+      expect(cubit.state.isMuted, isTrue);
+      expect(prefs.getDouble('video_playback_volume'), 0.0);
     });
 
     group('close', () {

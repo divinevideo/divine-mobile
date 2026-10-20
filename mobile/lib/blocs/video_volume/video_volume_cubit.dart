@@ -42,7 +42,8 @@ class _PluginVolumeListener implements SystemVolumeListener {
 /// The cubit bridges the hardware volume buttons to the app's video
 /// playback volume: when the user sets the device volume to zero, the
 /// video feed is muted; when the device volume rises above zero, volume
-/// is restored.
+/// is restored only if the system muted it. An explicit in-app mute always
+/// survives system volume notifications.
 ///
 /// Volume is binary: `1.0` (unmuted) or `0.0` (muted). The actual loudness
 /// is controlled by the device's hardware volume.
@@ -87,6 +88,7 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
 
   final SharedPreferences _prefs;
   StreamSubscription<double>? _systemVolumeSubscription;
+  bool _mutedBySystem = false;
 
   /// Called by the feed player when the user toggles mute or adjusts volume
   /// via the in-app UI.
@@ -94,6 +96,8 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   /// Values are clamped to the binary set `{0.0, 1.0}`: any positive
   /// [newVolume] is treated as unmuted (`1.0`).
   void onPlaybackVolumeChanged(double newVolume) {
+    // An explicit choice takes precedence even when already system-muted.
+    _mutedBySystem = false;
     final clamped = newVolume > 0 ? 1.0 : 0.0;
     if (state.volume == clamped) return;
     emit(VideoVolumeState(volume: clamped));
@@ -102,11 +106,13 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
 
   void _onSystemVolumeChanged(double systemVolume) {
     if (systemVolume == 0 && state.volume > 0) {
+      _mutedBySystem = true;
       // Device muted → mute video
       emitIfOpen(const VideoVolumeState(volume: 0));
       unawaited(_persist());
-    } else if (systemVolume > 0 && state.volume == 0) {
-      // Device unmuted → unmute video
+    } else if (systemVolume > 0 && _mutedBySystem) {
+      _mutedBySystem = false;
+      // Restore only a system-driven mute, never a saved in-app choice.
       emitIfOpen(const VideoVolumeState());
       unawaited(_persist());
     }
