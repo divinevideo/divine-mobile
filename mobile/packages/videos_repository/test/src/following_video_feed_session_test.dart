@@ -135,6 +135,94 @@ void main() {
       }
     }
     group('unknown direct follows at startup', () {
+      for (final settled in [false, true]) {
+        test('settled empty contact read permits badges: $settled', () async {
+          direct = [];
+          final feed = FollowingVideoFeedSession(
+            videosRepository: videos,
+            directAuthors: () => direct,
+            badgeAuthors: () async => ['2' * 64],
+            directAuthorsKnown: () => false,
+            waitForDirectAuthors: () async {},
+            confirmDirectAuthors: () async => settled,
+          );
+          if (settled) {
+            expect((await load(feed)).paginationCursor, 'badge-following');
+            expect(feed.hasBadgeAuthors, isTrue);
+          } else {
+            await expectLater(
+              load(feed),
+              throwsA(isA<FollowingAuthorsUnavailable>()),
+            );
+            expect(feed.hasBadgeAuthors, isFalse);
+          }
+        });
+      }
+
+      test('inconclusive contact read remains retryable', () async {
+        direct = [];
+        var settled = false;
+        final feed = FollowingVideoFeedSession(
+          videosRepository: videos,
+          directAuthors: () => direct,
+          badgeAuthors: () async => ['2' * 64],
+          directAuthorsKnown: () => false,
+          waitForDirectAuthors: () async {},
+          confirmDirectAuthors: () async => settled,
+        );
+        await expectLater(
+          load(feed),
+          throwsA(isA<FollowingAuthorsUnavailable>()),
+        );
+        settled = true;
+        await load(feed);
+        expect(feed.hasBadgeAuthors, isTrue);
+      });
+      test(
+        'detailed contact read is bounded without proving empty follows',
+        () async {
+          direct = [];
+          final feed = FollowingVideoFeedSession(
+            videosRepository: videos,
+            directAuthors: () => direct,
+            badgeAuthors: () async => ['2' * 64],
+            directAuthorsKnown: () => false,
+            waitForDirectAuthors: () async {},
+            confirmDirectAuthors: () => Completer<bool>().future,
+            directAuthorsTimeout: Duration.zero,
+          );
+          await expectLater(
+            load(feed),
+            throwsA(isA<FollowingAuthorsUnavailable>()),
+          );
+          expect(feed.hasBadgeAuthors, isFalse);
+        },
+      );
+      test('superseded detailed contact read never installs a pager', () async {
+        direct = [];
+        final settled = Completer<bool>();
+        final confirming = Completer<void>();
+        final feed = FollowingVideoFeedSession(
+          videosRepository: videos,
+          directAuthors: () => direct,
+          badgeAuthors: () async => ['2' * 64],
+          directAuthorsKnown: () => false,
+          waitForDirectAuthors: () async {},
+          confirmDirectAuthors: () {
+            confirming.complete();
+            return settled.future;
+          },
+        );
+        final pending = load(feed);
+        await confirming.future;
+        owns = false;
+        settled.complete(true);
+        await expectLater(pending, throwsA(isA<FollowingReadSuperseded>()));
+        verifyNever(
+          () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+        );
+      });
+
       test(
         'waits for initialization before merging direct and badge authors',
         () async {

@@ -15,6 +15,7 @@ class FollowingVideoFeedSession {
     Future<Iterable<String>> Function()? badgeAuthors,
     Future<void> Function()? waitForDirectAuthors,
     bool Function()? directAuthorsKnown,
+    Future<bool> Function()? confirmDirectAuthors,
     Duration directAuthorsTimeout = const Duration(seconds: 10),
     String? userPubkey,
   }) : _videosRepository = videosRepository,
@@ -22,6 +23,7 @@ class FollowingVideoFeedSession {
        _badgeAuthors = badgeAuthors,
        _waitForDirectAuthors = waitForDirectAuthors,
        _directAuthorsKnown = directAuthorsKnown,
+       _confirmDirectAuthors = confirmDirectAuthors,
        _directAuthorsTimeout = directAuthorsTimeout,
        _userPubkey = userPubkey;
 
@@ -30,6 +32,7 @@ class FollowingVideoFeedSession {
   final Future<Iterable<String>> Function()? _badgeAuthors;
   final Future<void> Function()? _waitForDirectAuthors;
   final bool Function()? _directAuthorsKnown;
+  final Future<bool> Function()? _confirmDirectAuthors;
   final Duration _directAuthorsTimeout;
   final String? _userPubkey;
   BadgeVideoPager? _pager;
@@ -94,7 +97,18 @@ class FollowingVideoFeedSession {
         }
         if (!ownsRequest()) throw const FollowingReadSuperseded();
         if (!_authorsKnown && _directAuthors().isEmpty) {
-          throw const FollowingAuthorsUnavailable();
+          // No kind 3 is valid for a new account, but only a settled relay
+          // answer can distinguish that from an unavailable follow list.
+          final settled =
+              await _confirmDirectAuthors?.call().timeout(
+                _directAuthorsTimeout,
+                onTimeout: () => false,
+              ) ??
+              false;
+          if (!ownsRequest()) throw const FollowingReadSuperseded();
+          if (!settled && !_authorsKnown && _directAuthors().isEmpty) {
+            throw const FollowingAuthorsUnavailable();
+          }
         }
         final pager = _videosRepository.createBadgeVideoPager([
           ..._directAuthors(),
