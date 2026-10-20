@@ -266,7 +266,7 @@ class _StatusBody extends StatelessWidget {
             onPressed: onRetry,
           ),
         ],
-        if (isEnforced && isAgeReviewClosure)
+        if (isAgeReviewClosure)
           _AgeReviewClosurePaths(
             openSupportMessages: openSupportMessages,
             composeEmail: composeEmail,
