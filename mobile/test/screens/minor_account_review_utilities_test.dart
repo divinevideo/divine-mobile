@@ -5,13 +5,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/router/providers/providers.dart';
+import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -26,11 +27,6 @@ class _MockBugReportService extends Mock implements BugReportService {}
 
 class _MockAccountDeletionService extends Mock
     implements AccountDeletionService {}
-
-class _ReviewRouteTrail extends SupportRouteTrail {
-  @override
-  List<RouteType> build() => const [RouteType.home, RouteType.accountStatus];
-}
 
 const _pubkey =
     '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
@@ -59,8 +55,9 @@ void main() {
 
   Future<void> pumpReview(
     WidgetTester tester,
-    MinorReviewCase? reviewCase,
-  ) async {
+    MinorReviewCase? reviewCase, {
+    List<String> locations = const ['/home/0', '/account-review'],
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -73,7 +70,17 @@ void main() {
           ),
           profileRepositoryProvider.overrideWithValue(null),
           profileReadRepositoryProvider.overrideWithValue(null),
-          supportRouteTrailProvider.overrideWith(_ReviewRouteTrail.new),
+          goRouterProvider.overrideWith((ref) {
+            final router = GoRouter(
+              navigatorKey: NavigatorKeys.root,
+              routes: appRoutes(ref),
+            );
+            ref.onDispose(router.dispose);
+            return router;
+          }),
+          routerLocationStreamProvider.overrideWithValue(
+            Stream.fromIterable(locations),
+          ),
           currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
             return MinorAccountReviewStatus(
               restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
@@ -151,8 +158,8 @@ void main() {
       expect(find.text(l10n.supportNoLogsToExport), findsOneWidget);
       verify(
         () => bugReportService.exportLogsToFile(
-          currentScreen: 'accountStatus',
-          recentScreens: const ['home', 'accountStatus'],
+          currentScreen: 'minorAccountReview',
+          recentScreens: const ['home', 'minorAccountReview'],
           userPubkey: _pubkey,
           sharePositionOrigin: any(
             named: 'sharePositionOrigin',
@@ -176,6 +183,29 @@ void main() {
       expect(find.text(l10n.deleteAccountConfirmDeletePrompt), findsOneWidget);
     });
   }
+
+  testWidgets('exports the review location on a cold account-review entry', (
+    tester,
+  ) async {
+    await pumpReview(tester, null, locations: const ['/account-review']);
+    await scrollUntilTappable(
+      tester,
+      find.text(l10n.supportSaveLogs),
+      300,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.text(l10n.supportSaveLogs));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.supportNoLogsToExport), findsOneWidget);
+    verify(
+      () => bugReportService.exportLogsToFile(
+        currentScreen: 'minorAccountReview',
+        recentScreens: const ['minorAccountReview'],
+        userPubkey: _pubkey,
+        sharePositionOrigin: any(named: 'sharePositionOrigin'),
+      ),
+    ).called(1);
+  });
 
   testWidgets('ignores repeated log-export taps during account review', (
     tester,

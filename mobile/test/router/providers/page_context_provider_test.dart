@@ -29,6 +29,16 @@ final String _ownNprofile = NIP19Tlv.encodeNprofile(
 );
 
 void main() {
+  test('models the account-review diagnostic route and rebuilds its URI', () {
+    final route = parseMatchedRoute(
+      '/account-review',
+      matchedTemplate: '/account-review',
+    );
+
+    expect(route?.type.name, 'minorAccountReview');
+    expect(buildRoute(route!), '/account-review');
+  });
+
   group('isOwnProfileLocation', () {
     test('is true on the profile grid', () {
       expect(
