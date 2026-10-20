@@ -10166,6 +10166,52 @@ class AppLocalizationsVi extends AppLocalizations {
       'Mất dấu giữa chừng. Từ đó lớp sẽ đứng yên.';
 
   @override
+  String get videoEditorLoopLabel => 'Loop';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'Tìm điểm loop mượt hơn';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Đã tìm thấy loop mượt hơn. Kết thúc sớm hơn $seconds giây.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Đã tìm thấy loop mượt hơn. Kết thúc muộn hơn $seconds giây.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Không có điểm khớp hoàn hảo, nhưng đây là điểm gần nhất. Kết thúc sớm hơn $seconds giây.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Không có điểm khớp hoàn hảo, nhưng đây là điểm gần nhất. Kết thúc muộn hơn $seconds giây.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Giữ';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'Giữ điểm loop mới';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel =>
+      'Đưa điểm kết thúc cũ trở lại';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Video này đã loop mượt rồi.';
+
+  @override
+  String get videoEditorLoopFailed => 'Không kiểm tra được loop. Thử lại nhé.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Không tìm thấy loop liền mạch. Không có đoạn nào gần cuối khớp với phần đầu video.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Hiệu ứng';
 
   @override

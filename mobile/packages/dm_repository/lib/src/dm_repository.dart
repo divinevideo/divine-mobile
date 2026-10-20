@@ -348,11 +348,13 @@ enum _OwnDmInboxState {
 
 /// An own-inbox read's outcome. `advertisedMissing` is the newest list found,
 /// set only for a `found` read that asked the advertised relay without that
-/// relay returning it (#8433).
+/// relay returning it (#8433). `list` retains the selected signed event, even
+/// when it names no relays, so later reads cannot downgrade its ordering.
 typedef _OwnDmInboxRead = ({
   _OwnDmInboxState state,
   List<String>? relays,
   Event? advertisedMissing,
+  Event? list,
 });
 
 /// What one NIP-04 recovery sweep heard back about one page.
@@ -378,7 +380,9 @@ typedef _Nip04Copy = ({
 /// delivery on it tells the sender a message arrived when it was written where
 /// the recipient does not look (#7317).
 enum DmInboxResolution {
-  /// The recipient advertises a kind-10050 and we read it.
+  /// The recipient advertises a kind-10050 naming at least one relay the
+  /// remote-relay URL policy admits, and a relay returned it during this
+  /// lookup. A copy held only in the local event cache never counts (#8528).
   found,
 
   /// Every relay asked answered — the pool, any indexer this build may
@@ -807,12 +811,13 @@ class DmRepository {
 
   /// Memoized resolution of the CURRENT user's own kind-10050 DM inbox
   /// relays (#4974 RC2). Resolved at most once per session and shared by the
-  /// live subscription, the history drain, and the RC3 existence check;
-  /// `null` until first requested. Cleared in [_resetState] so it never leaks
-  /// across an account switch. A `found`/`absent` outcome is cached so
-  /// reconnects don't re-query; a `failed` (transient relay error) outcome is
-  /// NOT cached — the memo is cleared once it resolves so the next caller
-  /// re-queries, and RC3 never overwrites a real list on a transient failure.
+  /// live subscription, the self-copy and the history drain, which reads it
+  /// to know which relays to ask and page; the drain and the RC3 existence
+  /// check make their own authoritative reads. `null` until first requested.
+  /// Cleared in [_resetState] so it never leaks across an account switch. A
+  /// `found`/`absent` outcome is cached so reconnects don't re-query; a
+  /// `failed` (transient relay error) outcome is NOT cached — the memo is
+  /// cleared once it resolves so the next caller re-queries.
   Future<_OwnDmInboxRead>? _ownInboxFuture;
 
   /// Debounced cross-device DM read-state marker publish (#4977). Reading a
@@ -1529,8 +1534,9 @@ class DmRepository {
   /// Resolves and memoizes the CURRENT user's own kind-10050 DM inbox
   /// resolution for the session (#4974 RC2).
   ///
-  /// Shared by the live subscription and history drain.
-  /// The RC3 existence check deliberately performs its own authoritative read.
+  /// Shared by the live subscription, the self-copy and the history drain.
+  /// The drain and the RC3 existence check do not trust it: each makes its own
+  /// authoritative read.
   /// A `found`/`absent` outcome is cached; a `failed` (transient) outcome is NOT
   /// — the memo clears itself once it resolves `failed` so the next caller
   /// re-queries instead of degrading the whole session to the default pool.
@@ -1540,9 +1546,9 @@ class DmRepository {
     if (cached != null) return cached;
     final future = _queryOwnDmInbox(
       _userPubkey,
-      // Deliberately NOT authoritative. Every consumer of this memo — the live
-      // gift-wrap subscription and the history drain —
-      // falls back to the default pool on `absent` and `failed` alike, and
+      // Deliberately NOT authoritative. Every consumer that routes by this
+      // memo — the live gift-wrap subscription and the self-copy — falls back
+      // to the default pool on `absent` and `failed` alike, and
       // `startListening` awaits it before opening the subscription. Making it
       // strict would put a full timeout in front of DM delivery on every login
       // and every reconnect to protect the inbox-list publish, which reads
@@ -1570,7 +1576,8 @@ class DmRepository {
   /// `absent`/`failed`.
   ///
   /// Every reader treats a non-null result as relays to reach IN ADDITION to
-  /// the pool — `tempRelays` on the live subscription and on each drain page.
+  /// the pool — `tempRelays` on the live subscription, and the self-copy's
+  /// publish targets.
   /// Read markers deliberately publish through the normal pool so they retain
   /// the pool's write redundancy; the publish API can also open temporary
   /// connections for explicit targets, unlike subscription/query filtering.
@@ -1603,41 +1610,67 @@ class DmRepository {
   /// The live subscription cannot afford a conclusive read — it is awaited on
   /// every login and reconnect (#8212). The drain can: it is unawaited
   /// background work that already runs fully-settled page queries, and it pays
-  /// this at most once per run, and not at all when the fast read already
-  /// returned a list.
+  /// this once per run (twice on the run that re-arms it). It reads even when
+  /// the memo found a list, because the memo may have answered from the local
+  /// cache; it asks Divine's inbox relay and the relays that list names as
+  /// well as the pool, because the list may live only there (#8528). A memo
+  /// that found a list is never downgraded by this read, and when the read is
+  /// inconclusive the drain still pages the memo's relays but records nothing.
   Future<({List<String>? relays, bool conclusive})> _drainOwnInboxRelays(
     String pubkey,
     int generation,
   ) async {
     final memoFuture = _resolveOwnDmInbox();
     final memo = await memoFuture;
-    if (memo.state == _OwnDmInboxState.found) {
-      return (relays: memo.relays, conclusive: true);
-    }
     if (_ingestSessionEnded(pubkey, generation)) {
       return (relays: null, conclusive: false);
     }
+    final memoRelays = memo.state == _OwnDmInboxState.found
+        ? memo.relays
+        : null;
+    final divineRelay = _dmInboxRelayUrl;
     final strict = await _queryOwnDmInbox(
       pubkey,
       requireAuthoritative: true,
       source: _DmRelayListSource.selfAuthored,
+      listedRelays: [
+        if (divineRelay != null && isRelayUrlAllowed(divineRelay)) divineRelay,
+        ...?memoRelays,
+      ],
     );
     if (_ingestSessionEnded(pubkey, generation)) {
       return (relays: null, conclusive: false);
     }
+    final knownList = memo.list;
+    final returnedList = strict.list;
+    if (knownList != null &&
+        returnedList != null &&
+        _compareInboxLists(knownList, returnedList) < 0) {
+      // A relay may lag behind a newer signed list we already hold. Its older
+      // answer neither replaces our routing evidence nor confirms coverage of
+      // the newer inbox. Page the known relays, but retry confirmation later.
+      return (relays: memoRelays, conclusive: false);
+    }
     // Repair the session memo with the better answer, so the live
     // subscription's next re-subscribe stops routing by a silence we have
-    // since resolved. Guarded like the `failed` self-clear so a concurrent
-    // reset wins.
-    if (_ownInboxFuture == null || identical(_ownInboxFuture, memoFuture)) {
+    // since resolved. A memo that found a list is replaced only by a list a
+    // relay just returned: the list may live on relays none of these legs
+    // asked. Guarded like the `failed` self-clear so a concurrent reset wins.
+    final memoStillOurs =
+        _ownInboxFuture == null || identical(_ownInboxFuture, memoFuture);
+    if (memoStillOurs &&
+        (strict.state == _OwnDmInboxState.found || memoRelays == null)) {
       _ownInboxFuture = strict.state == _OwnDmInboxState.failed
           ? null
           : Future.value(strict);
     }
     return switch (strict.state) {
       _OwnDmInboxState.found => (relays: strict.relays, conclusive: true),
-      _OwnDmInboxState.absent => (relays: null, conclusive: true),
-      _OwnDmInboxState.failed => (relays: null, conclusive: false),
+      // Every relay asked, the memo's included, answered without a list:
+      // page the memo's relays once more for older history, then record.
+      _OwnDmInboxState.absent => (relays: memoRelays, conclusive: true),
+      // Unread: still page what the memo found, but record nothing.
+      _OwnDmInboxState.failed => (relays: memoRelays, conclusive: false),
     };
   }
 
@@ -2490,18 +2523,21 @@ class DmRepository {
       var sawUnansweredPage = !inbox.conclusive;
       var partialViewReason = 'an earlier page was not fully settled';
       if (sawUnansweredPage) {
-        partialViewReason =
-            "the account's own DM inbox relays could not be read, so this run "
-            'paged the default pool only';
+        partialViewReason = ownInbox == null
+            ? "the account's own DM inbox relays could not be read, so this "
+                  'run paged the default pool only'
+            : "the account's own DM inbox list could not be confirmed by a "
+                  'relay, so this run paged the pool and the relays the '
+                  'session memo holds';
         // Pin the resume point before paging, for the same reason the in-loop
         // pins exist: this run persists messages, which drags oldestSyncedAt
         // down, and an unpinned next run would seed below the windows the
         // inbox relays still have to be asked for.
         await syncState.setHistoryDrainCursor(pubkey, cursor);
         Log.warning(
-          'DM history drain for ${pubkeyForLogs(pubkey)} could not read the '
-          "account's own DM inbox relays; holding the resume cursor at "
-          '$cursor and deferring completion to the next inbox open.',
+          'DM history drain for ${pubkeyForLogs(pubkey)}: $partialViewReason; '
+          'holding the resume cursor at $cursor and deferring completion to '
+          'the next inbox open.',
           category: LogCategory.system,
         );
       }
@@ -5141,10 +5177,11 @@ class DmRepository {
   /// how many hosts we dial nor whether any of them sit on the sender's own
   /// network (#6585).
   ///
-  /// The read is deliberately non-authoritative: it runs on every send,
-  /// degrades to the default pool whether the list is absent or unreadable,
-  /// and overwrites nothing — so it keeps the cache and the first answer it
-  /// gets rather than waiting for full relay settlement (#8212).
+  /// The read runs on every send, degrades to the default pool whether the
+  /// list is absent or unreadable, and overwrites nothing (#8212). It still
+  /// waits for every relay it asked before calling the list absent, and it
+  /// never answers from the local event cache, so `found` always means a relay
+  /// returned the list during this lookup (#8528).
   ///
   /// Callers that route a gift wrap need the relays; callers that also report
   /// delivery need the reason. A `null` list from [DmInboxResolution.absent]
@@ -5254,8 +5291,10 @@ class DmRepository {
   /// never fire — which is how a transient read replaced a real list (#8212).
   ///
   /// Resolving a COUNTERPARTY's inbox passes `false`: it runs on every send,
-  /// degrades to the default pool on either outcome, and overwrites nothing,
-  /// so it keeps the cache and the first answer it gets.
+  /// degrades to the default pool on either outcome, and overwrites nothing.
+  /// It still skips the local cache: a cached list is not a relay answer, and
+  /// a counterparty's `found` clears a nip04 latch for good (#8528). Only the
+  /// user's own memo reads the cache, and history restore does not trust it.
   Future<_OwnDmInboxRead> _queryOwnDmInbox(
     String pubkey, {
     required bool requireAuthoritative,
@@ -5266,6 +5305,10 @@ class DmRepository {
     // Read as its own leg when given. Only the publish passes it — see the
     // leg comment below.
     String? advertisedRelay,
+    // Read as one more leg, so a read that records something also asks where
+    // the user's own list says it lives. History restore passes Divine's
+    // inbox relay and the relays its held list names (#8528).
+    List<String> listedRelays = const [],
   }) async {
     final elapsed = Stopwatch()..start();
     try {
@@ -5299,13 +5342,13 @@ class DmRepository {
       // unreadable, and let a dead indexer drop out of the judgement while
       // the pool's answers completed the leg (#7317).
       //
-      // The live memo read and the drain's strict read keep a single
-      // pool-only leg: the memo is in front of the receiving subscription, and
-      // widening receipt is a separate asynchronous concern (#8212). Only the
-      // publish passes [advertisedRelay], and that leg asks it alone: a user
-      // can remove the relay from the pool, and a read that never asks where
-      // the list was written can neither confirm it nor see a list held only
-      // there (#8433).
+      // The live memo read keeps a single pool-only leg: the memo is in front
+      // of the receiving subscription, and widening receipt is a separate
+      // asynchronous concern (#8212). History restore's strict read adds
+      // [listedRelays] (#8528). Only the publish passes [advertisedRelay],
+      // and that leg asks it alone: a user can remove the relay from the
+      // pool, and a read that never asks where the list was written can
+      // neither confirm it nor see a list held only there (#8433).
       //
       // A build locked to its own relay host refuses the indexer, and a leg
       // whose every relay is refused never leaves this device. Read as
@@ -5317,11 +5360,20 @@ class DmRepository {
               leg: 'the indexer',
             )
           : const <String>[];
+      final listedLeg = listedRelays.isEmpty
+          ? const <String>[]
+          : _listedRelaysToAsk(
+              listedRelays,
+              pubkey: pubkey,
+              alsoAsked: [...lookupRelays, ?advertisedRelay],
+              lookup: isRecipient ? 'Recipient' : 'Own',
+            );
       final queryFutures = [
         _observedLeg(
           () => _nostrClient.queryEventsDetailed(
             filter,
-            useCache: !requireAuthoritative,
+            // A counterparty's `found` must come from a relay (#8528).
+            useCache: !requireAuthoritative && !isRecipient,
             requireAllRelaysSettled:
                 requireAuthoritative || source == _DmRelayListSource.remote,
             timeout: requireAuthoritative
@@ -5338,6 +5390,17 @@ class DmRepository {
               relayTypes: const [RelayType.temp],
               requireAllRelaysSettled: true,
               timeout: _dmInboxDiscoveryQueryTimeout,
+            ),
+          ),
+        if (listedLeg.isNotEmpty)
+          _observedLeg(
+            () => _nostrClient.queryEventsDetailed(
+              filter,
+              useCache: false,
+              tempRelays: listedLeg,
+              relayTypes: const [RelayType.temp],
+              requireAllRelaysSettled: true,
+              timeout: _ownDmInboxAuthoritativeTimeout,
             ),
           ),
         if (advertisedRelay != null)
@@ -5407,20 +5470,34 @@ class DmRepository {
         absentOrFailed = _OwnDmInboxState.absent;
       }
 
-      // Both callers reach this, and they act on it differently, so the line
+      // Four callers reach this, and they act on it differently, so the line
       // has to say which one is speaking: RC3 is about to replace the list it
-      // read, the send path is about to route a gift wrap by it.
+      // read, history restore is about to record what it covered, the send
+      // path is about to route a gift wrap by it, and the own memo routes the
+      // live subscription and the self-copy by it. Only RC3 passes
+      // [advertisedRelay].
       void logInconclusiveRead() {
         final reason = inconclusiveReason;
         if (reason == null) return;
+        final who = isRecipient ? 'Recipient' : 'Own';
+        final consequence = switch ((
+          requireAuthoritative,
+          isRecipient,
+          advertisedRelay != null,
+        )) {
+          (true, _, true) =>
+            'not publishing over a list we could not read; will retry',
+          (true, _, false) =>
+            'history restore will not treat the inbox as read; will retry',
+          (false, true, _) =>
+            'routing to the default pool, and NOT scoring the publish as '
+                'delivered (#7317)',
+          (false, false, _) =>
+            'the live subscription and self-copy use the default pool for now',
+        };
         Log.warning(
-          requireAuthoritative
-              ? 'Own kind-10050 lookup for ${pubkeyForLogs(pubkey)} was '
-                    'inconclusive ($reason) — not publishing over a list we '
-                    'could not read; will retry'
-              : 'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)} was '
-                    'inconclusive ($reason) — routing to the default pool, and '
-                    'NOT scoring the publish as delivered (#7317)',
+          '$who kind-10050 lookup for ${pubkeyForLogs(pubkey)} was '
+          'inconclusive ($reason) — $consequence',
           category: LogCategory.system,
         );
       }
@@ -5463,14 +5540,24 @@ class DmRepository {
           }
         }
         logInconclusiveRead();
-        return (state: absentOrFailed, relays: null, advertisedMissing: null);
+        return (
+          state: absentOrFailed,
+          relays: null,
+          advertisedMissing: null,
+          list: null,
+        );
       }
       // Newest wins for a replaceable event served from multiple relays.
-      matchingEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      matchingEvents.sort(_compareInboxLists);
       final inbox = _classifyInboxList(matchingEvents.first, pubkey, source);
       final relays = inbox.relays;
       if (relays == null) {
-        return (state: inbox.state, relays: null, advertisedMissing: null);
+        return (
+          state: inbox.state,
+          relays: null,
+          advertisedMissing: null,
+          list: matchingEvents.first,
+        );
       }
       final advertisedServesList =
           advertisedEvents == null ||
@@ -5482,6 +5569,7 @@ class DmRepository {
         state: _OwnDmInboxState.found,
         relays: relays,
         advertisedMissing: advertisedServesList ? null : matchingEvents.first,
+        list: matchingEvents.first,
       );
     } on TimeoutException {
       // Deliberately `failed`, never `absent`. NIP-17 says an absent kind-10050
@@ -5498,6 +5586,7 @@ class DmRepository {
         state: _OwnDmInboxState.failed,
         relays: null,
         advertisedMissing: null,
+        list: null,
       );
     } on Object catch (e) {
       Log.warning(
@@ -5508,8 +5597,16 @@ class DmRepository {
         state: _OwnDmInboxState.failed,
         relays: null,
         advertisedMissing: null,
+        list: null,
       );
     }
+  }
+
+  /// Orders replaceable inbox lists newest first, with NIP-01's lower event ID
+  /// winning when two signed lists share a timestamp.
+  static int _compareInboxLists(Event a, Event b) {
+    final timestampOrder = b.createdAt.compareTo(a.createdAt);
+    return timestampOrder != 0 ? timestampOrder : a.id.compareTo(b.id);
   }
 
   /// Reads one kind-10050 into the relays a gift wrap may be routed to.
@@ -5575,6 +5672,7 @@ class DmRepository {
     Iterable<String> relays, {
     required String pubkey,
     required String leg,
+    String lookup = 'Recipient',
   }) {
     final admitted = <String>[];
     final refused = <String>[];
@@ -5583,13 +5681,36 @@ class DmRepository {
     }
     if (refused.isNotEmpty) {
       Log.info(
-        'Recipient kind-10050 lookup for ${pubkeyForLogs(pubkey)}: not asking '
+        '$lookup kind-10050 lookup for ${pubkeyForLogs(pubkey)}: not asking '
         '$leg ${refused.join(', ')} — this build locks relays to its own host '
         '(#10148)',
         category: LogCategory.system,
       );
     }
     return admitted;
+  }
+
+  /// The [listed] relays not already asked by the pool or [alsoAsked], and
+  /// admitted by this build's relay lock.
+  List<String> _listedRelaysToAsk(
+    List<String> listed, {
+    required String pubkey,
+    required List<String> alsoAsked,
+    required String lookup,
+  }) {
+    final asked = {
+      for (final url in [..._nostrClient.configuredRelays, ...alsoAsked])
+        RelayAddrUtil.handle(url),
+    };
+    return _relaysTheLockAdmits(
+      {
+        for (final url in listed)
+          if (!asked.contains(RelayAddrUtil.handle(url))) url,
+      },
+      pubkey: pubkey,
+      leg: 'the relays its list names',
+      lookup: lookup,
+    );
   }
 
   /// Why a leg that did not settle was inconclusive, for the log line.
@@ -5619,6 +5740,7 @@ class DmRepository {
       state: _OwnDmInboxState.absent,
       relays: null,
       advertisedMissing: null,
+      list: null,
     );
     if (relayLists.isEmpty) return absent;
     final newest = relayLists.reduce(
@@ -5686,8 +5808,9 @@ class DmRepository {
           event,
     ];
     if (lists.isNotEmpty) {
+      lists.sort(_compareInboxLists);
       final inbox = _classifyInboxList(
-        lists.reduce((a, b) => b.createdAt > a.createdAt ? b : a),
+        lists.first,
         pubkey,
         _DmRelayListSource.remote,
       );
@@ -5695,6 +5818,7 @@ class DmRepository {
         state: inbox.state,
         relays: inbox.relays,
         advertisedMissing: null,
+        list: lists.first,
       );
     }
     if (result.noRelays || result.timedOut) {
@@ -5711,6 +5835,7 @@ class DmRepository {
         state: _OwnDmInboxState.failed,
         relays: null,
         advertisedMissing: null,
+        list: null,
       );
     }
     return absent;
@@ -9443,10 +9568,11 @@ class DmRepository {
   /// from the pre-latch upsert, not a designed guard), so a kind-10050 left
   /// behind by a client the peer has since abandoned can permanently cut a
   /// legacy-only reader off from the one copy they can read. Accepted:
-  /// #8519 weighs exactly this residual, the mirror cache-staleness case is
-  /// filed as #8528, and whether a later peer-authored kind-4 may re-latch
-  /// is a receive-path decision of the same "decide whether" family,
-  /// deliberately not taken here.
+  /// #8519 weighs exactly this residual, and whether a later peer-authored
+  /// kind-4 may re-latch is a receive-path decision of the same "decide
+  /// whether" family, deliberately not taken here. A stale list held only in
+  /// the local cache cannot clear the latch: a counterparty's lookup never
+  /// reads the cache (#8528).
   ///
   /// Best-effort. A failure leaves the thread latched and the next send
   /// presents the same evidence again, so it must never cost the message.

@@ -21,7 +21,6 @@ import 'package:openvine/bootstrap/editor_font_licenses.dart';
 import 'package:openvine/bootstrap/font_licenses.dart';
 import 'package:openvine/bootstrap/shorebird_licenses.dart';
 import 'package:openvine/config/screenshot_mode.dart';
-import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/environment_config.dart';
@@ -43,6 +42,7 @@ import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/services/database_recovery_store.dart';
+import 'package:openvine/services/device_memory_service.dart';
 import 'package:openvine/services/install_source_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
@@ -55,6 +55,7 @@ import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/startup/database_bootstrap_failure_app.dart';
+import 'package:openvine/startup/image_cache_budget.dart';
 import 'package:openvine/startup/startup_coordinator_factory.dart';
 import 'package:openvine/startup/window_size_constants.dart';
 import 'package:openvine/utils/app_uptime.dart';
@@ -189,12 +190,6 @@ Future<void> startOpenVineApp({
   // they appear on the in-app Open Source Licenses page. See #7206.
   registerShorebirdLicenses();
 
-  // Give the in-memory image cache a larger byte budget than Flutter's 100 MB
-  // default so thumbnails survive fast scrolling instead of being evicted and
-  // reloaded. Per-thumbnail memory is bounded by decoding at display size.
-  PaintingBinding.instance.imageCache.maximumSizeBytes =
-      AppConstants.imageCacheMaxBytes;
-
   // Keep the native splash visible until startup auth reaches a terminal
   // state. The release watcher is installed after the ProviderContainer exists
   // so the UI/native concern stays in app startup instead of AuthService.
@@ -237,6 +232,13 @@ Future<void> startOpenVineApp({
     disposeAll: DivineVideoPlayerController.disposeAll,
   );
 
+  // Size the decoded-image cache by device RAM so thumbnails survive fast
+  // scrolling without the cache's GPU cost crowding out smaller devices.
+  final imageCacheBudget = await configureImageCacheBudget(
+    cache: PaintingBinding.instance.imageCache,
+    readPhysicalMemoryBytes: const DeviceMemoryService().physicalMemoryBytes,
+  );
+
   startupPerformance.completePhase('bindings');
 
   // Initialize crash reporting ASAP so we can use it for logging
@@ -247,6 +249,11 @@ Future<void> startOpenVineApp({
   // Now we can start logging
   Log.info(
     '[STARTUP] App initialization started at $startTime',
+    name: 'Main',
+    category: LogCategory.system,
+  );
+  Log.info(
+    '[STARTUP] Image cache budget ${imageCacheBudget >> 20} MB',
     name: 'Main',
     category: LogCategory.system,
   );

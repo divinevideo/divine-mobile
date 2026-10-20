@@ -223,14 +223,11 @@ void dispose() {
 The project uses a 500 MB LRU disk cache for video content. Don't override this without profiling on low-end devices. Large caches cause storage pressure on older phones.
 
 ### Image Cache Tuning
-Flutter's default `ImageCache` holds 100 images / 100 MB. For media-heavy feeds, monitor memory in DevTools. If OOM crashes occur on low-end devices, consider:
+Startup sizes Flutter's decoded-image cache by device RAM in `mobile/lib/startup/image_cache_budget.dart`: RAM / 48, clamped to 96–256 MB, and 128 MB when RAM is unknown (web, desktop, or a failed channel call). The divisor and the bounds are `AppConstants.imageCache*`; change the budget through them. Another `imageCache.maximumSizeBytes` assignment anywhere else silently overrides it on every device. Flutter's own default (1000 entries, 100 MiB) applies only until startup sets it.
 
-```dart
-PaintingBinding.instance.imageCache.maximumSizeBytes =
-    50 * 1024 * 1024; // 50 MB
-```
+Clearing the cache frees nothing until a frame is drawn, because `ImageCache` releases each image it drops in a post-frame callback. Clear through `clearDecodedImageCache()` (`mobile/lib/utils/decoded_image_cache.dart`), which schedules that frame, rather than calling `imageCache.clear()` directly.
 
-Only tune this with profiling data — don't guess.
+Only tune the budget with profiling data — don't guess.
 
 ---
 

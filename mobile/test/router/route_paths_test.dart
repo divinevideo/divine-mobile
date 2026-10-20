@@ -2,6 +2,7 @@
 // ABOUTME: These are a deep-link contract — a silent change breaks live links
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/router/route_paths.dart';
 
 void main() {
@@ -125,6 +126,10 @@ void main() {
       expect(RoutePaths.profileForNpub('npub1x'), equals('/profile/npub1x'));
       expect(RoutePaths.soundDetailForId('s1'), equals('/sound/s1'));
       expect(
+        RoutePaths.soundDetailForId('a?b/c#d'),
+        equals('/sound/a%3Fb%2Fc%23d'),
+      );
+      expect(
         RoutePaths.subtitleEditorFor('v 1'),
         equals('/subtitle-edit/v%201'),
       );
@@ -138,6 +143,28 @@ void main() {
         RoutePaths.videoMetadataEditFor('v 1'),
         equals('/video-edit/v%201'),
       );
+    });
+
+    test('sound links built from every current id shape are unchanged', () {
+      // These shapes hold no reserved characters, so encoding the id
+      // leaves every link the app already builds byte-identical.
+      const eventId =
+          '672c4eb9fc29adb6b505713bc6da94af2244c1de55dc6f034e2bcdaba133ebbe';
+      final ids = [
+        eventId,
+        'video_$eventId',
+        '${AudioEvent.localImportMarker}_1760880000000000_0',
+        '${AudioEvent.voiceOverIdPrefix}_1760880000000',
+        '${AudioEvent.bundledMarker}_bing_chilling',
+      ];
+
+      for (final id in ids) {
+        expect(
+          RoutePaths.soundDetailForId(id),
+          equals('/sound/$id'),
+          reason: id,
+        );
+      }
     });
   });
 }

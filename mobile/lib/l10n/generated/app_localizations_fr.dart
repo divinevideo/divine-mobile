@@ -10363,6 +10363,54 @@ class AppLocalizationsFr extends AppLocalizations {
       'Perdu de vue en cours de route. Le calque reste immobile à partir de là.';
 
   @override
+  String get videoEditorLoopLabel => 'Boucle';
+
+  @override
+  String get videoEditorLoopSemanticLabel =>
+      'Trouver un point de boucle plus fluide';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Boucle plus fluide trouvée. Elle se termine $seconds s plus tôt.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Boucle plus fluide trouvée. Elle se termine $seconds s plus tard.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Pas de correspondance parfaite, mais c\'est la plus proche. Elle se termine $seconds s plus tôt.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Pas de correspondance parfaite, mais c\'est la plus proche. Elle se termine $seconds s plus tard.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Garder';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel =>
+      'Garder le nouveau point de boucle';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Remettre l\'ancienne fin';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Ça boucle déjà en douceur.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'Impossible de vérifier la boucle. Réessaie.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Aucune boucle fluide trouvée. Rien vers la fin ne correspond au début de la vidéo.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effet';
 
   @override

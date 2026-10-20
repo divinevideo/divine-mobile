@@ -10307,6 +10307,54 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se perdió a mitad de camino. La capa se queda quieta desde ahí.';
 
   @override
+  String get videoEditorLoopLabel => 'Bucle';
+
+  @override
+  String get videoEditorLoopSemanticLabel =>
+      'Buscar un punto de bucle más suave';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Encontramos un bucle más suave. Termina $seconds s antes.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Encontramos un bucle más suave. Termina $seconds s después.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'No hay una coincidencia perfecta, pero esta es la más cercana. Termina $seconds s antes.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'No hay una coincidencia perfecta, pero esta es la más cercana. Termina $seconds s después.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Mantener';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel =>
+      'Mantener el nuevo punto de bucle';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Volver al final anterior';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Esto ya hace un bucle suave.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'No pudimos revisar el bucle. Probá de nuevo.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'No encontramos un bucle sin cortes. Nada cerca del final coincide con el inicio del video.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efecto';
 
   @override

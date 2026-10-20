@@ -10299,6 +10299,54 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изгубено по пътя. Оттам слоят остава на място.';
 
   @override
+  String get videoEditorLoopLabel => 'Цикъл';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'Намери по-гладка точка на цикъла';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Намерен е по-гладък цикъл. Свършва $seconds с по-рано.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Намерен е по-гладък цикъл. Свършва $seconds с по-късно.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Няма точно съвпадение, но това е най-близкото. Свършва $seconds с по-рано.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Няма точно съвпадение, но това е най-близкото. Свършва $seconds с по-късно.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Запази';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel =>
+      'Запази новата точка на цикъла';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Върни предишния край';
+
+  @override
+  String get videoEditorLoopAlreadySmooth =>
+      'Това вече се върти гладко в цикъл.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'Цикълът не можа да се провери. Опитай отново.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Не намерихме гладък цикъл. Нищо близо до края не съвпада с началото на видеото.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Ефект';
 
   @override

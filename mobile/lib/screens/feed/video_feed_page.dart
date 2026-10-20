@@ -556,7 +556,7 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                             // For You, following, list, new and classic feeds
                             // are indistinguishable in view_traffic_sources.
                             sourceDetail: state.source.type.analyticsTag,
-                            onActiveVideoChanged: (video, index) {
+                            onActiveVideoChanged: (_, index) {
                               final isTuningAutoAdvance =
                                   _pendingTuningAutoAdvanceIndex == index;
                               _pendingTuningAutoAdvanceIndex = null;
@@ -574,11 +574,6 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                                   .read(lastTabPositionProvider.notifier)
                                   .recordPosition(RouteType.home, index);
                               _resumeAutoAdvanceAfterSwipe();
-                              ref
-                                  .read(feedPerformanceTrackerProvider)
-                                  .startVideoSwipeTracking(
-                                    video.id,
-                                  );
                             },
                             onNearEnd: () {
                               if (state.hasMore) {

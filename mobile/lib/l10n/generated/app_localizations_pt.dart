@@ -10290,6 +10290,53 @@ class AppLocalizationsPt extends AppLocalizations {
       'Perdeu de vista no meio do caminho. A camada fica parada a partir daí.';
 
   @override
+  String get videoEditorLoopLabel => 'Loop';
+
+  @override
+  String get videoEditorLoopSemanticLabel =>
+      'Encontrar um ponto de loop mais suave';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Loop mais suave encontrado. Termina $seconds s antes.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Loop mais suave encontrado. Termina $seconds s depois.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Não há correspondência perfeita, mas esta é a mais próxima. Termina $seconds s antes.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Não há correspondência perfeita, mas esta é a mais próxima. Termina $seconds s depois.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Manter';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'Manter o novo ponto de loop';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Voltar ao final anterior';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Isso já faz um loop suave.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'Não foi possível verificar o loop. Tente de novo.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Nenhum loop perfeito encontrado. Nada perto do final combina com o início do vídeo.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Efeito';
 
   @override

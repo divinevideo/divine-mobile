@@ -10488,6 +10488,55 @@ class AppLocalizationsTe extends AppLocalizations {
       'మధ్యలో కనిపించకుండా పోయింది. అక్కడి నుండి లేయర్ కదలకుండా ఉంటుంది.';
 
   @override
+  String get videoEditorLoopLabel => 'లూప్';
+
+  @override
+  String get videoEditorLoopSemanticLabel =>
+      'మరింత సాఫీ అయిన లూప్ పాయింట్‌ను కనుగొనండి';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'మరింత సాఫీ లూప్ దొరికింది. ఇది $seconds సె ముందుగా ముగుస్తుంది.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'మరింత సాఫీ లూప్ దొరికింది. ఇది $seconds సె ఆలస్యంగా ముగుస్తుంది.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'సరిగ్గా సరిపోయేది లేదు, కానీ ఇదే అత్యంత దగ్గరిది. ఇది $seconds సె ముందుగా ముగుస్తుంది.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'సరిగ్గా సరిపోయేది లేదు, కానీ ఇదే అత్యంత దగ్గరిది. ఇది $seconds సె ఆలస్యంగా ముగుస్తుంది.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'ఉంచు';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'కొత్త లూప్ పాయింట్‌ను ఉంచండి';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel =>
+      'పాత ముగింపును తిరిగి పెట్టండి';
+
+  @override
+  String get videoEditorLoopAlreadySmooth =>
+      'ఇది ఇప్పటికే సాఫీగా లూప్ అవుతోంది.';
+
+  @override
+  String get videoEditorLoopFailed =>
+      'లూప్‌ను తనిఖీ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'అతుకులు లేని లూప్ దొరకలేదు. ముగింపు దగ్గర ఏదీ వీడియో ప్రారంభంతో సరిపోలడం లేదు.';
+
+  @override
   String get videoEditorKeyframeEffect => 'ఎఫెక్ట్';
 
   @override

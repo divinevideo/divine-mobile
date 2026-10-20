@@ -14,6 +14,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/local_audio_cleanup_service.dart';
+import 'package:openvine/utils/editor_state_history_stats.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -194,6 +195,7 @@ class DraftStorageService {
       name: 'DraftStorageService',
       category: LogCategory.video,
     );
+    final stopwatch = Stopwatch()..start();
 
     // Check for orphaned files before overwriting. Delete them only after the
     // new row is committed, so this draft's old indexed file references no
@@ -283,6 +285,12 @@ class DraftStorageService {
       ownerPubkey: ownerPubkey,
     );
     ownedFilesMemo?._remember(draft.id, newOwnedFilePaths);
+    Log.info(
+      '💾 Saved draft ${draft.id} in ${stopwatch.elapsedMilliseconds} ms: '
+      '${_describeStoredDraft(draftData, draft)}',
+      name: 'DraftStorageService',
+      category: LogCategory.video,
+    );
 
     // Reap orphaned files only after the new draft/clip rows are committed, so
     // this draft's old indexed references no longer protect them. When the
@@ -511,6 +519,7 @@ class DraftStorageService {
     String id, {
     required bool scopedToOwner,
   }) async {
+    final stopwatch = Stopwatch()..start();
     final row = await _draftsDao.getDraftById(
       id,
       ownerPubkey: scopedToOwner ? ownerPubkey : null,
@@ -526,12 +535,29 @@ class DraftStorageService {
 
     final clipRows = await _clipsDao.getClipsByDraftId(id);
     final documentsPath = await getDocumentsPath();
-    return _tryParseDraftRow(
+    final draft = _tryParseDraftRow(
       row: row,
       clipRows: clipRows,
       documentsPath: documentsPath,
     );
+    if (draft != null) {
+      Log.info(
+        '📂 Loaded draft $id in ${stopwatch.elapsedMilliseconds} ms: '
+        '${_describeStoredDraft(row.data, draft)}',
+        name: 'DraftStorageService',
+        category: LogCategory.video,
+      );
+    }
+    return draft;
   }
+
+  /// How heavy the stored [draft] is: the size of its stored [data], its
+  /// clips, and what its editor history holds. A draft that grows too heavy
+  /// takes seconds to load and save, and can run the editor out of memory.
+  static String _describeStoredDraft(String data, DivineVideoDraft draft) =>
+      'data ${(data.length / 1024).toStringAsFixed(0)} KB, '
+      'clips ${draft.clips.length}, '
+      '${EditorStateHistoryStats.of(draft.editorStateHistory)}';
 
   /// Whether a draft row with [id] exists at all, whoever owns it.
   ///

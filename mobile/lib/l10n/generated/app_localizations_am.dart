@@ -9970,6 +9970,51 @@ class AppLocalizationsAm extends AppLocalizations {
       'በመሃል ጠፋ። ከዚያ በኋላ ንብርብሩ እንደቆመ ይቆያል።';
 
   @override
+  String get videoEditorLoopLabel => 'ዙር';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'ለስላሳ የዙር ነጥብ ፈልግ';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'ለስላሳ ዙር ተገኝቷል። $seconds ሰ ቀድሞ ያበቃል።';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'ለስላሳ ዙር ተገኝቷል። $seconds ሰ ዘግይቶ ያበቃል።';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'ፍጹም ተዛማጅ የለም፣ ግን ይህ በጣም ቅርቡ ነው። $seconds ሰ ቀድሞ ያበቃል።';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'ፍጹም ተዛማጅ የለም፣ ግን ይህ በጣም ቅርቡ ነው። $seconds ሰ ዘግይቶ ያበቃል።';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'አቆይ';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'አዲሱን የዙር ነጥብ አቆይ';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'የቀድሞውን መጨረሻ መልስ';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'ይህ አስቀድሞ ለስላሳ ሆኖ ይዞራል።';
+
+  @override
+  String get videoEditorLoopFailed => 'ዙሩን ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'እንከን የለሽ ዙር አልተገኘም። ከመጨረሻው አቅራቢያ ቪዲዮው ከሚጀምርበት ጋር የሚገጥም ነገር የለም።';
+
+  @override
   String get videoEditorKeyframeEffect => 'ውጤት';
 
   @override

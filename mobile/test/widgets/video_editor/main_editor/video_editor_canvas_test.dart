@@ -33,6 +33,36 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 void main() {
+  group('VideoEditorCanvas.overlayHistoryDuration', () {
+    test('does not clamp restored overlays to an uncommitted preview trim', () {
+      final original = DivineVideoClip(
+        id: 'clip',
+        video: EditorVideo.file('/docs/clip.mp4'),
+        duration: const Duration(seconds: 3),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
+      expect(
+        VideoEditorCanvas.overlayHistoryDuration(
+          historyClips: [original],
+          liveDuration: const Duration(milliseconds: 2500),
+        ),
+        const Duration(seconds: 3),
+      );
+    });
+
+    test('keeps live duration for legacy history without clip metadata', () {
+      expect(
+        VideoEditorCanvas.overlayHistoryDuration(
+          historyClips: const [],
+          liveDuration: const Duration(seconds: 3),
+        ),
+        const Duration(seconds: 3),
+      );
+    });
+  });
+
   group('renders', () {
     testWidgets('VideoEditorCanvas renders safely with no clips', (
       tester,

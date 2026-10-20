@@ -1,6 +1,7 @@
-// ABOUTME: Tests for the video routes' recorder builder and engagement paths.
-// ABOUTME: Pins recorder query parsing, the flat engagement registration and
-// ABOUTME: the detail location an engagement screen falls back to.
+// ABOUTME: Tests for the video routes' recorder builder, engagement paths and
+// ABOUTME: sound links. Pins recorder query parsing, the flat engagement
+// ABOUTME: registration, the detail location an engagement screen falls back
+// ABOUTME: to, and the sound link round trip.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -13,8 +14,11 @@ import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/sound_detail_screen.dart';
+import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
 
 import '../../helpers/l10n.dart';
 
@@ -76,7 +80,10 @@ VideoRecorderRoute _recorderRouteFor(String location, {Object? extra}) {
     _FakeBuildContext(),
     _FakeGoRouterState(Uri.parse(location), extra: extra),
   );
-  return (page as CustomTransitionPage<void>).child as VideoRecorderRoute;
+  final scope =
+      (page as CustomTransitionPage<void>).child
+          as ReleaseCachedImagesOnDispose;
+  return scope.child as VideoRecorderRoute;
 }
 
 void main() {
@@ -130,6 +137,51 @@ void main() {
       expect(recorder.entryPoint, CreationEntryPoint.bottomNav);
       expect(recorder.autoRecord, isTrue);
     });
+  });
+
+  group('videoRoutes image release', () {
+    test('releases cached images when the recorder closes', () {
+      final route = videoRoutes().whereType<GoRoute>().firstWhere(
+        (route) => route.path == VideoRecorderScreen.path,
+      );
+      final page = route.pageBuilder!(
+        _FakeBuildContext(),
+        _FakeGoRouterState(Uri.parse(VideoRecorderScreen.path)),
+      );
+
+      expect(
+        (page as CustomTransitionPage<void>).child,
+        isA<ReleaseCachedImagesOnDispose>().having(
+          (scope) => scope.child,
+          'child',
+          isA<VideoRecorderRoute>(),
+        ),
+      );
+    });
+
+    for (final path in [
+      VideoEditorScreen.path,
+      VideoEditorScreen.draftPathWithId,
+    ]) {
+      test('$path releases cached images when the editor closes', () {
+        final route = videoRoutes().whereType<GoRoute>().firstWhere(
+          (route) => route.path == path,
+        );
+        final widget = route.builder!(
+          _FakeBuildContext(),
+          _FakeGoRouterState(Uri.parse(VideoEditorScreen.path)),
+        );
+
+        expect(
+          widget,
+          isA<ReleaseCachedImagesOnDispose>().having(
+            (scope) => scope.child,
+            'child',
+            isA<VideoEditorScreen>(),
+          ),
+        );
+      });
+    }
   });
 
   group('videoRoutes engagement routes', () {
@@ -335,6 +387,43 @@ void main() {
       expect(aid, isNotNull);
       expect(aid!.kind, equals(34236));
       expect(aid.dTag, equals(dTag));
+    });
+  });
+
+  group('a sound link', () {
+    const soundId = 'a?b/c#d';
+
+    testWidgets('survives the round trip to the sound route', (tester) async {
+      final location = SoundDetailScreen.pathForId(soundId);
+      // Raw, the `?` ended the path at `a`, so the link named a different
+      // sound before it ever reached the router.
+      expect(Uri.parse(location).pathSegments, equals(['sound', soundId]));
+
+      String? seen;
+      final router = GoRouter(
+        initialLocation: location,
+        routes: [
+          GoRoute(
+            path: SoundDetailScreen.path,
+            builder: (_, state) {
+              seen = state.pathParameters['id'];
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(seen, equals(soundId));
     });
   });
 }

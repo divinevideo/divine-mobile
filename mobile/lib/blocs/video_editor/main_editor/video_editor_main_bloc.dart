@@ -158,15 +158,15 @@ class VideoEditorMainBloc
     VideoEditorAuditionStarted event,
     Emitter<VideoEditorMainState> emit,
   ) {
-    if (event.end <= event.start) return;
-    final position = state.currentPosition;
-    final isInside = position >= event.start && position < event.end;
+    if (event.end == event.start) return;
+    final audition = (start: event.start, end: event.end);
+    final isInside = auditionContains(audition, state.currentPosition);
     final startsPlayback = !state.isPlaying;
     // The seek goes out before the play, so the player starts where the
     // audition does rather than sounding a moment of where it was.
     emit(
       state.copyWith(
-        audition: (start: event.start, end: event.end),
+        audition: audition,
         pausesAfterAudition: startsPlayback,
         isAuditionSeekPending: !isInside,
         seekPosition: isInside ? null : event.start,
@@ -216,7 +216,7 @@ class VideoEditorMainBloc
       emit(state.copyWith(currentPosition: position));
       return;
     }
-    final isInside = position >= audition.start && position < audition.end;
+    final isInside = auditionContains(audition, position);
     final isSeekLost =
         state.isAuditionSeekPending &&
         position < audition.start &&

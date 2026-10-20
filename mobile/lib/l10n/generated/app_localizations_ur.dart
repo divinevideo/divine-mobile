@@ -10209,6 +10209,52 @@ class AppLocalizationsUr extends AppLocalizations {
       'راستے میں نظر سے اوجھل ہو گئی۔ وہاں سے لیئر ٹھہری رہتی ہے۔';
 
   @override
+  String get videoEditorLoopLabel => 'لوپ';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'زیادہ ہموار لوپ پوائنٹ تلاش کریں';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'زیادہ ہموار لوپ مل گیا۔ یہ $seconds سیکنڈ پہلے ختم ہوتا ہے۔';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'زیادہ ہموار لوپ مل گیا۔ یہ $seconds سیکنڈ بعد ختم ہوتا ہے۔';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'بالکل درست میچ نہیں ملا، لیکن یہ سب سے قریب ہے۔ یہ $seconds سیکنڈ پہلے ختم ہوتا ہے۔';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'بالکل درست میچ نہیں ملا، لیکن یہ سب سے قریب ہے۔ یہ $seconds سیکنڈ بعد ختم ہوتا ہے۔';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'رکھیں';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'نیا لوپ پوائنٹ رکھیں';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'پرانا اختتام واپس لائیں';
+
+  @override
+  String get videoEditorLoopAlreadySmooth =>
+      'یہ پہلے ہی ہموار طریقے سے لوپ ہوتا ہے۔';
+
+  @override
+  String get videoEditorLoopFailed => 'لوپ چیک نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'ہموار لوپ نہیں ملا۔ آخر کے قریب کچھ بھی ویڈیو کے آغاز سے میل نہیں کھاتا۔';
+
+  @override
   String get videoEditorKeyframeEffect => 'ایفیکٹ';
 
   @override

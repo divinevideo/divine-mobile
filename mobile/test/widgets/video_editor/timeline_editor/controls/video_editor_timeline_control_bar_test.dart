@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -64,6 +65,7 @@ void main() {
                 BlocProvider<ClipEditorBloc>.value(value: clipBloc),
                 BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
                 BlocProvider(create: (_) => StyleClipboardCubit()),
+                BlocProvider(create: (_) => LoopSuggestionCubit()),
               ],
               child: TimelineControlsBar(
                 isEditing: isEditing,

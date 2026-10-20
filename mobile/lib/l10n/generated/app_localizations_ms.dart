@@ -10216,6 +10216,53 @@ class AppLocalizationsMs extends AppLocalizations {
       'Hilang jejak di pertengahan jalan. Lapisan kekal diam dari situ.';
 
   @override
+  String get videoEditorLoopLabel => 'Loop';
+
+  @override
+  String get videoEditorLoopSemanticLabel =>
+      'Cari titik loop yang lebih lancar';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Loop yang lebih lancar ditemui. Ia tamat $seconds s lebih awal.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Loop yang lebih lancar ditemui. Ia tamat $seconds s lebih lewat.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'Tiada padanan sempurna, tetapi ini yang paling hampir. Ia tamat $seconds s lebih awal.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'Tiada padanan sempurna, tetapi ini yang paling hampir. Ia tamat $seconds s lebih lewat.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Simpan';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'Simpan titik loop baharu';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel =>
+      'Kembalikan penghujung lama';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'Ini sudah loop dengan lancar.';
+
+  @override
+  String get videoEditorLoopFailed => 'Tidak dapat menyemak loop. Cuba lagi.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'Loop lancar tidak ditemui. Tiada bahagian berhampiran penghujung yang sepadan dengan permulaan video.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Kesan';
 
   @override

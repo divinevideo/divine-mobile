@@ -118,6 +118,10 @@ class VideoEditorSeekRequested extends VideoEditorMainEvent {
 /// Plays [start] to [end] on the timeline in a loop until
 /// [VideoEditorAuditionEnded], starting playback if it was paused: a sheet
 /// that changes how that stretch sounds plays it while it is open.
+///
+/// An [end] before [start] plays across the loop point, from [start] to the
+/// end of the video and on from its beginning to [end], so the seam where
+/// the video starts over can be watched again and again.
 class VideoEditorAuditionStarted extends VideoEditorMainEvent {
   const VideoEditorAuditionStarted({required this.start, required this.end});
 

@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
@@ -226,6 +227,10 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     final isMarkerMode = context.select(
       (VideoEditorMainBloc b) => b.state.isMarkerMode,
     );
+    final hasLoopSuggestion = context.select(
+      (LoopSuggestionCubit cubit) =>
+          cubit.state.status == LoopSuggestionStatus.suggested,
+    );
     // Sync layers from main editor to timeline overlay bloc, and
     // sync scroll to playback position while not user-scrolling.
     final Widget body = MultiBlocListener(
@@ -233,6 +238,12 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         BlocListener<ClipEditorBloc, ClipEditorState>(
           listenWhen: (prev, curr) => prev.totalDuration != curr.totalDuration,
           listener: (context, state) {
+            // The loop trim is not committed until Keep. Clamping here drops
+            // sounds and merges markers irreversibly, even if it is cancelled.
+            if (context.read<LoopSuggestionCubit>().state.status ==
+                LoopSuggestionStatus.suggested) {
+              return;
+            }
             // _totalDuration is not updated here: build recomputes it on every
             // rebuild (all its inputs are in the context.select record above)
             // and, unlike this listener, correctly suspends the loop-wrap
@@ -355,86 +366,96 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         ),
       ],
       child: GestureDetector(
-        onTap: isEditing || hasSelectedOverlay ? _onBackgroundTapped : null,
+        onTap: !hasLoopSuggestion && (isEditing || hasSelectedOverlay)
+            ? _onBackgroundTapped
+            : null,
         behavior: HitTestBehavior.translucent,
         child: Stack(
           alignment: .bottomCenter,
           children: [
-            Column(
-              crossAxisAlignment: .stretch,
-              children: [
-                VideoEditorTimelineHeader(
-                  playheadPosition: _playheadPosition,
-                  volumePreviewNotifier: _volumePreviewNotifier,
-                ),
-                Padding(
-                  padding: const .only(top: 12),
-                  child: Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: context.vineColors.surfaceContainer,
+            // The suggested trim is only a preview, not a history entry.
+            // Another timeline edit would commit the entire clip list,
+            // including that preview, before Keep or Cancel decides it.
+            AbsorbPointer(
+              absorbing: hasLoopSuggestion,
+              child: Column(
+                crossAxisAlignment: .stretch,
+                children: [
+                  VideoEditorTimelineHeader(
+                    playheadPosition: _playheadPosition,
+                    volumePreviewNotifier: _volumePreviewNotifier,
                   ),
-                ),
-
-                AnimatedContainer(
-                  duration: _timelineToggleDuration,
-                  height: isTimelineHiddenByUser
-                      ? MediaQuery.viewPaddingOf(context).bottom
-                      : TimelineConstants.height,
-                  child: OverflowBox(
-                    alignment: .topCenter,
-                    minHeight: TimelineConstants.height,
-                    maxHeight: TimelineConstants.height,
-                    child: VideoEditorTimelineInteractiveBody(
-                      playheadPosition: _playheadPosition,
-                      totalDuration: displayDuration,
-                      formatPosition: (pos) {
-                        final totalSeconds = pos.inMilliseconds / 1000.0;
-                        final minutes = totalSeconds ~/ 60;
-                        final seconds = (totalSeconds % 60).toStringAsFixed(1);
-                        return context.l10n.videoEditorTimelinePositionFormat(
-                          minutes,
-                          seconds,
-                        );
-                      },
-                      onStepPosition: _stepPosition,
-                      onPointerDown: _onPointerDown,
-                      onPointerMove: _onPointerMove,
-                      onPointerUp: _onPointerUp,
-                      onPointerCancel: _onPointerCancel,
-                      onScrollNotification: _handleScrollNotification,
-                      scrollController: _scrollController,
-                      isPinching: _isPinching,
-                      isTrimming: _isTrimming,
-                      halfScreen: halfScreen,
-                      pixelsPerSecond: _pixelsPerSecond,
-                      clips: clips,
-                      totalWidth: totalWidth,
-                      isInteracting: _isUserScrolling || _isPinching,
-                      onReorder: _onClipsReordered,
-                      onReorderChanged: _onReorderChanged,
-                      trimmingClipId: trimmingClipId,
-                      onTrimChanged: _onClipTrimChange,
-                      onTrimDragChanged: _onTrimDragChanged,
-                      onClipTapped: _onClipTapped,
-                      isMultiSelectMode: isMultiSelectMode,
-                      selectedClipIds: selectedClipIds,
-                      onOverlayItemMoved: _onOverlayItemMoved,
-                      onOverlayItemMoving: _onOverlayItemMoving,
-                      onOverlayItemTrimmed: _onOverlayItemTrimmed,
-                      onOverlayTrimDragChanged: _onOverlayTrimDragChanged,
-                      onOverlayItemTapped: _onOverlayItemTapped,
-                      onOverlayDragStarted: _onOverlayDragStarted,
-                      onOverlayDragEnded: _onOverlayDragEnded,
-                      verticalScrollController: _verticalScrollController,
-                      overlayStripsScrollController:
-                          _overlayStripsScrollController,
-                      volumePreviewNotifier: _volumePreviewNotifier,
-                      onVolumePreviewCancelled: _cancelVolumePreview,
+                  Padding(
+                    padding: const .only(top: 12),
+                    child: Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: context.vineColors.surfaceContainer,
                     ),
                   ),
-                ),
-              ],
+
+                  AnimatedContainer(
+                    duration: _timelineToggleDuration,
+                    height: isTimelineHiddenByUser
+                        ? MediaQuery.viewPaddingOf(context).bottom
+                        : TimelineConstants.height,
+                    child: OverflowBox(
+                      alignment: .topCenter,
+                      minHeight: TimelineConstants.height,
+                      maxHeight: TimelineConstants.height,
+                      child: VideoEditorTimelineInteractiveBody(
+                        playheadPosition: _playheadPosition,
+                        totalDuration: displayDuration,
+                        formatPosition: (pos) {
+                          final totalSeconds = pos.inMilliseconds / 1000.0;
+                          final minutes = totalSeconds ~/ 60;
+                          final seconds = (totalSeconds % 60).toStringAsFixed(
+                            1,
+                          );
+                          return context.l10n.videoEditorTimelinePositionFormat(
+                            minutes,
+                            seconds,
+                          );
+                        },
+                        onStepPosition: _stepPosition,
+                        onPointerDown: _onPointerDown,
+                        onPointerMove: _onPointerMove,
+                        onPointerUp: _onPointerUp,
+                        onPointerCancel: _onPointerCancel,
+                        onScrollNotification: _handleScrollNotification,
+                        scrollController: _scrollController,
+                        isPinching: _isPinching,
+                        isTrimming: _isTrimming,
+                        halfScreen: halfScreen,
+                        pixelsPerSecond: _pixelsPerSecond,
+                        clips: clips,
+                        totalWidth: totalWidth,
+                        isInteracting: _isUserScrolling || _isPinching,
+                        onReorder: _onClipsReordered,
+                        onReorderChanged: _onReorderChanged,
+                        trimmingClipId: trimmingClipId,
+                        onTrimChanged: _onClipTrimChange,
+                        onTrimDragChanged: _onTrimDragChanged,
+                        onClipTapped: _onClipTapped,
+                        isMultiSelectMode: isMultiSelectMode,
+                        selectedClipIds: selectedClipIds,
+                        onOverlayItemMoved: _onOverlayItemMoved,
+                        onOverlayItemMoving: _onOverlayItemMoving,
+                        onOverlayItemTrimmed: _onOverlayItemTrimmed,
+                        onOverlayTrimDragChanged: _onOverlayTrimDragChanged,
+                        onOverlayItemTapped: _onOverlayItemTapped,
+                        onOverlayDragStarted: _onOverlayDragStarted,
+                        onOverlayDragEnded: _onOverlayDragEnded,
+                        verticalScrollController: _verticalScrollController,
+                        overlayStripsScrollController:
+                            _overlayStripsScrollController,
+                        volumePreviewNotifier: _volumePreviewNotifier,
+                        onVolumePreviewCancelled: _cancelVolumePreview,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             TimelineControlsBar(

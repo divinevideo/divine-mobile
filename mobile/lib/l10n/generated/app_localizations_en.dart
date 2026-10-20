@@ -10302,6 +10302,51 @@ class AppLocalizationsEn extends AppLocalizations {
       'Lost sight of it partway. The layer holds still from there.';
 
   @override
+  String get videoEditorLoopLabel => 'Loop';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'Find a smoother loop point';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'Smoother loop found. It ends $seconds s earlier.';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'Smoother loop found. It ends $seconds s later.';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return 'No perfect match, but this is the closest. It ends $seconds s earlier.';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return 'No perfect match, but this is the closest. It ends $seconds s later.';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => 'Keep';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => 'Keep the new loop point';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => 'Put the old end back';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'This already loops smoothly.';
+
+  @override
+  String get videoEditorLoopFailed => 'Couldn\'t check the loop. Try again.';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      'No seamless loop found. Nothing near the end matches how the video starts.';
+
+  @override
   String get videoEditorKeyframeEffect => 'Effect';
 
   @override

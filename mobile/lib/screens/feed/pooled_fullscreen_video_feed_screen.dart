@@ -24,7 +24,6 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
-import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -928,20 +927,13 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                           isLoadingMore: state.isLoadingMore,
                                           trafficSource: widget.trafficSource,
                                           sourceDetail: widget.sourceDetail,
-                                          onActiveVideoChanged: (video, index) {
+                                          onActiveVideoChanged: (_, index) {
                                             ref
                                                 .read(
                                                   foregroundFeedActivityGateProvider,
                                                 )
                                                 .markActive();
                                             _resumeAutoAdvanceAfterSwipe();
-                                            ref
-                                                .read(
-                                                  feedPerformanceTrackerProvider,
-                                                )
-                                                .startVideoSwipeTracking(
-                                                  video.id,
-                                                );
                                             context
                                                 .read<FullscreenFeedBloc>()
                                                 .add(

@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:pro_image_editor/features/main_editor/services/sizes_manager.dart'
@@ -81,6 +83,7 @@ void main() {
               providers: [
                 BlocProvider<ClipEditorBloc>.value(value: bloc),
                 BlocProvider.value(value: clipboard),
+                BlocProvider(create: (_) => LoopSuggestionCubit()),
               ],
               child: TimelineClipControls(
                 playheadPosition: ValueNotifier(playhead),
@@ -161,6 +164,7 @@ void main() {
                   providers: [
                     BlocProvider<ClipEditorBloc>.value(value: bloc),
                     BlocProvider.value(value: clipboard),
+                    BlocProvider(create: (_) => LoopSuggestionCubit()),
                     BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
                   ],
                   child: TimelineClipControls(
@@ -253,6 +257,7 @@ void main() {
                         providers: [
                           BlocProvider<ClipEditorBloc>.value(value: bloc),
                           BlocProvider.value(value: clipboard),
+                          BlocProvider(create: (_) => LoopSuggestionCubit()),
                           BlocProvider<TimelineOverlayBloc>.value(
                             value: overlayBloc,
                           ),
@@ -315,6 +320,61 @@ void main() {
         find.byType(VideoEditorTimelineControls),
       );
       expect(controls.onDetach, isNotNull);
+    });
+
+    group('Loop', () {
+      testWidgets('keeps Loop in place but disabled during another render', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [clip('a'), clip('b')],
+            currentClipIndex: 1,
+            isStabilizing: true,
+            stabilizingClipId: 'a',
+          ),
+        );
+
+        await tester.pumpWidget(build());
+
+        // Greyed rather than removed, so the actions after it stay put.
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final loop = tester.widget<TimelineActionButton>(
+          find.ancestor(
+            of: find.text(l10n.videoEditorLoopLabel),
+            matching: find.byType(TimelineActionButton),
+          ),
+        );
+        expect(loop.onPressed, isNull);
+      });
+
+      testWidgets('is offered on the last clip, whose end is the seam', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(clips: [clip('a'), clip('b')], currentClipIndex: 1),
+        );
+
+        await tester.pumpWidget(build());
+
+        final controls = tester.widget<VideoEditorTimelineControls>(
+          find.byType(VideoEditorTimelineControls),
+        );
+        expect(controls.onLoop, isNotNull);
+      });
+
+      testWidgets('is not offered on an earlier clip', (tester) async {
+        when(
+          () => bloc.state,
+        ).thenReturn(ClipEditorState(clips: [clip('a'), clip('b')]));
+
+        await tester.pumpWidget(build());
+
+        final controls = tester.widget<VideoEditorTimelineControls>(
+          find.byType(VideoEditorTimelineControls),
+        );
+        expect(controls.onLoop, isNull);
+      });
     });
 
     testWidgets('hides Detach on a placeholder clip', (tester) async {
@@ -1117,6 +1177,7 @@ void main() {
                     providers: [
                       BlocProvider<ClipEditorBloc>.value(value: bloc),
                       BlocProvider.value(value: clipboard),
+                      BlocProvider(create: (_) => LoopSuggestionCubit()),
                       BlocProvider<TimelineOverlayBloc>.value(
                         value: overlayBloc,
                       ),

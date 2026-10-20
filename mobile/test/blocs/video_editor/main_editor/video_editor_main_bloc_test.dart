@@ -826,6 +826,45 @@ void main() {
       );
 
       blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'plays a stretch across the loop point through the restart',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          isPlaying: true,
+          audition: (start: Duration(seconds: 5), end: Duration(seconds: 1)),
+          currentPosition: Duration(milliseconds: 5500),
+        ),
+        act: (bloc) async {
+          // The player's own loop carries playback from the end to the start.
+          bloc.add(
+            const VideoEditorPositionChanged(Duration(milliseconds: 200)),
+          );
+          await pumpEventQueue();
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 1)));
+          await pumpEventQueue();
+          bloc.add(const VideoEditorPositionChanged(Duration(seconds: 5)));
+        },
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having(
+                (s) => s.currentPosition,
+                'position',
+                const Duration(milliseconds: 200),
+              )
+              .having((s) => s.seekCounter, 'seekCounter', 0),
+          isA<VideoEditorMainState>()
+              .having(
+                (s) => s.seekPosition,
+                'seekPosition',
+                const Duration(seconds: 5),
+              )
+              .having((s) => s.seekCounter, 'seekCounter', 1),
+          isA<VideoEditorMainState>()
+              .having((s) => s.isAuditionSeekPending, 'pending', isFalse)
+              .having((s) => s.seekCounter, 'seekCounter', 1),
+        ],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
         'leaves a paused playhead where it is',
         build: buildBloc,
         seed: () => const VideoEditorMainState(audition: audition),

@@ -1,5 +1,7 @@
 package co.openvine.app
 
+import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -49,6 +51,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val NAV_TAG = "OpenVineNavigation"
         private const val INSTALL_SOURCE_CHANNEL = "divine/install_source"
         private const val INSTALL_SOURCE_TAG = "OpenVineInstallSource"
+        private const val DEVICE_MEMORY_CHANNEL = "divine/device_memory"
     }
 
     private var navigationChannel: MethodChannel? = null
@@ -84,6 +87,9 @@ class MainActivity : FlutterFragmentActivity() {
         // Drives the in-app review prompt's store-install gate and the
         // AppUpdateRepository's download-URL resolution (#6296).
         setupInstallSourceChannel(flutterEngine)
+
+        // Physical RAM, which sizes Flutter's decoded-image cache (#10301).
+        setupDeviceMemoryChannel(flutterEngine)
 
         // Set up NIP-55 Android Signer plugin
         nostrSignerPlugin = NostrSignerPlugin(this, flutterEngine)
@@ -198,6 +204,26 @@ class MainActivity : FlutterFragmentActivity() {
             }
         }
         Log.d(INSTALL_SOURCE_TAG, "Install source channel registered")
+    }
+
+    private fun setupDeviceMemoryChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DEVICE_MEMORY_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPhysicalMemoryBytes" -> {
+                    val activityManager =
+                        getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                    val info = ActivityManager.MemoryInfo()
+                    activityManager?.getMemoryInfo(info)
+                    // totalMem is 0 when the service is unavailable; Dart
+                    // treats null as unknown and falls back to a fixed budget.
+                    result.success(info.totalMem.takeIf { it > 0 })
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun onDestroy() {

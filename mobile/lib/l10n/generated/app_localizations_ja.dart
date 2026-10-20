@@ -9701,6 +9701,51 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTrackLostPartway => '途中で見失いました。そこから先はレイヤーが静止します。';
 
   @override
+  String get videoEditorLoopLabel => 'ループ';
+
+  @override
+  String get videoEditorLoopSemanticLabel => 'よりなめらかなループ位置を探す';
+
+  @override
+  String videoEditorLoopFoundEarlier(String seconds) {
+    return 'よりなめらかなループが見つかりました。$seconds秒早く終わります。';
+  }
+
+  @override
+  String videoEditorLoopFoundLater(String seconds) {
+    return 'よりなめらかなループが見つかりました。$seconds秒遅く終わります。';
+  }
+
+  @override
+  String videoEditorLoopClosestEarlier(String seconds) {
+    return '完全に一致する位置はありませんが、これが最も近い位置です。$seconds秒早く終わります。';
+  }
+
+  @override
+  String videoEditorLoopClosestLater(String seconds) {
+    return '完全に一致する位置はありませんが、これが最も近い位置です。$seconds秒遅く終わります。';
+  }
+
+  @override
+  String get videoEditorLoopKeepLabel => '採用';
+
+  @override
+  String get videoEditorLoopKeepSemanticLabel => '新しいループ位置を採用';
+
+  @override
+  String get videoEditorLoopDiscardSemanticLabel => '元の終わりに戻す';
+
+  @override
+  String get videoEditorLoopAlreadySmooth => 'すでになめらかにループしています。';
+
+  @override
+  String get videoEditorLoopFailed => 'ループを確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get videoEditorLoopNoMatch =>
+      '継ぎ目のないループは見つかりませんでした。終わり付近に、動画の始まりと一致する部分がありません。';
+
+  @override
   String get videoEditorKeyframeEffect => 'エフェクト';
 
   @override
