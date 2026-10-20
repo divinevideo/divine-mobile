@@ -153,23 +153,26 @@ void main() {
       if (root.existsSync()) root.deleteSync(recursive: true);
     });
 
-    DmVideoStore createStore({int maxBytes = DmVideoStore.defaultMaxBytes}) =>
-        DmVideoStore(
-          ownerPubkey: _owner,
-          fetchVideo: (message, {maxBytes, timeLimit, stillWanted}) {
-            fetches++;
-            fetchLimits.add((maxBytes: maxBytes, timeLimit: timeLimit));
-            fetchWanted.add(stillWanted);
-            return fetch(message);
-          },
-          readFrame: (video) {
-            frameReads++;
-            return readFrame(video);
-          },
-          rootDirectory: () async => root,
-          now: () => now,
-          maxBytes: maxBytes,
-        );
+    DmVideoStore createStore({
+      int maxBytes = DmVideoStore.defaultMaxBytes,
+      Future<bool> Function(String messageId)? isMessageGone,
+    }) => DmVideoStore(
+      ownerPubkey: _owner,
+      fetchVideo: (message, {maxBytes, timeLimit, stillWanted}) {
+        fetches++;
+        fetchLimits.add((maxBytes: maxBytes, timeLimit: timeLimit));
+        fetchWanted.add(stillWanted);
+        return fetch(message);
+      },
+      readFrame: (video) {
+        frameReads++;
+        return readFrame(video);
+      },
+      rootDirectory: () async => root,
+      now: () => now,
+      maxBytes: maxBytes,
+      isMessageGone: isMessageGone,
+    );
 
     Directory ownerDir([String? owner]) =>
         Directory('${root.path}/${DmVideoStore.dirName}/${owner ?? _owner}');
@@ -923,6 +926,58 @@ void main() {
             isNull,
           );
           expect(frameReads, equals(1));
+        },
+      );
+
+      test(
+        'deletes what is kept for a message that is gone, retracted or '
+        'removed',
+        () async {
+          final gone = _videoMessage(id: '9' * 64);
+          final shown = _videoMessage();
+          final earlier = createStore();
+          final goneFrame = await earlier.previewFor(gone, download: true);
+          final shownFrame = await earlier.previewFor(shown, download: true);
+          final goneVideo = File(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(gone)}',
+          );
+          expect(goneVideo.existsSync(), isTrue);
+          final store = createStore(
+            isMessageGone: (messageId) async => messageId == gone.id,
+          );
+          expect(await store.previewFor(gone, download: false), isNotNull);
+
+          await store.prune();
+
+          expect(goneVideo.existsSync(), isFalse);
+          expect(goneFrame!.existsSync(), isFalse);
+          expect(shownFrame!.existsSync(), isTrue);
+          expect(store.knownPreviewPathFor(gone), isNull);
+        },
+      );
+
+      test("keeps a gone message's video while it is played", () async {
+        final message = _videoMessage();
+        final store = createStore(isMessageGone: (_) async => true);
+        final played = await store.videoFor(message);
+
+        await store.prune();
+
+        expect(played.existsSync(), isTrue);
+      });
+
+      test(
+        'keeps everything when it cannot tell whether a message is gone',
+        () async {
+          final message = _videoMessage();
+          final store = createStore(
+            isMessageGone: (_) async => throw StateError('database closed'),
+          );
+          final frame = await store.previewFor(message, download: true);
+
+          await store.prune();
+
+          expect(frame!.existsSync(), isTrue);
         },
       );
 

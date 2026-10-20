@@ -38,13 +38,18 @@ typedef DmVideoStoreResolver = DmVideoStore? Function();
 /// Files live in the app's cache directory, which is not backed up and which
 /// the system may clear when storage runs low, under one folder per account.
 /// A file nobody opened for [maxIdle] is deleted, and past [maxBytes] the
-/// least recently opened go first. An account's folder goes when the account
+/// least recently opened go first; so is everything kept for a message that
+/// is gone (see `isMessageGone`). An account's folder goes when the account
 /// leaves this device ([deleteOwner], [sweepOwners]).
 ///
 /// The decryption key and nonce are never written anywhere; only the
 /// plaintext video and its frame are, and neither path is logged.
 class DmVideoStore {
   /// Creates a [DmVideoStore] for the account [ownerPubkey].
+  ///
+  /// [isMessageGone] says whether a message was retracted or removed with
+  /// its conversation; [prune] then deletes what is kept for it. Without it
+  /// nothing is deleted on those grounds.
   ///
   /// [readFrame] defaults to [readDmVideoCardFrame], [rootDirectory] to the
   /// app's cache directory and [now] to the wall clock; they exist so tests
@@ -53,6 +58,7 @@ class DmVideoStore {
     required String ownerPubkey,
     required DmVideoFetcher fetchVideo,
     DmVideoFrameReader? readFrame,
+    Future<bool> Function(String messageId)? isMessageGone,
     Future<Directory> Function()? rootDirectory,
     DateTime Function()? now,
     this.maxIdle = defaultMaxIdle,
@@ -61,6 +67,7 @@ class DmVideoStore {
        _removalsAtCreation = _removals[_safeName(ownerPubkey)] ?? 0,
        _fetchVideo = fetchVideo,
        _readFrame = readFrame ?? readDmVideoCardFrame,
+       _isMessageGone = isMessageGone,
        _rootDirectory = rootDirectory ?? getApplicationCacheDirectory,
        _now = now ?? DateTime.now;
 
@@ -111,6 +118,7 @@ class DmVideoStore {
   final int _removalsAtCreation;
   final DmVideoFetcher _fetchVideo;
   final DmVideoFrameReader _readFrame;
+  final Future<bool> Function(String messageId)? _isMessageGone;
   final Future<Directory> Function() _rootDirectory;
   final DateTime Function() _now;
 
@@ -272,6 +280,10 @@ class DmVideoStore {
   /// Deletes files nobody opened for [maxIdle], then the least recently
   /// opened ones until this account's files fit in [maxBytes].
   ///
+  /// Everything kept for a message that is gone is deleted too, so a video
+  /// retracted by its sender or removed with its conversation does not stay
+  /// decrypted on the device.
+  ///
   /// A video handed to playback or a save, or being read for its frame, is
   /// never deleted, so in-use videos can keep the files over [maxBytes]. Part
   /// files are deleted only once old enough to be a crash's. A folder that
@@ -291,17 +303,26 @@ class DmVideoStore {
   Future<void> _prune() async {
     final dir = await _ownerDirectory();
     if (!dir.existsSync()) return;
-    final files = await dir.list().where((entity) => entity is File).toList();
+    final files = await dir
+        .list()
+        .where((entity) => entity is File)
+        .cast<File>()
+        .toList();
+    final gone = await _goneMessageIds(files);
     // Nothing below awaits, so no file can be handed out between the check
     // that it is free and its deletion.
     final now = _now();
     final kept = <({File file, DateTime opened, int size})>[];
-    for (final file in files.cast<File>()) {
+    for (final file in files) {
       final stat = file.statSync();
       if (stat.type == FileSystemEntityType.notFound) continue;
       final age = now.difference(stat.modified);
       if (file.path.endsWith(_partSuffix)) {
         if (age > _crashedPartAge) _deleteNow(file);
+        continue;
+      }
+      if (gone.contains(_messageIdOf(file)) && !_isInUse(file)) {
+        _deleteNow(file);
         continue;
       }
       // Holds no space, and must outlive the read it marks.
@@ -594,6 +615,35 @@ class DmVideoStore {
       _deleteNow(attempt);
     }
   }
+
+  /// Ids of the messages behind [files] that are gone. A lookup that fails
+  /// keeps its message's files.
+  Future<Set<String>> _goneMessageIds(List<File> files) async {
+    final isGone = _isMessageGone;
+    if (isGone == null) return const {};
+    final ids = {
+      for (final file in files)
+        if (!file.path.endsWith(_partSuffix)) _messageIdOf(file),
+    };
+    final gone = <String>{};
+    for (final id in ids) {
+      try {
+        if (await isGone(id)) gone.add(id);
+      } on Object catch (error) {
+        Log.warning(
+          'Could not tell whether a kept video DM message is gone: '
+          '${error.runtimeType}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      }
+    }
+    return gone;
+  }
+
+  /// The message id a kept file is named after: its name up to the first dot.
+  static String _messageIdOf(File file) =>
+      file.uri.pathSegments.last.split('.').first;
 
   bool _mayAutoDownload(String messageId) {
     if (!_autoDownloadFailures.containsKey(messageId)) return true;

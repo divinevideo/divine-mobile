@@ -492,6 +492,7 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
   final store = DmVideoStore(
     ownerPubkey: owner,
     fetchVideo: ref.watch(dmVideoDecryptorProvider).decrypt,
+    isMessageGone: dmVideoMessageGone(ref.watch(databaseProvider), owner),
   );
   ref.onDispose(() => unawaited(store.dispose()));
   runProviderDetached(
@@ -501,6 +502,25 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
   );
   return store;
 });
+
+/// Whether a kept video's message is gone for [owner]: retracted by its
+/// sender, or removed with its conversation. A message with no row is not,
+/// since an account's messages download again after it switches back.
+Future<bool> Function(String messageId) dmVideoMessageGone(
+  AppDatabase db,
+  String owner,
+) => (messageId) async {
+  final removed = await db.removedMessageIdsDao.contains(
+    rumorId: messageId,
+    ownerPubkey: owner,
+  );
+  if (removed) return true;
+  final row = await db.directMessagesDao.getMessageById(
+    messageId,
+    ownerPubkey: owner,
+  );
+  return row?.isDeleted ?? false;
+};
 
 /// Gallery picker used to choose a video to attach to a DM.
 ///
