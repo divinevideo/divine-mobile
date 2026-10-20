@@ -84,10 +84,10 @@ class DmVideoStore {
 
   static const String _partSuffix = '.part';
 
-  /// How long a file may still be in use after it was written or opened: a
-  /// part file being written, or a video playing or being saved. Pruning
-  /// leaves such a file alone.
-  static const Duration _mayBeInUseFor = Duration(hours: 1);
+  /// Age past which a part file is taken as left by a crash: a younger one
+  /// may still be being written, by this store or by the one an account
+  /// switch replaced.
+  static const Duration _crashedPartAge = Duration(hours: 1);
 
   /// How many times each account's videos were deleted by [deleteOwner]. A
   /// store remembers the count it was created at, so a download that lands
@@ -113,6 +113,14 @@ class DmVideoStore {
 
   /// Downloads nobody tapped for that have left the queue and are fetching.
   final Map<String, Future<File>> _autoFetchesRunning = {};
+
+  /// Videos handed to playback or a save. Never pruned while this store
+  /// lives: playing or saving one must not find it gone.
+  final Set<String> _handedOut = {};
+
+  /// Videos about to be handed out or being read for their frame, counted.
+  /// Never pruned until released.
+  final Map<String, int> _leases = {};
 
   /// Downloads without a tap on play run one at a time: each holds a whole
   /// video in memory, and a long thread shows many at once.
@@ -166,16 +174,23 @@ class DmVideoStore {
     final id = message.id;
     // removeWhere, not remove: remove hands back this very future, and
     // whenComplete waits for a future its callback returns.
-    return _videosInFlight[id] ??= _tapVideoFor(
-      message,
-    ).whenComplete(() => _videosInFlight.removeWhere((key, _) => key == id));
+    return _videosInFlight[id] ??= _tapVideoFor(message)
+        .then((file) {
+          _handedOut.add(file.path);
+          _release(file);
+          return file;
+        })
+        .whenComplete(() => _videosInFlight.removeWhere((key, _) => key == id));
   }
 
   Future<File> _tapVideoFor(DmMessage message) async {
     final running = _autoFetchesRunning[message.id];
     if (running != null) {
       try {
-        return await running;
+        // That download's lease is its card's, released after the frame.
+        final file = await running;
+        _lease(file);
+        return file;
       } on Object {
         // Most likely the automatic limits, which a tap does not have: fetch
         // it again in full.
@@ -223,10 +238,10 @@ class DmVideoStore {
   /// Deletes files nobody opened for [maxIdle], then the least recently
   /// opened ones until this account's files fit in [maxBytes].
   ///
-  /// A file opened in the last hour is never deleted to fit, since it may be
-  /// playing or being saved, so the files can stay over [maxBytes] until it
-  /// ages. Part files are deleted only once old enough to be a crash's. A
-  /// folder that cannot be read is logged, without its path, and left.
+  /// A video handed to playback or a save, or being read for its frame, is
+  /// never deleted, so in-use videos can keep the files over [maxBytes]. Part
+  /// files are deleted only once old enough to be a crash's. A folder that
+  /// cannot be read is logged, without its path, and left.
   Future<void> prune() async {
     try {
       await _prune();
@@ -242,32 +257,33 @@ class DmVideoStore {
   Future<void> _prune() async {
     final dir = await _ownerDirectory();
     if (!dir.existsSync()) return;
+    final files = await dir.list().where((entity) => entity is File).toList();
+    // Nothing below awaits, so no file can be handed out between the check
+    // that it is free and its deletion.
     final now = _now();
     final kept = <({File file, DateTime opened, int size})>[];
-    await for (final entity in dir.list()) {
-      if (entity is! File) continue;
-      final stat = entity.statSync();
+    for (final file in files.cast<File>()) {
+      final stat = file.statSync();
+      if (stat.type == FileSystemEntityType.notFound) continue;
       final age = now.difference(stat.modified);
-      if (entity.path.endsWith(_partSuffix)) {
-        if (age > _mayBeInUseFor) await _deleteQuietly(entity);
+      if (file.path.endsWith(_partSuffix)) {
+        if (age > _crashedPartAge) _deleteNow(file);
         continue;
       }
-      if (age > maxIdle) {
-        await _deleteKept(entity);
+      if (age > maxIdle && !_isInUse(file)) {
+        _deleteNow(file);
         continue;
       }
-      kept.add((file: entity, opened: stat.modified, size: stat.size));
+      kept.add((file: file, opened: stat.modified, size: stat.size));
     }
 
     var total = kept.fold<int>(0, (sum, entry) => sum + entry.size);
     if (total <= maxBytes) return;
     kept.sort((a, b) => a.opened.compareTo(b.opened));
     for (final entry in kept) {
-      // Sorted oldest first, so every file after this one is in use too.
-      if (total <= maxBytes || now.difference(entry.opened) < _mayBeInUseFor) {
-        break;
-      }
-      await _deleteKept(entry.file);
+      if (total <= maxBytes) break;
+      if (_isInUse(entry.file)) continue;
+      _deleteNow(entry.file);
       total -= entry.size;
     }
   }
@@ -349,7 +365,7 @@ class DmVideoStore {
   }
 
   /// Deletes files in [dir] unopened for [maxIdle], and part files older than
-  /// [_mayBeInUseFor]: a younger one may be a download the signed-in
+  /// [_crashedPartAge]: a younger one may be a download the signed-in
   /// account's store is still writing.
   static Future<void> _deleteIdleFiles(
     Directory dir,
@@ -360,7 +376,7 @@ class DmVideoStore {
       if (entity is! File) continue;
       final age = now.difference(entity.statSync().modified);
       final isPart = entity.path.endsWith(_partSuffix);
-      if (age > maxIdle || (isPart && age > _mayBeInUseFor)) {
+      if (age > maxIdle || (isPart && age > _crashedPartAge)) {
         await _deleteQuietly(entity);
       }
     }
@@ -374,7 +390,12 @@ class DmVideoStore {
     return _autoDownloadsInFlight[id] ??=
         _inAutoDownloadQueue(() {
           final tapped = _videosInFlight[id];
-          if (tapped != null) return tapped;
+          if (tapped != null) {
+            return tapped.then((file) {
+              _lease(file);
+              return file;
+            });
+          }
           final fetch = _obtainVideo(
             message,
             maxBytes: autoDownloadMaxBytes,
@@ -404,14 +425,22 @@ class DmVideoStore {
     final file = File(
       '${(await _ownerDirectory()).path}/${videoFileNameFor(message)}',
     );
+    // Leased as soon as it exists, or before it does, so it is never pruned
+    // on its way to the caller, who releases it.
+    _lease(file);
     if (file.existsSync()) {
       await _markOpened(file);
       return file;
     }
-    await _writeAtomically(
-      file,
-      await _fetchVideo(message, maxBytes: maxBytes, timeLimit: timeLimit),
-    );
+    try {
+      await _writeAtomically(
+        file,
+        await _fetchVideo(message, maxBytes: maxBytes, timeLimit: timeLimit),
+      );
+    } on Object {
+      _release(file);
+      rethrow;
+    }
     // An account switch disposes the store while a download can still land.
     if (!_kept.isClosed) _kept.add(message.id);
     runDetached(
@@ -440,6 +469,7 @@ class DmVideoStore {
     final declaredBytes = message.fileMetadata?.fileSize;
     final File video;
     if (keptVideo.existsSync()) {
+      _lease(keptVideo);
       video = keptVideo;
     } else if (download &&
         _mayAutoDownload(message.id) &&
@@ -457,14 +487,18 @@ class DmVideoStore {
       return null;
     }
 
-    final frame = await _readFrame(video);
-    if (frame == null || frame.isEmpty) {
-      _unreadableFrames.add(message.id);
-      return null;
+    try {
+      final frame = await _readFrame(video);
+      if (frame == null || frame.isEmpty) {
+        _unreadableFrames.add(message.id);
+        return null;
+      }
+      await _writeAtomically(preview, frame);
+      _knownPreviews[message.id] = preview.path;
+      return preview;
+    } finally {
+      _release(video);
     }
-    await _writeAtomically(preview, frame);
-    _knownPreviews[message.id] = preview.path;
-    return preview;
   }
 
   bool _mayAutoDownload(String messageId) {
@@ -523,8 +557,36 @@ class DmVideoStore {
     }
   }
 
-  Future<void> _deleteKept(File file) async {
-    await _deleteQuietly(file);
+  void _lease(File file) =>
+      _leases.update(file.path, (count) => count + 1, ifAbsent: () => 1);
+
+  void _release(File file) {
+    final count = _leases[file.path];
+    if (count == null) return;
+    if (count > 1) {
+      _leases[file.path] = count - 1;
+    } else {
+      _leases.remove(file.path);
+    }
+  }
+
+  bool _isInUse(File file) =>
+      _handedOut.contains(file.path) || _leases.containsKey(file.path);
+
+  /// Deletes [file] before anything else can run, and forgets it if it was a
+  /// frame.
+  void _deleteNow(File file) {
+    try {
+      file.deleteSync();
+    } on PathNotFoundException {
+      // Already gone, which is all prune wanted.
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not delete a kept video DM file: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
     _knownPreviews.removeWhere((_, path) => path == file.path);
   }
 

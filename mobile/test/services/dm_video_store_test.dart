@@ -778,32 +778,59 @@ void main() {
       );
 
       test(
-        'never trims a video opened within the last hour to fit the cap, as '
-        'it may be playing',
+        'never trims a video handed to playback or a save, even the least '
+        'recently opened',
         () async {
-          final playing = keptFile(
-            'playing.mp4',
-            const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(minutes: 30)),
-          );
-          final newer = keptFile(
-            'newer.mp4',
-            const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(minutes: 5)),
-          );
-          final stale = keptFile(
-            'stale.mp4',
-            const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(hours: 2)),
-          );
+          final store = createStore(maxBytes: 4);
+          final played = await store.videoFor(_videoMessage());
+          played.setLastModifiedSync(now.subtract(const Duration(hours: 2)));
+          final newer = keptFile('newer.mp4', const [1, 2, 3, 4], opened: now);
 
-          await createStore(maxBytes: 4).prune();
+          await store.prune();
 
-          expect(stale.existsSync(), isFalse);
-          expect(playing.existsSync(), isTrue);
-          expect(newer.existsSync(), isTrue);
+          expect(played.existsSync(), isTrue);
+          expect(newer.existsSync(), isFalse);
         },
       );
+
+      test(
+        'trims a video fetched only for its frame, keeping the frame, once '
+        'the frame is read',
+        () async {
+          final store = createStore(maxBytes: _frame.length);
+          final message = _videoMessage();
+          final preview = await store.previewFor(message, download: true);
+          final video = File(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+          )..setLastModifiedSync(now.subtract(const Duration(minutes: 1)));
+          preview!.setLastModifiedSync(now);
+
+          await store.prune();
+
+          expect(video.existsSync(), isFalse);
+          expect(preview.existsSync(), isTrue);
+        },
+      );
+
+      test('never deletes a video whose frame is being read', () async {
+        final frameRead = Completer<Uint8List?>();
+        readFrame = (_) => frameRead.future;
+        final store = createStore();
+        final message = _videoMessage();
+        final video = keptFile(
+          DmVideoStore.videoFileNameFor(message),
+          _plaintext,
+          opened: now.subtract(const Duration(days: 31)),
+        );
+        final preview = store.previewFor(message, download: false);
+        await pumpEventQueue();
+
+        await store.prune();
+        expect(video.existsSync(), isTrue);
+
+        frameRead.complete(_frame);
+        expect(await preview, isNotNull);
+      });
     });
 
     group('account folders', () {
