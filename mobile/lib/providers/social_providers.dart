@@ -1144,6 +1144,11 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
     'sweep rows of accounts no longer on this device',
     logName: 'UserDataCleanup',
   );
+  runProviderDetached(
+    DmVideoStore.deleteLegacyPlaybackClips(),
+    'remove obsolete decrypted playback clips',
+    logName: 'UserDataCleanup',
+  );
 
   return service;
 }

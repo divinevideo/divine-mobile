@@ -111,6 +111,7 @@ class DmVideoStore {
   static const Duration autoDownloadRetryAfter = Duration(minutes: 2);
 
   static const String _partSuffix = '.part';
+  static const String _legacyPlaybackDirName = 'dm_video_playback';
 
   /// Beside a video from the start of its frame read until a frame is kept,
   /// so a read that fails or never finishes, as when the decoder crashes the
@@ -577,6 +578,33 @@ class DmVideoStore {
       );
     }
     return deleted;
+  }
+
+  /// Removes plaintext playback files that earlier versions left behind if
+  /// the app exited before playback cleanup. The old playback path no longer
+  /// exists, so nothing in this version reads or writes that legacy folder.
+  /// Native-only and best effort; no path is included in diagnostics.
+  static Future<void> deleteLegacyPlaybackClips({
+    Future<Directory> Function()? temporaryDirectory,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      final root = await (temporaryDirectory ?? getTemporaryDirectory)();
+      final legacy = Directory('${root.path}/$_legacyPlaybackDirName');
+      if (legacy.existsSync()) await legacy.delete(recursive: true);
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not remove obsolete decrypted playback clips: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    } on MissingPlatformDirectoryException {
+      Log.warning(
+        'Could not locate the temporary directory for obsolete playback clips',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// Deletes files in [dir] unopened for [maxIdle], and part files older than

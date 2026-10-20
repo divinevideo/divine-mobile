@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_store.dart';
+import 'package:path_provider/path_provider.dart'
+    show MissingPlatformDirectoryException;
 import 'package:unified_logger/unified_logger.dart';
 
 final String _owner = 'e' * 64;
@@ -2029,6 +2031,52 @@ void main() {
     });
 
     group('account folders', () {
+      test(
+        'legacy playback cleanup leaves other temporary files alone',
+        () async {
+          final legacy = File('${root.path}/dm_video_playback/clip.mp4')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(_plaintext);
+          final unrelated = File('${root.path}/other/clip.mp4')
+            ..createSync(recursive: true);
+
+          await DmVideoStore.deleteLegacyPlaybackClips(
+            temporaryDirectory: () async => root,
+          );
+
+          expect(legacy.parent.existsSync(), isFalse);
+          expect(unrelated.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        'legacy playback cleanup handles a missing temporary directory',
+        () async {
+          await expectLater(
+            DmVideoStore.deleteLegacyPlaybackClips(
+              temporaryDirectory: () async =>
+                  throw MissingPlatformDirectoryException(
+                    'no temporary folder',
+                  ),
+            ),
+            completes,
+          );
+        },
+      );
+
+      test('legacy playback cleanup errors do not expose file paths', () async {
+        await LogCaptureService().clearAllLogs();
+        await IOOverrides.runZoned(
+          () => DmVideoStore.deleteLegacyPlaybackClips(
+            temporaryDirectory: () async => root,
+          ),
+          createDirectory: _UndeletableDirectory.new,
+        );
+
+        expect(_loggedLines(), contains(contains('Directory not empty')));
+        expect(_loggedLines(), everyElement(isNot(contains(root.path))));
+      });
+
       test("deleteOwner removes only that account's videos", () async {
         final other = 'f' * 64;
         keptFile('mine.mp4', const [1], opened: now);

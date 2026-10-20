@@ -2936,6 +2936,29 @@ void main() {
         return subscription.read();
       }
 
+      test('launch removes obsolete decrypted playback clips only', () async {
+        final legacy = Directory('${tempDir.path}/dm_video_playback')
+          ..createSync();
+        File('${legacy.path}/clip.mp4').writeAsBytesSync([1, 2, 3]);
+        final unrelated = File('${tempDir.path}/unrelated.mp4')
+          ..writeAsBytesSync([4, 5, 6]);
+        final deleted = Completer<void>();
+        final watcher = tempDir.watch(events: FileSystemEvent.delete).listen((
+          event,
+        ) {
+          if (event.path == legacy.path && !deleted.isCompleted) {
+            deleted.complete();
+          }
+        });
+        addTearDown(watcher.cancel);
+
+        readCleanupService();
+        await deleted.future.timeout(const Duration(seconds: 5));
+
+        expect(legacy.existsSync(), isFalse);
+        expect(unrelated.existsSync(), isTrue);
+      });
+
       test("removing an account deletes only that account's videos", () async {
         final removed = keptVideoOf(_pubkeyA);
         final staying = keptVideoOf(_pubkeyB);
