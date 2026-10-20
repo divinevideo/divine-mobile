@@ -178,7 +178,9 @@ class DmVideoStore {
   }
 
   static String _previewFileNameFor(DmMessage message) =>
-      '${_safeName(message.id)}.preview.jpg';
+      '${_safeName(message.id)}$_previewSuffix';
+
+  static const String _previewSuffix = '.preview.jpg';
 
   static String _safeName(String value) =>
       value.replaceAll(RegExp('[^A-Za-z0-9]'), '');
@@ -278,15 +280,18 @@ class DmVideoStore {
     return null;
   }
 
-  /// Deletes files nobody opened for [maxIdle], then the least recently
-  /// opened ones until this account's files fit in [maxBytes].
+  /// Deletes files nobody opened for [maxIdle], then, until this account's
+  /// files fit in [maxBytes], the least recently opened videos and, only
+  /// after every video, frames: a frame is what a card shows, and costs
+  /// little.
   ///
   /// Everything kept for a message that is gone is deleted too, so a video
   /// retracted by its sender or removed with its conversation does not stay
   /// decrypted on the device.
   ///
   /// A video handed to playback or a save, or being read for its frame, is
-  /// never deleted, so in-use videos can keep the files over [maxBytes]. Part
+  /// never deleted and does not count against [maxBytes], so in-use videos
+  /// can keep the folder over it. Part
   /// files are deleted only once old enough to be a crash's. A folder that
   /// cannot be read is logged, without its path, and left.
   Future<void> prune() async {
@@ -338,12 +343,23 @@ class DmVideoStore {
       kept.add((file: file, opened: stat.modified, size: stat.size));
     }
 
-    var total = kept.fold<int>(0, (sum, entry) => sum + entry.size);
+    // Files in use neither count against the cap nor go to meet it: counted,
+    // a few played videos would leave nothing else room, frames included.
+    final trimmable = [
+      for (final entry in kept)
+        if (!_isInUse(entry.file)) entry,
+    ];
+    var total = trimmable.fold<int>(0, (sum, entry) => sum + entry.size);
     if (total <= maxBytes) return;
-    kept.sort((a, b) => a.opened.compareTo(b.opened));
-    for (final entry in kept) {
+    trimmable.sort((a, b) {
+      final aIsFrame = a.file.path.endsWith(_previewSuffix);
+      if (aIsFrame != b.file.path.endsWith(_previewSuffix)) {
+        return aIsFrame ? 1 : -1;
+      }
+      return a.opened.compareTo(b.opened);
+    });
+    for (final entry in trimmable) {
       if (total <= maxBytes) break;
-      if (_isInUse(entry.file)) continue;
       _deleteNow(entry.file);
       total -= entry.size;
     }

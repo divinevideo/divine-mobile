@@ -1035,7 +1035,11 @@ void main() {
           final store = createStore(maxBytes: 4);
           final played = await store.videoFor(_videoMessage());
           played.setLastModifiedSync(now.subtract(const Duration(hours: 2)));
-          final newer = keptFile('newer.mp4', const [1, 2, 3, 4], opened: now);
+          final newer = keptFile(
+            'newer.mp4',
+            const [1, 2, 3, 4, 5, 6, 7, 8],
+            opened: now,
+          );
 
           await store.prune();
 
@@ -1060,6 +1064,47 @@ void main() {
 
           expect(video.existsSync(), isFalse);
           expect(preview.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        'leaves the rest alone when videos in use fill the cap by themselves',
+        () async {
+          // Room for one card's video and frame, not for the played videos.
+          final store = createStore(
+            maxBytes: _plaintext.length + _frame.length,
+          );
+          await store.videoFor(_videoMessage(id: '1' * 64));
+          await store.videoFor(_videoMessage(id: '2' * 64));
+          final message = _videoMessage();
+          final frame = await store.previewFor(message, download: true);
+          final video = File(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+          );
+
+          await store.prune();
+
+          expect(frame!.existsSync(), isTrue);
+          expect(video.existsSync(), isTrue);
+          expect(store.knownPreviewPathFor(message), equals(frame.path));
+        },
+      );
+
+      test(
+        'trims videos before frames, even frames opened longer ago',
+        () async {
+          final store = createStore(maxBytes: _plaintext.length - 1);
+          final message = _videoMessage();
+          final frame = await store.previewFor(message, download: true);
+          frame!.setLastModifiedSync(now.subtract(const Duration(hours: 1)));
+          final video = File(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+          )..setLastModifiedSync(now);
+
+          await store.prune();
+
+          expect(video.existsSync(), isFalse);
+          expect(frame.existsSync(), isTrue);
         },
       );
 
