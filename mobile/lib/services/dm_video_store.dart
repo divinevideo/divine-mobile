@@ -791,9 +791,10 @@ class DmVideoStore {
     final record = File(
       '${dir.path}/${_safeName(message.id)}$_conversationSuffix',
     );
-    if (force ||
-        (_currentRecords[message.id] != content &&
-            await _readQuietly(record) != content)) {
+    // What this store wrote can still be deleted from outside it: the launch
+    // sweep, or the system clearing the cache folder.
+    final known = _currentRecords[message.id] == content && record.existsSync();
+    if (force || (!known && await _readQuietly(record) != content)) {
       await _writeAtomically(record, utf8.encode(content));
     }
     _currentRecords[message.id] = content;

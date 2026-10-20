@@ -1636,6 +1636,25 @@ void main() {
       );
 
       test(
+        "writes a kept video's record again when it went missing",
+        () async {
+          var removed = false;
+          final store = createStore(
+            isConversationRemoved: (_, _) async => removed,
+          );
+          final message = _videoMessage();
+          await store.videoFor(message);
+          File('${ownerDir().path}/${'a' * 64}.conversation').deleteSync();
+
+          await store.videoFor(message);
+          removed = true;
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
         'deletes a conversation record and a frame-read mark once their video '
         'is gone',
         () async {
