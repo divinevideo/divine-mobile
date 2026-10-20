@@ -521,6 +521,99 @@ void main() {
     });
   });
 
+  group(timelinePositionToClipSourcePosition, () {
+    test('maps a position inside a trimmed later clip to source time', () {
+      final trimClips = [
+        _clip('clip-1', 10),
+        _clip('clip-2', 10, trimStart: const Duration(seconds: 2)),
+      ];
+
+      expect(
+        timelinePositionToClipSourcePosition(
+          trimClips,
+          clipId: 'clip-2',
+          position: const Duration(seconds: 12),
+        ),
+        equals(const Duration(seconds: 4)),
+      );
+    });
+
+    test('respects playback speed for preceding and target clips', () {
+      final trimClips = [
+        _clip('clip-1', 10, speed: 2.0),
+        _clip('clip-2', 10, speed: 2.0, trimStart: const Duration(seconds: 2)),
+      ];
+
+      expect(
+        timelinePositionToClipSourcePosition(
+          trimClips,
+          clipId: 'clip-2',
+          position: const Duration(seconds: 7),
+        ),
+        equals(const Duration(seconds: 6)),
+      );
+    });
+
+    test('includes both clip edges', () {
+      final trimClips = [
+        _clip('clip-1', 10),
+        _clip(
+          'clip-2',
+          10,
+          trimStart: const Duration(seconds: 2),
+          trimEnd: const Duration(seconds: 3),
+        ),
+      ];
+
+      expect(
+        [
+          timelinePositionToClipSourcePosition(
+            trimClips,
+            clipId: 'clip-2',
+            position: const Duration(seconds: 10),
+          ),
+          timelinePositionToClipSourcePosition(
+            trimClips,
+            clipId: 'clip-2',
+            position: const Duration(seconds: 15),
+          ),
+        ],
+        equals(const [Duration(seconds: 2), Duration(seconds: 7)]),
+      );
+    });
+
+    test('returns null for a position outside the clip', () {
+      final trimClips = [_clip('clip-1', 10), _clip('clip-2', 10)];
+
+      expect(
+        [
+          timelinePositionToClipSourcePosition(
+            trimClips,
+            clipId: 'clip-2',
+            position: const Duration(milliseconds: 9999),
+          ),
+          timelinePositionToClipSourcePosition(
+            trimClips,
+            clipId: 'clip-2',
+            position: const Duration(milliseconds: 20001),
+          ),
+        ],
+        equals(const [null, null]),
+      );
+    });
+
+    test('returns null for an unknown clip id', () {
+      expect(
+        timelinePositionToClipSourcePosition(
+          clips,
+          clipId: 'missing',
+          position: Duration.zero,
+        ),
+        isNull,
+      );
+    });
+  });
+
   group(rebaseTimelineMarkersForClipState, () {
     test('keeps a marker attached to the same clip source position', () {
       final oldClips = [

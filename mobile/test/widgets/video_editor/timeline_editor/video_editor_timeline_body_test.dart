@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strips.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_body.dart';
@@ -65,6 +66,9 @@ void main() {
       Duration totalDuration = const Duration(seconds: 12),
       List<DivineVideoClip> clips = const <DivineVideoClip>[],
       OverlayTrimCallback? onOverlayItemTrimmed,
+      String? trimmingClipId,
+      ClipTrimCallback? onTrimChanged,
+      ValueNotifier<Duration>? playheadPosition,
       double pixelsPerSecond = 80,
       double totalWidth = 960,
     }) async {
@@ -74,10 +78,10 @@ void main() {
 
       final scrollController = ScrollController();
       final overlayStripsScrollController = ScrollController();
-      final playhead = ValueNotifier(Duration.zero);
+      final playhead = playheadPosition ?? ValueNotifier(Duration.zero);
       addTearDown(scrollController.dispose);
       addTearDown(overlayStripsScrollController.dispose);
-      addTearDown(playhead.dispose);
+      if (playheadPosition == null) addTearDown(playhead.dispose);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -102,6 +106,8 @@ void main() {
                 onReorder: (_) {},
                 onReorderChanged: (_) {},
                 onOverlayItemTrimmed: onOverlayItemTrimmed,
+                trimmingClipId: trimmingClipId,
+                onTrimChanged: onTrimChanged,
                 playheadPosition: playhead,
               ),
             ),
@@ -218,6 +224,44 @@ void main() {
         expect(trimmedEnd, isTrue);
       },
     );
+
+    testWidgets('clip trims snap to the body playhead position', (
+      tester,
+    ) async {
+      final playhead = ValueNotifier(const Duration(seconds: 2));
+      addTearDown(playhead.dispose);
+      Duration? reportedStart;
+      await pumpBody(
+        tester,
+        clips: [_createClip(id: 'a', duration: const Duration(seconds: 4))],
+        totalDuration: const Duration(seconds: 4),
+        totalWidth: 400,
+        pixelsPerSecond: 100,
+        trimmingClipId: 'a',
+        playheadPosition: playhead,
+        onTrimChanged:
+            ({
+              required clipId,
+              required isStart,
+              required trimStart,
+              required trimEnd,
+            }) {
+              reportedStart = trimStart;
+            },
+      );
+      final content = tester.getRect(find.byType(TimelineTrimHandles));
+      final gesture = await tester.startGesture(
+        Offset(content.left + 2, content.center.dy),
+      );
+      await gesture.moveBy(const Offset(20, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(198, 0));
+      await tester.pump();
+
+      expect(reportedStart, equals(const Duration(seconds: 2)));
+      await gesture.up();
+      await tester.pump();
+    });
 
     test('stores constructor parameters', () {
       final scrollController = ScrollController();

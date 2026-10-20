@@ -186,6 +186,7 @@ class VideoEditorTimelineBody extends StatelessWidget {
                           onReorderChanged: onReorderChanged,
                         )
                       : VideoEditorTimelineClipStrip(
+                          playheadPosition: playheadPosition,
                           clips: clips,
                           totalWidth: totalWidth,
                           pixelsPerSecond: pixelsPerSecond,

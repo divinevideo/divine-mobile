@@ -22,6 +22,8 @@ import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/clip_waveform_overlay.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_transition_buttons.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/timeline_snap_controller.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 
 part 'video_editor_timeline_clip_strip_tiles.dart';
 
@@ -49,6 +51,7 @@ class VideoEditorTimelineClipStrip extends StatefulWidget {
     this.trimmingClipId,
     this.onTrimChanged,
     this.onTrimDragChanged,
+    this.playheadPosition,
     this.isMultiSelectMode = false,
     this.selectedClipIds = const {},
     @visibleForTesting this.thumbnailManager,
@@ -95,6 +98,9 @@ class VideoEditorTimelineClipStrip extends StatefulWidget {
 
   /// Called when a trim drag gesture starts (`true`) or ends (`false`).
   final ValueChanged<bool>? onTrimDragChanged;
+
+  /// Composition position captured as a source-frame snap target at trim start.
+  final ValueNotifier<Duration>? playheadPosition;
 
   @override
   State<VideoEditorTimelineClipStrip> createState() =>
@@ -820,6 +826,7 @@ class _VideoEditorTimelineClipStripState
                   trimExpand: trimExpand,
                   pixelsPerSecond: widget.pixelsPerSecond,
                   onTrimChanged: widget.onTrimChanged,
+                  playheadPosition: widget.playheadPosition,
                   onTrimDragChanged: _handleTrimDragChanged,
                   onClipTapped: widget.onClipTapped,
                   reorderSize: _reorderSize,
@@ -903,6 +910,7 @@ class _TrimmingClipPositions extends StatelessWidget {
     required this.trimExpand,
     required this.pixelsPerSecond,
     required this.onTrimChanged,
+    required this.playheadPosition,
     required this.onTrimDragChanged,
     required this.onClipTapped,
     required this.reorderSize,
@@ -925,6 +933,7 @@ class _TrimmingClipPositions extends StatelessWidget {
   final double trimExpand;
   final double pixelsPerSecond;
   final ClipTrimCallback? onTrimChanged;
+  final ValueNotifier<Duration>? playheadPosition;
   final ValueChanged<bool>? onTrimDragChanged;
   final ValueChanged<int>? onClipTapped;
   final double reorderSize;
@@ -954,6 +963,8 @@ class _TrimmingClipPositions extends StatelessWidget {
                 clip: orderedClips[i],
                 clipWidth: layout.widths[i],
                 pixelsPerSecond: pixelsPerSecond,
+                playheadPosition: playheadPosition,
+                clips: orderedClips,
                 thumbnailNotifier: thumbnails[orderedClips[i].id],
                 waveformNotifier: isReordering
                     ? null
