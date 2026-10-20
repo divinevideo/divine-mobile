@@ -124,6 +124,54 @@ class _DeletableDirectory implements Directory {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _WriteHookFile implements File {
+  _WriteHookFile(this.file, this.beforeWrite);
+
+  final File file;
+  final void Function(File) beforeWrite;
+
+  @override
+  String get path => file.path;
+
+  @override
+  Directory get parent => file.parent;
+
+  @override
+  Future<File> writeAsBytes(
+    List<int> bytes, {
+    FileMode mode = FileMode.write,
+    bool flush = false,
+  }) {
+    beforeWrite(this);
+    return file.writeAsBytes(bytes, mode: mode, flush: flush);
+  }
+
+  @override
+  Future<File> rename(String newPath) => file.rename(newPath);
+
+  @override
+  bool existsSync() => file.existsSync();
+
+  @override
+  Future<FileSystemEntity> delete({bool recursive = false}) =>
+      file.delete(recursive: recursive);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+final class _WriteHooks extends IOOverrides {
+  _WriteHooks(this.beforeWrite);
+
+  final void Function(File) beforeWrite;
+
+  @override
+  File createFile(String path) {
+    final file = super.createFile(path);
+    return path.endsWith('.part') ? _WriteHookFile(file, beforeWrite) : file;
+  }
+}
+
 /// Everything logged since the last clear, error text included.
 List<String> _loggedLines() => [
   for (final entry in LogCaptureService().getRecentLogs())
@@ -1509,6 +1557,42 @@ void main() {
         },
       );
 
+      test('a tap takeover preserves the queued card\'s own lease', () async {
+        final other = _videoMessage(id: '2' * 64);
+        final message = _videoMessage();
+        final download = Completer<Uint8List>();
+        final blocker = Completer<Uint8List?>();
+        final reading = Completer<void>();
+        fetch = (asked) =>
+            asked.id == message.id ? download.future : Future.value(_plaintext);
+        readFrame = (video) {
+          if (video.path.contains(other.id)) {
+            reading.complete();
+            return blocker.future;
+          }
+          return Future.value(_frame);
+        };
+        final store = createStore(
+          isMessageGone: (id) async => id == message.id,
+        );
+        final firstPreview = store.previewFor(other, download: true);
+        await reading.future;
+        final queuedPreview = store.previewFor(message, download: true);
+        await pumpEventQueue();
+        final tapped = store.videoFor(message);
+        download.complete(_plaintext);
+        final video = await tapped;
+        await pumpEventQueue();
+
+        try {
+          await store.prune();
+          expect(video.existsSync(), isTrue);
+        } finally {
+          blocker.complete(_frame);
+          await Future.wait([firstPreview, queuedPreview]);
+        }
+      });
+
       test(
         'deletes a kept video once its conversation is removed, with no row '
         'left to say so',
@@ -2146,6 +2230,48 @@ void main() {
 
           expect(videos.map((video) => video.path).toSet(), hasLength(1));
           expect(videos.first.readAsBytesSync(), _plaintext);
+        },
+      );
+
+      test(
+        'refuses a rename if the account is removed during the part write',
+        () async {
+          final message = _videoMessage();
+          final deletionRoot = Completer<Directory>();
+          Future<void>? removal;
+          final store = createStore();
+          final kept = IOOverrides.runWithIOOverrides(
+            () => store.videoFor(message),
+            _WriteHooks((part) {
+              if (removal != null || !part.path.contains('.mp4.')) return;
+              // Hold the folder delete back: only the post-write owner check
+              // can prevent the plaintext rename at this boundary.
+              removal = DmVideoStore.deleteOwner(
+                _owner,
+                rootDirectory: () => deletionRoot.future,
+              );
+            }),
+          );
+          try {
+            await expectLater(
+              kept,
+              throwsA(isA<DmVideoUnavailableException>()),
+            );
+            expect(removal, isNotNull);
+            expect(
+              File(
+                '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+              ).existsSync(),
+              isFalse,
+            );
+            expect(
+              ownerDir().listSync().map((file) => file.path),
+              everyElement(isNot(endsWith('.part'))),
+            );
+          } finally {
+            deletionRoot.complete(root);
+            await removal;
+          }
         },
       );
 
