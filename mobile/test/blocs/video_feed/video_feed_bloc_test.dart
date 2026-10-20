@@ -133,6 +133,7 @@ class _GatedWrites extends InMemorySharedPreferencesStore {
     return super.setValue(valueType, key, value);
   }
 }
+class _MockSharedPreferences extends Mock implements SharedPreferences {}
 
 void main() {
   group('VideoFeedBloc', () {
@@ -163,6 +164,9 @@ void main() {
       when(
         () => mockFollowRepository.followingStream,
       ).thenAnswer((_) => followingController.stream);
+      when(() => mockFollowRepository.isFollowingConfirmedByRelay)
+          .thenReturn(true);
+      when(() => mockFollowRepository.initialized).thenAnswer((_) async {});
       when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
 
       when(
@@ -1609,9 +1613,165 @@ void main() {
         },
       );
 
+      group('badge lifecycle and refresh', () {
+        test(
+          'cold badge merge waits for the real follow repository snapshot',
+          () async {
+            final initialized = Completer<void>();
+            var known = false;
+            var authors = <String>[];
+            when(() => mockFollowRepository.initialized)
+                .thenAnswer((_) => initialized.future);
+            when(() => mockFollowRepository.isFollowingConfirmedByRelay)
+                .thenAnswer((_) => known);
+            when(() => mockFollowRepository.followingPubkeys)
+                .thenAnswer((_) => authors);
+            final pager = _MockBadgeVideoPager();
+            when(pager.loadMore)
+                .thenAnswer((_) async => [createTestVideo('merged')]);
+            when(() => pager.hasMore).thenReturn(false);
+            when(
+              () => mockVideosRepository.createBadgeVideoPager(
+                any(),
+                prioritizeUnseen: true,
+              ),
+            ).thenReturn(pager);
+            final bloc = VideoFeedBloc(
+              videosRepository: mockVideosRepository,
+              followRepository: mockFollowRepository,
+              curatedListRepository: mockCuratedListRepository,
+              badgeAuthors: () async => ['2' * 64],
+            );
+            addTearDown(bloc.close);
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+            await pumpEventQueue();
+            verifyNever(
+              () => mockVideosRepository.createBadgeVideoPager(
+                any(),
+                prioritizeUnseen: true,
+              ),
+            );
+            authors = ['1' * 64];
+            known = true;
+            initialized.complete();
+            await pumpEventQueue();
+            verify(
+              () => mockVideosRepository.createBadgeVideoPager([
+                '1' * 64,
+                '2' * 64,
+              ], prioritizeUnseen: true),
+            ).called(1);
+            expect(bloc.state.videos.single.id, 'merged');
+          },
+        );
+
+        test('close while mode persistence is pending never attaches badge listener', () async {
+          final prefs = _MockSharedPreferences();
+          final persisted = Completer<bool>();
+          when(() => prefs.getString(any())).thenReturn(null);
+          when(() => prefs.setString(any(), any()))
+              .thenAnswer((_) => persisted.future);
+          var listens = 0;
+          final changes = StreamController<void>.broadcast(
+            onListen: () => listens++,
+          );
+          addTearDown(changes.close);
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            sharedPreferences: prefs,
+            badgeSubscriptionChanges: changes.stream,
+          );
+          bloc.add(const VideoFeedStarted());
+          await pumpEventQueue();
+          final closed = bloc.close();
+          persisted.complete(true);
+          await closed;
+          expect(listens, 0);
+        });
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'late badge discovery preserves the current video and position',
+          setUp: () {
+            when(() => mockFollowRepository.followingPubkeys)
+                .thenReturn(['direct']);
+            when(
+              () => mockVideosRepository.getHomeFeedVideos(
+                authors: any(named: 'authors'),
+                userPubkey: any(named: 'userPubkey'),
+                cursor: any(named: 'cursor'),
+              ),
+            ).thenAnswer(
+              (_) async => HomeFeedResult(videos: [createTestVideo('fresh')]),
+            );
+          },
+          build: () => VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+          ),
+          seed: () => VideoFeedBlocState(
+            mode: FeedMode.following,
+            status: VideoFeedStatus.success,
+            videos: [
+              createTestVideo('prior'),
+              createTestVideo('watching'),
+              createTestVideo('next'),
+            ],
+            currentIndex: 1,
+          ),
+          act: (bloc) => bloc.add(const VideoFeedBadgeSubscriptionsChanged()),
+          verify: (bloc) {
+            expect(bloc.state.videos[bloc.state.currentIndex].id, 'watching');
+            expect(bloc.state.videos.map((v) => v.id), contains('fresh'));
+          },
+        );
+        test(
+          'empty badge page is not treated as having no followed sources',
+          () async {
+            final pager = _MockBadgeVideoPager();
+            when(pager.loadMore).thenAnswer((_) async => []);
+            when(() => pager.hasMore).thenReturn(false);
+            when(
+              () => mockVideosRepository.createBadgeVideoPager(
+                any(),
+                prioritizeUnseen: true,
+              ),
+            ).thenReturn(pager);
+            final bloc = VideoFeedBloc(
+              videosRepository: mockVideosRepository,
+              followRepository: mockFollowRepository,
+              curatedListRepository: mockCuratedListRepository,
+              badgeAuthors: () async => ['holder'],
+            );
+            addTearDown(bloc.close);
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+            await pumpEventQueue();
+            expect(bloc.state.status, VideoFeedStatus.success);
+            expect(bloc.state.videos, isEmpty);
+            expect(bloc.state.error, isNull);
+          },
+        );
+      });
+
       group('Following pager ownership', () {
         blocTest<VideoFeedBloc, VideoFeedBlocState>(
           'badge subscription discovery leaves For You untouched',
+          setUp: () {
+            when(
+              () => mockVideosRepository.getRecommendedVideos(
+                limit: any(named: 'limit'),
+                skipCache: any(named: 'skipCache'),
+                userPubkey: any(named: 'userPubkey'),
+                until: any(named: 'until'),
+                revalidate: any(named: 'revalidate'),
+                cursor: any(named: 'cursor'),
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  HomeFeedResult(videos: [createTestVideo('unexpected')]),
+            );
+          },
           build: () => VideoFeedBloc(
             videosRepository: mockVideosRepository,
             followRepository: mockFollowRepository,
@@ -1623,7 +1783,19 @@ void main() {
           ),
           act: (bloc) => bloc.add(const VideoFeedBadgeSubscriptionsChanged()),
           expect: () => <VideoFeedBlocState>[],
-          verify: (bloc) => expect(bloc.state.videos.single.id, 'for-you'),
+          verify: (bloc) {
+            expect(bloc.state.videos.single.id, 'for-you');
+            verifyNever(
+              () => mockVideosRepository.getRecommendedVideos(
+                limit: any(named: 'limit'),
+                skipCache: any(named: 'skipCache'),
+                userPubkey: any(named: 'userPubkey'),
+                until: any(named: 'until'),
+                revalidate: any(named: 'revalidate'),
+                cursor: any(named: 'cursor'),
+              ),
+            );
+          },
         );
 
         blocTest<VideoFeedBloc, VideoFeedBlocState>(
@@ -1796,8 +1968,11 @@ void main() {
                 refreshHolders.complete(successor == 'badge' ? ['2' * 64] : []);
                 await pumpEventQueue();
                 expect(
-                  bloc.state.videos.single.id,
-                  successor == 'badge' ? 'new-first' : 'direct-first',
+                  bloc.state.videos.map((video) => video.id),
+                  [
+                    'old-first',
+                    if (successor == 'badge') 'new-first' else 'direct-first',
+                  ],
                 );
                 if (obsoleteFailure) {
                   oldPage.completeError(Exception('obsolete cursor page'));
@@ -1818,8 +1993,8 @@ void main() {
                   },
                   {
                     'visibleIds': successor == 'badge'
-                        ? ['new-first', 'new-second']
-                        : ['direct-first', 'direct-second'],
+                        ? ['old-first', 'new-first', 'new-second']
+                        : ['old-first', 'direct-first', 'direct-second'],
                     'oldPages': 2,
                     'error': null,
                     'opaqueTokenSentHome': false,
@@ -1926,6 +2101,8 @@ void main() {
                 'opaqueTokenSentHome': false,
               });
               expect(bloc.state.videos.map((v) => v.id), [
+                'old-first',
+                'old-second',
                 'direct-first',
                 'direct-second',
               ]);
@@ -2081,6 +2258,7 @@ void main() {
               required kind,
               required content,
               required tags,
+              createdAt,
             }) async => null,
           );
         });
@@ -2114,13 +2292,15 @@ void main() {
 
         VideoFeedBloc badgeBloc({
           Duration timeout = const Duration(seconds: 10),
+          Duration Function()? readTimeout,
         }) => VideoFeedBloc(
           videosRepository: mockVideosRepository,
           followRepository: mockFollowRepository,
           curatedListRepository: mockCuratedListRepository,
           userPubkey: '2' * 64,
-          badgeAuthors: () async =>
-              (await badges.loadSubscribedHolders(timeout: timeout)).toList(),
+          badgeAuthors: () async => (await badges.loadSubscribedHolders(
+            timeout: readTimeout?.call() ?? timeout,
+          )).toList(),
           badgeSubscriptionChanges: badges.subscriptionChanges,
         );
 
@@ -2293,7 +2473,10 @@ void main() {
                         noRelays: false,
                       )),
               );
-              when(() => client.readAllEvents(any())).thenAnswer((call) async {
+              when(
+                () =>
+                    client.readAllEvents(any(), timeout: any(named: 'timeout')),
+              ).thenAnswer((call) async {
                 final filter = call.positionalArguments.single as nostr.Filter;
                 return nostr.PagedQueryResult(
                   events: switch (filter.kinds?.single) {
@@ -2325,8 +2508,11 @@ void main() {
               when(pager.loadMore)
                   .thenAnswer((_) async => [createTestVideo('badge')]);
               when(() => pager.hasMore).thenReturn(false);
+              var holderLoads = 0;
               final bloc = badgeBloc(
-                timeout: timedOut ? Duration.zero : const Duration(seconds: 10),
+                readTimeout: () => timedOut && holderLoads++ == 0
+                    ? Duration.zero
+                    : const Duration(seconds: 10),
               );
               bloc.add(const VideoFeedStarted(mode: FeedMode.following));
               await pumpEventQueue();
@@ -2361,7 +2547,12 @@ void main() {
               final finalState = bloc.state;
               await bloc.close();
               expect(finalState.status, VideoFeedStatus.success);
-              expect(finalState.videos.map((v) => v.id), ['badge']);
+              expect(
+                finalState.videos.map((v) => v.id),
+                beforeHomeCompletes || authNudge
+                    ? ['badge']
+                    : ['direct', 'badge'],
+              );
               expect(queries, authNudge ? 1 : 2);
             },
           );

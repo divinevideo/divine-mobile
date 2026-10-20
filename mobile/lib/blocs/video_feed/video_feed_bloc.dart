@@ -148,9 +148,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final Future<Iterable<String>> Function()? _badgeAuthors;
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
+  bool _isClosing = false;
+
   late final _followingFeed = FollowingVideoFeedSession(
     videosRepository: _videosRepository,
     directAuthors: () => _followRepository.followingPubkeys,
+    waitForDirectAuthors: () => _followRepository.initialized,
+    directAuthorsKnown: () => _followRepository.isFollowingConfirmedByRelay,
     badgeAuthors: _badgeAuthors,
     userPubkey: _userPubkey,
   );
@@ -265,7 +269,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   bool _canEmitForSource(
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
-  ) => !emit.isDone && state.source == source;
+  ) => !_isClosing && !emit.isDone && state.source == source;
 
   bool _shouldEnrichSource(VideoFeedSource source) =>
       // Subscribed-list rows are loaded from locally held event IDs and are
@@ -357,8 +361,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           category: LogCategory.system,
         );
       }
-      if (emit.isDone) return;
+      if (_isClosing || emit.isDone) return;
       await _hashtagsSubscription?.cancel();
+      if (_isClosing || emit.isDone) return;
       _hashtagsSubscription = hashtagRepository.subscriptionsStream.listen((
         tags,
       ) {
@@ -476,6 +481,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         ? storedSource
         : null;
 
+    if (_isClosing || emit.isDone) return;
     final subscribedLists = _curatedListRepository.getSubscribedLists();
 
     emit(
@@ -1172,7 +1178,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
     );
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(
+      state.source,
+      emit,
+      feedLoad: feedLoad,
+      skipCache: true,
+      preserveCurrentVideo: true,
+    );
   }
 
   /// Reconciles the active feed with current curated-list subscriptions.
@@ -1551,6 +1563,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     FeedLoadHandle? feedLoad,
     bool skipCache = false,
     bool revalidate = false,
+    bool preserveCurrentVideo = false,
     List<VideoEvent>? prefetchedCachedVideos,
     bool startsNewFeedSession = false,
   }) async {
@@ -1601,7 +1614,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // replace the rest with fresh results, so fresh content appears right
       // after the current video. The active controller is preserved by
       // InfiniteVideoFeed's common-prefix handling, so it does not restart.
-      final displayedVideos = servedCache
+      final displayedVideos = servedCache || preserveCurrentVideo
           ? _resumeManager.splice(
               existing: state.videos,
               fresh: validVideos,

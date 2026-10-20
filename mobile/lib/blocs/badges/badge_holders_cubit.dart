@@ -29,10 +29,12 @@ class BadgeHoldersCubit extends Cubit<BadgeHoldersState>
   final bool _canSubscribe;
   final Future<List<String>> Function(BadgeCoordinate)? _loadIndexedPreview;
   int _loadGeneration = 0;
+  int _subscriptionGeneration = 0;
 
   /// Loads the holders and, when signed in, the subscription.
   Future<void> load() async {
     final generation = ++_loadGeneration;
+    final subscriptionGeneration = ++_subscriptionGeneration;
     emit(
       state.copyWith(
         holdersStatus: BadgeHoldersStatus.loading,
@@ -44,8 +46,20 @@ class BadgeHoldersCubit extends Cubit<BadgeHoldersState>
     await Future.wait([
       _loadHolders(generation),
       if (_loadIndexedPreview != null) _loadPreview(generation),
-      if (_canSubscribe) _loadSubscription(generation),
+      if (_canSubscribe) _loadSubscription(subscriptionGeneration),
     ]);
+  }
+
+  /// Retries the subscription without discarding holders or video pages.
+  Future<void> retrySubscription() async {
+    if (!_canSubscribe ||
+        state.subscriptionStatus == BadgeSubscriptionStatus.loading ||
+        state.subscriptionStatus == BadgeSubscriptionStatus.saving) {
+      return;
+    }
+    final generation = ++_subscriptionGeneration;
+    emit(state.copyWith(subscriptionStatus: BadgeSubscriptionStatus.loading));
+    await _loadSubscription(generation);
   }
 
   /// Subscribes to or unsubscribes from this badge's holders.
@@ -118,7 +132,7 @@ class BadgeHoldersCubit extends Cubit<BadgeHoldersState>
       final subscriptions = await _repository.loadSubscriptions(
         requireComplete: true,
       );
-      if (generation != _loadGeneration) return;
+      if (generation != _subscriptionGeneration) return;
       emitIfOpen(
         state.copyWith(
           subscriptionStatus: BadgeSubscriptionStatus.ready,
@@ -126,7 +140,7 @@ class BadgeHoldersCubit extends Cubit<BadgeHoldersState>
         ),
       );
     } catch (error, stackTrace) {
-      if (generation != _loadGeneration) return;
+      if (generation != _subscriptionGeneration) return;
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(subscriptionStatus: BadgeSubscriptionStatus.failure),

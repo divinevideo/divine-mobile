@@ -21,6 +21,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
@@ -32,6 +33,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -397,10 +399,6 @@ class _AcceptedHolders extends ConsumerWidget {
         ),
         BlocProvider(
           key: ValueKey((badgeRepository, videosRepository, coordinate)),
-          // Eager, so a re-key after the holders loaded (a filter toggle
-          // rebuilds videosRepository) reloads here; the listener below only
-          // sees subsequent holder state transitions.
-          lazy: false,
           create: (context) {
             final cubit = BadgeVideosCubit(
               badgeRepository: badgeRepository,
@@ -516,8 +514,8 @@ class _SubscriptionAction extends StatelessWidget {
       BadgeSubscriptionStatus.unavailable ||
       BadgeSubscriptionStatus.initial => const SizedBox.shrink(),
       BadgeSubscriptionStatus.failure => _DetailMessage(
-        message: context.l10n.badgesLoadError,
-        onRetry: cubit.load,
+        message: context.l10n.badgeSubscriptionLoadError,
+        onRetry: cubit.retrySubscription,
       ),
       _ => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +527,9 @@ class _SubscriptionAction extends StatelessWidget {
             ),
           ),
           DivineButton(
-            label: subscribed
+            label: status == BadgeSubscriptionStatus.loading
+                ? context.l10n.commonLoading
+                : subscribed
                 ? context.l10n.badgeSubscribedAction
                 : context.l10n.badgeSubscribeAction,
             type: DivineButtonType.link,
@@ -587,6 +587,7 @@ class _AcceptedHolderListState extends State<_AcceptedHolderList> {
                 selector: (state) => state.isFollowing(holder),
                 builder: (context, isFollowing) => UserProfileTile(
                   pubkey: holder,
+                  onTap: () => context.pushOtherProfile(holder),
                   isFollowing: isFollowing,
                   onFollow: () => context.read<MyFollowingBloc>().add(
                     MyFollowingFollowRequested(holder),
@@ -652,6 +653,16 @@ class _BadgeVideoGrid extends ConsumerWidget {
                 size: DivineButtonSize.small,
                 onPressed: () => context.push<void>(
                   BadgeVideosScreen.pathFor(coordinate),
+                  extra: holdersStatus == BadgeHoldersStatus.loaded
+                      ? BadgeVideosSeed(
+                          coordinate: coordinate,
+                          holders: context
+                              .read<BadgeHoldersCubit>()
+                              .state
+                              .holders
+                              .toSet(),
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -672,49 +683,63 @@ class _BadgeVideoGrid extends ConsumerWidget {
               ),
             ),
           ),
-          BadgeVideosStatus.loaded when state.videos.isEmpty =>
-            SliverToBoxAdapter(
-              child: Text(
-                context.l10n.exploreNoVideosAvailable,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.onSurfaceVariant,
-                ),
-              ),
+          BadgeVideosStatus.loaded => VideoGridFilter(
+            videos: state.videos,
+            loadingBuilder: (_) => const SliverToBoxAdapter(
+              child: Center(child: BrandedLoadingIndicator(size: 40)),
             ),
-          BadgeVideosStatus.loaded => SliverGrid.builder(
-            itemCount: state.videos.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 4,
-              mainAxisSpacing: 4,
-              childAspectRatio: 0.75,
-            ),
-            itemBuilder: (context, index) {
-              final video = state.videos[index];
-              return Semantics(
-                label: context.l10n.profileVideoThumbnailLabel(index + 1),
-                button: true,
-                child: GestureDetector(
-                  onTap: () => unawaited(
-                    context.push(
-                      PooledFullscreenVideoFeedScreen.pathForVideoId(video.id),
-                      extra: PooledFullscreenVideoFeedArgs(
-                        source: VideoListViewSource(state.videos),
-                        feedRepository: ref.read(feedRepositoryProvider),
-                        initialIndex: index,
-                        initialVideoId: video.id,
-                        trafficSource: ViewTrafficSource.discoveryBadges,
-                        sourceDetail: coordinate.value,
+            builder: (context, videos) => videos.isEmpty
+                ? SliverToBoxAdapter(
+                    child: Text(
+                      context.l10n.exploreNoVideosAvailable,
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.onSurfaceVariant,
                       ),
                     ),
+                  )
+                : SliverGrid.builder(
+                    itemCount: videos.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 4,
+                          mainAxisSpacing: 4,
+                          childAspectRatio: 0.75,
+                        ),
+                    itemBuilder: (context, index) {
+                      final video = videos[index];
+                      return Semantics(
+                        label: context.l10n.profileVideoThumbnailLabel(
+                          index + 1,
+                        ),
+                        button: true,
+                        child: GestureDetector(
+                          onTap: () => unawaited(
+                            context.push(
+                              PooledFullscreenVideoFeedScreen.pathForVideoId(
+                                video.id,
+                              ),
+                              extra: PooledFullscreenVideoFeedArgs(
+                                source: VideoListViewSource(videos),
+                                feedRepository: ref.read(
+                                  feedRepositoryProvider,
+                                ),
+                                initialIndex: index,
+                                initialVideoId: video.id,
+                                trafficSource:
+                                    ViewTrafficSource.discoveryBadges,
+                                sourceDetail: coordinate.value,
+                              ),
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: VideoThumbnailWidget(video: video),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: VideoThumbnailWidget(video: video),
-                  ),
-                ),
-              );
-            },
           ),
         },
         if (state.status == BadgeVideosStatus.loaded && state.hasMore)
