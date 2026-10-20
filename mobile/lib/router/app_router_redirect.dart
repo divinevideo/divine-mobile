@@ -8,14 +8,18 @@ bool _hasNavigated = false;
 bool _suppressNextAuthenticatedAuthRouteRedirect = false;
 
 /// Sends profile routes to the wrapper that owns their action surface.
+///
+/// [matchedTemplate] is the pattern of the route GoRouter matched for
+/// [location], or null when it matched none (see [parseMatchedRoute]).
 @visibleForTesting
 String? profileOwnerRedirectTarget({
   required String location,
+  required String? matchedTemplate,
   required String? currentPublicKeyHex,
 }) {
   if (currentPublicKeyHex == null || currentPublicKeyHex.isEmpty) return null;
 
-  final route = parseKnownRoute(location);
+  final route = parseMatchedRoute(location, matchedTemplate: matchedTemplate);
   final npub = route?.npub;
   if (npub == null || npub.isEmpty) return null;
   final targetHex = npubToHexOrNull(npub);
@@ -657,6 +661,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
   if (authState == AuthState.authenticated) {
     final profileRedirect = profileOwnerRedirectTarget(
       location: location,
+      // A rewritten deep link is not the location GoRouter matched.
+      matchedTemplate: deepLinkRewrite == null ? state.fullPath : null,
       currentPublicKeyHex: authService.currentPublicKeyHex,
     );
     if (profileRedirect != null) return profileRedirect;

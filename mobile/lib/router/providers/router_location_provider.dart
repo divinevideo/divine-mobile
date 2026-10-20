@@ -4,8 +4,21 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// The location [router] is showing, as its delegate listeners should read it.
+///
+/// Not routeInformationProvider.value: after a refreshListenable redirect the
+/// router writes the new location there only after notifying, and silently, so
+/// it would stay on the previous page (#10279).
+Uri routerLocationOf(GoRouter router) {
+  final reported = router.routeInformationParser.restoreRouteInformation(
+    router.routerDelegate.currentConfiguration,
+  );
+  return reported?.uri ?? router.routeInformationProvider.value.uri;
+}
 
 /// Provider that exposes the raw router location stream
 ///
@@ -26,15 +39,8 @@ final routerLocationStreamProvider = Provider<Stream<String>>((ref) {
   // building` into the app zone, and on to Crashlytics, on every cold start.
   final ctrl = StreamController<String>();
 
-  // Not routeInformationProvider.value: after a refreshListenable redirect the
-  // router writes the new location there only after this notification, and
-  // silently, so it would stay on the previous page (#10279).
   void emit() {
-    final reported = router.routeInformationParser.restoreRouteInformation(
-      router.routerDelegate.currentConfiguration,
-    );
-    final location = reported?.uri ?? router.routeInformationProvider.value.uri;
-    if (!ctrl.isClosed) ctrl.add(location.toString());
+    if (!ctrl.isClosed) ctrl.add(routerLocationOf(router).toString());
   }
 
   // Queue the current location so a subscriber gets one without waiting for

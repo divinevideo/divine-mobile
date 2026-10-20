@@ -512,13 +512,17 @@ void main() {
       });
 
       test('Unknown route is not a known normalizable route', () {
-        expect(parseKnownRoute('/unknown-route'), isNull);
+        expect(
+          parseMatchedRoute('/unknown-route', matchedTemplate: null),
+          isNull,
+        );
       });
 
       test('people list roster is a known normalizable route', () {
-        // Registered with the normalizer, so the route is modeled rather
-        // than passed through as unknown.
-        final context = parseKnownRoute('/people-lists/list%3A123/members');
+        final context = parseMatchedRoute(
+          '/people-lists/list%3A123/members',
+          matchedTemplate: '/people-lists/:listId/members',
+        );
         expect(context?.type, RouteType.peopleListRoster);
         expect(context?.listId, 'list:123');
       });
@@ -533,14 +537,14 @@ void main() {
         expect(() => parseRoute('/following'), returnsNormally);
         final context = parseRoute('/following');
         expect(context.type, RouteType.home);
-        expect(parseKnownRoute('/following'), isNull);
+        expect(parseMatchedRoute('/following', matchedTemplate: null), isNull);
       });
 
       test('Incomplete followers route defaults to home without throwing', () {
         expect(() => parseRoute('/followers'), returnsNormally);
         final context = parseRoute('/followers');
         expect(context.type, RouteType.home);
-        expect(parseKnownRoute('/followers'), isNull);
+        expect(parseMatchedRoute('/followers', matchedTemplate: null), isNull);
       });
     });
 
@@ -594,8 +598,9 @@ void main() {
 
   group('Route normalization round-trip', () {
     // buildRoute(parseRoute(path)) must equal path for all routes.
-    // This is exactly the check routeNormalizationProvider performs;
-    // a mismatch causes an unwanted redirect (see /video/:id bug).
+    // routeNormalizationProvider rewrites a location to that canonical form
+    // whenever it still fits the route GoRouter matched, so a mismatch on
+    // the same route is an unwanted redirect (see /video/:id bug).
     final roundTripCases = {
       'video detail': VideoDetailScreen.pathForId(
         'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
