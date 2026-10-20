@@ -2473,14 +2473,9 @@ class FollowRepository {
   /// the next call free to try again. A disposed repository does nothing.
   Future<void> initialize() {
     if (_isInitialized || _isDisposed) return Future<void>.value();
-    return _initializing ??= _initialize().whenComplete(
-      () => _initializing = null,
-    );
-  }
-
-  Future<void> _initialize() async {
-    // Guard: Skip initialization if user is not authenticated.
-    // Don't set _isInitialized = true so we can retry when keys are available.
+    final initializing = _initializing;
+    if (initializing != null) return initializing;
+    // Missing keys have not started a run that a ready caller can join.
     if (!_nostrClient.hasKeys) {
       Log.debug(
         'FollowRepository.initialize() skipped '
@@ -2488,9 +2483,14 @@ class FollowRepository {
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return;
+      return Future<void>.value();
     }
+    return _initializing = _initialize().whenComplete(
+      () => _initializing = null,
+    );
+  }
 
+  Future<void> _initialize() async {
     try {
       await _restorePersistedMyFollowers();
 

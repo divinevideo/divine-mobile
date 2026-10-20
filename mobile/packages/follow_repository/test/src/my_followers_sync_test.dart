@@ -366,6 +366,47 @@ void main() {
       },
     );
     test(
+      'keys arriving before a skipped initialize settles start hydration',
+      () async {
+        dao.rows[owner] = {first: 100};
+        await repository.dispose();
+        var relayQueries = 0;
+        repository = FollowRepository(
+          nostrClient: client,
+          myFollowersDao: dao,
+          indexerRelayUrls: const [],
+          queryContactList:
+              ({
+                required eventStream,
+                required pubkey,
+                fallbackTimeoutSeconds = 10,
+              }) async {
+                relayQueries++;
+                return null;
+              },
+        );
+        when(() => client.hasKeys).thenReturn(false);
+        final skipped = repository.initialize();
+        when(() => client.hasKeys).thenReturn(true);
+        final ready = repository.initialize();
+        await Future.wait([skipped, ready]);
+        expect(repository.isInitialized, isTrue);
+        await expectLater(repository.initialized, completes);
+        expect(repository.relationshipTo(first), FollowRelationship.followsYou);
+        expect(relayQueries, 1);
+        verify(
+          () => client.subscribe(
+            any(),
+            subscriptionId: any(
+              named: 'subscriptionId',
+              that: startsWith('follow_repo_contact_list'),
+            ),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
       'initialize still loads the following list when persisted followers '
       'cannot be read',
       () async {
