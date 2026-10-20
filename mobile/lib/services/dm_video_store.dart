@@ -200,8 +200,14 @@ class DmVideoStore {
   }
 
   /// The path of [message]'s frame when this store already read or found it,
-  /// known without the disk so a card built again shows it at once.
-  String? knownPreviewPathFor(DmMessage message) => _knownPreviews[message.id];
+  /// so a card built again shows it at once. Null once the file is gone: the
+  /// system can clear the cache directory while the app runs.
+  String? knownPreviewPathFor(DmMessage message) {
+    final path = _knownPreviews[message.id];
+    if (path == null || File(path).existsSync()) return path;
+    _knownPreviews.remove(message.id);
+    return null;
+  }
 
   /// Deletes files nobody opened for [maxIdle], then the least recently
   /// opened ones until this account's files fit in [maxBytes].

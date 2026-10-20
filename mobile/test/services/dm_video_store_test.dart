@@ -334,6 +334,20 @@ void main() {
       );
 
       test(
+        'forgets a frame the system cleared, so no card starts from it',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          final preview = await store.previewFor(message, download: true);
+          expect(store.knownPreviewPathFor(message), equals(preview!.path));
+
+          preview.deleteSync();
+
+          expect(store.knownPreviewPathFor(message), isNull);
+        },
+      );
+
+      test(
         'remembers a frame an earlier session kept once it finds it',
         () async {
           final message = _videoMessage();
