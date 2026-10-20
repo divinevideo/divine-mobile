@@ -292,6 +292,15 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     }
   }
 
+  /// The canvas' speed bodies, or `null` outside the editor.
+  DetachedClipSpeedBodies? get _speedBodies {
+    try {
+      return context.read<DetachedClipSpeedBodies>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
   /// This layer's slot on the timeline, or `null` when it has none.
   ({Duration start, Duration end})? get _window {
     final id = DetachedClipLayerData.layerIdOf(widget.meta);
@@ -322,6 +331,7 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     _player?.detach();
 
     final key = detachedClipPlayerKey(widget.meta);
+    final speedBodies = _speedBodies;
     final documentsPath = await getDocumentsPath();
     // Keep ownership visible across every await: a release signal or dispose
     // must be able to return even a player that has not finished opening.
@@ -351,7 +361,7 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     final previousKey = _heldKey;
     final opening = detachedClipPlayers.acquire(
       key,
-      () => DetachedClipPlayer.open(clip),
+      () => DetachedClipPlayer.open(clip, speedBodies: speedBodies),
     );
     // Released only after the acquire, so reloading onto the same source keeps
     // the entry alive instead of dropping it to zero refs in between.

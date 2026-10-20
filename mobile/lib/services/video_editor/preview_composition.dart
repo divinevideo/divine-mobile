@@ -79,6 +79,10 @@ class PreviewComposition {
   /// live-retimed clip until the render swaps in (no overlay, no wait).
   final ClipSpeedRenderService _speedRenderService;
 
+  /// The speed bodies this composition renders, for the detached clips on the
+  /// canvas: they play a ramped clip from the same body as the timeline.
+  ClipSpeedRenderService get speedRenders => _speedRenderService;
+
   final _pendingSeamRenders = ValueNotifier<int>(0);
   bool _disposed = false;
 

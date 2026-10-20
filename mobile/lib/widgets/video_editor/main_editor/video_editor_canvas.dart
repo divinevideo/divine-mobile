@@ -56,6 +56,7 @@ import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
@@ -993,6 +994,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     runDetached: _runDetached,
     onSeamRendered: _resyncPlayerClips,
     onSpeedClipRendered: _resyncSpeedClipsWhenIdle,
+  );
+
+  /// Detached clips play a ramped clip from the same speed body as the
+  /// timeline, rendered by this composition.
+  late final _detachedSpeedBodies = DetachedClipSpeedBodies(
+    (clip) async => (await _composition.speedRenders.render(clip))?.path,
   );
 
   /// Set when a finished speed render's composition swap was deferred because
@@ -2714,7 +2721,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
 
     // Listen for playback control requests from BLoC
-    return MultiBlocListener(
+    final editor = MultiBlocListener(
       listeners: [
         BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
           listenWhen: (previous, current) => !listEquals(
@@ -3614,6 +3621,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           ),
         ),
       ),
+    );
+
+    return RepositoryProvider<DetachedClipSpeedBodies>.value(
+      value: _detachedSpeedBodies,
+      child: editor,
     );
   }
 }

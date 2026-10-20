@@ -12,6 +12,21 @@ import 'package:unified_logger/unified_logger.dart';
 
 const _logName = 'DetachedClipPlayer';
 
+/// Renders the speed body of a detached clip under a speed ramp: the clip
+/// trimmed and at its speeds in a plain file, the one the timeline plays.
+///
+/// Handed down by the editor canvas, which owns the renderer, so a ramped
+/// detached clip shares the timeline's render slots and cache.
+class DetachedClipSpeedBodies {
+  const DetachedClipSpeedBodies(this._render);
+
+  final Future<String?> Function(DivineVideoClip clip) _render;
+
+  /// The path of [clip]'s rendered speed body, or `null` when it could not
+  /// be rendered.
+  Future<String?> bodyPathOf(DivineVideoClip clip) => _render(clip);
+}
+
 /// Plays one detached clip alongside the timeline player and keeps it in step
 /// with the editor playhead.
 ///
@@ -32,7 +47,17 @@ class DetachedClipPlayer {
   ) : this._(controller, clip);
 
   /// Opens a player for [clip], or returns `null` when its file is unusable.
-  static Future<DetachedClipPlayer?> open(DivineVideoClip clip) async {
+  ///
+  /// A clip under a speed ramp plays its body from [speedBodies], the same
+  /// file the timeline plays and the same render the export composites.
+  /// The player retimes a clip at one speed only, and playing the ramp at its
+  /// average speed put the layer up to 0.6 s away from the export on the
+  /// Hero curve. If the body cannot be rendered, the clip falls back to that
+  /// average speed.
+  static Future<DetachedClipPlayer?> open(
+    DivineVideoClip clip, {
+    DetachedClipSpeedBodies? speedBodies,
+  }) async {
     final video = clip.video;
     if (video == null) return null;
 
@@ -45,6 +70,10 @@ class DetachedClipPlayer {
       );
       return null;
     }
+
+    final bodyPath = clip.speedRamp == null
+        ? null
+        : await speedBodies?.bodyPathOf(clip);
 
     final controller = DivineVideoPlayerController(
       useTexture: true,
@@ -63,16 +92,7 @@ class DetachedClipPlayer {
     try {
       await controller.initialize();
       await controller.setSource(
-        VideoClip.file(
-          path,
-          start: clip.trimStart,
-          end: clip.trimStart + clip.trimmedDuration,
-          volume: clip.volume,
-          equalizer: clip.equalizer.toPlayerEqualizer(),
-          // A speed ramp plays at its average speed: the player retimes at
-          // one speed, and the clip keeps the length it has on the canvas.
-          playbackSpeed: clip.averagePlaybackSpeed,
-        ),
+        detachedClipPlayerSource(clip, path: path, bodyPath: bodyPath),
       );
       return DetachedClipPlayer._(controller, clip);
     } catch (error, stackTrace) {
@@ -350,6 +370,36 @@ class DetachedClipPlayer {
     _isPlaying = true;
     await _controller.play();
   }
+}
+
+/// What the companion player loads for [clip], whose file is at [path].
+///
+/// [bodyPath] is the clip's rendered speed body: already trimmed and at the
+/// clip's speeds, so it plays from its own start at 1× and its time is the
+/// clip's playback time, as [detachedClipPlayerPosition] counts it. Without
+/// one the player trims the file itself and retimes it at the clip's average
+/// speed, the only speed it can play.
+VideoClip detachedClipPlayerSource(
+  DivineVideoClip clip, {
+  required String path,
+  String? bodyPath,
+}) {
+  final equalizer = clip.equalizer.toPlayerEqualizer();
+  if (bodyPath != null) {
+    return VideoClip.file(
+      bodyPath,
+      volume: clip.volume,
+      equalizer: equalizer,
+    );
+  }
+  return VideoClip.file(
+    path,
+    start: clip.trimStart,
+    end: clip.trimStart + clip.trimmedDuration,
+    volume: clip.volume,
+    equalizer: equalizer,
+    playbackSpeed: clip.averagePlaybackSpeed,
+  );
 }
 
 /// Where the companion player should be at editor-timeline position
