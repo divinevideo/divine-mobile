@@ -327,8 +327,9 @@ class DmVideoStore {
   /// A video handed to playback or a save this session, or being read for its
   /// frame, is not deleted for its age or the cap and does not count against
   /// [maxBytes], so in-use videos can keep the folder over it. Part files are
-  /// deleted only once old enough to be a crash's. A folder that cannot be
-  /// read is logged, without its path, and left.
+  /// deleted once old enough to be a crash's, or as soon as their message is
+  /// gone. A folder that cannot be read is logged, without its path, and
+  /// left.
   Future<void> prune() async {
     try {
       await _prune();
@@ -359,19 +360,20 @@ class DmVideoStore {
       final stat = file.statSync();
       if (stat.type == FileSystemEntityType.notFound) continue;
       final age = now.difference(stat.modified);
-      if (file.path.endsWith(_partSuffix)) {
-        if (age > _crashedPartAge) _deleteNow(file);
-        continue;
-      }
       // Even a video played this session goes: its sender took it back, or
       // the user removed it. Only a read or a hand-out under way holds it,
-      // and its release prunes again.
+      // and its release prunes again. A part file goes however young, as
+      // its write is no longer wanted.
       if (gone.contains(_messageIdOf(file))) {
         if (!_leases.containsKey(file.path)) {
           _deleteNow(file);
           continue;
         }
         _goneWhileLeased.add(file.path);
+      }
+      if (file.path.endsWith(_partSuffix)) {
+        if (age > _crashedPartAge) _deleteNow(file);
+        continue;
       }
       if (file.path.endsWith(_frameAttemptSuffix)) {
         if (!withVideo.contains(_messageIdOf(file))) _deleteNow(file);
@@ -731,10 +733,7 @@ class DmVideoStore {
   Future<Set<String>> _goneMessageIds(List<File> files) async {
     final isGone = _isMessageGone;
     if (isGone == null) return const {};
-    final ids = {
-      for (final file in files)
-        if (!file.path.endsWith(_partSuffix)) _messageIdOf(file),
-    };
+    final ids = {for (final file in files) _messageIdOf(file)};
     final gone = <String>{};
     for (final id in ids) {
       try {

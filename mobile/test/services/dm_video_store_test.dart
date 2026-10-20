@@ -1475,6 +1475,22 @@ void main() {
       );
 
       test(
+        "deletes a gone message's part file, however young: its write is no "
+        'longer wanted',
+        () async {
+          final writing = keptFile(
+            '${'a' * 64}.mp4.0.part',
+            const [1],
+            opened: now,
+          );
+
+          await createStore(isMessageGone: (_) async => true).prune();
+
+          expect(writing.existsSync(), isFalse);
+        },
+      );
+
+      test(
         'never trims a video handed to playback or a save, even the least '
         'recently opened',
         () async {
