@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_store.dart';
 
 final String _owner = 'e' * 64;
@@ -364,6 +365,33 @@ void main() {
           expect(ownerDir().existsSync(), isTrue);
         },
       );
+
+      test(
+        'writes nothing back for an account removed during its download',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+
+          final video = store.videoFor(_videoMessage());
+          await DmVideoStore.deleteOwner(
+            _owner,
+            rootDirectory: () async => root,
+          );
+          release.complete(_plaintext);
+
+          await expectLater(video, throwsA(isA<DmVideoUnavailableException>()));
+          expect(ownerDir().existsSync(), isFalse);
+        },
+      );
+
+      test('a store created after the removal keeps videos again', () async {
+        await DmVideoStore.deleteOwner(_owner, rootDirectory: () async => root);
+
+        final video = await createStore().videoFor(_videoMessage());
+
+        expect(video.readAsBytesSync(), equals(_plaintext));
+      });
 
       test('deleteOwnersNotIn counts nothing when no video was kept', () async {
         final deleted = await DmVideoStore.deleteOwnersNotIn(

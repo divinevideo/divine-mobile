@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:models/models.dart';
+import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_preview.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -50,6 +51,7 @@ class DmVideoStore {
     this.maxIdle = defaultMaxIdle,
     this.maxBytes = defaultMaxBytes,
   }) : _ownerPubkey = ownerPubkey,
+       _removalsAtCreation = _removals[_safeName(ownerPubkey)] ?? 0,
        _fetchVideo = fetchVideo,
        _readFrame = readFrame ?? readDmVideoCardFrame,
        _rootDirectory = rootDirectory ?? getApplicationCacheDirectory,
@@ -65,6 +67,11 @@ class DmVideoStore {
   static const int defaultMaxBytes = 300 * 1024 * 1024;
 
   static const String _partSuffix = '.part';
+
+  /// How many times each account's videos were deleted by [deleteOwner]. A
+  /// store remembers the count it was created at, so a download that lands
+  /// after its account was removed cannot write the video back.
+  static final Map<String, int> _removals = {};
   static const String _logName = 'DmVideoStore';
 
   /// How long a file may go unopened before [prune] deletes it.
@@ -74,6 +81,7 @@ class DmVideoStore {
   final int maxBytes;
 
   final String _ownerPubkey;
+  final int _removalsAtCreation;
   final DmVideoFetcher _fetchVideo;
   final DmVideoFrameReader _readFrame;
   final Future<Directory> Function() _rootDirectory;
@@ -175,8 +183,10 @@ class DmVideoStore {
     String ownerPubkey, {
     Future<Directory> Function()? rootDirectory,
   }) async {
+    final owner = _safeName(ownerPubkey);
+    _removals.update(owner, (count) => count + 1, ifAbsent: () => 1);
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
-    final dir = Directory('${root.path}/$dirName/${_safeName(ownerPubkey)}');
+    final dir = Directory('${root.path}/$dirName/$owner');
     if (dir.existsSync()) await dir.delete(recursive: true);
   }
 
@@ -262,14 +272,24 @@ class DmVideoStore {
     final part = File('${file.path}$_partSuffix');
     _partsBeingWritten.add(part.path);
     try {
+      _throwIfOwnerRemoved();
       await part.parent.create(recursive: true);
       await part.writeAsBytes(bytes, flush: true);
+      _throwIfOwnerRemoved();
       await part.rename(file.path);
     } catch (_) {
       _deleteQuietly(part);
       rethrow;
     } finally {
       _partsBeingWritten.remove(part.path);
+    }
+  }
+
+  void _throwIfOwnerRemoved() {
+    if ((_removals[_safeName(_ownerPubkey)] ?? 0) != _removalsAtCreation) {
+      throw const DmVideoUnavailableException(
+        'the account was removed from this device',
+      );
     }
   }
 
