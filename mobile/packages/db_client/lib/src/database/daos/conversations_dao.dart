@@ -691,13 +691,14 @@ END
   /// Advances each conversation's read cursor
   /// [Conversations.lastReadTimestamp] to its latest message timestamp, with
   /// the same monotonic semantics as [markAsRead].
-  Future<void> markMultipleAsRead(
+  /// Returns the number of matched rows, including already-read rows.
+  Future<int> markMultipleAsRead(
     List<String> ids, {
     String? ownerPubkey,
   }) async {
-    if (ids.isEmpty) return;
+    if (ids.isEmpty) return 0;
     final placeholders = List.filled(ids.length, '?').join(', ');
-    await customUpdate(
+    return customUpdate(
       'UPDATE conversations SET is_read = 1, '
       'last_read_timestamp = MAX( '
       'COALESCE(last_read_timestamp, 0), '

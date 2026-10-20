@@ -76,21 +76,30 @@ class ConversationActionsCubit extends Cubit<ConversationActionsState> {
   /// Dismiss or restore a single conversation without removing its history.
   Future<bool> setDismissed(String conversationId, {required bool dismissed}) =>
       _runTriage(
-        () => _dmRepository.setConversationDismissed(
-          conversationId,
-          dismissed: dismissed,
-        ),
+        () async {
+          await _dmRepository.setConversationDismissed(
+            conversationId,
+            dismissed: dismissed,
+          );
+          return true;
+        },
       );
 
-  Future<bool> _runTriage(Future<void> Function() action) async {
+  Future<bool> _runTriage(Future<bool> Function() action) async {
     if (state.status == ConversationActionsStatus.processing) return false;
     emit(state.copyWith(status: ConversationActionsStatus.processing));
     try {
-      await action();
+      final success = await action();
       if (!isClosed) {
-        emit(state.copyWith(status: ConversationActionsStatus.success));
+        emit(
+          state.copyWith(
+            status: success
+                ? ConversationActionsStatus.success
+                : ConversationActionsStatus.failure,
+          ),
+        );
       }
-      return true;
+      return success;
     } catch (e, stackTrace) {
       addError(e, stackTrace);
       if (!isClosed) {

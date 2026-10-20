@@ -158,6 +158,52 @@ void main() {
       },
     );
 
+    group('read-marking outcomes', () {
+      test('reports an existing row and repeated reads as success', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(await repository.markConversationAsRead(conversationId), isTrue);
+        expect(await repository.markConversationAsRead(conversationId), isTrue);
+        final row = await conversationsDao.getConversation(conversationId);
+        expect(row!.isRead, isTrue);
+      });
+
+      test('reports missing and other-account rows as unavailable', () async {
+        final repository = buildRepository(userPubkey: _ownerB);
+        expect(
+          await repository.markConversationAsRead(conversationId),
+          isFalse,
+        );
+        expect(await repository.markConversationAsRead('missing'), isFalse);
+        expect(
+          await repository.markConversationsAsRead([conversationId]),
+          isFalse,
+        );
+        final row = await conversationsDao.getConversation(conversationId);
+        expect(row!.isRead, isFalse);
+      });
+
+      test('batch reports partial writes and accepts repeated ids', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(
+          await repository.markConversationsAsRead([conversationId, 'missing']),
+          isFalse,
+        );
+        expect(
+          (await conversationsDao.getConversation(conversationId))!.isRead,
+          isTrue,
+        );
+        expect(
+          await repository.markConversationsAsRead([
+            conversationId,
+            conversationId,
+          ]),
+          isTrue,
+        );
+        expect(await repository.markConversationsAsRead(['missing']), isFalse);
+        expect(await repository.markConversationsAsRead([]), isTrue);
+      });
+    });
+
     test('an uninitialized repository marks nobody read', () async {
       // `ConversationsDao.markAsRead` drops its owner clause entirely for a
       // null owner, leaving `UPDATE conversations SET is_read = 1 WHERE
@@ -165,8 +211,11 @@ void main() {
       // cannot name an owner at all.
       final repository = buildRepository(userPubkey: '');
 
-      await repository.markConversationAsRead(conversationId);
-      await repository.markConversationsAsRead([conversationId]);
+      expect(await repository.markConversationAsRead(conversationId), isFalse);
+      expect(
+        await repository.markConversationsAsRead([conversationId]),
+        isFalse,
+      );
 
       final row = await conversationsDao.getConversation(
         conversationId,

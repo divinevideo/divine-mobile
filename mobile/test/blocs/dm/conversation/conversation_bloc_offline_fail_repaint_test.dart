@@ -49,7 +49,7 @@ void main() {
 
     when(
       () => repo.markConversationAsRead(any()),
-    ).thenAnswer((_) async {});
+    ).thenAnswer((_) async => true);
     // Opening a conversation arms the one-time history drain.
     when(() => repo.backfillHistoryIfNeeded()).thenAnswer((_) async {});
     // A credentialed repository: the bloc holds its loading state while the

@@ -64,6 +64,32 @@ void main() {
       await cubit.close();
     });
 
+    group('markAsRead', () {
+      for (final written in [true, false]) {
+        blocTest<ConversationActionsCubit, ConversationActionsState>(
+          'reports the repository result when written is $written',
+          setUp: () {
+            when(() => mockDmRepo.markConversationAsRead(conversationId))
+                .thenAnswer((_) async => written);
+          },
+          build: createCubit,
+          act: (cubit) async {
+            expect(await cubit.markAsRead(conversationId), written);
+          },
+          expect: () => [
+            const ConversationActionsState(
+              status: ConversationActionsStatus.processing,
+            ),
+            ConversationActionsState(
+              status: written
+                  ? ConversationActionsStatus.success
+                  : ConversationActionsStatus.failure,
+            ),
+          ],
+        );
+      }
+    });
+
     group('isBlocked', () {
       test('delegates to ContentBlocklistRepository', () async {
         when(() => mockBlocklistRepository.isBlocked(pubkey)).thenReturn(true);

@@ -155,11 +155,29 @@ void main() {
 
     group('markAllRequestsAsRead', () {
       blocTest<MessageRequestActionsCubit, MessageRequestActionsState>(
+        'reports failure when the repository cannot mark every request',
+        setUp: () {
+          when(() => mockDmRepository.markConversationsAsRead(any()))
+              .thenAnswer((_) async => false);
+        },
+        build: createCubit,
+        act: (cubit) => cubit.markAllRequestsAsRead([_testConversationId1]),
+        expect: () => [
+          const MessageRequestActionsState(
+            status: MessageRequestActionsStatus.processing,
+          ),
+          const MessageRequestActionsState(
+            status: MessageRequestActionsStatus.error,
+          ),
+        ],
+      );
+
+      blocTest<MessageRequestActionsCubit, MessageRequestActionsState>(
         'emits [processing, success] when markConversationsAsRead succeeds',
         setUp: () {
           when(
             () => mockDmRepository.markConversationsAsRead(any()),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
         },
         build: createCubit,
         act: (cubit) => cubit.markAllRequestsAsRead([

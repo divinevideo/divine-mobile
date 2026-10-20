@@ -10292,30 +10292,35 @@ class DmRepository {
   /// Advances the conversation's read cursor (see
   /// [ConversationsDao.markAsRead]) and schedules a debounced cross-device
   /// read-state marker publish (#4977).
-  /// No-op when no owner is known: [ConversationsDao.markAsRead] drops its
-  /// owner clause entirely for a null owner, leaving a bare
-  /// `UPDATE ... WHERE id = ?` that would advance any account's cursor.
-  Future<void> markConversationAsRead(String conversationId) async {
+  /// Returns false without writing when no owner is known or no visible row
+  /// exists. An already-read row is a successful, idempotent write.
+  Future<bool> markConversationAsRead(String conversationId) async {
     final owner = _ownerPubkey;
-    if (owner == null) return;
-    await _conversationsDao.markAsRead(conversationId, ownerPubkey: owner);
-    _scheduleReadMarkerPublish();
+    if (owner == null) return false;
+    final written = await _conversationsDao.markAsRead(
+      conversationId,
+      ownerPubkey: owner,
+    );
+    if (written) _scheduleReadMarkerPublish();
+    return written;
   }
 
   /// Mark multiple conversations as read in a single batch.
   ///
-  /// No-op when [conversationIds] is empty, or when no owner is known — see
-  /// [markConversationAsRead]. Advances each cursor and schedules a single
-  /// debounced read-state marker publish (#4977).
-  Future<void> markConversationsAsRead(List<String> conversationIds) async {
-    if (conversationIds.isEmpty) return;
+  /// Returns true when every distinct requested row was found (including
+  /// already-read rows), or the list is empty. Returns false for an unknown
+  /// owner or missing rows. Partial writes still sync their read cursors.
+  Future<bool> markConversationsAsRead(List<String> conversationIds) async {
+    if (conversationIds.isEmpty) return true;
     final owner = _ownerPubkey;
-    if (owner == null) return;
-    await _conversationsDao.markMultipleAsRead(
-      conversationIds,
+    if (owner == null) return false;
+    final ids = conversationIds.toSet().toList();
+    final written = await _conversationsDao.markMultipleAsRead(
+      ids,
       ownerPubkey: owner,
     );
-    _scheduleReadMarkerPublish();
+    if (written > 0) _scheduleReadMarkerPublish();
+    return written == ids.length;
   }
 
   /// Put a conversation aside locally, retaining messages and acceptance state.

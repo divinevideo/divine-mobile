@@ -977,7 +977,13 @@ void main() {
           isRead: false,
         );
 
-        await dao.markMultipleAsRead(['conv_1', 'conv_2']);
+        expect(await dao.markMultipleAsRead(['conv_1', 'conv_2']), 2);
+        expect(
+          await dao.markMultipleAsRead(['conv_1', 'conv_1', 'missing']),
+          1,
+        );
+        expect(await dao.markMultipleAsRead(['missing']), 0);
+        expect(await dao.markMultipleAsRead([]), 0);
 
         final c1 = await dao.getConversation('conv_1');
         final c2 = await dao.getConversation('conv_2');

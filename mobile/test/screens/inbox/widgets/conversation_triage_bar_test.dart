@@ -168,6 +168,20 @@ void main() {
       );
     });
 
+    testWidgets('does not report success when the conversation disappeared', (
+      tester,
+    ) async {
+      await database.conversationsDao.deleteConversation(id);
+      await tester.pumpWidget(subject());
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Mark as read'));
+        await database.conversationsDao.getConversation(id, ownerPubkey: owner);
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('Marked as read'), findsNothing);
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
     testWidgets('mark as read affects only this thread without accepting it', (
       tester,
     ) async {
