@@ -15,8 +15,6 @@ import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/video_editor/split_screen_layout_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
-import 'package:openvine/services/video_editor/video_editor_render_service.dart';
-import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
 import 'package:unified_logger/unified_logger.dart';
@@ -48,10 +46,6 @@ typedef SplitScreenBakeChromaKeyFn = Future<DivineVideoClip> Function(
 /// Hands files nothing will reference to the editor's deferred cleanup.
 typedef SplitScreenDeferFileCleanupFn = void Function(Iterable<String?> paths);
 
-/// Cancels a running render by its id — see
-/// [VideoEditorRenderService.cancelTask].
-typedef SplitScreenCancelRenderFn = Future<void> Function(String renderId);
-
 void _noopDeferFileCleanup(Iterable<String?> paths) {}
 
 /// Owns a split-screen layout while the user builds it.
@@ -70,14 +64,12 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
     SplitScreenMaterializeFn? materializeStopMotionClip,
     SplitScreenBakeChromaKeyFn? bakeCapturedChromaKey,
     SplitScreenDeferFileCleanupFn? deferFileCleanup,
-    SplitScreenCancelRenderFn? cancelRender,
   }) : _aspectRatio = aspectRatio,
        _renderLayout = renderLayout ?? SplitScreenLayoutRenderService.render,
        _materializeStopMotionClip =
            materializeStopMotionClip ?? StopMotionRenderService.materialize,
        _bakeCapturedChromaKey = bakeCapturedChromaKey,
        _deferFileCleanup = deferFileCleanup ?? _noopDeferFileCleanup,
-       _cancelRender = cancelRender ?? VideoEditorRenderService.cancelTask,
        super(
          SplitScreenLayoutState(
            frameAspectRatio: aspectRatio.value,
@@ -93,22 +85,6 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
   /// pending take raw — the same default as the clip editor's.
   final SplitScreenBakeChromaKeyFn? _bakeCapturedChromaKey;
   final SplitScreenDeferFileCleanupFn _deferFileCleanup;
-  final SplitScreenCancelRenderFn _cancelRender;
-
-  /// Cancels the render still running, if any: once the screen is gone,
-  /// nothing would take the clip it makes.
-  @override
-  Future<void> close() {
-    if (state.applyRenderId case final renderId? when state.isApplying) {
-      runDetached(
-        _cancelRender(renderId),
-        'cancel the split-screen layout render',
-        logName: 'SplitScreenLayoutCubit',
-        category: LogCategory.video,
-      );
-    }
-    return super.close();
-  }
 
   void presetSelected(SplitScreenLayoutPreset preset) {
     if (state.isApplying) return;

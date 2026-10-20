@@ -1,7 +1,6 @@
 // ABOUTME: Tests the composition a split-screen layout renders: each cell's
 // ABOUTME: placement and matte, and the held last frame of a shorter cell
 
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -13,9 +12,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
-import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/split_screen_layout_render_service.dart';
-import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -43,10 +40,6 @@ class _RecordingProVideoEditor extends ProVideoEditor {
 
   Uint8List frame;
   ui.Size resolution = const ui.Size(1080, 1920);
-
-  /// When set, every metadata read waits for it, holding the render while
-  /// it prepares its cells.
-  Completer<void>? metadataGate;
   final tasks = <VideoRenderData>[];
   final thumbnailRequests = <ThumbnailConfigs>[];
 
@@ -58,17 +51,14 @@ class _RecordingProVideoEditor extends ProVideoEditor {
     EditorVideo value, {
     bool checkStreamingOptimization = false,
     NativeLogLevel? nativeLogLevel,
-  }) async {
-    await metadataGate?.future;
-    return VideoMetadata(
-      duration: const Duration(seconds: 4),
-      extension: 'mp4',
-      fileSize: 1,
-      resolution: resolution,
-      rotation: 0,
-      bitrate: 1,
-    );
-  }
+  }) async => VideoMetadata(
+    duration: const Duration(seconds: 4),
+    extension: 'mp4',
+    fileSize: 1,
+    resolution: resolution,
+    rotation: 0,
+    bitrate: 1,
+  );
 
   @override
   Future<List<Uint8List>> getThumbnails(
@@ -130,7 +120,6 @@ void main() {
     });
 
     tearDown(() {
-      RenderCancellationRegistry.reset();
       PathProviderPlatform.instance = originalPathProvider;
       ProVideoEditor.instance = originalEditor;
       if (documents.existsSync()) documents.deleteSync(recursive: true);
@@ -241,48 +230,6 @@ void main() {
         expect(request['scaleY'], 1);
       },
     );
-
-    test(
-      'stops before encoding when cancelled while the cells are prepared',
-      () async {
-        final gate = Completer<void>();
-        editor.metadataGate = gate;
-        final rendering = SplitScreenLayoutRenderService.render(
-          cells: [
-            (
-              clip: _clip('a'),
-              rect: const ui.Rect.fromLTRB(0, 0, 1, 1),
-              alignment: Alignment.center,
-              zoom: 1,
-            ),
-          ],
-          aspectRatio: model.AspectRatio.vertical,
-          backgroundColor: const ui.Color(0xFFFF0000),
-          taskId: 'layout',
-        );
-        await pumpEventQueue();
-
-        await VideoEditorRenderService.cancelTask('layout');
-        gate.complete();
-
-        await expectLater(rendering, throwsA(isA<RenderCanceledException>()));
-        expect(editor.tasks, isEmpty);
-      },
-    );
-
-    test('leaves nothing to cancel under its render id once done', () async {
-      await renderSideBySide([
-        (clip: _clip('a'), zoom: 1),
-        (clip: _clip('b'), zoom: 1),
-      ]);
-
-      RenderCancellationRegistry.cancel('layout');
-
-      expect(
-        RenderCancellationRegistry.isCancellationRequested('layout'),
-        isFalse,
-      );
-    });
 
     test('renders a sped-up cell under the layout render id', () async {
       await expectLater(
