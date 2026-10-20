@@ -16,6 +16,7 @@ import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/share_sheet/reportable_sites.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -115,12 +116,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       // Divine does not support a self-addressed conversation (#8351), so
       // the viewer is never a share target. Both sources can carry them: a
       // contact list written by another Nostr client can self-follow, and
-      // recents accumulate whoever a share was sent to.
+      // recents accumulate whoever a share was sent to. Retired moderation
+      // accounts refuse sends, so they cannot be offered as recipients either.
       var recentUsers = _videoSharingService.recentlySharedWith
-          .where((user) => !_isSelf(user.pubkey))
+          .where((user) => _isSupportedRecipient(user.pubkey))
           .toList();
       final followList = _followRepository.followingPubkeys
-          .where((pubkey) => !_isSelf(pubkey))
+          .where(_isSupportedRecipient)
           .toSet();
       final candidates = {
         ...followList,
@@ -161,7 +163,9 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       }
       final recentPubkeys = recentUsers.map((u) => u.pubkey).toSet();
       var remainingPubkeys = (snapshot?.keys ?? followList)
-          .where((pk) => !_isSelf(pk) && !recentPubkeys.contains(pk))
+          .where(
+            (pk) => _isSupportedRecipient(pk) && !recentPubkeys.contains(pk),
+          )
           .toList();
       final excludedPubkeys = snapshot == null
           ? <String>{}
@@ -201,7 +205,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           // misses disappear after hydration; a miss that hydration identifies
           // keeps its place, and only rows not shown before append.
           for (final contact in state.contacts)
-            if (!_isSelf(contact.pubkey) &&
+            if (_isSupportedRecipient(contact.pubkey) &&
                 !excludedPubkeys.contains(contact.pubkey) &&
                 (snapshot != null ||
                     _rankingSignalsLoader.isEligible(contact.pubkey)))
@@ -327,11 +331,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     }
   }
 
-  /// Whether [pubkey] addresses the viewer.
+  /// Whether [pubkey] can receive a share through Divine.
   ///
-  /// Case-insensitive, because a pubkey that reaches Divine from another
-  /// client may be upper-case hex.
-  bool _isSelf(String pubkey) => pubkeysEqual(pubkey, _currentUserPubkey);
+  /// Compare the viewer case-insensitively because other clients may supply
+  /// upper-case hex. Retired moderation accounts follow the shared send policy.
+  bool _isSupportedRecipient(String pubkey) =>
+      !pubkeysEqual(pubkey, _currentUserPubkey) &&
+      !isRetiredModerationAccount(pubkey);
 
   // --------------------------------------------------------------------------
   // Recipient selection
@@ -344,7 +350,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     final recipient = event.recipient;
     // Find People searches all users, so it can surface the viewer even
     // though neither contact source offers them (#8351).
-    if (_isSelf(recipient.pubkey)) return;
+    if (pubkeysEqual(recipient.pubkey, _currentUserPubkey)) return;
 
     final updatedSelection = state.isSelected(recipient)
         ? [

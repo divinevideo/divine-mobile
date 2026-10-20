@@ -13,6 +13,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
@@ -463,6 +464,52 @@ void main() {
           readyWith([]),
         ],
       );
+
+      for (final source in ['follows', 'recents']) {
+        for (final snapshotFails in [false, true]) {
+          final retired = kLegacyModerationPubkeys.first;
+          final failure = Exception('local signal read failed');
+          blocTest<ShareSheetBloc, ShareSheetState>(
+            'excludes retired moderation $source when signals '
+            '${snapshotFails ? 'fail' : 'load'}',
+            setUp: () {
+              when(() => mockFollowRepository.followingPubkeys).thenReturn([
+                alice,
+                if (source == 'follows') retired,
+              ]);
+              when(() => mockSharingService.recentlySharedWith).thenReturn([
+                if (source == 'recents')
+                  ShareableUser(pubkey: retired, displayName: 'Retired'),
+              ]);
+              when(
+                () => mockProfileRepository.getCachedProfiles(
+                  pubkeys: any(named: 'pubkeys'),
+                ),
+              ).thenAnswer(
+                (_) async => [
+                  profile(alice, 'Alice'),
+                  profile(retired, 'Retired'),
+                ],
+              );
+              if (snapshotFails) {
+                when(
+                  () => mockRankingSignalsLoader.load(
+                    any(),
+                    includeDmCounterparts: true,
+                  ),
+                ).thenThrow(failure);
+              }
+            },
+            build: createBloc,
+            act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+            expect: () => [
+              const ShareSheetState(status: ShareSheetStatus.loading),
+              readyWith([alice]),
+            ],
+            errors: () => [if (snapshotFails) failure],
+          );
+        }
+      }
 
       final fallbackFailure = Exception('local signal read failed');
       blocTest<ShareSheetBloc, ShareSheetState>(
