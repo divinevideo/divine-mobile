@@ -1,6 +1,6 @@
 // ABOUTME: Widget tests for the single-platform verify connect form.
-// ABOUTME: Covers the manual account fallback used when a proof link is opaque,
-// ABOUTME: and approving the account a sign-in returned.
+// ABOUTME: Covers when sign-in is offered, the manual account fallback used
+// ABOUTME: when a proof link is opaque, and approving a returned sign-in.
 
 import 'dart:async';
 
@@ -8,15 +8,22 @@ import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
+import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:profile_repository/profile_repository.dart';
+
+import '../../helpers/test_provider_overrides.dart';
 
 class _MockIdentityClaimsRepository extends Mock
     implements IdentityClaimsRepository {}
@@ -63,6 +70,152 @@ const _bluesky = VerifierPlatform(
 );
 
 void main() {
+  group(VerifyConnectPage, () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    late _MockIdentityClaimsRepository repository;
+
+    setUp(() {
+      repository = _MockIdentityClaimsRepository();
+    });
+
+    Future<void> pump(
+      WidgetTester tester, {
+      required String platformKey,
+      bool deviceSupportsOAuth = true,
+    }) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            identityClaimsRepositoryProvider.overrideWithValue(repository),
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: _pubkey,
+              ),
+            ),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.authenticated,
+            ),
+            appOAuthSupportProvider.overrideWith(
+              (ref) async => deviceSupportsOAuth,
+            ),
+            analyticsEventSinkProvider.overrideWithValue(
+              const NoOpAnalyticsEventSink(),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: VerifyConnectPage(platformKey: platformKey),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    Finder signInButton(String platformKey) => find.text(
+      l10n.verifyConnectOauthCta(verifyPlatformLabel(platformKey)),
+    );
+
+    testWidgets(
+      'offers only the proof post when the list said sign-in is off',
+      (tester) async {
+        const twitterOff = VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          oauth: false,
+        );
+        // Never answers, so only the list's entry can be what hides it.
+        when(
+          () => repository.startingPlatform('twitter'),
+        ).thenReturn(twitterOff);
+        when(
+          () => repository.platform('twitter'),
+        ).thenAnswer((_) => Completer<VerifierPlatform>().future);
+
+        await pump(tester, platformKey: 'twitter');
+
+        expect(signInButton('twitter'), findsNothing);
+        expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      },
+    );
+
+    const blueskyOn = VerifierPlatform(
+      key: 'bluesky',
+      label: 'Bluesky',
+      supported: true,
+      oauth: true,
+    );
+
+    testWidgets('offers sign-in from the first frame when the list said it '
+        'is on', (tester) async {
+      // Never answers: the screen must not need loadPlatform to show it.
+      when(
+        () => repository.startingPlatform('bluesky'),
+      ).thenReturn(blueskyOn);
+      when(
+        () => repository.platform('bluesky'),
+      ).thenAnswer((_) => Completer<VerifierPlatform>().future);
+
+      await pump(tester, platformKey: 'bluesky');
+
+      expect(signInButton('bluesky'), findsOneWidget);
+    });
+
+    testWidgets("keeps sign-in hidden where the device can't finish it", (
+      tester,
+    ) async {
+      when(
+        () => repository.startingPlatform('bluesky'),
+      ).thenReturn(blueskyOn);
+      when(
+        () => repository.platform('bluesky'),
+      ).thenAnswer((_) async => blueskyOn);
+
+      await pump(tester, platformKey: 'bluesky', deviceSupportsOAuth: false);
+      await tester.pump();
+
+      expect(signInButton('bluesky'), findsNothing);
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+    });
+
+    testWidgets('opened without a list, offers only the proof post until the '
+        'answer arrives, then follows it', (tester) async {
+      final answer = Completer<VerifierPlatform>();
+      when(() => repository.startingPlatform('twitter')).thenReturn(
+        const VerifierPlatform(
+          key: 'twitter',
+          label: 'twitter',
+          supported: true,
+          oauth: false,
+        ),
+      );
+      when(
+        () => repository.platform('twitter'),
+      ).thenAnswer((_) => answer.future);
+
+      await pump(tester, platformKey: 'twitter');
+
+      expect(signInButton('twitter'), findsNothing);
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+
+      // The verifier couldn't be asked, so the app's own list decides.
+      answer.complete(
+        const VerifierPlatform(
+          key: 'twitter',
+          label: 'twitter',
+          supported: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(signInButton('twitter'), findsOneWidget);
+      verify(() => repository.platform('twitter')).called(1);
+    });
+  });
+
   group(VerifyConnectView, () {
     late _MockIdentityClaimsRepository repository;
     late _MockAnalyticsEventSink analytics;
@@ -605,6 +758,32 @@ void main() {
           confirmBinding: any(named: 'confirmBinding'),
         ),
       ).called(1);
+    });
+
+    testWidgets('keeps approve and cancel when the verifier turns sign-in '
+        'off meanwhile', (tester) async {
+      when(() => repository.platform('twitter')).thenAnswer(
+        (_) async => const VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          oauth: false,
+        ),
+      );
+      await pumpWaitingForApproval(tester);
+
+      await cubit.loadPlatform();
+      await tester.pump();
+
+      expect(find.text(signedInTitle), findsOneWidget);
+      expect(button(l10n.verifyConnectSignedInCta), findsOneWidget);
+      expect(button(l10n.verifyConnectSignedInCancel), findsOneWidget);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCancel));
+      await tester.pump();
+
+      expect(cubit.state.status, VerifyConnectStatus.editing);
+      expect(find.text(signedInTitle), findsNothing);
     });
 
     testWidgets('cancel goes back to the sign-in button', (tester) async {
