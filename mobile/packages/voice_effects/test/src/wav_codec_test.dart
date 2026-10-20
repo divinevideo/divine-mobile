@@ -46,6 +46,86 @@ List<int> _uint32(int value) =>
     (ByteData(4)..setUint32(0, value, Endian.little)).buffer.asUint8List();
 
 void main() {
+  group('channel-preserving WAV codec', () {
+    test('writes stereo header and keeps each interleaved sample', () {
+      final audio = PcmAudio(
+        samples: Float32List.fromList([0.5, -0.25, -0.75, 0.125]),
+        sampleRate: 48000,
+        channels: 2,
+      );
+
+      final bytes = encodePcmWav(audio);
+      final header = ByteData.sublistView(bytes);
+      final decoded = decodePcmWav(bytes);
+
+      expect(header.getUint16(22, Endian.little), 2);
+      expect(header.getUint32(28, Endian.little), 48000 * 4);
+      expect(header.getUint16(32, Endian.little), 4);
+      expect(header.getInt16(44, Endian.little), 16384);
+      expect(header.getInt16(46, Endian.little), -8192);
+      expect(decoded.sampleRate, 48000);
+      expect(decoded.channels, 2);
+      expect(decoded.samples, audio.samples);
+    });
+
+    test('keeps independent channels from an external WAV', () {
+      final bytes = _wav([
+        ('fmt ', _fmt(channels: 2)),
+        ('data', _int16([16384, -16384, 0, 8192])),
+      ]);
+
+      final audio = decodePcmWav(bytes);
+
+      expect(audio.channels, 2);
+      expect(audio.sampleRate, 44100);
+      expect(audio.samples, [0.5, -0.5, 0, 0.25]);
+    });
+
+    test('ignores an incomplete trailing frame', () {
+      final audio = decodePcmWav(
+        _wav([
+          ('fmt ', _fmt(channels: 2)),
+          ('data', _int16([16384, -16384, 8192])),
+        ]),
+      );
+
+      expect(audio.samples, [0.5, -0.5]);
+    });
+
+    test('rejects a WAV without a usable channel count', () {
+      expect(
+        () => decodePcmWav(
+          _wav([('fmt ', _fmt(channels: 0)), ('data', <int>[])]),
+        ),
+        throwsA(isA<WavFormatException>()),
+      );
+    });
+
+    test('rejects a WAV with a zero sample rate', () {
+      final bytes = _wav([('fmt ', _fmt()), ('data', <int>[])]);
+      ByteData.sublistView(bytes).setUint32(24, 0, Endian.little);
+
+      expect(() => decodePcmWav(bytes), throwsA(isA<WavFormatException>()));
+    });
+
+    for (final (rate, channels, samples) in [
+      (0, 1, <double>[0]),
+      (44100, 0, <double>[0]),
+      (44100, 2, <double>[0, 0, 0]),
+    ]) {
+      test('rejects invalid PCM ($rate Hz, $channels channels)', () {
+        final audio = PcmAudio(
+          samples: Float32List.fromList(samples),
+          sampleRate: rate,
+          channels: channels,
+        );
+
+        expect(() => encodePcmWav(audio), throwsArgumentError);
+        expect(() => const TimeStretch(2).apply(audio), throwsArgumentError);
+      });
+    }
+  });
+
   group('encodeWav', () {
     test('round-trips through decodeWav', () {
       final samples = Float32List.fromList([0, 0.25, -0.5, 0.999, -1]);

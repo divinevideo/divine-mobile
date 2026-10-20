@@ -1,9 +1,11 @@
-// ABOUTME: Reads 16-bit PCM WAV into mono float samples and writes mono float
-// ABOUTME: samples back out as 16-bit PCM WAV.
+// ABOUTME: Reads and writes 16-bit PCM WAV with interleaved channels, keeping
+// ABOUTME: the original mono codec API for existing voice-effect callers.
 
 import 'dart:typed_data';
 
-/// Thrown when bytes handed to [decodeWav] are not a WAV it can read.
+import 'package:voice_effects/src/pcm_audio.dart';
+
+/// Thrown when a WAV decoder receives a file it cannot read.
 class WavFormatException implements Exception {
   /// Creates a [WavFormatException] describing [message].
   const WavFormatException(this.message);
@@ -42,6 +44,28 @@ const double _int16Scale = 32768;
 /// Throws a [WavFormatException] when [bytes] are not a RIFF/WAVE file, carry
 /// any other sample format, or have no `fmt ` or `data` chunk.
 MonoAudio decodeWav(Uint8List bytes) {
+  final audio = decodePcmWav(bytes);
+  if (audio.channels == 1) {
+    return MonoAudio(samples: audio.samples, sampleRate: audio.sampleRate);
+  }
+  final frames = audio.samples.length ~/ audio.channels;
+  final samples = Float32List(frames);
+  for (var frame = 0; frame < frames; frame++) {
+    var sum = 0.0;
+    for (var channel = 0; channel < audio.channels; channel++) {
+      sum += audio.samples[frame * audio.channels + channel];
+    }
+    samples[frame] = sum / audio.channels;
+  }
+  return MonoAudio(samples: samples, sampleRate: audio.sampleRate);
+}
+
+/// Decodes a 16-bit PCM WAV without mixing its channels.
+///
+/// Accepts the same format and unpatched data sizes as [decodeWav]. Incomplete
+/// trailing frames are ignored. Throws [WavFormatException] for an unreadable
+/// WAV, a missing format/data chunk, or a zero sample rate or channel count.
+PcmAudio decodePcmWav(Uint8List bytes) {
   final data = ByteData.sublistView(bytes);
   if (bytes.length < 12 ||
       _fourCc(bytes, 0) != 'RIFF' ||
@@ -80,38 +104,48 @@ MonoAudio decodeWav(Uint8List bytes) {
   if (channels == null || sampleRate == null || channels == 0) {
     throw const WavFormatException('Missing fmt chunk');
   }
+  if (sampleRate == 0) {
+    throw const WavFormatException('Sample rate must be positive');
+  }
   if (dataOffset == null || dataLength == null) {
     throw const WavFormatException('Missing data chunk');
   }
 
   final frameBytes = channels * 2;
   final frames = dataLength ~/ frameBytes;
-  final samples = Float32List(frames);
-  for (var frame = 0; frame < frames; frame++) {
-    var sum = 0;
-    final start = dataOffset + frame * frameBytes;
-    for (var channel = 0; channel < channels; channel++) {
-      sum += data.getInt16(start + channel * 2, Endian.little);
-    }
-    samples[frame] = sum / channels / _int16Scale;
+  final samples = Float32List(frames * channels);
+  for (var i = 0; i < samples.length; i++) {
+    samples[i] = data.getInt16(dataOffset + i * 2, Endian.little) / _int16Scale;
   }
-  return MonoAudio(samples: samples, sampleRate: sampleRate);
+  return PcmAudio(samples: samples, sampleRate: sampleRate, channels: channels);
 }
 
 /// Encodes [samples] at [sampleRate] Hz as a mono 16-bit PCM WAV file.
 ///
 /// Samples outside `-1.0..1.0` are clamped.
-Uint8List encodeWav(Float32List samples, int sampleRate) {
+Uint8List encodeWav(Float32List samples, int sampleRate) => encodePcmWav(
+  PcmAudio(samples: samples, sampleRate: sampleRate, channels: 1),
+);
+
+/// Encodes [audio] as a 16-bit PCM WAV, preserving channel order and count.
+///
+/// Samples outside `-1.0..1.0` are clamped. Throws [ArgumentError] for a
+/// non-positive sample rate or channel count, or incomplete sample frames.
+Uint8List encodePcmWav(PcmAudio audio) {
+  validatePcmAudio(audio);
+  final samples = audio.samples;
+  final sampleRate = audio.sampleRate;
+  final frameBytes = audio.channels * 2;
   final dataLength = samples.length * 2;
   final bytes = Uint8List(_headerLength + dataLength);
   final data = ByteData.sublistView(bytes)
     ..setUint32(4, 36 + dataLength, Endian.little)
     ..setUint32(16, 16, Endian.little)
     ..setUint16(20, _pcmFormat, Endian.little)
-    ..setUint16(22, 1, Endian.little)
+    ..setUint16(22, audio.channels, Endian.little)
     ..setUint32(24, sampleRate, Endian.little)
-    ..setUint32(28, sampleRate * 2, Endian.little)
-    ..setUint16(32, 2, Endian.little)
+    ..setUint32(28, sampleRate * frameBytes, Endian.little)
+    ..setUint16(32, frameBytes, Endian.little)
     ..setUint16(34, _bitsPerSample, Endian.little)
     ..setUint32(40, dataLength, Endian.little);
   _writeFourCc(bytes, 0, 'RIFF');

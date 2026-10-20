@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:voice_effects/src/audio_effect.dart';
-import 'package:voice_effects/src/fft.dart';
+import 'package:voice_effects/src/wsola.dart';
 
 /// Moves a voice [semitones] up or down while keeping its timing.
 ///
@@ -21,120 +21,15 @@ class PitchShift extends AudioEffect {
   /// How far the voice moves, in equal-tempered semitones.
   final double semitones;
 
-  /// WSOLA frame length, in seconds. Long enough to span two periods of a low
-  /// voice, short enough not to smear syllables.
-  static const double _frameSeconds = 0.03;
-
-  /// How far, in seconds, a frame may move from its nominal position to line
-  /// up with the previous one.
-  static const double _toleranceSeconds = 0.008;
-
-  /// Coarse step of the alignment search before it is refined sample by
-  /// sample around the best candidate.
-  static const int _coarseStep = 4;
-
   @override
   Float32List apply(Float32List samples, int sampleRate) {
     final ratio = math.pow(2, semitones / 12).toDouble();
     if (ratio == 1 || samples.isEmpty) return Float32List.fromList(samples);
-    final stretched = _stretch(samples, sampleRate, ratio);
+    final stretched = stretchPcm(samples, sampleRate, ratio);
     if (ratio > 1) {
       _lowPass(stretched, sampleRate / (2 * ratio) * 0.9, sampleRate);
     }
     return _resample(stretched, samples.length, ratio);
-  }
-
-  /// [samples] made [ratio] times longer at the same pitch.
-  Float64List _stretch(Float32List samples, int sampleRate, double ratio) {
-    final frame = math.max(4, (sampleRate * _frameSeconds).round() & ~1);
-    final synthesisHop = frame ~/ 2;
-    final analysisHop = synthesisHop / ratio;
-    final tolerance = math.min(
-      synthesisHop - 1,
-      (sampleRate * _toleranceSeconds).round(),
-    );
-    final window = hannWindow(frame);
-    // Every sample's correlation is not needed to find the alignment; a
-    // decimated sum finds the same peak for a fraction of the work.
-    final stride = math.max(1, sampleRate ~/ 16000);
-
-    // Pad by a frame on each side so the edges are covered by whole frames.
-    final pad = frame;
-    final input = Float64List(samples.length + 2 * pad);
-    for (var i = 0; i < samples.length; i++) {
-      input[pad + i] = samples[i];
-    }
-    final outputLength = (input.length * ratio).ceil() + frame;
-    final output = Float64List(outputLength);
-
-    var previous = 0;
-    for (var k = 0; ; k++) {
-      final outStart = k * synthesisHop;
-      if (outStart + frame > outputLength) break;
-      final nominal = (k * analysisHop).round();
-      final position = k == 0
-          ? 0
-          : _bestAlignment(
-              input,
-              target: previous + synthesisHop,
-              nominal: nominal,
-              tolerance: tolerance,
-              length: frame - synthesisHop,
-              stride: stride,
-            );
-      for (var i = 0; i < frame; i++) {
-        output[outStart + i] += window[i] * _at(input, position + i);
-      }
-      previous = position;
-    }
-
-    // Crop the stretched padding back off.
-    final start = (pad * ratio).round();
-    final length = (samples.length * ratio).ceil();
-    final cropped = Float64List(length);
-    for (var i = 0; i < length; i++) {
-      cropped[i] = _at(output, start + i);
-    }
-    return cropped;
-  }
-
-  /// Position within `nominal ± tolerance` whose next [length] samples best
-  /// continue the waveform at [target].
-  static int _bestAlignment(
-    Float64List input, {
-    required int target,
-    required int nominal,
-    required int tolerance,
-    required int length,
-    required int stride,
-  }) {
-    double correlation(int candidate) {
-      var sum = 0.0;
-      for (var i = 0; i < length; i += stride) {
-        sum += _at(input, target + i) * _at(input, candidate + i);
-      }
-      return sum;
-    }
-
-    var best = nominal;
-    var bestScore = double.negativeInfinity;
-    for (var delta = -tolerance; delta <= tolerance; delta += _coarseStep) {
-      final score = correlation(nominal + delta);
-      if (score > bestScore) {
-        bestScore = score;
-        best = nominal + delta;
-      }
-    }
-    final first = math.max(best - _coarseStep + 1, nominal - tolerance);
-    final last = math.min(best + _coarseStep - 1, nominal + tolerance);
-    for (var candidate = first; candidate <= last; candidate++) {
-      final score = correlation(candidate);
-      if (score > bestScore) {
-        bestScore = score;
-        best = candidate;
-      }
-    }
-    return math.max(0, best);
   }
 
   /// [stretched] read back at [ratio] times the speed into [length] samples,
