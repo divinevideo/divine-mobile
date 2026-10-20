@@ -1382,7 +1382,10 @@ void main() {
           await preview;
           // The prune the release starts asks once it has listed the folder;
           // what follows it does not wait on anything.
-          await askedAfterRead.future;
+          await askedAfterRead.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('no prune followed the release'),
+          );
           await pumpEventQueue();
 
           expect(ownerDir().listSync(), isEmpty);
@@ -1543,6 +1546,8 @@ void main() {
           await store.prune();
           expect(video.existsSync(), isFalse);
           expect(frame.existsSync(), isTrue);
+          // A pass that no longer lists the video either.
+          await store.prune();
           removed = true;
           await store.prune();
 
@@ -1591,7 +1596,10 @@ void main() {
           readEnded = true;
           read.complete(_frame);
           await preview;
-          await askedAfterRead.future;
+          await askedAfterRead.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('no prune followed the release'),
+          );
           await pumpEventQueue();
 
           expect(ownerDir().listSync(), isEmpty);
@@ -1615,6 +1623,51 @@ void main() {
           await store.prune();
 
           expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
+        "moves a kept frame's record when a card shows it from another "
+        'conversation',
+        () async {
+          final store = createStore(
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'moved',
+          );
+          await store.previewFor(
+            _videoMessage(conversationId: 'misfiled'),
+            download: true,
+          );
+
+          await store.previewFor(
+            _videoMessage(conversationId: 'moved'),
+            download: false,
+          );
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
+        'keeps a conversation record while its video is downloading',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final tapped = store.videoFor(_videoMessage());
+          await pumpEventQueue();
+          final record = keptFile(
+            '${'a' * 64}.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now,
+          );
+
+          await store.prune();
+
+          expect(record.existsSync(), isTrue);
+          release.complete(_plaintext);
+          await tapped;
         },
       );
 

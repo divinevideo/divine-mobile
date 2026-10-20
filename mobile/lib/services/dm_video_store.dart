@@ -591,7 +591,8 @@ class DmVideoStore {
   };
 
   /// Ids of the messages with a video or a frame among [files], whole or
-  /// still being written.
+  /// still being written. A record still being written counts too, which
+  /// only keeps its message's record until the part goes.
   static Set<String> _messageIdsWithContent(List<File> files) => {
     for (final file in files)
       if (!_isSatellite(file)) _messageIdOf(file),
