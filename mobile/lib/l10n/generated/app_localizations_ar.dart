@@ -516,8 +516,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileInvalidId => 'معرّف الملف الشخصي غير صالح';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'شاهد $displayName على Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'شاهد $displayName على Divine!\n\n$url';
   }
 
   @override

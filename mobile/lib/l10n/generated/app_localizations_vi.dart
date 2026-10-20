@@ -498,8 +498,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profileInvalidId => 'ID hồ sơ không hợp lệ';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Xem $displayName trên Divine nè!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Xem $displayName trên Divine nè!\n\n$url';
   }
 
   @override

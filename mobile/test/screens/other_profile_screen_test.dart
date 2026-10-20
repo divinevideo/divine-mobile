@@ -9,6 +9,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateProvider;
@@ -24,6 +25,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -31,6 +33,7 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/auth_service.dart' show AuthState;
 import 'package:openvine/services/official_accounts_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -249,14 +252,25 @@ void main() {
   ProviderContainer createContainer(
     StateProvider<bool> restrictedProvider, {
     bool isVanished = false,
+    UserProfile? sharedProfile,
+    Nip05VerificationStatus verificationStatus =
+        Nip05VerificationStatus.verified,
   }) {
+    final profileRepository = createMockProfileRepository();
+    when(() => profileRepository.getCachedProfile(pubkey: targetPubkey))
+        .thenAnswer((_) async => sharedProfile);
     return ProviderContainer(
       overrides: [
         ...getStandardTestOverrides(
           mockAuthService: authService,
+          mockProfileRepository: profileRepository,
           mockNostrService: nostrClient,
           mockFollowRepository: followRepository,
         ),
+        if (sharedProfile?.nip05 case final String claim)
+          nip05ClaimVerificationProvider(
+            Nip05Claim(pubkey: targetPubkey, nip05: claim),
+          ).overrideWith((ref) async => verificationStatus),
         contentBlocklistRepositoryProvider.overrideWithValue(
           blocklistRepository,
         ),
@@ -291,6 +305,79 @@ void main() {
       ],
     );
   }
+
+  group('Share profile URL', () {
+    for (final (nip05, status, expectedUrl) in [
+      (
+        '_@alice.divine.video',
+        Nip05VerificationStatus.verified,
+        'https://alice.divine.video',
+      ),
+      (
+        'alice@divine.video',
+        Nip05VerificationStatus.verified,
+        'https://alice.divine.video',
+      ),
+      (
+        'alice@openvine.co',
+        Nip05VerificationStatus.verified,
+        'https://alice.divine.video',
+      ),
+      (null, Nip05VerificationStatus.none, null),
+      ('alice@example.com', Nip05VerificationStatus.verified, null),
+      ('_@alice.divine.video', Nip05VerificationStatus.failed, null),
+      ('_@alice.divine.video', Nip05VerificationStatus.error, null),
+    ]) {
+      testWidgets('shares the correct URL for $nip05 with $status', (
+        tester,
+      ) async {
+        final shareCalls = <Map<Object?, Object?>>[];
+        const channel = MethodChannel('dev.fluttercommunity.plus/share');
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          (call) async {
+            shareCalls.add(call.arguments as Map<Object?, Object?>);
+            return 'com.apple.UIKit.activity.CopyToPasteboard';
+          },
+        );
+        addTearDown(() {
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            null,
+          );
+        });
+        final container = createContainer(
+          StateProvider<bool>((ref) => false),
+          sharedProfile: UserProfile(
+            pubkey: targetPubkey,
+            nip05: nip05,
+            displayName: 'Alice',
+            rawData: const {},
+            createdAt: DateTime(2026),
+            eventId: 'c' * 64,
+          ),
+          verificationStatus: status,
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(buildSubject(container: container));
+        await tester.pump();
+        await tester.pump();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.bySemanticsLabel(l10n.profileShareLabel));
+        await tester.pump();
+        await tester.pump();
+
+        final npub = NostrKeyUtils.encodePubKey(targetPubkey);
+        expect(shareCalls, hasLength(1));
+        expect(
+          shareCalls.single['text'],
+          'Check out Alice on Divine!\n\n${expectedUrl ?? 'https://divine.video/profile/$npub'}',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+    }
+  });
 
   group('renders', () {
     testWidgets('names a deleted account instead of its route hints', (

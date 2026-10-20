@@ -535,8 +535,8 @@ class AppLocalizationsBg extends AppLocalizations {
   String get profileInvalidId => 'Невалиден ID на профил';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Виж $displayName в Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Виж $displayName в Divine!\n\n$url';
   }
 
   @override

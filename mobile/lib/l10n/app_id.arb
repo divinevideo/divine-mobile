@@ -184,13 +184,13 @@
     "contentPreferencesUnknownMicrophone": "Mikrofon Tidak Dikenal",
     "profileBlockedAccountNotAvailable": "Akun ini tidak tersedia",
     "profileInvalidId": "ID profil tidak valid",
-    "profileShareText": "Lihat {displayName} di Divine!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "Lihat {displayName} di Divine!\n\n{url}",
     "@profileShareText": {
         "placeholders": {
             "displayName": {
                 "type": "String"
             },
-            "npub": {
+            "url": {
                 "type": "String"
             }
         }

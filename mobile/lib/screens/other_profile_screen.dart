@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
@@ -21,6 +22,7 @@ import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.da
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -232,7 +234,22 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
           ?.getCachedProfile(pubkey: widget.pubkey);
       final displayName = profile?.bestDisplayName ?? fallbackName;
       final npub = NostrKeyUtils.encodePubKey(widget.pubkey);
-      final shareText = shareTextFn(displayName, npub);
+      if (!mounted) return;
+      final verificationStatus = profile?.divineUsername == null
+          ? Nip05VerificationStatus.none
+          : await ref.read(
+              nip05ClaimVerificationProvider(
+                Nip05Claim(pubkey: widget.pubkey, nip05: profile!.nip05!),
+              ).future,
+            );
+      if (!mounted) return;
+      final profileUrl = buildProfileUrl(
+        verificationStatus == Nip05VerificationStatus.verified
+            ? profile?.displayNip05
+            : null,
+        npub,
+      );
+      final shareText = shareTextFn(displayName, profileUrl);
 
       await showShareSheetAtOrigin(
         ShareParams(text: shareText, subject: shareSubjectFn(displayName)),

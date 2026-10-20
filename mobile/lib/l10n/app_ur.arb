@@ -194,13 +194,13 @@
   "contentFiltersFilterOut": "فلٹر کریں",
   "profileBlockedAccountNotAvailable": "یہ اکاؤنٹ دستیاب نہیں ہے",
   "profileInvalidId": "غلط پروفائل ID",
-  "profileShareText": "Divine پر {displayName} کو دیکھیں!\n\nhttps://divine.video/profile/{npub}",
+  "profileShareText": "Divine پر {displayName} کو دیکھیں!\n\n{url}",
   "@profileShareText": {
     "placeholders": {
       "displayName": {
         "type": "String"
       },
-      "npub": {
+      "url": {
         "type": "String"
       }
     }

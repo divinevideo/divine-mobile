@@ -922,8 +922,8 @@ abstract class AppLocalizations {
   /// No description provided for @profileShareText.
   ///
   /// In en, this message translates to:
-  /// **'Check out {displayName} on Divine!\n\nhttps://divine.video/profile/{npub}'**
-  String profileShareText(String displayName, String npub);
+  /// **'Check out {displayName} on Divine!\n\n{url}'**
+  String profileShareText(String displayName, String url);
 
   /// No description provided for @profileShareSubject.
   ///

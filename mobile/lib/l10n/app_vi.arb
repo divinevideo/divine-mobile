@@ -194,13 +194,13 @@
   "contentFiltersFilterOut": "Lọc bỏ",
   "profileBlockedAccountNotAvailable": "Tài khoản này không khả dụng",
   "profileInvalidId": "ID hồ sơ không hợp lệ",
-  "profileShareText": "Xem {displayName} trên Divine nè!\n\nhttps://divine.video/profile/{npub}",
+  "profileShareText": "Xem {displayName} trên Divine nè!\n\n{url}",
   "@profileShareText": {
     "placeholders": {
       "displayName": {
         "type": "String"
       },
-      "npub": {
+      "url": {
         "type": "String"
       }
     }

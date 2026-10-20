@@ -471,8 +471,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileInvalidId => '无效的个人资料 ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return '快来 Divine 看看 $displayName！\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return '快来 Divine 看看 $displayName！\n\n$url';
   }
 
   @override

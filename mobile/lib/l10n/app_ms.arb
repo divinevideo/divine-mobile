@@ -194,13 +194,13 @@
   "contentFiltersFilterOut": "Tapis Keluar",
   "profileBlockedAccountNotAvailable": "Akaun ini tidak tersedia",
   "profileInvalidId": "ID profil tidak sah",
-  "profileShareText": "Lihat {displayName} di Divine!\n\nhttps://divine.video/profile/{npub}",
+  "profileShareText": "Lihat {displayName} di Divine!\n\n{url}",
   "@profileShareText": {
     "placeholders": {
       "displayName": {
         "type": "String"
       },
-      "npub": {
+      "url": {
         "type": "String"
       }
     }

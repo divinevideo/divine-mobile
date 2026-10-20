@@ -528,8 +528,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get profileInvalidId => 'Ongeldige profiel-ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Bekijk $displayName op Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Bekijk $displayName op Divine!\n\n$url';
   }
 
   @override

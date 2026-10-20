@@ -184,13 +184,13 @@
     "contentPreferencesUnknownMicrophone": "Неизвестен микрофон",
     "profileBlockedAccountNotAvailable": "Този акаунт не е наличен",
     "profileInvalidId": "Невалиден ID на профил",
-    "profileShareText": "Виж {displayName} в Divine!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "Виж {displayName} в Divine!\n\n{url}",
     "@profileShareText": {
         "placeholders": {
             "displayName": {
                 "type": "String"
             },
-            "npub": {
+            "url": {
                 "type": "String"
             }
         }

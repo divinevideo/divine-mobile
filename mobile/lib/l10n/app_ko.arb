@@ -125,7 +125,7 @@
     "contentPreferencesUnknownMicrophone": "알 수 없는 마이크",
     "profileBlockedAccountNotAvailable": "이 계정은 이용할 수 없어요",
     "profileInvalidId": "잘못된 프로필 ID",
-    "profileShareText": "Divine에서 {displayName}님을 확인해보세요!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "Divine에서 {displayName}님을 확인해보세요!\n\n{url}",
     "profileShareSubject": "Divine의 {displayName}",
     "profileShareFailed": "프로필을 공유하지 못했어요. 다시 시도해보세요.",
     "profileCopyPublicKey": "공개 키 복사 (npub)",

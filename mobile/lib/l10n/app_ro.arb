@@ -184,13 +184,13 @@
     "contentPreferencesUnknownMicrophone": "Microfon necunoscut",
     "profileBlockedAccountNotAvailable": "Acest cont nu e disponibil",
     "profileInvalidId": "ID de profil invalid",
-    "profileShareText": "Aruncă o privire la {displayName} pe Divine!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "Aruncă o privire la {displayName} pe Divine!\n\n{url}",
     "@profileShareText": {
         "placeholders": {
             "displayName": {
                 "type": "String"
             },
-            "npub": {
+            "url": {
                 "type": "String"
             }
         }

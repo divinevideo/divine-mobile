@@ -69,14 +69,15 @@ class Nip05VerificationService extends ChangeNotifier {
   final Nip05Validator _validator;
   final Duration _batchDebounceDuration;
 
-  // In-memory cache for fast access (pubkey -> status)
-  final Map<String, Nip05VerificationStatus> _memoryCache = {};
+  // Cache and in-flight work are scoped to the exact identity claim.
+  final Map<_VerificationRequest, Nip05VerificationStatus> _memoryCache = {};
 
   // Pending verification requests (not yet executed)
   final Set<_VerificationRequest> _pendingVerifications = {};
 
   // Completers for tracking in-flight requests
-  final Map<String, Completer<Nip05VerificationStatus>> _completers = {};
+  final Map<_VerificationRequest, Completer<Nip05VerificationStatus>>
+  _completers = {};
 
   // Debounce timer for batching
   Timer? _batchDebounceTimer;
@@ -87,8 +88,8 @@ class Nip05VerificationService extends ChangeNotifier {
   bool _isDisposed = false;
 
   /// Get cached verification status (memory only, no network)
-  Nip05VerificationStatus? getCachedStatus(String pubkey) {
-    return _memoryCache[pubkey];
+  Nip05VerificationStatus? getCachedStatus(String pubkey, String nip05) {
+    return _memoryCache[_VerificationRequest(pubkey, nip05)];
   }
 
   /// Get verification status, checking cache and database.
@@ -108,7 +109,7 @@ class Nip05VerificationService extends ChangeNotifier {
     }
 
     // Check memory cache first
-    final cached = _memoryCache[pubkey];
+    final cached = _memoryCache[_VerificationRequest(pubkey, nip05)];
     if (cached != null && cached != Nip05VerificationStatus.pending) {
       return cached;
     }
@@ -119,10 +120,10 @@ class Nip05VerificationService extends ChangeNotifier {
       // If NIP-05 changed, invalidate the cache
       if (dbResult.nip05 != nip05) {
         await _dao.deleteVerification(pubkey);
-        _memoryCache.remove(pubkey);
+        _memoryCache.removeWhere((request, _) => request.pubkey == pubkey);
       } else {
         final status = _statusFromString(dbResult.status);
-        _memoryCache[pubkey] = status;
+        _memoryCache[_VerificationRequest(pubkey, nip05)] = status;
         return status;
       }
     }
@@ -137,16 +138,17 @@ class Nip05VerificationService extends ChangeNotifier {
     String nip05,
   ) {
     // Mark as pending in memory cache
-    _memoryCache[pubkey] = Nip05VerificationStatus.pending;
+    _memoryCache[_VerificationRequest(pubkey, nip05)] =
+        Nip05VerificationStatus.pending;
 
     // Check for existing completer (request deduplication)
-    if (_completers.containsKey(pubkey)) {
-      return _completers[pubkey]!.future;
+    if (_completers.containsKey(_VerificationRequest(pubkey, nip05))) {
+      return _completers[_VerificationRequest(pubkey, nip05)]!.future;
     }
 
     // Create new completer
     final completer = Completer<Nip05VerificationStatus>();
-    _completers[pubkey] = completer;
+    _completers[_VerificationRequest(pubkey, nip05)] = completer;
 
     // Add to pending requests
     _pendingVerifications.add(_VerificationRequest(pubkey, nip05));
@@ -230,7 +232,7 @@ class Nip05VerificationService extends ChangeNotifier {
     if (_isDisposed) return;
 
     // Update memory cache
-    _memoryCache[pubkey] = status;
+    _memoryCache[_VerificationRequest(pubkey, nip05)] = status;
 
     // Persist to database (except pending, which is transient)
     if (status != Nip05VerificationStatus.pending) {
@@ -242,7 +244,7 @@ class Nip05VerificationService extends ChangeNotifier {
     }
 
     // Complete the completer
-    final completer = _completers.remove(pubkey);
+    final completer = _completers.remove(_VerificationRequest(pubkey, nip05));
     if (completer != null && !completer.isCompleted) {
       completer.complete(status);
     }
@@ -254,11 +256,13 @@ class Nip05VerificationService extends ChangeNotifier {
   /// Force re-verification of a pubkey
   Future<Nip05VerificationStatus> reverify(String pubkey, String nip05) async {
     // Clear existing cache
-    _memoryCache.remove(pubkey);
+    _memoryCache.removeWhere((request, _) => request.pubkey == pubkey);
     await _dao.deleteVerification(pubkey);
 
     // Remove any pending completer
-    final existingCompleter = _completers.remove(pubkey);
+    final existingCompleter = _completers.remove(
+      _VerificationRequest(pubkey, nip05),
+    );
     if (existingCompleter != null && !existingCompleter.isCompleted) {
       existingCompleter.complete(Nip05VerificationStatus.pending);
     }
@@ -293,7 +297,8 @@ class Nip05VerificationService extends ChangeNotifier {
 
     final cached = await _dao.getValidVerifications(pubkeys);
     for (final row in cached) {
-      _memoryCache[row.pubkey] = _statusFromString(row.status);
+      _memoryCache[_VerificationRequest(row.pubkey, row.nip05)] =
+          _statusFromString(row.status);
     }
   }
 

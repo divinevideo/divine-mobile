@@ -125,7 +125,7 @@
     "contentPreferencesUnknownMicrophone": "Hindi Kilalang Microphone",
     "profileBlockedAccountNotAvailable": "Hindi available ang account na ito",
     "profileInvalidId": "Invalid ang profile ID",
-    "profileShareText": "Tingnan si {displayName} sa Divine!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "Tingnan si {displayName} sa Divine!\n\n{url}",
     "profileShareSubject": "Si {displayName} sa Divine",
     "profileShareFailed": "Hindi na-share ang profile. Subukan ulit.",
     "profileCopyPublicKey": "Kopyahin ang public key (npub)",

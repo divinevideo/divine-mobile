@@ -9,6 +9,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +34,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -383,6 +385,8 @@ void main() {
       OtherProfileState? otherProfileState,
       bool isOgDiviner = false,
       bool eligibilityIsLoading = false,
+      Nip05VerificationStatus verificationStatus =
+          Nip05VerificationStatus.verified,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -491,6 +495,10 @@ void main() {
             mockFollowRepository: mockFollowRepository,
           ),
           profileVanishedProvider(userIdHex).overrideWith((ref) => isVanished),
+          if ((profile ?? suppliedProfile)?.nip05 case final String claim)
+            nip05ClaimVerificationProvider(
+              Nip05Claim(pubkey: userIdHex, nip05: claim),
+            ).overrideWith((ref) async => verificationStatus),
           ogDivinerEligibilityProvider.overrideWith(
             eligibilityIsLoading
                 ? (ref, pubkey) => Completer<bool>().future
@@ -543,6 +551,68 @@ void main() {
     }
 
     for (final ownProfile in [true, false]) {
+      for (final (nip05, status) in [
+        ('_@alice.divine.video', Nip05VerificationStatus.verified),
+        ('alice@divine.video', Nip05VerificationStatus.verified),
+        ('alice@openvine.co', Nip05VerificationStatus.verified),
+        ('_@alice.divine.video', Nip05VerificationStatus.failed),
+        ('_@alice.divine.video', Nip05VerificationStatus.error),
+        ('_@alice.divine.video', Nip05VerificationStatus.pending),
+      ]) {
+        testWidgets(
+          'copies the correct URL from the shortened handle on '
+          '${ownProfile ? 'own' : 'other'} profile with $nip05 and $status',
+          (tester) async {
+            final clipboardCalls = <MethodCall>[];
+            tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              SystemChannels.platform,
+              (call) async {
+                if (call.method == 'Clipboard.setData') {
+                  clipboardCalls.add(call);
+                }
+                return null;
+              },
+            );
+            addTearDown(() {
+              tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+                SystemChannels.platform,
+                null,
+              );
+            });
+            final profile = createTestProfile(nip05: nip05);
+            await tester.pumpWidget(
+              buildTestWidget(
+                userIdHex: testUserHex,
+                isOwnProfile: ownProfile,
+                profile: profile,
+                suppliedProfile: profile,
+                verificationStatus: status,
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            final npub = NostrKeyUtils.encodePubKey(testUserHex);
+            final displayText =
+                !ownProfile && status == Nip05VerificationStatus.failed
+                ? truncateNpubForDisplay(npub)
+                : '@alice';
+            expect(find.text(displayText), findsOneWidget);
+            await tester.tap(find.text(displayText));
+            await tester.pumpAndSettle();
+
+            expect(clipboardCalls, hasLength(1));
+            expect(
+              clipboardCalls.single.arguments,
+              {
+                'text': status == Nip05VerificationStatus.verified
+                    ? 'https://alice.divine.video'
+                    : 'https://divine.video/profile/$npub',
+              },
+            );
+          },
+        );
+      }
+
       testWidgets(
         'shows the ${ownProfile ? 'private membership chip' : 'public supporter badge'} '
         'on ${ownProfile ? 'your own' : "someone else's"} profile',
@@ -1888,8 +1958,9 @@ void main() {
       tester,
     ) async {
       final mockGoRouter = MockGoRouter();
-      when(() => mockGoRouter.push<Object?>(any()))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockGoRouter.push<Object?>(any()),
+      ).thenAnswer((_) async => null);
       final testProfile = createTestProfile(displayName: 'Owner');
       const profileStats = ProfileStats(
         pubkey: testUserHex,
@@ -1920,8 +1991,9 @@ void main() {
 
     testWidgets("leaves a visitor's Loops column untappable", (tester) async {
       final mockGoRouter = MockGoRouter();
-      when(() => mockGoRouter.push<Object?>(any()))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockGoRouter.push<Object?>(any()),
+      ).thenAnswer((_) async => null);
       final testProfile = createTestProfile(displayName: 'Counted User');
       const profileStats = ProfileStats(
         pubkey: testUserHex,
@@ -3979,46 +4051,6 @@ void main() {
 
         expect(find.byType(VerifiedAccountsRow), findsNothing);
       });
-    });
-  });
-
-  group('buildProfileUrl', () {
-    const testNpub =
-        'npub10z98cqe5kehs5wfnax59vqzuyd7puhr2dyy0g5ha5kxc83h38yts0z3mgg';
-
-    test('returns subdomain URL for divine.video NIP-05', () {
-      expect(
-        buildProfileUrl('_@thomassanders.divine.video', testNpub),
-        equals('https://thomassanders.divine.video'),
-      );
-    });
-
-    test('returns subdomain URL for user@subdomain.divine.video NIP-05', () {
-      expect(
-        buildProfileUrl('user@rabble.divine.video', testNpub),
-        equals('https://rabble.divine.video'),
-      );
-    });
-
-    test('returns npub profile URL for non-divine.video NIP-05', () {
-      expect(
-        buildProfileUrl('alice@example.com', testNpub),
-        equals('https://divine.video/profile/$testNpub'),
-      );
-    });
-
-    test('returns npub profile URL when NIP-05 is null', () {
-      expect(
-        buildProfileUrl(null, testNpub),
-        equals('https://divine.video/profile/$testNpub'),
-      );
-    });
-
-    test('returns npub profile URL when NIP-05 is empty', () {
-      expect(
-        buildProfileUrl('', testNpub),
-        equals('https://divine.video/profile/$testNpub'),
-      );
     });
   });
 }

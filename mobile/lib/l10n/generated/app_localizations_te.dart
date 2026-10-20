@@ -536,8 +536,8 @@ class AppLocalizationsTe extends AppLocalizations {
   String get profileInvalidId => 'చెల్లని ప్రొఫైల్ ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Divineలో $displayNameని చూడండి!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Divineలో $displayNameని చూడండి!\n\n$url';
   }
 
   @override

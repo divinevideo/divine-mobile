@@ -529,8 +529,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get profileInvalidId => 'غلط پروفائل ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Divine پر $displayName کو دیکھیں!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Divine پر $displayName کو دیکھیں!\n\n$url';
   }
 
   @override

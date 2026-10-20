@@ -184,13 +184,13 @@
     "contentPreferencesUnknownMicrophone": "ميكروفون غير معروف",
     "profileBlockedAccountNotAvailable": "هذا الحساب غير متاح",
     "profileInvalidId": "معرّف الملف الشخصي غير صالح",
-    "profileShareText": "شاهد {displayName} على Divine!\n\nhttps://divine.video/profile/{npub}",
+    "profileShareText": "شاهد {displayName} على Divine!\n\n{url}",
     "@profileShareText": {
         "placeholders": {
             "displayName": {
                 "type": "String"
             },
-            "npub": {
+            "url": {
                 "type": "String"
             }
         }
