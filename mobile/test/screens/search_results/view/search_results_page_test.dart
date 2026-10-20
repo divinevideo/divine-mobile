@@ -102,9 +102,10 @@ void main() {
       Override? listThumbnailPolicyOverride,
       MockFollowRepository? mockFollowRepository,
       List<Override> flagOverrides = const [],
+      bool requestFocusOnMount = false,
     }) {
       return testMaterialApp(
-        home: const SearchResultsPage(),
+        home: SearchResultsPage(requestFocusOnMount: requestFocusOnMount),
         mockFollowRepository: mockFollowRepository,
         mockProfileRepository: profileRepositoryOverride == null
             ? mockProfileRepository
@@ -132,6 +133,25 @@ void main() {
         ],
       );
     }
+
+    testWidgets(
+      'offstage search cannot claim focus before profiles are ready',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            requestFocusOnMount: true,
+            profileRepositoryOverride: profileRepositoryProvider
+                .overrideWithValue(null),
+          ),
+        );
+        await tester.pump();
+        final editable = tester.widget<EditableText>(
+          find.byType(EditableText, skipOffstage: false),
+        );
+        expect(editable.focusNode.hasFocus, isFalse);
+        expect(tester.testTextInput.isVisible, isFalse);
+      },
+    );
 
     testWidgets('Nostr resolver follows edits through profile readiness', (
       tester,

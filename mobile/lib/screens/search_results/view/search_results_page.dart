@@ -150,85 +150,94 @@ class _SearchResultsScope extends ConsumerWidget {
       children: [
         Offstage(
           offstage: profileRepository == null,
-          child: MultiBlocProvider(
-            // Recreate the search blocs when an auth-sensitive repository or flag
-            // changes so no bloc remains bound to stale dependencies or visible previews.
-            // See `.claude/rules/state_management.md`.
-            key: ValueKey((
-              owner,
-              videosRepository,
-              hashtagRepository,
-              curatedListRepository,
-              peopleListsRepository,
-              peopleListSearchEnabled,
-            )),
-            providers: [
-              BlocProvider(
-                create: (_) => VideoSearchBloc(
-                  videosRepository: videosRepository,
-                ),
-              ),
-              BlocProvider(
-                create: (_) => HashtagSearchBloc(
-                  hashtagRepository: hashtagRepository,
-                ),
-              ),
-            ],
-            child: RetainedBlocProvider<UserSearchBloc, UserSearchState>(
-              dependencies: (
-                profileRepository,
-                followRepository,
-                rankingSignalsLoader,
-              ),
-              create: (snapshot) {
-                final bloc = UserSearchBloc(
-                  profileRepository: profileRepository,
-                  followRepository: followRepository,
-                  rankingSignalsLoader: rankingSignalsLoader,
-                  viewerPubkey: owner,
-                  initialState: snapshot,
-                );
-                final query = controller.text.trim();
-                if (profileRepository != null &&
-                    query.isNotEmpty &&
-                    (snapshot == null ||
-                        snapshot.query != query ||
-                        snapshot.status == UserSearchStatus.loading)) {
-                  bloc.add(UserSearchQueryChanged(query));
-                }
-                return bloc;
-              },
-              child:
-                  RetainedBlocProvider<NostrIdSearchCubit, NostrIdSearchState>(
-                    dependencies: (profileRepository, videosRepository),
-                    create: (_) => NostrIdSearchCubit(
-                      profileRepository: profileRepository,
+          child: ExcludeFocus(
+            excluding: profileRepository == null,
+            child: TickerMode(
+              enabled: profileRepository != null,
+              child: MultiBlocProvider(
+                // Recreate the search blocs when an auth-sensitive repository or flag
+                // changes so no bloc remains bound to stale dependencies or visible previews.
+                // See `.claude/rules/state_management.md`.
+                key: ValueKey((
+                  owner,
+                  videosRepository,
+                  hashtagRepository,
+                  curatedListRepository,
+                  peopleListsRepository,
+                  peopleListSearchEnabled,
+                )),
+                providers: [
+                  BlocProvider(
+                    create: (_) => VideoSearchBloc(
                       videosRepository: videosRepository,
-                      initialQuery: controller.text,
                     ),
-                    child: _NostrIdAutoOpenScope(
-                      controller: controller,
-                      child: _ListSearchPolicyScope(
-                        repository: curatedListRepository,
-                        peopleRepository: peopleListsRepository,
-                        peopleListSearchEnabled: peopleListSearchEnabled,
-                        policy: listThumbnailPolicy,
-                        controller: controller,
-                        child: _BlocklistRefreshListener(
-                          child: Scaffold(
-                            // bg/surface — matches SearchResultsView's body background so the
-                            // app bar area (which doesn't paint its own background) doesn't
-                            // show through to the root scaffold's darker default.
-                            backgroundColor: context.vineColors.surface,
-                            body: _SearchResultsBody(
-                              controller: controller,
-                              requestFocusOnMount: requestFocusOnMount,
+                  ),
+                  BlocProvider(
+                    create: (_) => HashtagSearchBloc(
+                      hashtagRepository: hashtagRepository,
+                    ),
+                  ),
+                ],
+                child: RetainedBlocProvider<UserSearchBloc, UserSearchState>(
+                  dependencies: (
+                    profileRepository,
+                    followRepository,
+                    rankingSignalsLoader,
+                  ),
+                  create: (snapshot) {
+                    final bloc = UserSearchBloc(
+                      profileRepository: profileRepository,
+                      followRepository: followRepository,
+                      rankingSignalsLoader: rankingSignalsLoader,
+                      viewerPubkey: owner,
+                      initialState: snapshot,
+                    );
+                    final query = controller.text.trim();
+                    if (profileRepository != null &&
+                        query.isNotEmpty &&
+                        (snapshot == null ||
+                            snapshot.query != query ||
+                            snapshot.status == UserSearchStatus.loading)) {
+                      bloc.add(UserSearchQueryChanged(query));
+                    }
+                    return bloc;
+                  },
+                  child:
+                      RetainedBlocProvider<
+                        NostrIdSearchCubit,
+                        NostrIdSearchState
+                      >(
+                        dependencies: (profileRepository, videosRepository),
+                        create: (_) => NostrIdSearchCubit(
+                          profileRepository: profileRepository,
+                          videosRepository: videosRepository,
+                          initialQuery: controller.text,
+                        ),
+                        child: _NostrIdAutoOpenScope(
+                          controller: controller,
+                          child: _ListSearchPolicyScope(
+                            repository: curatedListRepository,
+                            peopleRepository: peopleListsRepository,
+                            peopleListSearchEnabled: peopleListSearchEnabled,
+                            policy: listThumbnailPolicy,
+                            controller: controller,
+                            child: _BlocklistRefreshListener(
+                              child: Scaffold(
+                                // bg/surface — matches SearchResultsView's body background so the
+                                // app bar area (which doesn't paint its own background) doesn't
+                                // show through to the root scaffold's darker default.
+                                backgroundColor: context.vineColors.surface,
+                                body: _SearchResultsBody(
+                                  controller: controller,
+                                  requestFocusOnMount: requestFocusOnMount,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
+                ),
+              ),
             ),
           ),
         ),
