@@ -1615,6 +1615,38 @@ void main() {
 
       group('badge lifecycle and refresh', () {
         test(
+          'first badge subscription works without a published contact list',
+          () async {
+            when(() => mockFollowRepository.refreshFollowingForFeed())
+                .thenAnswer((_) async => true);
+            when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+            when(() => mockFollowRepository.isFollowingConfirmedByRelay)
+                .thenReturn(false);
+            final pager = _MockBadgeVideoPager();
+            when(pager.loadMore)
+                .thenAnswer((_) async => [createTestVideo('badge')]);
+            when(() => pager.hasMore).thenReturn(false);
+            when(
+              () => mockVideosRepository.createBadgeVideoPager(
+                any(),
+                prioritizeUnseen: true,
+              ),
+            ).thenReturn(pager);
+            final bloc = VideoFeedBloc(
+              videosRepository: mockVideosRepository,
+              followRepository: mockFollowRepository,
+              curatedListRepository: mockCuratedListRepository,
+              badgeAuthors: () async => ['2' * 64],
+            );
+            addTearDown(bloc.close);
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+            await pumpEventQueue();
+            expect(bloc.state.status, VideoFeedStatus.success);
+            expect(bloc.state.videos.single.id, 'badge');
+          },
+        );
+
+        test(
           'cold badge merge waits for the real follow repository snapshot',
           () async {
             final initialized = Completer<void>();

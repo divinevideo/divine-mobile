@@ -155,6 +155,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     directAuthors: () => _followRepository.followingPubkeys,
     waitForDirectAuthors: () => _followRepository.initialized,
     directAuthorsKnown: () => _followRepository.isFollowingConfirmedByRelay,
+    confirmDirectAuthors: _followRepository.refreshFollowingForFeed,
     badgeAuthors: _badgeAuthors,
     userPubkey: _userPubkey,
   );
