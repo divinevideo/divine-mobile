@@ -152,6 +152,10 @@ class DmVideoStore {
   /// again once their last lease is released.
   final Set<String> _goneWhileLeased = {};
 
+  /// The prune under way, if any, and whether one was asked for meanwhile.
+  Future<void>? _pruning;
+  bool _pruneAgain = false;
+
   /// Downloads without a tap on play run one at a time: each holds a whole
   /// video in memory, and a long thread shows many at once.
   final _OneAtATime _autoDownloads = _OneAtATime();
@@ -320,9 +324,9 @@ class DmVideoStore {
   /// Everything kept for a message that is gone is deleted too, even a video
   /// played this session: a video retracted by its sender or removed with its
   /// conversation goes at the next prune or, while a read or a hand-out of it
-  /// is under way, once that ends. An account the user
-  /// switched away from keeps such videos until it is signed in again or they
-  /// sit unopened for [maxIdle], since its rows are cleared on the switch.
+  /// is under way, once that ends. An account the user switched away from
+  /// keeps such videos until it is signed in again or they sit unopened for
+  /// [maxIdle], since its rows are cleared on the switch.
   ///
   /// A video handed to playback or a save this session, or being read for its
   /// frame, is not deleted for its age or the cap and does not count against
@@ -330,15 +334,35 @@ class DmVideoStore {
   /// deleted once old enough to be a crash's, or as soon as their message is
   /// gone. A folder that cannot be read is logged, without its path, and
   /// left.
-  Future<void> prune() async {
+  ///
+  /// One prune runs at a time. Asked for while one runs, it runs once more
+  /// after it, for every caller asking meanwhile, and completes with that.
+  Future<void> prune() {
+    final running = _pruning;
+    if (running != null) {
+      _pruneAgain = true;
+      return running;
+    }
+    return _pruning = _pruneWhileAsked();
+  }
+
+  Future<void> _pruneWhileAsked() async {
     try {
-      await _prune();
-    } on FileSystemException catch (error) {
-      Log.warning(
-        'Could not prune kept video DMs: ${_causeOf(error)}',
-        name: _logName,
-        category: LogCategory.video,
-      );
+      do {
+        _pruneAgain = false;
+        try {
+          await _prune();
+        } on FileSystemException catch (error) {
+          Log.warning(
+            'Could not prune kept video DMs: ${_causeOf(error)}',
+            name: _logName,
+            category: LogCategory.video,
+          );
+        }
+      } while (_pruneAgain);
+    } finally {
+      // Cleared before this run completes, so a later ask starts a new run.
+      _pruning = null;
     }
   }
 

@@ -1475,6 +1475,28 @@ void main() {
       );
 
       test(
+        'runs one prune at a time, and one more for all asked meanwhile',
+        () async {
+          keptFile(
+            DmVideoStore.videoFileNameFor(_videoMessage()),
+            _plaintext,
+            opened: now,
+          );
+          var lookups = 0;
+          final store = createStore(
+            isMessageGone: (_) async {
+              lookups++;
+              return false;
+            },
+          );
+
+          await Future.wait([store.prune(), store.prune(), store.prune()]);
+
+          expect(lookups, equals(2));
+        },
+      );
+
+      test(
         "deletes a gone message's part file, however young: its write is no "
         'longer wanted',
         () async {
