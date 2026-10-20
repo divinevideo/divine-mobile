@@ -352,6 +352,38 @@ void main() {
         ],
       );
 
+      test('cancels the render still running when it closes', () async {
+        final rendering = Completer<DivineVideoClip?>();
+        final cancelled = <String>[];
+        final cleanedUp = <String?>[];
+        final cubit = SplitScreenLayoutCubit(
+          aspectRatio: model.AspectRatio.vertical,
+          borderColor: _red,
+          renderLayout: ({
+            required cells,
+            required aspectRatio,
+            required backgroundColor,
+            required taskId,
+          }) => rendering.future,
+          cancelRender: (renderId) async => cancelled.add(renderId),
+          deferFileCleanup: cleanedUp.addAll,
+        )..clipsPicked([_clip('a')]);
+
+        final applying = cubit.apply();
+        await pumpEventQueue();
+        final renderId = cubit.state.applyRenderId;
+        expect(renderId, isNotNull);
+
+        await cubit.close();
+        // A cancel that comes too late still leaves a finished clip behind.
+        rendering.complete(_clip('layout'));
+        await applying;
+
+        expect(cancelled, [renderId]);
+        expect(cleanedUp, contains('/documents/layout.mp4'));
+        expect(cubit.state.status, SplitScreenLayoutStatus.applying);
+      });
+
       test('blocks the layout while a recorded key is being baked', () async {
         final baked = Completer<DivineVideoClip>();
         final cubit = renders.cubit(bake: (_) => baked.future)

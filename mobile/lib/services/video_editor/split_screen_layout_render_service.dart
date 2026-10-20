@@ -15,6 +15,7 @@ import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -90,7 +91,9 @@ abstract final class SplitScreenLayoutRenderService {
   /// Returns `null` when the render produced no file. Throws whatever the
   /// renderer throws, a [RenderCanceledException] included, and an
   /// [Exception] when a cell's clip cannot be read; nothing is left on disk
-  /// then. [taskId] keys the encoder's progress stream.
+  /// then. [taskId] keys the encoder's progress stream, and a
+  /// [VideoEditorRenderService.cancelTask] with it stops the render at any
+  /// point until the encode finishes, the cells' preparation included.
   static Future<DivineVideoClip?> render({
     required List<SplitScreenRenderCell> cells,
     required model.AspectRatio aspectRatio,
@@ -98,6 +101,25 @@ abstract final class SplitScreenLayoutRenderService {
     required String taskId,
   }) async {
     if (cells.isEmpty) return null;
+    final generation = RenderCancellationRegistry.start(taskId);
+    try {
+      return await _render(
+        cells: cells,
+        aspectRatio: aspectRatio,
+        backgroundColor: backgroundColor,
+        taskId: taskId,
+      );
+    } finally {
+      RenderCancellationRegistry.finish(taskId, generation);
+    }
+  }
+
+  static Future<DivineVideoClip?> _render({
+    required List<SplitScreenRenderCell> cells,
+    required model.AspectRatio aspectRatio,
+    required ui.Color backgroundColor,
+    required String taskId,
+  }) async {
     final canvas = VideoEditorConstants.quality.resolutionForAspectRatio(
       aspectRatio,
     );
