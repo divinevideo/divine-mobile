@@ -13,8 +13,13 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Downloads, verifies and decrypts a video DM, returning its plaintext.
-typedef DmVideoFetcher = Future<Uint8List> Function(DmMessage message);
+/// Downloads, verifies and decrypts a video DM, returning its plaintext. A
+/// null [maxBytes] or [timeLimit] keeps the fetcher's own limit.
+typedef DmVideoFetcher = Future<Uint8List> Function(
+  DmMessage message, {
+  int? maxBytes,
+  Duration? timeLimit,
+});
 
 /// Reads the preview frame of a decrypted video, or null when it cannot.
 typedef DmVideoFrameReader = Future<Uint8List?> Function(File video);
@@ -66,6 +71,13 @@ class DmVideoStore {
   /// How much one account's kept files may take before [prune] trims them.
   static const int defaultMaxBytes = 300 * 1024 * 1024;
 
+  /// Largest video, in ciphertext bytes, fetched without a tap on play. A
+  /// bigger one waits for the tap, which still allows the full size.
+  static const int autoDownloadMaxBytes = 25 * 1024 * 1024;
+
+  /// How long a download without a tap on play may run.
+  static const Duration autoDownloadTimeLimit = Duration(minutes: 1);
+
   static const String _partSuffix = '.part';
 
   /// Age past which [sweepOwners] treats a part file as left by a crash.
@@ -91,6 +103,11 @@ class DmVideoStore {
   final DateTime Function() _now;
 
   final Map<String, Future<File>> _videosInFlight = {};
+  final Map<String, Future<File>> _autoDownloadsInFlight = {};
+
+  /// Downloads without a tap on play run one at a time: each holds a whole
+  /// video in memory, and a long thread shows many at once.
+  Future<void> _autoDownloadQueue = Future<void>.value();
   final Map<String, Future<File?>> _previewsInFlight = {};
   final Set<String> _partsBeingWritten = {};
   final StreamController<String> _kept = StreamController<String>.broadcast();
@@ -136,7 +153,10 @@ class DmVideoStore {
   ///
   /// When [download] is false only a video that is already kept is used, so
   /// a message from someone the user has not accepted never fetches anything.
-  /// Null when there is no video to read or no frame can be read from it.
+  /// When it is true the video is fetched in turn with other such downloads,
+  /// within [autoDownloadMaxBytes] and [autoDownloadTimeLimit]; one declared
+  /// bigger is not fetched. Null when there is no video to read or no frame
+  /// can be read from it.
   Future<File?> previewFor(DmMessage message, {required bool download}) {
     final key = '${message.id}|$download';
     return _previewsInFlight[key] ??=
@@ -245,7 +265,35 @@ class DmVideoStore {
     }
   }
 
-  Future<File> _obtainVideo(DmMessage message) async {
+  /// Fetches [message]'s video in turn with other downloads nobody tapped
+  /// for, within their limits. Not shared with [videoFor], which a tap on
+  /// play must not see fail for a limit it does not have.
+  Future<File> _autoVideoFor(DmMessage message) {
+    final id = message.id;
+    return _autoDownloadsInFlight[id] ??=
+        _inAutoDownloadQueue(
+          () => _obtainVideo(
+            message,
+            maxBytes: autoDownloadMaxBytes,
+            timeLimit: autoDownloadTimeLimit,
+          ),
+        ).whenComplete(
+          () => _autoDownloadsInFlight.removeWhere((key, _) => key == id),
+        );
+  }
+
+  Future<File> _inAutoDownloadQueue(Future<File> Function() download) {
+    final turn = _autoDownloadQueue.then((_) => download());
+    // The next download waits for this one to settle, failed or not.
+    _autoDownloadQueue = turn.then<void>((_) {}, onError: (Object _) {});
+    return turn;
+  }
+
+  Future<File> _obtainVideo(
+    DmMessage message, {
+    int? maxBytes,
+    Duration? timeLimit,
+  }) async {
     final file = File(
       '${(await _ownerDirectory()).path}/${videoFileNameFor(message)}',
     );
@@ -253,7 +301,10 @@ class DmVideoStore {
       _markOpened(file);
       return file;
     }
-    await _writeAtomically(file, await _fetchVideo(message));
+    await _writeAtomically(
+      file,
+      await _fetchVideo(message, maxBytes: maxBytes, timeLimit: timeLimit),
+    );
     // An account switch disposes the store while a download can still land.
     if (!_kept.isClosed) _kept.add(message.id);
     runDetached(
@@ -277,11 +328,13 @@ class DmVideoStore {
     }
 
     final keptVideo = File('${dir.path}/${videoFileNameFor(message)}');
+    final declaredBytes = message.fileMetadata?.fileSize;
     final File video;
     if (keptVideo.existsSync()) {
       video = keptVideo;
-    } else if (download) {
-      video = await videoFor(message);
+    } else if (download &&
+        (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
+      video = await _autoVideoFor(message);
     } else {
       return null;
     }

@@ -1,6 +1,7 @@
 // ABOUTME: Fetches a received encrypted video DM and decrypts it.
 // ABOUTME: Bounded Blossom download, hash check, AES-GCM decrypt to bytes.
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
@@ -60,20 +61,32 @@ class DmVideoDecryptor {
   /// Downloads, verifies, and decrypts [message]'s video, returning the
   /// plaintext.
   ///
+  /// The download is cut off past [maxBytes] of ciphertext, which defaults to
+  /// [dmVideoMaxCiphertextBytes], and, when [timeLimit] is given, once it has
+  /// run that long; a host can otherwise trickle bytes forever.
+  ///
   /// Throws a [DmVideoUnavailableException] when the message is not a video,
-  /// the ciphertext exceeds [dmVideoMaxCiphertextBytes], or its SHA-256 does
-  /// not match the sender's `x` tag; an [ArgumentError] for a non-HTTPS URL;
-  /// a [DioException] if the download fails or times out; and whatever
-  /// [FileEncryption.decrypt] throws when the ciphertext does not
-  /// authenticate.
+  /// the ciphertext exceeds [maxBytes], the download outlasts [timeLimit], or
+  /// the ciphertext's SHA-256 does not match the sender's `x` tag; an
+  /// [ArgumentError] for a non-HTTPS URL; a [DioException] if the download
+  /// fails or stalls; and whatever [FileEncryption.decrypt] throws when the
+  /// ciphertext does not authenticate.
   @useResult
-  Future<Uint8List> decrypt(DmMessage message) async {
+  Future<Uint8List> decrypt(
+    DmMessage message, {
+    int? maxBytes,
+    Duration? timeLimit,
+  }) async {
     final metadata = message.fileMetadata;
     if (metadata == null || !metadata.isVideo) {
       throw const DmVideoUnavailableException('message is not a video');
     }
 
-    final ciphertext = await _download(message.content);
+    final ciphertext = await _download(
+      message.content,
+      maxBytes: maxBytes ?? dmVideoMaxCiphertextBytes,
+      timeLimit: timeLimit,
+    );
 
     final expectedHash = metadata.fileHash.toLowerCase();
     if (expectedHash.isNotEmpty &&
@@ -91,8 +104,13 @@ class DmVideoDecryptor {
   }
 
   /// Fetches the ciphertext at [url], refusing anything but `https` and
-  /// aborting as soon as the body exceeds [dmVideoMaxCiphertextBytes].
-  Future<Uint8List> _download(String url) async {
+  /// aborting as soon as the body exceeds [maxBytes] or the download outlasts
+  /// [timeLimit].
+  Future<Uint8List> _download(
+    String url, {
+    required int maxBytes,
+    Duration? timeLimit,
+  }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       throw ArgumentError.value(url, 'url', 'must be an https URL');
@@ -100,6 +118,13 @@ class DmVideoDecryptor {
 
     final cancelToken = CancelToken();
     var oversized = false;
+    var outlasted = false;
+    final deadline = timeLimit == null
+        ? null
+        : Timer(timeLimit, () {
+            outlasted = true;
+            cancelToken.cancel('encrypted video download took too long');
+          });
     final Response<List<int>> response;
     try {
       response = await _dio.get<List<int>>(
@@ -107,8 +132,7 @@ class DmVideoDecryptor {
         options: Options(responseType: ResponseType.bytes),
         cancelToken: cancelToken,
         onReceiveProgress: (received, total) {
-          if (received > dmVideoMaxCiphertextBytes ||
-              total > dmVideoMaxCiphertextBytes) {
+          if (received > maxBytes || total > maxBytes) {
             oversized = true;
             cancelToken.cancel('encrypted video exceeds size limit');
           }
@@ -120,14 +144,21 @@ class DmVideoDecryptor {
           'ciphertext exceeds the size limit',
         );
       }
+      if (outlasted && CancelToken.isCancel(error)) {
+        throw const DmVideoUnavailableException(
+          'the download outlasted its time limit',
+        );
+      }
       rethrow;
+    } finally {
+      deadline?.cancel();
     }
 
     final data = response.data;
     if (data == null || data.isEmpty) {
       throw const DmVideoUnavailableException('empty ciphertext body');
     }
-    if (data.length > dmVideoMaxCiphertextBytes) {
+    if (data.length > maxBytes) {
       throw const DmVideoUnavailableException(
         'ciphertext exceeds the size limit',
       );

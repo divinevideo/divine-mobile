@@ -16,29 +16,34 @@ final Uint8List _plaintext = Uint8List.fromList(
 );
 final Uint8List _frame = Uint8List.fromList(const [0xFF, 0xD8, 0xFF, 0xE0]);
 
-DmMessage _videoMessage({String? id, String fileType = 'video/mp4'}) =>
-    DmMessage(
-      id: id ?? 'a' * 64,
-      conversationId: 'conversation',
-      senderPubkey: 'b' * 64,
-      content: 'https://media.divine.video/${'d' * 64}',
-      createdAt: 1757385263,
-      giftWrapId: 'c' * 64,
-      messageKind: 15,
-      fileMetadata: DmFileMetadata(
-        fileType: fileType,
-        encryptionAlgorithm: 'aes-gcm',
-        decryptionKey: '00' * 32,
-        decryptionNonce: '00' * 12,
-        fileHash: 'f' * 64,
-      ),
-    );
+DmMessage _videoMessage({
+  String? id,
+  String fileType = 'video/mp4',
+  int? fileSize,
+}) => DmMessage(
+  id: id ?? 'a' * 64,
+  conversationId: 'conversation',
+  senderPubkey: 'b' * 64,
+  content: 'https://media.divine.video/${'d' * 64}',
+  createdAt: 1757385263,
+  giftWrapId: 'c' * 64,
+  messageKind: 15,
+  fileMetadata: DmFileMetadata(
+    fileType: fileType,
+    encryptionAlgorithm: 'aes-gcm',
+    decryptionKey: '00' * 32,
+    decryptionNonce: '00' * 12,
+    fileHash: 'f' * 64,
+    fileSize: fileSize,
+  ),
+);
 
 void main() {
   group(DmVideoStore, () {
     late Directory root;
     late DateTime now;
     late int fetches;
+    late List<({int? maxBytes, Duration? timeLimit})> fetchLimits;
     late int frameReads;
     late Future<Uint8List> Function(DmMessage message) fetch;
     late Future<Uint8List?> Function(File video) readFrame;
@@ -47,6 +52,7 @@ void main() {
       root = Directory.systemTemp.createTempSync('dm_video_store_');
       now = DateTime(2026, 10, 20, 12);
       fetches = 0;
+      fetchLimits = [];
       frameReads = 0;
       fetch = (_) async => _plaintext;
       readFrame = (_) async => _frame;
@@ -59,8 +65,9 @@ void main() {
     DmVideoStore createStore({int maxBytes = DmVideoStore.defaultMaxBytes}) =>
         DmVideoStore(
           ownerPubkey: _owner,
-          fetchVideo: (message) {
+          fetchVideo: (message, {maxBytes, timeLimit}) {
             fetches++;
+            fetchLimits.add((maxBytes: maxBytes, timeLimit: timeLimit));
             return fetch(message);
           },
           readFrame: (video) {
@@ -256,6 +263,59 @@ void main() {
           ownerDir().listSync().map((entity) => entity.path),
           equals(['${ownerDir().path}/${'a' * 64}.mp4']),
         );
+      });
+    });
+
+    group('automatic downloads', () {
+      test('run one video at a time', () async {
+        final first = Completer<Uint8List>();
+        final second = Completer<Uint8List>();
+        fetch = (message) =>
+            message.id == 'a' * 64 ? first.future : second.future;
+        final store = createStore();
+
+        final firstPreview = store.previewFor(_videoMessage(), download: true);
+        final secondPreview = store.previewFor(
+          _videoMessage(id: '9' * 64),
+          download: true,
+        );
+        await pumpEventQueue();
+        expect(fetches, equals(1));
+
+        first.complete(_plaintext);
+        await firstPreview;
+        await pumpEventQueue();
+        expect(fetches, equals(2));
+
+        second.complete(_plaintext);
+        expect(await secondPreview, isNotNull);
+      });
+
+      test('are limited in size and time, unlike a tap on play', () async {
+        final store = createStore();
+
+        await store.previewFor(_videoMessage(), download: true);
+        await store.videoFor(_videoMessage(id: '9' * 64));
+
+        expect(fetchLimits, [
+          (
+            maxBytes: DmVideoStore.autoDownloadMaxBytes,
+            timeLimit: DmVideoStore.autoDownloadTimeLimit,
+          ),
+          (maxBytes: null, timeLimit: null),
+        ]);
+      });
+
+      test('leave a video declared too big for a tap on play', () async {
+        final store = createStore();
+
+        final preview = await store.previewFor(
+          _videoMessage(fileSize: DmVideoStore.autoDownloadMaxBytes + 1),
+          download: true,
+        );
+
+        expect(preview, isNull);
+        expect(fetches, isZero);
       });
     });
 

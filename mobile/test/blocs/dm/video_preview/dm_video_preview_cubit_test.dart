@@ -146,6 +146,25 @@ void main() {
         ],
       );
 
+      blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
+        'shows the frame of a video too big to fetch by itself once played',
+        setUp: () => stubPreview(null, download: true),
+        build: () => createCubit(download: true),
+        act: (cubit) async {
+          await cubit.load();
+          stubPreview(_framePath, download: true);
+          kept.add('a' * 64);
+          await pumpEventQueue();
+        },
+        expect: () => const [
+          DmVideoPreviewState(status: DmVideoPreviewStatus.none),
+          DmVideoPreviewState(
+            status: DmVideoPreviewStatus.ready,
+            framePath: _framePath,
+          ),
+        ],
+      );
+
       test('stops waiting when closed', () async {
         stubPreview(null, download: false);
         final cubit = createCubit(download: false);

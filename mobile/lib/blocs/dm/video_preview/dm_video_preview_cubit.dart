@@ -42,9 +42,10 @@ class DmVideoPreviewState extends Equatable {
 /// Finds the frame one video DM's card shows.
 ///
 /// With [download] the video is downloaded and decrypted when it is not kept
-/// yet. Without it, which is how a message request's card works, only a video
-/// already kept is used, and the card picks up its frame as soon as the user
-/// plays the video and the store keeps it.
+/// yet, unless it is too big to fetch without a tap. Without it, which is how
+/// a message request's card works, only a video already kept is used. Either
+/// way, a card left without a frame picks it up as soon as the user plays the
+/// video and the store keeps it.
 class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
     with CloseGuardedEmit<DmVideoPreviewState> {
   /// Creates a [DmVideoPreviewCubit] for [message].
@@ -83,7 +84,7 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
         return;
       }
       emitIfOpen(const DmVideoPreviewState(status: DmVideoPreviewStatus.none));
-      if (!_download && !isClosed) _waitForKeptVideo(store);
+      if (!isClosed) _waitForKeptVideo(store);
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emitIfOpen(const DmVideoPreviewState(status: DmVideoPreviewStatus.none));
