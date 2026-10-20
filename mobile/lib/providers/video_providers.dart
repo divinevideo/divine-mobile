@@ -497,17 +497,7 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
     fetchVideo: ref.watch(dmVideoDecryptorProvider).decrypt,
     isMessageGone: dmVideoMessageGone(db, owner),
   );
-  // A retracted or removed message's video goes soon after, not only at the
-  // next launch.
-  final goneCleanup = dmVideoMessageChanges(db)
-      .debounce(DmVideoStore.goneCleanupDelay)
-      .listen(
-        (_) => runProviderDetached(
-          store.prune(),
-          'prune kept video DMs after a message went',
-          logName: 'DmVideoStore',
-        ),
-      );
+  final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
   ref.onDispose(() {
     unawaited(goneCleanup.cancel());
     unawaited(store.dispose());
@@ -535,6 +525,22 @@ Future<bool> Function(String messageId) dmVideoMessageGone(
   return removed ||
       await db.directMessagesDao.isRetracted(messageId, ownerPubkey: owner);
 };
+
+/// Runs [prune] after a DM row in [db] changes or a removed message is
+/// recorded, so a retracted or removed message's kept video goes soon after,
+/// not only at the next launch.
+StreamSubscription<void> pruneWhenDmVideoMessagesGo(
+  AppDatabase db,
+  Future<void> Function() prune,
+) => dmVideoMessageChanges(db)
+    .audit(DmVideoStore.goneCleanupDelay)
+    .listen(
+      (_) => runProviderDetached(
+        prune(),
+        'prune kept video DMs after a message went',
+        logName: 'DmVideoStore',
+      ),
+    );
 
 /// Writes that can make a kept video's message gone: a retraction marks its
 /// row, an update, and removing its conversation records its id, an insert.

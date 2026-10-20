@@ -1,10 +1,14 @@
 // ABOUTME: Tests for dmVideoMessageGone: which kept video DMs prune deletes
 // ABOUTME: because their message was retracted or removed with its chat.
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/dm_video_store.dart';
 
 void main() {
   group('dmVideoMessageGone', () {
@@ -150,6 +154,114 @@ void main() {
       );
 
       await expectLater(changed, completes);
+    });
+  });
+
+  group('pruneWhenDmVideoMessagesGo', () {
+    final owner = 'e' * 64;
+    late AppDatabase db;
+
+    setUp(() => db = AppDatabase.test(NativeDatabase.memory()));
+
+    tearDown(() => db.close());
+
+    /// Records message [n] from someone else, then its retraction.
+    void retract(FakeAsync async, int n) {
+      bool? inserted;
+      unawaited(() async {
+        inserted = await db.directMessagesDao.insertMessage(
+          id: '$n' * 64,
+          conversationId: 'conversation',
+          senderPubkey: 'b' * 64,
+          content: 'https://media.example/blob',
+          createdAt: 1757385263,
+          giftWrapId: '${'c' * 63}$n',
+          messageKind: 15,
+          ownerPubkey: owner,
+        );
+        await db.directMessagesDao.markMessageDeleted(
+          '$n' * 64,
+          ownerPubkey: owner,
+        );
+      }());
+      async.elapse(Duration.zero);
+      expect(inserted, isTrue);
+    }
+
+    test('prunes once, the cleanup delay after a retraction', () {
+      fakeAsync((async) {
+        var prunes = 0;
+        final subscription = pruneWhenDmVideoMessagesGo(
+          db,
+          () async => prunes++,
+        );
+
+        retract(async, 1);
+        async.elapse(
+          DmVideoStore.goneCleanupDelay - const Duration(milliseconds: 1),
+        );
+        expect(prunes, isZero);
+        async.elapse(const Duration(milliseconds: 1));
+        expect(prunes, equals(1));
+
+        async.elapse(DmVideoStore.goneCleanupDelay * 2);
+        expect(prunes, equals(1));
+        unawaited(subscription.cancel());
+      });
+    });
+
+    test('prunes once for a burst of retractions', () {
+      fakeAsync((async) {
+        var prunes = 0;
+        final subscription = pruneWhenDmVideoMessagesGo(
+          db,
+          () async => prunes++,
+        );
+
+        retract(async, 1);
+        async.elapse(const Duration(seconds: 1));
+        retract(async, 2);
+        async.elapse(DmVideoStore.goneCleanupDelay * 2);
+
+        expect(prunes, equals(1));
+        unawaited(subscription.cancel());
+      });
+    });
+
+    test('prunes within the cleanup delay while retractions keep coming', () {
+      fakeAsync((async) {
+        var prunes = 0;
+        final subscription = pruneWhenDmVideoMessagesGo(
+          db,
+          () async => prunes++,
+        );
+        final step = DmVideoStore.goneCleanupDelay ~/ 2;
+
+        for (var index = 1; index <= 3; index++) {
+          retract(async, index);
+          async.elapse(step);
+        }
+
+        expect(prunes, greaterThanOrEqualTo(1));
+        unawaited(subscription.cancel());
+      });
+    });
+
+    test('prunes nothing once cancelled', () {
+      fakeAsync((async) {
+        var prunes = 0;
+        final subscription = pruneWhenDmVideoMessagesGo(
+          db,
+          () async => prunes++,
+        );
+
+        unawaited(subscription.cancel());
+        async.elapse(Duration.zero);
+        retract(async, 1);
+        async.elapse(DmVideoStore.goneCleanupDelay * 2);
+
+        expect(prunes, isZero);
+      });
     });
   });
 }

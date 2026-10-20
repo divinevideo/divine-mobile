@@ -90,8 +90,9 @@ class DmVideoStore {
   /// How long a download without a tap on play may run.
   static const Duration autoDownloadTimeLimit = Duration(minutes: 1);
 
-  /// How quiet the DM tables must stay after a message goes before [prune]
-  /// runs for it: a history download writes in bursts.
+  /// How long after a message goes [prune] runs for it at most. Changes that
+  /// arrive meanwhile share that prune: a history download writes in bursts,
+  /// and a steady run of writes must not hold the prune off.
   static const Duration goneCleanupDelay = Duration(seconds: 5);
 
   /// How long a card waits before fetching again by itself after a failure
