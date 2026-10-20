@@ -57,10 +57,12 @@ class VerifierPlatform extends Equatable {
   /// Whether this platform can be linked through an OAuth login instead of a
   /// proof post.
   ///
-  /// Needs both halves: a flow the app can start ([oauthPlatforms]) and the
-  /// verifier having it turned on ([oauth]). When [oauth] is unknown, the
-  /// first half decides on its own, as it did before the verifier said.
-  bool get supportsOAuth => oauthPlatforms.contains(key) && (oauth ?? true);
+  /// Needs a platform the verifier accepts ([supported]), a flow the app can
+  /// start ([oauthPlatforms]), and the verifier not having it turned off
+  /// ([oauth]). When [oauth] is unknown, the first two decide, as they did
+  /// before the verifier said.
+  bool get supportsOAuth =>
+      supported && oauthPlatforms.contains(key) && (oauth ?? true);
 
   /// Platforms the verifier exposes an OAuth flow for.
   ///

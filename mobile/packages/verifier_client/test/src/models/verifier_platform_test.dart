@@ -94,6 +94,22 @@ void main() {
       expect(platform.supportsOAuth, isFalse);
     });
 
+    test('never offers sign-in for a platform the verifier does not '
+        'support', () {
+      // A verifier older than the flag reports TikTok unsupported exactly
+      // when its sign-in is off, and an unsupported platform can't link.
+      for (final oauth in [null, true]) {
+        final platform = VerifierPlatform(
+          key: 'tiktok',
+          label: 'TikTok',
+          supported: false,
+          oauth: oauth,
+        );
+
+        expect(platform.supportsOAuth, isFalse, reason: 'oauth: $oauth');
+      }
+    });
+
     test('reports OAuth capability per platform when the verifier says '
         'nothing', () {
       const oauth = VerifierPlatform(
