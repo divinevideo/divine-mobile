@@ -2348,6 +2348,7 @@ void main() {
         when(
           () => mockNostrClient.publishEvent(any()),
         ).thenAnswer((_) async => const PublishFailed());
+        when(() => mockNostrClient.connectedRelayCount).thenReturn(1);
 
         final rumor = realKeyService.buildRumor(
           recipientPubkey: _recipientPubkey,
@@ -2381,6 +2382,32 @@ void main() {
         expect(result.success, isFalse);
         expect(result.reachedNoRelay, isTrue);
         verify(() => mockNostrClient.publishEvent(any())).called(1);
+      });
+
+      test('reports reachedNoRelay for a copy sent to named relays while no '
+          'relay is connected', () async {
+        // Named targets bypass publishEvent's PublishNoRelays check, so an
+        // account with its own inbox sees a plain PublishFailed instead.
+        when(
+          () => mockNostrClient.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => const PublishFailed());
+        when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(true);
+        when(() => mockNostrClient.connectedRelayCount).thenReturn(0);
+        final rumor = realKeyService.buildRumor(
+          recipientPubkey: _recipientPubkey,
+          content: 'own inbox, nothing connected',
+        );
+
+        final result = await realKeyService.publishSelfWrap(
+          rumorEvent: rumor,
+          targetRelays: const ['wss://inbox.example.com'],
+        );
+
+        expect(result.success, isFalse);
+        expect(result.reachedNoRelay, isTrue);
       });
 
       test('reports reachedNoRelay without publishing when the device is '
@@ -2422,6 +2449,11 @@ void main() {
 
         expect(result.success, isFalse);
         expect(result.error, isNotNull);
+        expect(
+          result.reachedNoRelay,
+          isFalse,
+          reason: 'a copy that cannot be built is a failure, not an outage',
+        );
         verifyNever(() => mockNostrClient.publishEvent(any()));
       });
 

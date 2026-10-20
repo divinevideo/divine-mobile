@@ -1073,7 +1073,9 @@ class NIP17MessageService {
   /// publish (the `messageEventId` slot carries the rumor id since no
   /// new recipient-wrap event id is produced on this path) or
   /// [NIP17SendResult.failure] when the self-wrap could not be built
-  /// or did not reach a relay.
+  /// or did not reach a relay. The failure carries `reachedNoRelay` when
+  /// nothing left the device — offline, or no relay connected — so a retry
+  /// caller can leave it uncharged, as it does a full send (#8516).
   @useResult
   Future<NIP17SendResult> publishSelfWrap({
     required Event rumorEvent,
@@ -1288,7 +1290,10 @@ class NIP17MessageService {
           'reason=${published.failureReason})',
           category: LogCategory.system,
         );
-        return published is PublishNoRelays
+        // Named relays skip publishEvent's PublishNoRelays check, so the
+        // pool is read directly — the same test sendRumor applies (#8516).
+        return published is PublishNoRelays ||
+                _nostrService.connectedRelayCount == 0
             ? _SelfWrapPublish.reachedNoRelay
             : _SelfWrapPublish.failed;
       }
