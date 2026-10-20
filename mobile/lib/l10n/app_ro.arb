@@ -5747,5 +5747,6 @@
   "userRowPosted": "Publicat {time}",
   "badgeSubscribedAction": "Abonat",
   "badgeSubscribeAction": "Abonează-te la insignă",
-  "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna"
+  "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna",
+  "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou."
 }

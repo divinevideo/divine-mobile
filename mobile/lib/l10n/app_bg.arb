@@ -5871,5 +5871,6 @@
   "userRowPosted": "Публикувано {time}",
   "badgeSubscribedAction": "Абониран",
   "badgeSubscribeAction": "Абониране за значката",
-  "badgeAcceptedHoldersTitle": "Приели значката"
+  "badgeAcceptedHoldersTitle": "Приели значката",
+  "badgeSubscriptionLoadError": "Абонаментите ви за значки не можаха да се заредят. Опитайте отново."
 }

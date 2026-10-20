@@ -10845,6 +10845,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Người đã chấp nhận huy hiệu';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Không thể tải các đăng ký huy hiệu của bạn. Hãy thử lại.';
+
+  @override
   String get badgesLoadError => 'Không tải được huy hiệu';
 
   @override

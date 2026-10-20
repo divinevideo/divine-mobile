@@ -4753,5 +4753,6 @@
   "userRowPosted": "Na-post {time}",
   "badgeSubscribedAction": "Naka-subscribe",
   "badgeSubscribeAction": "Mag-subscribe sa badge",
-  "badgeAcceptedHoldersTitle": "Mga tumanggap ng badge"
+  "badgeAcceptedHoldersTitle": "Mga tumanggap ng badge",
+  "badgeSubscriptionLoadError": "Hindi ma-load ang iyong mga subscription sa badge. Subukan muli."
 }

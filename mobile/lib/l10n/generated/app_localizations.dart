@@ -18423,6 +18423,12 @@ abstract class AppLocalizations {
   /// **'Accepted holders'**
   String get badgeAcceptedHoldersTitle;
 
+  /// Shown when badge subscription preferences could not be read; retry reloads only subscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your badge subscriptions. Try again.'**
+  String get badgeSubscriptionLoadError;
+
   /// No description provided for @badgesLoadError.
   ///
   /// In en, this message translates to:

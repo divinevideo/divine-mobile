@@ -5747,5 +5747,6 @@
   "userRowPosted": "نُشر {time}",
   "badgeSubscribedAction": "مشترك",
   "badgeSubscribeAction": "اشترك في الشارة",
-  "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها"
+  "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها",
+  "badgeSubscriptionLoadError": "تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى."
 }

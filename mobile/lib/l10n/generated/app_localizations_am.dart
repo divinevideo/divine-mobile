@@ -10633,6 +10633,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'ባጁን የተቀበሉ';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
   String get badgesLoadError => 'ባጆችን መጫን አልተቻለም';
 
   @override

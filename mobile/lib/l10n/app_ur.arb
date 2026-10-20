@@ -5626,6 +5626,7 @@
   "badgeSubscribeAction": "بیج سبسکرائب کریں",
   "badgeSubscribedAction": "سبسکرائب کر لیا",
   "badgeAcceptedHoldersTitle": "بیج قبول کرنے والے",
+  "badgeSubscriptionLoadError": "آپ کی بیج سبسکرپشنز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔",
   "badgesLoadError": "بیجز لوڈ نہیں ہو سکے",
   "badgesUpdateError": "بیج اپڈیٹ نہیں ہو سکا",
   "badgesAwardedEmptyTitle": "ابھی کوئی بیج ایوارڈ نہیں",

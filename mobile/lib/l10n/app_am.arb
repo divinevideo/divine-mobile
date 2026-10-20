@@ -5807,5 +5807,6 @@
   "userRowPosted": "የተለጠፈው {time}",
   "badgeSubscribedAction": "ተከትለዋል",
   "badgeSubscribeAction": "ባጁን ተከተል",
-  "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ"
+  "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ",
+  "badgeSubscriptionLoadError": "የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።"
 }

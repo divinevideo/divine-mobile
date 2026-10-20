@@ -5293,5 +5293,6 @@
   "userRowPosted": "{time} 게시",
   "badgeSubscribedAction": "구독 중",
   "badgeSubscribeAction": "배지 구독",
-  "badgeAcceptedHoldersTitle": "배지를 수락한 사람"
+  "badgeAcceptedHoldersTitle": "배지를 수락한 사람",
+  "badgeSubscriptionLoadError": "배지 구독을 불러오지 못했어요. 다시 시도해 주세요."
 }

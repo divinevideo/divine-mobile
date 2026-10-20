@@ -10863,6 +10863,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'حاملو الشارة الذين قبلوها';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى.';
+
+  @override
   String get badgesLoadError => 'تعذّر تحميل الشارات';
 
   @override

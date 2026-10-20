@@ -10997,6 +10997,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Приели значката';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Абонаментите ви за значки не можаха да се заредят. Опитайте отново.';
+
+  @override
   String get badgesLoadError => 'Значките не се заредиха';
 
   @override

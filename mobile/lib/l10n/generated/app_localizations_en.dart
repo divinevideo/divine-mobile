@@ -10981,6 +10981,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'Accepted holders';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'Could not load your badge subscriptions. Try again.';
+
+  @override
   String get badgesLoadError => 'Could not load badges';
 
   @override

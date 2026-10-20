@@ -6431,6 +6431,7 @@
   "badgeSubscribeAction": "బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి",
   "badgeSubscribedAction": "సబ్‌స్క్రైబ్ చేశారు",
   "badgeAcceptedHoldersTitle": "బ్యాడ్జ్‌ను అంగీకరించినవారు",
+  "badgeSubscriptionLoadError": "మీ బ్యాడ్జ్ సబ్‌స్క్రిప్షన్‌లను లోడ్ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "badgesLoadError": "బ్యాడ్జ్‌లను లోడ్ చేయడం సాధ్యపడలేదు",
   "badgesUpdateError": "బ్యాడ్జ్‌ని అప్‌డేట్ చేయడం సాధ్యపడలేదు",
   "badgesAwardedEmptyTitle": "ఇంకా బ్యాడ్జ్ అవార్డులు లేవు",

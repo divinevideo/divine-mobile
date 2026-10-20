@@ -5747,5 +5747,6 @@
   "userRowPosted": "Publicado {time}",
   "badgeSubscribedAction": "Suscrito",
   "badgeSubscribeAction": "Suscribirse a la insignia",
-  "badgeAcceptedHoldersTitle": "Personas que aceptaron la insignia"
+  "badgeAcceptedHoldersTitle": "Personas que aceptaron la insignia",
+  "badgeSubscriptionLoadError": "No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo."
 }

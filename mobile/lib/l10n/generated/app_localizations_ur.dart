@@ -10894,6 +10894,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get badgeAcceptedHoldersTitle => 'بیج قبول کرنے والے';
 
   @override
+  String get badgeSubscriptionLoadError =>
+      'آپ کی بیج سبسکرپشنز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get badgesLoadError => 'بیجز لوڈ نہیں ہو سکے';
 
   @override
