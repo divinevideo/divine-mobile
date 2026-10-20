@@ -1,5 +1,5 @@
 // ABOUTME: Drives the split-screen layout screen: the layout, its gap and
-// ABOUTME: border colour, the clip in each cell, and the render that places it
+// ABOUTME: border colour, the clip in each cell, and its render into one clip
 
 import 'dart:ui';
 

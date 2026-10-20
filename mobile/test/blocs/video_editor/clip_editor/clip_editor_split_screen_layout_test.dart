@@ -1,5 +1,5 @@
 // ABOUTME: Tests for putting the clip a split-screen layout was rendered into
-// ABOUTME: on the timeline at the seam nearest the playhead
+// ABOUTME: on the timeline after the clip under the playhead
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';

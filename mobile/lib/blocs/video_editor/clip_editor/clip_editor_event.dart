@@ -459,7 +459,7 @@ class ClipEditorClipDetachRequested extends ClipEditorEvent {
 // === SPLIT-SCREEN LAYOUT ===
 
 /// Put [clip], the clip a split-screen layout was rendered into, on the
-/// timeline at the seam nearest [playhead].
+/// timeline after the clip under [playhead], or at the seam it is on.
 ///
 /// The layout screen has already rendered it. The widget layer consumes
 /// [ClipSplitScreenLayoutResult] to commit the insertion to editor history.
@@ -471,7 +471,7 @@ class ClipEditorSplitScreenLayoutInserted extends ClipEditorEvent {
 
   final DivineVideoClip clip;
 
-  /// Timeline position the layout joins at.
+  /// Where the playhead was when the layout screen opened.
   final Duration playhead;
 
   @override

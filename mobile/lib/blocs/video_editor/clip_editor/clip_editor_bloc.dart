@@ -382,8 +382,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       transformer: sequential(),
     );
 
-    // Put a split-screen layout's backdrop on the timeline. Synchronous, and
-    // every render already ran on the layout screen.
+    // Put the clip a split-screen layout was rendered into on the timeline.
+    // Synchronous: every render already ran on the layout screen.
     on<ClipEditorSplitScreenLayoutInserted>(_onSplitScreenLayoutInserted);
 
     // Hold the frame under the playhead still. sequential for the same reason
@@ -2445,12 +2445,12 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   }
 
   /// Puts the clip a split-screen layout was rendered into on the timeline,
-  /// at the seam nearest the playhead.
+  /// after the clip under the playhead, or at the seam the playhead is on.
   ///
   /// The layout screen did the rendering; this is only the clip-list half.
   /// Writing it to editor history is the widget layer's, driven by
-  /// [ClipEditorState.lastSplitScreenLayoutResult] — the split a freeze frame
-  /// uses.
+  /// [ClipEditorState.lastSplitScreenLayoutResult], the same division of work
+  /// as a freeze frame.
   ///
   /// The clip joins between clips rather than cutting one in two, the way a
   /// clip put back from the canvas does. Placed first, it takes on the

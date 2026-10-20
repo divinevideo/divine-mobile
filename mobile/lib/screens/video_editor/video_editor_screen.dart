@@ -630,7 +630,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
   /// Opens the split-screen layout screen and, once it hands back the clip
   /// the layout was rendered into, gives that to the bloc to put on the
-  /// timeline at the playhead.
+  /// timeline after the clip under the playhead.
   ///
   /// The layout screen renders the clip; nothing changes here until the user
   /// confirms, so closing it costs nothing.
@@ -705,13 +705,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
   /// The camera, for recording straight into a split-screen cell.
   ///
-  /// The recorder shows the cell's crop over the viewfinder and caps a take at
-  /// the time the video has left, since it counts the timeline the same way a
-  /// layout does. Its takes land in the clip manager like any other; they are
-  /// taken back out, because they belong in the cell rather than on the
-  /// timeline, and stay in the library the recorder saved them to. A take
-  /// still being cut to the limit is waited for, so the cell gets the
-  /// finished file.
+  /// The recorder shows the cell's crop over the viewfinder. Its takes land in
+  /// the clip manager like any other; they are taken back out, because they
+  /// belong in the cell rather than on the timeline, and stay in the library
+  /// the recorder saved them to. A take still being cut to a recording limit
+  /// is waited for, so the cell gets the finished file.
   Future<List<DivineVideoClip>?> _recordLayoutCellClips(
     BuildContext context, {
     required double cellAspectRatio,

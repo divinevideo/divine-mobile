@@ -113,8 +113,8 @@ class VideoEditorSplitScreenLayoutView extends StatelessWidget {
     );
 
     return PopScope(
-      // The render writes a file the editor is about to own; leaving halfway
-      // would strand them, so the back gesture waits like Close does.
+      // The render writes files the editor is about to own; leaving halfway
+      // would strand them, so the back gesture is held, like Close.
       canPop: !isApplying,
       child: BlocListener<SplitScreenLayoutCubit, SplitScreenLayoutState>(
         listenWhen: (previous, current) => previous.status != current.status,

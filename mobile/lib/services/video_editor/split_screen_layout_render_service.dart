@@ -36,11 +36,12 @@ typedef SplitScreenRenderCell = ({
 
 /// Renders a split-screen layout into a single clip.
 ///
-/// Every cell is a layer of one composition, so the whole layout costs one
-/// encode however many cells it has. A cell shows exactly what the layout
-/// screen showed: where the user zoomed or slid the footage, the clip is drawn
-/// larger than its cell and an alpha matte cuts it back to the cell, since the
-/// renderer only crops the centre of a frame on its own.
+/// Every cell is a layer of one composition, so the layout is a single encode
+/// however many cells it has; only a sped-up cell is rendered at its speed
+/// first. A cell shows exactly what the layout screen showed: where the user
+/// zoomed or slid the footage, the clip is drawn larger than its cell and an
+/// alpha matte cuts it back to the cell, since the renderer only crops the
+/// centre of a frame on its own.
 abstract final class SplitScreenLayoutRenderService {
   /// How far before a cell's end its last frame is read from — see
   /// `FreezeFrameRenderService`: the end itself lies past the last frame.
