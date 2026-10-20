@@ -50,7 +50,7 @@ class ProVideoEditorLogForwarder {
     CrashReporter crashReporter = const SilentCrashReporter(),
   }) {
     if (entry.message.isEmpty) return;
-    final name = redactFilesystemPaths(
+    final name = _redact(
       (entry.tag?.isNotEmpty ?? false) ? entry.tag! : 'ProVideoEditorNative',
     );
     // Redact before either sink: the local capture also retains native logs.
@@ -90,7 +90,9 @@ class ProVideoEditorLogForwarder {
   }
 
   // A kept video DM's files are named after its message, and an iOS file
-  // error quotes that name without the path around it.
+  // error quotes that name without the path around it. A render cache file
+  // named after its hash looks the same and is hidden too; a task id that
+  // carries the hash is not, since only a name followed by a dot is.
   static final _messageNamedFile = RegExp(
     r'(?<![A-Za-z0-9])[A-Za-z0-9]{64}(?=\.)',
   );

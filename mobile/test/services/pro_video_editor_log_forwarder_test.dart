@@ -126,10 +126,13 @@ void main() {
       () {
         final reporter = _RecordingCrashReporter();
         final messageId = 'a1' * 32;
+        // A render task id carries a hash too, but no file name.
+        final taskId = 'seam_${'c3' * 32}_1';
         ProVideoEditorLogForwarder.forwardEntry(
           entry(
             NativeLogLevel.error,
-            'frame failed: The file “$messageId.mp4” couldn’t be opened.',
+            'frame failed for $taskId: The file “$messageId.mp4” couldn’t '
+            'be opened.',
             tag: 'pve-kept-file-name',
             stackTrace: 'Caused by: cannot open $messageId.preview.jpg',
           ),
@@ -140,6 +143,7 @@ void main() {
           (entry) => entry.name == 'pve-kept-file-name',
         );
         expect(logged.message, contains('couldn’t be opened'));
+        expect(logged.message, contains(taskId));
         for (final text in [
           logged.message,
           logged.stackTrace.toString(),
@@ -149,6 +153,24 @@ void main() {
         }
       },
     );
+
+    test("keeps a kept video's file name out of a native log's tag", () {
+      final reporter = _RecordingCrashReporter();
+      final messageId = 'b2' * 32;
+      ProVideoEditorLogForwarder.forwardEntry(
+        entry(
+          NativeLogLevel.error,
+          'pve-kept-file-tag',
+          tag: 'Thumbnail $messageId.mp4',
+        ),
+        crashReporter: reporter,
+      );
+
+      final logged = latestWithMessage('pve-kept-file-tag');
+      expect(logged, isNotNull);
+      expect(logged!.name, isNot(contains(messageId)));
+      expect(reporter.breadcrumbs.single, isNot(contains(messageId)));
+    });
 
     test('sanitizes the message, tag and cause before crash reporting', () {
       final reporter = _RecordingCrashReporter();
