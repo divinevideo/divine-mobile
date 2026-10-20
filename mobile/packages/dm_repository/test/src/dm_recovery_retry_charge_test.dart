@@ -357,6 +357,25 @@ void main() {
         },
       );
 
+      test('with resetRetryBudget, hands an exhausted row back with a fresh '
+          'budget before charging the replay', () async {
+        final id = await deliveredWithoutSelfCopy();
+        for (var i = 0; i < 5; i++) {
+          await dao.incrementRetry(id);
+        }
+        expect(await retryCount(id), 5, reason: 'the sweep has given up');
+        dao.charges = 0;
+
+        final result = await repository.recoverSelfWrap(
+          rumorId: id,
+          resetRetryBudget: true,
+        );
+
+        expect(result.success, isFalse);
+        expect(dao.charges, 1);
+        expect(await retryCount(id), 1);
+      });
+
       test('does not charge a replay abandoned before publishing because the '
           'session ended', () async {
         final id = await deliveredWithoutSelfCopy();

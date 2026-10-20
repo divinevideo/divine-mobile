@@ -6880,8 +6880,16 @@ class DmRepository {
   /// Throws [StateError] if the repository or its queue DAO are not
   /// wired in. Throws [ArgumentError] if no row exists for [rumorId]
   /// or the row belongs to a different account.
+  ///
+  /// [resetRetryBudget] zeroes the row's retry counter before dispatch, as in
+  /// [recoverFullSend]. Pass `true` from a user's Retry tap: the tap is then
+  /// charged like any attempt, but it hands a row whose budget the sweep
+  /// already spent back to the sweep instead of leaving it abandoned.
   @useResult
-  Future<NIP17SendResult> recoverSelfWrap({required String rumorId}) async {
+  Future<NIP17SendResult> recoverSelfWrap({
+    required String rumorId,
+    bool resetRetryBudget = false,
+  }) async {
     _assertInitialized();
     final dao = _outgoingDmsDao;
     if (dao == null) {
@@ -6889,6 +6897,9 @@ class DmRepository {
         'recoverSelfWrap requires the outgoing_dms queue DAO; '
         'wire OutgoingDmsDao into DmRepository before calling.',
       );
+    }
+    if (resetRetryBudget) {
+      await _resetRetryBudget(dao: dao, rumorId: rumorId);
     }
     return _joinOrStartRecovery(
       'self:$rumorId',
@@ -7166,28 +7177,37 @@ class DmRepository {
       );
     }
     if (resetRetryBudget) {
-      // Before the in-flight join, so a resend that lands mid-sweep still
-      // refreshes the budget for the sweep's follow-up passes. Owner-checked
-      // first (same pattern as cancelOutgoingSend): resetRetryCount is not
-      // owner-scoped, so without the check a foreign account's row would get
-      // its budget re-armed before the locked body's ArgumentError fires.
-      // Non-fatal: a missed reset only means the sweep may give up earlier.
-      try {
-        final row = await dao.getById(rumorId);
-        if (row != null && row.ownerPubkey == _userPubkey) {
-          await dao.resetRetryCount(rumorId);
-        }
-      } on Object catch (e) {
-        Log.warning(
-          'Failed to reset retry budget for $rumorId: $e',
-          category: LogCategory.system,
-        );
-      }
+      await _resetRetryBudget(dao: dao, rumorId: rumorId);
     }
     return _joinOrStartRecovery(
       'full:$rumorId',
       () => _recoverFullSendLocked(dao: dao, rumorId: rumorId),
     );
+  }
+
+  /// Zero [rumorId]'s retry counter for an explicit user retry.
+  ///
+  /// Runs before the in-flight join, so a retry that lands mid-sweep still
+  /// refreshes the budget for the sweep's follow-up passes. Owner-checked
+  /// first (same pattern as cancelOutgoingSend): resetRetryCount is not
+  /// owner-scoped, so without the check a foreign account's row would get its
+  /// budget re-armed before the locked body's ArgumentError fires. Non-fatal:
+  /// a missed reset only means the sweep may give up earlier.
+  Future<void> _resetRetryBudget({
+    required OutgoingDmsDao dao,
+    required String rumorId,
+  }) async {
+    try {
+      final row = await dao.getById(rumorId);
+      if (row != null && row.ownerPubkey == _userPubkey) {
+        await dao.resetRetryCount(rumorId);
+      }
+    } on Object catch (e) {
+      Log.warning(
+        'Failed to reset retry budget for $rumorId: $e',
+        category: LogCategory.system,
+      );
+    }
   }
 
   Future<NIP17SendResult> _recoverFullSendLocked({
@@ -7658,7 +7678,12 @@ class DmRepository {
     for (final invite in matchingInvites) {
       attempted++;
       try {
-        final result = await recoverFullSend(rumorId: invite.rumorId);
+        // A banner tap is an explicit retry: like Resend, it hands the row
+        // back to the sweep with a fresh budget (#8628).
+        final result = await recoverFullSend(
+          rumorId: invite.rumorId,
+          resetRetryBudget: true,
+        );
         if (result.success) {
           success++;
         } else if (result.blocked) {
