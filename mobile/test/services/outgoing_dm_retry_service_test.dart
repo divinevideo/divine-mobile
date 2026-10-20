@@ -1949,44 +1949,6 @@ void main() {
         );
       }
 
-      test('does not use up a full send retry', () async {
-        stubFailedRow('rumor-unreached');
-        when(
-          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
-        ).thenAnswer((_) async => unreached);
-
-        await buildService().sweep();
-
-        verify(
-          () => dmRepository.recoverFullSend(rumorId: 'rumor-unreached'),
-        ).called(1);
-        verifyNever(() => dao.incrementRetry(any()));
-      });
-
-      test('does not use up an interrupted send retry', () async {
-        final now = DateTime.utc(2026, 5, 10, 12);
-        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
-          (_) async => [
-            _row(
-              id: 'interrupted-unreached',
-              recipient: OutgoingWrapStatus.pending,
-              self: OutgoingWrapStatus.pending,
-              queuedAt: now.subtract(const Duration(minutes: 5)),
-            ),
-          ],
-        );
-        when(
-          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
-        ).thenAnswer((_) async => unreached);
-
-        await buildService(now: () => now).sweep();
-
-        verify(
-          () => dmRepository.recoverFullSend(rumorId: 'interrupted-unreached'),
-        ).called(1);
-        verifyNever(() => dao.incrementRetry(any()));
-      });
-
       test('arms no follow-up pass for it', () {
         fakeAsync((async) {
           stubFailedRow('rumor-unreached');
@@ -2048,6 +2010,7 @@ void main() {
           verify(
             () => dmRepository.recoverSelfWrap(rumorId: 'self-copy-unreached'),
           ).called(1);
+          verifyNever(() => dao.incrementRetry(any()));
           expect(
             async.pendingTimers,
             isEmpty,
@@ -2485,6 +2448,30 @@ void main() {
 
           // recoverFullSend charged its own failed attempt (#8628).
           verifyNever(() => dao.incrementRetry(any()));
+        },
+      );
+
+      test(
+        'a dispatch that throws is charged by the sweep, since it never '
+        'reached the repository charge',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          final stalePending = _row(
+            id: 'interrupted-throw',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: now.subtract(const Duration(minutes: 5)),
+          );
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [stalePending]);
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenThrow(Exception('relay disconnected'));
+
+          await buildService(now: () => now).sweep();
+
+          verify(() => dao.incrementRetry('interrupted-throw')).called(1);
         },
       );
     });

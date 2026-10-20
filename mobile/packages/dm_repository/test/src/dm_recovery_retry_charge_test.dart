@@ -2,6 +2,8 @@
 // ABOUTME: charged to the queue row's retry budget exactly once, whoever
 // ABOUTME: called them, so five attempts mean five on every path.
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
@@ -10,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
@@ -39,9 +42,17 @@ const _peerKey =
     '6a1f2e3d4c5b6a7980f1e2d3c4b5a69788f9e0d1c2b3a4958677f8e9d0c1b2a3';
 
 const _poolRelay = 'wss://relay.divine.video';
+const _ownInbox = 'wss://own-inbox.example.com';
 
 /// How the relay answers the recipient's gift wrap.
-enum _Recipient { confirms, rejects, neverAnswers }
+enum _Recipient {
+  confirms,
+  rejects,
+  neverAnswers,
+
+  /// No relay took the frame: accepted, rejected and silent are all empty.
+  unreached,
+}
 
 void main() {
   setUpAll(() {
@@ -62,6 +73,8 @@ void main() {
     late PublishResult Function(Event) selfCopy;
     late int recipientPublishes;
     late int selfCopyPublishes;
+    late int connectedRelays;
+    late bool ownInboxAdvertised;
 
     setUp(() {
       db = AppDatabase.test(NativeDatabase.memory());
@@ -71,13 +84,17 @@ void main() {
       selfCopy = (event) => PublishSuccess(event: event);
       recipientPublishes = 0;
       selfCopyPublishes = 0;
+      connectedRelays = 1;
+      ownInboxAdvertised = false;
 
-      when(() => nostrClient.connectedRelayCount).thenReturn(1);
+      when(
+        () => nostrClient.connectedRelayCount,
+      ).thenAnswer((_) => connectedRelays);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelays).thenReturn(const [_poolRelay]);
       when(() => nostrClient.isRelayAllowed(any())).thenReturn(true);
-      // Every relay answers and none holds a kind-10050 list, so both copies
-      // go to the pool.
+      // Every relay answers. Only the sender's own kind-10050 list can exist,
+      // when a test advertises it; otherwise both copies go to the pool.
       when(
         () => nostrClient.queryEventsDetailed(
           any(),
@@ -93,10 +110,27 @@ void main() {
             named: 'acceptRelayClosedWhenOthersAnswered',
           ),
         ),
-      ).thenAnswer(
-        (_) async =>
-            (events: const <Event>[], timedOut: false, noRelays: false),
-      );
+      ).thenAnswer((invocation) async {
+        final filters = (invocation.positionalArguments.first as List)
+            .cast<nostr_filter.Filter>();
+        final asksForOwnInbox = filters.first.authors?.contains(owner) ?? false;
+        return (
+          events: [
+            if (ownInboxAdvertised && asksForOwnInbox)
+              Event(
+                owner,
+                EventKind.dmRelaysList,
+                [
+                  ['relay', _ownInbox],
+                ],
+                '',
+                createdAt: 1700000000,
+              ),
+          ],
+          timedOut: false,
+          noRelays: false,
+        );
+      });
       when(
         () => nostrClient.publishEventAwaitOk(
           any(),
@@ -266,6 +300,18 @@ void main() {
         expect(await dao.getById(id), isNull);
         expect(dao.charges, 0);
       });
+
+      test('does not charge a replay that reached no relay', () async {
+        final id = await rejectedSend();
+        recipient = _Recipient.unreached;
+
+        final result = await repository.recoverFullSend(rumorId: id);
+
+        expect(result.reachedNoRelay, isTrue);
+        expect(recipientPublishes, 2, reason: 'the replay was attempted');
+        expect(dao.charges, 0, reason: 'an outage is not an attempt (#8516)');
+        expect(await retryCount(id), 0);
+      });
     });
 
     group('recoverSelfWrap', () {
@@ -276,6 +322,21 @@ void main() {
 
         expect(result.success, isFalse);
         expect(selfCopyPublishes, 2, reason: 'one self-copy replay ran');
+        expect(dao.charges, 1);
+        expect(await retryCount(id), 1);
+      });
+
+      test('charges two callers that join one failing self-copy replay '
+          'once', () async {
+        final id = await deliveredWithoutSelfCopy();
+
+        final results = await Future.wait([
+          repository.recoverSelfWrap(rumorId: id),
+          repository.recoverSelfWrap(rumorId: id),
+        ]);
+
+        expect(results.every((result) => !result.success), isTrue);
+        expect(selfCopyPublishes, 2, reason: 'the two calls shared one');
         expect(dao.charges, 1);
         expect(await retryCount(id), 1);
       });
@@ -295,6 +356,36 @@ void main() {
           expect(await retryCount(id), 0);
         },
       );
+
+      test('does not charge a replay abandoned before publishing because the '
+          'session ended', () async {
+        final id = await deliveredWithoutSelfCopy();
+
+        final pending = repository.recoverSelfWrap(rumorId: id);
+        // Ends the session while the replay is between its row read and its
+        // publish, the window the account-switch guard covers.
+        unawaited(repository.stopListening());
+        final result = await pending;
+
+        expect(result.retryablePending, isTrue);
+        expect(selfCopyPublishes, 1, reason: 'nothing was republished');
+        expect(dao.charges, 0);
+        expect(await retryCount(id), 0);
+      });
+
+      test('does not charge a self-copy to an advertised inbox while no relay '
+          'is connected', () async {
+        ownInboxAdvertised = true;
+        final id = await deliveredWithoutSelfCopy();
+        connectedRelays = 0;
+
+        final result = await repository.recoverSelfWrap(rumorId: id);
+
+        expect(result.reachedNoRelay, isTrue);
+        expect(selfCopyPublishes, 2, reason: 'the replay was attempted');
+        expect(dao.charges, 0);
+        expect(await retryCount(id), 0);
+      });
 
       test('does not wake the sweep for a self-copy replay that reached no '
           'relay', () async {

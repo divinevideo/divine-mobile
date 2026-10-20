@@ -7148,8 +7148,8 @@ class DmRepository {
   /// instead of publishing a duplicate.
   ///
   /// [resetRetryBudget] zeroes the row's retry counter before dispatch. Pass
-  /// `true` from the manual Resend path: each soft-unconfirmed attempt burns
-  /// the shared sweep budget, and once `retry_count` reaches the sweep's
+  /// `true` from the manual Resend path: each failed attempt burns the shared
+  /// sweep budget, and once `retry_count` reaches the sweep's
   /// `maxRetries` the sweep abandons the row permanently — an explicit user
   /// resend is the signal to hand it back with a fresh budget.
   @useResult

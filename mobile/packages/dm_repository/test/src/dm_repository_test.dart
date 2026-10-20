@@ -30049,6 +30049,10 @@ void main() {
           );
 
           expect(result.success, isFalse);
+          // The attempt still counts when its status write failed.
+          verify(
+            () => mockOutgoingDmsDao.incrementRetry(_rumorEventId),
+          ).called(1);
           expect(reporterCalls, hasLength(1));
           expect(
             reporterCalls.single.site,

@@ -363,23 +363,21 @@ class OutgoingDmRetryService {
           try {
             final result = await _dmRepository.recoverSelfWrap(rumorId: row.id);
             if (result.success) {
-              // recoverSelfWrap deleted the row on success. The bumped
-              // retryCount would be moot anyway, so skip incrementRetry.
+              // recoverSelfWrap deleted the row on success.
               processedSelfWrap++;
             } else if (result.blocked) {
               // Terminal: the row is addressed to its own sender, which
               // recoverSelfWrap refuses and drops (#8363). It is never
-              // retried, so the counter is not bumped and the pass does not
-              // count it as a failure.
+              // retried, and the pass does not count it as a failure.
               blockedSelfWrap++;
             } else if (result.reachedNoRelay) {
               // Same as the failed-send arm: not charged, and a relay
               // connecting wakes the sweep for it (#8516).
               notSentSelfWrap++;
             } else {
-              // Publish failed. recoverSelfWrap marked the self-wrap failed
-              // and charged the attempt itself, so backoff applies and the
-              // row exits the retryable filter at maxRetries (#8628).
+              // Publish failed, and recoverSelfWrap charged the attempt itself
+              // (#8628); or the session ended before it could publish, which
+              // nothing charges.
               failedSelfWrap++;
             }
           } on Object catch (e, stackTrace) {
@@ -444,21 +442,18 @@ class OutgoingDmRetryService {
               // recoverFullSend's success path either deletes the row
               // (full delivery) or promotes it to
               // `recipient: sent / self: failed` (partial). Either
-              // way the row exits the recipient-failed filter, so
-              // skip incrementRetry.
+              // way the row exits the recipient-failed filter.
               processedFullSend++;
             } else if (result.blocked) {
               // Terminal, not transient: recoverFullSend settled the row for
               // a #176 policy block, or dropped a one-to-one row addressed to
-              // its own sender (#8363). Don't bump the retry counter (every
-              // retry would be refused again), and count it as terminal
-              // rather than a failure.
+              // its own sender (#8363). Every retry would be refused again, so
+              // count it as terminal rather than a failure.
               blockedFullSend++;
             } else if (result.retryablePending) {
-              // Soft-unconfirmed: recoverFullSend already bumped the retry
-              // counter via _finalizeAfterRecipientUnconfirmed. Bumping
-              // again here double-charged every soft attempt and halved
-              // the effective retry budget.
+              // Soft-unconfirmed, charged by recoverFullSend itself; or a
+              // self-wrap replay it delegated that the session ended before it
+              // could publish, which nothing charges (#8628).
               failedFullSend++;
             } else if (result.reachedNoRelay) {
               // Nothing reached a relay: not charged, and a relay connecting
@@ -578,8 +573,7 @@ class OutgoingDmRetryService {
               // settled or dropped the row, so don't re-arm it.
               blockedInterrupted++;
             } else if (result.retryablePending) {
-              // Soft-unconfirmed: the repo already bumped the counter via
-              // _finalizeAfterRecipientUnconfirmed — no double charge.
+              // Soft-unconfirmed, charged by recoverFullSend itself (#8628).
               failedInterrupted++;
             } else if (result.reachedNoRelay) {
               // Same as the failed-send arm: not charged (#8516).
