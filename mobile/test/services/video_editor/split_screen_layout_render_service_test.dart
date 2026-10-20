@@ -36,6 +36,7 @@ class _RecordingProVideoEditor extends ProVideoEditor {
   _RecordingProVideoEditor(this.frame);
 
   Uint8List frame;
+  ui.Size resolution = const ui.Size(1080, 1920);
   final tasks = <VideoRenderData>[];
   final thumbnailRequests = <ThumbnailConfigs>[];
 
@@ -51,7 +52,7 @@ class _RecordingProVideoEditor extends ProVideoEditor {
     duration: const Duration(seconds: 4),
     extension: 'mp4',
     fileSize: 1,
-    resolution: const ui.Size(1080, 1920),
+    resolution: resolution,
     rotation: 0,
     bitrate: 1,
   );
@@ -224,6 +225,28 @@ void main() {
       final requested = editor.thumbnailRequests.single.timestamps.single;
       expect(requested, lessThan(const Duration(seconds: 2)));
       expect(requested, greaterThan(const Duration(milliseconds: 1900)));
+    });
+
+    test('fails an unreadable clip as expected, not as a bug', () async {
+      editor.resolution = ui.Size.zero;
+
+      await expectLater(
+        SplitScreenLayoutRenderService.render(
+          cells: [
+            (
+              clip: _clip('gone'),
+              rect: const ui.Rect.fromLTRB(0, 0, 1, 1),
+              alignment: Alignment.center,
+              zoom: 1,
+            ),
+          ],
+          aspectRatio: model.AspectRatio.vertical,
+          backgroundColor: const ui.Color(0xFFFF0000),
+          taskId: 'layout',
+        ),
+        throwsA(isA<Exception>()),
+      );
+      expect(editor.tasks, isEmpty);
     });
 
     test(

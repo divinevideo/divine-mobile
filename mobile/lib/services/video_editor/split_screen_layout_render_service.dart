@@ -87,8 +87,9 @@ abstract final class SplitScreenLayoutRenderService {
   /// layout does holds its last frame until the end.
   ///
   /// Returns `null` when the render produced no file. Throws whatever the
-  /// renderer throws, a [RenderCanceledException] included; nothing is left on
-  /// disk then. [taskId] keys the encoder's progress stream.
+  /// renderer throws, a [RenderCanceledException] included, and an
+  /// [Exception] when a cell's clip cannot be read; nothing is left on disk
+  /// then. [taskId] keys the encoder's progress stream.
   static Future<DivineVideoClip?> render({
     required List<SplitScreenRenderCell> cells,
     required model.AspectRatio aspectRatio,
@@ -122,11 +123,7 @@ abstract final class SplitScreenLayoutRenderService {
           tempPaths: tempPaths,
         );
         final size = await videoSize(source.video);
-        if (size == null) {
-          throw StateError(
-            'The size of layout clip ${cell.clip.id} is unknown',
-          );
-        }
+        if (size == null) throw _UnreadableLayoutClip(cell.clip.id);
         final cellRect = pixelRects[index];
         layers.add(
           await _layer(
@@ -503,4 +500,16 @@ abstract final class SplitScreenLayoutRenderService {
       );
     }
   }
+}
+
+/// A cell whose clip cannot be read, such as one moved or damaged since it
+/// was picked. Not a [StateError]: that is an expected failure the user can
+/// recover from, not a broken invariant worth a crash report.
+class _UnreadableLayoutClip implements Exception {
+  const _UnreadableLayoutClip(this.clipId);
+
+  final String clipId;
+
+  @override
+  String toString() => 'UnreadableLayoutClip: $clipId';
 }
