@@ -57,6 +57,7 @@ void main() {
       () => store.previewFor(
         any(),
         download: any(named: 'download'),
+        decode: any(named: 'decode'),
         stillWanted: any(named: 'stillWanted'),
       ),
     ).thenAnswer((_) async => File(_framePath));
@@ -249,6 +250,63 @@ void main() {
               stillWanted: any(named: 'stillWanted'),
             ),
           );
+          verify(
+            () => store.previewFor(
+              any(),
+              download: false,
+              decode: false,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          ).called(1);
+        },
+      );
+    });
+
+    group('blocked senders, later', () {
+      testWidgets(
+        "stops decoding a stranger's video once they are blocked while it "
+        'shows',
+        (tester) async {
+          final blocked = ValueNotifier(false);
+          addTearDown(blocked.dispose);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                dmVideoStoreProvider.overrideWithValue(store),
+                followRelationshipProvider.overrideWith(
+                  (ref, pubkey) => Stream.value(FollowRelationship.none),
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: ValueListenableBuilder<bool>(
+                  valueListenable: blocked,
+                  builder: (context, isBlocked, _) => DmVideoPreviewScope(
+                    message: _videoMessage(),
+                    accepted: false,
+                    blocked: isBlocked,
+                    builder: (context, framePath) =>
+                        Text(framePath ?? 'no frame'),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          verify(
+            () => store.previewFor(
+              any(),
+              download: false,
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          ).called(1);
+
+          blocked.value = true;
+          await tester.pump();
+          await tester.pump();
+
           verify(
             () => store.previewFor(
               any(),
