@@ -1493,6 +1493,59 @@ void main() {
       );
 
       group('Following pager ownership', () {
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'badge subscription discovery leaves For You untouched',
+          build: () => VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+          ),
+          seed: () => VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            videos: [createTestVideo('for-you')],
+          ),
+          act: (bloc) => bloc.add(const VideoFeedBadgeSubscriptionsChanged()),
+          expect: () => <VideoFeedBlocState>[],
+          verify: (bloc) => expect(bloc.state.videos.single.id, 'for-you'),
+        );
+
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'superseded cached-window page preserves continuation when reload fails',
+          setUp: () {
+            when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+          },
+          build: () {
+            final oldHolders = Completer<Iterable<String>>();
+            var reads = 0;
+            return VideoFeedBloc(
+              videosRepository: mockVideosRepository,
+              followRepository: mockFollowRepository,
+              curatedListRepository: mockCuratedListRepository,
+              badgeAuthors: () {
+                if (reads++ == 0) return oldHolders.future;
+                oldHolders.complete([]);
+                return Future.error(Exception('reload unavailable'));
+              },
+            );
+          },
+          seed: () => VideoFeedBlocState(
+            mode: FeedMode.following,
+            status: VideoFeedStatus.success,
+            videos: [createTestVideo('cached')],
+          ),
+          act: (bloc) async {
+            bloc.add(const VideoFeedLoadMoreRequested());
+            await pumpEventQueue();
+            bloc.add(const VideoFeedBadgeSubscriptionsChanged());
+            await pumpEventQueue();
+          },
+          verify: (bloc) {
+            expect(bloc.state.hasMore, isTrue);
+            expect(bloc.state.isLoadingMore, isFalse);
+            expect(bloc.state.videos.single.id, 'cached');
+          },
+        );
+
         for (final hasBadgeLoader in [false, true]) {
           blocTest<VideoFeedBloc, VideoFeedBlocState>(
             'badge cursor without a live snapshot never creates a pager or calls home, loader $hasBadgeLoader',
@@ -1922,6 +1975,7 @@ void main() {
             () => client.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer(
             (_) async =>
@@ -1970,6 +2024,7 @@ void main() {
               () => client.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).thenAnswer((_) => pending.future);
             final bloc = badgeBloc();
@@ -2003,6 +2058,7 @@ void main() {
               () => client.queryEventsDetailed(
                 any(),
                 requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
               ),
             ).thenAnswer((_) => pending.future);
             final bloc = badgeBloc();
@@ -2109,6 +2165,7 @@ void main() {
                 () => client.queryEventsDetailed(
                   any(),
                   requireAllRelaysSettled: true,
+                  acceptRelayClosedWhenOthersAnswered: true,
                 ),
               ).thenAnswer(
                 (_) => queries++ == 0
@@ -2205,6 +2262,7 @@ void main() {
             () => client.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer((_) => pending.future);
           final first = badgeBloc();
@@ -2221,6 +2279,7 @@ void main() {
             () => client.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenThrow(const BadgeReadIncompleteException('still unavailable'));
           final fresh = badgeBloc();

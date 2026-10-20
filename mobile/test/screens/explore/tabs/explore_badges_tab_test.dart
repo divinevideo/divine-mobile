@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -50,6 +54,77 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('badge row opens its complete coordinate route', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+          ),
+        );
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => Scaffold(
+                body: BlocProvider<ExploreBadgesCubit>.value(
+                  value: cubit,
+                  child: const ExploreBadgesView(),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: BadgeDetailScreen.path,
+              builder: (_, state) =>
+                  Scaffold(body: Text(state.pathParameters['naddr']!)),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          testProviderScope(
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Diviner of the Day'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(BadgeCoordinate.parse(_definition.coordinate)!.toNaddr()),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('refresh failure reset shows no duplicate snackbar', (
+        tester,
+      ) async {
+        final states = StreamController<ExploreBadgesState>();
+        addTearDown(states.close);
+        final loaded = ExploreBadgesState(
+          status: ExploreBadgesStatus.loaded,
+          definitions: [_definition],
+        );
+        whenListen(cubit, states.stream, initialState: loaded);
+        await tester.pumpWidget(buildSubject());
+        states.add(loaded.copyWith(refreshFailures: 1));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.badgesLoadError), findsOneWidget);
+        ScaffoldMessenger.of(tester.element(find.byType(ExploreBadgesView)))
+            .removeCurrentSnackBar();
+        await tester.pumpAndSettle();
+        states.add(loaded);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.badgesLoadError), findsNothing);
+        states.add(loaded.copyWith(refreshFailures: 1));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.badgesLoadError), findsOneWidget);
+      });
+
       testWidgets('failed refresh keeps badges and shows feedback', (
         tester,
       ) async {

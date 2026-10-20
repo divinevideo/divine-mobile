@@ -174,7 +174,20 @@ class FunnelcakeApiClient {
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
-  Future<http.Response> _get(Uri uri) async {
+  Future<http.Response> _get(Uri uri) => _retryRead(
+    () => _httpClient.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+      },
+    ),
+  );
+
+  /// Retries an idempotent read within one shared timeout budget.
+  Future<http.Response> _retryRead(
+    Future<http.Response> Function() request,
+  ) async {
     final elapsed = Stopwatch()..start();
     Duration remaining() => _timeout - elapsed.elapsed;
 
@@ -190,15 +203,7 @@ class FunnelcakeApiClient {
       }
       attempt++;
       try {
-        final response = await _httpClient
-            .get(
-              uri,
-              headers: {
-                'Accept': 'application/json',
-                ...buildDivineClientHeaders(appVersion: _appVersion),
-              },
-            )
-            .timeout(remaining());
+        final response = await request().timeout(remaining());
 
         if (_canRetry(attempt, remaining()) &&
             _isRetryableStatus(response.statusCode)) {
@@ -252,18 +257,21 @@ class FunnelcakeApiClient {
     );
   }
 
-  Future<http.Response> _post(Uri uri, {required Object body}) {
-    return _httpClient
-        .post(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            ...buildDivineClientHeaders(appVersion: _appVersion),
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(_timeout);
+  Future<http.Response> _post(
+    Uri uri, {
+    required Object body,
+    bool retryRead = false,
+  }) {
+    Future<http.Response> request() => _httpClient.post(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+      },
+      body: jsonEncode(body),
+    );
+    return retryRead ? _retryRead(request) : request().timeout(_timeout);
   }
 
   Map<String, String> _diagnosticHeaders(http.Response response) {
@@ -1166,7 +1174,7 @@ class FunnelcakeApiClient {
     };
     final uri = Uri.parse('$_baseUrl/api/v2/videos/by-authors');
     try {
-      final response = await _post(uri, body: body);
+      final response = await _post(uri, body: body, retryRead: true);
       if (response.statusCode != 200) {
         throw FunnelcakeApiException(
           message: 'Failed to fetch videos by authors',
