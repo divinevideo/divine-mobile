@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -49,6 +50,9 @@ class VideoRenderWatchdog {
     return render.timeout(
       timeout,
       onTimeout: () {
+        // First, so a process that dies in the report or the native cancel
+        // still leaves the timeout in the render's marker.
+        if (taskId != null) InterruptedRenderMonitor.noteWatchdogFired(taskId);
         const failure = VideoRenderFailedException(
           VideoRenderFailureReason.timedOut,
         );

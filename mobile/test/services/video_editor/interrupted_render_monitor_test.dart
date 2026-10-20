@@ -6,9 +6,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
+import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 class _RecordingCrashReporter implements CrashReporter {
@@ -28,6 +31,19 @@ class _RecordingCrashReporter implements CrashReporter {
   }) async {
     reports.add((error: error, reason: reason));
   }
+}
+
+/// Runs [onCancel] where the native cancel would reach the platform.
+class _FakeProVideoEditor extends ProVideoEditor {
+  _FakeProVideoEditor({required this.onCancel});
+
+  final void Function(String taskId) onCancel;
+
+  @override
+  Stream<dynamic> initializeStream() => const Stream.empty();
+
+  @override
+  Future<void> cancel(String taskId) async => onCancel(taskId);
 }
 
 /// The first 24 bytes of a PNG of [width] x [height]: all the monitor reads.
@@ -50,6 +66,9 @@ Uint8List _pngHeader(int width, int height) {
 const int _mb = 1024 * 1024;
 
 void main() {
+  // Lifecycle changes reach the markers through the widgets binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group(InterruptedRenderMonitor, () {
     late Directory markers;
     late _RecordingCrashReporter reporter;
@@ -69,6 +88,14 @@ void main() {
       expect(files, hasLength(1));
       return jsonDecode(files.single.readAsStringSync())
           as Map<String, Object?>;
+    }
+
+    /// The marker of the running render of [taskId].
+    Map<String, Object?> readMarker(String taskId) {
+      final file = markerFiles().singleWhere(
+        (file) => file.path.endsWith('_$taskId.json'),
+      );
+      return jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
     }
 
     setUp(() async {
@@ -99,11 +126,12 @@ void main() {
     /// its marker has been written.
     Future<Future<String>> startRender(
       Completer<String> finish, {
+      String taskId = 'draft_autosave',
       Map<String, Object> details = const {'segments': 2},
     }) async {
       final started = Completer<void>();
       final render = InterruptedRenderMonitor.track(
-        taskId: 'draft_autosave',
+        taskId: taskId,
         kind: 'video',
         details: details,
         operation: () {
@@ -231,6 +259,159 @@ void main() {
       });
     });
 
+    group('watchdog timeout', () {
+      tearDown(() => VideoRenderWatchdog.crashReporterOverride = null);
+
+      test('lands in the marker before the timeout is reported and the '
+          'native task cancelled', () async {
+        final finish = Completer<String>();
+        final render = await startRender(finish, taskId: 'seam');
+        Map<String, Object?>? markerWhenReported;
+        Map<String, Object?>? markerWhenCancelled;
+        VideoRenderWatchdog.crashReporterOverride = (_, _) =>
+            markerWhenReported = readMarker('seam');
+
+        await expectLater(
+          VideoRenderWatchdog.run(
+            render: render,
+            taskId: 'seam',
+            cancelTask: (_) async => markerWhenCancelled = readMarker('seam'),
+            timeout: Duration.zero,
+          ),
+          throwsA(isA<VideoRenderFailedException>()),
+        );
+
+        expect(
+          markerWhenReported,
+          containsPair('watchdogFiredAtMs', isA<int>()),
+        );
+        expect(
+          markerWhenCancelled,
+          containsPair('watchdogFiredAtMs', isA<int>()),
+        );
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
+      test('leaves the marker of the render beside it alone', () async {
+        final finishTimedOut = Completer<String>();
+        final finishBeside = Completer<String>();
+        final timedOut = await startRender(finishTimedOut, taskId: 'seam-a');
+        final beside = await startRender(finishBeside, taskId: 'seam-b');
+        VideoRenderWatchdog.crashReporterOverride = (_, _) {};
+
+        await expectLater(
+          VideoRenderWatchdog.run(
+            render: timedOut,
+            taskId: 'seam-a',
+            cancelTask: (_) async {},
+            timeout: Duration.zero,
+          ),
+          throwsA(isA<VideoRenderFailedException>()),
+        );
+
+        expect(readMarker('seam-a'), contains('watchdogFiredAtMs'));
+        expect(readMarker('seam-b'), isNot(contains('watchdogFiredAtMs')));
+
+        finishTimedOut.complete('a.mp4');
+        finishBeside.complete('b.mp4');
+        await Future.wait([timedOut, beside]);
+      });
+    });
+
+    group('native cancel', () {
+      final originalProVideoEditor = ProVideoEditor.instance;
+
+      tearDown(() => ProVideoEditor.instance = originalProVideoEditor);
+
+      test('lands in the marker before the platform call and notes its '
+          'return after it', () async {
+        final finish = Completer<String>();
+        final render = await startRender(finish, taskId: 'seam');
+        Map<String, Object?>? markerAtPlatformCall;
+        ProVideoEditor.instance = _FakeProVideoEditor(
+          onCancel: (_) => markerAtPlatformCall = readMarker('seam'),
+        );
+
+        await VideoEditorRenderService.cancelTask('seam');
+
+        expect(
+          markerAtPlatformCall,
+          containsPair('cancelRequestedAtMs', isA<int>()),
+        );
+        expect(markerAtPlatformCall, isNot(contains('cancelReturnedAtMs')));
+        expect(
+          readMarker('seam'),
+          containsPair('cancelReturnedAtMs', isA<int>()),
+        );
+
+        finish.complete('out.mp4');
+        await render;
+      });
+    });
+
+    group('lifecycle history', () {
+      late TestWidgetsFlutterBinding binding;
+
+      setUp(() {
+        binding = TestWidgetsFlutterBinding.instance;
+        addTearDown(binding.resetInternalState);
+      });
+
+      void moveThrough(List<AppLifecycleState> states) =>
+          states.forEach(binding.handleAppLifecycleStateChanged);
+
+      List<String> statesIn(Map<String, Object?> marker) => [
+        for (final entry in marker['lifecycleHistory']! as List<Object?>)
+          (entry! as String).split('@').first,
+      ];
+
+      test(
+        'records each change the app goes through while rendering',
+        () async {
+          final finish = Completer<String>();
+          final render = await startRender(finish);
+
+          moveThrough(const [
+            AppLifecycleState.inactive,
+            AppLifecycleState.hidden,
+            AppLifecycleState.paused,
+          ]);
+
+          expect(
+            statesIn(readOnlyMarker()),
+            equals(['resumed', 'inactive', 'hidden', 'paused']),
+          );
+
+          finish.complete('out.mp4');
+          await render;
+        },
+      );
+
+      test('keeps the last five states', () async {
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        moveThrough(const [
+          AppLifecycleState.inactive,
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+          AppLifecycleState.hidden,
+          AppLifecycleState.inactive,
+          AppLifecycleState.resumed,
+        ]);
+
+        expect(
+          statesIn(readOnlyMarker()),
+          equals(['hidden', 'paused', 'hidden', 'inactive', 'resumed']),
+        );
+
+        finish.complete('out.mp4');
+        await render;
+      });
+    });
+
     group('initialize', () {
       test('reports and deletes a marker a previous session left', () async {
         File('${markers.path}/1_draft_autosave.json').writeAsStringSync(
@@ -347,6 +528,29 @@ void main() {
       });
 
       expect(summary, equals('kind=stop_motion elapsedMs=40 frames=12'));
+    });
+
+    test('names the lifecycle changes and the last things done to the '
+        'render', () {
+      final summary = summarizeMarker(const {
+        'kind': 'video',
+        'elapsedMs': 119751,
+        'lifecycle': 'resumed',
+        'lifecycleHistory': ['resumed@0', 'inactive@2140', 'resumed@2610'],
+        'watchdogFiredAtMs': 119750,
+        'cancelRequestedAtMs': 119751,
+        'details': {'segments': 2},
+      });
+
+      expect(
+        summary,
+        equals(
+          'kind=video elapsedMs=119751 lifecycle=resumed '
+          'lifecycleHistory=resumed@0,inactive@2140,resumed@2610 '
+          'watchdogFiredAtMs=119750 '
+          'cancelRequestedAtMs=119751 segments=2',
+        ),
+      );
     });
   });
 }
