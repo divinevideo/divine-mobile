@@ -23,6 +23,11 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
   group(BadgeReadIncompleteException, () {
+    test('signing refusal keeps its diagnostic message in local logs', () {
+      const error = BadgeSigningException('signing declined');
+      expect(error.toString(), 'BadgeSigningException: signing declined');
+    });
+
     test('incomplete reads use a diagnostic exception instead of an Error', () {
       const failure = BadgeReadIncompleteException(
         'badge definitions incomplete',
