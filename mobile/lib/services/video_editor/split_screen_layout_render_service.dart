@@ -118,9 +118,11 @@ abstract final class SplitScreenLayoutRenderService {
       final layers = <VideoLayer>[];
       final holds = <ImageLayer>[];
       for (final (index, cell) in cells.indexed) {
+        // Under the layout's own id, so its progress and a cancel of the
+        // layout reach a sped-up cell's render too.
         final source = await _footageOf(
           cell.clip,
-          taskId: '${taskId}_cell_$index',
+          taskId: taskId,
           tempPaths: tempPaths,
         );
         final size = await videoSize(source.video);

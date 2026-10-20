@@ -26,6 +26,9 @@ class _FakePathProvider extends Fake
 
   @override
   Future<String?> getApplicationDocumentsPath() async => path;
+
+  @override
+  Future<String?> getTemporaryPath() async => path;
 }
 
 /// Thrown by the fake renderer once it has recorded the task, so the test
@@ -227,6 +230,29 @@ void main() {
         expect(request['scaleY'], 1);
       },
     );
+
+    test('renders a sped-up cell under the layout render id', () async {
+      await expectLater(
+        SplitScreenLayoutRenderService.render(
+          cells: [
+            (
+              clip: _clip('fast').copyWith(playbackSpeed: 2),
+              rect: const ui.Rect.fromLTRB(0, 0, 1, 1),
+              alignment: Alignment.center,
+              zoom: 1,
+            ),
+          ],
+          aspectRatio: model.AspectRatio.vertical,
+          backgroundColor: const ui.Color(0xFFFF0000),
+          taskId: 'layout',
+        ),
+        throwsA(isA<_Rendered>()),
+      );
+
+      final speedRender = editor.tasks.single;
+      expect(speedRender.videoSegments?.single.playbackSpeed, 2);
+      expect(speedRender.id, 'layout');
+    });
 
     test('leaves a green-screen clip as its file was keyed', () async {
       final keyed = _clip(
