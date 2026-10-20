@@ -4180,8 +4180,26 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundsAddSharePublicly => 'Herkese açık paylaş';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Cihazından bir ses dosyası seç. Seslerim\'de gizli tut ya da Divine\'daki herkes kullanabilsin diye paylaş.';
+  String get soundsAddPromptDescription =>
+      'Bir ses dosyası seç ya da ses kaydet. Seslerim\'de gizli tut ya da Divine\'daki herkes kullanabilsin diye paylaş.';
+
+  @override
+  String get soundsRecordAction => 'Ses kaydet';
+
+  @override
+  String get soundsRecordAgainAction => 'Yeniden kaydet';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Kayıt $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Ses kaydetmek için mikrofon erişimine izin ver.';
+
+  @override
+  String get soundsRecordFailed => 'Kayıt yapılamadı. Tekrar dene.';
 
   @override
   String get soundsImportUnsupportedFormat =>

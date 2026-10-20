@@ -77,6 +77,39 @@ class LocalAudioImportService {
   Future<AudioEvent> importAudioFile({
     required String sourcePath,
     required String displayName,
+  }) {
+    return _import(
+      sourcePath: sourcePath,
+      displayName: displayName,
+      title: _titleFromDisplayName(displayName),
+      moveSource: false,
+    );
+  }
+
+  /// Moves a microphone recording at [recordingPath] into library-owned audio
+  /// storage under [title].
+  ///
+  /// Unlike [importAudioFile] the source is consumed: the recording is a
+  /// scratch file nobody else references, so it is moved rather than copied
+  /// and nothing is left behind next to it. Failures are reported the same
+  /// way, and a recording that cannot be decoded is deleted.
+  Future<AudioEvent> importRecording({
+    required String recordingPath,
+    required String title,
+  }) {
+    return _import(
+      sourcePath: recordingPath,
+      displayName: p.basename(recordingPath),
+      title: title,
+      moveSource: true,
+    );
+  }
+
+  Future<AudioEvent> _import({
+    required String sourcePath,
+    required String displayName,
+    required String title,
+    required bool moveSource,
   }) async {
     final source = File(sourcePath);
     if (!source.existsSync()) {
@@ -98,10 +131,13 @@ class LocalAudioImportService {
     );
     final root = await _storageRootProvider();
     await root.create(recursive: true);
+    final destination = p.join(root.path, fileName);
 
     final File copied;
     try {
-      copied = await source.copy(p.join(root.path, fileName));
+      copied = moveSource
+          ? await _move(source, destination)
+          : await source.copy(destination);
     } on Exception catch (error) {
       throw LocalAudioImportException(
         'The audio file could not be copied: $error',
@@ -124,14 +160,26 @@ class LocalAudioImportService {
       id: 'local_import_$uniqueSuffix',
       filePath: copied.path,
       createdAt: now.millisecondsSinceEpoch ~/ 1000,
-      title: _titleFromDisplayName(displayName),
+      title: title,
       mimeType: mimeType,
       duration: duration == null ? null : duration.inMilliseconds / 1000,
     );
   }
 
+  /// Renames [source] to [destination], falling back to copy-then-delete when
+  /// the two sit on different file systems.
+  static Future<File> _move(File source, String destination) async {
+    try {
+      return await source.rename(destination);
+    } on FileSystemException {
+      final copied = await source.copy(destination);
+      await _deleteQuietly(source);
+      return copied;
+    }
+  }
+
   /// Deletes [file], swallowing a failure so it cannot mask the original error.
-  Future<void> _deleteQuietly(File file) async {
+  static Future<void> _deleteQuietly(File file) async {
     try {
       if (file.existsSync()) await file.delete();
     } on Exception {

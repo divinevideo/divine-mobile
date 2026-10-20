@@ -4249,8 +4249,26 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundsAddSharePublicly => 'عوامی طور پر شیئر کریں';
 
   @override
-  String get soundsImportPromptDescription =>
-      'اپنے آلے سے کوئی آڈیو فائل منتخب کریں۔ اسے میری آوازیں میں نجی رکھیں یا شیئر کریں تاکہ Divine پر کوئی بھی اسے استعمال کر سکے۔';
+  String get soundsAddPromptDescription =>
+      'کوئی آڈیو فائل منتخب کریں یا ساؤنڈ ریکارڈ کریں۔ اسے میری آوازیں میں نجی رکھیں یا شیئر کریں تاکہ Divine پر کوئی بھی اسے استعمال کر سکے۔';
+
+  @override
+  String get soundsRecordAction => 'ساؤنڈ ریکارڈ کریں';
+
+  @override
+  String get soundsRecordAgainAction => 'دوبارہ ریکارڈ کریں';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'ریکارڈنگ $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'ساؤنڈ ریکارڈ کرنے کے لیے مائکروفون تک رسائی کی اجازت دیں۔';
+
+  @override
+  String get soundsRecordFailed => 'ریکارڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
 
   @override
   String get soundsImportUnsupportedFormat =>

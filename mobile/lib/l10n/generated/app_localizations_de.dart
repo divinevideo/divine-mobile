@@ -4297,8 +4297,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get soundsAddSharePublicly => 'Öffentlich teilen';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Wähle eine Audiodatei von deinem Gerät. Behalte sie privat in Meine Sounds oder teile sie, damit alle auf Divine sie verwenden können.';
+  String get soundsAddPromptDescription =>
+      'Wähle eine Audiodatei oder nimm einen Sound auf. Behalte ihn privat in Meine Sounds oder teile ihn, damit alle auf Divine ihn verwenden können.';
+
+  @override
+  String get soundsRecordAction => 'Sound aufnehmen';
+
+  @override
+  String get soundsRecordAgainAction => 'Neu aufnehmen';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Aufnahme $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Erlaube den Mikrofonzugriff, um einen Sound aufzunehmen.';
+
+  @override
+  String get soundsRecordFailed =>
+      'Die Aufnahme hat nicht geklappt. Versuch es erneut.';
 
   @override
   String get soundsImportUnsupportedFormat =>

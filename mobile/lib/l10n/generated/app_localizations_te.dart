@@ -4397,8 +4397,27 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundsAddSharePublicly => 'బహిరంగంగా పంచుకోండి';
 
   @override
-  String get soundsImportPromptDescription =>
-      'మీ పరికరం నుండి ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి. దాన్ని నా సౌండ్స్‌లో ప్రైవేట్‌గా ఉంచండి లేదా Divine లో ఎవరైనా వాడేలా పంచుకోండి.';
+  String get soundsAddPromptDescription =>
+      'ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి లేదా ఒక సౌండ్‌ను రికార్డ్ చేయండి. దాన్ని నా సౌండ్స్‌లో ప్రైవేట్‌గా ఉంచండి లేదా Divine లో ఎవరైనా వాడేలా పంచుకోండి.';
+
+  @override
+  String get soundsRecordAction => 'సౌండ్‌ను రికార్డ్ చేయండి';
+
+  @override
+  String get soundsRecordAgainAction => 'మళ్లీ రికార్డ్ చేయండి';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'రికార్డింగ్ $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'సౌండ్ రికార్డ్ చేయడానికి మైక్రోఫోన్ యాక్సెస్‌ని అనుమతించండి.';
+
+  @override
+  String get soundsRecordFailed =>
+      'రికార్డ్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
 
   @override
   String get soundsImportUnsupportedFormat =>

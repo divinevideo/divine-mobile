@@ -4375,8 +4375,26 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundsAddSharePublicly => 'Împărtășește public';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Alege un fișier audio de pe dispozitiv. Păstrează-l privat în Sunetele mele sau împărtășește-l, ca oricine de pe Divine să-l poată folosi.';
+  String get soundsAddPromptDescription =>
+      'Alege un fișier audio sau înregistrează un sunet. Păstrează-l privat în Sunetele mele sau împărtășește-l, ca oricine de pe Divine să-l poată folosi.';
+
+  @override
+  String get soundsRecordAction => 'Înregistrează un sunet';
+
+  @override
+  String get soundsRecordAgainAction => 'Înregistrează din nou';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Înregistrare $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Permite accesul la microfon pentru a înregistra un sunet.';
+
+  @override
+  String get soundsRecordFailed => 'Nu am putut înregistra. Încearcă din nou.';
 
   @override
   String get soundsImportUnsupportedFormat =>

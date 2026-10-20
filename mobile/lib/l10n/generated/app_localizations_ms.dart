@@ -4233,8 +4233,26 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundsAddSharePublicly => 'Kongsi secara umum';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Pilih fail audio daripada peranti anda. Simpan secara peribadi dalam Bunyi Saya, atau kongsikan supaya sesiapa sahaja di Divine boleh menggunakannya.';
+  String get soundsAddPromptDescription =>
+      'Pilih fail audio atau rakam bunyi. Simpan secara peribadi dalam Bunyi Saya, atau kongsikan supaya sesiapa sahaja di Divine boleh menggunakannya.';
+
+  @override
+  String get soundsRecordAction => 'Rakam bunyi';
+
+  @override
+  String get soundsRecordAgainAction => 'Rakam semula';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Rakaman $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Benarkan akses mikrofon untuk merakam bunyi.';
+
+  @override
+  String get soundsRecordFailed => 'Tidak dapat merakam. Cuba lagi.';
 
   @override
   String get soundsImportUnsupportedFormat =>

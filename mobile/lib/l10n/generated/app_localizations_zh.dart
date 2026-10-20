@@ -3960,8 +3960,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsAddSharePublicly => '公开分享';
 
   @override
-  String get soundsImportPromptDescription =>
-      '从你的设备中选择一个音频文件。可以私下保存在“我的声音”里，也可以分享出去，让 Divine 上的任何人都能使用。';
+  String get soundsAddPromptDescription =>
+      '选择一个音频文件，或录制一段声音。可以私下保存在“我的声音”里，也可以分享出去，让 Divine 上的任何人都能使用。';
+
+  @override
+  String get soundsRecordAction => '录制声音';
+
+  @override
+  String get soundsRecordAgainAction => '重新录制';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return '录音 $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody => '允许访问麦克风才能录制声音。';
+
+  @override
+  String get soundsRecordFailed => '录制失败。请重试。';
 
   @override
   String get soundsImportUnsupportedFormat => '不支持该文件类型。请选择音频文件。';

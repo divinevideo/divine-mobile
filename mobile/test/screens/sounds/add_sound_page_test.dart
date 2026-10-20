@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for the Add sound screen: pick, preview, save privately
-// ABOUTME: under a name, or share publicly with a credit and land in My Sounds.
+// ABOUTME: Widget tests for the Add sound screen: pick or record, preview, save
+// ABOUTME: privately under a name, or share publicly and land in My Sounds.
 
 import 'dart:async';
 import 'dart:io';
@@ -18,6 +18,7 @@ import 'package:openvine/blocs/add_sound/add_sound_cubit.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
+import 'package:openvine/blocs/sound_recorder/sound_recorder_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/saved_sound.dart';
@@ -29,10 +30,41 @@ import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
+import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
 
 class _MockPublisher extends Mock implements LocalAudioEventPublisher {}
+
+class _MockPermissionsService extends Mock implements PermissionsService {}
+
+class _FakeAudioSessionService extends AudioSessionService {
+  @override
+  Future<void> resetAudioSession() async {}
+}
+
+class _FakeRecorder implements VoiceOverRecorderService {
+  final _levels = StreamController<double>.broadcast();
+  String? path;
+
+  @override
+  Stream<double> get amplitudeStream => _levels.stream;
+
+  @override
+  Future<void> start(String path) async {
+    this.path = path;
+    File(path).writeAsBytesSync([7, 8, 9]);
+  }
+
+  @override
+  Future<String?> stop() async => path;
+
+  @override
+  Future<void> dispose() => _levels.close();
+
+  void emitLevel(double level) => _levels.add(level);
+}
 
 class _FakeAudioEvent extends Fake implements AudioEvent {}
 
@@ -103,6 +135,23 @@ class _FakeImportService extends LocalAudioImportService {
       duration: 3,
     );
   }
+
+  /// Moves the recording like the real service, without probing it.
+  @override
+  Future<AudioEvent> importRecording({
+    required String recordingPath,
+    required String title,
+  }) async {
+    final file = File(recordingPath).renameSync('${storageDir.path}/rec.m4a');
+    return AudioEvent.fromLocalImport(
+      id: 'local_import_recording',
+      filePath: file.path,
+      createdAt: 1,
+      title: title,
+      mimeType: 'audio/mp4',
+      duration: 2,
+    );
+  }
 }
 
 const _self =
@@ -134,6 +183,8 @@ void main() {
   late List<String> reclaimed;
   late _FakeAudioPlaybackService audio;
   late _MockPublisher publisher;
+  late _MockPermissionsService permissions;
+  late _FakeRecorder recorder;
   late AppLocalizations l10n;
   AudioImportPickedFile? nextPick;
 
@@ -151,6 +202,12 @@ void main() {
     reclaimed = <String>[];
     audio = _FakeAudioPlaybackService();
     publisher = _MockPublisher();
+    permissions = _MockPermissionsService();
+    recorder = _FakeRecorder();
+    when(
+      permissions.checkMicrophoneStatus,
+    ).thenAnswer((_) async => PermissionStatus.granted);
+    when(permissions.openAppSettings).thenAnswer((_) async => true);
     l10n = lookupAppLocalizations(const Locale('en'));
     nextPick = AudioImportPickedFile(path: source.path, name: 'beat.mp3');
     when(
@@ -218,17 +275,29 @@ void main() {
       tester,
       savedSoundsService: savedSoundsService,
       page: Builder(
-        builder: (context) => BlocProvider(
-          create: (_) => AddSoundCubit(
-            importService: _FakeImportService(storageDir),
-            pickFile: () async => nextPick,
-            saveSound: context.read<SavedSoundsBloc>().saveSound,
-            reclaimAudio: (path) async => reclaimed.add(path),
-            viewerAccountId: () => _self,
-            publisher: () => publisher,
-            publisherName: 'Alice',
-            publisherPubkey: _self,
-          ),
+        builder: (context) => MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => AddSoundCubit(
+                importService: _FakeImportService(storageDir),
+                pickFile: () async => nextPick,
+                saveSound: context.read<SavedSoundsBloc>().saveSound,
+                reclaimAudio: (path) async => reclaimed.add(path),
+                viewerAccountId: () => _self,
+                publisher: () => publisher,
+                publisherName: 'Alice',
+                publisherPubkey: _self,
+              ),
+            ),
+            BlocProvider(
+              create: (_) => SoundRecorderCubit(
+                permissionsService: permissions,
+                audioSessionService: _FakeAudioSessionService(),
+                recorder: recorder,
+                scratchDirectoryProvider: () async => root,
+              ),
+            ),
+          ],
           child: const AddSoundView(),
         ),
       ),
@@ -237,6 +306,14 @@ void main() {
 
   Future<void> pickFile(WidgetTester tester) async {
     await tester.tap(find.byKey(const Key('add_sound_pick')));
+    await tester.pumpAndSettle();
+  }
+
+  /// Stopping the recorder awaits cancelling its level subscription, which
+  /// resolves through the root zone's microtask queue: that needs a real
+  /// event-loop turn before the fake-async pump can carry the rest through.
+  Future<void> settleRecorder(WidgetTester tester) async {
+    await tester.runAsync(pumpEventQueue);
     await tester.pumpAndSettle();
   }
 
@@ -325,8 +402,9 @@ void main() {
         await pumpView(tester);
 
         expect(find.text(l10n.soundsAddSound), findsOneWidget);
-        expect(find.text(l10n.soundsImportPromptDescription), findsOneWidget);
+        expect(find.text(l10n.soundsAddPromptDescription), findsOneWidget);
         expect(find.byKey(const Key('add_sound_pick')), findsOneWidget);
+        expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
         expect(find.byKey(const Key('add_sound_save')), findsNothing);
       });
 
@@ -601,6 +679,63 @@ void main() {
             allowAudioReuse: any(named: 'allowAudioReuse'),
           ),
         ).called(1);
+      });
+
+      testWidgets('records a sound and saves it privately', (tester) async {
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('add_sound_pick')), findsNothing);
+        expect(find.byKey(const Key('add_sound_save')), findsNothing);
+
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        expect(find.byKey(const Key('add_sound_record_again')), findsOneWidget);
+        expect(find.textContaining('Recording '), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pumpAndSettle();
+
+        final saved = librarySounds().single.audio;
+        expect(saved.title, startsWith('Recording '));
+        expect(saved.mimeType, 'audio/mp4');
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('back while recording cancels it and stays', (tester) async {
+        final router = await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
+        );
+        await settleRecorder(tester);
+
+        expect(router.state.uri.path, '/add');
+        expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('points to settings when the microphone is refused', (
+        tester,
+      ) async {
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) async => PermissionStatus.requiresSettings);
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('add_sound_open_settings')));
+
+        expect(find.text(l10n.soundsRecordPermissionBody), findsOneWidget);
+        expect(recorder.path, isNull);
+        verify(permissions.openAppSettings).called(1);
       });
 
       testWidgets('blocks back navigation while sharing', (tester) async {

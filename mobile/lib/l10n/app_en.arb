@@ -2680,15 +2680,41 @@
   "soundsSavedEmptyDescription": "Tap Use Sound on a video to save it here.",
   "soundsAddSound": "Add sound",
   "@soundsAddSound": {
-    "description": "Label of the button above the My Sounds list that adds an audio file from the device, and the title of the screen it opens."
+    "description": "Label of the button above the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens."
   },
   "soundsAddSharePublicly": "Share publicly",
   "@soundsAddSharePublicly": {
     "description": "Switch on the Add sound screen. On, the sound is published for anyone on Divine to reuse (with a public credit) before it is saved to My Sounds; off, it stays private."
   },
-  "soundsImportPromptDescription": "Pick an audio file from your device. Keep it private in My Sounds, or share it so anyone on Divine can use it.",
-  "@soundsImportPromptDescription": {
-    "description": "Shown on the Add sound screen before a file is picked. Explains the file can stay private or be shared publicly."
+  "soundsAddPromptDescription": "Pick an audio file or record a sound. Keep it private in My Sounds, or share it so anyone on Divine can use it.",
+  "@soundsAddPromptDescription": {
+    "description": "Shown on the Add sound screen before a sound is picked or recorded. Names both ways to add one and explains it can stay private or be shared publicly."
+  },
+  "soundsRecordAction": "Record a sound",
+  "@soundsRecordAction": {
+    "description": "Button on the Add sound screen that starts recording a sound with the microphone."
+  },
+  "soundsRecordAgainAction": "Record again",
+  "@soundsRecordAgainAction": {
+    "description": "Small button next to a sound recorded on the Add sound screen; replaces it with a new recording."
+  },
+  "soundsRecordingTitle": "Recording {dateTime}",
+  "@soundsRecordingTitle": {
+    "description": "Default title of a sound recorded on the Add sound screen, shown until the user names it.",
+    "placeholders": {
+      "dateTime": {
+        "type": "String",
+        "example": "Oct 20 2:32 PM"
+      }
+    }
+  },
+  "soundsRecordPermissionBody": "Allow microphone access to record a sound.",
+  "@soundsRecordPermissionBody": {
+    "description": "Shown on the Add sound screen when microphone access was refused, below the 'Microphone access needed' title and above an Open settings button."
+  },
+  "soundsRecordFailed": "Couldn't record that. Try again.",
+  "@soundsRecordFailed": {
+    "description": "Snackbar on the Add sound screen when the microphone recorder fails to start or stop."
   },
   "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
   "@soundsImportUnsupportedFormat": {

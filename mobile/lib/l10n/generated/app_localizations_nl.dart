@@ -4254,8 +4254,26 @@ class AppLocalizationsNl extends AppLocalizations {
   String get soundsAddSharePublicly => 'Openbaar delen';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Kies een audiobestand van je apparaat. Houd het privé in Mijn sounds of deel het zodat iedereen op Divine het kan gebruiken.';
+  String get soundsAddPromptDescription =>
+      'Kies een audiobestand of neem een sound op. Houd het privé in Mijn sounds of deel het zodat iedereen op Divine het kan gebruiken.';
+
+  @override
+  String get soundsRecordAction => 'Sound opnemen';
+
+  @override
+  String get soundsRecordAgainAction => 'Opnieuw opnemen';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Opname $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Geef toegang tot de microfoon om een sound op te nemen.';
+
+  @override
+  String get soundsRecordFailed => 'Opnemen is mislukt. Probeer het opnieuw.';
 
   @override
   String get soundsImportUnsupportedFormat =>

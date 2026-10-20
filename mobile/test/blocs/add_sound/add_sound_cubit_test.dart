@@ -272,6 +272,53 @@ void main() {
       });
     });
 
+    group('importRecording', () {
+      late File recording;
+
+      setUp(() {
+        recording = File('${root.path}/sound_1.m4a')
+          ..writeAsBytesSync([4, 5, 6]);
+      });
+
+      test('moves the recording in and replaces the picked file', () async {
+        final cubit = build();
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final picked = cubit.state.audio!;
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+
+        expect(cubit.state.status, AddSoundStatus.ready);
+        expect(cubit.state.source, AddSoundSource.recording);
+        expect(cubit.state.audio!.title, 'Recording');
+        expect(cubit.state.attribution!.title, 'Recording');
+        expect(
+          await File(cubit.state.audio!.localFilePath!).readAsBytes(),
+          equals([4, 5, 6]),
+        );
+        expect(recording.existsSync(), isFalse);
+        expect(reclaimed, equals([picked.localFilePath]));
+      });
+
+      test('a recording that cannot be read keeps the current sound', () async {
+        durationFn = (file) async {
+          if (file.path.endsWith('.m4a')) throw const FormatException('empty');
+          return const Duration(seconds: 3);
+        };
+        final cubit = build();
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final picked = cubit.state.audio!;
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+
+        expect(cubit.state.failure, AddSoundFailure.unreadableFile);
+        expect(cubit.state.audio, same(picked));
+        expect(cubit.state.source, AddSoundSource.file);
+        expect(reclaimed, isEmpty);
+      });
+    });
+
     group('updateAttribution', () {
       test('credits the publisher pubkey only while it is own work', () async {
         final cubit = await sharingCubit();

@@ -164,5 +164,61 @@ void main() {
         ),
       );
     });
+
+    group('importRecording', () {
+      test(
+        'moves the recording into library storage under its title',
+        () async {
+          final recording = File('${sourceDir.path}/recording_1.m4a')
+            ..writeAsBytesSync([5, 6, 7]);
+          final service = LocalAudioImportService(
+            storageRootProvider: () async => storageDir,
+            durationResolver: (_) async => const Duration(milliseconds: 4200),
+          );
+
+          final event = await service.importRecording(
+            recordingPath: recording.path,
+            title: 'Recording Oct 20 2:32 PM',
+          );
+
+          expect(event.title, equals('Recording Oct 20 2:32 PM'));
+          expect(event.mimeType, equals('audio/mp4'));
+          expect(event.duration, equals(4.2));
+          expect(p.dirname(event.localFilePath!), equals(storageDir.path));
+          expect(
+            await File(event.localFilePath!).readAsBytes(),
+            equals([5, 6, 7]),
+          );
+          // The scratch recording is consumed, not copied.
+          expect(recording.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'a recording that cannot be decoded leaves no file behind',
+        () async {
+          final recording = File('${sourceDir.path}/recording_2.m4a')
+            ..writeAsBytesSync([1]);
+          final service = LocalAudioImportService(
+            storageRootProvider: () async => storageDir,
+            durationResolver: (_) async => throw const FormatException('empty'),
+          );
+
+          await expectLater(
+            service.importRecording(recordingPath: recording.path, title: 'x'),
+            throwsA(
+              isA<LocalAudioImportException>().having(
+                (error) => error.reason,
+                'reason',
+                LocalAudioImportFailureReason.decodeFailed,
+              ),
+            ),
+          );
+
+          expect(storageDir.listSync(recursive: true), isEmpty);
+          expect(recording.existsSync(), isFalse);
+        },
+      );
+    });
   });
 }

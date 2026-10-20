@@ -4144,8 +4144,25 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsAddSharePublicly => 'በይፋ ያጋሩ';
 
   @override
-  String get soundsImportPromptDescription =>
-      'ከመሣሪያዎ የድምፅ ፋይል ይምረጡ። በየእኔ ድምፆች ውስጥ በግል ያስቀምጡት ወይም በ Divine ላይ ማንኛውም ሰው እንዲጠቀምበት ያጋሩት።';
+  String get soundsAddPromptDescription =>
+      'የድምፅ ፋይል ይምረጡ ወይም ድምፅ ይቅዱ። በየእኔ ድምፆች ውስጥ በግል ያስቀምጡት ወይም በ Divine ላይ ማንኛውም ሰው እንዲጠቀምበት ያጋሩት።';
+
+  @override
+  String get soundsRecordAction => 'ድምፅ ይቅዱ';
+
+  @override
+  String get soundsRecordAgainAction => 'እንደገና ይቅዱ';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'ቅረጻ $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody => 'ድምፅ ለመቅዳት የማይክሮፎን መዳረሻ ይፍቀዱ።';
+
+  @override
+  String get soundsRecordFailed => 'መቅዳት አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
   String get soundsImportUnsupportedFormat =>

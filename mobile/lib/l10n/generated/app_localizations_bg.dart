@@ -4289,8 +4289,26 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundsAddSharePublicly => 'Сподели публично';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Избери аудиофайл от устройството си. Запази го лично в Моите звуци или го сподели, за да може всеки в Divine да го използва.';
+  String get soundsAddPromptDescription =>
+      'Избери аудиофайл или запиши звук. Запази го лично в Моите звуци или го сподели, за да може всеки в Divine да го използва.';
+
+  @override
+  String get soundsRecordAction => 'Запиши звук';
+
+  @override
+  String get soundsRecordAgainAction => 'Запиши отново';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Запис $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Разреши достъп до микрофона, за да запишеш звук.';
+
+  @override
+  String get soundsRecordFailed => 'Записът не успя. Опитай пак.';
 
   @override
   String get soundsImportUnsupportedFormat =>

@@ -4166,8 +4166,26 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundsAddSharePublicly => 'Bagikan ke publik';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Pilih file audio dari perangkatmu. Simpan secara pribadi di Suara Saya, atau bagikan agar siapa pun di Divine bisa memakainya.';
+  String get soundsAddPromptDescription =>
+      'Pilih file audio atau rekam suara. Simpan secara pribadi di Suara Saya, atau bagikan agar siapa pun di Divine bisa memakainya.';
+
+  @override
+  String get soundsRecordAction => 'Rekam suara';
+
+  @override
+  String get soundsRecordAgainAction => 'Rekam ulang';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Rekaman $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Izinkan akses mikrofon untuk merekam suara.';
+
+  @override
+  String get soundsRecordFailed => 'Gagal merekam. Coba lagi.';
 
   @override
   String get soundsImportUnsupportedFormat =>

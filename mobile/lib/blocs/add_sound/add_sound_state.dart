@@ -1,5 +1,6 @@
-// ABOUTME: State for the library's Add sound flow: the picked file, whether it
-// ABOUTME: is shared publicly, its public credit, and the save lifecycle.
+// ABOUTME: State for the library's Add sound flow: the picked or recorded sound,
+// ABOUTME: whether it is shared publicly, its public credit, and the save
+// ABOUTME: lifecycle.
 
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart' show AudioEvent;
@@ -8,12 +9,22 @@ import 'package:openvine/services/saved_sounds_service.dart';
 
 const _unset = Object();
 
+/// Where the sound on the Add sound screen comes from.
+enum AddSoundSource {
+  /// An audio file picked from the device.
+  file,
+
+  /// A recording made with the microphone on the screen itself.
+  recording,
+}
+
 enum AddSoundStatus {
   /// Nothing picked yet.
   idle,
 
-  /// The picker is open, or the picked file is being copied into library
-  /// storage and probed. A previous pick, if any, stays in [AddSoundState.audio].
+  /// The picker is open, or the picked file or recording is being moved into
+  /// library storage and probed. A previous sound, if any, stays in
+  /// [AddSoundState.audio].
   importing,
 
   /// A library-owned copy exists and can be previewed, named or credited, and
@@ -63,6 +74,7 @@ class AddSoundState extends Equatable {
     this.status = AddSoundStatus.idle,
     this.audio,
     this.accountId,
+    this.source,
     this.sharePublicly = false,
     this.attribution,
     this.publishedSound,
@@ -72,13 +84,20 @@ class AddSoundState extends Equatable {
 
   final AddSoundStatus status;
 
-  /// The library-owned copy for this pick, once it exists.
+  /// The library-owned copy of the picked file or recording, once it exists.
   final AudioEvent? audio;
 
   /// The account [audio] was imported under. A save is refused once another
   /// account is signed in, so one account's sound never lands in another's
   /// library.
   final String? accountId;
+
+  /// Where [audio] came from or, while [status] is importing, where the sound
+  /// being imported comes from.
+  ///
+  /// Picks how the sound is replaced: a file through the picker, a recording
+  /// by recording again.
+  final AddSoundSource? source;
 
   /// Whether saving also publishes the sound as a reusable Kind 1063.
   final bool sharePublicly;
@@ -124,6 +143,7 @@ class AddSoundState extends Equatable {
     AddSoundStatus? status,
     Object? audio = _unset,
     Object? accountId = _unset,
+    Object? source = _unset,
     bool? sharePublicly,
     Object? attribution = _unset,
     Object? publishedSound = _unset,
@@ -136,6 +156,9 @@ class AddSoundState extends Equatable {
       accountId: identical(accountId, _unset)
           ? this.accountId
           : accountId as String?,
+      source: identical(source, _unset)
+          ? this.source
+          : source as AddSoundSource?,
       sharePublicly: sharePublicly ?? this.sharePublicly,
       attribution: identical(attribution, _unset)
           ? this.attribution
@@ -157,6 +180,7 @@ class AddSoundState extends Equatable {
     status,
     audio,
     accountId,
+    source,
     sharePublicly,
     attribution,
     publishedSound,
