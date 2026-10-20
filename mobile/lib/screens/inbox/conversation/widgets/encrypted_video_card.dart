@@ -28,8 +28,9 @@ const double encryptedVideoCardRadius = 16;
 /// the video DM play page; [onTap] is the future hook for it.
 ///
 /// When the sender provided no blurhash there is nothing safe to preview, so
-/// the card shows a neutral play placeholder. Divine's sender attaches one;
-/// older messages and other clients may not.
+/// the card shows a neutral play placeholder. Divine's sender attaches one
+/// when it can read the video's frame in time; older messages and other
+/// clients may not.
 class EncryptedVideoCard extends StatefulWidget {
   const EncryptedVideoCard({
     required this.fileMetadata,
