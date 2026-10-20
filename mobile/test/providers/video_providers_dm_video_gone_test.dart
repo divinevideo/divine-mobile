@@ -501,8 +501,9 @@ void main() {
       final watch = video.parent.watch(events: FileSystemEvent.delete).listen((
         event,
       ) {
-        if (event.path == video.path && !deleted.isCompleted)
+        if (event.path == video.path && !deleted.isCompleted) {
           deleted.complete();
+        }
       });
       addTearDown(watch.cancel);
       await db.directMessagesDao.markMessageDeleted(

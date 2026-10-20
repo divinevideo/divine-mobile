@@ -1557,7 +1557,7 @@ void main() {
         },
       );
 
-      test('a tap takeover preserves the queued card\'s own lease', () async {
+      test("a tap takeover preserves the queued card's own lease", () async {
         final other = _videoMessage(id: '2' * 64);
         final message = _videoMessage();
         final download = Completer<Uint8List>();
