@@ -2,7 +2,6 @@
 // ABOUTME: Read/dismiss preserve messages and never accept the request.
 
 import 'package:db_client/db_client.dart';
-import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,14 +70,13 @@ void main() {
   );
 
   group('renders and interactions', () {
-    testWidgets('protected notices offer read without dismissal or removal', (
+    testWidgets('protected notices offer read without dismissal', (
       tester,
     ) async {
       protectPeer = true;
       await tester.pumpWidget(subject());
       expect(find.text('Mark as read'), findsOneWidget);
       expect(find.text('Dismiss'), findsNothing);
-      expect(find.text('Remove'), findsNothing);
     });
 
     testWidgets('dismiss keeps history and returns to the inbox', (
@@ -134,64 +132,6 @@ void main() {
         hasLength(1),
       );
     });
-    testWidgets(
-      'confirming removal deletes only this conversation’s local history',
-      (tester) async {
-        final router = GoRouter(
-          initialLocation: '/thread',
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, _) => const Scaffold(body: Text('Inbox')),
-              routes: [
-                GoRoute(
-                  path: 'thread',
-                  builder: (_, _) => Scaffold(
-                    body: ConversationTriageBar(
-                      conversationId: id,
-                      participantPubkeys: [peer],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-        addTearDown(router.dispose);
-        await tester.pumpWidget(
-          testProviderScope(
-            mockAuthService: createMockAuthService(currentPublicKeyHex: owner),
-            additionalOverrides: [
-              dmRepositoryProvider.overrideWithValue(repository),
-            ],
-            child: MaterialApp.router(
-              routerConfig: router,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        await tester.runAsync(() => tester.tap(find.text('Remove')));
-        await tester.pumpAndSettle();
-        await tester.runAsync(() async {
-          await tester.tap(find.widgetWithText(DivineButton, 'Remove').last);
-          await database.conversationsDao
-              .watchConversation(id, ownerPubkey: owner)
-              .firstWhere((conversation) => conversation == null);
-        });
-        await tester.pumpAndSettle();
-        expect(find.text('Inbox'), findsOneWidget);
-        expect(
-          await tester.runAsync(() => repository.getConversation(id)),
-          isNull,
-        );
-        expect(
-          await tester.runAsync(() => repository.getMessages(id)),
-          isEmpty,
-        );
-      },
-    );
 
     testWidgets('mark as read affects only this thread without accepting it', (
       tester,
@@ -213,25 +153,5 @@ void main() {
       );
       expect(find.text('Marked as read'), findsOneWidget);
     });
-
-    testWidgets(
-      'canceling removal preserves this thread’s history',
-      (tester) async {
-        await tester.pumpWidget(subject());
-        await tester.tap(find.text('Remove'));
-        await tester.pumpAndSettle();
-        expect(find.text('Remove conversation?'), findsOneWidget);
-        expect(
-          await tester.runAsync(() => repository.getMessages(id)),
-          hasLength(1),
-        );
-        await tester.tap(find.text('Cancel'));
-        await tester.pumpAndSettle();
-        expect(
-          await tester.runAsync(() => repository.getMessages(id)),
-          hasLength(1),
-        );
-      },
-    );
   });
 }

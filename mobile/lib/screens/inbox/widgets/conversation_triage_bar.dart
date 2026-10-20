@@ -1,4 +1,4 @@
-// ABOUTME: Visible, per-thread read, dismissal, and local removal controls.
+// ABOUTME: Visible read and dismissal controls for a message request.
 // ABOUTME: Shares the same repository-backed actions as the inbox list.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -15,13 +15,11 @@ import 'package:openvine/screens/inbox/inbox_page.dart';
 class ConversationTriageBar extends ConsumerWidget {
   const ConversationTriageBar({
     required this.conversationId,
-    this.showRemove = true,
     this.participantPubkeys = const [],
     super.key,
   });
 
   final String conversationId;
-  final bool showRemove;
   final List<String> participantPubkeys;
 
   @override
@@ -38,7 +36,6 @@ class ConversationTriageBar extends ConsumerWidget {
       ),
       child: _TriageActions(
         conversationId: conversationId,
-        showRemove: showRemove,
         participantPubkeys: participantPubkeys,
       ),
     );
@@ -48,12 +45,10 @@ class ConversationTriageBar extends ConsumerWidget {
 class _TriageActions extends StatelessWidget {
   const _TriageActions({
     required this.conversationId,
-    required this.showRemove,
     required this.participantPubkeys,
   });
 
   final String conversationId;
-  final bool showRemove;
   final List<String> participantPubkeys;
 
   @override
@@ -112,45 +107,9 @@ class _TriageActions extends StatelessWidget {
                       }
                     },
             ),
-          if (showRemove && canDismiss)
-            DivineButton(
-              label: context.l10n.inboxRemoveConfirmConfirm,
-              type: DivineButtonType.link,
-              size: DivineButtonSize.small,
-              onPressed: processing ? null : () => _remove(context, cubit),
-            ),
         ],
       ),
     );
-  }
-
-  Future<void> _remove(
-    BuildContext context,
-    ConversationActionsCubit cubit,
-  ) async {
-    final confirmed = await VineBottomSheet.show<bool>(
-      context: context,
-      scrollable: false,
-      expanded: false,
-      isScrollControlled: true,
-      title: Text(context.l10n.inboxRemoveConfirmTitle),
-      body: _RemoveConfirmation(participantPubkeys: participantPubkeys),
-    );
-    if (confirmed != true || !context.mounted || cubit.isClosed) return;
-    final result = await cubit.removeConversation(conversationId);
-    if (!context.mounted) return;
-    switch (result) {
-      case RemoveConversationOutcome.removed:
-        context.safePop(fallback: InboxPage.path);
-      case RemoveConversationOutcome.refused:
-        ScaffoldMessenger.of(context).showSnackBar(
-          DivineSnackbarContainer.snackBar(
-            context.l10n.messageRequestModerationNoticeCannotBeRemoved,
-          ),
-        );
-      case RemoveConversationOutcome.failed:
-        _showError(context);
-    }
   }
 
   void _showError(BuildContext context) {
@@ -161,39 +120,4 @@ class _TriageActions extends StatelessWidget {
       ),
     );
   }
-}
-
-class _RemoveConfirmation extends StatelessWidget {
-  const _RemoveConfirmation({required this.participantPubkeys});
-
-  final List<String> participantPubkeys;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          participantPubkeys.length > 1
-              ? context.l10n.inboxRemoveConfirmBodyGroup
-              : context.l10n.inboxRemoveConfirmBodyVanishedAccount,
-          style: VineTheme.bodyLargeFont(color: context.vineColors.onSurface),
-        ),
-        const SizedBox(height: 16),
-        DivineButton(
-          label: context.l10n.inboxRemoveConfirmConfirm,
-          type: DivineButtonType.error,
-          onPressed: () => Navigator.of(context).pop(true),
-        ),
-        const SizedBox(height: 8),
-        DivineButton(
-          label: context.l10n.commonCancel,
-          type: DivineButtonType.secondary,
-          onPressed: () => Navigator.of(context).pop(false),
-        ),
-      ],
-    ),
-  );
 }
