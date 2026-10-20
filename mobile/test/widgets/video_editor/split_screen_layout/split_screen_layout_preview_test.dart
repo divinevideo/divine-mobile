@@ -98,6 +98,14 @@ void main() {
       expect(identical(tester.widget(second), before), isTrue);
     });
 
+    testWidgets('labels a filled cell with how long its clip plays', (
+      tester,
+    ) async {
+      await pump(tester, [_clip('a').copyWith(playbackSpeed: 2)]);
+
+      expect(find.text(l10n.libraryClipDuration('1.00')), findsOneWidget);
+    });
+
     testWidgets('shows a poster that cannot be decoded as a blank frame', (
       tester,
     ) async {

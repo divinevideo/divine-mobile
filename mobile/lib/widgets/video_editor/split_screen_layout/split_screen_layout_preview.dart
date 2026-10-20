@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 
 /// The frame the layout splits, with every cell where the export will put it.
@@ -177,7 +178,7 @@ class _LayoutCellState extends State<_LayoutCell> {
           value: cell == null
               ? null
               : context.l10n.libraryClipDuration(
-                  _formatSeconds(cell.clip.playbackDuration),
+                  cell.clip.playbackDuration.toFormattedSeconds(),
                 ),
           child: GestureDetector(
             behavior: .opaque,
@@ -331,7 +332,7 @@ class _DurationBadge extends StatelessWidget {
           child: Padding(
             padding: const .symmetric(horizontal: 6, vertical: 2),
             child: Text(
-              context.l10n.libraryClipDuration(_formatSeconds(duration)),
+              context.l10n.libraryClipDuration(duration.toFormattedSeconds()),
               style: VineTheme.labelSmallFont(color: VineTheme.whiteText),
             ),
           ),
@@ -340,8 +341,3 @@ class _DurationBadge extends StatelessWidget {
     );
   }
 }
-
-/// [duration] in seconds with two decimals, the way clip lengths read
-/// everywhere in the editor.
-String _formatSeconds(Duration duration) =>
-    (duration.inMilliseconds / 1000).toStringAsFixed(2);
