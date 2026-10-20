@@ -73,10 +73,12 @@ class DmVideoDecryptor {
   /// or carries a malformed key or nonce (checked before any download, and
   /// never quoted), the ciphertext exceeds [maxBytes], the download outlasts
   /// [timeLimit], or
-  /// the ciphertext's SHA-256 does not match the sender's `x` tag; an
-  /// [ArgumentError] for a non-HTTPS URL; a [DioException] if the download
-  /// fails or stalls; and whatever [FileEncryption.decrypt] throws when the
-  /// ciphertext does not authenticate.
+  /// the ciphertext's SHA-256 does not match the sender's `x` tag; also when
+  /// the URL is not HTTPS or the download fails or stalls, naming the kind of
+  /// failure and any HTTP status but never the address, which links the
+  /// sender's upload to this recipient. Throws whatever
+  /// [FileEncryption.decrypt] throws when the ciphertext does not
+  /// authenticate.
   @useResult
   Future<Uint8List> decrypt(
     DmMessage message, {
@@ -119,7 +121,7 @@ class DmVideoDecryptor {
   }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
-      throw ArgumentError.value(url, 'url', 'must be an https URL');
+      throw const DmVideoUnavailableException('the video is not on HTTPS');
     }
 
     final cancelToken = CancelToken();
@@ -155,7 +157,13 @@ class DmVideoDecryptor {
           'the download outlasted its time limit',
         );
       }
-      rethrow;
+      // Dio's text carries the nested error, which can quote the URL or its
+      // host: keep the kind of failure and the status only.
+      final status = error.response?.statusCode;
+      throw DmVideoUnavailableException(
+        'the download failed: ${error.type.name}'
+        '${status == null ? '' : ', HTTP $status'}',
+      );
     } finally {
       deadline?.cancel();
     }

@@ -2,6 +2,7 @@
 // ABOUTME: Uses a mocked Dio returning real AES-GCM ciphertext so decrypt is real.
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -138,26 +139,35 @@ void main() {
       expect(dio.options.receiveTimeout, isNotNull);
     });
 
-    test('rejects a non-HTTPS url before making any request', () async {
-      final message = _videoMessage(
-        fileHash: 'ab' * 32,
-        url: 'http://127.0.0.1/secret',
-      );
+    test(
+      'rejects a non-HTTPS url before any request, without naming it',
+      () async {
+        final message = _videoMessage(
+          fileHash: 'ab' * 32,
+          url: 'http://127.0.0.1/secret',
+        );
 
-      await expectLater(
-        DmVideoDecryptor(dio: dio).decrypt(message),
-        throwsA(isA<ArgumentError>()),
-      );
+        await expectLater(
+          DmVideoDecryptor(dio: dio).decrypt(message),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.toString(),
+              'description',
+              isNot(contains('127.0.0.1')),
+            ),
+          ),
+        );
 
-      verifyNever(
-        () => dio.get<List<int>>(
-          any(),
-          options: any(named: 'options'),
-          cancelToken: any(named: 'cancelToken'),
-          onReceiveProgress: any(named: 'onReceiveProgress'),
-        ),
-      );
-    });
+        verifyNever(
+          () => dio.get<List<int>>(
+            any(),
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        );
+      },
+    );
 
     test(
       'refuses a key of the wrong size before any request, without naming it',
@@ -235,33 +245,43 @@ void main() {
       );
     });
 
-    test('surfaces a download timeout as an error', () async {
-      when(
-        () => dio.get<List<int>>(
-          _videoUrl,
-          options: any(named: 'options'),
-          cancelToken: any(named: 'cancelToken'),
-          onReceiveProgress: any(named: 'onReceiveProgress'),
-        ),
-      ).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: _videoUrl),
-          type: DioExceptionType.receiveTimeout,
-        ),
-      );
-
-      final message = _videoMessage(fileHash: 'ab' * 32);
-      await expectLater(
-        DmVideoDecryptor(dio: dio).decrypt(message),
-        throwsA(
-          isA<DioException>().having(
-            (e) => e.type,
-            'type',
-            DioExceptionType.receiveTimeout,
+    test(
+      'reports a dropped download by its kind, never by its address',
+      () async {
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
           ),
-        ),
-      );
-    });
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: _videoUrl),
+            type: DioExceptionType.unknown,
+            error: HttpException(
+              'Connection closed while receiving data',
+              uri: Uri.parse(_videoUrl),
+            ),
+          ),
+        );
+
+        final message = _videoMessage(fileHash: 'ab' * 32);
+        await expectLater(
+          DmVideoDecryptor(dio: dio).decrypt(message),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.toString(),
+              'description',
+              allOf(
+                contains(DioExceptionType.unknown.name),
+                isNot(contains('media.divine.video')),
+              ),
+            ),
+          ),
+        );
+      },
+    );
 
     test('refuses a download past a smaller size limit', () async {
       final produced = await FileEncryption().encrypt(
@@ -345,7 +365,7 @@ void main() {
       },
     );
 
-    test('propagates an HTTP failure', () async {
+    test('reports an HTTP failure by its status only', () async {
       when(
         () => dio.get<List<int>>(
           _videoUrl,
@@ -367,7 +387,13 @@ void main() {
       final message = _videoMessage(fileHash: 'ab' * 32);
       await expectLater(
         DmVideoDecryptor(dio: dio).decrypt(message),
-        throwsA(isA<DioException>()),
+        throwsA(
+          isA<DmVideoUnavailableException>().having(
+            (error) => error.toString(),
+            'description',
+            allOf(contains('404'), isNot(contains('media.divine.video'))),
+          ),
+        ),
       );
     });
   });
