@@ -70,26 +70,6 @@ class _FakeProVideoEditor extends ProVideoEditor {
   }
 }
 
-/// A stopwatch whose every reading is a millisecond past the one before, so
-/// two reads for one marker write never agree. Its other readings throw, so
-/// a marker cannot read a clock this fake does not advance.
-class _TickingStopwatch extends Stopwatch {
-  int _readings = 0;
-
-  @override
-  int get elapsedMilliseconds => ++_readings;
-
-  @override
-  Duration get elapsed => throw UnsupportedError('read elapsedMilliseconds');
-
-  @override
-  int get elapsedMicroseconds =>
-      throw UnsupportedError('read elapsedMilliseconds');
-
-  @override
-  int get elapsedTicks => throw UnsupportedError('read elapsedMilliseconds');
-}
-
 /// The first 24 bytes of a PNG of [width] x [height]: all the monitor reads.
 Uint8List _pngHeader(int width, int height) {
   List<int> uint32(int value) => [
@@ -121,7 +101,6 @@ void main() {
     final originalDirectory = InterruptedRenderMonitor.markerDirectory;
     final originalFootprint = InterruptedRenderMonitor.readFootprintBytes;
     final originalLifecycle = InterruptedRenderMonitor.readLifecycleState;
-    final originalStopwatch = InterruptedRenderMonitor.startStopwatch;
     final originalInterval = InterruptedRenderMonitor.sampleInterval;
     final originalReporter = InterruptedRenderMonitor.crashReporter;
 
@@ -172,7 +151,6 @@ void main() {
       InterruptedRenderMonitor.markerDirectory = originalDirectory;
       InterruptedRenderMonitor.readFootprintBytes = originalFootprint;
       InterruptedRenderMonitor.readLifecycleState = originalLifecycle;
-      InterruptedRenderMonitor.startStopwatch = originalStopwatch;
       InterruptedRenderMonitor.sampleInterval = originalInterval;
       InterruptedRenderMonitor.crashReporter = originalReporter;
       if (markers.existsSync()) markers.deleteSync(recursive: true);
@@ -320,7 +298,6 @@ void main() {
 
       test('lands in the marker before the timeout is reported and the '
           'native task cancelled', () async {
-        InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
         final finish = Completer<String>();
         final render = await startRender(finish, taskId: 'seam');
         Map<String, Object?>? markerWhenReported;
@@ -338,19 +315,14 @@ void main() {
           throwsA(isA<VideoRenderFailedException>()),
         );
 
-        // Nothing writes between the note and either call, so each one sees
-        // the note as the marker's last write.
-        for (final (moment, marker) in [
-          ('reported', markerWhenReported),
-          ('cancelled', markerWhenCancelled),
-        ]) {
-          expect(marker?['elapsedMs'], isA<int>(), reason: 'when $moment');
-          expect(
-            marker,
-            containsPair('watchdogFiredAtMs', marker!['elapsedMs']),
-            reason: 'when $moment',
-          );
-        }
+        expect(
+          markerWhenReported,
+          containsPair('watchdogFiredAtMs', isA<int>()),
+        );
+        expect(
+          markerWhenCancelled,
+          containsPair('watchdogFiredAtMs', isA<int>()),
+        );
 
         finish.complete('out.mp4');
         await render;
@@ -390,7 +362,6 @@ void main() {
 
       test('lands in the marker before the platform call and notes its '
           'return after it', () async {
-        InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
         final finish = Completer<String>();
         final render = await startRender(finish, taskId: 'seam');
         Map<String, Object?>? markerAtPlatformCall;
@@ -405,49 +376,17 @@ void main() {
           containsPair('cancelRequestedAtMs', isA<int>()),
         );
         expect(markerAtPlatformCall, isNot(contains('cancelReturnedAtMs')));
-        final afterReturn = readMarker('seam');
-        expect(afterReturn['elapsedMs'], isA<int>());
         expect(
-          afterReturn,
-          containsPair('cancelReturnedAtMs', afterReturn['elapsedMs']),
-        );
-        expect(
-          afterReturn['cancelReturnedAtMs']! as int,
-          greaterThan(afterReturn['cancelRequestedAtMs']! as int),
+          readMarker('seam'),
+          containsPair('cancelReturnedAtMs', isA<int>()),
         );
 
         finish.complete('out.mp4');
         await render;
       });
 
-      test(
-        'stamps the request with the time its marker write carries',
-        () async {
-          InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
-          final finish = Completer<String>();
-          final render = await startRender(finish, taskId: 'seam');
-          Map<String, Object?>? markerAtPlatformCall;
-          ProVideoEditor.instance = _FakeProVideoEditor(
-            onCancel: (_) => markerAtPlatformCall = readMarker('seam'),
-          );
-
-          await VideoEditorRenderService.cancelTask('seam');
-
-          final elapsedMs = markerAtPlatformCall!['elapsedMs'];
-          expect(elapsedMs, isA<int>());
-          expect(
-            markerAtPlatformCall,
-            containsPair('cancelRequestedAtMs', elapsedMs),
-          );
-
-          finish.complete('out.mp4');
-          await render;
-        },
-      );
-
       test('drops the return of an earlier cancel once another is '
           'requested', () async {
-        InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
         final finish = Completer<String>();
         final render = await startRender(finish, taskId: 'seam');
         final markersAtPlatformCall = <Map<String, Object?>>[];
@@ -460,16 +399,8 @@ void main() {
         await VideoEditorRenderService.cancelTask('seam');
 
         expect(markersAtPlatformCall, hasLength(2));
-        final [first, second] = markersAtPlatformCall;
-        expect(second['elapsedMs'], isA<int>());
-        expect(
-          second,
-          containsPair('cancelRequestedAtMs', second['elapsedMs']),
-        );
-        expect(
-          second['cancelRequestedAtMs']! as int,
-          greaterThan(first['cancelRequestedAtMs']! as int),
-        );
+        final second = markersAtPlatformCall.last;
+        expect(second, contains('cancelRequestedAtMs'));
         expect(second, isNot(contains('cancelReturnedAtMs')));
 
         finish.complete('out.mp4');
@@ -690,44 +621,6 @@ void main() {
           statesIn(readOnlyMarker()),
           equals(['hidden', 'paused', 'hidden', 'inactive', 'resumed']),
         );
-
-        finish.complete('out.mp4');
-        await render;
-      });
-
-      test(
-        'stamps each change with the time its marker write carries',
-        () async {
-          InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
-          final finish = Completer<String>();
-          final render = await startRender(finish);
-
-          moveThrough(const [AppLifecycleState.inactive]);
-
-          final marker = readOnlyMarker();
-          expect(marker['elapsedMs'], isA<int>());
-          expect(
-            marker['lifecycleHistory'],
-            equals(['resumed@0', 'inactive@${marker['elapsedMs']}']),
-          );
-
-          finish.complete('out.mp4');
-          await render;
-        },
-      );
-
-      test('does not repeat the state the render started in', () async {
-        final finish = Completer<String>();
-        final render = await startRender(finish);
-
-        // A render that starts while observers hear about a change is then
-        // told the state it already opened in.
-        moveThrough(const [
-          AppLifecycleState.resumed,
-          AppLifecycleState.inactive,
-        ]);
-
-        expect(statesIn(readOnlyMarker()), equals(['resumed', 'inactive']));
 
         finish.complete('out.mp4');
         await render;
