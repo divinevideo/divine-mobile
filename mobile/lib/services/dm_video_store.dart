@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
@@ -484,6 +485,7 @@ class DmVideoStore {
     String ownerPubkey, {
     Future<Directory> Function()? rootDirectory,
   }) async {
+    if (kIsWeb) return;
     final owner = _safeName(ownerPubkey);
     _removals.update(owner, (count) => count + 1, ifAbsent: () => 1);
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
@@ -512,6 +514,7 @@ class DmVideoStore {
     DateTime Function()? now,
     Duration maxIdle = defaultMaxIdle,
   }) async {
+    if (kIsWeb) return 0;
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
     final dir = Directory('${root.path}/$dirName');
     if (!dir.existsSync()) return 0;

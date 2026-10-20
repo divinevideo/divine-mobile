@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart' show TableUpdateQuery, UpdateKind;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
@@ -489,6 +490,8 @@ final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
 /// Rebuilt when the account changes, so each account reads only its own
 /// folder. Prunes old and excess videos once when built.
 final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
+  // The web target has neither filesystem storage nor path_provider support.
+  if (kIsWeb) return null;
   final owner = ref.watch(currentAccountIdProvider);
   if (owner == null || owner.isEmpty) return null;
   final db = ref.watch(databaseProvider);
