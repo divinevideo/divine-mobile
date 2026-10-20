@@ -496,6 +496,25 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
         .getSingleOrNull();
   }
 
+  /// Whether [rumorId] is retracted for [ownerPubkey]: its row stays, for
+  /// deduplication, but the thread no longer shows it. Your own retraction
+  /// counts only once delivered, as the thread shows the message until then.
+  /// False when there is no row.
+  Future<bool> isRetracted(
+    String rumorId, {
+    required String ownerPubkey,
+  }) async {
+    final query = selectOnly(directMessages)
+      ..addColumns([directMessages.id])
+      ..where(
+        directMessages.id.equals(rumorId) &
+            _visibleToOwner(directMessages, ownerPubkey) &
+            _visibleInThread(directMessages, ownerPubkey).not(),
+      )
+      ..limit(1);
+    return await query.getSingleOrNull() != null;
+  }
+
   /// Check if a gift wrap event has already been processed (dedup).
   ///
   /// Intentionally NOT scoped by `ownerPubkey`: gift-wrap event IDs are

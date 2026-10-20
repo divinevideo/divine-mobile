@@ -17,11 +17,11 @@ void main() {
 
     tearDown(() => db.close());
 
-    Future<void> insertVideoMessage() async {
+    Future<void> insertVideoMessage({String? sender}) async {
       final inserted = await db.directMessagesDao.insertMessage(
         id: messageId,
         conversationId: conversationId,
-        senderPubkey: 'b' * 64,
+        senderPubkey: sender ?? 'b' * 64,
         content: 'https://media.example/blob',
         createdAt: 1757385263,
         giftWrapId: 'c' * 64,
@@ -55,6 +55,21 @@ void main() {
 
       expect(await dmVideoMessageGone(db, owner)(messageId), isTrue);
     });
+
+    test(
+      'keeps your own message while its retraction is undelivered, as the '
+      'thread still shows it',
+      () async {
+        await insertVideoMessage(sender: owner);
+        await db.directMessagesDao.markMessageDeletionPending(
+          messageId,
+          deletionRumorJson: '{"kind":5}',
+          ownerPubkey: owner,
+        );
+
+        expect(await dmVideoMessageGone(db, owner)(messageId), isFalse);
+      },
+    );
 
     test('keeps a message that is shown', () async {
       await insertVideoMessage();
