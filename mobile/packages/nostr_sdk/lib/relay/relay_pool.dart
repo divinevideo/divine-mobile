@@ -118,6 +118,11 @@ class RelayPool {
   /// Used to determine when all relays have finished sending stored events.
   final Map<String, Set<String>> _subscriptionEoseRelays = {};
 
+  /// Subscription ids the pool released most recently, so a late `EOSE` or
+  /// `CLOSED` for one still logs which request it answered.
+  final LinkedHashSet<String> _recentlyReleasedSubIds = LinkedHashSet<String>();
+  static const int _recentlyReleasedSubIdLimit = 64;
+
   List<EventFilter> eventFilters;
 
   Function(String, String)? onNotice;
@@ -310,6 +315,32 @@ class RelayPool {
   /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] already do.
   String _closedReasonCategory(String reason) =>
       relayRefusalCategoryForDiagnostics(reason);
+
+  /// [eventId] when it is 64 lowercase hex characters, or a placeholder:
+  /// the `OK` id slot is relay text until checked.
+  static String _eventIdForDiagnostics(String eventId) =>
+      _hexEventId.hasMatch(eventId) ? eventId : '<malformed event id>';
+
+  static final RegExp _hexEventId = RegExp(r'^[0-9a-f]{64}$');
+
+  /// [subId] when [relay] holds it or the pool released it recently, or a
+  /// placeholder, so a relay cannot pass its own text off as an id.
+  String _subscriptionIdForDiagnostics(Relay relay, String subId) =>
+      relay.hasSubscriptionById(subId) ||
+          relay.checkQuery(subId) ||
+          relay.hasCountQuery(subId) ||
+          _recentlyReleasedSubIds.contains(subId)
+      ? subId
+      : '<unknown subscription id>';
+
+  void _rememberReleasedSubId(String subId) {
+    _recentlyReleasedSubIds
+      ..remove(subId)
+      ..add(subId);
+    if (_recentlyReleasedSubIds.length > _recentlyReleasedSubIdLimit) {
+      _recentlyReleasedSubIds.remove(_recentlyReleasedSubIds.first);
+    }
+  }
 
   /// Records that [relay] refused one-shot query [subId] with `CLOSED`,
   /// keeping only the reason's NIP-01 prefix.
@@ -1316,6 +1347,7 @@ class RelayPool {
   /// offered to [_repairSilentRelays] first — while [_querySentAt] still holds
   /// the fan-out timestamp that check needs.
   void _releaseQuery(String subId) {
+    _rememberReleasedSubId(subId);
     _repairRelaysThatNeverAnswered(subId);
     for (final relay in [
       ..._relaysSnapshot(),
@@ -1342,6 +1374,7 @@ class RelayPool {
   /// frame is queued into `pendingMessages` — where it names a subscription
   /// that only ever existed on the connection that already died.
   void _releaseSubscription(String subId) {
+    _rememberReleasedSubId(subId);
     for (final relay in [
       ..._relaysSnapshot(),
       ..._tempRelaysSnapshot(),
@@ -2172,7 +2205,8 @@ class RelayPool {
         RelayDiagnosticSite.requestSettlement,
         RelayDiagnosticLevel.info,
         relay.url,
-        'Relay settled request $subId with EOSE',
+        'Relay settled request ${_subscriptionIdForDiagnostics(relay, subId)} '
+        'with EOSE',
       );
       // Recorded before the await: `checkAndCompleteQuery` forgets the query
       // at once, and a completion that runs while its CLOSE is in flight
@@ -2229,7 +2263,7 @@ class RelayPool {
         RelayDiagnosticSite.requestSettlement,
         success ? RelayDiagnosticLevel.info : RelayDiagnosticLevel.warning,
         relay.url,
-        'Relay settled event $eventId with OK '
+        'Relay settled event ${_eventIdForDiagnostics(eventId)} with OK '
         'accepted=$success$settlementReason',
       );
 
@@ -2487,7 +2521,8 @@ class RelayPool {
         RelayDiagnosticSite.requestSettlement,
         RelayDiagnosticLevel.warning,
         relay.url,
-        'Relay closed request $subscriptionId '
+        'Relay closed request '
+        '${_subscriptionIdForDiagnostics(relay, subscriptionId)} '
         '(reason=${_closedReasonCategory(reason)})',
       );
       // Check if this is a COUNT query being refused

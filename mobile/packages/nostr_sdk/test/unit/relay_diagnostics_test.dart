@@ -392,6 +392,175 @@ void main() {
       expect(settlement.message, isNot(contains('reason=')));
     });
 
+    test('keeps a malformed OK event id out of the settlement line', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      await relay.deliver([
+        'OK',
+        'from 203.0.113.9\nforged line',
+        false,
+        'blocked: no',
+      ]);
+
+      final settlement = diagnostics.singleWhere(
+        (entry) => entry.site == RelayDiagnosticSite.requestSettlement,
+      );
+      expect(settlement.message, isNot(contains('203.0.113.9')));
+      expect(settlement.message, isNot(contains('\n')));
+    });
+
+    test('keeps an unrecognized EOSE subscription id out of the log', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      await relay.deliver(['EOSE', 'from 203.0.113.9']);
+
+      final settlement = diagnostics.singleWhere(
+        (entry) => entry.site == RelayDiagnosticSite.requestSettlement,
+      );
+      expect(settlement.message, isNot(contains('203.0.113.9')));
+    });
+
+    test(
+      'keeps an unrecognized CLOSED subscription id out of the log',
+      () async {
+        final relay = _DiagnosticRelay('wss://relay.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+
+        await relay.deliver(['CLOSED', 'from 2001:db8::4', 'blocked: no']);
+
+        final settlement = diagnostics.singleWhere(
+          (entry) => entry.site == RelayDiagnosticSite.requestSettlement,
+        );
+        expect(settlement.message, isNot(contains('2001:db8::4')));
+        expect(settlement.message, contains('reason=blocked'));
+      },
+    );
+
+    test('still logs a subscription id the app opened', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final subscription = Subscription(
+        const [
+          {
+            'kinds': [1],
+          },
+        ],
+        (_) {},
+        id: 'opened-subscription-id',
+      );
+      expect(
+        await nostr.relayPool.relayDoQuery(relay, subscription, false),
+        isTrue,
+      );
+
+      await relay.deliver(['EOSE', subscription.id]);
+
+      final settlement = diagnostics.singleWhere(
+        (entry) => entry.site == RelayDiagnosticSite.requestSettlement,
+      );
+      expect(settlement.message, contains('opened-subscription-id'));
+    });
+
+    test('still logs a live subscription id the app opened', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final subscription = Subscription(
+        const [
+          {
+            'kinds': [1],
+          },
+        ],
+        (_) {},
+        id: 'live-subscription-id',
+      );
+      expect(
+        await nostr.relayPool.relayDoSubscribe(relay, subscription, false),
+        isTrue,
+      );
+
+      await relay.deliver(['EOSE', subscription.id]);
+
+      final settlement = diagnostics.singleWhere(
+        (entry) => entry.message.startsWith('Relay settled request'),
+      );
+      expect(settlement.message, contains('live-subscription-id'));
+    });
+
+    test('still logs a COUNT id the app registered', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final countFails = expectLater(
+        relay.registerCountQuery('count-request-id'),
+        throwsA(anything),
+      );
+
+      await relay.deliver(['CLOSED', 'count-request-id', 'blocked: no']);
+      await countFails;
+
+      final settlement = diagnostics.singleWhere(
+        (entry) => entry.message.startsWith('Relay closed request'),
+      );
+      expect(settlement.message, contains('count-request-id'));
+    });
+
+    test(
+      'still logs a query id the app released before the relay answered',
+      () async {
+        final relay = _DiagnosticRelay('wss://relay.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+        final subscription = Subscription(
+          const [
+            {
+              'kinds': [1],
+            },
+          ],
+          (_) {},
+          id: 'released-query-id',
+        );
+        expect(
+          await nostr.relayPool.relayDoQuery(relay, subscription, false),
+          isTrue,
+        );
+        nostr.relayPool.unsubscribe(subscription.id);
+
+        await relay.deliver(['EOSE', subscription.id]);
+
+        final settlement = diagnostics.singleWhere(
+          (entry) => entry.message.startsWith('Relay settled request'),
+        );
+        expect(settlement.message, contains('released-query-id'));
+      },
+    );
+
+    test('still logs a live subscription id the app closed before the relay '
+        'answered', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final id = nostr.relayPool.subscribe(
+        const [
+          {
+            'kinds': [1],
+          },
+        ],
+        (_) {},
+        id: 'closed-live-subscription-id',
+      );
+      expect(
+        relay.sent.where((frame) => frame.first == 'REQ' && frame[1] == id),
+        isNotEmpty,
+      );
+      nostr.relayPool.unsubscribe(id);
+
+      await relay.deliver(['EOSE', id]);
+
+      final settlement = diagnostics.singleWhere(
+        (entry) => entry.message.startsWith('Relay settled request'),
+      );
+      expect(settlement.message, contains('closed-live-subscription-id'));
+    });
+
     test('a throwing diagnostics sink cannot break relay behavior', () async {
       final throwingNostr = Nostr(
         LocalNostrSigner(
