@@ -181,34 +181,46 @@ void main() {
         expect(row!.isRead, isFalse);
       });
 
-      for (final includeMissing in [false, true]) {
-        test('batch counts a legacy and owned copy once '
-            '(missing: $includeMissing)', () async {
-          await conversationsDao.upsertConversation(
-            id: conversationId,
-            participantPubkeys: '["$_ownerA","$_peer"]',
-            isGroup: false,
-            createdAt: _createdAt,
-            isRead: false,
-          );
-          final repository = buildRepository(userPubkey: _ownerA);
-          addTearDown(repository.stopListening);
+      // A legacy ownerless view of A's conversation, beside the owned row.
+      Future<void> seedLegacyCopy() => conversationsDao.upsertConversation(
+        id: conversationId,
+        participantPubkeys: '["$_ownerA","$_peer"]',
+        isGroup: false,
+        createdAt: _createdAt,
+        isRead: false,
+      );
 
-          expect(
-            await repository.markConversationsAsRead([
-              conversationId,
-              if (includeMissing) 'missing',
-            ]),
-            !includeMissing,
-          );
-          expect(
-            (await repository.getConversation(conversationId))!.isRead,
-            isTrue,
-          );
-        });
-      }
+      test('batch counts a legacy and owned copy once', () async {
+        await seedLegacyCopy();
+        final repository = buildRepository(userPubkey: _ownerA);
+        addTearDown(repository.stopListening);
 
-      test('batch reports partial writes and accepts repeated ids', () async {
+        expect(
+          await repository.markConversationsAsRead([conversationId]),
+          isTrue,
+        );
+        expect(
+          (await repository.getConversation(conversationId))!.isRead,
+          isTrue,
+        );
+      });
+
+      test('batch with a legacy copy still reports a missing id', () async {
+        await seedLegacyCopy();
+        final repository = buildRepository(userPubkey: _ownerA);
+        addTearDown(repository.stopListening);
+
+        expect(
+          await repository.markConversationsAsRead([conversationId, 'missing']),
+          isFalse,
+        );
+        expect(
+          (await repository.getConversation(conversationId))!.isRead,
+          isTrue,
+        );
+      });
+
+      test('batch reports a partial write but marks the rows found', () async {
         final repository = buildRepository(userPubkey: _ownerA);
         expect(
           await repository.markConversationsAsRead([conversationId, 'missing']),
@@ -218,6 +230,10 @@ void main() {
           (await conversationsDao.getConversation(conversationId))!.isRead,
           isTrue,
         );
+      });
+
+      test('batch counts a repeated id once', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
         expect(
           await repository.markConversationsAsRead([
             conversationId,
@@ -225,7 +241,24 @@ void main() {
           ]),
           isTrue,
         );
+      });
+
+      test('batch reports success for a row that is already read', () async {
+        await conversationsDao.markAsRead(conversationId, ownerPubkey: _ownerA);
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(
+          await repository.markConversationsAsRead([conversationId]),
+          isTrue,
+        );
+      });
+
+      test('batch of only missing ids reports failure', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
         expect(await repository.markConversationsAsRead(['missing']), isFalse);
+      });
+
+      test('an empty batch reports success', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
         expect(await repository.markConversationsAsRead([]), isTrue);
       });
     });

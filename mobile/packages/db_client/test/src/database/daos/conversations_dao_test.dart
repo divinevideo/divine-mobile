@@ -1013,13 +1013,7 @@ void main() {
           isRead: false,
         );
 
-        expect(await dao.markMultipleAsRead(['conv_1', 'conv_2']), 2);
-        expect(
-          await dao.markMultipleAsRead(['conv_1', 'conv_1', 'missing']),
-          1,
-        );
-        expect(await dao.markMultipleAsRead(['missing']), 0);
-        expect(await dao.markMultipleAsRead([]), 0);
+        await dao.markMultipleAsRead(['conv_1', 'conv_2']);
 
         final c1 = await dao.getConversation('conv_1');
         final c2 = await dao.getConversation('conv_2');
@@ -1028,6 +1022,80 @@ void main() {
         expect(c2!.isRead, isTrue);
         expect(c2.lastReadTimestamp, 1700000400);
       });
+
+      test(
+        'markMultipleAsRead returns how many requested rows exist',
+        () async {
+          for (final id in ['conv_1', 'conv_2']) {
+            await dao.upsertConversation(
+              id: id,
+              participantPubkeys: '["a","b"]',
+              isGroup: false,
+              createdAt: 1700000000,
+              lastMessageTimestamp: 1700000200,
+              isRead: false,
+            );
+          }
+
+          expect(await dao.markMultipleAsRead(['conv_1', 'conv_2']), 2);
+        },
+      );
+
+      test(
+        'markMultipleAsRead counts a repeated id once and skips a missing one',
+        () async {
+          for (final id in ['conv_1', 'conv_2']) {
+            await dao.upsertConversation(
+              id: id,
+              participantPubkeys: '["a","b"]',
+              isGroup: false,
+              createdAt: 1700000000,
+              lastMessageTimestamp: 1700000200,
+              isRead: false,
+            );
+          }
+
+          expect(
+            await dao.markMultipleAsRead(['conv_1', 'conv_1', 'missing']),
+            1,
+          );
+        },
+      );
+
+      test(
+        'markMultipleAsRead returns 0 and leaves other rows unread when no '
+        'requested row exists',
+        () async {
+          await dao.upsertConversation(
+            id: 'conv_1',
+            participantPubkeys: '["a","b"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageTimestamp: 1700000200,
+            isRead: false,
+          );
+
+          expect(await dao.markMultipleAsRead(['missing']), 0);
+          expect((await dao.getConversation('conv_1'))!.isRead, isFalse);
+        },
+      );
+
+      test(
+        'markMultipleAsRead returns 0 and leaves rows unread for an empty list',
+        () async {
+          await dao.upsertConversation(
+            id: 'conv_1',
+            participantPubkeys: '["a","b"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageTimestamp: 1700000200,
+            isRead: false,
+          );
+
+          expect(await dao.markMultipleAsRead([]), 0);
+          expect((await dao.getConversation('conv_1'))!.isRead, isFalse);
+        },
+      );
 
       test('ingest upsert never writes the cursor', () async {
         await dao.upsertConversation(
