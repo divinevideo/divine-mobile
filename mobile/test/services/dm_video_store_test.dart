@@ -592,9 +592,16 @@ void main() {
           );
 
           expect(await store.previewFor(first, download: false), isNull);
+          final secondKept = store.kept.firstWhere((id) => id == second.id);
           final secondFrame = store.previewFor(second, download: false);
           await secondReadStarted.future.timeout(const Duration(seconds: 5));
-          expect(await secondFrame, isNotNull);
+          // The card's 1 ms wait can end before the frame is written; the
+          // store announces the frame once it is.
+          await secondKept.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('the second frame was never kept'),
+          );
+          await secondFrame;
 
           firstGone = true;
           await store.prune();
@@ -629,8 +636,12 @@ void main() {
           expect(await store.previewFor(message, download: false), isNull);
           expect(announced, isEmpty);
 
+          final lateFrame = store.kept.firstWhere((id) => id == message.id);
           decode.complete(_frame);
-          await pumpEventQueue();
+          await lateFrame.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('the late frame was never announced'),
+          );
 
           expect(announced, equals([message.id]));
           expect(await store.previewFor(message, download: false), isNotNull);
