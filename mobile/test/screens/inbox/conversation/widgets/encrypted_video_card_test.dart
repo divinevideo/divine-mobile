@@ -56,6 +56,16 @@ Future<String> _writeKeptFrame() async {
   return file.path;
 }
 
+/// The card's image of the kept frame at [path], decoded or not.
+Finder _keptFrame(String path) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Image &&
+      widget.image is ResizeImage &&
+      (widget.image as ResizeImage).imageProvider is FileImage &&
+      ((widget.image as ResizeImage).imageProvider as FileImage).file.path ==
+          path,
+);
+
 Widget _host(Widget child) => MaterialApp(
   localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
@@ -145,19 +155,7 @@ void main() {
         );
 
         expect(find.byType(BlurhashDisplay), findsOneWidget);
-        expect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is Image &&
-                widget.image is ResizeImage &&
-                (widget.image as ResizeImage).imageProvider is FileImage &&
-                ((widget.image as ResizeImage).imageProvider as FileImage)
-                        .file
-                        .path ==
-                    framePath,
-          ),
-          findsOneWidget,
-        );
+        expect(_keptFrame(framePath), findsOneWidget);
       },
     );
 
@@ -261,7 +259,7 @@ void main() {
       },
     );
 
-    testWidgets('passes the frame it is given to the card', (tester) async {
+    testWidgets('shows the kept frame it is given', (tester) async {
       const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
       await tester.pumpWidget(
         _host(
@@ -275,10 +273,13 @@ void main() {
         ),
       );
 
-      final card = tester.widget<EncryptedVideoCard>(
-        find.byType(EncryptedVideoCard),
+      expect(
+        find.descendant(
+          of: find.byType(EncryptedVideoCard),
+          matching: _keptFrame(framePath),
+        ),
+        findsOneWidget,
       );
-      expect(card.framePath, equals(framePath));
     });
 
     testWidgets('never renders the encrypted file URL as text', (tester) async {
