@@ -39,7 +39,9 @@ A verified empty subscription list then permits direct-feed first display while
 one background read revalidates it. Account changes, sign-out and local edits
 invalidate the proof; same-account upgrade/resume notifications do not. A newly
 observed subscription triggers a merged-feed refresh; failed revalidation revokes
-the shortcut for the next load without discarding the current page. A signed
+the shortcut for the next load without discarding the current page. Badge
+subscription refreshes retain the current video and one lookahead before adding
+fresh results. A signed
 subscription list arriving after its caller's deadline can trigger a merged-feed
 refresh once. Deadlines and incomplete reads during holder loading retain the
 existing failure policy: users can retry explicitly, and late holder results do
@@ -53,8 +55,12 @@ The cache is in memory and stores no state across app restarts.
 Following's badge/direct source selection and fallback live in
 `FollowingVideoFeedSession`. The app injects author-reader callbacks and request
 ownership; the session owns the committed badge pager and prevents superseded
-reads from becoming empty terminal pages. Holder sets are not cached: a
-nonempty-holder cache needs an explicit freshness and revocation policy.
+reads from becoming empty terminal pages. Before merging holders, an unknown
+local follow list waits for initialization; it cannot silently produce a
+holder-only feed. On badge failure, a nonempty server-computed Following page
+can establish direct follows while the local list is unknown. A confirmed empty
+local list still fails closed, and an empty server page is not proof of follows.
+Holder sets are not cached: a nonempty-holder cache needs an explicit freshness and revocation policy.
 
 The badge detail Videos action opens the dedicated grid inside the mobile app.
 Its URL is also routable on web; `/badges` URLs are not registered native app

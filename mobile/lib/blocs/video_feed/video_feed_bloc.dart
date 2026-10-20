@@ -127,9 +127,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final Future<Iterable<String>> Function()? _badgeAuthors;
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
+  bool _isClosing = false;
+
   late final _followingFeed = FollowingVideoFeedSession(
     videosRepository: _videosRepository,
     directAuthors: () => _followRepository.followingPubkeys,
+    waitForDirectAuthors: () => _followRepository.initialized,
+    directAuthorsKnown: () => _followRepository.isFollowingConfirmedByRelay,
     badgeAuthors: _badgeAuthors,
     userPubkey: _userPubkey,
   );
@@ -192,7 +196,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   bool _canEmitForSource(
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
-  ) => !emit.isDone && state.source == source;
+  ) => !_isClosing && !emit.isDone && state.source == source;
 
   bool _shouldEnrichSource(VideoFeedSource source) =>
       // Subscribed-list rows are loaded from locally held event IDs and are
@@ -279,8 +283,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           category: LogCategory.system,
         );
       }
-      if (emit.isDone) return;
+      if (_isClosing || emit.isDone) return;
       await _hashtagsSubscription?.cancel();
+      if (_isClosing || emit.isDone) return;
       _hashtagsSubscription = hashtagRepository.subscriptionsStream.listen((
         tags,
       ) {
@@ -296,6 +301,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       await _modePreferences.persist(source);
     }
 
+    if (_isClosing || emit.isDone) return;
     final subscribedLists = _curatedListRepository.getSubscribedLists();
 
     emit(
@@ -316,12 +322,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     );
 
     await _badgeSubscriptionsSubscription?.cancel();
+    if (_isClosing || emit.isDone) return;
     _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
       (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
     );
 
     await _loadVideos(source, emit, feedLoad: feedLoad, revalidate: true);
-    if (emit.isDone) return;
+    if (_isClosing || emit.isDone) return;
 
     // After the initial load, check for the "no follows" CTA. Needed for
     // BLoC re-creation (e.g. navigating back to home) when the follow repo
@@ -346,10 +353,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       }
     }
 
-    if (emit.isDone) return;
+    if (_isClosing || emit.isDone) return;
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    if (_isClosing || emit.isDone) return;
 
     // Subscribe to following list changes.
     //
@@ -385,6 +393,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
   @override
   Future<void> close() async {
+    _isClosing = true;
     // Flush any swipe still inside the debounce window before tearing down, so
     // the last move isn't lost on dispose.
     _resumeManager.dispose();
@@ -797,7 +806,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
     );
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(
+      state.source,
+      emit,
+      feedLoad: feedLoad,
+      skipCache: true,
+      preserveCurrentVideo: true,
+    );
   }
 
   /// Handle curated list subscription changes from [CuratedListRepository].
@@ -908,6 +923,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     FeedLoadHandle? feedLoad,
     bool skipCache = false,
     bool revalidate = false,
+    bool preserveCurrentVideo = false,
     List<VideoEvent>? prefetchedCachedVideos,
   }) async {
     // Only a new load supersedes the current one. A selection cancelled
@@ -949,7 +965,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       // replace the rest with fresh results, so fresh content appears right
       // after the current video. The active controller is preserved by
       // InfiniteVideoFeed's common-prefix handling, so it does not restart.
-      final displayedVideos = servedCache
+      final displayedVideos = servedCache || preserveCurrentVideo
           ? _resumeManager.splice(
               existing: state.videos,
               fresh: validVideos,

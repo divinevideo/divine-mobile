@@ -124,7 +124,12 @@ List<RouteBase> settingsRoutes(Ref ref) {
       name: BadgeVideosScreen.routeName,
       builder: (_, state) => _badgeRouteScreen(
         state,
-        (coordinate) => BadgeVideosScreen(coordinate: coordinate),
+        (coordinate) => BadgeVideosScreen(
+          coordinate: coordinate,
+          seed: state.extra is BadgeVideosSeed
+              ? state.extra! as BadgeVideosSeed
+              : null,
+        ),
       ),
     ),
     GoRoute(

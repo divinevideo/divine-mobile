@@ -27,6 +27,32 @@ void main() {
           canSubscribe: canSubscribe,
         );
 
+    group('retrySubscription', () {
+      test(
+        'keeps loaded holders while retrying only the subscription',
+        () async {
+          when(() => repository.loadAcceptedHolders(_coordinate))
+              .thenAnswer((_) async => {'holder'});
+          var reads = 0;
+          when(
+            () => repository.loadSubscriptions(requireComplete: true),
+          ).thenAnswer((_) async {
+            if (reads++ == 0) throw const BadgeReadIncompleteException('read');
+            return {_coordinate};
+          });
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          await cubit.load();
+          await cubit.retrySubscription();
+          expect(cubit.state.holders, ['holder']);
+          expect(cubit.state.holdersStatus, BadgeHoldersStatus.loaded);
+          expect(cubit.state.subscriptionStatus, BadgeSubscriptionStatus.ready);
+          expect(cubit.state.isSubscribed, isTrue);
+          verify(() => repository.loadAcceptedHolders(_coordinate)).called(1);
+        },
+      );
+    });
+
     group('load', () {
       for (final oldFailure in [false, true]) {
         test(
@@ -73,6 +99,42 @@ void main() {
           },
         );
       }
+
+      test(
+        'stale preview cannot replace a newer load still awaiting holders',
+        () async {
+          final previews = [
+            Completer<List<String>>(),
+            Completer<List<String>>(),
+          ];
+          final holders = [Completer<Set<String>>(), Completer<Set<String>>()];
+          var previewReads = 0;
+          var holderReads = 0;
+          when(() => repository.loadAcceptedHolders(_coordinate))
+              .thenAnswer((_) => holders[holderReads++].future);
+          when(() => repository.withoutHiddenPubkeys(any())).thenAnswer(
+            (call) => call.positionalArguments.first as List<String>,
+          );
+          final cubit = BadgeHoldersCubit(
+            repository: repository,
+            coordinate: _coordinate,
+            canSubscribe: false,
+            loadIndexedPreview: (_) => previews[previewReads++].future,
+          );
+          addTearDown(cubit.close);
+          final oldLoad = cubit.load();
+          final newLoad = cubit.load();
+          previews.first.complete(['old']);
+          await Future<void>.value();
+          expect(cubit.state.holdersStatus, BadgeHoldersStatus.loading);
+          expect(cubit.state.holders, isEmpty);
+          previews.last.complete(['new']);
+          holders.first.complete({'old'});
+          holders.last.complete({'new'});
+          await Future.wait([oldLoad, newLoad]);
+          expect(cubit.state.holders, ['new']);
+        },
+      );
 
       test('leaves hidden accounts out of the indexed preview', () async {
         final relayResult = Completer<Set<String>>();

@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 
@@ -18,7 +19,34 @@ import '../../../helpers/test_provider_overrides.dart';
 class _MockExploreBadgesCubit extends MockCubit<ExploreBadgesState>
     implements ExploreBadgesCubit {}
 
+class _MockBadgeRepository extends Mock implements BadgeRepository {}
+
 void main() {
+  group(ExploreBadgesTab, () {
+    testWidgets('loads curated badges when the actual tab mounts', (
+      tester,
+    ) async {
+      final repository = _MockBadgeRepository();
+      when(() => repository.loadDefinitionsByIssuers(exploreBadgeIssuers))
+          .thenAnswer((_) async => [_definition]);
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            badgeRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: ExploreBadgesTab()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      verify(() => repository.loadDefinitionsByIssuers(exploreBadgeIssuers))
+          .called(1);
+      expect(find.text('Diviner of the Day'), findsOneWidget);
+    });
+  });
   group(ExploreBadgesView, () {
     late _MockExploreBadgesCubit cubit;
     final l10n = lookupAppLocalizations(const Locale('en'));
