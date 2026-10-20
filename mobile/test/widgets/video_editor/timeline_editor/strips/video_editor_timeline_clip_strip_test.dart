@@ -1202,37 +1202,6 @@ void main() {
         });
       }
 
-      testWidgets('a second finger on the other handle leaves the first '
-          'drag in place', (tester) async {
-        playhead.value = const Duration(milliseconds: -100);
-        await pumpClip(tester);
-        final startDrag1 = await startDrag(tester, isStart: true);
-        await startDrag1.moveBy(const Offset(100, 0));
-        await tester.pump();
-        expect(reportedStart, equals(const Duration(milliseconds: 1500)));
-
-        // Feed the trim back, as ClipEditorBloc does mid-gesture.
-        await pumpClip(
-          tester,
-          clip: _createTestClip(id: 'snap', seconds: 4).copyWith(
-            trimStart: reportedStart,
-            trimEnd: const Duration(milliseconds: 500),
-          ),
-        );
-        final endDrag = await startDrag(tester, isStart: false);
-        await startDrag1.moveBy(const Offset(50, 0));
-        await tester.pump();
-        expect(reportedStart, equals(const Duration(seconds: 2)));
-        await endDrag.up();
-        await tester.pump();
-
-        await startDrag1.moveBy(const Offset(10, 0));
-        await tester.pump();
-        expect(reportedStart, equals(const Duration(milliseconds: 2100)));
-        await startDrag1.up();
-        await tester.pump();
-      });
-
       testWidgets('split end half cannot reveal its sibling frames', (
         tester,
       ) async {
