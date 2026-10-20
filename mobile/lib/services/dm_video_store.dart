@@ -285,6 +285,13 @@ class DmVideoStore {
 
   static bool _alwaysWanted() => true;
 
+  /// Whether a caller allowed to decode [messageId]'s video still waits for
+  /// its frame. Callers share one read, whether they may download or not.
+  bool _frameWanted(String messageId) => [
+    for (final download in const [true, false])
+      ...?_previewWanters['$messageId|$download|true'],
+  ].any((wanted) => wanted());
+
   /// The path of [message]'s frame when this store already read or found it,
   /// so a card built again shows it at once. Null once the file is gone: the
   /// system can clear the cache directory while the app runs.
@@ -652,7 +659,12 @@ class DmVideoStore {
       if (!wanted()) return null;
       final id = message.id;
       return await (_frameReadsInFlight[id] ??= _frameReads
-          .run(() => _readAndKeepFrame(message, video, preview))
+          .run(() async {
+            // Its turn can come long after the check above: a card closed or
+            // a sender blocked meanwhile must not cost a decode.
+            if (!_frameWanted(id)) return null;
+            return _readAndKeepFrame(message, video, preview);
+          })
           .whenComplete(
             () => _frameReadsInFlight.removeWhere((key, _) => key == id),
           ));

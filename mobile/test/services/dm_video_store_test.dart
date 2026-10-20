@@ -503,6 +503,82 @@ void main() {
       );
 
       test(
+        'skips a queued frame read once no card waiting for it wants it',
+        () async {
+          final firstRead = Completer<Uint8List?>();
+          var reads = 0;
+          readFrame = (_) {
+            reads++;
+            return reads == 1 ? firstRead.future : Future.value(_frame);
+          };
+          final store = createStore();
+          final first = _videoMessage(id: '1' * 64);
+          final second = _videoMessage(id: '2' * 64);
+          await store.videoFor(first);
+          await store.videoFor(second);
+          var secondWanted = true;
+
+          final firstFrame = store.previewFor(first, download: false);
+          final secondFrame = store.previewFor(
+            second,
+            download: false,
+            stillWanted: () => secondWanted,
+          );
+          await pumpEventQueue();
+          expect(reads, equals(1));
+          secondWanted = false;
+          firstRead.complete(_frame);
+
+          expect(await firstFrame, isNotNull);
+          expect(await secondFrame, isNull);
+          expect(reads, equals(1));
+          expect(
+            ownerDir()
+                .listSync()
+                .map((entity) => entity.path)
+                .where(
+                  (path) => path.contains('2' * 64) && !path.endsWith('.mp4'),
+                ),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'still reads a queued frame that another card waiting for it wants',
+        () async {
+          final firstRead = Completer<Uint8List?>();
+          var reads = 0;
+          readFrame = (_) {
+            reads++;
+            return reads == 1 ? firstRead.future : Future.value(_frame);
+          };
+          final store = createStore();
+          final first = _videoMessage(id: '1' * 64);
+          final shared = _videoMessage(id: '2' * 64);
+          await store.videoFor(first);
+          await store.videoFor(shared);
+          var closedCardWanted = true;
+
+          final firstFrame = store.previewFor(first, download: false);
+          final closedCard = store.previewFor(
+            shared,
+            download: true,
+            stillWanted: () => closedCardWanted,
+          );
+          final openCard = store.previewFor(shared, download: false);
+          await pumpEventQueue();
+          closedCardWanted = false;
+          firstRead.complete(_frame);
+
+          expect(await firstFrame, isNotNull);
+          expect(await openCard, isNotNull);
+          expect(reads, equals(2));
+          await closedCard;
+        },
+      );
+
+      test(
         'keeps the mark of a frame that could not be read for as long as its '
         'video stays',
         () async {
