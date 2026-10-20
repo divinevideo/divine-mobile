@@ -208,7 +208,6 @@ class RequestPreviewView extends ConsumerWidget {
               conversationId: context
                   .read<RequestPreviewCubit>()
                   .conversationId,
-              showRemove: false,
               participantPubkeys: participantPubkeys,
             ),
             Expanded(

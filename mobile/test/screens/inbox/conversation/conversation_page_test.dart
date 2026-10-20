@@ -27,11 +27,7 @@ import 'package:openvine/services/connection_status_service.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
-class _MockDmRepository extends Mock implements DmRepository {
-  @override
-  bool isRemovalProtectedParticipants(Iterable<String> participantPubkeys) =>
-      false;
-}
+class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -149,6 +145,41 @@ void main() {
         await tester.pump();
 
         expect(find.byType(ConversationView), findsOneWidget);
+      });
+
+      // Those three actions are for message requests. Opening a chat already
+      // marks it read, and the inbox's long-press menu offers the other two.
+      testWidgets('shows no Mark as read, Dismiss or Remove row in a chat', (
+        tester,
+      ) async {
+        // Answered so a returning row fails on the labels below, not on an
+        // unanswered mock call that turns the row into an error widget.
+        when(
+          () => mockDmRepository.isRemovalProtectedParticipants(any()),
+        ).thenReturn(false);
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const ConversationPage(
+              conversationId: testConversationId,
+              participantPubkeys: [otherPubkey],
+            ),
+            mockAuthService: mockAuthService,
+            additionalOverrides: [
+              isDmRestrictedProvider.overrideWithValue(false),
+              dmRepositoryProvider.overrideWithValue(mockDmRepository),
+              fetchUserProfileProvider(
+                otherPubkey,
+              ).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.byType(ConversationView), findsOneWidget);
+        expect(find.text(l10n.inboxThreadMarkRead), findsNothing);
+        expect(find.text(l10n.inboxRequestDismiss), findsNothing);
+        expect(find.text(l10n.inboxRemoveConfirmConfirm), findsNothing);
       });
 
       testWidgets('resolves the counterparty from the conversation row when '
