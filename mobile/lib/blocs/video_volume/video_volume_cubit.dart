@@ -88,6 +88,12 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   static const _prefsKey = 'video_playback_volume';
   static const _systemMutePrefsKey = 'video_playback_muted_by_system';
 
+  /// Playback audio belongs to the device and survives account switches.
+  static const List<String> deviceScopedPrefsKeys = [
+    _prefsKey,
+    _systemMutePrefsKey,
+  ];
+
   final SharedPreferences _prefs;
   StreamSubscription<double>? _systemVolumeSubscription;
   bool _mutedBySystem;
