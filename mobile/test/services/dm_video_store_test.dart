@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_store.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 final String _owner = 'e' * 64;
 final Uint8List _plaintext = Uint8List.fromList(
@@ -37,6 +38,38 @@ DmMessage _videoMessage({
     fileSize: fileSize,
   ),
 );
+
+/// A folder that exists but cannot be listed, as when its permissions change.
+class _UnreadableDirectory implements Directory {
+  _UnreadableDirectory(this.path);
+
+  @override
+  final String path;
+
+  @override
+  bool existsSync() => true;
+
+  @override
+  Stream<FileSystemEntity> list({
+    bool recursive = false,
+    bool followLinks = true,
+  }) => Stream.error(
+    FileSystemException(
+      'Directory listing failed',
+      path,
+      const OSError('Permission denied', 13),
+    ),
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Everything logged since the last clear, error text included.
+List<String> _loggedLines() => [
+  for (final entry in LogCaptureService().getRecentLogs())
+    '${entry.message} ${entry.error}',
+];
 
 void main() {
   group(DmVideoStore, () {
@@ -154,6 +187,26 @@ void main() {
           release.complete(_plaintext);
 
           expect((await video).readAsBytesSync(), equals(_plaintext));
+        },
+      );
+
+      test(
+        'reports a video it cannot store without naming the file, which '
+        'carries the account and the message',
+        () async {
+          // A file where the account's folder belongs: nothing can be stored.
+          File(ownerDir().path).createSync(recursive: true);
+
+          await expectLater(
+            createStore().videoFor(_videoMessage()),
+            throwsA(
+              isA<DmVideoUnavailableException>().having(
+                (error) => error.toString(),
+                'description',
+                isNot(contains(root.path)),
+              ),
+            ),
+          );
         },
       );
 
@@ -420,6 +473,21 @@ void main() {
         expect(store.knownPreviewPathFor(message), isNull);
       });
 
+      test(
+        'gives up on a folder it cannot list, logging why but not where',
+        () async {
+          await LogCaptureService().clearAllLogs();
+
+          await IOOverrides.runZoned(
+            () => expectLater(createStore().prune(), completes),
+            createDirectory: _UnreadableDirectory.new,
+          );
+
+          expect(_loggedLines(), contains(contains('Permission denied')));
+          expect(_loggedLines(), everyElement(isNot(contains(root.path))));
+        },
+      );
+
       test('opening a kept video keeps it from expiring', () async {
         final store = createStore();
         final message = _videoMessage();
@@ -582,6 +650,28 @@ void main() {
           expect(crashed.existsSync(), isFalse);
           expect(recent.existsSync(), isTrue);
           expect(writing.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        'sweepOwners gives up on a folder it cannot list, logging why but '
+        'not where',
+        () async {
+          Directory('${root.path}/${DmVideoStore.dirName}').createSync();
+          await LogCaptureService().clearAllLogs();
+
+          final deleted = await IOOverrides.runZoned(
+            () => DmVideoStore.sweepOwners(
+              {_owner},
+              rootDirectory: () async => root,
+              now: () => now,
+            ),
+            createDirectory: _UnreadableDirectory.new,
+          );
+
+          expect(deleted, isZero);
+          expect(_loggedLines(), contains(contains('Permission denied')));
+          expect(_loggedLines(), everyElement(isNot(contains(root.path))));
         },
       );
 

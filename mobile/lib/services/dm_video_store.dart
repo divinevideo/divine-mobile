@@ -143,8 +143,8 @@ class DmVideoStore {
   /// and kept after that. Callers asking at once share one download.
   ///
   /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`) or
-  /// a [FileSystemException] when the video cannot be stored. Nothing is kept
-  /// on a failure.
+  /// a [DmVideoUnavailableException] when the video cannot be stored, naming
+  /// the cause but not the file. Nothing is kept on a failure.
   Future<File> videoFor(DmMessage message) {
     final id = message.id;
     // removeWhere, not remove: remove hands back this very future, and
@@ -182,8 +182,21 @@ class DmVideoStore {
   ///
   /// A file opened in the last hour is never deleted to fit, since it may be
   /// playing or being saved, so the files can stay over [maxBytes] until it
-  /// ages. Part files are deleted only once old enough to be a crash's.
+  /// ages. Part files are deleted only once old enough to be a crash's. A
+  /// folder that cannot be read is logged, without its path, and left.
   Future<void> prune() async {
+    try {
+      await _prune();
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not prune kept video DMs: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  Future<void> _prune() async {
     final dir = await _ownerDirectory();
     if (!dir.existsSync()) return;
     final now = _now();
@@ -234,7 +247,8 @@ class DmVideoStore {
   /// Deletes the videos kept for every account not in [keepOwnerPubkeys],
   /// and in the kept accounts' folders whatever nobody opened for [maxIdle]
   /// and part files a crash left. Returns how many accounts' videos it
-  /// deleted.
+  /// deleted. A folder that cannot be read is logged, without its path, and
+  /// left.
   ///
   /// Runs at launch for every account, so an account the user switched away
   /// from does not keep its videos past [maxIdle]: its store prunes only
@@ -251,16 +265,24 @@ class DmVideoStore {
     final keep = keepOwnerPubkeys.map(_safeName).toSet();
     final currentTime = (now ?? DateTime.now)();
     var deleted = 0;
-    await for (final entity in dir.list()) {
-      if (entity is! Directory) continue;
-      if (keep.contains(
-        entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
-      )) {
-        await _deleteIdleFiles(entity, currentTime, maxIdle);
-        continue;
+    try {
+      await for (final entity in dir.list()) {
+        if (entity is! Directory) continue;
+        if (keep.contains(
+          entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
+        )) {
+          await _deleteIdleFiles(entity, currentTime, maxIdle);
+          continue;
+        }
+        await entity.delete(recursive: true);
+        deleted++;
       }
-      await entity.delete(recursive: true);
-      deleted++;
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not sweep kept video DMs: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
     }
     return deleted;
   }
@@ -382,6 +404,11 @@ class DmVideoStore {
       await part.writeAsBytes(bytes, flush: true);
       _throwIfOwnerRemoved();
       await part.rename(file.path);
+    } on FileSystemException catch (error) {
+      await _deleteQuietly(part);
+      throw DmVideoUnavailableException(
+        'could not store the file: ${_causeOf(error)}',
+      );
     } catch (_) {
       await _deleteQuietly(part);
       rethrow;
@@ -402,7 +429,7 @@ class DmVideoStore {
       await file.setLastModified(_now());
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not mark a kept video DM file as opened: ${error.osError}',
+        'Could not mark a kept video DM file as opened: ${_causeOf(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -414,12 +441,17 @@ class DmVideoStore {
     _knownPreviews.removeWhere((_, path) => path == file.path);
   }
 
+  /// What went wrong, without the path: file names carry the account's
+  /// pubkey and the message id.
+  static String _causeOf(FileSystemException error) =>
+      error.osError?.toString() ?? 'no OS error';
+
   static Future<void> _deleteQuietly(File file) async {
     try {
       if (file.existsSync()) await file.delete();
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not delete a kept video DM file: ${error.osError}',
+        'Could not delete a kept video DM file: ${_causeOf(error)}',
         name: _logName,
         category: LogCategory.video,
       );
