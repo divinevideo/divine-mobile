@@ -12,6 +12,7 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/router/providers/providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
@@ -19,6 +20,8 @@ import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/bug_report_service.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
@@ -250,6 +253,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ..._diagnosticOverrides(),
             currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
               return const MinorAccountReviewStatus(
                 restrictionStatus:
@@ -356,6 +360,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ..._diagnosticOverrides(),
               currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
                 return const MinorAccountReviewStatus(
                   restrictionStatus:
@@ -428,6 +433,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ..._diagnosticOverrides(),
               currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
                 return MinorAccountReviewStatus(
                   restrictionStatus:
@@ -489,6 +495,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ..._diagnosticOverrides(),
               currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
                 return MinorAccountReviewStatus(
                   restrictionStatus:
@@ -544,6 +551,7 @@ void main() {
           ProviderScope(
             key: ValueKey(ageBand),
             overrides: [
+              ..._diagnosticOverrides(),
               currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
                 return MinorAccountReviewStatus(
                   restrictionStatus:
@@ -605,6 +613,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ..._diagnosticOverrides(),
             currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
               return const MinorAccountReviewStatus(
                 restrictionStatus:
@@ -655,6 +664,7 @@ void main() {
         var protectedFetches = 0;
         final container = ProviderContainer(
           overrides: [
+            ..._diagnosticOverrides(),
             currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
               return const MinorAccountReviewStatus(
                 restrictionStatus:
@@ -1375,14 +1385,13 @@ Future<void> _pumpReview(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        ..._diagnosticOverrides(authService),
         currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
           return MinorAccountReviewStatus(
             restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
             currentCase: reviewCase,
           );
         }),
-        if (authService != null)
-          authServiceProvider.overrideWithValue(authService),
       ],
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -1405,6 +1414,7 @@ Future<void> _pumpRestrictedReview(
     ProviderScope(
       key: UniqueKey(),
       overrides: [
+        ..._diagnosticOverrides(),
         currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
           return MinorAccountReviewStatus(
             restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
@@ -1466,6 +1476,7 @@ Future<void> _pumpAppeal(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        ..._diagnosticOverrides(),
         currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
           final caseState = fetches++ == 0 ? state : stateAfterRefresh ?? state;
           return MinorAccountReviewStatus(
@@ -1507,4 +1518,20 @@ MockGoRouter _pushStubbedGoRouter() {
     () => goRouter.push<void>(any(), extra: any(named: 'extra')),
   ).thenAnswer((_) async {});
   return goRouter;
+}
+
+// Account review also renders the shared diagnostic tool. Keep unrelated
+// support dependencies local while these tests exercise appeal/navigation.
+List<Override> _diagnosticOverrides([AuthService? authService]) => [
+  authServiceProvider.overrideWithValue(authService ?? _MockAuthService()),
+  currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+  bugReportServiceProvider.overrideWithValue(_MockBugReportService()),
+  supportRouteTrailProvider.overrideWith(_EmptySupportRouteTrail.new),
+];
+
+class _MockBugReportService extends Mock implements BugReportService {}
+
+class _EmptySupportRouteTrail extends SupportRouteTrail {
+  @override
+  List<RouteType> build() => const [];
 }

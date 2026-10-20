@@ -19,6 +19,8 @@ import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/delete_account_action.dart';
+import 'package:openvine/widgets/export_logs_tile.dart';
 import 'package:openvine/widgets/support_contact_action.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -395,6 +397,33 @@ class _LoadedView extends ConsumerWidget {
           type: DivineButtonType.ghost,
           expanded: true,
           onPressed: () => refreshMinorAccountState(ref),
+        ),
+        const SizedBox(height: 24),
+        const ExportLogsTile(),
+        ListTile(
+          leading: const DivineIcon(
+            icon: DivineIconName.trash,
+            color: VineTheme.error,
+          ),
+          title: Text(
+            l10n.nostrSettingsDeleteAccount,
+            style: VineTheme.titleMediumFont(color: VineTheme.error),
+          ),
+          subtitle: Text(
+            l10n.nostrSettingsDeleteAccountSubtitle,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.mutedText,
+            ),
+          ),
+          trailing: const DivineIcon(
+            icon: DivineIconName.caretRight,
+            color: VineTheme.error,
+          ),
+          onTap: () => startAccountDeletionFlow(
+            context: context,
+            ref: ref,
+            screenName: 'MinorAccountReviewScreen',
+          ),
         ),
         const SizedBox(height: 24),
         TextButton(
