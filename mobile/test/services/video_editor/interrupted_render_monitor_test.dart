@@ -321,8 +321,9 @@ void main() {
     });
 
     group('native cancel', () {
-      final originalProVideoEditor = ProVideoEditor.instance;
+      late ProVideoEditor originalProVideoEditor;
 
+      setUp(() => originalProVideoEditor = ProVideoEditor.instance);
       tearDown(() => ProVideoEditor.instance = originalProVideoEditor);
 
       test('lands in the marker before the platform call and notes its '
