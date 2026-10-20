@@ -947,8 +947,6 @@ void main() {
             expect(find.text('Aeontropy'), findsNothing);
           });
 
-          // Official branding follows recorded custody (#9963). The row hands
-          // the resolved recipient to the sheet, handle included.
           group('a retired moderation key, by recorded custody', () {
             final retired = ShareableUser(
               pubkey: shippedRetiredKey,
@@ -956,47 +954,34 @@ void main() {
               handle: '@looks.official',
             );
 
-            ShareableUser selectedRecipient(WidgetTester tester) => tester
-                .element(find.text(l10n.shareWithTitle))
-                .read<ShareSheetBloc>()
-                .state
-                .selectedRecipients
-                .single;
-
-            for (final custody in keptCustodies) {
-              testWidgets('${custody.name}: hands on the handle the key '
-                  'published', (tester) async {
-                await pumpWithContact(
+            for (final custody in [...keptCustodies, ...withdrawnCustodies]) {
+              testWidgets(
+                '${custody.name}: never offers the retired recipient',
+                (
                   tester,
-                  retired,
-                  extraOverrides: [retiredKeyCustody(custody)],
-                );
+                ) async {
+                  await pumpWithContact(
+                    tester,
+                    retired,
+                    extraOverrides: [retiredKeyCustody(custody)],
+                  );
 
-                await tester.tap(find.text(l10n.inboxSupportRowTitle));
-                await tester.pumpAndSettle();
-
-                expect(
-                  selectedRecipient(tester).handle,
-                  equals('@looks.official'),
-                );
-              });
-            }
-
-            for (final custody in withdrawnCustodies) {
-              testWidgets('${custody.name}: hands on no handle', (
-                tester,
-              ) async {
-                await pumpWithContact(
-                  tester,
-                  retired,
-                  extraOverrides: [retiredKeyCustody(custody)],
-                );
-
-                await tester.tap(find.text(l10n.dmFormerModerationAccountName));
-                await tester.pumpAndSettle();
-
-                expect(selectedRecipient(tester).handle, isNull);
-              });
+                  expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+                  expect(
+                    find.text(l10n.dmFormerModerationAccountName),
+                    findsNothing,
+                  );
+                  expect(find.text('Looks Official'), findsNothing);
+                  expect(
+                    tester
+                        .element(find.text(l10n.shareWithTitle))
+                        .read<ShareSheetBloc>()
+                        .state
+                        .contacts,
+                    isEmpty,
+                  );
+                },
+              );
             }
           });
         });

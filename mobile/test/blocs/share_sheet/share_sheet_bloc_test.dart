@@ -1372,6 +1372,20 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('ShareSheetRecipientToggled', () {
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'ignores a Find People selection of a retired moderation account',
+        build: createBloc,
+        act: (bloc) => bloc.add(
+          ShareSheetRecipientToggled(
+            ShareableUser(
+              pubkey: kLegacyModerationPubkeys.first,
+              displayName: 'Retired',
+            ),
+          ),
+        ),
+        expect: () => <ShareSheetState>[],
+      );
+
       const otherRecipient = ShareableUser(
         pubkey:
             'bbbb456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',

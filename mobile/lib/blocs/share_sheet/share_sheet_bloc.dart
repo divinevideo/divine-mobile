@@ -348,9 +348,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     Emitter<ShareSheetState> emit,
   ) {
     final recipient = event.recipient;
-    // Find People searches all users, so it can surface the viewer even
-    // though neither contact source offers them (#8351).
-    if (pubkeysEqual(recipient.pubkey, _currentUserPubkey)) return;
+    // Find People searches all users, including unsupported share recipients.
+    if (!_isSupportedRecipient(recipient.pubkey)) return;
 
     final updatedSelection = state.isSelected(recipient)
         ? [
