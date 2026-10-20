@@ -504,30 +504,44 @@ class DmVideoStore {
     required bool Function() wanted,
   }) {
     final id = message.id;
-    return _autoDownloadsInFlight[id] ??= _autoDownloads
-        .run(() {
-          final tapped = _videosInFlight[id];
-          if (tapped != null) {
-            return tapped.then((file) {
-              _lease(file);
-              return file;
-            });
-          }
-          if (!wanted()) throw const _DownloadDropped();
-          final fetch = _obtainVideo(
-            message,
-            maxBytes: autoDownloadMaxBytes,
-            timeLimit: autoDownloadTimeLimit,
-            stillWanted: () => wanted() || _videosInFlight.containsKey(id),
-          );
-          _autoFetchesRunning[id] = fetch;
-          return fetch.whenComplete(
-            () => _autoFetchesRunning.removeWhere((key, _) => key == id),
-          );
-        })
+    return _autoDownloadsInFlight[id] ??= _autoVideoInTurn(message, wanted)
         .whenComplete(
           () => _autoDownloadsInFlight.removeWhere((key, _) => key == id),
         );
+  }
+
+  Future<File> _autoVideoInTurn(
+    DmMessage message,
+    bool Function() wanted,
+  ) async {
+    final id = message.id;
+    final turn = await _autoDownloads.run<_Turn>(() async {
+      final tapped = _videosInFlight[id];
+      if (tapped != null) return _TapFetching(tapped);
+      if (!wanted()) throw const _DownloadDropped();
+      final fetch = _obtainVideo(
+        message,
+        maxBytes: autoDownloadMaxBytes,
+        timeLimit: autoDownloadTimeLimit,
+        stillWanted: () => wanted() || _videosInFlight.containsKey(id),
+      );
+      _autoFetchesRunning[id] = fetch;
+      return fetch
+          .then<_Turn>(_Fetched.new)
+          .whenComplete(
+            () => _autoFetchesRunning.removeWhere((key, _) => key == id),
+          );
+    });
+    switch (turn) {
+      case _Fetched(:final file):
+        return file;
+      case _TapFetching(:final download):
+        // Waited for after the turn: a tap fetches without limits, and other
+        // cards' downloads must not wait behind it.
+        final file = await download;
+        _lease(file);
+        return file;
+    }
   }
 
   Future<File> _obtainVideo(
@@ -814,6 +828,25 @@ class DmVideoStore {
 /// A queued download no card wants any more when its turn comes.
 class _DownloadDropped implements Exception {
   const _DownloadDropped();
+}
+
+/// What a card's turn in the download queue ended with.
+sealed class _Turn {
+  const _Turn();
+}
+
+/// The card's own download, finished.
+final class _Fetched extends _Turn {
+  const _Fetched(this.file);
+
+  final File file;
+}
+
+/// The download a tap started for the same video, still running.
+final class _TapFetching extends _Turn {
+  const _TapFetching(this.download);
+
+  final Future<File> download;
 }
 
 /// Runs tasks one at a time, each once the one before it has settled.

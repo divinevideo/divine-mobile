@@ -679,6 +679,35 @@ void main() {
         },
       );
 
+      test(
+        "let other cards download while one waits on a tap's download",
+        () async {
+          final tapRelease = Completer<Uint8List>();
+          final tappedMessage = _videoMessage(id: '1' * 64);
+          final other = _videoMessage(id: '2' * 64);
+          final fetchedIds = <String>[];
+          fetch = (message) {
+            fetchedIds.add(message.id);
+            return message.id == tappedMessage.id
+                ? tapRelease.future
+                : Future.value(_plaintext);
+          };
+          final store = createStore();
+          final tapped = store.videoFor(tappedMessage);
+          await pumpEventQueue();
+
+          final waiting = store.previewFor(tappedMessage, download: true);
+          final otherPreview = store.previewFor(other, download: true);
+          await pumpEventQueue();
+          expect(fetchedIds, contains(other.id));
+          expect(await otherPreview, isNotNull);
+
+          tapRelease.complete(_plaintext);
+          await tapped;
+          expect(await waiting, isNotNull);
+        },
+      );
+
       test('never make a tap wait behind them', () async {
         final blocking = Completer<Uint8List>();
         final queued = _videoMessage(id: '9' * 64);
