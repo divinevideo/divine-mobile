@@ -386,7 +386,7 @@ void main() {
     });
   });
 
-  group('dmVideoStoreProvider disposal', () {
+  group('dmVideoStoreProvider retention', () {
     final owner = 'e' * 64;
     final messageId = '1' * 64;
     late AppDatabase db;
@@ -406,6 +406,68 @@ void main() {
       await db.close();
       cache.deleteSync(recursive: true);
     });
+
+    test(
+      'conversation repair refreshes the kept record before old-room removal',
+      () async {
+        const sentAt = 1757385263;
+        await db.directMessagesDao.insertMessage(
+          id: messageId,
+          conversationId: 'old-room',
+          senderPubkey: 'b' * 64,
+          content: 'https://media.example/blob',
+          createdAt: sentAt,
+          giftWrapId: 'c' * 64,
+          messageKind: 15,
+          ownerPubkey: owner,
+        );
+        final video = File(
+          '${cache.path}/${DmVideoStore.dirName}/$owner/$messageId.mp4',
+        )..createSync(recursive: true);
+        final record = File('${video.parent.path}/$messageId.conversation')
+          ..writeAsStringSync('old-room\n$sentAt');
+        final container = ProviderContainer(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            currentAccountIdProvider.overrideWithValue(owner),
+          ],
+        );
+        final store = container.read(dmVideoStoreProvider)!;
+        final closed = store.kept.drain<void>();
+        addTearDown(() async {
+          container.dispose();
+          await closed;
+        });
+        await store.prune();
+        expect(video.existsSync(), isTrue);
+
+        await db.directMessagesDao.reassignMessages(
+          messageIds: [messageId],
+          toConversationId: 'repaired-group',
+          ownerPubkey: owner,
+        );
+        await db.removedConversationsDao.record(
+          conversationId: 'old-room',
+          ownerPubkey: owner,
+          removedAt: sentAt + 1,
+        );
+        await store.prune();
+
+        expect(video.existsSync(), isTrue);
+        expect(record.readAsStringSync(), 'repaired-group\n$sentAt');
+
+        await db.directMessagesDao.clearForAccountSwitch(owner);
+        await store.prune();
+        expect(video.existsSync(), isTrue);
+        await db.removedConversationsDao.record(
+          conversationId: 'repaired-group',
+          ownerPubkey: owner,
+          removedAt: sentAt + 1,
+        );
+        await store.prune();
+        expect(video.existsSync(), isFalse);
+      },
+    );
 
     test('flushes the pending retraction before disposing the store', () async {
       await db.directMessagesDao.insertMessage(

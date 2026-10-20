@@ -32,6 +32,9 @@ typedef DmVideoFetcher = Future<Uint8List> Function(
 /// timeout: the store owns serialization and the file lease until completion.
 typedef DmVideoFrameReader = Future<Uint8List?> Function(File video);
 
+/// Current conversation metadata for a message whose row is still available.
+typedef DmVideoMessageLocation = ({String conversationId, int sentAt});
+
 /// The [DmVideoStore] of the account signed in now, or null when none is.
 ///
 /// Resolved when a save starts, so a save keeps the account that asked even
@@ -60,6 +63,8 @@ class DmVideoStore {
   /// whether the user removed a conversation at or after a message in it was
   /// sent, which [prune] asks too, from a record kept beside each video: the
   /// message's row can be missing, as after an account switch.
+  /// [findMessageLocation], when supplied, refreshes that record from a live
+  /// row after conversation repair; a missing row still uses the kept record.
   ///
   /// [readFrame] defaults to [readDmVideoCardFrame] without its own timeout:
   /// the store bounds the UI wait separately from native completion.
@@ -72,6 +77,8 @@ class DmVideoStore {
     Future<bool> Function(String messageId)? isMessageGone,
     Future<bool> Function(String conversationId, int sentAt)?
     isConversationRemoved,
+    Future<DmVideoMessageLocation?> Function(String messageId)?
+    findMessageLocation,
     Future<Directory> Function()? rootDirectory,
     DateTime Function()? now,
     this.maxIdle = defaultMaxIdle,
@@ -82,6 +89,7 @@ class DmVideoStore {
        _readFrame = readFrame ?? _readCardFrameUntilSettled,
        _isMessageGone = isMessageGone,
        _isConversationRemoved = isConversationRemoved,
+       _findMessageLocation = findMessageLocation,
        _rootDirectory = rootDirectory ?? getApplicationCacheDirectory,
        _now = now ?? DateTime.now;
 
@@ -150,6 +158,8 @@ class DmVideoStore {
   final Future<bool> Function(String messageId)? _isMessageGone;
   final Future<bool> Function(String conversationId, int sentAt)?
   _isConversationRemoved;
+  final Future<DmVideoMessageLocation?> Function(String messageId)?
+  _findMessageLocation;
   final Future<Directory> Function() _rootDirectory;
   final DateTime Function() _now;
 
@@ -880,7 +890,10 @@ class DmVideoStore {
     Directory dir, {
     bool force = false,
   }) async {
-    final content = '${message.conversationId}\n${message.createdAt}';
+    final content = _conversationRecordContent(
+      message.conversationId,
+      message.createdAt,
+    );
     final record = File(
       '${dir.path}/${_safeName(message.id)}$_conversationSuffix',
     );
@@ -917,6 +930,9 @@ class DmVideoStore {
       return null;
     }
   }
+
+  static String _conversationRecordContent(String conversationId, int sentAt) =>
+      '$conversationId\n$sentAt';
 
   Future<File?> _readAndKeepFrame(
     DmMessage message,
@@ -977,8 +993,32 @@ class DmVideoStore {
           gone.add(id);
           continue;
         }
+        if (isRemoved == null) continue;
+        final current = await _findMessageLocation?.call(id);
+        if (current != null) {
+          if (await isRemoved(current.conversationId, current.sentAt)) {
+            gone.add(id);
+          } else {
+            // A group repair may have moved this message since it was kept.
+            // Refresh the durable record before a later account switch drops
+            // its row. Check disk, not just this store's metadata cache:
+            // another same-account store can write the same record.
+            final record =
+                records[id] ??
+                File('${files.first.parent.path}/$id$_conversationSuffix');
+            final content = _conversationRecordContent(
+              current.conversationId,
+              current.sentAt,
+            );
+            if (await _readQuietly(record) != content) {
+              await _writeAtomically(record, utf8.encode(content));
+            }
+            _currentRecords[id] = content;
+          }
+          continue;
+        }
         final record = records[id];
-        if (isRemoved == null || record == null) continue;
+        if (record == null) continue;
         final lines = (await record.readAsString()).split('\n');
         final sentAt = lines.length == 2 ? int.tryParse(lines[1]) : null;
         if (sentAt != null && await isRemoved(lines[0], sentAt)) gone.add(id);

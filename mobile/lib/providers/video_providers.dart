@@ -499,6 +499,15 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
     fetchVideo: ref.watch(dmVideoDecryptorProvider).decrypt,
     isMessageGone: dmVideoMessageGone(db, owner),
     isConversationRemoved: dmVideoConversationRemoved(db, owner),
+    findMessageLocation: (messageId) async {
+      final row = await db.directMessagesDao.getMessageById(
+        messageId,
+        ownerPubkey: owner,
+      );
+      return row == null
+          ? null
+          : (conversationId: row.conversationId, sentAt: row.createdAt);
+    },
   );
   final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
   ref.onDispose(() {
