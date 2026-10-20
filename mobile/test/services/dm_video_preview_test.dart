@@ -8,15 +8,37 @@ import 'package:blurhash_service/blurhash_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/dm_video_preview.dart';
 // Not exported from pro_video_editor's barrel. Imported by path so the test
 // can subclass MethodChannelProVideoEditor without its EventChannel setup.
 import 'package:pro_video_editor/core/platform/native_method_channel.dart';
 import 'package:pro_video_editor/core/platform/platform_interface.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _NoopInitProVideoEditor extends MethodChannelProVideoEditor {
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recorded = <({Object error, String? reason})>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recorded.add((error: error, reason: reason));
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
 }
 
 /// A PNG frame filled with one colour, as the native thumbnailer returns.
@@ -116,6 +138,59 @@ void main() {
       expect(preview.blurhash, isNotNull);
       expect(preview.dimensions, isNull);
     });
+
+    test(
+      'tries one frame and keeps the attachment name out of logs and crash '
+      'reports',
+      () async {
+        // A picked attachment keeps its gallery name, which can say who or
+        // what is in a private video.
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final reporter = _RecordingCrashReporter();
+        var frameAttempts = 0;
+        answer = (call) async {
+          if (call.method == 'getThumbnails') frameAttempts++;
+          throw PlatformException(
+            code: 'decode',
+            message: 'cannot open ${video.path}',
+          );
+        };
+
+        final preview = await readDmVideoPreview(video, reporter: reporter);
+
+        expect(preview.blurhash, isNull);
+        expect(preview.dimensions, isNull);
+        expect(frameAttempts, equals(1));
+        expect(reporter.recorded, isEmpty);
+        for (final entry in logCapture.getRecentLogs()) {
+          expect(entry.message, isNot(contains('clip.mp4')));
+          expect(entry.error ?? '', isNot(contains('clip.mp4')));
+        }
+      },
+    );
+
+    test(
+      'leaves out a part that fails with a programming error, reports it, and '
+      'still sends the other part',
+      () async {
+        final reporter = _RecordingCrashReporter();
+        answer = (call) async => switch (call.method) {
+          'getThumbnails' => <Uint8List>[_solidFrame(255, 0, 0)],
+          // Not the map the plugin expects, so its cast throws a TypeError.
+          'getMetadata' => const ['not', 'a', 'map'],
+          _ => null,
+        };
+
+        final preview = await readDmVideoPreview(video, reporter: reporter);
+
+        expect(preview.blurhash, isNotNull);
+        expect(preview.dimensions, isNull);
+        expect(reporter.recorded, hasLength(1));
+        expect(reporter.recorded.single.error, isA<ReportableError>());
+      },
+    );
 
     test(
       'gives up on a platform call that never answers, so the send is not '

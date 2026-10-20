@@ -9,7 +9,6 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_preview.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 /// Progress stages reported by [DmVideoSendService.sendVideo].
 ///
@@ -78,7 +77,7 @@ class DmVideoSendService {
     onPhase?.call(DmVideoSendPhase.encrypting);
     // Read alongside the encrypt and upload, which take far longer.
     final preview = blurhash == null && dimensions == null
-        ? _readPreviewOrNone(videoFile)
+        ? _readPreview(videoFile)
         : Future.value((blurhash: blurhash, dimensions: dimensions));
     final enc = await _encryption.encryptFile(videoFile);
     try {
@@ -119,23 +118,6 @@ class DmVideoSendService {
       );
     } finally {
       await _deleteCiphertextQuietly(enc.ciphertextFile);
-    }
-  }
-
-  /// The preview is optional, so a failure to read one sends the video
-  /// without it. Errors are left to propagate: they are bugs, not media.
-  Future<DmVideoPreview> _readPreviewOrNone(File videoFile) async {
-    try {
-      return await _readPreview(videoFile);
-    } on Exception catch (error, stackTrace) {
-      Log.warning(
-        'Sending the video DM without a preview: $error',
-        name: 'DmVideoSendService',
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return (blurhash: null, dimensions: null);
     }
   }
 

@@ -356,23 +356,6 @@ void main() {
         expect(sent.single.blurhash, isNotNull);
         expect(sent.single.dimensions, '1080x1920');
       });
-
-      test('still sends the video when reading the preview fails', () async {
-        final sent = stubSuccessfulSend(videoFile);
-
-        final result =
-            await createService(
-              readPreview: (_) async => throw const FileSystemException('x'),
-            ).sendVideo(
-              recipientPubkey: _recipientPubkey,
-              videoFile: videoFile,
-              mimeType: 'video/mp4',
-            );
-
-        expect(result.success, isTrue);
-        expect(sent.single.blurhash, isNull);
-        expect(sent.single.dimensions, isNull);
-      });
     });
 
     test('upload failure skips sendFileMessage and still cleans up', () async {

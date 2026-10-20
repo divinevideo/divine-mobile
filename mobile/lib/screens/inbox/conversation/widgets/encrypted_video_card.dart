@@ -23,8 +23,9 @@ const double encryptedVideoCardRadius = 16;
 /// The card deliberately renders no thumbnail: the encrypted thumbnail in
 /// `DmFileMetadata.thumbnailUrl` is encrypted under the same key and nonce as
 /// the video, so fetching it as a plain image would reuse the GCM nonce. The
-/// blurhash is a local, non-secret preview. Playback (decrypt + player) is
-/// owned by the video DM play page; [onTap] is the future hook for it.
+/// blurhash is decoded on the device and fetches nothing; it is as private as
+/// the video, so it is never logged. Playback (decrypt + player) is owned by
+/// the video DM play page; [onTap] is the future hook for it.
 ///
 /// When the sender provided no blurhash there is nothing safe to preview, so
 /// the card shows a neutral play placeholder. Divine's sender attaches one;
