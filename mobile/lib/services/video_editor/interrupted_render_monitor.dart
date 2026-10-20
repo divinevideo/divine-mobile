@@ -275,8 +275,8 @@ class InterruptedRenderMonitor {
       WidgetsBinding.instance.addObserver(_lifecycleObserver);
       _observingLifecycle = true;
     } on Object {
-      // No binding (pure Dart tests): each marker keeps only the state it
-      // opened in and the one its last write saw.
+      // No binding (pure Dart tests): there is no lifecycle to observe, and
+      // markers record the state as unknown.
     }
   }
 
