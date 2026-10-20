@@ -863,8 +863,8 @@ class DmVideoStore {
         id,
         () => _queueFrameRead(message, video, preview),
       );
-      // Interest holds while queued: the card's deadline bounds its own
-      // decode, not its place behind other native reads.
+      // Interest holds while queued: the card's deadline bounds its wait for
+      // its own decode, not its place behind other native reads.
       await Future.any<void>([read.started, read.settled.then<void>((_) {})]);
       return await read.settled.timeout(
         frameDeadline,
