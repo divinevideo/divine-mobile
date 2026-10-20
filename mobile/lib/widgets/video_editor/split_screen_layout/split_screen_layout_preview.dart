@@ -1,7 +1,6 @@
 // ABOUTME: The split-screen layout as it will look: the border colour behind
 // ABOUTME: every cell, each cell showing its clip framed, pan and pinch to reframe
 
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
@@ -10,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 
 /// The frame the layout splits, with every cell where the export will put it.
 ///
@@ -282,6 +282,7 @@ class _CellFootage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final thumbnail = thumbnailPath;
+    final missing = ColoredBox(color: context.vineColors.surfaceContainerHigh);
     return ExcludeSemantics(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -296,9 +297,13 @@ class _CellFootage extends StatelessWidget {
             children: [
               Positioned.fromRect(
                 rect: footage,
-                child: thumbnail == null || !File(thumbnail).existsSync()
-                    ? ColoredBox(color: context.vineColors.surfaceContainerHigh)
-                    : Image.file(File(thumbnail), fit: .cover),
+                child: thumbnail == null
+                    ? missing
+                    : ClipThumbnailImage(
+                        path: thumbnail,
+                        fit: .cover,
+                        placeholder: missing,
+                      ),
               ),
             ],
           );
