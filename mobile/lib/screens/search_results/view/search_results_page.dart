@@ -230,6 +230,7 @@ class _SearchResultsScope extends ConsumerWidget {
                                 body: _SearchResultsBody(
                                   controller: controller,
                                   requestFocusOnMount: requestFocusOnMount,
+                                  focusEnabled: profileRepository != null,
                                 ),
                               ),
                             ),
@@ -438,10 +439,12 @@ class _SearchResultsBody extends StatelessWidget {
   const _SearchResultsBody({
     required this.controller,
     required this.requestFocusOnMount,
+    required this.focusEnabled,
   });
 
   final TextEditingController controller;
   final bool requestFocusOnMount;
+  final bool focusEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -451,6 +454,7 @@ class _SearchResultsBody extends StatelessWidget {
           controller: controller,
           initialQuery: controller.text,
           requestFocusOnMount: requestFocusOnMount,
+          focusEnabled: focusEnabled,
         ),
         Expanded(child: SearchResultsView(controller: controller)),
       ],

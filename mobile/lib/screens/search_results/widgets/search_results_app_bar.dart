@@ -22,6 +22,7 @@ class SearchResultsAppBar extends StatefulWidget {
     required this.controller,
     required this.initialQuery,
     this.requestFocusOnMount = false,
+    this.focusEnabled = true,
     super.key,
   });
 
@@ -42,12 +43,16 @@ class SearchResultsAppBar extends StatefulWidget {
   /// Empty-query mounts still request focus by default.
   final bool requestFocusOnMount;
 
+  /// Whether dependency readiness permits applying the pending mount focus.
+  final bool focusEnabled;
+
   @override
   State<SearchResultsAppBar> createState() => _SearchResultsAppBarState();
 }
 
 class _SearchResultsAppBarState extends State<SearchResultsAppBar> {
   late final FocusNode _focusNode;
+  late bool _mountFocusPending;
 
   // Last text we dispatched to the BLoCs. The TextField's EditableText
   // mutates the controller's selection (cursor position) on attach and
@@ -60,6 +65,8 @@ class _SearchResultsAppBarState extends State<SearchResultsAppBar> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    _mountFocusPending =
+        widget.requestFocusOnMount || widget.initialQuery.isEmpty;
     _lastDispatchedQuery = widget.initialQuery;
 
     if (widget.initialQuery.isNotEmpty) {
@@ -77,16 +84,34 @@ class _SearchResultsAppBarState extends State<SearchResultsAppBar> {
       _dispatchQuery(widget.initialQuery);
     }
 
-    if (widget.requestFocusOnMount || widget.initialQuery.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _focusNode.requestFocus();
-      });
-    }
+    _requestPendingMountFocus();
 
     // Attach the listener AFTER the initial dispatch so the controller's
     // pre-seeded text (set in the parent's initState) does not produce a
     // duplicate event.
     widget.controller.addListener(_onSearchChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchResultsAppBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.focusEnabled && widget.focusEnabled) {
+      _requestPendingMountFocus();
+    }
+  }
+
+  void _requestPendingMountFocus() {
+    if (!_mountFocusPending || !widget.focusEnabled) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_mountFocusPending ||
+          !widget.focusEnabled ||
+          !_focusNode.canRequestFocus) {
+        return;
+      }
+      _mountFocusPending = false;
+      _focusNode.requestFocus();
+    });
   }
 
   @override

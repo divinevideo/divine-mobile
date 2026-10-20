@@ -103,9 +103,13 @@ void main() {
       MockFollowRepository? mockFollowRepository,
       List<Override> flagOverrides = const [],
       bool requestFocusOnMount = false,
+      String? initialQuery,
     }) {
       return testMaterialApp(
-        home: SearchResultsPage(requestFocusOnMount: requestFocusOnMount),
+        home: SearchResultsPage(
+          requestFocusOnMount: requestFocusOnMount,
+          initialQuery: initialQuery,
+        ),
         mockFollowRepository: mockFollowRepository,
         mockProfileRepository: profileRepositoryOverride == null
             ? mockProfileRepository
@@ -152,6 +156,67 @@ void main() {
         expect(tester.testTextInput.isVisible, isFalse);
       },
     );
+
+    for (final scenario in [
+      (name: 'empty search', query: '', explicitFocus: false, focused: true),
+      (
+        name: 'explicit-focus search',
+        query: 'cats',
+        explicitFocus: true,
+        focused: true,
+      ),
+      (
+        name: 'prefilled search',
+        query: 'cats',
+        explicitFocus: false,
+        focused: false,
+      ),
+    ]) {
+      testWidgets(
+        '${scenario.name} preserves mount focus intent until profiles become ready',
+        (tester) async {
+          await tester.pumpWidget(
+            createTestWidget(
+              initialQuery: scenario.query,
+              requestFocusOnMount: scenario.explicitFocus,
+              profileRepositoryOverride: profileRepositoryProvider.overrideWith(
+                (ref) => ref.watch(_profileRepositoryAvailable)
+                    ? mockProfileRepository
+                    : null,
+              ),
+            ),
+          );
+          await tester.pump();
+          final hidden = tester.state<EditableTextState>(
+            find.byType(EditableText, skipOffstage: false),
+          );
+          expect(hidden.widget.focusNode.hasFocus, isFalse);
+          expect(tester.testTextInput.isVisible, isFalse);
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(SearchResultsPage)),
+          );
+          container.read(_profileRepositoryAvailable.notifier).state = true;
+          await tester.pump();
+          await tester.pump();
+          final visible = tester.state<EditableTextState>(
+            find.byType(EditableText),
+          );
+          expect(visible, same(hidden));
+          expect(visible.widget.focusNode.hasFocus, scenario.focused);
+          expect(tester.testTextInput.isVisible, scenario.focused);
+          visible.widget.focusNode.unfocus();
+          await tester.pump();
+          container.read(_profileRepositoryAvailable.notifier).state = false;
+          await tester.pump();
+          container.read(_profileRepositoryAvailable.notifier).state = true;
+          await tester.pump();
+          await tester.pump();
+          expect(visible.widget.focusNode.hasFocus, isFalse);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(milliseconds: 350));
+        },
+      );
+    }
 
     testWidgets('Nostr resolver follows edits through profile readiness', (
       tester,
