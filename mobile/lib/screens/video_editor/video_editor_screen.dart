@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
@@ -655,7 +656,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       bakeCapturedChromaKey: clipManager.bakeCapturedChromaKey,
       deferFileCleanup: videoEditor.deferFileCleanup,
     );
-    mainBloc.add(const VideoEditorMainSubEditorClosed());
+    // The editor can be torn down while the layout screen is up; a bare add
+    // would throw before the rendered clip below is handed to cleanup.
+    mainBloc.addIfOpen(const VideoEditorMainSubEditorClosed());
     if (layoutClip == null) return;
     if (!mounted || clipEditorBloc.isClosed) {
       videoEditor.deferFileCleanup(layoutClip.ownedFilePaths);
