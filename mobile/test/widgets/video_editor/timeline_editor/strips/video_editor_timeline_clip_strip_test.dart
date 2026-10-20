@@ -1162,6 +1162,41 @@ void main() {
           await tester.pump();
           expect(dragStates, [true, false, true, false]);
         });
+
+        testWidgets('$handle drags freely off a playhead parked on it', (
+          tester,
+        ) async {
+          // A released trim parks the playhead on the handle, and the
+          // timeline reports it in whole milliseconds: here 1ms of source
+          // away from the edge, in the neighbouring millisecond.
+          final clip = _createTestClip(
+            id: 'snap',
+            seconds: 4,
+            trimStartMs: 500,
+            trimEndMs: isStart ? 500 : 501,
+          ).copyWith(playbackSpeed: 2);
+          final preceding = _createTestClip(
+            id: 'preceding',
+            trimEndMs: 999,
+          ).copyWith(playbackSpeed: 2);
+          playhead.value = Duration(milliseconds: isStart ? 501 : 1499);
+          await pumpClip(
+            tester,
+            clip: clip,
+            precedingClips: isStart ? [preceding] : const [],
+          );
+          final gesture = await startDrag(tester, isStart: isStart);
+          await gesture.moveBy(Offset(direction * 2, 0));
+          await tester.pump();
+
+          expect(
+            reportedEdge(),
+            equals(Duration(milliseconds: isStart ? 540 : 541)),
+          );
+          expect(haptics, isEmpty);
+          await gesture.up();
+          await tester.pump();
+        });
       }
 
       testWidgets('split end half cannot reveal its sibling frames', (

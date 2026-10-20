@@ -43,6 +43,10 @@ double _rasterPhasePx(DivineVideoClip clip, double contentWidth) {
   return offsetPx % TimelineConstants.thumbnailWidth;
 }
 
+/// The timeline reports the playhead in whole milliseconds, so a playhead
+/// parked on a trim handle can read up to this far from the handle's edge.
+const _playheadResolution = Duration(milliseconds: 1);
+
 class _TrimmableClipTile extends StatefulWidget {
   const _TrimmableClipTile({
     required this.clip,
@@ -152,15 +156,29 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     _snapSourcePosition = _captureSnapSourcePosition();
     final sourcePixelsPerSecond =
         widget.pixelsPerSecond * widget.clip._playbackScale;
-    final startMs = widget.clip.trimStart.inMilliseconds;
-    final endMs = (widget.clip.duration - widget.clip.trimEnd).inMilliseconds;
+    final start = widget.clip.trimStart;
+    final end = widget.clip.duration - widget.clip.trimEnd;
     _leftSnap
       ..pixelsPerSecond = sourcePixelsPerSecond
-      ..begin(startMs, initialExcludeMs: startMs);
+      ..begin(start.inMilliseconds, initialExcludeMs: _ownEdgeSnapMs(start));
     _rightSnap
       ..pixelsPerSecond = sourcePixelsPerSecond
-      ..begin(endMs, initialExcludeMs: endMs);
+      ..begin(end.inMilliseconds, initialExcludeMs: _ownEdgeSnapMs(end));
     widget.onTrimDragChanged?.call(true);
+  }
+
+  /// The snap point a handle at [edge] skips until it moves away: the
+  /// playhead target when the playhead is parked on that edge, which it is
+  /// after every released trim.
+  int _ownEdgeSnapMs(Duration edge) {
+    final target = _snapSourcePosition;
+    final tolerance = widget.clip.playbackDurationToSourceDuration(
+      _playheadResolution,
+    );
+    if (target != null && (target - edge).abs() <= tolerance) {
+      return target.inMilliseconds;
+    }
+    return edge.inMilliseconds;
   }
 
   void _onDragEnd() {
