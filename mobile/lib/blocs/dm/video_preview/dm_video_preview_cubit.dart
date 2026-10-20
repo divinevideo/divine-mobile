@@ -113,8 +113,8 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
     }
   }
 
-  /// Reads the frame again once this message's video is kept, which happens
-  /// when the user plays it.
+  /// Reads the frame again once this message's video or frame is kept: when
+  /// the user plays it, or when a decode that outlasted the card's wait ends.
   void _waitForKeptVideo(DmVideoStore store) {
     _keptVideos ??= store.kept
         .where((messageId) => messageId == _message.id)

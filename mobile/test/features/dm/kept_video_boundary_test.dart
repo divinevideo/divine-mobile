@@ -123,7 +123,8 @@ void main() {
         final firstMessage = _message('a');
         final first = store.previewFor(firstMessage, download: true);
         await nativeStarted.future;
-        // The real default reader's ten-second UI deadline, not a test delay.
+        // The store's ten-second card deadline, not a test delay. The default
+        // reader sets none of its own: it waits for the native reply.
         expect(await first, isNull);
         final firstVideo = File(
           '${root.path}/${DmVideoStore.dirName}/${'e' * 64}/'
@@ -136,7 +137,8 @@ void main() {
           secondCompleted = true;
           return frame;
         });
-        // Longer than its own decode deadline, entirely spent in the queue.
+        // Longer than its own card deadline, entirely spent in the queue, and
+        // past the ten seconds a reader that gave up by itself would wait.
         // Waiting for the result with a test deadline does not release it.
         await second.timeout(
           const Duration(seconds: 11),

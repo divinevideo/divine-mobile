@@ -29,7 +29,8 @@ typedef DmVideoFetcher = Future<Uint8List> Function(
 
 /// Reads the preview frame of a decrypted video, or null when it cannot.
 /// Completes only once the decoder no longer reads the file, not on a UI
-/// timeout: the store owns serialization and the file lease until completion.
+/// timeout: the store leases the file until completion, and holds the frame
+/// queue until then or for at most [DmVideoStore.frameTurnLimit].
 typedef DmVideoFrameReader = Future<Uint8List?> Function(File video);
 
 /// Current conversation metadata for a message whose row is still available.
@@ -330,10 +331,11 @@ class DmVideoStore {
   /// within [autoDownloadMaxBytes] and [autoDownloadTimeLimit]; one declared
   /// bigger is not fetched. Null when there is no video to read or no frame
   /// can be read from it; a frame that could not be read, or whose read never
-  /// finished, is not tried again. A download that failed is not tried again by
-  /// itself this session when the failure will repeat, nor for
-  /// [autoDownloadRetryAfter] when it may pass; a tap on play still fetches
-  /// it.
+  /// finished, is not tried again. Null too when the decode outlasts
+  /// [frameDeadline]; its frame is still kept, and announced on [kept]. A
+  /// download that failed is not tried again by itself this session when the
+  /// failure will repeat, nor for [autoDownloadRetryAfter] when it may pass; a
+  /// tap on play still fetches it.
   ///
   /// When [decode] is false nothing is decoded, only a frame read before is
   /// returned: for a sender the user blocked, whose file should not reach the
@@ -861,8 +863,8 @@ class DmVideoStore {
         id,
         () => _queueFrameRead(message, video, preview),
       );
-      // Preserve interest while queued, as before: a UI deadline only bounds
-      // this card's decode, not its place behind other native reads.
+      // Interest holds while queued: the card's deadline bounds its own
+      // decode, not its place behind other native reads.
       await Future.any<void>([read.started, read.settled.then<void>((_) {})]);
       return await read.settled.timeout(
         frameDeadline,
