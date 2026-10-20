@@ -80,13 +80,15 @@ final RegExp _relayNoticeSigningMaterial = RegExp(
   caseSensitive: false,
 );
 // Addresses a relay can see and echo back. IPv6 needs `::` or at least four
-// groups, so a clock time like 12:30:45 stays readable. IPv4 runs first, so
-// an IPv4-mapped IPv6 address loses all four of its octets.
+// groups, so a clock time like 12:30:45 stays readable. A colon beside the
+// address is punctuation unless a group follows it, so `ip:2001:db8::4` and
+// `2001:db8::4: slow down` are caught too. IPv4 runs first, so an
+// IPv4-mapped IPv6 address loses all four of its octets.
 final RegExp _relayNoticeIpv4 = RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b');
 final RegExp _relayNoticeIpv6 = RegExp(
-  r'(?<![0-9a-z:])(?:(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}|'
+  r'(?<![0-9a-z])(?:(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}|'
   r'(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?::'
-  r'(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?)(?![0-9a-z:])',
+  r'(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?)(?![0-9a-z]|:[0-9a-z:])',
   caseSensitive: false,
 );
 final RegExp _relayNoticeAuthorization = RegExp(

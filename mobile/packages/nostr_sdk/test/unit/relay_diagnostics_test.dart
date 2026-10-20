@@ -696,6 +696,22 @@ void main() {
       expect(sanitized, contains('wss://relay.example:443'));
     });
 
+    test('redacts an IPv6 address that touches a colon', () {
+      final eventId = 'a' * 64;
+      final notice =
+          'rate-limited: 2001:db8::4: slow down, ip:2001:db8::5 and '
+          'client=2001:db8:1:2:3:4:5:6: banned at 12:30:45 for $eventId: bye';
+
+      final sanitized = relayNoticeForDiagnostics(notice);
+
+      expect(sanitized, isNot(contains('2001:db8')));
+      expect(sanitized, contains('rate-limited: [REDACTED]: slow down'));
+      expect(sanitized, contains('ip:[REDACTED] and'));
+      expect(sanitized, contains('client=[REDACTED]: banned'));
+      expect(sanitized, contains('12:30:45'));
+      expect(sanitized, contains('$eventId: bye'));
+    });
+
     test('strips Unicode controls and format characters, not just ASCII', () {
       // NEL is a C1 line break; the bidi override and zero-width joiner are
       // format characters that leave no visible trace but change how the
