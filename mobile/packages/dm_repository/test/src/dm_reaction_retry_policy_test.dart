@@ -415,6 +415,16 @@ void main() {
         },
       );
 
+      test('leaves a reaction a relay rejected on a full set', () async {
+        stubWire((_) async => const NIP17SendResult.failure('rejected'));
+        await publish();
+
+        final target = (await reactions.retryableReactions()).single;
+
+        expect(target.publishStatus, 'failed');
+        expect(target.retriesRanOut, isFalse);
+      });
+
       test(
         'marks a removal whose retries ran out, and only that one',
         () async {
