@@ -4,8 +4,17 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/services/consent_upload_session.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// One confirmation form's submission lifetime, including its retry snapshot.
+class ParentConsentSubmission {
+  final _uploadSession = ConsentUploadSession();
+
+  /// Releases private upload bytes after any active transport finishes.
+  Future<void> dispose() => _uploadSession.dispose();
+}
 
 class MinorAccountReviewRepository {
   MinorAccountReviewRepository({
@@ -52,6 +61,8 @@ class MinorAccountReviewRepository {
 
   /// Submits the recorded parent-consent clip at [videoPath] for [caseId].
   ///
+  /// Retain [submission] across retries and dispose it when the form closes.
+  ///
   /// [localReceipt] is the copy written into the developer override when one
   /// is simulating this case locally; see [_completedLocally].
   Future<void> submitParentConsent({
@@ -59,8 +70,9 @@ class MinorAccountReviewRepository {
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
+    ParentConsentSubmission? submission,
   }) async {
-    var submissionCaseId = caseId;
+    var submissionCaseId = submission?._uploadSession.caseId ?? caseId;
     if (submissionCaseId == null) {
       final status = MinorAccountReviewStatus.fromJson(
         await _apiService.startGreenlight(),
@@ -74,11 +86,13 @@ class MinorAccountReviewRepository {
       }
       submissionCaseId = reviewCase.id;
     }
+    submission?._uploadSession.caseId = submissionCaseId;
     if (await _completedLocally(submissionCaseId, localReceipt)) return;
     await _apiService.submitMinorAccountReviewParentConsent(
       caseId: submissionCaseId,
       email: email,
       videoPath: videoPath,
+      session: submission?._uploadSession,
     );
   }
 

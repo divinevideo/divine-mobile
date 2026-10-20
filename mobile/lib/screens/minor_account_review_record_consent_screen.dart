@@ -471,6 +471,7 @@ class _MinorConsentSubmitFormState
           child: DivineAuthTextField(
             label: l10n.minorAccountReviewParentContactFieldLabel,
             controller: _emailController,
+            enabled: state.status == MinorConsentSubmitStatus.editing,
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
             validator: (value) => Validators.validateEmail(

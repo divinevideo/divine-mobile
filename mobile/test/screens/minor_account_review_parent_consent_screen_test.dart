@@ -93,6 +93,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
+    ParentConsentSubmission? submission,
   }) async {}
 }
 

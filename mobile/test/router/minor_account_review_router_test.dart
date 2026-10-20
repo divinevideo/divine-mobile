@@ -124,6 +124,7 @@ class _StubRepository implements MinorAccountReviewRepository {
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
+    ParentConsentSubmission? submission,
   }) async {}
 }
 

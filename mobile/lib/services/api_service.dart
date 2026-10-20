@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:openvine/platform_io.dart';
 import 'package:openvine/services/consent_upload.dart';
+import 'package:openvine/services/consent_upload_session.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -31,11 +32,13 @@ class ApiService {
     http.Client? client,
     Nip98AuthService? authService,
     Duration requestTimeout = _defaultTimeout,
+    Duration uploadTimeout = _defaultUploadTimeout,
   }) : _relayManagerBaseUrl = relayManagerBaseUrl,
        _client = client ?? http.Client(),
        _authService = authService,
        _appVersion = appVersion,
-       _requestTimeout = requestTimeout;
+       _requestTimeout = requestTimeout,
+       _uploadTimeout = uploadTimeout;
 
   /// Relay-manager worker base URL (minor-account-review endpoints live
   /// there, not on the main backend — divine-relay-manager#108). Injected
@@ -48,7 +51,8 @@ class ApiService {
   /// Longer timeout for multipart uploads. A consent video over a slow link
   /// can legitimately exceed the shared [_defaultTimeout]; this applies only to
   /// the parent-consent upload so no other request is slowed down.
-  static const Duration _uploadTimeout = Duration(seconds: 120);
+  static const Duration _defaultUploadTimeout = Duration(seconds: 120);
+  final Duration _uploadTimeout;
 
   final http.Client _client;
   final Nip98AuthService? _authService;
@@ -169,10 +173,13 @@ class ApiService {
   /// The NIP-98 payload tag binds the exact multipart body, including the email
   /// and video. Freeze the body before signing and send that same snapshot.
   /// The server verifies its streamed hash before completing the private video.
+  /// Keep [session] for retries: the server requires the same multipart framing,
+  /// not just the same email and video. Omit it only for a single attempt.
   Future<void> submitMinorAccountReviewParentConsent({
     required String caseId,
     required String email,
     required String videoPath,
+    ConsentUploadSession? session,
   }) async {
     Log.debug(
       'Submitting parent consent video for case $caseId',
@@ -185,63 +192,66 @@ class ApiService {
         '$_relayManagerBaseUrl/v1/minor-review-cases/$caseId/parent-consent',
       );
 
-      // Fail fast with an accurate message rather than letting the multipart
-      // stream error surface later as an ambiguous network failure.
-      final file = File(videoPath);
-      if (!file.existsSync()) {
-        throw ApiException(
-          'Parent consent video not found or unreadable at $videoPath',
-        );
-      }
-
-      // relay-manager rejects a video part that is not labelled video/* with
-      // a 415, and http defaults file parts to application/octet-stream. The
-      // camera writes MP4 on both platforms.
-      final multipart = http.MultipartRequest('POST', uri)
-        ..fields['email'] = email
-        ..files.add(
-          await http.MultipartFile.fromPath(
-            'video',
-            videoPath,
-            contentType: MediaType('video', 'mp4'),
-          ),
-        );
-
-      final upload = await ConsentUpload.prepare(multipart);
-      // A timeout does not cancel the underlying request. Its own finally
-      // retains the snapshot until the transport finishes reading it.
-      var transportOwnsSnapshot = false;
+      final submission = session ?? ConsentUploadSession();
+      await submission.bind(
+        url: uri,
+        email: email,
+        videoPath: videoPath,
+        pubkey: _authService?.currentUserPubkey,
+      );
       final http.Response response;
       try {
-        final token = await _authService?.createAuthToken(
-          url: uri.toString(),
-          method: HttpMethod.post,
-          payloadHash: upload.payloadHash,
-          reuseCached: false,
-        );
-        if (token == null) {
-          throw const ApiException('Could not authenticate consent upload');
-        }
-        upload.request.headers.addAll({
-          'Accept': 'application/json',
-          ...buildDivineClientHeaders(appVersion: _appVersion),
-          'Authorization': token.authorizationHeader,
-        });
-        transportOwnsSnapshot = true;
         response = await _request(
-          () async {
-            try {
-              return await _client
-                  .send(upload.request)
-                  .then(http.Response.fromStream);
-            } finally {
-              await upload.dispose();
-            }
-          },
+          () => submission.send(
+            prepare: () async {
+              final file = File(videoPath);
+              if (!file.existsSync()) {
+                throw ApiException(
+                  'Parent consent video not found or unreadable at $videoPath',
+                );
+              }
+              final multipart = http.MultipartRequest('POST', uri)
+                ..fields['email'] = email
+                ..files.add(
+                  await http.MultipartFile.fromPath(
+                    'video',
+                    videoPath,
+                    contentType: MediaType('video', 'mp4'),
+                  ),
+                );
+              return ConsentUpload.prepare(multipart);
+            },
+            transmit: (upload) async {
+              final token = await _authService?.createAuthToken(
+                url: uri.toString(),
+                method: HttpMethod.post,
+                payloadHash: upload.payloadHash,
+                reuseCached: false,
+              );
+              if (token == null) {
+                throw const ApiException(
+                  'Could not authenticate consent upload',
+                );
+              }
+              await submission.bind(
+                url: uri,
+                email: email,
+                videoPath: videoPath,
+                pubkey: _authService?.currentUserPubkey,
+              );
+              final request = upload.request;
+              request.headers.addAll({
+                'Accept': 'application/json',
+                ...buildDivineClientHeaders(appVersion: _appVersion),
+                'Authorization': token.authorizationHeader,
+              });
+              return _client.send(request).then(http.Response.fromStream);
+            },
+          ),
           timeout: _uploadTimeout,
         );
       } finally {
-        if (!transportOwnsSnapshot) await upload.dispose();
+        if (session == null) await submission.dispose();
       }
 
       if (response.statusCode == 200 ||

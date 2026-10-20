@@ -72,6 +72,8 @@ class MinorConsentSubmitCubit extends Cubit<MinorConsentSubmitState>
        _onUploadFinished = onUploadFinished,
        super(const MinorConsentSubmitState());
 
+  final _session = ParentConsentSubmission();
+  String? _submissionEmail;
   final MinorAccountReviewRepository _repository;
   final void Function() _onSubmitted;
   final void Function()? _onUploadStarted;
@@ -88,22 +90,29 @@ class MinorConsentSubmitCubit extends Cubit<MinorConsentSubmitState>
     required String videoPath,
     required MinorReviewInstructions localReceipt,
   }) async {
-    if (state.status == MinorConsentSubmitStatus.submitting) return;
+    if (isClosed ||
+        state.status == MinorConsentSubmitStatus.submitting ||
+        state.status == MinorConsentSubmitStatus.success) {
+      return;
+    }
+    _submissionEmail ??= email;
     emit(state.copyWith(status: MinorConsentSubmitStatus.submitting));
     _onUploadStarted?.call();
 
     try {
       await _repository.submitParentConsent(
         caseId: caseId,
-        email: email,
+        email: _submissionEmail!,
         videoPath: videoPath,
         localReceipt: localReceipt,
+        submission: _session,
       );
+      await _session.dispose();
       _onSubmitted();
       emitIfOpen(
         MinorConsentSubmitState(
           status: MinorConsentSubmitStatus.success,
-          submittedEmail: email,
+          submittedEmail: _submissionEmail,
         ),
       );
     } catch (error, stackTrace) {
@@ -112,5 +121,11 @@ class MinorConsentSubmitCubit extends Cubit<MinorConsentSubmitState>
     } finally {
       _onUploadFinished?.call();
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _session.dispose();
+    return super.close();
   }
 }
