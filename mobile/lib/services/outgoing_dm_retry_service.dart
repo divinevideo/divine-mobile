@@ -326,6 +326,7 @@ class OutgoingDmRetryService {
       var processedSelfWrap = 0;
       var failedSelfWrap = 0;
       var blockedSelfWrap = 0;
+      var notSentSelfWrap = 0;
       var processedFullSend = 0;
       var failedFullSend = 0;
       var blockedFullSend = 0;
@@ -371,6 +372,10 @@ class OutgoingDmRetryService {
               // retried, so the counter is not bumped and the pass does not
               // count it as a failure.
               blockedSelfWrap++;
+            } else if (result.reachedNoRelay) {
+              // Same as the failed-send arm: not charged, and a relay
+              // connecting wakes the sweep for it (#8516).
+              notSentSelfWrap++;
             } else {
               // Publish failed. recoverSelfWrap marked the self-wrap failed
               // and charged the attempt itself, so backoff applies and the
@@ -627,6 +632,7 @@ class OutgoingDmRetryService {
         'self-wrap-recovered=$processedSelfWrap '
         'self-wrap-failed=$failedSelfWrap '
         'self-wrap-blocked=$blockedSelfWrap '
+        'self-wrap-not-sent=$notSentSelfWrap '
         'full-send-recovered=$processedFullSend '
         'full-send-failed=$failedFullSend '
         'full-send-blocked=$blockedFullSend '

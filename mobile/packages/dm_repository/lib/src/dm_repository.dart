@@ -6863,7 +6863,9 @@ class DmRepository {
   /// - Success: delete the queue row — both wraps have now landed.
   /// - Failure: mark the self-wrap status [OutgoingWrapStatus.failed]
   ///   so the row stays retryable, and charge the attempt to the row's
-  ///   retry budget. Callers never charge the returned outcome (#8628).
+  ///   retry budget — unless it reached no relay, which is free and waits
+  ///   for a relay to connect (#8516). Callers never charge the returned
+  ///   outcome (#8628).
   ///
   /// Returns the underlying [NIP17SendResult] so callers can chain a
   /// per-rumor recovery and aggregate the result.
@@ -7075,11 +7077,15 @@ class DmRepository {
         );
         // Don't rethrow — caller already gets the failure result.
       }
-      await _chargeFailedReplay(dao: dao, rumorId: rumorId);
-      // The self-wrap is still missing — nudge the sweep. Manual
-      // recoveries (sentPartial Retry) reach here without a sweep pass
-      // to reschedule them.
-      _notifyRetryableWork();
+      // A replay that reached no relay is free and waits for a relay to
+      // connect rather than the sweep heartbeat, as a full send does (#8516).
+      if (!result.reachedNoRelay) {
+        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+        // The self-wrap is still missing — nudge the sweep. Manual
+        // recoveries (sentPartial Retry) reach here without a sweep pass
+        // to reschedule them.
+        _notifyRetryableWork();
+      }
     }
 
     return result;

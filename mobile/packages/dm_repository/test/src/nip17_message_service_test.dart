@@ -2359,7 +2359,48 @@ void main() {
         expect(result.success, isFalse);
         expect(result.error, isNotNull);
         expect(result.selfWrapPublished, isNull);
+        expect(
+          result.reachedNoRelay,
+          isFalse,
+          reason: 'a relay was connected, so the attempt counts (#8628)',
+        );
         verify(() => mockNostrClient.publishEvent(any())).called(1);
+      });
+
+      test('reports reachedNoRelay when no relay is connected', () async {
+        when(
+          () => mockNostrClient.publishEvent(any()),
+        ).thenAnswer((_) async => const PublishNoRelays());
+        final rumor = realKeyService.buildRumor(
+          recipientPubkey: _recipientPubkey,
+          content: 'no relay connected',
+        );
+
+        final result = await realKeyService.publishSelfWrap(rumorEvent: rumor);
+
+        expect(result.success, isFalse);
+        expect(result.reachedNoRelay, isTrue);
+        verify(() => mockNostrClient.publishEvent(any())).called(1);
+      });
+
+      test('reports reachedNoRelay without publishing when the device is '
+          'offline', () async {
+        final offlineService = NIP17MessageService(
+          signer: LocalNostrSigner(_testPrivateKey),
+          senderPublicKey: getPublicKey(_testPrivateKey),
+          nostrService: mockNostrClient,
+          isOffline: () async => true,
+        );
+        final rumor = offlineService.buildRumor(
+          recipientPubkey: _recipientPubkey,
+          content: 'offline',
+        );
+
+        final result = await offlineService.publishSelfWrap(rumorEvent: rumor);
+
+        expect(result.success, isFalse);
+        expect(result.reachedNoRelay, isTrue);
+        verifyNever(() => mockNostrClient.publishEvent(any()));
       });
 
       test('returns failure when the gift-wrap builder returns null', () async {

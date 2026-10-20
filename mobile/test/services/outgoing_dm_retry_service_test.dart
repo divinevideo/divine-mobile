@@ -2011,6 +2011,53 @@ void main() {
         });
       });
 
+      test('arms no follow-up pass for a self-copy (#8628)', () {
+        fakeAsync((async) {
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              _row(
+                id: 'self-copy-unreached',
+                recipient: OutgoingWrapStatus.sent,
+                self: OutgoingWrapStatus.failed,
+                retryCount: 1,
+                lastAttemptAt: DateTime.utc(2025),
+              ),
+            ],
+          );
+          when(
+            () => dmRepository.recoverSelfWrap(rumorId: any(named: 'rumorId')),
+          ).thenAnswer(
+            (_) async => const NIP17SendResult.failure(
+              'Self-wrap not sent: no relay connected',
+              reachedNoRelay: true,
+            ),
+          );
+          final service = buildService(
+            now: async.getClock(DateTime.utc(2026, 5, 10, 12)).now,
+          );
+          unawaited(service.initialize());
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          verify(
+            () => dmRepository.recoverSelfWrap(rumorId: 'self-copy-unreached'),
+          ).called(1);
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'a relay connecting wakes it, not the 30-second follow-up',
+          );
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
+
       test('arms no follow-up pass for an interrupted send', () {
         fakeAsync((async) {
           when(() => dao.getStillPendingForOwner(any())).thenAnswer(

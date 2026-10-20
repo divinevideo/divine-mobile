@@ -280,6 +280,42 @@ void main() {
         expect(await retryCount(id), 1);
       });
 
+      test(
+        'does not charge a self-copy replay that reached no relay',
+        () async {
+          final id = await deliveredWithoutSelfCopy();
+          selfCopy = (_) => const PublishNoRelays();
+
+          final result = await repository.recoverSelfWrap(rumorId: id);
+
+          expect(result.success, isFalse);
+          expect(result.reachedNoRelay, isTrue);
+          expect(selfCopyPublishes, 2, reason: 'the replay was attempted');
+          expect(dao.charges, 0);
+          expect(await retryCount(id), 0);
+        },
+      );
+
+      test('does not wake the sweep for a self-copy replay that reached no '
+          'relay', () async {
+        final id = await deliveredWithoutSelfCopy();
+        selfCopy = (_) => const PublishNoRelays();
+        final nudges = <void>[];
+        final subscription = repository.retryableOutgoingWork.listen(
+          nudges.add,
+        );
+        addTearDown(subscription.cancel);
+
+        final _ = await repository.recoverSelfWrap(rumorId: id);
+        await pumpEventQueue();
+
+        expect(
+          nudges,
+          isEmpty,
+          reason: 'a relay connecting wakes the sweep for it (#8516)',
+        );
+      });
+
       test('charges a stored rumor it cannot parse once', () async {
         final id = await deliveredWithoutSelfCopy();
         await corruptRumor(id);
