@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip17/file_encryption.dart';
@@ -88,19 +89,13 @@ class DmVideoDecryptor {
       timeLimit: timeLimit,
     );
 
-    final expectedHash = metadata.fileHash.toLowerCase();
-    if (expectedHash.isNotEmpty &&
-        HashUtil.sha256Hash(ciphertext) != expectedHash) {
-      throw const DmVideoUnavailableException(
-        'ciphertext hash does not match the x tag',
-      );
-    }
-
-    return _encryption.decrypt(
+    return compute(_verifyAndDecrypt, (
       ciphertext: ciphertext,
+      expectedHash: metadata.fileHash.toLowerCase(),
       hexKey: metadata.decryptionKey,
       hexNonce: metadata.decryptionNonce,
-    );
+      encryption: _encryption,
+    ));
   }
 
   /// Fetches the ciphertext at [url], refusing anything but `https` and
@@ -165,4 +160,30 @@ class DmVideoDecryptor {
     }
     return data is Uint8List ? data : Uint8List.fromList(data);
   }
+}
+
+/// What [_verifyAndDecrypt] needs, sent to the isolate it runs in.
+typedef _DecryptJob = ({
+  Uint8List ciphertext,
+  String expectedHash,
+  String hexKey,
+  String hexNonce,
+  FileEncryption encryption,
+});
+
+/// Checks [job]'s ciphertext against the sender's hash and decrypts it. Run
+/// off the UI isolate: both are pure Dart, about a second for 20 MB even on a
+/// laptop, and a card can now start one without a tap.
+Future<Uint8List> _verifyAndDecrypt(_DecryptJob job) async {
+  if (job.expectedHash.isNotEmpty &&
+      HashUtil.sha256Hash(job.ciphertext) != job.expectedHash) {
+    throw const DmVideoUnavailableException(
+      'ciphertext hash does not match the x tag',
+    );
+  }
+  return job.encryption.decrypt(
+    ciphertext: job.ciphertext,
+    hexKey: job.hexKey,
+    hexNonce: job.hexNonce,
+  );
 }

@@ -1,6 +1,8 @@
 // ABOUTME: Tests for DmVideoDecryptor: fetch ciphertext, verify, decrypt to bytes.
 // ABOUTME: Uses a mocked Dio returning real AES-GCM ciphertext so decrypt is real.
 
+import 'dart:convert';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
@@ -12,6 +14,16 @@ import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 
 class _MockDio extends Mock implements Dio {}
+
+/// Decrypts to the name of the isolate it ran in.
+class _IsolateNamingEncryption extends FileEncryption {
+  @override
+  Future<Uint8List> decrypt({
+    required Uint8List ciphertext,
+    required String hexKey,
+    required String hexNonce,
+  }) async => Uint8List.fromList(utf8.encode(Isolate.current.debugName ?? ''));
+}
 
 const _videoUrl = 'https://media.divine.video/testciphertexthash';
 final String _messageId = 'a' * 64;
@@ -101,6 +113,21 @@ void main() {
                 ).captured.single
                 as Options;
         expect(options.responseType, ResponseType.bytes);
+      },
+    );
+
+    test(
+      'checks and decrypts off the calling isolate, so a long video cannot '
+      'freeze the UI',
+      () async {
+        stubDownload(Uint8List.fromList(const [1, 2, 3]));
+
+        final decrypted = await DmVideoDecryptor(
+          dio: dio,
+          encryption: _IsolateNamingEncryption(),
+        ).decrypt(_videoMessage(fileHash: ''));
+
+        expect(utf8.decode(decrypted), isNot(Isolate.current.debugName));
       },
     );
 
