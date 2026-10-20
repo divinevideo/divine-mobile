@@ -38,9 +38,10 @@ typedef DmVideoStoreResolver = DmVideoStore? Function();
 /// Files live in the app's cache directory, which is not backed up and which
 /// the system may clear when storage runs low, under one folder per account.
 /// A file nobody opened for [maxIdle] is deleted, and past [maxBytes] the
-/// least recently opened go first; so is everything kept for a message that
-/// is gone (see `isMessageGone`). An account's folder goes when the account
-/// leaves this device ([deleteOwner], [sweepOwners]).
+/// least recently opened go first, videos before frames. Everything kept for
+/// a message that is gone (see `isMessageGone`) goes at the next [prune]. An
+/// account's folder goes when the account leaves this device ([deleteOwner],
+/// [sweepOwners]).
 ///
 /// The decryption key and nonce are never written anywhere; only the
 /// plaintext video and its frame are, and neither path is logged.
@@ -289,9 +290,11 @@ class DmVideoStore {
   /// after every video, frames: a frame is what a card shows, and costs
   /// little.
   ///
-  /// Everything kept for a message that is gone is deleted too, so a video
-  /// retracted by its sender or removed with its conversation does not stay
-  /// decrypted on the device.
+  /// Everything kept for a message that is gone is deleted too, unless a read
+  /// or a hand-out is under way: a video retracted by its sender or removed
+  /// with its conversation goes at the next prune. An account the user
+  /// switched away from keeps such videos until it is signed in again or they
+  /// sit unopened for [maxIdle], since its rows are cleared on the switch.
   ///
   /// A video handed to playback or a save, or being read for its frame, is
   /// never deleted and does not count against [maxBytes], so in-use videos
@@ -332,7 +335,10 @@ class DmVideoStore {
         if (age > _crashedPartAge) _deleteNow(file);
         continue;
       }
-      if (gone.contains(_messageIdOf(file)) && !_isInUse(file)) {
+      // Even a video played this session goes: its sender took it back, or
+      // the user removed it. Only a read or a hand-out under way holds it.
+      if (gone.contains(_messageIdOf(file)) &&
+          !_leases.containsKey(file.path)) {
         _deleteNow(file);
         continue;
       }

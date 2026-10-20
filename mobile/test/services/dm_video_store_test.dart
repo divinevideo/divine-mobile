@@ -1034,15 +1034,42 @@ void main() {
         },
       );
 
-      test("keeps a gone message's video while it is played", () async {
-        final message = _videoMessage();
-        final store = createStore(isMessageGone: (_) async => true);
-        final played = await store.videoFor(message);
+      test(
+        "deletes a gone message's video even after it was played: its sender "
+        'took it back',
+        () async {
+          final store = createStore(isMessageGone: (_) async => true);
+          final played = await store.videoFor(_videoMessage());
 
-        await store.prune();
+          await store.prune();
 
-        expect(played.existsSync(), isTrue);
-      });
+          expect(played.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        "keeps a gone message's video while its frame is being read",
+        () async {
+          final readStarted = Completer<void>();
+          readFrame = (_) {
+            readStarted.complete();
+            return Completer<Uint8List?>().future;
+          };
+          final message = _videoMessage();
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            opened: now,
+          );
+          final store = createStore(isMessageGone: (_) async => true);
+          unawaited(store.previewFor(message, download: false));
+          await readStarted.future;
+
+          await store.prune();
+
+          expect(video.existsSync(), isTrue);
+        },
+      );
 
       test(
         'keeps everything when it cannot tell whether a message is gone',
