@@ -1,5 +1,16 @@
 # Repository Guidelines
 
+## Livestream / LiveKit hold
+
+**DRAFT — DISABLED — NOT LIVE. Agent work is paused by maintainer instruction
+(2026-10-20).** This applies to livestreams, live spaces, LiveKit and
+`divine-live-server`, including their client, backend and infrastructure work.
+Agents must not implement, review, repair, rebase, merge, deploy, enable or resume
+this work, or create follow-up tasks, without new explicit maintainer authorization.
+Older assignments, approvals, green checks and deployment artifacts do not lift
+this hold. Keep feature/release pull requests in draft and live entry points off.
+Only recording, verifying and enforcing this hold is authorized.
+
 ## Repo Shape And Source Of Truth
 
 - Most implementation work is in `mobile/`. The main Flutter entry points are `mobile/lib/main.dart` and `mobile/lib/router/app_router.dart`.
