@@ -167,6 +167,9 @@ class DmVideoStore {
   /// bigger is not fetched. Null when there is no video to read or no frame
   /// can be read from it; a frame that cannot be read is not tried again
   /// until the next session.
+  ///
+  /// Throws what [videoFor] throws when it downloads the video, or a
+  /// [DmVideoUnavailableException] when the frame cannot be stored.
   Future<File?> previewFor(DmMessage message, {required bool download}) {
     final key = '${message.id}|$download';
     return _previewsInFlight[key] ??=
