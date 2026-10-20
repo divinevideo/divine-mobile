@@ -175,6 +175,7 @@ class FunnelcakeApiClient {
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
   Future<http.Response> _get(Uri uri) => _retryRead(
+    uri,
     () => _httpClient.get(
       uri,
       headers: {
@@ -186,6 +187,7 @@ class FunnelcakeApiClient {
 
   /// Retries an idempotent read within one shared timeout budget.
   Future<http.Response> _retryRead(
+    Uri uri,
     Future<http.Response> Function() request,
   ) async {
     final elapsed = Stopwatch()..start();
@@ -271,7 +273,7 @@ class FunnelcakeApiClient {
       },
       body: jsonEncode(body),
     );
-    return retryRead ? _retryRead(request) : request().timeout(_timeout);
+    return retryRead ? _retryRead(uri, request) : request().timeout(_timeout);
   }
 
   Map<String, String> _diagnosticHeaders(http.Response response) {
