@@ -83,19 +83,29 @@ void main() {
     List<File> markerFiles() =>
         markers.listSync().whereType<File>().toList(growable: false);
 
+    Map<String, Object?> decodeMarker(File file) =>
+        jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+
     Map<String, Object?> readOnlyMarker() {
       final files = markerFiles();
       expect(files, hasLength(1));
-      return jsonDecode(files.single.readAsStringSync())
-          as Map<String, Object?>;
+      return decodeMarker(files.single);
     }
 
     /// The marker of the running render of [taskId].
     Map<String, Object?> readMarker(String taskId) {
-      final file = markerFiles().singleWhere(
-        (file) => file.path.endsWith('_$taskId.json'),
+      // Markers are named `<microseconds>_<sanitized task id>.json`; anchoring
+      // the whole name keeps `autosave` from matching `draft_autosave`.
+      final safeId = taskId.replaceAll(RegExp('[^A-Za-z0-9_-]'), '_');
+      final name = RegExp(
+        '^[0-9]+_${RegExp.escape(safeId)}'
+        r'\.json$',
       );
-      return jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      return decodeMarker(
+        markerFiles().singleWhere(
+          (file) => name.hasMatch(file.uri.pathSegments.last),
+        ),
+      );
     }
 
     setUp(() async {
