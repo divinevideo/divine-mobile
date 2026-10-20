@@ -196,8 +196,8 @@ void main() {
       ).called(2);
     });
 
-    test('sweeps when a relay connects, once per newly connected relay '
-        '(#8516)', () async {
+    test('sweeps when a relay connects, and not again while it stays '
+        'connected (#8516)', () async {
       container.listen(outgoingDmRetryServiceProvider, (_, _) {});
       await pumpEventQueue();
 
@@ -279,8 +279,8 @@ void main() {
       addTearDown(container.dispose);
     });
 
-    test('sweeps when a relay connects, once per newly connected relay '
-        '(#8516)', () async {
+    test('sweeps each time a relay connects, and not while it stays '
+        'connected (#8516)', () async {
       container.listen(dmReactionRetryServiceProvider, (_, _) {});
       await pumpEventQueue();
       verifyNever(reactions.retryableReactions);
