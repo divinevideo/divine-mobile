@@ -11,7 +11,10 @@ import 'package:path_provider/path_provider.dart';
 /// Largest plaintext video accepted for an encrypted video DM.
 ///
 /// The whole file is held in memory for AES-GCM on both the send and receive
-/// side, so the ceiling bounds peak memory as well as upload cost.
+/// side, so the ceiling bounds peak memory as well as upload cost. A receive
+/// holds one ciphertext more than the decrypt itself needs: the isolate that
+/// decrypts gets its own copy, while the downloaded one stays alive until the
+/// decrypt finishes.
 const int dmVideoMaxPlaintextBytes = 100 * 1024 * 1024;
 
 /// Largest ciphertext blob a receiver will download: the plaintext ceiling
