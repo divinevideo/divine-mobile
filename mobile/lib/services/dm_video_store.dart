@@ -138,8 +138,9 @@ class DmVideoStore {
   final Map<String, ({Future<File> video, Completer<void> takeover})>
   _autoFetchesRunning = {};
 
-  /// Videos handed to playback or a save. Never pruned while this store
-  /// lives: playing or saving one must not find it gone.
+  /// Videos handed to playback or a save. Never deleted for their age or the
+  /// cap while this store lives, so playing or saving one does not find it
+  /// gone; only a gone message's video is deleted after its hand-out.
   final Set<String> _handedOut = {};
 
   /// Videos about to be handed out or being read for their frame, counted.
@@ -315,17 +316,18 @@ class DmVideoStore {
   /// after every video, frames: a frame is what a card shows, and costs
   /// little.
   ///
-  /// Everything kept for a message that is gone is deleted too, unless a read
-  /// or a hand-out is under way: a video retracted by its sender or removed
-  /// with its conversation goes at the next prune. An account the user
+  /// Everything kept for a message that is gone is deleted too, even a video
+  /// played this session: a video retracted by its sender or removed with its
+  /// conversation goes at the next prune or, while a read or a hand-out of it
+  /// is under way, once that ends. An account the user
   /// switched away from keeps such videos until it is signed in again or they
   /// sit unopened for [maxIdle], since its rows are cleared on the switch.
   ///
-  /// A video handed to playback or a save, or being read for its frame, is
-  /// never deleted and does not count against [maxBytes], so in-use videos
-  /// can keep the folder over it. Part
-  /// files are deleted only once old enough to be a crash's. A folder that
-  /// cannot be read is logged, without its path, and left.
+  /// A video handed to playback or a save this session, or being read for its
+  /// frame, is not deleted for its age or the cap and does not count against
+  /// [maxBytes], so in-use videos can keep the folder over it. Part files are
+  /// deleted only once old enough to be a crash's. A folder that cannot be
+  /// read is logged, without its path, and left.
   Future<void> prune() async {
     try {
       await _prune();
