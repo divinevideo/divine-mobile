@@ -756,6 +756,7 @@ class _UniqueIdentifier extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final nip05 = profile?.displayNip05;
+    final showProfileDomain = isOwnProfile && profile?.divineUsername != null;
     final hasNip05 = nip05 != null && nip05.isNotEmpty;
     final npub = NostrKeyUtils.encodePubKey(userIdHex);
     final linkColor = context.vineColors.accentPositive;
@@ -782,33 +783,41 @@ class _UniqueIdentifier extends ConsumerWidget {
         // Don't show unverified NIP-05s for other users - potential impersonation
         displayText = truncateNpubForDisplay(npub);
       } else {
-        displayText = profile!.shortDisplayNip05!;
+        displayText = showProfileDomain
+            ? nip05.substring(1)
+            : profile!.shortDisplayNip05!;
       }
     } else {
       displayText = truncateNpubForDisplay(npub);
     }
 
-    return GestureDetector(
-      onTap: () {
-        final verifiedNip05 =
-            verificationStatus == Nip05VerificationStatus.verified
-            ? nip05
-            : null;
-        final profileUrl = buildProfileUrl(verifiedNip05, npub);
-        _runProfileDetached(
-          ClipboardUtils.copy(
-            context,
-            profileUrl,
-            message: context.l10n.profileLinkCopied,
+    return Semantics(
+      button: true,
+      hint: context.l10n.authCopyUrl,
+      child: GestureDetector(
+        onTap: () {
+          final verifiedNip05 =
+              verificationStatus == Nip05VerificationStatus.verified
+              ? nip05
+              : null;
+          final profileUrl = buildProfileUrl(verifiedNip05, npub);
+          _runProfileDetached(
+            ClipboardUtils.copy(
+              context,
+              profileUrl,
+              message: context.l10n.profileLinkCopied,
+            ),
+            'copy profile link',
+          );
+        },
+        child: Text(
+          displayText,
+          style: VineTheme.bodyMediumFont(color: linkColor).copyWith(
+            decoration: showProfileDomain ? TextDecoration.underline : null,
           ),
-          'copy profile link',
-        );
-      },
-      child: Text(
-        displayText,
-        style: VineTheme.bodyMediumFont(color: linkColor),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

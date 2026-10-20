@@ -550,6 +550,32 @@ void main() {
           : MockGoRouterProvider(goRouter: goRouter, child: scoped);
     }
 
+    for (final domain in ['divine.video', 'openvine.co']) {
+      testWidgets(
+        'sanitizes the own-profile domain from a legacy $domain claim',
+        (tester) async {
+          final profile = createTestProfile(
+            nip05: 'a\u0301\u0301\u0301lice@$domain',
+          );
+          await tester.pumpWidget(
+            buildTestWidget(
+              userIdHex: testUserHex,
+              isOwnProfile: true,
+              profile: profile,
+              verificationStatus: Nip05VerificationStatus.failed,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('a\u0301\u0301lice.divine.video'), findsOneWidget);
+          expect(
+            find.text('a\u0301\u0301\u0301lice.divine.video'),
+            findsNothing,
+          );
+        },
+      );
+    }
+
     for (final ownProfile in [true, false]) {
       for (final (nip05, status) in [
         ('_@alice.divine.video', Nip05VerificationStatus.verified),
@@ -560,7 +586,7 @@ void main() {
         ('_@alice.divine.video', Nip05VerificationStatus.pending),
       ]) {
         testWidgets(
-          'copies the correct URL from the shortened handle on '
+          'copies the correct URL from the domain or handle on '
           '${ownProfile ? 'own' : 'other'} profile with $nip05 and $status',
           (tester) async {
             final clipboardCalls = <MethodCall>[];
@@ -595,8 +621,27 @@ void main() {
             final displayText =
                 !ownProfile && status == Nip05VerificationStatus.failed
                 ? truncateNpubForDisplay(npub)
+                : ownProfile
+                ? 'alice.divine.video'
                 : '@alice';
             expect(find.text(displayText), findsOneWidget);
+            expect(
+              find.text(ownProfile ? '@alice' : 'alice.divine.video'),
+              findsNothing,
+            );
+            if (ownProfile) {
+              final text = tester.widget<Text>(find.text(displayText));
+              expect(text.style?.decoration, TextDecoration.underline);
+              expect(
+                tester.getSemantics(find.text(displayText)),
+                matchesSemantics(
+                  label: displayText,
+                  hint: enL10n.authCopyUrl,
+                  isButton: true,
+                  hasTapAction: true,
+                ),
+              );
+            }
             await tester.tap(find.text(displayText));
             await tester.pumpAndSettle();
 
