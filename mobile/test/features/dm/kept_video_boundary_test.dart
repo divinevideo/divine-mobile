@@ -248,6 +248,31 @@ void main() {
       }
     });
 
+    test("logs a saved file's size only to a tenth of a megabyte", () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            galChannel,
+            (call) async => call.method == 'putVideo' ? null : true,
+          );
+      final cubit = EncryptedVideoSaveCubit(
+        resolveStore: () => store,
+        gallerySaveService: GallerySaveService(
+          permissionsService: _GrantedPermissions(),
+        ),
+      );
+      addTearDown(cubit.close);
+
+      await cubit.save(_message('a'));
+
+      expect(cubit.state.status, DmVideoSaveStatus.saved);
+      final saveLog = LogCaptureService()
+          .getRecentLogs()
+          .map((entry) => entry.message)
+          .singleWhere((message) => message.contains('Gal.putVideo'));
+      expect(saveLog, contains('size=0.0 MB'));
+    });
+
     test('keeps a name derived from the retained file out of a native '
         'failure', () async {
       // Android's gallery plugin numbers a copy whose name is taken.

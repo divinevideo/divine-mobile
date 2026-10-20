@@ -128,7 +128,7 @@ class GallerySaveService {
       // Without album, it only needs photosAddOnly permission
       Log.info(
         'saveVideoToGallery calling Gal.putVideo: '
-        'size=${file.lengthSync()} '
+        'size=${_roundedSize(file.lengthSync())} '
         'platform=$defaultTargetPlatform',
         name: 'GallerySaveService',
         category: LogCategory.video,
@@ -282,6 +282,11 @@ class GallerySaveService {
     }
     return redactFilesystemPaths(text);
   }
+
+  // A kept video DM's exact length would identify it in support logs (#6522);
+  // a tenth of a megabyte still shows how big a slow save was.
+  static String _roundedSize(int bytes) =>
+      '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 
   static String _failureKind(Object error) => error is FileSystemException
       ? '${error.runtimeType} (OS code: ${error.osError?.errorCode})'
