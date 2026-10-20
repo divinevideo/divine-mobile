@@ -1,6 +1,7 @@
 // ABOUTME: Tests for the split-screen layout cubit: filling cells, switching
 // ABOUTME: layouts, framing a cell, and the render that turns it into a clip
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/painting.dart' show Alignment;
@@ -8,9 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/services/video_editor/split_screen_layout_render_service.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
 
 const _red = Color(0xFFFF0000);
 
@@ -23,6 +26,10 @@ DivineVideoClip _clip(String id, {int seconds = 2}) => DivineVideoClip(
   originalAspectRatio: 9 / 16,
 );
 
+/// A take recorded in chroma key mode whose key is not baked in yet.
+DivineVideoClip _recordedWithKey(String id) =>
+    _clip(id).copyWith(captureChromaKey: const ClipChromaKey(key: ChromaKey()));
+
 /// Stands in for the renderer, recording what it was asked to render.
 class _FakeRender {
   final List<({List<SplitScreenRenderCell> cells, Color background})> calls =
@@ -30,21 +37,23 @@ class _FakeRender {
   final List<String?> cleanedUp = [];
   bool fail = false;
 
-  SplitScreenLayoutCubit cubit() => SplitScreenLayoutCubit(
-    aspectRatio: model.AspectRatio.vertical,
-    borderColor: _red,
-    renderLayout:
-        ({
-          required cells,
-          required aspectRatio,
-          required backgroundColor,
-          required taskId,
-        }) async {
-          calls.add((cells: cells, background: backgroundColor));
-          return fail ? null : _clip('layout', seconds: 3);
-        },
-    deferFileCleanup: cleanedUp.addAll,
-  );
+  SplitScreenLayoutCubit cubit({SplitScreenBakeChromaKeyFn? bake}) =>
+      SplitScreenLayoutCubit(
+        aspectRatio: model.AspectRatio.vertical,
+        borderColor: _red,
+        bakeCapturedChromaKey: bake,
+        renderLayout:
+            ({
+              required cells,
+              required aspectRatio,
+              required backgroundColor,
+              required taskId,
+            }) async {
+              calls.add((cells: cells, background: backgroundColor));
+              return fail ? null : _clip('layout', seconds: 3);
+            },
+        deferFileCleanup: cleanedUp.addAll,
+      );
 }
 
 void main() {
@@ -251,6 +260,70 @@ void main() {
         expect(cubit.state.cells.first?.alignment, Alignment.center);
         expect(cubit.state.canApply, isTrue);
         addTearDown(cubit.close);
+      });
+
+      test('blocks the layout while a recorded key is being baked', () async {
+        final baked = Completer<DivineVideoClip>();
+        final cubit = renders.cubit(bake: (_) => baked.future)
+          ..clipsPicked([_recordedWithKey('a')]);
+        addTearDown(cubit.close);
+
+        final applying = cubit.apply();
+
+        expect(cubit.state.status, SplitScreenLayoutStatus.applying);
+        expect(cubit.state.canApply, isFalse);
+        cubit.presetSelected(SplitScreenLayoutPreset.grid);
+        expect(cubit.state.preset, SplitScreenLayoutPreset.sideBySide);
+
+        baked.complete(_clip('a_keyed'));
+        await applying;
+
+        expect(
+          renders.calls.single.cells.single.clip.video?.file?.path,
+          '/documents/a_keyed.mp4',
+        );
+        expect(cubit.state.status, SplitScreenLayoutStatus.applied);
+      });
+
+      test('reports a failure ahead of the render on every try', () async {
+        final cubit = renders.cubit(
+          bake: (_) async => throw Exception('backdrop is gone'),
+        )..clipsPicked([_recordedWithKey('a')]);
+        addTearDown(cubit.close);
+        final statuses = <SplitScreenLayoutStatus>[];
+        final subscription = cubit.stream.listen(
+          (state) => statuses.add(state.status),
+        );
+        addTearDown(subscription.cancel);
+
+        await cubit.apply();
+        await cubit.apply();
+        await pumpEventQueue();
+
+        expect(statuses, const [
+          SplitScreenLayoutStatus.applying,
+          SplitScreenLayoutStatus.failure,
+          SplitScreenLayoutStatus.applying,
+          SplitScreenLayoutStatus.failure,
+        ]);
+        expect(renders.calls, isEmpty);
+      });
+
+      test('bakes and renders nothing once it is closed', () async {
+        final baked = <String>[];
+        final cubit = renders.cubit(
+          bake: (clip) async {
+            baked.add(clip.id);
+            return clip;
+          },
+        )..clipsPicked([_recordedWithKey('a')]);
+        expect(cubit.state.canApply, isTrue);
+        await cubit.close();
+
+        await cubit.apply();
+
+        expect(baked, isEmpty);
+        expect(renders.calls, isEmpty);
       });
     });
   });

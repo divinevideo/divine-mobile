@@ -215,10 +215,11 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
   /// Renders the layout into one clip.
   ///
   /// A stop-motion set is assembled into a video first, one render each, so
-  /// the progress overlay counts those as steps before the layout's own. On
-  /// success the state carries the clip in [SplitScreenLayoutState.result];
-  /// on failure every file written so far is handed to cleanup and the layout
-  /// is left exactly as it was.
+  /// the progress overlay counts those as steps before the layout's own. The
+  /// layout is blocked from the start, while a recorded key is still being
+  /// baked too. On success the state carries the clip in
+  /// [SplitScreenLayoutState.result]; on failure every file written so far is
+  /// handed to cleanup and the layout is left exactly as it was.
   Future<void> apply() async {
     if (!state.canApply) return;
 
@@ -232,6 +233,18 @@ class SplitScreenLayoutCubit extends Cubit<SplitScreenLayoutState>
     final base = 'split_layout_${DateTime.now().microsecondsSinceEpoch}';
     final written = <String?>[];
     var step = 0;
+
+    // Before anything awaits: baking a recorded key into a cell's clip comes
+    // ahead of the first render, and the layout must not change under it.
+    final started = emitIfOpen(
+      state.copyWith(
+        status: SplitScreenLayoutStatus.applying,
+        clearApplyRenderId: true,
+        applyStep: 1,
+        applyStepCount: stepCount,
+      ),
+    );
+    if (!started) return;
 
     String startStep() {
       step++;
