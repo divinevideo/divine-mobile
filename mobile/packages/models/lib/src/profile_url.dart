@@ -3,9 +3,7 @@
 /// Callers must verify the identifier before passing it. Display-only handles
 /// such as `@username` do not contain enough information to build a URL.
 ///
-/// If the user has a `.divine.video` NIP-05 subdomain (e.g. `_@thomas.divine.video`),
-/// returns `https://thomas.divine.video`. Otherwise falls back to
-/// `https://divine.video/profile/{npub}`.
+/// Returns the Divine subdomain URL, or the npub profile URL as a fallback.
 String buildProfileUrl(String? nip05, String npub) {
   if (nip05 != null && nip05.isNotEmpty) {
     // NIP-05 format: `_@username.divine.video` or `user@domain.com`
