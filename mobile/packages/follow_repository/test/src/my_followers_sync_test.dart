@@ -579,6 +579,92 @@ void main() {
     );
 
     test(
+      'canceled picker still finishes its full reconcile before queued sync',
+      () async {
+        dao.rows[owner] = {stale: 50};
+        final response = Completer<List<Event>>();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer(
+          (_) async => PaginatedPubkeys(pubkeys: [first], total: 1),
+        );
+        when(
+          () => client.queryEvents(any()),
+        ).thenAnswer((_) => response.future);
+        final subscription = repository.streamMyFollowers().listen((_) {});
+        await pumpEventQueue();
+        final canceled = subscription.cancel();
+        now += 901;
+        final sync = repository.syncMyFollowers();
+        await pumpEventQueue();
+        expect(dao.rows[owner], {stale: 50});
+        response.complete([contact(second, 100)]);
+        await canceled;
+        await sync;
+        await repository.stopFollowerWrites(owner);
+        expect(dao.rows[owner], {first: null, second: 100});
+        expect(dao.replacements, 1);
+        expect((await MyFollowersSyncState().read(owner)).full, now);
+        verify(() => client.queryEvents(any())).called(1);
+      },
+    );
+
+    for (final boundary in ['switch owner', 'stop writes']) {
+      test(
+        'canceled picker rejects late persistence after $boundary',
+        () async {
+          dao.rows[owner] = {stale: 50};
+          final firstEmission = Completer<void>();
+          final response = Completer<List<Event>>();
+          when(() => api.isAvailable).thenReturn(true);
+          when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer(
+            (_) async => PaginatedPubkeys(pubkeys: [first], total: 1),
+          );
+          when(
+            () => client.queryEvents(any()),
+          ).thenAnswer((_) => response.future);
+          final subscription = repository.streamMyFollowers().listen((_) {
+            if (!firstEmission.isCompleted) firstEmission.complete();
+          });
+          await firstEmission.future;
+          await subscription.cancel();
+          now += 901;
+          final queued = repository.syncMyFollowers();
+          if (boundary == 'switch owner') {
+            when(() => client.publicKey).thenReturn(otherOwner);
+          } else {
+            await repository.stopFollowerWrites(owner);
+          }
+          response.complete([contact(second, 100)]);
+          await queued;
+          expect(dao.rows, {
+            owner: {stale: 50},
+          });
+          expect(dao.replacements, 0);
+          expect((await MyFollowersSyncState().read(owner)).full, isNull);
+          expect((await MyFollowersSyncState().read(otherOwner)).full, isNull);
+        },
+      );
+    }
+
+    test(
+      'other users follower lists use the ordinary relay query',
+      () async {
+        when(
+          () => client.queryEvents(any()),
+        ).thenAnswer((_) async => [contact(first, 100)]);
+        final followers = await repository.getFollowers(otherOwner);
+        expect(followers, [first]);
+        final filters =
+            verify(() => client.queryEvents(captureAny())).captured.single
+                as List<Filter>;
+        expect(filters.single.limit, isNull);
+        verifyNever(
+          () => client.readEvents(any(), requireAllRelaysSettled: true),
+        );
+      },
+    );
+
+    test(
       'queued picker persistence rejects an account switched during fetch',
       () async {
         await stamp(incremental: now - 901);

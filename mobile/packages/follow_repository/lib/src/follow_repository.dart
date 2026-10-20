@@ -2115,24 +2115,38 @@ class FollowRepository {
   /// stream only emits an error when it ends up with *no* followers at all
   /// and at least one source failed, which is the case where the caller
   /// genuinely cannot tell "you have no followers" from "the lookup broke".
-  Stream<List<String>> streamMyFollowers() async* {
-    final owner = _nostrClient.publicKey;
-    final lease = _reserveFollowerWrite();
-    try {
-      if (owner.isNotEmpty && _isCurrentFollowerOwner(owner)) {
-        await _withFollowerPersistence(
-          owner,
-          () => _myFollowersSyncState.stampFullAttempt(owner, _nowSeconds()),
-        );
+  Stream<List<String>> streamMyFollowers() => Stream.multi((controller) {
+    var canceled = false;
+    controller.onCancel = () => canceled = true;
+
+    // Closing a picker stops emissions but lets its started reconcile finish.
+    // Hold the write lease until persistence settles, even after cancellation.
+    Future<void> collect() async {
+      final owner = _nostrClient.publicKey;
+      final lease = _reserveFollowerWrite();
+      try {
+        if (owner.isNotEmpty && _isCurrentFollowerOwner(owner)) {
+          await _withFollowerPersistence(
+            owner,
+            () => _myFollowersSyncState.stampFullAttempt(owner, _nowSeconds()),
+          );
+        }
+        await _streamFollowers(owner, beforePersist: lease.ready).forEach((
+          keys,
+        ) {
+          if (!canceled) controller.add(keys);
+        });
+      } catch (error, stackTrace) {
+        if (!canceled) controller.addError(error, stackTrace);
+      } finally {
+        if (lease.ready != null) await lease.ready;
+        lease.release();
+        unawaited(controller.close());
       }
-      yield* _streamFollowers(owner, beforePersist: lease.ready);
-    } finally {
-      // A canceled or failed fetch must not let later writes overtake a
-      // predecessor that is still fetching.
-      if (lease.ready != null) await lease.ready;
-      lease.release();
     }
-  }
+
+    unawaited(collect());
+  });
 
   Stream<List<String>> _streamFollowers(
     String pubkey, {
@@ -2206,20 +2220,28 @@ class FollowRepository {
   /// the merged list; duplicates are collapsed there.
   Future<_FollowerBatch> _fetchFollowersFromRelays(String pubkey) async {
     try {
-      final result = await _nostrClient
-          .readEvents([
-            // Match the REST bound so ordinary EOSE below the limit can
-            // complete even when a relay advertises no NIP-11 max_limit.
-            Filter(
-              kinds: const [EventKind.contactList],
-              p: [pubkey],
-              limit: 5000,
-            ),
-          ], requireAllRelaysSettled: true)
-          .timeout(_fetchFollowersTimeout);
+      final isOwner = pubkey == _nostrClient.publicKey;
+      final filters = [
+        Filter(
+          kinds: const [EventKind.contactList],
+          p: [pubkey],
+          // Only owner reconciliation needs completeness and its explicit cap.
+          limit: isOwner ? 5000 : null,
+        ),
+      ];
+      final result = isOwner
+          ? await _nostrClient
+                .readEvents(filters, requireAllRelaysSettled: true)
+                .timeout(_fetchFollowersTimeout)
+          : null;
+      final events =
+          result?.events ??
+          await _nostrClient
+              .queryEvents(filters)
+              .timeout(_fetchFollowersTimeout);
       return (
         refs: [
-          for (final event in result.events)
+          for (final event in events)
             (
               pubkey: event.pubkey,
               followedAt: _datableFollowedAt(event.createdAt),
@@ -2227,7 +2249,8 @@ class FollowRepository {
         ],
         // EOSE can finish a capped read. Neither an early return nor a cap
         // proves that a missing follower has unfollowed.
-        anySourceFailed: !result.isComplete || result.possiblyCapped,
+        anySourceFailed:
+            result != null && (!result.isComplete || result.possiblyCapped),
       );
     } on TimeoutException {
       Log.warning(
