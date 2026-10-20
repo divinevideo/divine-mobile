@@ -38,9 +38,8 @@ void main() {
       messagesDao = DirectMessagesDao(db);
       conversationId = DmRepository.computeConversationId([_ownerA, _peer]);
 
-      // `conversations` keys on `id` alone, so one row per conversation id —
-      // it belongs to A. `direct_messages` keys on the rumor id, so the two
-      // accounts' messages do coexist under that one conversation.
+      // Seed A's conversation view. The composite (id, ownerPubkey) key also
+      // permits a legacy view of that same conversation on the device.
       await conversationsDao.upsertConversation(
         id: conversationId,
         participantPubkeys: '["$_ownerA","$_peer"]',
@@ -181,6 +180,33 @@ void main() {
         final row = await conversationsDao.getConversation(conversationId);
         expect(row!.isRead, isFalse);
       });
+
+      for (final includeMissing in [false, true]) {
+        test('batch counts a legacy and owned copy once '
+            '(missing: $includeMissing)', () async {
+          await conversationsDao.upsertConversation(
+            id: conversationId,
+            participantPubkeys: '["$_ownerA","$_peer"]',
+            isGroup: false,
+            createdAt: _createdAt,
+            isRead: false,
+          );
+          final repository = buildRepository(userPubkey: _ownerA);
+          addTearDown(repository.stopListening);
+
+          expect(
+            await repository.markConversationsAsRead([
+              conversationId,
+              if (includeMissing) 'missing',
+            ]),
+            !includeMissing,
+          );
+          expect(
+            (await repository.getConversation(conversationId))!.isRead,
+            isTrue,
+          );
+        });
+      }
 
       test('batch reports partial writes and accepts repeated ids', () async {
         final repository = buildRepository(userPubkey: _ownerA);

@@ -959,6 +959,42 @@ void main() {
         expect(updated, isFalse);
       });
 
+      test('markMultipleAsRead counts IDs rather than owner copies', () async {
+        for (final owner in ['', 'owner', 'other']) {
+          await dao.upsertConversation(
+            id: 'shared',
+            ownerPubkey: owner,
+            participantPubkeys: '["a","b"]',
+            isGroup: false,
+            createdAt: 1700000000,
+            lastMessageTimestamp: 1700000200,
+            isRead: false,
+          );
+        }
+
+        expect(
+          await dao.markMultipleAsRead(['shared'], ownerPubkey: 'owner'),
+          1,
+        );
+        expect(
+          await dao.markMultipleAsRead(
+            ['shared', 'shared', 'missing'],
+            ownerPubkey: 'owner',
+          ),
+          1,
+        );
+        for (final owner in ['', 'owner']) {
+          final row = await dao.getConversation('shared', ownerPubkey: owner);
+          expect(row!.isRead, isTrue);
+          expect(row.lastReadTimestamp, 1700000200);
+        }
+        expect(
+          (await dao.getConversation('shared', ownerPubkey: 'other'))!.isRead,
+          isFalse,
+        );
+        expect(await dao.markMultipleAsRead(['shared']), 1);
+      });
+
       test('markMultipleAsRead advances each cursor', () async {
         await dao.upsertConversation(
           id: 'conv_1',

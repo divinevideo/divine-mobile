@@ -691,23 +691,40 @@ END
   /// Advances each conversation's read cursor
   /// [Conversations.lastReadTimestamp] to its latest message timestamp, with
   /// the same monotonic semantics as [markAsRead].
-  /// Returns the number of matched rows, including already-read rows.
+  /// Returns the number of distinct matched conversation IDs, including
+  /// already-read conversations. Owned and legacy copies count only once.
   Future<int> markMultipleAsRead(
     List<String> ids, {
     String? ownerPubkey,
   }) async {
     if (ids.isEmpty) return 0;
     final placeholders = List.filled(ids.length, '?').join(', ');
-    return customUpdate(
-      'UPDATE conversations SET is_read = 1, '
-      'last_read_timestamp = MAX( '
-      'COALESCE(last_read_timestamp, 0), '
-      'COALESCE(last_message_timestamp, 0)) '
-      'WHERE id IN ($placeholders)${_ownerSqlClause(ownerPubkey)}',
-      variables: [...ids.map(Variable.new), ..._ownerSqlVariables(ownerPubkey)],
-      updates: {attachedDatabase.conversations},
-      updateKind: UpdateKind.update,
-    );
+    final where = 'id IN ($placeholders)${_ownerSqlClause(ownerPubkey)}';
+    final variables = [
+      ...ids.map(Variable.new),
+      ..._ownerSqlVariables(ownerPubkey),
+    ];
+    return transaction(() async {
+      // The primary key includes owner_pubkey, so an owned row and a legacy
+      // row can both match one requested ID. Count IDs, not physical updates,
+      // in the same transaction as the write to keep feedback consistent.
+      final matched = await customSelect(
+        'SELECT COUNT(DISTINCT id) AS matched FROM conversations WHERE $where',
+        variables: variables,
+        readsFrom: {attachedDatabase.conversations},
+      ).getSingle();
+      await customUpdate(
+        'UPDATE conversations SET is_read = 1, '
+        'last_read_timestamp = MAX( '
+        'COALESCE(last_read_timestamp, 0), '
+        'COALESCE(last_message_timestamp, 0)) '
+        'WHERE $where',
+        variables: variables,
+        updates: {attachedDatabase.conversations},
+        updateKind: UpdateKind.update,
+      );
+      return matched.read<int>('matched');
+    });
   }
 
   /// Delete a conversation by ID.

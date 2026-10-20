@@ -10307,9 +10307,10 @@ class DmRepository {
 
   /// Mark multiple conversations as read in a single batch.
   ///
-  /// Returns true when every distinct requested row was found (including
-  /// already-read rows), or the list is empty. Returns false for an unknown
-  /// owner or missing rows. Partial writes still sync their read cursors.
+  /// Returns true when every distinct requested conversation was found
+  /// (including already-read rows), or the list is empty. Returns false for an
+  /// unknown owner or missing rows. Partial writes still sync their read
+  /// cursors.
   Future<bool> markConversationsAsRead(List<String> conversationIds) async {
     if (conversationIds.isEmpty) return true;
     final owner = _ownerPubkey;
