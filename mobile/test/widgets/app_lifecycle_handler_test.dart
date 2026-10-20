@@ -461,6 +461,35 @@ void main() {
     });
   });
 
+  group('desktop window focus outside macOS', () {
+    tearDown(() {
+      BackgroundActivityManager().onAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      );
+    });
+
+    for (final platform in [TargetPlatform.windows, TargetPlatform.linux]) {
+      testWidgets('keeps playing on $platform when the window goes inactive', (
+        tester,
+      ) async {
+        debugDefaultTargetPlatformOverride = platform;
+        final container = await _pumpHandler(tester);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        await tester.pump();
+
+        expect(container.read(playbackEligibleProvider), isTrue);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump(const Duration(seconds: 31));
+        debugDefaultTargetPlatformOverride = null;
+      });
+    }
+  });
+
   group('app badge', () {
     testWidgets('clears the app badge on launch and resume', (tester) async {
       final authService = _MockAuthService();
