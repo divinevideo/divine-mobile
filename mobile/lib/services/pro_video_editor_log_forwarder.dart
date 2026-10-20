@@ -54,10 +54,8 @@ class ProVideoEditorLogForwarder {
       (entry.tag?.isNotEmpty ?? false) ? entry.tag! : 'ProVideoEditorNative',
     );
     // Redact before either sink: the local capture also retains native logs.
-    final message = redactFilesystemPaths(entry.message);
-    final stack = entry.stackTrace == null
-        ? null
-        : redactFilesystemPaths(entry.stackTrace!);
+    final message = _redact(entry.message);
+    final stack = entry.stackTrace == null ? null : _redact(entry.stackTrace!);
     // The final render owns the non-fatal report. Native fallback attempts
     // contribute context without each becoming a separate crash issue.
     if (entry.level == NativeLogLevel.warning ||
@@ -90,4 +88,14 @@ class ProVideoEditorLogForwarder {
         Log.info(message, name: name, category: LogCategory.video);
     }
   }
+
+  // A kept video DM's files are named after its message, and an iOS file
+  // error quotes that name without the path around it.
+  static final _messageNamedFile = RegExp(
+    r'(?<![A-Za-z0-9])[A-Za-z0-9]{64}(?=\.)',
+  );
+
+  static String _redact(String text) => redactFilesystemPaths(
+    text,
+  ).replaceAll(_messageNamedFile, '[REDACTED]');
 }

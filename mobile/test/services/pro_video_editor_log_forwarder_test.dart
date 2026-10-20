@@ -120,6 +120,36 @@ void main() {
       },
     );
 
+    test(
+      "keeps a kept video's bare file name, which names its message, out of "
+      'local logs and crash reports',
+      () {
+        final reporter = _RecordingCrashReporter();
+        final messageId = 'a1' * 32;
+        ProVideoEditorLogForwarder.forwardEntry(
+          entry(
+            NativeLogLevel.error,
+            'frame failed: The file “$messageId.mp4” couldn’t be opened.',
+            tag: 'pve-kept-file-name',
+            stackTrace: 'Caused by: cannot open $messageId.preview.jpg',
+          ),
+          crashReporter: reporter,
+        );
+
+        final logged = LogCaptureService().getRecentLogs().lastWhere(
+          (entry) => entry.name == 'pve-kept-file-name',
+        );
+        expect(logged.message, contains('couldn’t be opened'));
+        for (final text in [
+          logged.message,
+          logged.stackTrace.toString(),
+          reporter.breadcrumbs.single,
+        ]) {
+          expect(text, isNot(contains(messageId)));
+        }
+      },
+    );
+
     test('sanitizes the message, tag and cause before crash reporting', () {
       final reporter = _RecordingCrashReporter();
       // Synthetic identifiers exercise the shared crash-report sanitizer.
