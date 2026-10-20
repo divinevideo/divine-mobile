@@ -92,11 +92,15 @@ void main() {
 
   /// Stubs a successful encrypt and upload of [videoFile], and captures the
   /// metadata the service hands to [DmRepository.sendFileMessage].
-  List<DmFileMetadata> stubSuccessfulSend(File videoFile) {
+  List<DmFileMetadata> stubSuccessfulSend(
+    File videoFile, {
+    void Function()? onEncrypt,
+  }) {
     final ciphertext = ciphertextFile();
-    when(
-      () => encryption.encryptFile(videoFile),
-    ).thenAnswer((_) async => encryptedVideo(ciphertext));
+    when(() => encryption.encryptFile(videoFile)).thenAnswer((_) async {
+      onEncrypt?.call();
+      return encryptedVideo(ciphertext);
+    });
     when(
       () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
     ).thenAnswer(
@@ -292,6 +296,36 @@ void main() {
           expect(sent.single.blurhash, 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH');
           expect(sent.single.dimensions, '1080x1920');
           expect(sent.single.thumbnailUrl, isNull);
+        },
+      );
+
+      test(
+        'reads the preview once the file is encrypted, so encryption does not '
+        'use up its time limit',
+        () async {
+          // Encryption runs on this isolate and holds it for seconds on a
+          // large file, which would expire a deadline started before it.
+          final order = <String>[];
+          final sent = stubSuccessfulSend(
+            videoFile,
+            onEncrypt: () => order.add('encrypt'),
+          );
+
+          final result =
+              await createService(
+                readPreview: (_) async {
+                  order.add('preview');
+                  return (blurhash: null, dimensions: null);
+                },
+              ).sendVideo(
+                recipientPubkey: _recipientPubkey,
+                videoFile: videoFile,
+                mimeType: 'video/mp4',
+              );
+
+          expect(result.success, isTrue);
+          expect(sent, hasLength(1));
+          expect(order, equals(['encrypt', 'preview']));
         },
       );
 

@@ -48,12 +48,12 @@ class DmVideoSendService {
   /// file message to [recipientPubkey].
   ///
   /// [mimeType] is the plaintext MIME type recorded in the metadata.
-  /// [blurhash] and [dimensions] are the display hints the recipient's card
-  /// draws; when the caller passes neither, they are read from [videoFile]
-  /// while it encrypts and uploads. A preview that cannot be read is left out
-  /// rather than failing the send. No thumbnail is ever attached: the
-  /// thumbnail would reuse the GCM nonce, so `thumbnailUrl` is always `null`
-  /// and no `thumb` tag is emitted.
+  /// [blurhash] is the preview the recipient's card draws, and [dimensions]
+  /// the size the video displays at. When the caller passes neither, they are
+  /// read from [videoFile] while the ciphertext uploads. A preview that cannot
+  /// be read is left out rather than failing the send. No thumbnail is ever
+  /// attached: the thumbnail would reuse the GCM nonce, so `thumbnailUrl` is
+  /// always `null` and no `thumb` tag is emitted.
   ///
   /// Returns an upload failure result if the encryption upload does not
   /// succeed, without calling [DmRepository.sendFileMessage].
@@ -75,11 +75,12 @@ class DmVideoSendService {
     void Function(DmVideoSendPhase phase)? onPhase,
   }) async {
     onPhase?.call(DmVideoSendPhase.encrypting);
-    // Read alongside the encrypt and upload, which take far longer.
+    final enc = await _encryption.encryptFile(videoFile);
+    // Read while the ciphertext uploads, which takes far longer. Not before
+    // encrypting: that holds this isolate and would use up the read's limit.
     final preview = blurhash == null && dimensions == null
         ? _readPreview(videoFile)
         : Future.value((blurhash: blurhash, dimensions: dimensions));
-    final enc = await _encryption.encryptFile(videoFile);
     try {
       onPhase?.call(DmVideoSendPhase.uploading);
       final upload = await _blossom.uploadEncryptedFile(

@@ -196,6 +196,9 @@ void main() {
       'gives up on a platform call that never answers, so the send is not '
       'held',
       () async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
         final never = Completer<Object?>();
         answer = (call) => never.future;
 
@@ -206,6 +209,10 @@ void main() {
 
         expect(preview.blurhash, isNull);
         expect(preview.dimensions, isNull);
+        final timeouts = logCapture.getRecentLogs().where(
+          (entry) => entry.name == 'DmVideoPreview',
+        );
+        expect(timeouts, hasLength(2));
       },
     );
   });

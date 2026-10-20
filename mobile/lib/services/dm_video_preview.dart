@@ -78,7 +78,18 @@ Future<String?> _readPart(
   CrashReporter reporter,
 ) async {
   try {
-    return await read().timeout(timeout, onTimeout: () => null);
+    return await read().timeout(
+      timeout,
+      onTimeout: () {
+        Log.warning(
+          'Left the $part out of a video DM preview: no answer within '
+          '${timeout.inMilliseconds} ms',
+          name: 'DmVideoPreview',
+          category: LogCategory.video,
+        );
+        return null;
+      },
+    );
   } on Object catch (error, stackTrace) {
     final code = error is PlatformException ? ' ${error.code}' : '';
     Log.warning(
