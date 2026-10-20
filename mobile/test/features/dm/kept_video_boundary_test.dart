@@ -248,6 +248,44 @@ void main() {
       }
     });
 
+    test('keeps a name derived from the retained file out of a native '
+        'failure', () async {
+      // Android's gallery plugin numbers a copy whose name is taken.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      String? stem;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(galChannel, (call) async {
+            if (call.method != 'putVideo') return true;
+            final args = call.arguments as Map<Object?, Object?>;
+            final name = File(args['path']! as String).uri.pathSegments.last;
+            stem = name.substring(0, name.lastIndexOf('.'));
+            throw PlatformException(
+              code: 'UNEXPECTED',
+              message: 'Could not insert ${stem}1.mp4',
+            );
+          });
+      final cubit = EncryptedVideoSaveCubit(
+        resolveStore: () => store,
+        gallerySaveService: GallerySaveService(
+          permissionsService: _GrantedPermissions(),
+        ),
+      );
+      addTearDown(cubit.close);
+
+      await cubit.save(_message('a'));
+
+      expect(stem, isNotNull);
+      expect(cubit.state.status, DmVideoSaveStatus.failed);
+      final logs = LogCaptureService().getRecentLogs();
+      expect(
+        logs.map((entry) => entry.message),
+        contains(contains('Could not insert')),
+      );
+      for (final entry in logs) {
+        expect('${entry.message} ${entry.error}', isNot(contains(stem)));
+      }
+    });
+
     for (final removeSource in [false, true]) {
       test(
         'redacts desktop fallback ${removeSource ? 'failure' : 'success'}',
