@@ -56,6 +56,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   final Stopwatch _recordStopwatch = clock.stopwatch();
   final List<DivineVideoClip> _clips = [];
   Timer? _pendingDeletionTimer;
+  final Map<String, Future<void>> _clipEnrichment = {};
 
   /// Chroma-key bakes still running, by clip id, so a second request for the
   /// same take joins the first instead of rendering it again.
@@ -85,6 +86,36 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Returns an unmodifiable view of all clips.
   List<DivineVideoClip> get clips => List.unmodifiable(_clips);
+
+  /// Tracks metadata and library work without blocking the next recording.
+  void trackClipEnrichment(String clipId, Future<void> enrichment) {
+    late final Future<void> pending;
+    pending = enrichment.whenComplete(() {
+      if (identical(_clipEnrichment[clipId], pending)) {
+        unawaited(_clipEnrichment.remove(clipId));
+      }
+    });
+    _clipEnrichment[clipId] = pending;
+    unawaited(pending);
+  }
+
+  /// Waits for recorded takes to finish processing, then moves them out of
+  /// the timeline without deleting their saved library copies.
+  Future<List<DivineVideoClip>> extractClips(Set<String> clipIds) async {
+    final takes = clips.where((clip) => clipIds.contains(clip.id)).toList();
+    for (final take in takes) {
+      await take.processingCompleter?.future;
+      await _clipEnrichment[take.id];
+    }
+    final finished = [
+      for (final take in takes) getClipById(take.id) ?? take,
+    ];
+    replaceClips([
+      for (final clip in clips)
+        if (!clipIds.contains(clip.id)) clip,
+    ]);
+    return finished;
+  }
 
   /// Calculates the remaining recording time available.
   ///

@@ -711,8 +711,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// The recorder shows the cell's crop over the viewfinder. Its takes land in
   /// the clip manager like any other; they are taken back out, because they
   /// belong in the cell rather than on the timeline, and stay in the library
-  /// the recorder saved them to. A take still being cut to a recording limit
-  /// is waited for, so the cell gets the finished file.
+  /// the recorder saved them to. The handoff waits for trimming, metadata,
+  /// posters and the enriched library save, so the cell gets the finished take.
   Future<List<DivineVideoClip>?> _recordLayoutCellClips(
     BuildContext context, {
     required double cellAspectRatio,
@@ -743,17 +743,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       return null;
     }
 
-    for (final take in takes) {
-      await take.processingCompleter?.future;
-    }
+    final finished = await notifier.extractClips({
+      for (final take in takes) take.id,
+    });
     if (!mounted) return null;
-    final finished = [
-      for (final take in takes) notifier.getClipById(take.id) ?? take,
-    ];
-    notifier.replaceClips([
-      for (final clip in notifier.clips)
-        if (initialIds.contains(clip.id)) clip,
-    ]);
     return finished;
   }
 

@@ -75,8 +75,19 @@ class _MockClipManager extends Mock implements ClipManagerNotifier {}
 
 /// Uses the real recording timer and addClip; library I/O is outside this test.
 class _RecordingClipManager extends ClipManagerNotifier {
+  final List<DivineVideoClip> savedClips = [];
+  Completer<void>? enrichedSave;
+  Completer<void>? releaseEnrichedSave;
+
   @override
-  Future<bool> saveClipToLibrary(DivineVideoClip clip) async => true;
+  Future<bool> saveClipToLibrary(DivineVideoClip clip) async {
+    savedClips.add(clip);
+    if (clip.ghostFramePath != null && releaseEnrichedSave != null) {
+      enrichedSave!.complete();
+      await releaseEnrichedSave!.future;
+    }
+    return true;
+  }
 }
 
 class _RecordingVideoEditor extends VideoEditorNotifier {
@@ -2617,6 +2628,130 @@ void main() {
             !File('${recordingFile.path}.work.mp4').existsSync(),
         checkInterval: const Duration(milliseconds: 10),
         description: 'detached enrichment to delete its work copy',
+      );
+
+      test(
+        'confirming a layout take waits for metadata and the enriched save',
+        () async {
+          docsDir = Directory.systemTemp.createTempSync(
+            'layout_take_enrichment',
+          );
+          originalPathProvider = PathProviderPlatform.instance;
+          PathProviderPlatform.instance = MockPathProviderPlatform()
+            ..setApplicationDocumentsPath(docsDir.path)
+            ..setTemporaryPath(docsDir.path);
+          originalProVideoEditor = ProVideoEditor.instance;
+          final editor = _MockProVideoEditor();
+          ProVideoEditor.instance = editor;
+          final metadataRequested = Completer<void>();
+          final metadata = Completer<VideoMetadata>();
+          when(() => editor.getMetadata(any())).thenAnswer((_) {
+            if (!metadataRequested.isCompleted) metadataRequested.complete();
+            return metadata.future;
+          });
+          when(() => editor.getThumbnails(any())).thenAnswer(
+            (_) async => [
+              Uint8List.fromList(const [1, 2, 3]),
+            ],
+          );
+          when(() => editor.getSingleThumbnail(any())).thenAnswer(
+            (_) async => Uint8List.fromList(const [4, 5, 6]),
+          );
+          recordingFile = File('${docsDir.path}/recording.mp4')
+            ..writeAsStringSync('recorded clip');
+          when(() => cameraService.stopRecording()).thenAnswer(
+            (_) async => EditorVideo.file(recordingFile),
+          );
+          final manager = _RecordingClipManager()
+            ..enrichedSave = Completer<void>()
+            ..releaseEnrichedSave = Completer<void>();
+          final container = ProviderContainer(
+            overrides: [
+              clipManagerProvider.overrideWith(() => manager),
+              videoEditorProvider.overrideWith(_RecordingVideoEditor.new),
+            ],
+          );
+          container.read(clipManagerProvider);
+          final existing = manager.addClip(
+            video: EditorVideo.file('/documents/existing.mp4'),
+            duration: const Duration(seconds: 1),
+            originalAspectRatio: 3 / 4,
+            targetAspectRatio: model.AspectRatio.vertical,
+            limitClipDuration: false,
+          );
+          final bloc =
+              VideoRecorderBloc(
+                readClipManager: () => manager,
+                readVideoEditor: () => videoEditor,
+                readVideoEditorState: VideoEditorProviderState.new,
+                readSharedPreferences: () => prefs,
+                cameraService: cameraService,
+              )..emit(
+                const VideoRecorderBlocState(
+                  recordingState: VideoRecorderState.recording,
+                ),
+              );
+          List<DivineVideoClip>? picked;
+          Future<void>? confirmation;
+          try {
+            bloc.add(const VideoRecorderRecordingStopRequested());
+            await metadataRequested.future;
+            final take = manager.clips.last;
+            expect(take.processingCompleter, isNull);
+            expect(bloc.state.isRecording, isFalse);
+            // Confirmation happens while native metadata extraction is parked.
+            confirmation = manager.extractClips({take.id}).then((clips) {
+              picked = clips;
+            });
+            await pumpEventQueue();
+            expect(picked, isNull);
+            expect(manager.getClipById(take.id), isNotNull);
+
+            metadata.complete(
+              VideoMetadata(
+                duration: const Duration(milliseconds: 2400),
+                audioDuration: const Duration(milliseconds: 2300),
+                extension: 'mp4',
+                fileSize: 1024,
+                resolution: const Size(720, 1280),
+                rotation: 0,
+                bitrate: 2000000,
+              ),
+            );
+            await manager.enrichedSave!.future;
+            expect(picked, isNull);
+            expect(manager.getClipById(take.id), isNotNull);
+            manager.releaseEnrichedSave!.complete();
+            await confirmation;
+
+            final selected = picked!.single;
+            expect(selected.duration, const Duration(milliseconds: 2300));
+            expect(selected.thumbnailPath, isNotNull);
+            expect(selected.ghostFramePath, isNotNull);
+            expect(File(selected.thumbnailPath!).readAsBytesSync(), [1, 2, 3]);
+            expect(File(selected.ghostFramePath!).readAsBytesSync(), [4, 5, 6]);
+            expect(manager.savedClips.last.toJson(), selected.toJson());
+            expect(manager.clips.map((clip) => clip.id), [existing.id]);
+          } finally {
+            if (!metadata.isCompleted) {
+              metadata.completeError(StateError('test released metadata'));
+            }
+            if (!manager.releaseEnrichedSave!.isCompleted) {
+              manager.releaseEnrichedSave!.complete();
+            }
+            await confirmation;
+            await bloc.close();
+            await TestHelpers.waitForCondition(
+              () => !File('${recordingFile.path}.work.mp4').existsSync(),
+              checkInterval: const Duration(milliseconds: 10),
+              description: 'layout take enrichment cleanup',
+            );
+            container.dispose();
+            ProVideoEditor.instance = originalProVideoEditor;
+            PathProviderPlatform.instance = originalPathProvider;
+            docsDir.deleteSync(recursive: true);
+          }
+        },
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
