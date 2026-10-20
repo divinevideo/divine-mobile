@@ -14,6 +14,7 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/consent_upload_session.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 /// Placeholder author for the fake signed event; [Event] only requires a
@@ -40,6 +41,7 @@ class _RecordingNip98AuthService implements Nip98AuthService {
 
   final Nip98Token token;
   bool createCalled = false;
+  int createCount = 0;
   String? capturedUrl;
   HttpMethod? capturedMethod;
   String? capturedPayload;
@@ -55,6 +57,7 @@ class _RecordingNip98AuthService implements Nip98AuthService {
     bool reuseCached = true,
   }) async {
     createCalled = true;
+    createCount++;
     capturedUrl = url;
     capturedMethod = method;
     capturedPayload = payload;
@@ -101,6 +104,66 @@ void main() {
   });
 
   group('ApiService.submitMinorAccountReviewParentConsent', () {
+    test(
+      'retries send the same multipart bytes after a transport failure',
+      () async {
+        final session = ConsentUploadSession();
+        addTearDown(session.dispose);
+        final bodies = <List<int>>[];
+        final auth = _RecordingNip98AuthService();
+        final api = ApiService(
+          relayManagerBaseUrl: 'https://api.test',
+          appVersion: 'test',
+          authService: auth,
+          client: MockClient((request) async {
+            bodies.add(request.bodyBytes);
+            if (bodies.length == 1) throw const SocketException('offline');
+            return http.Response('', 201);
+          }),
+        );
+        Future<void> submit() => api.submitMinorAccountReviewParentConsent(
+          caseId: 'case-123',
+          email: 'parent@example.com',
+          videoPath: clip.path,
+          session: session,
+        );
+        await expectLater(submit(), throwsA(isA<ApiException>()));
+        await submit();
+        expect(bodies[1], bodies[0]);
+      },
+    );
+
+    test(
+      'timed-out retry waits for the existing transport and keeps its file',
+      () async {
+        final session = ConsentUploadSession();
+        addTearDown(session.dispose);
+        final response = Completer<http.Response>();
+        var sends = 0;
+        final api = ApiService(
+          relayManagerBaseUrl: 'https://api.test',
+          appVersion: 'test',
+          uploadTimeout: const Duration(milliseconds: 30),
+          authService: _RecordingNip98AuthService(),
+          client: MockClient((request) async {
+            sends++;
+            return response.future;
+          }),
+        );
+        Future<void> submit() => api.submitMinorAccountReviewParentConsent(
+          caseId: 'case-123',
+          email: 'parent@example.com',
+          videoPath: clip.path,
+          session: session,
+        );
+        await expectLater(submit(), throwsA(isA<ApiException>()));
+        final retry = submit();
+        response.complete(http.Response('', 201));
+        await retry;
+        expect(sends, 1);
+      },
+    );
+
     test(
       'signs the exact binary multipart snapshot sent to the server',
       () async {

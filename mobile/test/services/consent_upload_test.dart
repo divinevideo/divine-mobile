@@ -1,5 +1,5 @@
 // ABOUTME: Verifies bounded file snapshots preserve binary multipart bytes and
-// ABOUTME: are discarded after transport without deleting the accepted clip.
+// ABOUTME: survive retries and are discarded when the submission ends.
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -27,6 +27,8 @@ void main() {
         final upload = await ConsentUpload.prepare(multipart);
         await clip.delete();
         final bytes = await upload.request.finalize().toBytes();
+        final retry = await upload.request.finalize().toBytes();
+        expect(retry, bytes);
         expect(sha256.convert(bytes).toString(), upload.payloadHash);
         expect(bytes, containsAllInOrder([0, 128, 255]));
         await upload.dispose();
