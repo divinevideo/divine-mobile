@@ -1203,6 +1203,56 @@ void main() {
       });
 
       test(
+        "deletes an expired video's record and frame-read mark in the same "
+        'prune',
+        () async {
+          final old = now.subtract(const Duration(days: 31));
+          final video = keptFile('stale.mp4', const [1], opened: old);
+          final frame = keptFile('stale.preview.jpg', const [1], opened: old);
+          final record = keptFile(
+            'stale.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now,
+          );
+          final mark = keptFile('stale.frame-attempt', const [], opened: now);
+
+          await createStore().prune();
+
+          expect(video.existsSync(), isFalse);
+          expect(frame.existsSync(), isFalse);
+          expect(record.existsSync(), isFalse);
+          expect(mark.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'deletes the record of a video trimmed for the cap in the same prune',
+        () async {
+          final trimmed = keptFile(
+            'oldest.mp4',
+            const [1, 2, 3, 4],
+            opened: now.subtract(const Duration(hours: 2)),
+          );
+          final record = keptFile(
+            'oldest.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now,
+          );
+          final kept = keptFile(
+            'newest.mp4',
+            const [1, 2, 3, 4],
+            opened: now.subtract(const Duration(hours: 1)),
+          );
+
+          await createStore(maxBytes: 4).prune();
+
+          expect(trimmed.existsSync(), isFalse);
+          expect(record.existsSync(), isFalse);
+          expect(kept.existsSync(), isTrue);
+        },
+      );
+
+      test(
         'deletes the least recently opened first while over the cap',
         () async {
           final oldest = keptFile(
@@ -2081,6 +2131,34 @@ void main() {
           );
 
           expect(record.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        "sweepOwners deletes an expired video's record and frame-read mark in "
+        'the same sweep',
+        () async {
+          final video = keptFile(
+            'stale.mp4',
+            const [1],
+            opened: now.subtract(const Duration(days: 31)),
+          );
+          final record = keptFile(
+            'stale.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now,
+          );
+          final mark = keptFile('stale.frame-attempt', const [], opened: now);
+
+          await DmVideoStore.sweepOwners(
+            {_owner},
+            rootDirectory: () async => root,
+            now: () => now,
+          );
+
+          expect(video.existsSync(), isFalse);
+          expect(record.existsSync(), isFalse);
+          expect(mark.existsSync(), isFalse);
         },
       );
 

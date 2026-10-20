@@ -406,8 +406,6 @@ class DmVideoStore {
     // is free and its deletion.
     if (!dir.existsSync()) return;
     final files = dir.listSync().whereType<File>().toList();
-    final withVideo = _messageIdsWithVideo(files);
-    final withContent = _messageIdsWithContent(files);
     final leased = {for (final path in _leases.keys) _messageIdOf(File(path))};
     final now = _now();
     final kept = <({File file, DateTime opened, int size})>[];
@@ -435,23 +433,21 @@ class DmVideoStore {
         if (age > _crashedPartAge) _deleteNow(file);
         continue;
       }
-      if (file.path.endsWith(_frameAttemptSuffix)) {
-        if (!withVideo.contains(id)) _deleteNow(file);
-        continue;
-      }
-      if (file.path.endsWith(_conversationSuffix)) {
-        if (!withContent.contains(id) && !leased.contains(id)) {
-          _deleteNow(file);
-        }
-        continue;
-      }
+      // Decided below, once age and the cap have deleted what they will.
+      if (_isSatellite(file)) continue;
       if (age > maxIdle && !_isInUse(file)) {
         _deleteNow(file);
         continue;
       }
       kept.add((file: file, opened: stat.modified, size: stat.size));
     }
+    _trimToCap(kept);
+    _deleteOrphanedSatellites(dir, leased);
+  }
 
+  /// Deletes the least recently opened of [kept] until what is not in use
+  /// fits in [maxBytes], videos before frames.
+  void _trimToCap(List<({File file, DateTime opened, int size})> kept) {
     // Files in use neither count against the cap nor go to meet it: counted,
     // a few played videos would leave nothing else room, frames included.
     final trimmable = [
@@ -471,6 +467,24 @@ class DmVideoStore {
       if (total <= maxBytes) break;
       _deleteNow(entry.file);
       total -= entry.size;
+    }
+  }
+
+  /// Deletes, from what [dir] holds now, frame-read marks whose video is gone
+  /// and records whose message has nothing left and is not [leased], so they
+  /// go in the same prune as the files they describe.
+  void _deleteOrphanedSatellites(Directory dir, Set<String> leased) {
+    final files = dir.listSync().whereType<File>().toList();
+    final withVideo = _messageIdsWithVideo(files);
+    final withContent = _messageIdsWithContent(files);
+    for (final file in files) {
+      final id = _messageIdOf(file);
+      if (file.path.endsWith(_frameAttemptSuffix) && !withVideo.contains(id) ||
+          file.path.endsWith(_conversationSuffix) &&
+              !withContent.contains(id) &&
+              !leased.contains(id)) {
+        _deleteNow(file);
+      }
     }
   }
 
@@ -560,11 +574,19 @@ class DmVideoStore {
     DateTime now,
     Duration maxIdle,
   ) async {
-    final files = await dir
-        .list()
-        .where((entity) => entity is File)
-        .cast<File>()
-        .toList();
+    Future<List<File>> listFiles() =>
+        dir.list().where((entity) => entity is File).cast<File>().toList();
+    for (final file in await listFiles()) {
+      if (_isSatellite(file)) continue;
+      final age = now.difference(file.statSync().modified);
+      final isPart = file.path.endsWith(_partSuffix);
+      if (age > maxIdle || (isPart && age > _crashedPartAge)) {
+        await _deleteQuietly(file);
+      }
+    }
+    // After the files they describe, so marks and records go in the same
+    // sweep as the last of those.
+    final files = await listFiles();
     final withVideo = _messageIdsWithVideo(files);
     final withContent = _messageIdsWithContent(files);
     for (final file in files) {
@@ -572,13 +594,6 @@ class DmVideoStore {
       if (file.path.endsWith(_frameAttemptSuffix) && !withVideo.contains(id) ||
           file.path.endsWith(_conversationSuffix) &&
               !withContent.contains(id)) {
-        await _deleteQuietly(file);
-        continue;
-      }
-      if (_isSatellite(file)) continue;
-      final age = now.difference(file.statSync().modified);
-      final isPart = file.path.endsWith(_partSuffix);
-      if (age > maxIdle || (isPart && age > _crashedPartAge)) {
         await _deleteQuietly(file);
       }
     }
