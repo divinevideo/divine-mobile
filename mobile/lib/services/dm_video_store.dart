@@ -233,9 +233,13 @@ class DmVideoStore {
         final file = await running.video;
         _lease(file);
         return file;
-      } on Object {
-        // Perhaps a limit it hit before this tap lifted them: fetch it again
-        // in full.
+      } on Object catch (error) {
+        // A limit it hit before this tap lifted them, or a failure that may
+        // pass, is fetched again in full; anything else would only repeat.
+        final again =
+            error is DmVideoLimitException ||
+            (error is DmVideoUnavailableException && error.mayPass);
+        if (!again) rethrow;
       }
     }
     return _obtainVideo(message);

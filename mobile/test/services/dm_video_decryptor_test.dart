@@ -286,22 +286,61 @@ void main() {
       },
     );
 
-    test('refuses a download past a smaller size limit', () async {
-      final produced = await FileEncryption().encrypt(
-        Uint8List.fromList(List<int>.filled(64, 7)),
-      );
-      stubDownload(produced.ciphertext);
-      final message = _videoMessage(
-        fileHash: HashUtil.sha256Hash(produced.ciphertext),
-        key: produced.key,
-        nonce: produced.nonce,
-      );
+    test(
+      "refuses a download past a smaller size limit, as the caller's limit",
+      () async {
+        final produced = await FileEncryption().encrypt(
+          Uint8List.fromList(List<int>.filled(64, 7)),
+        );
+        stubDownload(produced.ciphertext);
+        final message = _videoMessage(
+          fileHash: HashUtil.sha256Hash(produced.ciphertext),
+          key: produced.key,
+          nonce: produced.nonce,
+        );
 
-      await expectLater(
-        DmVideoDecryptor(dio: dio).decrypt(message, maxBytes: 16),
-        throwsA(isA<DmVideoUnavailableException>()),
-      );
-    });
+        await expectLater(
+          DmVideoDecryptor(dio: dio).decrypt(message, maxBytes: 16),
+          throwsA(isA<DmVideoLimitException>()),
+        );
+      },
+    );
+
+    test(
+      'reports a download past the largest a video can be as such, even under '
+      "a smaller limit of the caller's",
+      () async {
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer((invocation) async {
+          final token = invocation.namedArguments[#cancelToken] as CancelToken;
+          final progress =
+              invocation.namedArguments[#onReceiveProgress] as ProgressCallback;
+          progress(16, dmVideoMaxCiphertextBytes + 1);
+          throw await token.whenCancel;
+        });
+
+        await expectLater(
+          DmVideoDecryptor(
+            dio: dio,
+          ).decrypt(_videoMessage(fileHash: 'ab' * 32), maxBytes: 16),
+          throwsA(
+            isA<DmVideoUnavailableException>()
+                .having((e) => e.message, 'message', contains('size limit'))
+                .having(
+                  (e) => e is DmVideoLimitException,
+                  "only the caller's limit",
+                  isFalse,
+                ),
+          ),
+        );
+      },
+    );
 
     test('gives up on a download past its time limit', () async {
       when(
@@ -322,7 +361,7 @@ void main() {
           timeLimit: const Duration(milliseconds: 20),
         ),
         throwsA(
-          isA<DmVideoUnavailableException>()
+          isA<DmVideoLimitException>()
               .having((e) => e.message, 'message', contains('time'))
               .having((e) => e.mayPass, 'mayPass', isTrue),
         ),
@@ -396,11 +435,13 @@ void main() {
             limitsApply: () => false,
           ),
           throwsA(
-            isA<DmVideoUnavailableException>().having(
-              (e) => e.message,
-              'message',
-              contains('size limit'),
-            ),
+            isA<DmVideoUnavailableException>()
+                .having((e) => e.message, 'message', contains('size limit'))
+                .having(
+                  (e) => e is DmVideoLimitException,
+                  "only the caller's limit",
+                  isFalse,
+                ),
           ),
         );
       },

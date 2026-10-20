@@ -725,7 +725,7 @@ void main() {
           await pumpEventQueue();
           final tapped = store.videoFor(message);
           release.completeError(
-            const DmVideoUnavailableException('ciphertext exceeds the size'),
+            const DmVideoLimitException('ciphertext exceeds the size limit'),
           );
 
           expect((await tapped).readAsBytesSync(), equals(_plaintext));
@@ -733,6 +733,42 @@ void main() {
             fetchLimits.map((limits) => limits.maxBytes),
             equals([DmVideoStore.autoDownloadMaxBytes, null]),
           );
+          await previewFailure;
+        },
+      );
+
+      test(
+        'leave a tap with a failure the download it took over would hit '
+        'again',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+
+          final previewFailure = expectLater(
+            store.previewFor(message, download: true),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          await pumpEventQueue();
+          final tapped = store.videoFor(message);
+          release.completeError(
+            const DmVideoUnavailableException(
+              'ciphertext hash does not match the x tag',
+            ),
+          );
+
+          await expectLater(
+            tapped,
+            throwsA(
+              isA<DmVideoUnavailableException>().having(
+                (e) => e.message,
+                'message',
+                contains('hash'),
+              ),
+            ),
+          );
+          expect(fetches, equals(1));
           await previewFailure;
         },
       );

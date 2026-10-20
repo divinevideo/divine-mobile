@@ -30,6 +30,13 @@ class DmVideoUnavailableException implements Exception {
   String toString() => 'DmVideoUnavailableException: $message';
 }
 
+/// Thrown when a download stopped at a size or time limit its caller set,
+/// which a download without that limit may not reach.
+class DmVideoLimitException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoLimitException] with a diagnostic [message].
+  const DmVideoLimitException(super.message, {super.mayPass});
+}
+
 /// Thrown when a download stopped because its caller no longer wanted it,
 /// which says nothing about the video.
 class DmVideoWithdrawnException extends DmVideoUnavailableException {
@@ -166,7 +173,8 @@ class DmVideoDecryptor {
     bool limited() => limitsApply?.call() ?? true;
     int sizeLimit() => limited() ? maxBytes : dmVideoMaxCiphertextBytes;
     final cancelToken = CancelToken();
-    var oversized = false;
+    // The size the download had reached, or announced, past its limit.
+    int? oversizedAt;
     var outlasted = false;
     var unwanted = false;
     final deadline = timeLimit == null
@@ -202,7 +210,7 @@ class DmVideoDecryptor {
           onReceiveProgress: (received, total) {
             final limit = sizeLimit();
             if (consumed + received > limit || consumed + total > limit) {
-              oversized = true;
+              oversizedAt = consumed + (total > received ? total : received);
               cancelToken.cancel('encrypted video exceeds size limit');
             } else if (stillWanted != null && !stillWanted()) {
               unwanted = true;
@@ -232,16 +240,15 @@ class DmVideoDecryptor {
         target = resolved.toString();
       }
     } on DioException catch (error) {
-      if (oversized && CancelToken.isCancel(error)) {
-        throw const DmVideoUnavailableException(
-          'ciphertext exceeds the size limit',
-        );
+      final reached = oversizedAt;
+      if (reached != null && CancelToken.isCancel(error)) {
+        throw _tooLarge(reached);
       }
       if (unwanted && CancelToken.isCancel(error)) {
         throw const DmVideoWithdrawnException();
       }
       if (outlasted && CancelToken.isCancel(error)) {
-        throw const DmVideoUnavailableException(
+        throw const DmVideoLimitException(
           'the download outlasted its time limit',
           mayPass: true,
         );
@@ -272,14 +279,19 @@ class DmVideoDecryptor {
       throw const DmVideoUnavailableException('empty ciphertext body');
     }
     if (consumed + data.length > sizeLimit()) {
-      throw const DmVideoUnavailableException(
-        'ciphertext exceeds the size limit',
-      );
+      throw _tooLarge(consumed + data.length);
     }
     return data is Uint8List ? data : Uint8List.fromList(data);
   }
 
   static bool _isHttps(Uri uri) => uri.scheme == 'https' && uri.host.isNotEmpty;
+
+  /// The failure for a download stopped past its size limit at [bytes]: one
+  /// that still fits the largest a video can be passed only its caller's.
+  static DmVideoUnavailableException _tooLarge(int bytes) =>
+      bytes <= dmVideoMaxCiphertextBytes
+      ? const DmVideoLimitException('ciphertext exceeds the size limit')
+      : const DmVideoUnavailableException('ciphertext exceeds the size limit');
 }
 
 /// What [_verifyAndDecrypt] needs, sent to the isolate it runs in.
