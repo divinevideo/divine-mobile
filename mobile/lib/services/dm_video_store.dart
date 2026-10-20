@@ -344,15 +344,15 @@ class DmVideoStore {
   Future<void> _prune() async {
     final dir = await _ownerDirectory();
     if (!dir.existsSync()) return;
-    final files = await dir
-        .list()
-        .where((entity) => entity is File)
-        .cast<File>()
-        .toList();
-    final gone = await _goneMessageIds(files);
+    final gone = await _goneMessageIds(
+      await dir.list().where((entity) => entity is File).cast<File>().toList(),
+    );
+    // Listed again where nothing awaits: a frame written during the lookups
+    // is seen too, and no file can be handed out between the check that it
+    // is free and its deletion.
+    if (!dir.existsSync()) return;
+    final files = dir.listSync().whereType<File>().toList();
     final withVideo = _messageIdsWithVideo(files);
-    // Nothing below awaits, so no file can be handed out between the check
-    // that it is free and its deletion.
     final now = _now();
     final kept = <({File file, DateTime opened, int size})>[];
     for (final file in files) {

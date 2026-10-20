@@ -1356,6 +1356,44 @@ void main() {
       );
 
       test(
+        "deletes a gone message's frame read while the prune looked the "
+        'message up',
+        () async {
+          final read = Completer<Uint8List?>();
+          final reading = Completer<void>();
+          readFrame = (_) {
+            reading.complete();
+            return read.future;
+          };
+          final lookup = Completer<bool>();
+          final lookingUp = Completer<void>();
+          final message = _videoMessage();
+          keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            opened: now,
+          );
+          final store = createStore(
+            isMessageGone: (_) {
+              lookingUp.complete();
+              return lookup.future;
+            },
+          );
+          final preview = store.previewFor(message, download: false);
+          await reading.future;
+
+          final pruning = store.prune();
+          await lookingUp.future;
+          read.complete(_frame);
+          expect(await preview, isNotNull);
+          lookup.complete(true);
+          await pruning;
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
         "keeps a gone message's video while a card reads the frame of a "
         "tap's download",
         () async {
