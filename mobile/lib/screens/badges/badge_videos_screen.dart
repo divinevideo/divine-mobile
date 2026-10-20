@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
@@ -23,9 +24,9 @@ import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Browse public videos by the accepted holders of [coordinate].
-class BadgeVideosScreen extends ConsumerWidget {
+class BadgeVideosScreen extends ConsumerStatefulWidget {
   /// Creates the badge video browser.
-  const BadgeVideosScreen({required this.coordinate, super.key});
+  const BadgeVideosScreen({required this.coordinate, this.seed, super.key});
 
   /// Route name.
   static const routeName = 'badgeVideos';
@@ -40,21 +41,40 @@ class BadgeVideosScreen extends ConsumerWidget {
   /// Badge whose holders supply the videos.
   final BadgeCoordinate coordinate;
 
+  /// Accepted holders already resolved by this badge's detail page.
+  final BadgeVideosSeed? seed;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BadgeVideosScreen> createState() => _BadgeVideosScreenState();
+}
+
+class _BadgeVideosScreenState extends ConsumerState<BadgeVideosScreen> {
+  bool _usedSeed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final coordinate = widget.coordinate;
     final blocklistVersion = ref.watch(blocklistVersionProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     return BlocProvider(
-      key: ValueKey((badgeRepository, videosRepository, blocklistVersion)),
+      key: ValueKey((
+        badgeRepository,
+        videosRepository,
+        blocklistVersion,
+        coordinate,
+      )),
       create: (_) {
         final cubit = BadgeVideosCubit(
           badgeRepository: badgeRepository,
           videosRepository: videosRepository,
           coordinate: coordinate,
         );
+        final seed = widget.seed;
+        final useSeed = !_usedSeed && seed?.coordinate == coordinate;
+        _usedSeed = true;
         runDetached(
-          cubit.load(),
+          useSeed ? cubit.loadForHolders(seed!.holders) : cubit.load(),
           'load badge videos',
           logName: 'BadgeVideosScreen',
           category: LogCategory.ui,
@@ -64,6 +84,19 @@ class BadgeVideosScreen extends ConsumerWidget {
       child: BadgeVideosView(coordinate: coordinate),
     );
   }
+}
+
+/// In-memory navigation data; direct URL entries resolve holders normally.
+class BadgeVideosSeed {
+  /// Pins the accepted holder snapshot to its badge.
+  BadgeVideosSeed({required this.coordinate, required Set<String> holders})
+    : holders = Set.unmodifiable(holders);
+
+  /// Badge whose accepted holders were resolved.
+  final BadgeCoordinate coordinate;
+
+  /// Complete accepted holder snapshot from the detail page.
+  final Set<String> holders;
 }
 
 /// The badge video grid, driven by [BadgeVideosCubit].
@@ -89,7 +122,11 @@ class BadgeVideosView extends ConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: DiVineAppBar(title: context.l10n.profileVideosLabel),
+        appBar: DiVineAppBar(
+          title: context.l10n.profileVideosLabel,
+          showBackButton: true,
+          onBackPressed: () => context.safePop(),
+        ),
         backgroundColor: context.vineColors.background,
         body: switch (state.status) {
           BadgeVideosStatus.initial || BadgeVideosStatus.loading =>

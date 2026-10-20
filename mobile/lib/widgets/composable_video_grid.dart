@@ -193,28 +193,10 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
 
   @override
   Widget build(BuildContext context) {
-    // Watch broken video tracker asynchronously
-    final brokenTrackerAsync = ref.watch(brokenVideoTrackerProvider);
     final viewerPubkey = _resolveViewerPubkey();
-
-    return brokenTrackerAsync.when(
-      loading: () => Center(
-        child: DivineCircularProgressIndicator(
-          color: context.vineColors.accentPositive,
-        ),
-      ),
-      error: (error, stack) {
-        // Fallback: show all videos if tracker fails
-        return _buildGrid(context, widget.videos, viewerPubkey);
-      },
-      data: (tracker) {
-        // Filter out broken videos
-        final filteredVideos = widget.videos
-            .where((video) => !tracker.isVideoBroken(video.id))
-            .toList();
-
-        return _buildGrid(context, filteredVideos, viewerPubkey);
-      },
+    return VideoGridFilter(
+      videos: widget.videos,
+      builder: (context, videos) => _buildGrid(context, videos, viewerPubkey),
     );
   }
 
@@ -689,4 +671,42 @@ class _LoadingMoreIndicator extends StatelessWidget {
       child: Center(child: BrandedLoadingIndicator(size: 48)),
     );
   }
+}
+
+/// Shares broken-video visibility between full-page and embedded video grids.
+class VideoGridFilter extends ConsumerWidget {
+  /// Creates a filter, optionally with a sliver-compatible loading widget.
+  const VideoGridFilter({
+    required this.videos,
+    required this.builder,
+    this.loadingBuilder,
+    super.key,
+  });
+
+  /// Candidate videos in their original feed order.
+  final List<VideoEvent> videos;
+
+  /// Builds the grid and its navigation source from the same visible videos.
+  final Widget Function(BuildContext, List<VideoEvent>) builder;
+
+  /// Overrides the normal box loading indicator for embedded sliver grids.
+  final WidgetBuilder? loadingBuilder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(brokenVideoTrackerProvider)
+      .when(
+        loading: () =>
+            loadingBuilder?.call(context) ??
+            Center(
+              child: DivineCircularProgressIndicator(
+                color: context.vineColors.accentPositive,
+              ),
+            ),
+        error: (_, _) => builder(context, videos),
+        data: (tracker) => builder(
+          context,
+          videos.where((video) => !tracker.isVideoBroken(video.id)).toList(),
+        ),
+      );
 }

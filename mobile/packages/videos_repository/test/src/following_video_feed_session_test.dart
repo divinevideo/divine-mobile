@@ -78,7 +78,10 @@ void main() {
         expect(next.hasMore, more);
         expect(next.paginationCursor, more ? 'badge-following' : null);
         active = false;
-        expect((await load(feed, cursor: 'badge-following')).hasMore, isFalse);
+        await expectLater(
+          load(feed, cursor: 'badge-following'),
+          throwsA(isA<FollowingReadSuperseded>()),
+        );
       });
     }
     test(
@@ -97,7 +100,7 @@ void main() {
         ).thenReturn(replacement);
         await load(feed);
         old.complete([]);
-        expect((await pending).hasMore, isFalse);
+        await expectLater(pending, throwsA(isA<FollowingReadSuperseded>()));
       },
     );
     for (final directPresent in [false, true]) {
@@ -131,9 +134,203 @@ void main() {
         );
       }
     }
+    group('unknown direct follows at startup', () {
+      test(
+        'waits for initialization before merging direct and badge authors',
+        () async {
+          direct = [];
+          var known = false;
+          final initialized = Completer<void>();
+          final feed = FollowingVideoFeedSession(
+            videosRepository: videos,
+            directAuthors: () => direct,
+            badgeAuthors: () async => ['2' * 64],
+            waitForDirectAuthors: () => initialized.future,
+            directAuthorsKnown: () => known,
+          );
+          final pending = load(feed);
+          await Future<void>.value();
+          verifyNever(
+            () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+          );
+          direct = ['1' * 64];
+          known = true;
+          initialized.complete();
+          await pending;
+          verify(
+            () => videos.createBadgeVideoPager([
+              '1' * 64,
+              '2' * 64,
+            ], prioritizeUnseen: true),
+          ).called(1);
+        },
+      );
+      for (final known in [false, true]) {
+        for (final nonempty in [false, true]) {
+          test(
+            'server proof requires unknown follows and a nonempty page: '
+            'known $known, videos $nonempty',
+            () async {
+              direct = [];
+              final failure = Exception('holders unavailable');
+              final result = HomeFeedResult(
+                videos: nonempty ? [_video] : [],
+                hasMore: false,
+              );
+              when(
+                () => videos.getHomeFeedVideos(
+                  authors: any(named: 'authors'),
+                  userPubkey: any(named: 'userPubkey'),
+                  cursor: any(named: 'cursor'),
+                ),
+              ).thenAnswer((_) async => result);
+              final feed = FollowingVideoFeedSession(
+                videosRepository: videos,
+                directAuthors: () => direct,
+                badgeAuthors: () async => throw failure,
+                userPubkey: '3' * 64,
+                directAuthorsKnown: () => known,
+                waitForDirectAuthors: () async {},
+              );
+              if (!known && nonempty) {
+                expect(await load(feed), same(result));
+              } else {
+                await expectLater(load(feed), throwsA(same(failure)));
+              }
+            },
+          );
+        }
+      }
+      test(
+        'cached direct authors do not wait for relay initialization',
+        () async {
+          var waited = false;
+          final feed = FollowingVideoFeedSession(
+            videosRepository: videos,
+            directAuthors: () => direct,
+            badgeAuthors: () async => ['2' * 64],
+            directAuthorsKnown: () => false,
+            waitForDirectAuthors: () async {
+              waited = true;
+            },
+          );
+          await load(feed);
+          expect(waited, isFalse);
+          expect(feed.hasBadgeAuthors, isTrue);
+        },
+      );
+      test(
+        'newly confirmed empty follows reject an in-flight '
+        'positive server page',
+        () async {
+          direct = [];
+          var known = false;
+          final page = Completer<HomeFeedResult>();
+          final failure = Exception('badges unavailable');
+          when(
+            () => videos.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+              userPubkey: any(named: 'userPubkey'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) => page.future);
+          final feed = FollowingVideoFeedSession(
+            videosRepository: videos,
+            directAuthors: () => direct,
+            badgeAuthors: () async => throw failure,
+            directAuthorsKnown: () => known,
+            userPubkey: '3' * 64,
+          );
+          final pending = load(feed);
+          await Future<void>.value();
+          known = true;
+          page.complete(HomeFeedResult(videos: [_video]));
+          await expectLater(pending, throwsA(same(failure)));
+        },
+      );
+      test('superseded initialization never installs a pager', () async {
+        direct = [];
+        final initialized = Completer<void>();
+        final feed = FollowingVideoFeedSession(
+          videosRepository: videos,
+          directAuthors: () => direct,
+          badgeAuthors: () async => ['2' * 64],
+          directAuthorsKnown: () => false,
+          waitForDirectAuthors: () => initialized.future,
+        );
+        final pending = load(feed);
+        await Future<void>.value();
+        owns = false;
+        initialized.complete();
+        await expectLater(pending, throwsA(isA<FollowingReadSuperseded>()));
+        verifyNever(
+          () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+        );
+      });
+      test(
+        'initialization that never completes is bounded without '
+        'proving empty follows',
+        () async {
+          direct = [];
+          final feed = FollowingVideoFeedSession(
+            videosRepository: videos,
+            directAuthors: () => direct,
+            badgeAuthors: () async => ['2' * 64],
+            directAuthorsKnown: () => false,
+            waitForDirectAuthors: () => Completer<void>().future,
+            directAuthorsTimeout: Duration.zero,
+          );
+          await expectLater(
+            load(feed),
+            throwsA(isA<FollowingAuthorsUnavailable>()),
+          );
+          verifyNever(
+            () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+          );
+        },
+      );
+      test('unknown follows never install a holder-only pager', () async {
+        direct = [];
+        final feed = FollowingVideoFeedSession(
+          videosRepository: videos,
+          directAuthors: () => direct,
+          badgeAuthors: () async => ['2' * 64],
+          directAuthorsKnown: () => false,
+          waitForDirectAuthors: () async {},
+        );
+        await expectLater(
+          load(feed),
+          throwsA(isA<FollowingAuthorsUnavailable>()),
+        );
+        verifyNever(
+          () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+        );
+      });
+    });
+
     test('known empty subscriptions permit server-computed startup', () async {
       direct = [];
       expect(await load(session(holders: () async => [])), same(directPage));
+    });
+    test('direct fallback preserves its original failure stack', () async {
+      final failure = Exception('direct unavailable');
+      final origin = StackTrace.fromString('direct reader original frame');
+      when(
+        () => videos.getHomeFeedVideos(
+          authors: any(named: 'authors'),
+          userPubkey: any(named: 'userPubkey'),
+          cursor: any(named: 'cursor'),
+        ),
+      ).thenAnswer((_) => Future.error(failure, origin));
+      try {
+        await load(
+          session(holders: () async => throw Exception('badges unavailable')),
+        );
+        fail('expected direct failure');
+      } on Exception catch (error, stack) {
+        expect(error, same(failure));
+        expect(stack.toString(), origin.toString());
+      }
     });
     test('failed direct prefetch is preserved after badge fallback', () async {
       final failure = Exception('direct unavailable');
@@ -149,6 +346,28 @@ void main() {
         throwsA(same(failure)),
       );
     });
+    test(
+      'ownership lost after direct completion checkpoint '
+      'throws typed supersession',
+      () async {
+        final directDone = Completer<HomeFeedResult>();
+        final holdersDone = Completer<Iterable<String>>();
+        when(
+          () => videos.getHomeFeedVideos(
+            authors: any(named: 'authors'),
+            userPubkey: any(named: 'userPubkey'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) => directDone.future);
+        final feed = session(holders: () => holdersDone.future);
+        final pending = load(feed);
+        holdersDone.complete([]);
+        await Future<void>.value();
+        owns = false;
+        directDone.complete(directPage);
+        await expectLater(pending, throwsA(isA<FollowingReadSuperseded>()));
+      },
+    );
     for (final stage in ['holders', 'pager', 'direct']) {
       test(
         'supersession after $stage never commits a false terminal page',
@@ -204,3 +423,11 @@ void main() {
     );
   });
 }
+
+final _video = VideoEvent(
+  id: '4' * 64,
+  pubkey: '5' * 64,
+  createdAt: 1,
+  content: '',
+  timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+);

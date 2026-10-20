@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
@@ -24,6 +26,39 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 
 void main() {
   group(BadgeVideosScreen, () {
+    testWidgets(
+      'uses detail holders once and re-resolves after moderation changes',
+      (tester) async {
+        final repository = _MockBadgeRepository();
+        final videos = _MockVideosRepository();
+        when(() => repository.loadAcceptedHolders(_coordinate))
+            .thenAnswer((_) async => <String>{});
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              badgeRepositoryProvider.overrideWithValue(repository),
+              videosRepositoryProvider.overrideWithValue(videos),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BadgeVideosScreen(
+                coordinate: _coordinate,
+                seed: BadgeVideosSeed(coordinate: _coordinate, holders: {}),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        verifyNever(() => repository.loadAcceptedHolders(_coordinate));
+        ProviderScope.containerOf(
+          tester.element(find.byType(BadgeVideosScreen)),
+        ).read(blocklistVersionProvider.notifier).increment();
+        await tester.pumpAndSettle();
+        verify(() => repository.loadAcceptedHolders(_coordinate)).called(1);
+      },
+    );
+
     testWidgets('reloads holders when the blocklist changes', (tester) async {
       final repository = _MockBadgeRepository();
       final videos = _MockVideosRepository();
@@ -80,6 +115,51 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('back button returns to the page that opened videos', (
+        tester,
+      ) async {
+        when(
+          () => cubit.state,
+        ).thenReturn(const BadgeVideosState(status: BadgeVideosStatus.loaded));
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => Scaffold(
+                body: TextButton(
+                  onPressed: () => context.push('/videos'),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/videos',
+              builder: (_, _) => BlocProvider<BadgeVideosCubit>.value(
+                value: cubit,
+                child: const BadgeVideosView(coordinate: _coordinate),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          testProviderScope(
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        final appBar = tester.widget<DiVineAppBar>(find.byType(DiVineAppBar));
+        expect(appBar.showBackButton, isTrue);
+        appBar.onBackPressed!();
+        await tester.pumpAndSettle();
+        expect(find.text('open'), findsOneWidget);
+      });
+
       testWidgets('retries a failed load', (tester) async {
         when(() => cubit.state).thenReturn(
           const BadgeVideosState(status: BadgeVideosStatus.failure),
