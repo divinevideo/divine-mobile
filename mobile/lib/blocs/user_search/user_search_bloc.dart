@@ -233,7 +233,6 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     Emitter<UserSearchState> emit,
   ) async {
     final repository = _profileRepository;
-    if (repository == null && _searchRunner == null) return;
     final query = event.query.trim();
 
     // Empty query, or one holding a private key, resets to initial state
@@ -243,6 +242,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
       emit(const UserSearchState());
       return;
     }
+    if (repository == null && _searchRunner == null) return;
 
     // Resuming an interrupted same-owner query keeps positions already shown.
     final retainedProfiles = state.query == query

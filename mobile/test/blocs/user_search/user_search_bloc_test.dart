@@ -951,6 +951,31 @@ void main() {
         },
       );
 
+      test(
+        'private-key input clears retained results before profiles are ready',
+        () {
+          fakeAsync((clock) {
+            final bloc = UserSearchBloc(
+              profileRepository: null,
+              initialState: UserSearchState(
+                status: UserSearchStatus.success,
+                query: 'flutter',
+                results: [createTestProfile('a' * 64, 'Flutter Dev')],
+              ),
+            );
+            try {
+              bloc.add(const UserSearchQueryChanged(_privateKeyQuery));
+              clock.elapse(debounceDuration);
+              clock.flushMicrotasks();
+              expect(bloc.state, const UserSearchState());
+            } finally {
+              unawaited(bloc.close());
+              clock.flushMicrotasks();
+            }
+          });
+        },
+      );
+
       blocTest<UserSearchBloc, UserSearchState>(
         'does not search and resets when the query contains a private key',
         setUp: () {
