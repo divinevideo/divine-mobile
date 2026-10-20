@@ -194,6 +194,28 @@ void main() {
         ],
       );
 
+      blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
+        'shows the frame of a video whose download failed once it is played',
+        setUp: () => when(
+          () => store.previewFor(any(), download: true),
+        ).thenThrow(const SocketException('offline')),
+        build: () => createCubit(download: true),
+        act: (cubit) async {
+          await cubit.load();
+          stubPreview(_framePath, download: true);
+          kept.add('a' * 64);
+          await pumpEventQueue();
+        },
+        expect: () => const [
+          DmVideoPreviewState(status: DmVideoPreviewStatus.none),
+          DmVideoPreviewState(
+            status: DmVideoPreviewStatus.ready,
+            framePath: _framePath,
+          ),
+        ],
+        errors: () => [isA<SocketException>()],
+      );
+
       test('stops waiting when closed', () async {
         stubPreview(null, download: false);
         final cubit = createCubit(download: false);

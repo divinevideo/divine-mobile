@@ -99,6 +99,8 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emitIfOpen(const DmVideoPreviewState(status: DmVideoPreviewStatus.none));
+      // A tap on play still keeps the video, so wait for it as above.
+      if (!isClosed) _waitForKeptVideo(store);
     }
   }
 
