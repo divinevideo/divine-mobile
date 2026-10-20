@@ -496,6 +496,7 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
     ownerPubkey: owner,
     fetchVideo: ref.watch(dmVideoDecryptorProvider).decrypt,
     isMessageGone: dmVideoMessageGone(db, owner),
+    isConversationRemoved: dmVideoConversationRemoved(db, owner),
   );
   final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
   ref.onDispose(() {
@@ -511,9 +512,10 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
 });
 
 /// Whether a kept video's message is gone for [owner]: retracted, as the
-/// thread no longer shows it, or removed with its conversation. A message
-/// with no row is not, since an account's messages download again after it
-/// switches back.
+/// thread no longer shows it, or removed with its conversation. A missing
+/// row alone says nothing, since an account switch clears the rows and the
+/// messages download again; [dmVideoConversationRemoved] covers one whose
+/// conversation was removed meanwhile.
 Future<bool> Function(String messageId) dmVideoMessageGone(
   AppDatabase db,
   String owner,
@@ -542,9 +544,23 @@ StreamSubscription<void> pruneWhenDmVideoMessagesGo(
       ),
     );
 
+/// Whether [owner] removed the conversation [conversationId] at or after
+/// [sentAt], the rule the DM history download applies to old messages. A
+/// kept video's message is then gone even when no row is left to say so, as
+/// when an account switch cleared the rows but kept the conversation.
+Future<bool> Function(String conversationId, int sentAt)
+dmVideoConversationRemoved(AppDatabase db, String owner) =>
+    (conversationId, sentAt) async {
+      final removedAt = await db.removedConversationsDao.removedAtFor(
+        conversationId: conversationId,
+        ownerPubkey: owner,
+      );
+      return removedAt != null && sentAt <= removedAt;
+    };
+
 /// Writes that can make a kept video's message gone: a retraction marks its
-/// row, an update, and removing its conversation records its id, an insert.
-/// A new message is neither.
+/// row, an update, and removing its conversation records the conversation
+/// and the ids of its messages. A new message is none of these.
 Stream<void> dmVideoMessageChanges(AppDatabase db) => db
     .tableUpdates(
       TableUpdateQuery.allOf([
@@ -556,6 +572,7 @@ Stream<void> dmVideoMessageChanges(AppDatabase db) => db
           db.removedMessageIds,
           limitUpdateKind: UpdateKind.insert,
         ),
+        TableUpdateQuery.onTable(db.removedConversations),
       ]),
     )
     .map((_) {});

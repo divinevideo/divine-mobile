@@ -100,6 +100,55 @@ void main() {
     });
   });
 
+  group('dmVideoConversationRemoved', () {
+    final owner = 'e' * 64;
+    const conversationId = 'conversation';
+    const removedAt = 1757385300;
+    late AppDatabase db;
+
+    setUp(() async {
+      db = AppDatabase.test(NativeDatabase.memory());
+      await db.removedConversationsDao.record(
+        conversationId: conversationId,
+        ownerPubkey: owner,
+        removedAt: removedAt,
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test('counts a message sent before its conversation was removed', () async {
+      expect(
+        await dmVideoConversationRemoved(db, owner)(conversationId, removedAt),
+        isTrue,
+      );
+    });
+
+    test('keeps a message sent after its conversation was removed', () async {
+      expect(
+        await dmVideoConversationRemoved(
+          db,
+          owner,
+        )(conversationId, removedAt + 1),
+        isFalse,
+      );
+    });
+
+    test('keeps a message whose conversation was never removed', () async {
+      expect(
+        await dmVideoConversationRemoved(db, owner)('other', removedAt),
+        isFalse,
+      );
+    });
+
+    test('keeps a message whose conversation another account removed', () {
+      expect(
+        dmVideoConversationRemoved(db, 'f' * 64)(conversationId, removedAt),
+        completion(isFalse),
+      );
+    });
+  });
+
   group('dmVideoMessageChanges', () {
     final owner = 'e' * 64;
     final messageId = 'a' * 64;
@@ -140,6 +189,21 @@ void main() {
         );
         await pumpEventQueue();
         expect(changes, equals(1));
+      },
+    );
+
+    test(
+      'speaks up when a conversation is removed with no messages left',
+      () async {
+        final changed = dmVideoMessageChanges(db).first;
+
+        await db.removedConversationsDao.record(
+          conversationId: conversationId,
+          ownerPubkey: owner,
+          removedAt: 1757385300,
+        );
+
+        await expectLater(changed, completes);
       },
     );
 

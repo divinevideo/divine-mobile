@@ -2,6 +2,7 @@
 // ABOUTME: one download per video, a preview frame, and pruning by age and size.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -52,7 +53,10 @@ class DmVideoStore {
   ///
   /// [isMessageGone] says whether a message was retracted or removed with
   /// its conversation; [prune] then deletes what is kept for it. Without it
-  /// nothing is deleted on those grounds.
+  /// nothing is deleted on those grounds. [isConversationRemoved] says
+  /// whether the user removed a conversation at or after a message in it was
+  /// sent, which [prune] asks too, from a record kept beside each video: the
+  /// message's row can be missing, as after an account switch.
   ///
   /// [readFrame] defaults to [readDmVideoCardFrame], [rootDirectory] to the
   /// app's cache directory and [now] to the wall clock; they exist so tests
@@ -62,6 +66,8 @@ class DmVideoStore {
     required DmVideoFetcher fetchVideo,
     DmVideoFrameReader? readFrame,
     Future<bool> Function(String messageId)? isMessageGone,
+    Future<bool> Function(String conversationId, int sentAt)?
+    isConversationRemoved,
     Future<Directory> Function()? rootDirectory,
     DateTime Function()? now,
     this.maxIdle = defaultMaxIdle,
@@ -71,6 +77,7 @@ class DmVideoStore {
        _fetchVideo = fetchVideo,
        _readFrame = readFrame ?? readDmVideoCardFrame,
        _isMessageGone = isMessageGone,
+       _isConversationRemoved = isConversationRemoved,
        _rootDirectory = rootDirectory ?? getApplicationCacheDirectory,
        _now = now ?? DateTime.now;
 
@@ -106,6 +113,11 @@ class DmVideoStore {
   /// app, is not tried again.
   static const String _frameAttemptSuffix = '.frame-attempt';
 
+  /// Beside a kept video for as long as it stays: the conversation it came
+  /// from and when it was sent, so removing that conversation deletes it
+  /// even once its message row is gone.
+  static const String _conversationSuffix = '.conversation';
+
   /// Age past which a part file is taken as left by a crash: a younger one
   /// may still be being written, by this store or by the one an account
   /// switch replaced.
@@ -128,6 +140,8 @@ class DmVideoStore {
   final DmVideoFetcher _fetchVideo;
   final DmVideoFrameReader _readFrame;
   final Future<bool> Function(String messageId)? _isMessageGone;
+  final Future<bool> Function(String conversationId, int sentAt)?
+  _isConversationRemoved;
   final Future<Directory> Function() _rootDirectory;
   final DateTime Function() _now;
 
@@ -409,7 +423,7 @@ class DmVideoStore {
         if (age > _crashedPartAge) _deleteNow(file);
         continue;
       }
-      if (file.path.endsWith(_frameAttemptSuffix)) {
+      if (_livesWithVideo(file)) {
         if (!withVideo.contains(_messageIdOf(file))) _deleteNow(file);
         continue;
       }
@@ -533,7 +547,7 @@ class DmVideoStore {
         .toList();
     final withVideo = _messageIdsWithVideo(files);
     for (final file in files) {
-      if (file.path.endsWith(_frameAttemptSuffix)) {
+      if (_livesWithVideo(file)) {
         if (!withVideo.contains(_messageIdOf(file))) {
           await _deleteQuietly(file);
         }
@@ -547,16 +561,22 @@ class DmVideoStore {
     }
   }
 
-  /// Ids of the messages whose video is among [files]. A frame-read mark
-  /// lives as long as its video: a decode that never finished must not be
-  /// retried while the file that caused it is still here.
+  /// Ids of the messages whose video is among [files].
   static Set<String> _messageIdsWithVideo(List<File> files) => {
     for (final file in files)
       if (!file.path.endsWith(_partSuffix) &&
           !file.path.endsWith(_previewSuffix) &&
-          !file.path.endsWith(_frameAttemptSuffix))
+          !_livesWithVideo(file))
         _messageIdOf(file),
   };
+
+  /// Whether [file] is kept for exactly as long as its video, neither aging
+  /// nor trimmed by itself: a frame-read mark, as a decode that never
+  /// finished must not be retried while the file that caused it is here, and
+  /// a conversation record, which is what lets a removal find the video.
+  static bool _livesWithVideo(File file) =>
+      file.path.endsWith(_frameAttemptSuffix) ||
+      file.path.endsWith(_conversationSuffix);
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
   /// for, within their limits, or, when its turn comes, uses the download a
@@ -639,6 +659,13 @@ class DmVideoStore {
       if (stillWanted != null && !stillWanted()) {
         throw const DmVideoWithdrawnException();
       }
+      // Written first: a video is never kept without it.
+      await _writeAtomically(
+        File(
+          '${file.parent.path}/${_safeName(message.id)}$_conversationSuffix',
+        ),
+        utf8.encode('${message.conversationId}\n${message.createdAt}'),
+      );
       await _writeAtomically(file, plaintext);
     } on Object {
       _release(file);
@@ -765,12 +792,25 @@ class DmVideoStore {
   /// keeps its message's files.
   Future<Set<String>> _goneMessageIds(List<File> files) async {
     final isGone = _isMessageGone;
-    if (isGone == null) return const {};
+    final isRemoved = _isConversationRemoved;
+    if (isGone == null && isRemoved == null) return const {};
     final ids = {for (final file in files) _messageIdOf(file)};
+    final records = {
+      for (final file in files)
+        if (file.path.endsWith(_conversationSuffix)) _messageIdOf(file): file,
+    };
     final gone = <String>{};
     for (final id in ids) {
       try {
-        if (await isGone(id)) gone.add(id);
+        if (isGone != null && await isGone(id)) {
+          gone.add(id);
+          continue;
+        }
+        final record = records[id];
+        if (isRemoved == null || record == null) continue;
+        final lines = (await record.readAsString()).split('\n');
+        final sentAt = lines.length == 2 ? int.tryParse(lines[1]) : null;
+        if (sentAt != null && await isRemoved(lines[0], sentAt)) gone.add(id);
       } on Object catch (error) {
         Log.warning(
           'Could not tell whether a kept video DM message is gone: '

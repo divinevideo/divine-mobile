@@ -19,11 +19,12 @@ final Uint8List _frame = Uint8List.fromList(const [0xFF, 0xD8, 0xFF, 0xE0]);
 
 DmMessage _videoMessage({
   String? id,
+  String conversationId = 'conversation',
   String fileType = 'video/mp4',
   int? fileSize,
 }) => DmMessage(
   id: id ?? 'a' * 64,
-  conversationId: 'conversation',
+  conversationId: conversationId,
   senderPubkey: 'b' * 64,
   content: 'https://media.divine.video/${'d' * 64}',
   createdAt: 1757385263,
@@ -158,6 +159,8 @@ void main() {
     DmVideoStore createStore({
       int maxBytes = DmVideoStore.defaultMaxBytes,
       Future<bool> Function(String messageId)? isMessageGone,
+      Future<bool> Function(String conversationId, int sentAt)?
+      isConversationRemoved,
       Future<Directory> Function()? rootDirectory,
     }) => DmVideoStore(
       ownerPubkey: _owner,
@@ -176,6 +179,7 @@ void main() {
       now: () => now,
       maxBytes: maxBytes,
       isMessageGone: isMessageGone,
+      isConversationRemoved: isConversationRemoved,
     );
 
     Directory ownerDir([String? owner]) =>
@@ -538,7 +542,10 @@ void main() {
                 .listSync()
                 .map((entity) => entity.path)
                 .where(
-                  (path) => path.contains('2' * 64) && !path.endsWith('.mp4'),
+                  (path) =>
+                      path.contains('2' * 64) &&
+                      (path.endsWith('.jpg') ||
+                          path.endsWith('.frame-attempt')),
                 ),
             isEmpty,
           );
@@ -1448,6 +1455,78 @@ void main() {
       );
 
       test(
+        'deletes a kept video once its conversation is removed, with no row '
+        'left to say so',
+        () async {
+          final removed = _videoMessage(id: '1' * 64, conversationId: 'gone');
+          final shown = _videoMessage(id: '2' * 64, conversationId: 'shown');
+          final asked = <(String, int)>[];
+          final store = createStore(
+            isMessageGone: (_) async => false,
+            isConversationRemoved: (conversationId, sentAt) async {
+              asked.add((conversationId, sentAt));
+              return conversationId == 'gone';
+            },
+          );
+          await store.videoFor(removed);
+          await store.videoFor(shown);
+
+          await store.prune();
+
+          expect(asked, contains(('gone', removed.createdAt)));
+          expect(
+            ownerDir().listSync().where(
+              (entity) => entity.path.contains('1' * 64),
+            ),
+            isEmpty,
+          );
+          expect(
+            File(
+              '${ownerDir().path}/${DmVideoStore.videoFileNameFor(shown)}',
+            ).existsSync(),
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        "keeps a kept video's conversation record for as long as the video",
+        () async {
+          var removed = false;
+          final store = createStore(
+            isConversationRemoved: (_, _) async => removed,
+          );
+          await store.videoFor(_videoMessage());
+          final record = File('${ownerDir().path}/${'a' * 64}.conversation');
+          expect(record.existsSync(), isTrue);
+          record.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          await store.prune();
+          removed = true;
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
+        'deletes a conversation record and a frame-read mark once their video '
+        'is gone',
+        () async {
+          keptFile(
+            '${'a' * 64}.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now,
+          );
+          keptFile('${'a' * 64}.frame-attempt', const [], opened: now);
+
+          await createStore().prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
         'keeps everything when it cannot tell whether a message is gone',
         () async {
           final message = _videoMessage();
@@ -1762,6 +1841,27 @@ void main() {
           expect(crashed.existsSync(), isFalse);
           expect(recent.existsSync(), isTrue);
           expect(writing.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        "sweepOwners keeps a known account's conversation record while its "
+        'video stays',
+        () async {
+          keptFile('recent.mp4', const [1], opened: now);
+          final record = keptFile(
+            'recent.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now.subtract(const Duration(days: 31)),
+          );
+
+          await DmVideoStore.sweepOwners(
+            {_owner},
+            rootDirectory: () async => root,
+            now: () => now,
+          );
+
+          expect(record.existsSync(), isTrue);
         },
       );
 
