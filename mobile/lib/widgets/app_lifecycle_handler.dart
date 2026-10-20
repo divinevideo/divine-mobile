@@ -15,6 +15,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/background_activity_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -139,6 +140,7 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 
     switch (state) {
       case AppLifecycleState.resumed:
+        ref.read(playbackWindowFocusedProvider.notifier).setFocused(true);
         Log.info(
           '📱 App resumed from background - restoring activities',
           name: 'AppLifecycleHandler',
@@ -198,6 +200,10 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
         );
 
       case AppLifecycleState.inactive:
+        if (defaultTargetPlatform == TargetPlatform.macOS) {
+          // Focus loss pauses media without rebuilding readiness-gated feeds.
+          ref.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+        }
         if (_inactiveDisablesForegroundPlayback(defaultTargetPlatform)) {
           Log.info(
             '📱 App became inactive - disabling foreground playback gates',
@@ -209,9 +215,9 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
             setState(() => _tickersEnabled = false);
           }
         } else {
-          // Other desktop platforms retain playback during focus changes.
+          // Desktop focus changes leave app readiness and animations active.
           Log.debug(
-            '📱 App became inactive (desktop focus change) - keeping videos active',
+            '📱 App became inactive (desktop focus change) - keeping app readiness active',
             name: 'AppLifecycleHandler',
             category: LogCategory.system,
           );
@@ -292,6 +298,4 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 }
 
 bool _inactiveDisablesForegroundPlayback(TargetPlatform platform) =>
-    platform == TargetPlatform.android ||
-    platform == TargetPlatform.iOS ||
-    platform == TargetPlatform.macOS;
+    platform == TargetPlatform.android || platform == TargetPlatform.iOS;

@@ -21,9 +21,9 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
-import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_coordinator.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
@@ -264,9 +264,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final appForeground = ref.watch(appForegroundProvider);
+    final playbackEligible = ref.watch(playbackEligibleProvider);
     final isFeedActive =
-        widget.isActive && _routeAllowsPlayback && appForeground;
+        widget.isActive && _routeAllowsPlayback && playbackEligible;
     // Rebuild when a community-label prefetch resolves, and when the
     // kill-switch flips, so InfiniteVideoFeed re-syncs the autoplay gate from
     // didUpdateWidget. The package captures the gate answer per rebuild

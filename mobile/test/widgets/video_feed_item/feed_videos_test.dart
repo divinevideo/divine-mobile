@@ -38,6 +38,7 @@ import 'package:openvine/models/viewer_auth_result.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/repositories/community_content_label_repository.dart';
 import 'package:openvine/router/app_router.dart';
@@ -2425,6 +2426,24 @@ void main() {
         find.byType(InfiniteVideoFeed),
       );
       expect(feed.isActive, isFalse);
+    });
+
+    testWidgets('window focus gates pooled playback without backgrounding', (
+      tester,
+    ) async {
+      await _pumpFeedVideos(tester, videos: [_makeVideo()]);
+      final finder = find.byType(InfiniteVideoFeed);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(FeedVideos)),
+      );
+      expect(tester.widget<InfiniteVideoFeed>(finder).isActive, isTrue);
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(false);
+      await tester.pump();
+      expect(tester.widget<InfiniteVideoFeed>(finder).isActive, isFalse);
+      expect(container.read(appForegroundProvider), isTrue);
+      container.read(playbackWindowFocusedProvider.notifier).setFocused(true);
+      await tester.pump();
+      expect(tester.widget<InfiniteVideoFeed>(finder).isActive, isTrue);
     });
 
     testWidgets('pauses InfiniteVideoFeed while app is backgrounded', (

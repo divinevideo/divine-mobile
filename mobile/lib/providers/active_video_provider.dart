@@ -3,8 +3,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
-import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/state/video_feed_state.dart';
@@ -14,14 +14,11 @@ import 'package:unified_logger/unified_logger.dart';
 /// Returns null when app is backgrounded, overlay is visible, or no valid video at current index
 /// Route-aware: switches feed provider based on route type
 final activeVideoIdProvider = Provider<String?>((ref) {
-  // Check app foreground state using the Notifier-based provider that
-  // defaults to true immediately (no stream delay). The old StreamProvider
-  // defaulted to false when the stream hadn't emitted yet, causing all
-  // videos to pause on startup until the stream caught up.
-  final isFg = ref.watch(appForegroundProvider);
-  if (!isFg) {
+  // Lifecycle and macOS window focus gate playback independently of feeds.
+  final playbackEligible = ref.watch(playbackEligibleProvider);
+  if (!playbackEligible) {
     Log.debug(
-      '[ACTIVE] ❌ App not in foreground',
+      '[ACTIVE] ❌ Playback disabled by lifecycle or window focus',
       name: 'ActiveVideoProvider',
       category: LogCategory.system,
     );
