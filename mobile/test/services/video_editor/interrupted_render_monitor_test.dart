@@ -319,6 +319,7 @@ void main() {
 
       test('lands in the marker before the timeout is reported and the '
           'native task cancelled', () async {
+        InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
         final finish = Completer<String>();
         final render = await startRender(finish, taskId: 'seam');
         Map<String, Object?>? markerWhenReported;
@@ -336,14 +337,19 @@ void main() {
           throwsA(isA<VideoRenderFailedException>()),
         );
 
-        expect(
-          markerWhenReported,
-          containsPair('watchdogFiredAtMs', isA<int>()),
-        );
-        expect(
-          markerWhenCancelled,
-          containsPair('watchdogFiredAtMs', isA<int>()),
-        );
+        // Nothing writes between the note and either call, so each one sees
+        // the note as the marker's last write.
+        for (final (moment, marker) in [
+          ('reported', markerWhenReported),
+          ('cancelled', markerWhenCancelled),
+        ]) {
+          expect(marker?['elapsedMs'], isA<int>(), reason: 'when $moment');
+          expect(
+            marker,
+            containsPair('watchdogFiredAtMs', marker!['elapsedMs']),
+            reason: 'when $moment',
+          );
+        }
 
         finish.complete('out.mp4');
         await render;
@@ -383,6 +389,7 @@ void main() {
 
       test('lands in the marker before the platform call and notes its '
           'return after it', () async {
+        InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
         final finish = Completer<String>();
         final render = await startRender(finish, taskId: 'seam');
         Map<String, Object?>? markerAtPlatformCall;
@@ -397,9 +404,15 @@ void main() {
           containsPair('cancelRequestedAtMs', isA<int>()),
         );
         expect(markerAtPlatformCall, isNot(contains('cancelReturnedAtMs')));
+        final afterReturn = readMarker('seam');
+        expect(afterReturn['elapsedMs'], isA<int>());
         expect(
-          readMarker('seam'),
-          containsPair('cancelReturnedAtMs', isA<int>()),
+          afterReturn,
+          containsPair('cancelReturnedAtMs', afterReturn['elapsedMs']),
+        );
+        expect(
+          afterReturn['cancelReturnedAtMs']! as int,
+          greaterThan(afterReturn['cancelRequestedAtMs']! as int),
         );
 
         finish.complete('out.mp4');
