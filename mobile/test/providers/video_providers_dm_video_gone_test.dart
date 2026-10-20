@@ -494,6 +494,7 @@ void main() {
         if (!disposed) container.dispose();
       });
       final store = container.read(dmVideoStoreProvider)!;
+      final closed = store.kept.drain<void>();
       await store.prune();
       expect(video.existsSync(), isTrue);
       final deleted = Completer<void>();
@@ -513,7 +514,7 @@ void main() {
       disposed = true;
       container.dispose();
       await deleted.future.timeout(const Duration(seconds: 5));
-      await store.prune();
+      await closed;
 
       expect(video.existsSync(), isFalse);
     });
