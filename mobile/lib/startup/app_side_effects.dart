@@ -89,15 +89,16 @@ class AppRootSideEffects extends ConsumerWidget {
     // constructed at all (#4124, #3161).
     ref.watch(outgoingDmRetryServiceProvider);
     ref.watch(dmReactionRetryServiceProvider);
-    // Keep retracted/removed messages' plaintext cleanup active even when no
-    // video chat has opened this session. Account changes rebuild the store
-    // and prune the newly active account; activation downloads nothing.
-    ref.watch(dmVideoStoreProvider);
     ref.watch(viewEventRetryServiceProvider);
     ref.watch(reportRetryServiceProvider);
     ref.watch(productEventQueueProvider);
     ref.watch(profileSaveRetryServiceProvider);
     ref.watch(scheduledPostCoordinatorProvider);
+
+    // Keep retracted/removed messages' plaintext cleanup active even when no
+    // video chat has opened this session. Account changes rebuild the store
+    // and prune the newly active account; activation downloads nothing.
+    ref.watch(dmVideoStoreProvider);
 
     // The one owner of connectivity-driven relay repair (#3161, #8990). The
     // pool has to self-heal on a real network change app-wide, including on
