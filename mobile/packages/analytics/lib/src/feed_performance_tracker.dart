@@ -55,7 +55,6 @@ class FeedPerformanceTracker {
   final DateTime Function() _now;
 
   final Map<int, _FeedLoadSession> _activeSessions = {};
-  final Map<String, FeedLoadHandle> _activeSwipeSessions = {};
   static int _nextSessionId = 0;
 
   /// Number of active tracking sessions (exposed for testing).
@@ -73,7 +72,6 @@ class FeedPerformanceTracker {
         name: 'FeedPerformance',
       );
       _activeSessions.clear();
-      _activeSwipeSessions.clear();
     }
   }
 
@@ -401,28 +399,6 @@ class FeedPerformanceTracker {
         'result_count': resultCount,
       },
     );
-  }
-
-  /// Start tracking time-to-play for a video swipe transition.
-  ///
-  /// Called when the user swipes to a new video. The session completes
-  /// when [markVideoSwipeComplete] is called.
-  void startVideoSwipeTracking(String videoId) {
-    final feedType = 'video_swipe_$videoId';
-    final previous = _activeSwipeSessions.remove(videoId);
-    if (previous != null) abandonFeedLoad(previous);
-    _activeSwipeSessions[videoId] = _startSession(
-      feedType,
-      const {},
-    ).handle;
-  }
-
-  /// Mark a video swipe as complete (video is now playing).
-  ///
-  /// Closes the session started by [startVideoSwipeTracking].
-  void markVideoSwipeComplete(String videoId) {
-    final handle = _activeSwipeSessions.remove(videoId);
-    if (handle != null) markFeedDisplayed(handle, 1);
   }
 
   /// Track terminal outcome of one source in user-profile search.
