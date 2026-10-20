@@ -346,7 +346,7 @@ abstract final class SplitScreenLayoutRenderService {
     final lastFrame = source.end - _lastFrameLead;
     final position = lastFrame > source.start ? lastFrame : source.start;
     final scale = math.min(1, _maxHoldFrameSide / sourceSize.longestSide);
-    final ui.Image image;
+    final Uint8List? frame;
     try {
       final thumbnails = await ProVideoEditor.instance.getThumbnails(
         ThumbnailConfigs(
@@ -359,14 +359,7 @@ abstract final class SplitScreenLayoutRenderService {
           jpegQuality: _holdFrameJpegQuality,
         ),
       );
-      final frame = thumbnails.firstOrNull;
-      if (frame == null || frame.isEmpty) return null;
-      final codec = await ui.instantiateImageCodec(frame);
-      try {
-        image = (await codec.getNextFrame()).image;
-      } finally {
-        codec.dispose();
-      }
+      frame = thumbnails.firstOrNull;
     } catch (e) {
       Log.warning(
         '⚠️ Could not read the last frame of layout clip ${cell.clip.id}: $e',
@@ -375,6 +368,11 @@ abstract final class SplitScreenLayoutRenderService {
       );
       return null;
     }
+    if (frame == null || frame.isEmpty) return null;
+
+    final codec = await ui.instantiateImageCodec(frame);
+    final image = (await codec.getNextFrame()).image;
+    codec.dispose();
     try {
       final width = cellRect.width.round();
       final height = cellRect.height.round();
