@@ -89,8 +89,8 @@ final RegExp _relayNoticeCredential = RegExp(
 );
 
 /// Makes relay-controlled text, such as a NOTICE body, safe and bounded for
-/// support logs. An AUTH `OK` rejection is reduced to its category instead;
-/// see [relayRefusalCategoryForDiagnostics].
+/// support logs. A refused `OK`, AUTH included, is reduced to its category
+/// instead; see [relayRefusalCategoryForDiagnostics].
 ///
 /// Public Nostr identifiers are deliberately retained in full. When the
 /// length boundary lands inside the final token, that whole token is omitted
@@ -125,10 +125,10 @@ String relayNoticeForDiagnostics(String message) {
 /// `CLOSED` examples.
 ///
 /// One vocabulary for every path that reduces a relay refusal to a category:
-/// `CLOSED` settlement, `QueryResult.closedRelayReasons`, and the NIP-42 `OK`
-/// rejection diagnostic. A second copy drifts silently, and a prefix missing
-/// from one of them reads as `other` — which callers treat as an unclassified
-/// refusal.
+/// `CLOSED` settlement, `QueryResult.closedRelayReasons`, the NIP-42 `OK`
+/// rejection diagnostic, and the `OK` settlement diagnostic for a refused
+/// publish. A second copy drifts silently, and a prefix missing from one of
+/// them reads as `other` — which callers treat as an unclassified refusal.
 const Set<String> relayRefusalPrefixes = {
   'auth-required',
   'blocked',

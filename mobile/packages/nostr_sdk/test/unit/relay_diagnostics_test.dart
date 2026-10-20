@@ -309,8 +309,14 @@ void main() {
         diagnostics.map((entry) => entry.message),
         everyElement(isNot(contains('auth-secret'))),
       );
-      expect(authDiagnostic.message, isNot(contains('203.0.113.9')));
-      expect(authDiagnostic.message, isNot(contains('2001:db8::4')));
+      expect(
+        diagnostics.map((entry) => entry.message),
+        everyElement(isNot(contains('203.0.113.9'))),
+      );
+      expect(
+        diagnostics.map((entry) => entry.message),
+        everyElement(isNot(contains('2001:db8::4'))),
+      );
     });
 
     test('categorizes a CLOSED reason by its NIP-01 prefix', () async {
@@ -340,6 +346,50 @@ void main() {
       expect(settlements.first, isNot(contains('auth-required')));
       expect(settlements.first, isNot(contains('rate-limited')));
       expect(settlements.last, contains('reason=unsupported'));
+    });
+
+    test('categorizes a refused publish by its NIP-01 prefix', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final eventId = 'b' * 64;
+
+      await relay.deliver([
+        'OK',
+        eventId,
+        false,
+        'invalid: event too large: 76965 from 203.0.113.9',
+      ]);
+
+      final settlement = diagnostics.singleWhere(
+        (entry) =>
+            entry.site == RelayDiagnosticSite.requestSettlement &&
+            entry.message.contains(eventId),
+      );
+      expect(settlement.level, RelayDiagnosticLevel.warning);
+      expect(settlement.message, contains('reason=invalid'));
+      expect(settlement.message, isNot(contains('event too large')));
+      expect(settlement.message, isNot(contains('203.0.113.9')));
+    });
+
+    test('does not log an accepted OK as a refusal', () async {
+      final relay = _DiagnosticRelay('wss://relay.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final eventId = 'c' * 64;
+
+      await relay.deliver([
+        'OK',
+        eventId,
+        true,
+        'duplicate: already have this event',
+      ]);
+
+      final settlement = diagnostics.singleWhere(
+        (entry) =>
+            entry.site == RelayDiagnosticSite.requestSettlement &&
+            entry.message.contains(eventId),
+      );
+      expect(settlement.level, RelayDiagnosticLevel.info);
+      expect(settlement.message, isNot(contains('reason=')));
     });
 
     test('a throwing diagnostics sink cannot break relay behavior', () async {
@@ -548,7 +598,7 @@ void main() {
         expect(
           relayRefusalCategoryForDiagnostics('$prefix: relay said so'),
           prefix,
-          reason: 'one refusal vocabulary serves CLOSED and the AUTH OK path',
+          reason: 'one refusal vocabulary serves CLOSED and every refused OK',
         );
       }
     });

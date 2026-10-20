@@ -304,8 +304,8 @@ class RelayPool {
 
   /// Reduces a `CLOSED` reason to its NIP-01 prefix, or `other`.
   ///
-  /// Shares `relayRefusalPrefixes` with the NIP-42 `OK` rejection diagnostic
-  /// so the two cannot disagree about what counts as a known refusal.
+  /// Shares `relayRefusalPrefixes` with the `OK` refusal diagnostics, AUTH
+  /// included, so they cannot disagree about what counts as a known refusal.
   /// Matches the prefix rather than searching the whole reason, like
   /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] already do.
   String _closedReasonCategory(String reason) =>
@@ -2222,11 +2222,15 @@ class RelayPool {
         defaultValue: '',
       );
       if (message == null) return;
+      final settlementReason = success
+          ? ''
+          : ' (reason=${relayRefusalCategoryForDiagnostics(message)})';
       _diagnose(
         RelayDiagnosticSite.requestSettlement,
         success ? RelayDiagnosticLevel.info : RelayDiagnosticLevel.warning,
         relay.url,
-        'Relay settled event $eventId with OK accepted=$success',
+        'Relay settled event $eventId with OK '
+        'accepted=$success$settlementReason',
       );
 
       // The relay has spoken for this event. Unless it refused for a reason
