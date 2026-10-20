@@ -183,8 +183,8 @@ class DmVideoStore {
 
   /// Frame reads run one at a time too: a crash then marks only the video
   /// being read, and a long thread does not start a native decoder per card.
-  /// Native thumbnail extraction has no confirmed cancellation: a read that
-  /// never replies holds this turn until the store is recreated. Cards keep
+  /// The getThumbnails call used here has no confirmed cancellation: a read
+  /// that never replies holds this turn until the store is recreated. Cards keep
   /// their fallback rather than starting overlapping recovery decoders.
   final _OneAtATime _frameReads = _OneAtATime();
   final Map<String, Future<File?>> _previewsInFlight = {};
