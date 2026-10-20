@@ -182,6 +182,7 @@ class PreviewComposition {
       clipA: clipA,
       clipB: clipB,
       transition: transition,
+      speedRenders: _speedRenderService,
     );
     if (_disposed) return;
     if (identical(_seamRendersInFlight[key], attempt)) {

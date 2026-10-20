@@ -53,6 +53,9 @@ class _GatedSeamService extends TransitionSeamRenderService {
   final cancelled = <String, Completer<TransitionSeam?>>{};
   int renderCalls = 0;
 
+  /// The speed renderer each render was handed, in call order.
+  final speedRenderers = <ClipSpeedRenderService?>[];
+
   String _id(DivineVideoClip a, DivineVideoClip b) =>
       seamKey(a, b, a.transition!);
 
@@ -68,8 +71,10 @@ class _GatedSeamService extends TransitionSeamRenderService {
     required DivineVideoClip clipA,
     required DivineVideoClip clipB,
     required editor.ClipTransition transition,
+    ClipSpeedRenderService? speedRenders,
   }) {
     renderCalls++;
+    speedRenderers.add(speedRenders);
     final id = _id(clipA, clipB);
     return pending.putIfAbsent(id, Completer.new).future;
   }
@@ -181,6 +186,23 @@ void main() {
         // Both seams are cached now: nothing left to render.
         composition.ensureSeamsRendered(clips);
         expect(seams.renderCalls, 2);
+      });
+
+      test('hands its speed renderer to every seam render', () {
+        // A ramped side of a seam is cut from that renderer's body, the same
+        // file the timeline plays.
+        final a = _clip('a', transition: _dissolve);
+        final b = _clip('b');
+        clips = [a, b];
+
+        composition.ensureSeamsRendered(clips);
+
+        expect(seams.speedRenderers, isNotEmpty);
+        expect(
+          seams.speedRenderers,
+          everyElement(same(composition.speedRenders)),
+        );
+        expect(composition.speedRenders, same(speeds));
       });
 
       test(

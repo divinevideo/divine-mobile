@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
@@ -720,6 +721,77 @@ void main() {
       expect(second, isNotNull);
       expect(second!.path, isNot(first!.path));
       expect(File(first.path).existsSync(), isTrue);
+    });
+
+    group('speed ramps', () {
+      // Four seconds under the Hero curve. Cropping its ramp to the last
+      // second refits the curve, which played that second in 1.115 s.
+      DivineVideoClip hero(String id, {editor.ClipTransition? transition}) =>
+          clip(id, transition: transition).copyWith(
+            duration: const Duration(seconds: 4),
+            speedRamp: ClipSpeedRampPreset.hero.ramp,
+          );
+
+      ClipSpeedRenderService bodies(List<DivineVideoClip> clips) {
+        final speeds = ClipSpeedRenderService();
+        for (final c in clips) {
+          speeds.cacheForTest(
+            c,
+            RenderedSpeedClip(
+              path: '${tempRoot.path}/${c.id}_body.mp4',
+              duration: c.playbackDuration,
+            ),
+          );
+        }
+        return speeds;
+      }
+
+      test('cuts the tail of a ramped clip from its rendered body', () async {
+        final clipA = hero('a', transition: dissolve);
+        final clipB = clip('b');
+        final consumed = service()
+            .computeSeamSpans(clipA, clipB, dissolve)
+            .consumed;
+
+        await service().render(
+          clipA: clipA,
+          clipB: clipB,
+          transition: dissolve,
+          speedRenders: bodies([clipA]),
+        );
+
+        final tail = renderedClips.first;
+        expect(tail.video?.file?.path, equals('${tempRoot.path}/a_body.mp4'));
+        expect(tail.speedRamp, isNull);
+        expect(tail.playbackSpeed, isNull);
+        expect(tail.trimEnd, equals(Duration.zero));
+        // The body's last `consumed` of playback is the stretch the export
+        // plays there, at the ramp's own speeds.
+        expect(tail.playbackDuration, equals(consumed));
+        expect(tail.transition, equals(dissolve));
+      });
+
+      test('cuts the head of a ramped clip from its rendered body', () async {
+        final clipA = clip('a', transition: dissolve);
+        final clipB = hero('b');
+        final consumed = service()
+            .computeSeamSpans(clipA, clipB, dissolve)
+            .consumed;
+
+        await service().render(
+          clipA: clipA,
+          clipB: clipB,
+          transition: dissolve,
+          speedRenders: bodies([clipB]),
+        );
+
+        final head = renderedClips.last;
+        expect(head.video?.file?.path, equals('${tempRoot.path}/b_body.mp4'));
+        expect(head.speedRamp, isNull);
+        expect(head.trimStart, equals(Duration.zero));
+        expect(head.playbackDuration, equals(consumed));
+        expect(head.transition, isNull);
+      });
     });
 
     test("deletes the render's cache output once the seam is "
