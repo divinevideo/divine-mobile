@@ -78,6 +78,10 @@ class DmVideoStore {
   /// How long a download without a tap on play may run.
   static const Duration autoDownloadTimeLimit = Duration(minutes: 1);
 
+  /// How long a card waits before fetching again by itself after a failure
+  /// that may pass, such as a dropped connection.
+  static const Duration autoDownloadRetryAfter = Duration(minutes: 2);
+
   static const String _partSuffix = '.part';
 
   /// How long a file may still be in use after it was written or opened: a
@@ -121,6 +125,10 @@ class DmVideoStore {
   /// Ids of messages whose frame could not be read. Each read is a native
   /// decode that can run to its timeout, so it is tried once a session.
   final Set<String> _unreadableFrames = {};
+
+  /// Downloads nobody tapped for that failed, by message id, with when a card
+  /// may fetch it again by itself, or null when the failure will repeat.
+  final Map<String, DateTime?> _autoDownloadFailures = {};
   int _writes = 0;
   final StreamController<String> _kept = StreamController<String>.broadcast();
 
@@ -184,7 +192,10 @@ class DmVideoStore {
   /// within [autoDownloadMaxBytes] and [autoDownloadTimeLimit]; one declared
   /// bigger is not fetched. Null when there is no video to read or no frame
   /// can be read from it; a frame that cannot be read is not tried again
-  /// until the next session.
+  /// until the next session. A download that failed is not tried again by
+  /// itself this session when the failure will repeat, nor for
+  /// [autoDownloadRetryAfter] when it may pass; a tap on play still fetches
+  /// it.
   ///
   /// Throws what [videoFor] throws when it downloads the video, or a
   /// [DmVideoUnavailableException] when the frame cannot be stored.
@@ -431,8 +442,17 @@ class DmVideoStore {
     if (keptVideo.existsSync()) {
       video = keptVideo;
     } else if (download &&
+        _mayAutoDownload(message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
-      video = await _autoVideoFor(message);
+      try {
+        video = await _autoVideoFor(message);
+      } on Object catch (error) {
+        _autoDownloadFailures[message.id] =
+            error is DmVideoUnavailableException && error.mayPass
+            ? _now().add(autoDownloadRetryAfter)
+            : null;
+        rethrow;
+      }
     } else {
       return null;
     }
@@ -445,6 +465,12 @@ class DmVideoStore {
     await _writeAtomically(preview, frame);
     _knownPreviews[message.id] = preview.path;
     return preview;
+  }
+
+  bool _mayAutoDownload(String messageId) {
+    if (!_autoDownloadFailures.containsKey(messageId)) return true;
+    final retryAt = _autoDownloadFailures[messageId];
+    return retryAt != null && !_now().isBefore(retryAt);
   }
 
   Future<Directory> _ownerDirectory() async {
@@ -468,6 +494,7 @@ class DmVideoStore {
       await _deleteQuietly(part);
       throw DmVideoUnavailableException(
         'could not store the file: ${_causeOf(error)}',
+        mayPass: true,
       );
     } catch (_) {
       await _deleteQuietly(part);

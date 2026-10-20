@@ -269,14 +269,16 @@ void main() {
         await expectLater(
           DmVideoDecryptor(dio: dio).decrypt(message),
           throwsA(
-            isA<DmVideoUnavailableException>().having(
-              (error) => error.toString(),
-              'description',
-              allOf(
-                contains(DioExceptionType.unknown.name),
-                isNot(contains('media.divine.video')),
-              ),
-            ),
+            isA<DmVideoUnavailableException>()
+                .having(
+                  (error) => error.toString(),
+                  'description',
+                  allOf(
+                    contains(DioExceptionType.unknown.name),
+                    isNot(contains('media.divine.video')),
+                  ),
+                )
+                .having((error) => error.mayPass, 'mayPass', isTrue),
           ),
         );
       },
@@ -318,11 +320,9 @@ void main() {
           timeLimit: const Duration(milliseconds: 20),
         ),
         throwsA(
-          isA<DmVideoUnavailableException>().having(
-            (e) => e.message,
-            'message',
-            contains('time'),
-          ),
+          isA<DmVideoUnavailableException>()
+              .having((e) => e.message, 'message', contains('time'))
+              .having((e) => e.mayPass, 'mayPass', isTrue),
         ),
       );
     });
@@ -340,7 +340,13 @@ void main() {
 
       await expectLater(
         DmVideoDecryptor(dio: dio).decrypt(message),
-        throwsA(isA<DmVideoUnavailableException>()),
+        throwsA(
+          isA<DmVideoUnavailableException>().having(
+            (e) => e.mayPass,
+            'mayPass',
+            isFalse,
+          ),
+        ),
       );
     });
 

@@ -17,10 +17,14 @@ import 'package:openvine/services/dm_video_encryption.dart';
 /// sender's `x` tag, or the message carries no video metadata.
 class DmVideoUnavailableException implements Exception {
   /// Creates a [DmVideoUnavailableException] with a diagnostic [message].
-  const DmVideoUnavailableException(this.message);
+  const DmVideoUnavailableException(this.message, {this.mayPass = false});
 
   /// Diagnostic text. Never contains the decryption key or nonce.
   final String message;
+
+  /// Whether trying again later may work: the network or the storage
+  /// failed, not the video itself.
+  final bool mayPass;
 
   @override
   String toString() => 'DmVideoUnavailableException: $message';
@@ -188,6 +192,7 @@ class DmVideoDecryptor {
       if (outlasted && CancelToken.isCancel(error)) {
         throw const DmVideoUnavailableException(
           'the download outlasted its time limit',
+          mayPass: true,
         );
       }
       // Dio's text carries the nested error, which can quote the URL or its
@@ -196,6 +201,7 @@ class DmVideoDecryptor {
       throw DmVideoUnavailableException(
         'the download failed: ${error.type.name}'
         '${status == null ? '' : ', HTTP $status'}',
+        mayPass: true,
       );
     } finally {
       deadline?.cancel();

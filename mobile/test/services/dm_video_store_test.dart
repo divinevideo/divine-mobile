@@ -571,6 +571,72 @@ void main() {
         expect(fetchedIds.where((id) => id == queued.id), hasLength(1));
       });
 
+      test('are not tried again this session after failing for good', () async {
+        fetch = (_) async => throw const DmVideoUnavailableException(
+          'ciphertext hash does not match the x tag',
+        );
+        final store = createStore();
+        final message = _videoMessage();
+
+        await expectLater(
+          store.previewFor(message, download: true),
+          throwsA(isA<DmVideoUnavailableException>()),
+        );
+        now = now.add(const Duration(days: 1));
+
+        expect(await store.previewFor(message, download: true), isNull);
+        expect(fetches, equals(1));
+      });
+
+      test(
+        'are tried again after a failure that may pass, once a while has '
+        'passed',
+        () async {
+          fetch = (_) async => fetches == 1
+              ? throw const DmVideoUnavailableException(
+                  'the download failed: connectionError',
+                  mayPass: true,
+                )
+              : _plaintext;
+          final store = createStore();
+          final message = _videoMessage();
+          await expectLater(
+            store.previewFor(message, download: true),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+
+          expect(await store.previewFor(message, download: true), isNull);
+          expect(fetches, equals(1));
+
+          now = now.add(DmVideoStore.autoDownloadRetryAfter);
+          expect(await store.previewFor(message, download: true), isNotNull);
+          expect(fetches, equals(2));
+        },
+      );
+
+      test(
+        'leave a tap free to fetch a video whose download failed',
+        () async {
+          fetch = (_) async => fetches == 1
+              ? throw const DmVideoUnavailableException(
+                  'ciphertext exceeds the size limit',
+                )
+              : _plaintext;
+          final store = createStore();
+          final message = _videoMessage();
+          await expectLater(
+            store.previewFor(message, download: true),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+
+          expect(
+            (await store.videoFor(message)).readAsBytesSync(),
+            equals(_plaintext),
+          );
+          expect(await store.previewFor(message, download: true), isNotNull);
+        },
+      );
+
       test('are limited in size and time, unlike a tap on play', () async {
         final store = createStore();
 
