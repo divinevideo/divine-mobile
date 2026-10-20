@@ -14183,6 +14183,12 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => false);
+          // A stored cursor means any scheduled publish would send a marker.
+          when(
+            () => mockConversationsDao.getAllConversations(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [readConversation(cursor: 1700000200)]);
           final repository = createRepository(
             readMarkerDebounceDelay: Duration.zero,
           );
