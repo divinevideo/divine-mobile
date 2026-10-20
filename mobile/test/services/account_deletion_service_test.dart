@@ -12,6 +12,7 @@ import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {
   /// Drives the `timedOut` field of the record synthesized below, so tests
@@ -513,6 +514,55 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         ).called(1);
+      },
+    );
+
+    test(
+      'logs only the refusal category for an already-vanished relay answer',
+      () async {
+        await LogCaptureService().clearAllLogs();
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer(
+          (_) async => createTestEvent(
+            pubkey: testPublicKey,
+            kind: 62,
+            tags: [
+              ['relay', 'ALL_RELAYS'],
+            ],
+            content: 'User requested account deletion via Divine app',
+          ),
+        );
+        when(
+          () => mockNostrService.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => const PublishOutcome(
+            eventId: 'already-vanished',
+            acceptedBy: <String>[],
+            rejectedBy: {
+              'wss://relay.example.com':
+                  'blocked: pubkey already vanished, seen from 203.0.113.9',
+            },
+            noResponseFrom: <String>[],
+          ),
+        );
+
+        final result = await service.deleteAccount();
+
+        expect(result.success, isTrue);
+        final messages = LogCaptureService().getRecentLogs().map(
+          (entry) => entry.message,
+        );
+        expect(messages, anyElement(contains('blocked')));
+        expect(messages, everyElement(isNot(contains('203.0.113.9'))));
+        expect(messages, everyElement(isNot(contains('already vanished'))));
       },
     );
 

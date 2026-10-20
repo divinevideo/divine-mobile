@@ -334,7 +334,7 @@ class AccountDeletionService {
             ? 'NIP-62 deletion request confirmed by relay(s): '
                   '${outcome.acceptedBy}'
             : 'NIP-62 deletion already accepted by relay(s): '
-                  '${outcome.rejectedBy}',
+                  '${outcome.rejectionCategories}',
         name: 'AccountDeletionService',
         category: LogCategory.system,
       );

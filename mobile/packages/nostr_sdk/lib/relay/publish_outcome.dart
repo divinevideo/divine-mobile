@@ -3,6 +3,8 @@
 
 import 'dart:async';
 
+import 'relay_diagnostics.dart';
+
 /// Outcome of a publish operation that awaits relay OK confirmations.
 ///
 /// Per NIP-01, relays respond to `EVENT` messages with `OK` frames indicating
@@ -104,7 +106,15 @@ class PublishOutcome {
   /// this as a hard failure.
   bool get failed => acceptedBy.isEmpty;
 
+  /// The log-safe form of [rejectedBy]: each relay's refusal category only.
+  Map<String, String> get rejectionCategories => {
+    for (final MapEntry(key: relay, value: reason) in rejectedBy.entries)
+      relay: relayRefusalCategoryForDiagnostics(reason),
+  };
+
   /// A short, human-readable summary for logs and error messages.
+  ///
+  /// A refusal is named by its category alone; see [rejectionCategories].
   String get summary {
     if (acceptedByAll) {
       return 'accepted by all ${acceptedBy.length} relay'
@@ -115,7 +125,8 @@ class PublishOutcome {
     }
     if (rejectedBy.isNotEmpty) {
       final first = rejectedBy.entries.first;
-      return 'rejected by ${first.key}: ${first.value}';
+      return 'rejected by ${first.key}: '
+          '${relayRefusalCategoryForDiagnostics(first.value)}';
     }
     if (noResponseFrom.isNotEmpty) {
       return 'no relay responded (${noResponseFrom.length} timed out)';
