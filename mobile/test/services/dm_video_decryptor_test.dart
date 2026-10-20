@@ -531,6 +531,54 @@ void main() {
         );
       });
 
+      test("counts every hop's body against one size limit", () async {
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => Response<List<int>>(
+            requestOptions: RequestOptions(path: _videoUrl),
+            statusCode: 302,
+            headers: Headers.fromMap({
+              'location': [cdnUrl],
+            }),
+            data: List<int>.filled(10, 0),
+          ),
+        );
+        when(
+          () => dio.get<List<int>>(
+            cdnUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => Response<List<int>>(
+            requestOptions: RequestOptions(path: cdnUrl),
+            statusCode: 200,
+            data: List<int>.filled(10, 1),
+          ),
+        );
+
+        await expectLater(
+          DmVideoDecryptor(
+            dio: dio,
+            encryption: _IsolateNamingEncryption(),
+          ).decrypt(_videoMessage(fileHash: ''), maxBytes: 15),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.message,
+              'message',
+              contains('size limit'),
+            ),
+          ),
+        );
+      });
+
       test('gives up on a redirect loop', () async {
         stubRedirect(_videoUrl, _videoUrl);
 
@@ -605,10 +653,78 @@ void main() {
       await expectLater(
         DmVideoDecryptor(dio: dio).decrypt(message),
         throwsA(
+          isA<DmVideoUnavailableException>()
+              .having(
+                (error) => error.toString(),
+                'description',
+                allOf(contains('404'), isNot(contains('media.divine.video'))),
+              )
+              .having((error) => error.mayPass, 'mayPass', isFalse),
+        ),
+      );
+    });
+
+    for (final status in [408, 429]) {
+      test('reports an HTTP $status as a failure that may pass', () async {
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: _videoUrl),
+            type: DioExceptionType.badResponse,
+            response: Response<void>(
+              requestOptions: RequestOptions(path: _videoUrl),
+              statusCode: status,
+            ),
+          ),
+        );
+
+        await expectLater(
+          DmVideoDecryptor(
+            dio: dio,
+          ).decrypt(_videoMessage(fileHash: 'ab' * 32)),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.mayPass,
+              'mayPass',
+              isTrue,
+            ),
+          ),
+        );
+      });
+    }
+
+    test('reports a server error as one that may pass', () async {
+      when(
+        () => dio.get<List<int>>(
+          _videoUrl,
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+          onReceiveProgress: any(named: 'onReceiveProgress'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: _videoUrl),
+          type: DioExceptionType.badResponse,
+          response: Response<void>(
+            requestOptions: RequestOptions(path: _videoUrl),
+            statusCode: 503,
+          ),
+        ),
+      );
+
+      await expectLater(
+        DmVideoDecryptor(dio: dio).decrypt(_videoMessage(fileHash: 'ab' * 32)),
+        throwsA(
           isA<DmVideoUnavailableException>().having(
-            (error) => error.toString(),
-            'description',
-            allOf(contains('404'), isNot(contains('media.divine.video'))),
+            (error) => error.mayPass,
+            'mayPass',
+            isTrue,
           ),
         ),
       );

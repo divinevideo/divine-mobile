@@ -175,6 +175,8 @@ class DmVideoDecryptor {
             cancelToken.cancel('encrypted video no longer wanted');
           });
     late final Response<List<int>> response;
+    // Redirect bodies count too, so a chain of redirects cannot multiply it.
+    var consumed = 0;
     try {
       var target = url;
       for (var redirects = 0; ; redirects++) {
@@ -189,7 +191,7 @@ class DmVideoDecryptor {
           ),
           cancelToken: cancelToken,
           onReceiveProgress: (received, total) {
-            if (received > maxBytes || total > maxBytes) {
+            if (consumed + received > maxBytes || consumed + total > maxBytes) {
               oversized = true;
               cancelToken.cancel('encrypted video exceeds size limit');
             } else if (stillWanted != null && !stillWanted()) {
@@ -202,6 +204,7 @@ class DmVideoDecryptor {
           response = hop;
           break;
         }
+        consumed += hop.data?.length ?? 0;
         if (redirects == maxRedirects) {
           throw const DmVideoUnavailableException(
             'the video redirected too many times',
@@ -236,10 +239,18 @@ class DmVideoDecryptor {
       // Dio's text carries the nested error, which can quote the URL or its
       // host: keep the kind of failure and the status only.
       final status = error.response?.statusCode;
+      // A blob that is missing or refused stays so; a timeout, a busy server
+      // or a dropped connection may pass.
+      final lasting =
+          status != null &&
+          status >= 400 &&
+          status < 500 &&
+          status != 408 &&
+          status != 429;
       throw DmVideoUnavailableException(
         'the download failed: ${error.type.name}'
         '${status == null ? '' : ', HTTP $status'}',
-        mayPass: true,
+        mayPass: !lasting,
       );
     } finally {
       deadline?.cancel();
@@ -250,7 +261,7 @@ class DmVideoDecryptor {
     if (data == null || data.isEmpty) {
       throw const DmVideoUnavailableException('empty ciphertext body');
     }
-    if (data.length > maxBytes) {
+    if (consumed + data.length > maxBytes) {
       throw const DmVideoUnavailableException(
         'ciphertext exceeds the size limit',
       );
