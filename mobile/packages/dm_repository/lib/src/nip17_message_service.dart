@@ -879,8 +879,8 @@ class NIP17MessageService {
         // Not confirmed. The caller's chip + retry follow from the sub-case:
         //  * rejected → mark failed (terminal-ish; failed rows skip the sweep's
         //    in-flight min-age guard so they re-drive immediately).
-        //  * reachedNoRelay (offline) → mark failed so the sweep re-drives it
-        //    the instant connectivity returns.
+        //  * reachedNoRelay (no relay took it) → mark failed so the sweep
+        //    re-drives it as soon as a relay connects.
         //  * softUnconfirmed → keep a dim, sweep-retryable 'pending' chip
         //    (a lost OK is not proof of loss).
         final String errorMsg;
