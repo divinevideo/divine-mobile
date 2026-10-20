@@ -29,11 +29,9 @@ class StorageManagementPage extends ConsumerWidget {
 
   /// Route path.
   ///
-  /// A flat, first-class path (not nested under `/settings`) so
-  /// `routeNormalizationProvider` can round-trip it through
-  /// `parseRoute`/`buildRoute`. A `/settings/…` path collapses to
-  /// `RouteType.settings` and gets normalized straight back to the
-  /// Settings screen.
+  /// A flat, first-class path (not nested under `/settings`) so `parseRoute`
+  /// reads it as its own `RouteType`: a `/settings/…` path it does not model
+  /// reads as `RouteType.settings`.
   static const String path = RoutePaths.storageManagement;
 
   @override

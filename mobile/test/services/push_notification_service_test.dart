@@ -577,6 +577,55 @@ void main() {
         },
       );
 
+      test(
+        'logs only the refusal category when registration is rejected',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          when(
+            () => mockNostrSigner.nip44Encrypt(any(), any()),
+          ).thenAnswer((_) async => encryptedPayload);
+          final fakeEvent = _FakeEvent();
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async => fakeEvent);
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              fakeEvent,
+              targetRelays: [testEnvironment.relayUrl],
+              timeout: pushPublishTimeout,
+            ),
+          ).thenAnswer(
+            (_) async => PublishOutcome(
+              eventId: fakeEvent.id,
+              acceptedBy: const [],
+              rejectedBy: {
+                testEnvironment.relayUrl:
+                    'rate-limited: too many registrations from 203.0.113.9',
+              },
+              noResponseFrom: const [],
+            ),
+          );
+
+          final service = buildService();
+          await service.register(testPubkey);
+          service.dispose();
+
+          final messages = LogCaptureService().getRecentLogs().map(
+            (entry) => entry.message,
+          );
+          expect(messages, anyElement(contains('rate-limited')));
+          expect(messages, everyElement(isNot(contains('203.0.113.9'))));
+          expect(
+            messages,
+            everyElement(isNot(contains('too many registrations'))),
+          );
+        },
+      );
+
       test('retries when no relay received the registration', () async {
         final fakeEvent = _FakeEvent();
         when(

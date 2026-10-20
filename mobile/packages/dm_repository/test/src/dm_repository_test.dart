@@ -7650,6 +7650,57 @@ void main() {
         noResponseFrom: const [],
       );
 
+      /// Answers every publish with [relay] refusing in words that carry the
+      /// client's address, the way a relay can echo it back.
+      void stubPublishRefusedBy(
+        String relay, {
+        List<String> acceptedBy = const [],
+      }) {
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer(
+          (_) async => PublishOutcome(
+            eventId: 'eid',
+            acceptedBy: acceptedBy,
+            rejectedBy: {relay: 'blocked: kind not allowed from 203.0.113.9'},
+            noResponseFrom: const [],
+          ),
+        );
+      }
+
+      /// The one warning naming [relay] carries the refusal category and none
+      /// of the relay's own text.
+      void expectCategoryOnlyWarningFor(String relay) {
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) => e.level == LogLevel.warning && e.message.contains(relay),
+            )
+            .map((e) => e.message)
+            .toList();
+        expect(warnings, hasLength(1));
+        expect(warnings.single, contains('blocked'));
+        expect(warnings.single, isNot(contains('203.0.113.9')));
+        expect(warnings.single, isNot(contains('kind not allowed')));
+      }
+
+      test(
+        'logs only the refusal category when the advertised relay refuses',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          stubPublishRefusedBy('wss://relay.divine.video');
+
+          await createRepository(
+            syncState: _FakeDmSyncState(),
+          ).ensureDmRelayListPublished();
+
+          expectCategoryOnlyWarningFor('wss://relay.divine.video');
+        },
+      );
+
       test(
         'publishes a kind-10050 advertising the injected stable relay when '
         'absent, and leaves recording it to a later read (#8433)',
@@ -7780,6 +7831,21 @@ void main() {
               ),
             ).captured;
             expect(captured.single, [divine, discovery]);
+          },
+        );
+
+        test(
+          'logs only the refusal category when a discovery relay refuses',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            stubPublishRefusedBy(discovery, acceptedBy: const [divine]);
+
+            await createRepository(
+              syncState: _FakeDmSyncState(),
+              dmInboxDiscoveryRelays: const [discovery],
+            ).ensureDmRelayListPublished();
+
+            expectCategoryOnlyWarningFor(discovery);
           },
         );
       });
@@ -8348,6 +8414,26 @@ void main() {
             expect(sent?.id, list.id);
             expect(sentTo, ['wss://relay.divine.video']);
             expect(syncState.dmRelayListPublishedPubkeys, isEmpty);
+          },
+        );
+
+        test(
+          'logs only the refusal category when the re-send is refused',
+          () async {
+            await LogCaptureService().clearAllLogs();
+            stubOwnInboxByLeg(
+              pool: answeredList([
+                existingInbox(const ['wss://relay.divine.video']),
+              ]),
+              advertised: answeredList(const <Event>[]),
+            );
+            stubPublishRefusedBy('wss://relay.divine.video');
+
+            await createRepository(
+              syncState: _FakeDmSyncState(),
+            ).ensureDmRelayListPublished();
+
+            expectCategoryOnlyWarningFor('wss://relay.divine.video');
           },
         );
 
@@ -26696,6 +26782,39 @@ void main() {
           );
         });
 
+        test(
+          'does not fire when a send reached no relay, and says so (#8516)',
+          () async {
+            stubSendRumor(
+              (_, _) async => const NIP17SendResult.failure(
+                'Message not sent: no relay reached',
+                reachedNoRelay: true,
+              ),
+            );
+            final repository = createRepository(
+              outgoingDmsDao: mockOutgoingDmsDao,
+            );
+            late NIP17SendResult result;
+
+            final events = await collectedEvents(repository, () async {
+              result = await repository.sendMessage(
+                recipientPubkey: _validPubkeyB,
+                content: 'no relay',
+              );
+            });
+
+            expect(
+              events,
+              isEmpty,
+              reason:
+                  'a relay connecting wakes the sweep for it; a nudge would '
+                  'retry it every 30 seconds while the relays are out of '
+                  'reach',
+            );
+            expect(result.reachedNoRelay, isTrue);
+          },
+        );
+
         test('fires when a send hard-fails', () async {
           stubSendRumor(
             (_, _) async => const NIP17SendResult.failure('relay refused'),
@@ -30249,6 +30368,51 @@ void main() {
               onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
+        },
+      );
+
+      test(
+        'does not nudge the sweep when the replay reached no relay (#8516)',
+        () async {
+          when(
+            () => mockOutgoingDmsDao.getById(_rumorEventId),
+          ).thenAnswer((_) async => queuedRow());
+          stubSendRumor(
+            (_, _) async => const NIP17SendResult.failure(
+              'Message not sent: no relay reached',
+              reachedNoRelay: true,
+            ),
+          );
+          final repository = createRepository(
+            outgoingDmsDao: mockOutgoingDmsDao,
+          );
+          final nudges = <void>[];
+          final subscription = repository.retryableOutgoingWork.listen(
+            nudges.add,
+          );
+          addTearDown(subscription.cancel);
+
+          final result = await repository.recoverFullSend(
+            rumorId: _rumorEventId,
+          );
+          await pumpEventQueue();
+
+          expect(result.reachedNoRelay, isTrue);
+          verify(
+            () => mockOutgoingDmsDao.markRecipientWrapStatus(
+              id: _rumorEventId,
+              status: OutgoingWrapStatus.failed,
+              eventId: any(named: 'eventId'),
+              lastError: any(named: 'lastError'),
+            ),
+          ).called(1);
+          expect(
+            nudges,
+            isEmpty,
+            reason:
+                'the sweep made this attempt itself, and a nudge would make '
+                'it again every 30 seconds while the relays are out of reach',
+          );
         },
       );
 

@@ -270,7 +270,6 @@ class _ConversationBlocScope extends ConsumerWidget {
       ],
       child: _FollowRefiledMessages(
         child: ConversationView(
-          conversationId: conversationId,
           participantPubkeys: participantPubkeys,
           subject: subject,
         ),

@@ -3967,6 +3967,7 @@
     "dmReactionChipOtherA11yLabel": "{name} が {emoji} でリアクションしました",
     "dmReactionChipPendingA11yLabel": "リアクションを送信中: {emoji}",
     "dmReactionChipFailedA11yLabel": "リアクションに失敗しました。ダブルタップで再試行",
+    "dmReactionChipUnconfirmedA11yLabel": "{emoji} のリアクションを送信できませんでした。ダブルタップで再試行",
     "dmReactionChipRetryAnnouncement": "リアクションを再試行中",
     "dmFormatBold": "太字",
     "dmFormatItalic": "斜体",

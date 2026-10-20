@@ -1,5 +1,5 @@
-// ABOUTME: Tests that the account status route is a known route shape and
-// ABOUTME: round-trips through parseKnownRoute/buildRoute (s-t-s#200).
+// ABOUTME: Tests that the account status route parses as its own route and
+// ABOUTME: round-trips through parseMatchedRoute/buildRoute (s-t-s#200).
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
@@ -8,10 +8,10 @@ import 'package:openvine/router/route_paths.dart';
 void main() {
   group('account status route', () {
     test('parses to the account status context', () {
-      // The `settings` segment validator accepts only an allow-listed set of
-      // subpaths, so a new /settings/* path that is not added there is
-      // rejected as an unknown route shape.
-      final context = parseKnownRoute(RoutePaths.accountStatus);
+      final context = parseMatchedRoute(
+        RoutePaths.accountStatus,
+        matchedTemplate: RoutePaths.accountStatus,
+      );
 
       expect(context, isNotNull);
       expect(context!.type, RouteType.accountStatus);
@@ -25,7 +25,10 @@ void main() {
     });
 
     test('does not shadow the settings root', () {
-      final context = parseKnownRoute(RoutePaths.settings);
+      final context = parseMatchedRoute(
+        RoutePaths.settings,
+        matchedTemplate: RoutePaths.settings,
+      );
 
       expect(context, isNotNull);
       expect(context!.type, isNot(RouteType.accountStatus));

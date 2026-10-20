@@ -1,23 +1,22 @@
-// ABOUTME: Tests for route normalization skip logic
-// ABOUTME: Prevents universal links from being rewritten by internal canonicalization
+// ABOUTME: Tests for route normalization: what is skipped, and what is rewritten
+// ABOUTME: Walks the registered route tree so no route is redirected off itself
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
-import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
-import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
-import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
-import 'package:openvine/screens/minor_account_review_screen.dart';
-import 'package:openvine/screens/minor_account_review_under13_screen.dart';
-import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   const videoId =
       '672c4eb9fc29adb6b505713bc6da94af2244c1de55dc6f034e2bcdaba133ebbe';
   const pubkey =
@@ -113,102 +112,231 @@ void main() {
         }
       },
     );
+  });
 
-    test('skips parse-but-build-shorter route families', () {
-      final routes = {
-        WelcomeScreen.path:
-            'welcome subtree is GoRouter-owned and normalization-sensitive',
-        WelcomeScreen.loginOptionsPath:
-            'welcome subtree is GoRouter-owned and normalization-sensitive',
-        '/apps/primal/sandbox':
-            'app sandbox is not represented in RouteContext',
-        '/video/$videoId/likers':
-            'video engagement list suffix is not represented in RouteContext',
-        '/video/$videoId/reposters':
-            'video engagement list suffix is not represented in RouteContext',
-        MinorAccountReviewScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewScreen.welcomePath:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewLoadingScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewParentConsentScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewParentContactScreen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewUnder13Screen.path:
-            'minor account review flow is GoRouter-owned',
-        MinorAccountReviewUnder13SupportScreen.path:
-            'minor account review flow is GoRouter-owned',
+  group('normalizedPathFor over the registered route tree', () {
+    late List<RouteBase> registered;
+    late List<String> templates;
+    late RouteConfiguration routes;
+
+    setUp(() {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      registered = container.read(_appRoutesProvider);
+      templates = _templatesOf(registered);
+      routes = _configurationOf(registered);
+    });
+
+    test('leaves every registered route where it is', () {
+      expect(
+        templates,
+        containsAll([
+          '/video/:eventId/likers',
+          '/video/:eventId/reposters',
+          '/apps/:appId/sandbox',
+          '/account-review/parent-consent',
+          '/profile/:npub/:index',
+          '/welcome/login-options/reset-password',
+        ]),
+        reason: 'the walk must reach shell branches and nested children',
+      );
+      for (final template in templates) {
+        final location = Uri.parse(_sampleLocation(template));
+        expect(
+          normalizedPathFor(routes, location),
+          isNull,
+          reason: 'registered route $template was rewritten from $location',
+        );
+      }
+    });
+
+    test('canonicalizes a negative index on its own route', () {
+      final expected = {
+        '/home/-3': '/home/0',
+        '/notifications/-2': '/notifications/0',
+        '/profile/$pubkey/-1': '/profile/$pubkey/0',
       };
 
-      for (final entry in routes.entries) {
+      for (final entry in expected.entries) {
         expect(
-          shouldSkipRouteNormalization(entry.key),
-          isTrue,
+          normalizedPathFor(routes, Uri.parse(entry.key)),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    });
+
+    test('rescues a retired alias GoRouter no longer registers', () {
+      final expected = {
+        '/video-feed': '/pooled-video-feed',
+        '/clips-no-sound': '/clips-only',
+      };
+
+      for (final entry in expected.entries) {
+        expect(
+          normalizedPathFor(routes, Uri.parse(entry.key)),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+    });
+
+    test('leaves unknown, incomplete and canonical routes alone', () {
+      final cases = {
+        '/search-results/nostr': 'search results are not RouteContext modeled',
+        '/verify-email': 'auth deep links are GoRouter-owned',
+        '/wat/xyz': 'unknown routes must not be rewritten to home',
+        '/following': 'an incomplete dynamic route must not normalize',
+        ProfileSetupScreen.setupPath: 'setup profile is not edit profile',
+        '/hashtag/nostr%20video': 'an encoded parameter is already canonical',
+      };
+
+      for (final entry in cases.entries) {
+        expect(
+          normalizedPathFor(routes, Uri.parse(entry.key)),
+          isNull,
           reason: entry.value,
         );
       }
     });
-  });
 
-  group('normalization classification', () {
-    test('normalizes modeled routes only', () {
-      final routes = {
-        '/home/-3': '/home/0',
-        '/profile/$pubkey/-1': '/profile/$pubkey/0',
-        '/hashtag/nostr%20video': '/hashtag/nostr%20video',
+    test('leaves a non-numeric index on the route GoRouter matched', () {
+      final expected = {
+        '/explore/latest': null,
+        '/liked-videos/latest': null,
+        '/home/latest': '/home/0',
+        '/notifications/latest': '/notifications/0',
       };
 
-      for (final entry in routes.entries) {
-        final parsed = parseKnownRoute(entry.key);
-        expect(parsed, isNotNull, reason: entry.key);
-        expect(buildRoute(parsed!), entry.value, reason: entry.key);
+      for (final entry in expected.entries) {
+        expect(
+          normalizedPathFor(routes, Uri.parse(entry.key)),
+          entry.value,
+          reason: entry.key,
+        );
       }
     });
 
-    test('leaves unknown and incomplete routes to GoRouter', () {
-      expect(
-        parseKnownRoute('/search-results/nostr'),
-        isNull,
-        reason: 'search results are GoRouter-owned, not RouteContext modeled',
-      );
-      expect(
-        parseKnownRoute('/verify-email'),
-        isNull,
-        reason: 'auth deep links are GoRouter-owned',
-      );
-      expect(
-        parseKnownRoute('/wat/xyz'),
-        isNull,
-        reason: 'unknown routes should not be rewritten to home',
-      );
-      expect(
-        parseKnownRoute('/following'),
-        isNull,
-        reason: 'incomplete dynamic routes should not throw or normalize',
-      );
-      expect(
-        parseKnownRoute(ProfileSetupScreen.setupPath),
-        isNull,
-        reason: 'setup profile must not normalize to edit profile',
-      );
-    });
-
-    test('leaves routes with unmodeled trailing segments to GoRouter', () {
+    test('leaves an unregistered trailing segment to GoRouter', () {
       for (final route in [
-        ExploreScreen.pathForTab('popular'),
         '/people-lists/new/extra',
         '/hashtag/dogs/3',
         '/video/$videoId/bogus',
+        '/home/0/extra',
         '/profile/$pubkey/0/extra',
       ]) {
         expect(
-          parseKnownRoute(route),
+          normalizedPathFor(routes, Uri.parse(route)),
           isNull,
-          reason: 'unmodeled suffix must not be normalized away: $route',
+          reason: route,
+        );
+      }
+    });
+
+    test('never moves a route registered under another one onto it', () {
+      final lastParameter = RegExp(r'/:\w+$');
+      final nested = {
+        for (final template in templates) ...{
+          _joinPath(template, 'added'),
+          if (lastParameter.hasMatch(template))
+            template.replaceFirst(lastParameter, '/added'),
+        },
+      }..removeAll(templates);
+      expect(nested, containsAll(['/profile/:npub/added', '/home/added']));
+      final withNested = _configurationOf([
+        for (final path in nested)
+          GoRoute(path: path, builder: (_, _) => const SizedBox()),
+        ...registered,
+      ]);
+
+      for (final template in nested) {
+        final location = Uri.parse(_sampleLocation(template));
+        expect(
+          normalizedPathFor(withNested, location),
+          isNull,
+          reason: 'a new route at $template was redirected from $location',
         );
       }
     });
   });
+
+  group('routeNormalizationProvider', () {
+    testWidgets('normalizes the location a refresh redirect lands on', (
+      tester,
+    ) async {
+      final refresh = ValueNotifier<bool>(false);
+      addTearDown(refresh.dispose);
+      var redirected = false;
+      final router = GoRouter(
+        initialLocation: '/home/0',
+        refreshListenable: refresh,
+        redirect: (_, _) {
+          if (!refresh.value || redirected) return null;
+          redirected = true;
+          return '/home/-1';
+        },
+        routes: [
+          GoRoute(path: '/home/:index', builder: (_, _) => const SizedBox()),
+        ],
+      );
+      addTearDown(router.dispose);
+      final container = ProviderContainer(
+        overrides: [goRouterProvider.overrideWithValue(router)],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      container.read(routeNormalizationProvider);
+
+      refresh.value = true;
+      await tester.pumpAndSettle();
+
+      expect(redirected, isTrue);
+      expect(
+        router.routerDelegate.currentConfiguration.uri.toString(),
+        '/home/0',
+      );
+    });
+  });
 }
+
+RouteConfiguration _configurationOf(List<RouteBase> routes) {
+  final router = GoRouter(navigatorKey: NavigatorKeys.root, routes: routes);
+  addTearDown(router.dispose);
+  return router.configuration;
+}
+
+final _appRoutesProvider = Provider<List<RouteBase>>(appRoutes);
+
+/// Full path templates of [routes] and their descendants, shell routes
+/// included, in registration order.
+List<String> _templatesOf(List<RouteBase> routes, [String parent = '']) => [
+  for (final route in routes)
+    if (route is GoRoute) ...[
+      _joinPath(parent, route.path),
+      ..._templatesOf(route.routes, _joinPath(parent, route.path)),
+    ] else if (route is ShellRouteBase)
+      ..._templatesOf(route.routes, parent),
+];
+
+String _joinPath(String parent, String child) {
+  if (child.startsWith('/')) return child;
+  return parent.endsWith('/') ? '$parent$child' : '$parent/$child';
+}
+
+/// A concrete location for [template]: an index for index parameters, a full
+/// 64-hex value (valid as an event id, pubkey, list id or slug) for the rest.
+String _sampleLocation(String template) => template.replaceAllMapped(
+  RegExp(r':(\w+)'),
+  (match) => match[1] == 'index' || match[1]!.endsWith('Index')
+      ? '2'
+      : '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+);

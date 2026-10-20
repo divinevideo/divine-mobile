@@ -36,6 +36,7 @@ class DmReactionPublishResult {
     required this.rumorId,
     this.errorMessage,
     this.optimisticInsertSucceeded = false,
+    this.reachedNoRelay = false,
   });
 
   /// Whether the gift-wrap publish landed for the recipient.
@@ -54,6 +55,11 @@ class DmReactionPublishResult {
   /// catches up. `false` only when the repo was uninitialized or the insert
   /// itself failed (no durable row exists).
   final bool optimisticInsertSucceeded;
+
+  /// Whether the attempt reached no relay at all, so nothing was delivered or
+  /// rejected. The retry sweep does not count it against the reaction's
+  /// automatic retries (#8516).
+  final bool reachedNoRelay;
 }
 
 /// Outcome of one own-reaction deletion delivery attempt.
@@ -67,6 +73,11 @@ enum DmReactionDeletionOutcome {
 
   /// Delivery was not confirmed. The pending row remains sweep-retryable.
   unconfirmed,
+
+  /// No relay was reached, so nothing was delivered or rejected. The pending
+  /// row remains sweep-retryable, and the attempt does not count against its
+  /// automatic retries (#8516).
+  notSent,
 
   /// No initialized repository or stored deletion was available to drive.
   unavailable,
@@ -103,6 +114,7 @@ class DmReactionRetryTarget {
     required this.targetMessageAuthor,
     required this.publishStatus,
     required this.createdAt,
+    this.retriesRanOut = false,
   });
 
   /// Reaction rumor id — the argument `retry` expects.
@@ -113,13 +125,19 @@ class DmReactionRetryTarget {
   /// stores none.
   final String targetMessageAuthor;
 
-  /// Persisted publish status: `'failed'` or `'pending'` for a reaction,
-  /// `'deletion_pending'` or `'deletion_unconfirmed'` for a removal.
+  /// Persisted publish status: `'failed'`, `'pending'` or `'unconfirmed'` for
+  /// a reaction, `'deletion_pending'` or `'deletion_unconfirmed'` for a
+  /// removal.
   final String publishStatus;
 
   /// Rumor `created_at` (unix seconds). Lets the sweep hold back a still-in-
   /// flight `'pending'` reaction until its original publish has resolved.
   final int createdAt;
+
+  /// Whether an earlier run of automatic retries ran out for this row without
+  /// a relay confirming it: the reaction or removal is shown with a retry. A
+  /// new session gives it one automatic try rather than a full set (#8516).
+  final bool retriesRanOut;
 }
 
 /// Resolves [pubkey]'s NIP-17 kind-10050 DM inbox relays, and says why the
@@ -225,8 +243,10 @@ class DmReactionsRepository {
   /// unconfirmed or failed reaction, a removal whose kind-5 did not confirm,
   /// or a removal recorded before its recipients were known. The retry
   /// service listens and arms its in-session follow-up pass. Without it, such
-  /// a row waits for the next foreground transition or connectivity change,
-  /// and a removal has no chip left for the user to re-tap.
+  /// a row waits for the next foreground transition or relay connection, and
+  /// a removal has no chip left for the user to re-tap. An attempt that
+  /// reached no relay does not fire it: a relay connecting wakes the sweep for
+  /// that row instead (#8516).
   ///
   /// Some emissions follow a database write that other work may still be
   /// reading, so listeners MUST NOT touch the database synchronously: arm a
@@ -683,6 +703,7 @@ class DmReactionsRepository {
             :final error,
             :final retryablePending,
             :final blocked,
+            :final reachedNoRelay,
           ):
             // Policy-blocked (#176): terminal and non-retryable — retrying
             // only re-hits the same policy. Mark 'blocked' so the sweep and a
@@ -708,13 +729,16 @@ class DmReactionsRepository {
                 placeholderId: rumorId,
                 ownerPubkey: ownerPubkey,
               );
-              _notifyRetryableWork();
+              // An attempt that reached no relay waits for one to connect
+              // rather than the 30-second follow-up (#8516).
+              if (!reachedNoRelay) _notifyRetryableWork();
             }
             return DmReactionPublishResult(
               success: false,
               rumorId: rumorId,
               errorMessage: error,
               optimisticInsertSucceeded: true,
+              reachedNoRelay: reachedNoRelay,
             );
         }
       } finally {
@@ -846,6 +870,7 @@ class DmReactionsRepository {
             :final error,
             :final retryablePending,
             :final blocked,
+            :final reachedNoRelay,
           ):
             // Policy-blocked (#176): terminal — flip the row out of the
             // retryable pending/failed set so the sweep and a chip re-tap stop
@@ -855,6 +880,12 @@ class DmReactionsRepository {
                 id: rumorId,
                 ownerPubkey: ownerPubkey,
               );
+            } else if (reachedNoRelay) {
+              // Nothing left the device, so the row keeps the status it had
+              // before this attempt: one whose retries ran out keeps that
+              // mark. No nudge either: a relay connecting wakes the sweep
+              // for it, not the 30-second follow-up (#8516).
+              await _restoreStatusBeforeRetry(row, ownerPubkey: ownerPubkey);
             } else {
               // Confirmed rejection/error: flip to 'failed' so the chip is
               // tappable again. A soft (retryablePending) failure instead
@@ -873,6 +904,7 @@ class DmReactionsRepository {
               rumorId: rumorId,
               errorMessage: error,
               optimisticInsertSucceeded: true,
+              reachedNoRelay: reachedNoRelay,
             );
         }
       } finally {
@@ -894,6 +926,40 @@ class DmReactionsRepository {
     }
   }
 
+  /// Put [row] back to the status it had before a retry marked it
+  /// `'pending'`, for an attempt that reached no relay.
+  Future<void> _restoreStatusBeforeRetry(
+    DmReactionRow row, {
+    required String ownerPubkey,
+  }) async {
+    switch (row.publishStatus) {
+      case DmReactionsDao.unconfirmed:
+        await _reactionsDao.markUnconfirmed(
+          id: row.id,
+          ownerPubkey: ownerPubkey,
+        );
+      case 'failed':
+        await _reactionsDao.markFailed(
+          placeholderId: row.id,
+          ownerPubkey: ownerPubkey,
+        );
+      default:
+        // Intentional no-op: the row was `'pending'`, which the retry wrote
+        // again before sending.
+        break;
+    }
+  }
+
+  /// Whether an attempt to deliver [rumorId] is running now: the reaction's
+  /// publish or a retry of it, or with [removal] its kind-5 removal.
+  ///
+  /// A retry called while one is would join it and send nothing, so the
+  /// retry sweep asks right before driving a row and leaves the row for a
+  /// later pass instead of counting it (#10044).
+  bool isAttemptInFlight(String rumorId, {required bool removal}) => removal
+      ? _deletionRecoveriesInFlight.containsKey(rumorId)
+      : _reactionPublishesInFlight.containsKey((_userPubkey, rumorId));
+
   Future<DmReactionPublishResult> _coalesceReactionAttempt(
     String ownerPubkey,
     String rumorId,
@@ -912,13 +978,14 @@ class DmReactionsRepository {
   }
 
   /// List this user's own outgoing reactions still awaiting durable delivery
-  /// (publish `'failed'`, or `'pending'` from an interrupted send), for the
-  /// foreground retry sweep to re-drive via [retry]. Returns empty when
-  /// credentials have not been wired.
+  /// (publish `'failed'`, `'pending'` from an interrupted send, or
+  /// `'unconfirmed'` once their retries ran out), for the retry sweep to
+  /// re-drive via [retry]. Returns empty when credentials have not been wired.
   Future<List<DmReactionRetryTarget>> retryableReactions() async {
-    if (_userPubkey.isEmpty) return const [];
+    final ownerPubkey = _userPubkey;
+    if (ownerPubkey.isEmpty) return const [];
     final rows = await _reactionsDao.getRetryableOwnReactions(
-      ownerPubkey: _userPubkey,
+      ownerPubkey: ownerPubkey,
     );
     return rows
         .map(
@@ -927,6 +994,7 @@ class DmReactionsRepository {
             targetMessageAuthor: r.targetMessageAuthor,
             publishStatus: r.publishStatus ?? 'pending',
             createdAt: r.createdAt,
+            retriesRanOut: r.publishStatus == DmReactionsDao.unconfirmed,
           ),
         )
         .toList(growable: false);
@@ -1068,6 +1136,8 @@ class DmReactionsRepository {
             targetMessageAuthor: r.targetMessageAuthor,
             publishStatus: r.publishStatus ?? '',
             createdAt: r.createdAt,
+            retriesRanOut:
+                r.publishStatus == DmReactionsDao.deletionUnconfirmed,
           ),
         )
         .toList(growable: false);
@@ -1108,6 +1178,24 @@ class DmReactionsRepository {
   /// * the database error when the row cannot be written.
   Future<void> markDeletionUnconfirmed({required String rumorId}) {
     return _reactionsDao.markDeletionUnconfirmed(
+      id: rumorId,
+      ownerPubkey: _userPubkey,
+    );
+  }
+
+  /// Record that automatic retries ran out for the own reaction [rumorId]
+  /// while no relay had confirmed it (#8516).
+  ///
+  /// The reaction shows as [DmReactionPublishStatus.unconfirmed], with a
+  /// retry, instead of looking in flight for good. It keeps its rumor and
+  /// stays in [retryableReactions], so a later launch retries it on its own.
+  /// Changes nothing unless the reaction is still `'pending'`.
+  ///
+  /// Throws:
+  ///
+  /// * the database error when the row cannot be written.
+  Future<void> markReactionUnconfirmed({required String rumorId}) {
+    return _reactionsDao.markUnconfirmed(
       id: rumorId,
       ownerPubkey: _userPubkey,
     );
@@ -1154,7 +1242,11 @@ class DmReactionsRepository {
               ownerPubkey: ownerPubkey,
             );
             return DmReactionDeletionOutcome.sent;
-          case NIP17SendFailure(:final error, :final blocked):
+          case NIP17SendFailure(
+            :final error,
+            :final blocked,
+            :final reachedNoRelay,
+          ):
             if (blocked) {
               await _reactionsDao.markDeletionRefused(
                 id: rumorId,
@@ -1166,8 +1258,7 @@ class DmReactionsRepository {
               'DM reaction deletion retry was unconfirmed: $error',
               category: LogCategory.system,
             );
-            _notifyRetryableWork();
-            return DmReactionDeletionOutcome.unconfirmed;
+            return _unsentDeletionOutcome(reachedNoRelay: reachedNoRelay);
         }
       } finally {
         // After the outcome is recorded, so the copy cannot delay or change it.
@@ -1210,7 +1301,7 @@ class DmReactionsRepository {
               ownerPubkey: ownerPubkey,
             );
             return DmReactionDeletionOutcome.sent;
-          case NIP17SendFailure(:final blocked):
+          case NIP17SendFailure(:final blocked, :final reachedNoRelay):
             if (blocked) {
               await _reactionsDao.markDeletionRefused(
                 id: rumorId,
@@ -1218,8 +1309,7 @@ class DmReactionsRepository {
               );
               return DmReactionDeletionOutcome.refused;
             }
-            _notifyRetryableWork();
-            return DmReactionDeletionOutcome.unconfirmed;
+            return _unsentDeletionOutcome(reachedNoRelay: reachedNoRelay);
         }
       } finally {
         // After the outcome is recorded, so the copy cannot delay or change it.
@@ -1233,6 +1323,17 @@ class DmReactionsRepository {
       _notifyRetryableWork();
       return DmReactionDeletionOutcome.unconfirmed;
     }
+  }
+
+  /// The outcome of a removal attempt no relay confirmed. Only an attempt
+  /// that reached a relay nudges the retry sweep; one that reached none waits
+  /// for a relay to connect rather than the 30-second follow-up (#8516).
+  DmReactionDeletionOutcome _unsentDeletionOutcome({
+    required bool reachedNoRelay,
+  }) {
+    if (reachedNoRelay) return DmReactionDeletionOutcome.notSent;
+    _notifyRetryableWork();
+    return DmReactionDeletionOutcome.unconfirmed;
   }
 
   Future<DmReactionDeletionOutcome> _coalesceDeletionAttempt(
@@ -1994,6 +2095,9 @@ class DmReactionsRepository {
     return NIP17SendResult.failure(
       summary,
       retryablePending: failures.every((f) => f.retryablePending),
+      // A recipient whose wrap a relay took means the fan-out reached one.
+      reachedNoRelay:
+          lastSuccess == null && failures.every((f) => f.reachedNoRelay),
     );
   }
 
@@ -2089,6 +2193,7 @@ class DmReactionsRepository {
     final publishStatus = switch (row.publishStatus) {
       'pending' => DmReactionPublishStatus.pending,
       'failed' => DmReactionPublishStatus.failed,
+      DmReactionsDao.unconfirmed => DmReactionPublishStatus.unconfirmed,
       'sent' => DmReactionPublishStatus.sent,
       'blocked' => DmReactionPublishStatus.blocked,
       DmReactionsDao.deletionRefused || DmReactionsDao.deletionUnconfirmed =>

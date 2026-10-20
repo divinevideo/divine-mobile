@@ -384,7 +384,7 @@ void main() {
             outcome.rejectedBy,
             equals({'wss://only.example': 'blocked: policy'}),
           );
-          expect(outcome.summary, contains('blocked: policy'));
+          expect(outcome.summary, contains('blocked'));
         },
       );
     });
@@ -493,6 +493,49 @@ void main() {
       );
       expect(outcome.acceptedByAny, isFalse);
       expect(outcome.failed, isTrue);
+    });
+
+    group('summary', () {
+      test('names a refusal by its category, never the relay text', () {
+        const outcome = PublishOutcome(
+          eventId: 'refused',
+          acceptedBy: [],
+          rejectedBy: {
+            'wss://refuses.example':
+                'invalid: event too large from 203.0.113.9',
+          },
+          noResponseFrom: [],
+        );
+
+        expect(outcome.summary, contains('wss://refuses.example'));
+        expect(outcome.summary, contains('invalid'));
+        expect(outcome.summary, isNot(contains('203.0.113.9')));
+        expect(outcome.summary, isNot(contains('event too large')));
+      });
+    });
+
+    group('rejectionCategories', () {
+      test('maps each rejecting relay to its category alone', () {
+        const outcome = PublishOutcome(
+          eventId: 'refused',
+          acceptedBy: ['wss://accepts.example'],
+          rejectedBy: {
+            'wss://large.example': 'invalid: event too large from 203.0.113.9',
+            'wss://busy.example': 'rate-limited: slow down, 2001:db8::7',
+            'wss://terse.example': 'go away 203.0.113.9',
+          },
+          noResponseFrom: [],
+        );
+
+        expect(
+          outcome.rejectionCategories,
+          equals({
+            'wss://large.example': 'invalid',
+            'wss://busy.example': 'rate-limited',
+            'wss://terse.example': 'other',
+          }),
+        );
+      });
     });
   });
 }

@@ -45,7 +45,6 @@ import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
-import 'package:openvine/screens/inbox/widgets/conversation_triage_bar.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
 import 'package:openvine/screens/library_screen.dart';
@@ -78,14 +77,12 @@ class ConversationView extends ConsumerStatefulWidget {
   const ConversationView({
     required this.participantPubkeys,
     this.subject,
-    this.conversationId,
     super.key,
   });
 
   /// Pubkeys of the other participants (excludes current user).
   final List<String> participantPubkeys;
   final String? subject;
-  final String? conversationId;
 
   @override
   ConsumerState<ConversationView> createState() => _ConversationViewState();
@@ -580,12 +577,6 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                               ? () => _onOptions(otherPubkey)
                               : null,
                         ),
-                        if (otherPubkey.isNotEmpty &&
-                            widget.conversationId != null)
-                          ConversationTriageBar(
-                            conversationId: widget.conversationId!,
-                            participantPubkeys: widget.participantPubkeys,
-                          ),
                         Expanded(
                           // Force the messages card to fill the available width
                           // regardless of its content. Without this, the empty /

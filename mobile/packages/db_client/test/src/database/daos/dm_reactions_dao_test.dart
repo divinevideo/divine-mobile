@@ -1078,6 +1078,73 @@ void main() {
       });
     });
 
+    group('markUnconfirmed (#8516)', () {
+      Future<List<String>> visibleIds() async {
+        final visible = await dao
+            .watchForConversation(
+              conversationId: _conversationId,
+              ownerPubkey: _ownerA,
+            )
+            .first;
+        return visible.map((row) => row.id).toList();
+      }
+
+      test(
+        'keeps a pending reaction in the thread with its rumor, and on the '
+        'automatic retry set',
+        () async {
+          await insertPending();
+
+          await dao.markUnconfirmed(id: _pendingId, ownerPubkey: _ownerA);
+
+          final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+          expect(row!.publishStatus, DmReactionsDao.unconfirmed);
+          expect(row.isDeleted, isFalse);
+          expect(row.rumorEventJson, '{"id":"$_pendingId"}');
+          expect(await visibleIds(), [_pendingId]);
+          final retryable = await dao.getRetryableOwnReactions(
+            ownerPubkey: _ownerA,
+          );
+          expect(retryable.map((r) => r.id), [_pendingId]);
+        },
+      );
+
+      test('leaves a reaction a relay rejected alone', () async {
+        await insertPending();
+        await dao.markFailed(placeholderId: _pendingId, ownerPubkey: _ownerA);
+
+        await dao.markUnconfirmed(id: _pendingId, ownerPubkey: _ownerA);
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row!.publishStatus, 'failed');
+      });
+
+      test('leaves a delivered reaction alone', () async {
+        await insertPending();
+        await dao.swapPlaceholderId(
+          placeholderId: _pendingId,
+          realRumorId: _pendingId,
+          ownerPubkey: _ownerA,
+        );
+
+        await dao.markUnconfirmed(id: _pendingId, ownerPubkey: _ownerA);
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row!.publishStatus, 'sent');
+      });
+
+      test('survives an account switch that keeps retryable rows', () async {
+        await insertPending();
+        await dao.markUnconfirmed(id: _pendingId, ownerPubkey: _ownerA);
+
+        await dao.deleteNonRetryableForOwner(_ownerA);
+
+        final row = await dao.getById(id: _pendingId, ownerPubkey: _ownerA);
+        expect(row, isNotNull);
+        expect(row!.rumorEventJson, '{"id":"$_pendingId"}');
+      });
+    });
+
     group('reassignForTargetMessages', () {
       test('follows the named targets to the new conversation', () async {
         await insertPending();

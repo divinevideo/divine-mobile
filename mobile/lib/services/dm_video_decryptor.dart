@@ -69,17 +69,15 @@ class DmVideoDecryptor {
   ///
   /// Keyed on the full message id plus a per-decrypt [sequence], so the play
   /// page and a concurrent save of the same message never share a path and
-  /// one cannot delete the clip the other is still reading. The extension is
-  /// taken from the wire MIME type so the native decoder sees a recognisable
-  /// container.
+  /// one cannot delete the clip the other is still reading. The extension
+  /// comes from [dmVideoFileExtensionFor] so the native decoder sees a
+  /// container it recognises.
   static String clipFileNameFor(DmMessage message, {int sequence = 0}) {
-    final fileType = message.fileMetadata?.fileType ?? '';
-    final slash = fileType.indexOf('/');
-    final raw = slash == -1 ? '' : fileType.substring(slash + 1);
-    final extension = raw.replaceAll(RegExp('[^A-Za-z0-9]'), '');
+    final extension = dmVideoFileExtensionFor(
+      message.fileMetadata?.fileType ?? '',
+    );
     final safeId = message.id.replaceAll(RegExp('[^A-Za-z0-9]'), '');
-    return 'dm_video_${safeId}_$sequence.'
-        '${extension.isEmpty ? 'mp4' : extension}';
+    return 'dm_video_${safeId}_$sequence.$extension';
   }
 
   /// Downloads, verifies, and decrypts [message]'s video, returning the path

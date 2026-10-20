@@ -3967,6 +3967,7 @@
     "dmReactionChipOtherA11yLabel": "{name} {emoji} ile tepki verdi",
     "dmReactionChipPendingA11yLabel": "Tepki gönderiliyor: {emoji}",
     "dmReactionChipFailedA11yLabel": "Tepki başarısız, tekrar denemek için çift dokun",
+    "dmReactionChipUnconfirmedA11yLabel": "{emoji} tepkin gönderilemedi. Tekrar denemek için çift dokun",
     "dmReactionChipRetryAnnouncement": "Tepki yeniden deneniyor",
     "dmFormatBold": "Kalın",
     "dmFormatItalic": "İtalik",

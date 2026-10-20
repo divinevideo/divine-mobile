@@ -1,6 +1,7 @@
 // ABOUTME: Guards the shipped sticker assets: every locale strings file must
 // ABOUTME: cover exactly the structural manifest's stickers, with no blanks —
-// ABOUTME: so a hand-edited translation can never silently drift or go missing.
+// ABOUTME: so a hand-edited translation can never silently drift or go missing,
+// ABOUTME: and no two stickers may point at identical image files.
 
 import 'dart:convert';
 import 'dart:io';
@@ -43,6 +44,25 @@ void main() {
           reason: 'Descriptions belong in the per-locale i18n files.',
         );
       }
+    });
+
+    test('no two stickers draw the same image', () {
+      final manifest =
+          json.decode(File(manifestPath).readAsStringSync()) as List<dynamic>;
+      final pathsByImage = <String, List<String>>{};
+      for (final entry in manifest) {
+        final assetPath = (entry as Map<String, dynamic>)['assetPath'];
+        if (assetPath is! String) continue;
+        pathsByImage
+            .putIfAbsent(File(assetPath).readAsStringSync(), () => [])
+            .add(assetPath);
+      }
+
+      expect(
+        pathsByImage.values.where((paths) => paths.length > 1),
+        isEmpty,
+        reason: 'Identical files show the same sticker twice in the picker.',
+      );
     });
 
     test('every supported locale has a strings file', () {

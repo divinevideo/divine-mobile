@@ -105,6 +105,52 @@ void main() {
     });
   });
 
+  group('parseMatchedRoute', () {
+    test('reads a location matched to the route it builds back to', () {
+      final route = parseMatchedRoute(
+        '/profile/$_otherHex/2',
+        matchedTemplate: '/profile/:npub/:index',
+      );
+
+      expect(route?.type, RouteType.profile);
+      expect(route?.videoIndex, 2);
+    });
+
+    test('rejects a literal route registered under a modeled parent', () {
+      expect(
+        parseMatchedRoute(
+          '/profile/$_otherHex/collections',
+          matchedTemplate: '/profile/:npub/collections',
+        ),
+        isNull,
+      );
+    });
+
+    test('rejects a route deeper than the one it builds back to', () {
+      expect(
+        parseMatchedRoute(
+          '/video/$_otherHex/likers',
+          matchedTemplate: '/video/:eventId/likers',
+        ),
+        isNull,
+      );
+    });
+
+    test('recognizes an unmatched alias that keeps every segment', () {
+      expect(
+        parseMatchedRoute('/video-feed', matchedTemplate: null)?.type,
+        RouteType.videoFeed,
+      );
+    });
+
+    test('rejects an unmatched location its canonical form shortens', () {
+      expect(
+        parseMatchedRoute('/video/$_otherHex/bogus', matchedTemplate: null),
+        isNull,
+      );
+    });
+  });
+
   group('isOwnProfileGridRoute', () {
     // `/profile/<hex>` is a documented deep-link form
     // (DEEP_LINK_URL_REFERENCE.md), and nothing normalizes the segment on the

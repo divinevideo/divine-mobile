@@ -374,6 +374,57 @@ void main() {
     });
   });
 
+  group(clipDeletionCutPosition, () {
+    test('is where the deleted clip started', () {
+      expect(
+        clipDeletionCutPosition(clips, removedClipIds: {'c1'}),
+        equals(const Duration(seconds: 2)),
+      );
+    });
+
+    test('is the start for the first clip and the new end for the last', () {
+      expect(
+        clipDeletionCutPosition(clips, removedClipIds: {'c0'}),
+        equals(Duration.zero),
+      );
+      expect(
+        clipDeletionCutPosition(clips, removedClipIds: {'c2'}),
+        equals(const Duration(seconds: 5)),
+      );
+    });
+
+    test('is the first cut when several clips are deleted', () {
+      expect(
+        clipDeletionCutPosition(clips, removedClipIds: {'c2', 'c1'}),
+        equals(const Duration(seconds: 2)),
+      );
+    });
+
+    test('walks in playback time, so speed and trims count', () {
+      // c0 plays 1s of its 2s at 2×.
+      final timed = [
+        _clip('c0', 2, speed: 2, trimStart: const Duration(seconds: 1)),
+        _clip('c1', 3),
+      ];
+
+      expect(
+        clipDeletionCutPosition(timed, removedClipIds: {'c1'}),
+        equals(const Duration(milliseconds: 500)),
+      );
+    });
+
+    test('is null when nothing would be deleted or nothing would remain', () {
+      expect(
+        clipDeletionCutPosition(clips, removedClipIds: {'missing'}),
+        isNull,
+      );
+      expect(
+        clipDeletionCutPosition(clips, removedClipIds: {'c0', 'c1', 'c2'}),
+        isNull,
+      );
+    });
+  });
+
   group(clipSourcePositionToTimelinePosition, () {
     test(
       'maps a second-clip start trim handle to the clip start in timeline',

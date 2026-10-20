@@ -618,6 +618,7 @@ void main() {
       for (final status in [
         DmReactionPublishStatus.failed,
         DmReactionPublishStatus.pending,
+        DmReactionPublishStatus.unconfirmed,
       ]) {
         blocTest<ConversationReactionsCubit, ConversationReactionsState>(
           're-tapping a $status own reaction retries instead of removing it',
@@ -927,7 +928,8 @@ void main() {
                   ReactionRemovalRetryLocalStatus.sent,
                 DmReactionDeletionOutcome.refused =>
                   ReactionRemovalRetryLocalStatus.refused,
-                DmReactionDeletionOutcome.unconfirmed =>
+                DmReactionDeletionOutcome.unconfirmed ||
+                DmReactionDeletionOutcome.notSent =>
                   ReactionRemovalRetryLocalStatus.unconfirmed,
                 DmReactionDeletionOutcome.unavailable =>
                   ReactionRemovalRetryLocalStatus.unavailable,

@@ -3967,6 +3967,7 @@
     "dmReactionChipOtherA11yLabel": "{name} a réagi avec {emoji}",
     "dmReactionChipPendingA11yLabel": "Envoi de la réaction : {emoji}",
     "dmReactionChipFailedA11yLabel": "La réaction a échoué, appuie deux fois pour réessayer",
+    "dmReactionChipUnconfirmedA11yLabel": "Ta réaction {emoji} n'a pas pu être envoyée. Appuie deux fois pour réessayer",
     "dmReactionChipRetryAnnouncement": "Nouvel essai pour la réaction",
     "dmFormatBold": "Gras",
     "dmFormatItalic": "Italique",

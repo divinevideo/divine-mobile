@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -26,6 +27,10 @@ class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
+
+class _MockVideoEditorMainBloc
+    extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
+    implements VideoEditorMainBloc {}
 
 class _MockProImageEditorState extends Mock implements ProImageEditorState {
   @override
@@ -67,6 +72,7 @@ void main() {
   group(TimelineMultiSelectControls, () {
     late _MockClipEditorBloc bloc;
     late StyleClipboardCubit clipboard;
+    late _MockVideoEditorMainBloc mainBloc;
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     setUp(() {
@@ -75,6 +81,7 @@ void main() {
       when(
         () => bloc.stream,
       ).thenAnswer((_) => const Stream<ClipEditorState>.empty());
+      mainBloc = _MockVideoEditorMainBloc();
     });
 
     tearDown(() => clipboard.close());
@@ -88,6 +95,7 @@ void main() {
             providers: [
               BlocProvider<ClipEditorBloc>.value(value: bloc),
               BlocProvider.value(value: clipboard),
+              BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
             ],
             child: const TimelineMultiSelectControls(),
           ),
@@ -233,14 +241,13 @@ void main() {
       verify(() => bloc.add(const ClipEditorMultiSelectCancelled())).called(1);
     });
 
-    testWidgets('Delete dispatches a remove event when enabled', (
-      tester,
-    ) async {
+    testWidgets('Delete lands the playhead on the first cut, then dispatches '
+        'a remove event', (tester) async {
       when(() => bloc.state).thenReturn(
         ClipEditorState(
           clips: [_clip('a'), _clip('b'), _clip('c')],
           isMultiSelectMode: true,
-          selectedClipIds: const {'a', 'b'},
+          selectedClipIds: const {'b', 'c'},
         ),
       );
 
@@ -251,7 +258,14 @@ void main() {
       );
       await tester.pump();
 
-      verify(() => bloc.add(const ClipEditorSelectedClipsRemoved())).called(1);
+      // The player reloads at the playhead the removal finds, so the move has
+      // to be dispatched first.
+      verifyInOrder([
+        () => mainBloc.add(
+          const VideoEditorPositionChanged(Duration(seconds: 2)),
+        ),
+        () => bloc.add(const ClipEditorSelectedClipsRemoved()),
+      ]);
     });
 
     group('paste style', () {

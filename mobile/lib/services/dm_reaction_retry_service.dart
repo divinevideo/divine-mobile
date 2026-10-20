@@ -1,5 +1,5 @@
 // ABOUTME: Sweep that re-drives undelivered DM reactions and removals via
-// ABOUTME: DmReactionsRepository on foreground, connectivity, repository
+// ABOUTME: DmReactionsRepository on foreground, a relay connecting, repository
 // ABOUTME: nudges and a follow-up heartbeat, so a stable session still recovers.
 
 import 'dart:async';
@@ -26,6 +26,10 @@ abstract class DmReactionRetryServiceReportableSites {
   /// A removal whose budget ran out could not be recorded as unconfirmed.
   static const String markDeletionUnconfirmed =
       'DmReactionRetryService.markDeletionUnconfirmed';
+
+  /// A reaction whose budget ran out could not be recorded as unconfirmed.
+  static const String markReactionUnconfirmed =
+      'DmReactionRetryService.markReactionUnconfirmed';
 }
 
 /// Backoff + budget configuration for [DmReactionRetryService].
@@ -44,11 +48,18 @@ class DmReactionRetryConfig {
     this.backoffMultiplier = 2.0,
     this.interruptedPendingMinAge = const Duration(seconds: 30),
     this.followUpSweepGap = const Duration(seconds: 30),
+    this.retriesOnceRanOut = 1,
   });
 
   /// Attempts a single reaction gets before the sweep drops it (a manual
   /// re-tap still works).
   final int maxRetries;
+
+  /// Attempts a reaction or removal gets in a session once an earlier
+  /// session's retries ran out for it ([DmReactionRetryTarget.retriesRanOut]).
+  /// Fewer than [maxRetries], so one the relays never confirm costs a single
+  /// gift wrap per launch rather than a full set (#8516).
+  final int retriesOnceRanOut;
 
   /// Delay before the first retry after a failure.
   final Duration initialDelay;
@@ -69,7 +80,7 @@ class DmReactionRetryConfig {
   /// repository nudge) the next pass runs on its own. Mirrors
   /// `OutgoingDmRetryService`'s follow-up gap, so a reaction or removal that
   /// did not confirm is re-driven within the session instead of waiting for
-  /// the next foreground transition or connectivity change.
+  /// the next foreground transition or relay connection.
   final Duration followUpSweepGap;
 
   /// Minimum gap required before re-attempting a reaction whose previous
@@ -85,7 +96,15 @@ class DmReactionRetryConfig {
   }
 }
 
-enum _RetryAttemptOutcome { recovered, refused, failed }
+enum _RetryAttemptOutcome {
+  recovered,
+  refused,
+  failed,
+
+  /// The attempt reached no relay. It is not counted, and a relay connecting
+  /// wakes the sweep for it rather than the follow-up heartbeat (#8516).
+  notSent,
+}
 
 /// Re-drives undelivered own DM reactions and removals, closing the
 /// reliability gap that leaves a reaction lost when its recipient gift wrap
@@ -101,13 +120,13 @@ enum _RetryAttemptOutcome { recovered, refused, failed }
 ///
 /// **Triggers:** [appForegroundStream] transitions to `true` (the provider
 /// seeds the current foreground state, so the cold-start sweep fires
-/// automatically), the optional connectivity stream, the repository's
-/// `retryableReactionWork` nudge, and a follow-up heartbeat. The heartbeat is
-/// armed whenever a pass leaves rows that can still be retried this session,
-/// and by a nudge when none is armed. Without it a session on stable
-/// connectivity has no second pass at all: a removal that did not confirm
-/// leaves no chip to re-tap, so the counterparty keeps a reaction the sender
-/// believes is gone.
+/// automatically), the optional retry trigger (a relay connecting), the
+/// repository's `retryableReactionWork` nudge, and a follow-up heartbeat. The
+/// heartbeat is armed whenever a pass leaves rows that can still be retried
+/// this session, and by a nudge when none is armed. Without it a session on
+/// stable connectivity has no second pass at all: a removal that did not
+/// confirm leaves no chip to re-tap, so the counterparty keeps a reaction the
+/// sender believes is gone.
 ///
 /// **Re-entrancy:** a sweep already in progress short-circuits the next
 /// trigger. A nudge or heartbeat that lands mid-pass is remembered and arms a
@@ -116,11 +135,14 @@ enum _RetryAttemptOutcome { recovered, refused, failed }
 ///
 /// **Backoff/budget:** per-reaction attempts are tracked in memory. A reaction
 /// is skipped until `lastAttempt + backoff(attempts)` elapses and dropped from
-/// the sweep once it hits [DmReactionRetryConfig.maxRetries] (a manual re-tap
-/// still works). A removal has no chip to re-tap, so when its budget runs out
-/// it is marked unconfirmed: the thread then shows it as a warning with a
-/// retry, and a later launch retries it with a fresh budget (#8390). Entries
-/// for reactions that are no longer retryable (sent, deleted) are pruned each
+/// the sweep once it hits [DmReactionRetryConfig.maxRetries] (a manual retry
+/// still works). When its budget runs out it is marked unconfirmed: a removal
+/// shows as a warning with a retry (#8390), and a reaction no relay confirmed
+/// shows like a failed one, with a retry, instead of looking in flight for
+/// good (#8516). A later launch gives either one more automatic try
+/// ([DmReactionRetryConfig.retriesOnceRanOut]). A pass that reached no relay
+/// or found the row's own attempt still running is not counted. Entries for
+/// reactions that are no longer retryable (sent, deleted) are pruned each
 /// pass so the maps stay bounded to the live set.
 class DmReactionRetryService {
   /// Construct the service. [reactionsRepository] must be the same instance
@@ -145,18 +167,16 @@ class DmReactionRetryService {
   final Stream<bool> _appForegroundStream;
 
   /// Fires a sweep on each event, independent of foreground transitions.
-  /// Wired to connectivity/relay-reconnection so a reaction (or removal) made
-  /// during a brief network drop is re-driven the moment the network returns —
-  /// without waiting for the user to background and re-foreground the app.
+  /// Wired to a relay connecting, so a reaction (or removal) made while no
+  /// relay could be reached is re-driven as soon as one can take it — without
+  /// waiting for the user to background and re-foreground the app (#8516).
   final Stream<void>? _retryTriggerStream;
 
   /// Connectivity probe (same contract as `NIP17MessageService`'s). When it
   /// reports offline the pass is skipped entirely: every dispatch would
-  /// deterministically hit the send path's own offline fail-fast, and
-  /// [_driveTargets] charges a target's budget on any non-success result. So
-  /// five foreground transitions in airplane mode would otherwise exhaust a
-  /// pending removal, after which the sweep skips it for the rest of the
-  /// process and reports a removal failure that was only ever an outage.
+  /// deterministically hit the send path's own offline fail-fast. That
+  /// attempt reaches no relay and is not charged either (#8516), but skipping
+  /// the pass saves the doomed sends.
   /// [_retryTriggerStream] re-fires the sweep when the network returns.
   /// Mirrors `OutgoingDmRetryService`. #7319.
   final OfflineProbe? _isOffline;
@@ -180,6 +200,12 @@ class DmReactionRetryService {
   final Map<String, int> _attempts = {};
   final Map<String, DateTime> _lastAttempt = {};
 
+  /// Rows, keyed like [_attempts], whose retries have run out: in this
+  /// session, or in an earlier one ([DmReactionRetryTarget.retriesRanOut]).
+  /// They get [DmReactionRetryConfig.retriesOnceRanOut] for the rest of the
+  /// session, whatever status a manual retry leaves them in.
+  final Set<String> _ranOut = {};
+
   StreamSubscription<bool>? _foregroundSubscription;
   StreamSubscription<void>? _retryTriggerSubscription;
   StreamSubscription<void>? _retryableWorkSubscription;
@@ -190,6 +216,11 @@ class DmReactionRetryService {
   /// A nudge or heartbeat arrived while a pass was running. Consumed after
   /// the pass so a row that landed mid-pass still arms a follow-up.
   bool _wakeRequestedDuringSweep = false;
+
+  /// The retry trigger fired while a pass was running. A relay that connected
+  /// mid-pass may be what an earlier row in that pass was waiting for, so one
+  /// more pass runs as soon as this one ends (#8516).
+  bool _triggeredDuringSweep = false;
 
   /// Passes in a row that threw before listing the worklist. Bounds the
   /// heartbeat so a persistent fault cannot loop for the rest of the session.
@@ -212,9 +243,9 @@ class DmReactionRetryService {
       }
     });
 
-    _retryTriggerSubscription = _retryTriggerStream?.listen((_) {
-      unawaited(sweep());
-    });
+    _retryTriggerSubscription = _retryTriggerStream?.listen(
+      (_) => _onRetryTrigger(),
+    );
 
     _retryableWorkSubscription = _repository.retryableReactionWork.listen(
       (_) => _onRepositoryNudge(),
@@ -231,6 +262,7 @@ class DmReactionRetryService {
   /// un-init. Idempotent.
   Future<void> dispose() async {
     _isInitialized = false;
+    _triggeredDuringSweep = false;
     _followUpTimer?.cancel();
     _followUpTimer = null;
     await _foregroundSubscription?.cancel();
@@ -262,10 +294,9 @@ class DmReactionRetryService {
 
     try {
       // Offline: every dispatch would deterministically hit the send path's
-      // own offline fail-fast, and _driveTargets charges the budget on any
-      // non-success result. Gate the whole pass rather than the dispatch, so
-      // no target is charged for a network outage. _retryTriggerStream
-      // re-fires the sweep when connectivity returns. #7319.
+      // own offline fail-fast. Gate the whole pass rather than the dispatch,
+      // so no target is charged for a network outage (#7319) and no doomed
+      // send is made. _retryTriggerStream re-fires the sweep afterwards.
       if (await _isOfflineSafely()) {
         Log.debug(
           'device offline; skipping sweep without charging retry budgets',
@@ -289,13 +320,17 @@ class DmReactionRetryService {
         reactionTargets,
         phase: _addPhase,
         applyPendingMinAge: true,
-        driver: (t) async =>
-            (await _repository.retry(
-              rumorId: t.rumorId,
-              targetMessageAuthor: t.targetMessageAuthor,
-            )).success
-            ? _RetryAttemptOutcome.recovered
-            : _RetryAttemptOutcome.failed,
+        driver: (t) async => switch (await _repository.retry(
+          rumorId: t.rumorId,
+          targetMessageAuthor: t.targetMessageAuthor,
+        )) {
+          DmReactionPublishResult(success: true) =>
+            _RetryAttemptOutcome.recovered,
+          DmReactionPublishResult(reachedNoRelay: true) =>
+            _RetryAttemptOutcome.notSent,
+          _ => _RetryAttemptOutcome.failed,
+        },
+        onBudgetSpent: _markReactionUnconfirmed,
       );
       final d = await _driveTargets(
         deletionTargets,
@@ -307,6 +342,7 @@ class DmReactionRetryService {
         )) {
           DmReactionDeletionOutcome.sent => _RetryAttemptOutcome.recovered,
           DmReactionDeletionOutcome.refused => _RetryAttemptOutcome.refused,
+          DmReactionDeletionOutcome.notSent => _RetryAttemptOutcome.notSent,
           DmReactionDeletionOutcome.unconfirmed ||
           DmReactionDeletionOutcome.unavailable => _RetryAttemptOutcome.failed,
         },
@@ -316,14 +352,16 @@ class DmReactionRetryService {
       Log.info(
         'sweep complete: '
         'reactions(recovered=${r.recovered} failed=${r.failed} '
-        'refused=${r.refused} '
+        'refused=${r.refused} not-sent=${r.notSent} '
         'skipped-backoff=${r.skippedBackoff} '
         'skipped-exhausted=${r.skippedExhausted} '
-        'skipped-too-young=${r.skippedTooYoung}) '
+        'skipped-too-young=${r.skippedTooYoung} '
+        'skipped-in-flight=${r.skippedInFlight}) '
         'deletions(recovered=${d.recovered} failed=${d.failed} '
-        'refused=${d.refused} '
+        'refused=${d.refused} not-sent=${d.notSent} '
         'skipped-backoff=${d.skippedBackoff} '
-        'skipped-exhausted=${d.skippedExhausted})',
+        'skipped-exhausted=${d.skippedExhausted} '
+        'skipped-in-flight=${d.skippedInFlight})',
         name: 'DmReactionRetryService',
         category: LogCategory.system,
       );
@@ -361,7 +399,19 @@ class DmReactionRetryService {
         _wakeRequestedDuringSweep = false;
         _armFollowUpIfIdle();
       }
+      if (_triggeredDuringSweep) {
+        _triggeredDuringSweep = false;
+        if (_isInitialized) unawaited(sweep());
+      }
     }
+  }
+
+  void _onRetryTrigger() {
+    if (_isSweeping) {
+      _triggeredDuringSweep = true;
+      return;
+    }
+    unawaited(sweep());
   }
 
   /// Arm the heartbeat to run one more pass after [DmReactionRetryConfig
@@ -408,9 +458,11 @@ class DmReactionRetryService {
       int recovered,
       int failed,
       int refused,
+      int notSent,
       int skippedBackoff,
       int skippedExhausted,
       int skippedTooYoung,
+      int skippedInFlight,
       int stillRetryable,
     })
   >
@@ -425,22 +477,54 @@ class DmReactionRetryService {
     var recovered = 0;
     var failed = 0;
     var refused = 0;
+    var notSent = 0;
     var skippedBackoff = 0;
     var skippedExhausted = 0;
     var skippedTooYoung = 0;
+    var skippedInFlight = 0;
 
     // Rows this session may still attempt: they back off, age past the
     // in-flight guard, or failed with budget left. A row that was delivered,
     // refused, or has spent its budget will never be attempted again, so it
-    // must not keep the heartbeat alive.
+    // must not keep the heartbeat alive. Nor does one whose attempt reached
+    // no relay: a relay connecting wakes the sweep for it (#8516).
     var stillRetryable = 0;
 
     for (final target in targets) {
       final id = '$phase:${target.rumorId}';
       final attempts = _attempts[id] ?? 0;
 
-      if (attempts >= _config.maxRetries) {
+      // Once a row's retries have run out, this session treats it so even if
+      // a manual retry has since marked it pending again. Recorded before the
+      // in-flight check, since that manual retry may be what is running now.
+      if (target.retriesRanOut) _ranOut.add(id);
+
+      // A retry now would join the running attempt and send nothing, so it
+      // must not use up a retry (#10044). That attempt reports its own result.
+      // Asked here rather than when the row was listed, since a pass can run
+      // for minutes; nothing below awaits before the driver starts its call.
+      if (_repository.isAttemptInFlight(
+        target.rumorId,
+        removal: phase == _deletionPhase,
+      )) {
+        skippedInFlight++;
+        stillRetryable++;
+        continue;
+      }
+
+      final allowance = _ranOut.contains(id)
+          ? _config.retriesOnceRanOut
+          : _config.maxRetries;
+
+      if (attempts >= allowance) {
         skippedExhausted++;
+        // A manual retry of a reaction marks it pending, and if no relay
+        // confirms it, it stays so. Mark it again so it shows with its retry,
+        // not as in flight (#8516). A removal's manual retry leaves its
+        // status alone.
+        if (target.publishStatus == 'pending') {
+          await onBudgetSpent?.call(target);
+        }
         continue;
       }
 
@@ -499,13 +583,16 @@ class DmReactionRetryService {
           _attempts.remove(id);
           _lastAttempt.remove(id);
           refused++;
+        case _RetryAttemptOutcome.notSent:
+          notSent++;
         case _RetryAttemptOutcome.failed:
           _attempts[id] = attempts + 1;
           _lastAttempt[id] = _now();
           failed++;
-          if (attempts + 1 < _config.maxRetries) {
+          if (attempts + 1 < allowance) {
             stillRetryable++;
           } else {
+            _ranOut.add(id);
             await onBudgetSpent?.call(target);
           }
       }
@@ -515,36 +602,55 @@ class DmReactionRetryService {
       recovered: recovered,
       failed: failed,
       refused: refused,
+      notSent: notSent,
       skippedBackoff: skippedBackoff,
       skippedExhausted: skippedExhausted,
       skippedTooYoung: skippedTooYoung,
+      skippedInFlight: skippedInFlight,
       stillRetryable: stillRetryable,
     );
   }
 
-  /// This process will not attempt [target] again. Record that, so the
-  /// removal is shown with a retry instead of staying hidden.
-  ///
+  /// This process will not attempt the removal [target] again. Record that,
+  /// so it is shown with a retry instead of staying hidden.
+  Future<void> _markDeletionUnconfirmed(DmReactionRetryTarget target) =>
+      _recordBudgetSpent(
+        target,
+        what: 'removal',
+        mark: _repository.markDeletionUnconfirmed,
+        site: DmReactionRetryServiceReportableSites.markDeletionUnconfirmed,
+      );
+
+  /// This process will not attempt the reaction [target] again. Record that,
+  /// so one no relay confirmed is shown with a retry instead of looking in
+  /// flight for good (#8516). A reaction a relay rejected stays failed.
+  Future<void> _markReactionUnconfirmed(DmReactionRetryTarget target) =>
+      _recordBudgetSpent(
+        target,
+        what: 'reaction',
+        mark: _repository.markReactionUnconfirmed,
+        site: DmReactionRetryServiceReportableSites.markReactionUnconfirmed,
+      );
+
   /// Never throws: a throw would end the pass before the targets after
-  /// this one were driven.
-  Future<void> _markDeletionUnconfirmed(DmReactionRetryTarget target) async {
+  /// [target] were driven.
+  Future<void> _recordBudgetSpent(
+    DmReactionRetryTarget target, {
+    required String what,
+    required Future<void> Function({required String rumorId}) mark,
+    required String site,
+  }) async {
     try {
-      await _repository.markDeletionUnconfirmed(rumorId: target.rumorId);
+      await mark(rumorId: target.rumorId);
     } on Object catch (e, stackTrace) {
       Log.error(
-        'could not mark removal ${target.rumorId} unconfirmed: $e',
+        'could not mark $what ${target.rumorId} unconfirmed: $e',
         name: 'DmReactionRetryService',
         category: LogCategory.system,
         error: e,
         stackTrace: stackTrace,
       );
-      unawaited(
-        _crashReporting.recordError(
-          e,
-          stackTrace,
-          reason: DmReactionRetryServiceReportableSites.markDeletionUnconfirmed,
-        ),
-      );
+      unawaited(_crashReporting.recordError(e, stackTrace, reason: site));
     }
   }
 
@@ -571,5 +677,6 @@ class DmReactionRetryService {
   void _pruneTracking(Set<String> liveIds) {
     _attempts.removeWhere((id, _) => !liveIds.contains(id));
     _lastAttempt.removeWhere((id, _) => !liveIds.contains(id));
+    _ranOut.removeWhere((id) => !liveIds.contains(id));
   }
 }

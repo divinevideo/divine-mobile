@@ -3619,6 +3619,7 @@
   "@dmReactionChipFailedA11yLabel": {
     "description": "Screen-reader label for a reaction chip whose publish failed."
   },
+  "dmReactionChipUnconfirmedA11yLabel": "మీ {emoji} ప్రతిచర్యను పంపడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి",
   "dmReactionChipRetryAnnouncement": "ప్రతిచర్యను మళ్లీ ప్రయత్నిస్తోంది",
   "@dmReactionChipRetryAnnouncement": {
     "description": "Live-region announcement on chip retry."

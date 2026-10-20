@@ -3072,6 +3072,7 @@
   "@dmReactionChipFailedA11yLabel": {
     "description": "Screen-reader label for a reaction chip whose publish failed."
   },
+  "dmReactionChipUnconfirmedA11yLabel": "Tindak balas {emoji} anda tidak dapat dihantar. Ketik dua kali untuk cuba semula",
   "dmReactionChipRetryAnnouncement": "Mencuba semula tindak balas",
   "@dmReactionChipRetryAnnouncement": {
     "description": "Live-region announcement on chip retry."

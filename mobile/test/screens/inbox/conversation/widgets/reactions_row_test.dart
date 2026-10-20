@@ -156,6 +156,38 @@ void main() {
       );
     });
 
+    testWidgets('an own reaction no relay confirmed renders the error pill, '
+        'not a dimmed one (#8516)', (tester) async {
+      primeState(
+        stateWith([
+          makeReaction(
+            id: '1',
+            reactorPubkey: ownerPubkey,
+            emoji: '🔥',
+            publishStatus: DmReactionPublishStatus.unconfirmed,
+          ),
+        ]),
+      );
+
+      await tester.pumpWidget(buildSubject(cubit));
+      await tester.pump();
+
+      final decorations = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((widget) => widget.decoration)
+          .whereType<BoxDecoration>();
+      expect(
+        decorations.any(
+          (decoration) => decoration.border?.top.color == VineTheme.error,
+        ),
+        isTrue,
+      );
+      expect(
+        tester.widgetList<Opacity>(find.byType(Opacity)).map((o) => o.opacity),
+        everyElement(1.0),
+      );
+    });
+
     testWidgets('a refused removal on a closed thread is not warning-styled', (
       tester,
     ) async {

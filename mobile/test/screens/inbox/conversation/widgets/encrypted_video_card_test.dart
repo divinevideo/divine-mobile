@@ -84,6 +84,31 @@ void main() {
       expect(find.text(strings.dmClipBadge), findsOneWidget);
     });
 
+    testWidgets(
+      'draws a play icon over a blurhash preview, so it still reads as a '
+      'video to tap',
+      (tester) async {
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(fileMetadata: _videoMetadata(), isSent: false),
+          ),
+        );
+
+        final playIcon = find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineIcon &&
+              (widget.icon == DivineIconName.play ||
+                  widget.icon == DivineIconName.playCircleFill),
+        );
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        expect(playIcon, findsOneWidget);
+        expect(
+          tester.getCenter(playIcon),
+          tester.getCenter(find.byType(BlurhashDisplay)),
+        );
+      },
+    );
+
     testWidgets('does not label a plain video as a clip', (tester) async {
       await tester.pumpWidget(
         _host(

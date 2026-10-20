@@ -2,6 +2,8 @@
 // ABOUTME: Excludes support routes so opening the report form preserves context
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -26,14 +28,15 @@ class SupportRouteSnapshot {
 class SupportRouteTrail extends Notifier<List<RouteType>> {
   @override
   List<RouteType> build() {
+    final routes = ref.read(goRouterProvider).configuration;
     ref.listen(routerLocationProvider, (_, next) {
       final location = next.asData?.value;
-      if (location != null) _record(location);
+      if (location != null) _record(routes, location);
     });
 
     final initialLocation = ref.read(routerLocationProvider).asData?.value;
     if (initialLocation == null) return const [];
-    return _updatedTrail(const [], initialLocation);
+    return _updatedTrail(routes, const [], initialLocation);
   }
 
   SupportRouteSnapshot get snapshot => SupportRouteSnapshot(
@@ -41,19 +44,24 @@ class SupportRouteTrail extends Notifier<List<RouteType>> {
     recentScreens: List.unmodifiable(state.map((route) => route.name)),
   );
 
-  void _record(String location) {
-    final updated = _updatedTrail(state, location);
+  void _record(RouteConfiguration routes, String location) {
+    final updated = _updatedTrail(routes, state, location);
     if (!identical(updated, state)) state = updated;
   }
 
   static List<RouteType> _updatedTrail(
+    RouteConfiguration routes,
     List<RouteType> current,
     String location,
   ) {
     final uri = Uri.tryParse(location);
     if (uri == null || _isSupportPath(uri.path)) return current;
 
-    final route = parseKnownRoute(uri.path)?.type;
+    final match = routes.findMatch(uri);
+    final route = parseMatchedRoute(
+      location,
+      matchedTemplate: match.isError ? null : match.fullPath,
+    )?.type;
     if (route == null || (current.isNotEmpty && current.last == route)) {
       return current;
     }

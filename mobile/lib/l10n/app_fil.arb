@@ -2973,6 +2973,7 @@
     "dmReactionChipOtherA11yLabel": "Nag-react si {name} ng {emoji}",
     "dmReactionChipPendingA11yLabel": "Ipinapadala ang reaction: {emoji}",
     "dmReactionChipFailedA11yLabel": "Nabigo ang reaction, i-double tap para subukan ulit",
+    "dmReactionChipUnconfirmedA11yLabel": "Hindi naipadala ang iyong {emoji} reaction. I-double tap para subukan ulit",
     "dmReactionChipRetryAnnouncement": "Sinusubukan ulit ang reaction",
     "dmFormatBold": "Makapal",
     "dmFormatItalic": "Pahilis",

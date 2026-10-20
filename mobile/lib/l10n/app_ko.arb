@@ -3513,6 +3513,7 @@
     "dmReactionChipOtherA11yLabel": "{name}님이 {emoji}(으)로 반응했어요",
     "dmReactionChipPendingA11yLabel": "반응 보내는 중: {emoji}",
     "dmReactionChipFailedA11yLabel": "반응 실패, 두 번 탭하면 다시 시도",
+    "dmReactionChipUnconfirmedA11yLabel": "{emoji} 반응을 보내지 못했어요. 두 번 탭하면 다시 시도해요",
     "dmReactionChipRetryAnnouncement": "반응 다시 시도 중",
     "dmFormatBold": "굵게",
     "dmFormatItalic": "기울임꼴",

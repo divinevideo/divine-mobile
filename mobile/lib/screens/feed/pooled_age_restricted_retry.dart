@@ -280,7 +280,7 @@ Future<void> _promptAdultContentHidden(BuildContext context) async {
     // from the sheet's own subtree, which stays mounted while the sheet is up.
     body: Builder(
       builder: (sheetContext) => VineBottomSheetPrompt(
-        sticker: DivineStickerName.trafficCone,
+        sticker: DivineStickerName.underConstructionSign,
         title: sheetContext.l10n.videoErrorAdultContentHiddenTitle,
         subtitle: sheetContext.l10n.videoErrorAdultContentHiddenBody,
         primaryButtonText: sheetContext.l10n.videoErrorAdultContentHiddenAction,

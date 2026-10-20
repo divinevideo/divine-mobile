@@ -58,6 +58,20 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
     deletionUnconfirmed,
   ];
 
+  /// Publish status of an own reaction whose automatic retries ran out
+  /// without a relay confirming it (#8516). It keeps its rumor and stays on
+  /// the automatic retry set, so it can be retried by hand and by a later
+  /// launch.
+  static const String unconfirmed = 'unconfirmed';
+
+  /// Own reactions not yet confirmed by a relay that still hold their rumor:
+  /// what the retry sweep re-drives, and what an account switch keeps.
+  static const List<String> _retryableReactionStatuses = [
+    'failed',
+    'pending',
+    unconfirmed,
+  ];
+
   /// Terminal `publish_status` for an outgoing reaction the send policy (#176
   /// protected-minor DM restriction) refused. Not retryable — excluded from
   /// [getRetryableOwnReactions] — since retrying only re-hits the same policy.
@@ -223,6 +237,28 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
     )..where((t) => t.id.equals(id) & t.ownerPubkey.equals(ownerPubkey))).write(
       const DmMessageReactionsCompanion(publishStatus: Value('pending')),
     );
+  }
+
+  /// Record that automatic retries ran out for the own reaction [id] while it
+  /// was still `'pending'`: no relay confirmed it, though one may have
+  /// received it (#8516).
+  ///
+  /// Only a `'pending'` row is changed. A reaction a relay rejected stays
+  /// `'failed'`, which already shows as failed, and one confirmed or refused
+  /// in the meantime is never overwritten.
+  Future<void> markUnconfirmed({
+    required String id,
+    required String ownerPubkey,
+  }) async {
+    await (update(dmMessageReactions)..where(
+          (t) =>
+              t.id.equals(id) &
+              t.ownerPubkey.equals(ownerPubkey) &
+              t.publishStatus.equals('pending'),
+        ))
+        .write(
+          const DmMessageReactionsCompanion(publishStatus: Value(unconfirmed)),
+        );
   }
 
   /// Mark an outgoing row terminally `'blocked'` — the send policy refused the
@@ -397,8 +433,8 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
 
   /// Fetch this user's own outgoing reactions that a retry sweep should
   /// re-drive: live rows authored by [ownerPubkey] whose publish is
-  /// `'failed'` or still `'pending'`, that still carry the rumor JSON needed
-  /// to replay the gift wrap.
+  /// `'failed'`, still `'pending'`, or [unconfirmed], that still carry the
+  /// rumor JSON needed to replay the gift wrap.
   ///
   /// Soft-deleted rows (superseded / removed) and already-`'sent'` rows (whose
   /// JSON is cleared on [swapPlaceholderId]) are excluded, so a re-driven
@@ -414,7 +450,7 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
                 t.reactorPubkey.equals(ownerPubkey) &
                 t.isDeleted.equals(false) &
                 t.rumorEventJson.isNotNull() &
-                t.publishStatus.isIn(const ['failed', 'pending']) &
+                t.publishStatus.isIn(_retryableReactionStatuses) &
                 _notSuppressedByRemoval(t),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
@@ -818,7 +854,7 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
               t.reactorPubkey.equals(ownerPubkey) &
               t.isDeleted.equals(false) &
               t.rumorEventJson.isNotNull() &
-              t.publishStatus.isIn(const ['failed', 'pending']);
+              t.publishStatus.isIn(_retryableReactionStatuses);
           final retryableOwnDeletion =
               t.reactorPubkey.equals(ownerPubkey) &
               t.isDeleted.equals(true) &

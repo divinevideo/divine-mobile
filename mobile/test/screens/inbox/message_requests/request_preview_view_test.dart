@@ -972,6 +972,15 @@ void main() {
         expect(find.text('Decline and remove'), findsOneWidget);
       });
 
+      // Chats no longer carry this row, so a request is its only home.
+      testWidgets('renders the Mark as read and Dismiss row', (tester) async {
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.inboxThreadMarkRead), findsOneWidget);
+        expect(find.text(l10n.inboxRequestDismiss), findsOneWidget);
+      });
+
       testWidgets('renders only the approved request actions', (tester) async {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();

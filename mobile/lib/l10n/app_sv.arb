@@ -3967,6 +3967,7 @@
     "dmReactionChipOtherA11yLabel": "{name} reagerade med {emoji}",
     "dmReactionChipPendingA11yLabel": "Skickar reaktion: {emoji}",
     "dmReactionChipFailedA11yLabel": "Reaktionen misslyckades, dubbeltryck för att försöka igen",
+    "dmReactionChipUnconfirmedA11yLabel": "Din reaktion {emoji} kunde inte skickas. Dubbeltryck för att försöka igen",
     "dmReactionChipRetryAnnouncement": "Försöker med reaktionen igen",
     "dmFormatBold": "Fet",
     "dmFormatItalic": "Kursiv",

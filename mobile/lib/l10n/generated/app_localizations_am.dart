@@ -3615,13 +3615,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmAttachVideo => 'ቪዲዮ አይዝ';
 
   @override
-  String get dmVideoUnavailable => 'ይህ ቪዲዮ መክፈት አልተቸልም';
+  String get dmVideoUnavailable => 'ይህን ቪዲዮ መክፈት አልተቻለም';
 
   @override
   String get dmVideoSent => 'ቪዲዮ ተልኳል';
 
   @override
-  String get dmVideoSendFailed => 'ቪዲዮ መልክ አልተቸልም';
+  String get dmVideoSendFailed => 'ቪዲዮ መላክ አልተቻለም';
 
   @override
   String dmVideoTooLarge(String maxMegabytes) {
@@ -5956,6 +5956,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get dmReactionChipFailedA11yLabel => 'ምላሹ አልተሳካም፣ እንደገና ለመሞከር ሁለቴ ንካ';
+
+  @override
+  String dmReactionChipUnconfirmedA11yLabel(String emoji) {
+    return 'የ$emoji ምላሽዎን መላክ አልተቻለም። እንደገና ለመሞከር ሁለቴ ይንኩ';
+  }
 
   @override
   String get dmReactionChipRetryAnnouncement => 'ምላሹን እንደገና በመሞከር ላይ';

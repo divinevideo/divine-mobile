@@ -919,6 +919,79 @@ void main() {
         },
       );
 
+      test('reports reaching no relay only when nothing reached any relay '
+          '(#8516)', () async {
+        final (unreached, _) = await sendReaction(outcome());
+        final (rejected, _) = await sendReaction(
+          outcome(rejected: const {'wss://relay.example.com': 'blocked'}),
+        );
+        final (unanswered, _) = await sendReaction(
+          outcome(noResponse: const ['wss://relay.example.com']),
+        );
+
+        expect(unreached.reachedNoRelay, isTrue);
+        expect(rejected.reachedNoRelay, isFalse);
+        expect(unanswered.reachedNoRelay, isFalse);
+      });
+
+      group('when the recipient inbox relays it names cannot be reached', () {
+        const deadInbox = 'wss://inbox.dead.example';
+
+        Future<NIP17SendResult> sendToDeadInbox({
+          required int ourConnectedRelays,
+        }) async {
+          when(
+            () => mockNostrClient.connectedRelayCount,
+          ).thenReturn(ourConnectedRelays);
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => const PublishOutcome(
+              eventId: 'gift-wrap-id',
+              acceptedBy: [],
+              rejectedBy: {},
+              noResponseFrom: [],
+              unreachableTargets: [deadInbox],
+            ),
+          );
+          final rumor = okService.buildRumor(
+            recipientPubkey: _recipientPubkey,
+            content: '🔥',
+            eventKind: EventKind.reaction,
+          );
+          return okService.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _recipientPubkey,
+            targetRelays: const [deadInbox],
+            awaitRecipientOk: true,
+          );
+        }
+
+        test('counts as a failure while our own relays are connected '
+            '(#8516)', () async {
+          final result = await sendToDeadInbox(ourConnectedRelays: 1);
+
+          expect(result.success, isFalse);
+          expect(result.retryablePending, isFalse);
+          expect(result.reachedNoRelay, isFalse);
+        });
+
+        test(
+          'reports reaching no relay when ours are down too (#8516)',
+          () async {
+            final result = await sendToDeadInbox(ourConnectedRelays: 0);
+
+            expect(result.success, isFalse);
+            expect(result.retryablePending, isFalse);
+            expect(result.reachedNoRelay, isTrue);
+          },
+        );
+      });
+
       test('a hung connectivity probe cannot stall the send', () {
         // The probe is a raw platform-channel round trip with no timeout, and
         // `_isOfflineSafely`'s try/catch cannot help: a wedged channel is a
@@ -1006,6 +1079,8 @@ void main() {
           // in-flight min-age guard and re-drive on the next reconnect.
           expect(result.retryablePending, isFalse);
           expect(result.blocked, isFalse);
+          // Nothing left the device, so a retry sweep must not count it.
+          expect(result.reachedNoRelay, isTrue);
           // Offline short-circuits before any relay round-trip: nothing is
           // buffered to a stale socket, so there is no doomed OK-confirm wait…
           verifyNever(

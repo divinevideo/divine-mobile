@@ -8,6 +8,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
+import 'package:openvine/services/dm_video_preview.dart';
 
 /// Progress stages reported by [DmVideoSendService.sendVideo].
 ///
@@ -26,27 +27,33 @@ enum DmVideoSendPhase { encrypting, uploading, sending }
 class DmVideoSendService {
   /// Creates a [DmVideoSendService].
   ///
-  /// [encryption] defaults to a real [DmVideoEncryption] and exists so tests
-  /// can inject a fake.
+  /// [encryption] defaults to a real [DmVideoEncryption] and [readPreview] to
+  /// [readDmVideoPreview]; both exist so tests can inject fakes.
   DmVideoSendService({
     required DmRepository dmRepository,
     required BlossomUploadService blossom,
     DmVideoEncryption? encryption,
+    DmVideoPreviewReader? readPreview,
   }) : _dmRepository = dmRepository,
        _blossom = blossom,
-       _encryption = encryption ?? DmVideoEncryption();
+       _encryption = encryption ?? DmVideoEncryption(),
+       _readPreview = readPreview ?? readDmVideoPreview;
 
   final DmRepository _dmRepository;
   final BlossomUploadService _blossom;
   final DmVideoEncryption _encryption;
+  final DmVideoPreviewReader _readPreview;
 
   /// Encrypts [videoFile], uploads the ciphertext, and sends it as a kind 15
   /// file message to [recipientPubkey].
   ///
   /// [mimeType] is the plaintext MIME type recorded in the metadata.
-  /// [blurhash] and [dimensions] are optional display hints. No thumbnail is
-  /// ever attached: the thumbnail would reuse the GCM nonce, so
-  /// `thumbnailUrl` is always `null` and no `thumb` tag is emitted.
+  /// [blurhash] is the preview the recipient's card draws, and [dimensions]
+  /// the size the video displays at. When the caller passes neither, they are
+  /// read from [videoFile] while the ciphertext uploads. A preview that cannot
+  /// be read is left out rather than failing the send. No thumbnail is ever
+  /// attached: the thumbnail would reuse the GCM nonce, so `thumbnailUrl` is
+  /// always `null` and no `thumb` tag is emitted.
   ///
   /// Returns an upload failure result if the encryption upload does not
   /// succeed, without calling [DmRepository.sendFileMessage].
@@ -69,6 +76,11 @@ class DmVideoSendService {
   }) async {
     onPhase?.call(DmVideoSendPhase.encrypting);
     final enc = await _encryption.encryptFile(videoFile);
+    // Read while the ciphertext uploads, which takes far longer. Not before
+    // encrypting: that holds this isolate and would use up the read's limit.
+    final preview = blurhash == null && dimensions == null
+        ? _readPreview(videoFile)
+        : Future.value((blurhash: blurhash, dimensions: dimensions));
     try {
       onPhase?.call(DmVideoSendPhase.uploading);
       final upload = await _blossom.uploadEncryptedFile(
@@ -84,6 +96,7 @@ class DmVideoSendService {
           upload.url ??
           '${BlossomUploadService.defaultBlossomServer}/${upload.videoId}';
 
+      final hints = await preview;
       onPhase?.call(DmVideoSendPhase.sending);
       return await _dmRepository.sendFileMessage(
         recipientPubkey: recipientPubkey,
@@ -96,8 +109,8 @@ class DmVideoSendService {
           fileHash: enc.ciphertextHash,
           originalFileHash: enc.plaintextHash,
           fileSize: enc.ciphertextSize,
-          dimensions: dimensions,
-          blurhash: blurhash,
+          dimensions: hints.dimensions,
+          blurhash: hints.blurhash,
           // Always null: a thumbnail would reuse the GCM nonce.
           // ignore: avoid_redundant_argument_values
           thumbnailUrl: null,
