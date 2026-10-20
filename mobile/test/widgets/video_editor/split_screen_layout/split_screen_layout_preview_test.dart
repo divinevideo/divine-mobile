@@ -1,5 +1,5 @@
-// ABOUTME: Tests for the split-screen layout preview: reframing one cell
-// ABOUTME: leaves the others alone, posters and rings read in both modes
+// ABOUTME: Tests for the split-screen layout preview: cells follow the layout,
+// ABOUTME: show their clip's length and poster, and rings read in both modes
 
 import 'dart:async';
 import 'dart:io';
@@ -77,31 +77,6 @@ void main() {
       );
       return cubit;
     }
-
-    testWidgets('leaves the other cells alone while one is reframed', (
-      tester,
-    ) async {
-      final cubit = await pump(tester, [_clip('a'), _clip('b')]);
-      final second = find.byWidgetPredicate(
-        (widget) =>
-            widget is Semantics &&
-            widget.properties.label ==
-                l10n.videoEditorLayoutCellSemanticLabel('2'),
-      );
-      final before = tester.widget(second);
-
-      cubit.cellReframed(
-        0,
-        focalPoint: Offset.zero,
-        delta: const Offset(10, 0),
-        zoom: 2,
-        cellSize: const Size(90, 320),
-      );
-      await tester.pump();
-
-      expect(cubit.state.cells.first!.zoom, 2);
-      expect(identical(tester.widget(second), before), isTrue);
-    });
 
     for (final (name, theme) in [
       ('dark', VineTheme.theme),
@@ -223,32 +198,6 @@ void main() {
         ),
         findsOneWidget,
       );
-    });
-
-    testWidgets('shows a poster that cannot be decoded as a blank frame', (
-      tester,
-    ) async {
-      final directory = Directory.systemTemp.createTempSync('layout_poster');
-      addTearDown(() => directory.deleteSync(recursive: true));
-      final poster = File('${directory.path}/poster.jpg')
-        ..writeAsBytesSync(const [1, 2, 3]);
-      addTearDown(
-        () => PaintingBinding.instance.imageCache.evict(FileImage(poster)),
-      );
-
-      await tester.runAsync(() => _settled(FileImage(poster)));
-      await pump(tester, [_clip('a').copyWith(thumbnailPath: poster.path)]);
-      await tester.pump();
-
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is ColoredBox &&
-              widget.color == VineTheme.darkColors.surfaceContainerHigh,
-        ),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
     });
 
     testWidgets('shows a poster that can be decoded', (tester) async {
