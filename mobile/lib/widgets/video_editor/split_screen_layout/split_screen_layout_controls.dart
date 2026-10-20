@@ -2,6 +2,7 @@
 // ABOUTME: selected cell, which layout, the gap and the border colour
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
@@ -218,7 +219,7 @@ class _PresetPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PresetPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.cells != cells;
+      oldDelegate.color != color || !listEquals(oldDelegate.cells, cells);
 }
 
 /// The gap slider and the border colour row.
