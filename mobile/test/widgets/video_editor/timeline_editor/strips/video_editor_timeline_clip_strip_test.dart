@@ -920,6 +920,7 @@ void main() {
         WidgetTester tester, {
         DivineVideoClip? clip,
         List<DivineVideoClip> precedingClips = const [],
+        double pixelsPerSecond = 100,
       }) async {
         clip ??= _createTestClip(
           id: 'snap',
@@ -930,7 +931,7 @@ void main() {
         await tester.pumpWidget(
           buildWidget(
             clips: [...precedingClips, clip],
-            pixelsPerSecond: 100,
+            pixelsPerSecond: pixelsPerSecond,
             trimmingClipId: clip.id,
             playheadPosition: playhead,
             scrollable: false,
@@ -1314,6 +1315,23 @@ void main() {
         await endDrag.up();
         await tester.pump();
         expect(dragStates, equals([true, false]));
+      });
+
+      testWidgets('a zoom change mid-drag moves the handle by the new '
+          'distance only', (tester) async {
+        playhead.value = const Duration(milliseconds: -100);
+        await pumpClip(tester);
+        final gesture = await startDrag(tester, isStart: true);
+        await gesture.moveBy(const Offset(100, 0));
+        await tester.pump();
+        expect(reportedStart, equals(const Duration(milliseconds: 1500)));
+
+        await pumpClip(tester, pixelsPerSecond: 50);
+        await gesture.moveBy(const Offset(10, 0));
+        await tester.pump();
+        expect(reportedStart, equals(const Duration(milliseconds: 1700)));
+        await gesture.up();
+        await tester.pump();
       });
 
       testWidgets('split end half cannot reveal its sibling frames', (

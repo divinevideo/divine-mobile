@@ -159,6 +159,17 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     return Duration(milliseconds: snappedMs);
   }
 
+  @override
+  void didUpdateWidget(_TrimmableClipTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The edges add up the drag in pixels, so a pinch-zoom mid-drag would
+    // rescale all of it. Restart them from where they are at the new scale.
+    if (_activeDrags > 0 &&
+        widget.pixelsPerSecond != oldWidget.pixelsPerSecond) {
+      _beginEdges();
+    }
+  }
+
   void _onDragStart() {
     if (_activeDrags++ > 0) return;
     _beginDrag();
@@ -172,10 +183,15 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     _dragTrimStart = widget.clip.trimStart;
     _dragTrimEnd = widget.clip.trimEnd;
     _snapSourcePosition = _captureSnapSourcePosition();
-    // Zoom and the clip's speed can both change between drags.
+    _beginEdges();
+  }
+
+  /// Starts both edges' snap controllers from where the edges are now, at the
+  /// current scale.
+  void _beginEdges() {
     final sourcePixelsPerSecond = _sourcePixelsPerSecond;
-    _leftOrigin = widget.clip.trimStart;
-    _rightOrigin = widget.clip.duration - widget.clip.trimEnd;
+    _leftOrigin = _dragTrimStart ?? widget.clip.trimStart;
+    _rightOrigin = widget.clip.duration - (_dragTrimEnd ?? widget.clip.trimEnd);
     _leftSnap
       ..pixelsPerSecond = sourcePixelsPerSecond
       ..begin(
