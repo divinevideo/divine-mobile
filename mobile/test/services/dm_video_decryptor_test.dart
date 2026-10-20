@@ -1,7 +1,6 @@
-// ABOUTME: Tests for DmVideoDecryptor: fetch ciphertext, verify, decrypt to a clip.
+// ABOUTME: Tests for DmVideoDecryptor: fetch ciphertext, verify, decrypt to bytes.
 // ABOUTME: Uses a mocked Dio returning real AES-GCM ciphertext so decrypt is real.
 
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
@@ -11,9 +10,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-
-import '../mocks/mock_path_provider_platform.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -46,8 +42,6 @@ DmMessage _videoMessage({
 void main() {
   group(DmVideoDecryptor, () {
     late _MockDio dio;
-    late Directory tempDir;
-    late PathProviderPlatform originalPathProvider;
 
     setUpAll(() {
       registerFallbackValue(Options());
@@ -59,20 +53,7 @@ void main() {
     setUp(() {
       dio = _MockDio();
       when(() => dio.options).thenReturn(BaseOptions());
-      tempDir = Directory.systemTemp.createTempSync('dm_video_decryptor_');
-      originalPathProvider = PathProviderPlatform.instance;
-      PathProviderPlatform.instance = MockPathProviderPlatform()
-        ..setTemporaryPath(tempDir.path);
     });
-
-    tearDown(() {
-      PathProviderPlatform.instance = originalPathProvider;
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-    });
-
-    String clipPath(DmMessage message, {int sequence = 0}) =>
-        '${tempDir.path}/${DmVideoDecryptor.playbackDirName}/'
-        '${DmVideoDecryptor.clipFileNameFor(message, sequence: sequence)}';
 
     void stubDownload(Uint8List ciphertext) {
       when(
@@ -92,8 +73,7 @@ void main() {
     }
 
     test(
-      'downloads ciphertext, verifies it, and writes the decrypted bytes to a '
-      'clip',
+      'downloads ciphertext, verifies it, and returns the decrypted bytes',
       () async {
         final plaintext = Uint8List.fromList(
           List<int>.generate(256, (index) => index % 251),
@@ -106,10 +86,9 @@ void main() {
           nonce: encrypted.nonce,
         );
 
-        final path = await DmVideoDecryptor(dio: dio).decryptToFile(message);
+        final decrypted = await DmVideoDecryptor(dio: dio).decrypt(message);
 
-        expect(path, equals(clipPath(message)));
-        expect(File(path).readAsBytesSync(), equals(plaintext));
+        expect(decrypted, equals(plaintext));
 
         final options =
             verify(
@@ -122,31 +101,6 @@ void main() {
                 ).captured.single
                 as Options;
         expect(options.responseType, ResponseType.bytes);
-      },
-    );
-
-    test(
-      'gives each decrypt of the same message its own clip, so deleting one '
-      'leaves the other readable',
-      () async {
-        final plaintext = Uint8List.fromList(List<int>.generate(64, (i) => i));
-        final encrypted = await FileEncryption().encrypt(plaintext);
-        stubDownload(encrypted.ciphertext);
-        final message = _videoMessage(
-          fileHash: HashUtil.sha256Hash(encrypted.ciphertext),
-          key: encrypted.key,
-          nonce: encrypted.nonce,
-        );
-        final decryptor = DmVideoDecryptor(dio: dio);
-
-        final first = await decryptor.decryptToFile(message);
-        final second = await decryptor.decryptToFile(message);
-        decryptor.deleteClip(first);
-
-        expect(second, equals(clipPath(message, sequence: 1)));
-        expect(second, isNot(equals(first)));
-        expect(File(first).existsSync(), isFalse);
-        expect(File(second).readAsBytesSync(), equals(plaintext));
       },
     );
 
@@ -164,7 +118,7 @@ void main() {
       );
 
       await expectLater(
-        DmVideoDecryptor(dio: dio).decryptToFile(message),
+        DmVideoDecryptor(dio: dio).decrypt(message),
         throwsA(isA<ArgumentError>()),
       );
 
@@ -176,7 +130,6 @@ void main() {
           onReceiveProgress: any(named: 'onReceiveProgress'),
         ),
       );
-      expect(File(clipPath(message)).existsSync(), isFalse);
     });
 
     test('rejects a non-video message before making any request', () async {
@@ -186,7 +139,7 @@ void main() {
       );
 
       await expectLater(
-        DmVideoDecryptor(dio: dio).decryptToFile(message),
+        DmVideoDecryptor(dio: dio).decrypt(message),
         throwsA(isA<DmVideoUnavailableException>()),
       );
 
@@ -217,7 +170,7 @@ void main() {
 
       final message = _videoMessage(fileHash: 'ab' * 32);
       await expectLater(
-        DmVideoDecryptor(dio: dio).decryptToFile(message),
+        DmVideoDecryptor(dio: dio).decrypt(message),
         throwsA(
           isA<DioException>().having(
             (e) => e.type,
@@ -226,7 +179,6 @@ void main() {
           ),
         ),
       );
-      expect(File(clipPath(message)).existsSync(), isFalse);
     });
 
     test('rejects ciphertext whose hash does not match the x tag', () async {
@@ -241,14 +193,13 @@ void main() {
       );
 
       await expectLater(
-        DmVideoDecryptor(dio: dio).decryptToFile(message),
+        DmVideoDecryptor(dio: dio).decrypt(message),
         throwsA(isA<DmVideoUnavailableException>()),
       );
-      expect(File(clipPath(message)).existsSync(), isFalse);
     });
 
     test(
-      'propagates a decryption failure and writes no plaintext file',
+      'propagates a decryption failure',
       () async {
         final produced = await FileEncryption().encrypt(
           Uint8List.fromList([1, 2, 3, 4, 5]),
@@ -261,14 +212,13 @@ void main() {
         );
 
         await expectLater(
-          DmVideoDecryptor(dio: dio).decryptToFile(message),
+          DmVideoDecryptor(dio: dio).decrypt(message),
           throwsA(isA<Exception>()),
         );
-        expect(File(clipPath(message)).existsSync(), isFalse);
       },
     );
 
-    test('propagates an HTTP failure and writes no plaintext file', () async {
+    test('propagates an HTTP failure', () async {
       when(
         () => dio.get<List<int>>(
           _videoUrl,
@@ -289,52 +239,9 @@ void main() {
 
       final message = _videoMessage(fileHash: 'ab' * 32);
       await expectLater(
-        DmVideoDecryptor(dio: dio).decryptToFile(message),
+        DmVideoDecryptor(dio: dio).decrypt(message),
         throwsA(isA<DioException>()),
       );
-      expect(File(clipPath(message)).existsSync(), isFalse);
-    });
-
-    test('deleteClip removes an existing clip and tolerates a missing one', () {
-      final path = '${tempDir.path}/${DmVideoDecryptor.playbackDirName}/clip';
-      final file = File(path)
-        ..createSync(recursive: true)
-        ..writeAsBytesSync(const [1]);
-      final decryptor = DmVideoDecryptor(dio: dio);
-
-      decryptor.deleteClip(path);
-      expect(file.existsSync(), isFalse);
-
-      // Deleting again is a no-op rather than a throw.
-      decryptor.deleteClip(path);
-    });
-
-    group('clipFileNameFor', () {
-      // iOS picks the container parser from the file extension and refuses a
-      // clip named after the MIME subtype, such as `.quicktime`.
-      const extensionsByFileType = {
-        'video/mp4': 'mp4',
-        'video/quicktime': 'mov',
-        'video/QuickTime': 'mov',
-        'video/x-m4v': 'm4v',
-        'video/webm': 'webm',
-        'video/x-msvideo': 'avi',
-        'video/x-matroska': 'mkv',
-        'video/3gpp': '3gp',
-        'video/x-unknown': 'mp4',
-      };
-
-      for (final MapEntry(key: fileType, value: extension)
-          in extensionsByFileType.entries) {
-        test('names a $fileType clip with the .$extension extension', () {
-          final message = _videoMessage(fileHash: '', fileType: fileType);
-
-          expect(
-            DmVideoDecryptor.clipFileNameFor(message),
-            equals('dm_video_${'a' * 64}_0.$extension'),
-          );
-        });
-      }
     });
   });
 }

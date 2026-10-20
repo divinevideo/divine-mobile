@@ -17,7 +17,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
-import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -25,7 +25,7 @@ import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import '../../../helpers/divine_video_player_channel.dart';
 import '../../../mocks/mock_path_provider_platform.dart';
 
-class _MockDmVideoDecryptor extends Mock implements DmVideoDecryptor {}
+class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _MockGallerySaveService extends Mock implements GallerySaveService {}
 
@@ -68,7 +68,7 @@ DmMessage _videoMessage() => DmMessage(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late _MockDmVideoDecryptor decryptor;
+  late _MockDmVideoStore store;
   late _MockGallerySaveService gallerySaveService;
   late Directory tempDir;
   late PathProviderPlatform originalPathProvider;
@@ -80,7 +80,7 @@ void main() {
   });
 
   setUp(() {
-    decryptor = _MockDmVideoDecryptor();
+    store = _MockDmVideoStore();
     gallerySaveService = _MockGallerySaveService();
     tempDir = Directory.systemTemp.createTempSync('dm_video_play_page_');
     originalPathProvider = PathProviderPlatform.instance;
@@ -109,24 +109,18 @@ void main() {
   });
 
   String expectedClipPath() =>
-      '${tempDir.path}/${DmVideoDecryptor.playbackDirName}/'
-      '${DmVideoDecryptor.clipFileNameFor(_videoMessage())}';
+      '${tempDir.path}/${DmVideoStore.dirName}/owner/'
+      '${DmVideoStore.videoFileNameFor(_videoMessage())}';
 
-  void stubDecrypt(Future<String> Function() answer) {
-    when(() => decryptor.decryptToFile(any())).thenAnswer((_) => answer());
-  }
-
-  void stubDelete() {
-    when(() => decryptor.deleteClip(any())).thenAnswer((invocation) {
-      final path = invocation.positionalArguments.first as String;
-      final file = File(path);
-      if (file.existsSync()) file.deleteSync();
-    });
+  void stubKeptVideo(Future<String> Function() answer) {
+    when(
+      () => store.videoFor(any()),
+    ).thenAnswer((_) async => File(await answer()));
   }
 
   Widget host({bool canAddToClips = false}) => ProviderScope(
     overrides: [
-      dmVideoDecryptorProvider.overrideWithValue(decryptor),
+      dmVideoStoreProvider.overrideWithValue(store),
       gallerySaveServiceProvider.overrideWithValue(gallerySaveService),
     ],
     child: MaterialApp(
@@ -144,7 +138,7 @@ void main() {
       tester,
     ) async {
       final completer = Completer<String>();
-      stubDecrypt(() => completer.future);
+      stubKeptVideo(() => completer.future);
       installMockDivineVideoPlayer();
 
       await tester.pumpWidget(host());
@@ -164,9 +158,8 @@ void main() {
       expect(find.byType(DivineVideoPlayer), findsOneWidget);
     });
 
-    testWidgets('removes the decrypted temp file on dispose', (tester) async {
-      stubDelete();
-      stubDecrypt(() async {
+    testWidgets('keeps the video when the page closes', (tester) async {
+      stubKeptVideo(() async {
         File(expectedClipPath())
           ..createSync(recursive: true)
           ..writeAsBytesSync(const [1, 2, 3]);
@@ -183,12 +176,11 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
 
-      expect(File(expectedClipPath()).existsSync(), isFalse);
-      verify(() => decryptor.deleteClip(expectedClipPath())).called(1);
+      expect(File(expectedClipPath()).existsSync(), isTrue);
     });
 
     testWidgets('shows an error state when decrypt fails', (tester) async {
-      stubDecrypt(() async => throw Exception('decrypt failed'));
+      stubKeptVideo(() async => throw Exception('decrypt failed'));
       installMockDivineVideoPlayer();
 
       await tester.pumpWidget(host());
@@ -209,8 +201,7 @@ void main() {
 
       /// Opens the page on a decrypted clip and waits for the player.
       Future<void> openPlayer(WidgetTester tester) async {
-        stubDelete();
-        stubDecrypt(() async {
+        stubKeptVideo(() async {
           File(expectedClipPath())
             ..createSync(recursive: true)
             ..writeAsBytesSync(const [1, 2, 3]);
@@ -312,7 +303,6 @@ void main() {
             find.text(AppLocalizationsEn().dmVideoUnavailable),
             findsOneWidget,
           );
-          verify(() => decryptor.deleteClip(expectedClipPath())).called(1);
         },
       );
     });
@@ -322,8 +312,7 @@ void main() {
         'keeps playing when the player recovers from a decoder error, as '
         'Android retries one',
         (tester) async {
-          stubDelete();
-          stubDecrypt(() async {
+          stubKeptVideo(() async {
             File(expectedClipPath())
               ..createSync(recursive: true)
               ..writeAsBytesSync(const [1, 2, 3]);
@@ -348,7 +337,6 @@ void main() {
             find.text(AppLocalizationsEn().dmVideoUnavailable),
             findsNothing,
           );
-          verifyNever(() => decryptor.deleteClip(any()));
         },
       );
     });
@@ -360,8 +348,7 @@ void main() {
         WidgetTester tester, {
         required bool canAddToClips,
       }) async {
-        stubDelete();
-        stubDecrypt(() async {
+        stubKeptVideo(() async {
           File(expectedClipPath())
             ..createSync(recursive: true)
             ..writeAsBytesSync(const [1, 2, 3]);

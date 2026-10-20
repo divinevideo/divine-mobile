@@ -14,10 +14,11 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
-class _MockDmVideoDecryptor extends Mock implements DmVideoDecryptor {}
+class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _MockClipProvenanceVerifier extends Mock
     implements ClipProvenanceVerifier {}
@@ -50,7 +51,7 @@ DmMessage _clipMessage({String? id, String fileType = 'video/mp4'}) =>
     );
 
 void main() {
-  late _MockDmVideoDecryptor decryptor;
+  late _MockDmVideoStore store;
   late _MockClipProvenanceVerifier verifier;
   late _MockVideoClipImportService importService;
 
@@ -60,16 +61,16 @@ void main() {
   });
 
   setUp(() {
-    decryptor = _MockDmVideoDecryptor();
+    store = _MockDmVideoStore();
     verifier = _MockClipProvenanceVerifier();
     importService = _MockVideoClipImportService();
     when(
-      () => decryptor.decryptToFile(any()),
-    ).thenAnswer((_) async => _decryptedPath);
+      () => store.videoFor(any()),
+    ).thenAnswer((_) async => File(_decryptedPath));
   });
 
   DmClipSaveCubit buildCubit() => DmClipSaveCubit(
-    decryptor: decryptor,
+    resolveStore: () => store,
     verifier: verifier,
     resolveImporter: () => importService.importReceivedClip,
   );
@@ -145,7 +146,6 @@ void main() {
                   ).captured.single
                   as File;
           expect(source.path, equals(_decryptedPath));
-          verify(() => decryptor.deleteClip(_decryptedPath)).called(1);
         },
       );
 
@@ -168,7 +168,6 @@ void main() {
               targetAspectRatio: any(named: 'targetAspectRatio'),
             ),
           );
-          verify(() => decryptor.deleteClip(_decryptedPath)).called(1);
         },
       );
 
@@ -194,12 +193,28 @@ void main() {
 
       blocTest<DmClipSaveCubit, DmClipSaveState>(
         'fails when the clip cannot be decrypted',
-        setUp: () => when(() => decryptor.decryptToFile(any())).thenThrow(
+        setUp: () => when(() => store.videoFor(any())).thenThrow(
           const DmVideoUnavailableException(
             'ciphertext hash does not match the x tag',
           ),
         ),
         build: buildCubit,
+        act: (cubit) => cubit.save(_clipMessage()),
+        expect: () => const [
+          DmClipSaveState(status: DmClipSaveStatus.checking),
+          DmClipSaveState(status: DmClipSaveStatus.failed),
+        ],
+        errors: () => [isA<DmVideoUnavailableException>()],
+        verify: (_) => verifyNever(() => verifier.verify(any())),
+      );
+
+      blocTest<DmClipSaveCubit, DmClipSaveState>(
+        'fails without downloading when no account is signed in',
+        build: () => DmClipSaveCubit(
+          resolveStore: () => null,
+          verifier: verifier,
+          resolveImporter: () => importService.importReceivedClip,
+        ),
         act: (cubit) => cubit.save(_clipMessage()),
         expect: () => const [
           DmClipSaveState(status: DmClipSaveStatus.checking),
@@ -219,7 +234,7 @@ void main() {
         final otherAccountImport = _MockVideoClipImportService();
         var signedIn = importService;
         final cubit = DmClipSaveCubit(
-          decryptor: decryptor,
+          resolveStore: () => store,
           verifier: verifier,
           resolveImporter: () => signedIn.importReceivedClip,
         );
@@ -282,19 +297,19 @@ void main() {
           DmClipSaveState(status: DmClipSaveStatus.checking),
           DmClipSaveState(status: DmClipSaveStatus.notVerified),
         ],
-        verify: (_) => verifyNever(() => decryptor.decryptToFile(any())),
+        verify: (_) => verifyNever(() => store.videoFor(any())),
       );
 
       test('checks a second video while the first is still checking', () async {
         const secondPath = '/tmp/dm_video_playback/dm_video_clip_1.mp4';
         final second = _clipMessage(id: 'e' * 64);
         final firstCheck = Completer<ClipProvenanceResult>();
-        when(() => decryptor.decryptToFile(any())).thenAnswer(
-          (invocation) async =>
-              (invocation.positionalArguments.single as DmMessage).id ==
-                  second.id
-              ? secondPath
-              : _decryptedPath,
+        when(() => store.videoFor(any())).thenAnswer(
+          (invocation) async => File(
+            (invocation.positionalArguments.single as DmMessage).id == second.id
+                ? secondPath
+                : _decryptedPath,
+          ),
         );
         when(
           () => verifier.verify(_decryptedPath),

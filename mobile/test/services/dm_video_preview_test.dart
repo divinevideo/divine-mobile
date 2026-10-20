@@ -1,5 +1,5 @@
-// ABOUTME: Tests for readDmVideoPreview: the blurhash and displayed size a
-// ABOUTME: video DM carries, read through a mocked pro_video_editor channel.
+// ABOUTME: Tests for readDmVideoPreview and readDmVideoCardFrame, read through
+// ABOUTME: a mocked pro_video_editor channel.
 
 import 'dart:async';
 import 'dart:io';
@@ -213,6 +213,84 @@ void main() {
           (entry) => entry.name == 'DmVideoPreview',
         );
         expect(timeouts, hasLength(2));
+      },
+    );
+  });
+
+  group('readDmVideoCardFrame', () {
+    const channel = MethodChannel('pro_video_editor');
+    late ProVideoEditor originalProVideoEditor;
+    late Directory tempDir;
+    late File video;
+    late Future<Object?> Function(MethodCall call) answer;
+
+    setUp(() {
+      originalProVideoEditor = ProVideoEditor.instance;
+      ProVideoEditor.instance = _NoopInitProVideoEditor();
+      tempDir = Directory.systemTemp.createTempSync('dm_video_card_frame_');
+      video = File('${tempDir.path}/clip.mp4')
+        ..writeAsBytesSync(const [1, 2, 3]);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) => answer(call));
+    });
+
+    tearDown(() {
+      ProVideoEditor.instance = originalProVideoEditor;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+
+    test(
+      "reads one frame at Divine's thumbnail time, cropped to the card",
+      () async {
+        final frame = _solidFrame(255, 0, 0);
+        final calls = <MethodCall>[];
+        answer = (call) async {
+          calls.add(call);
+          return <Uint8List>[frame];
+        };
+
+        final read = await readDmVideoCardFrame(video);
+
+        expect(read, equals(frame));
+        final arguments = calls.single.arguments as Map<Object?, Object?>;
+        expect(calls.single.method, equals('getThumbnails'));
+        expect(arguments['outputWidth'], equals(744));
+        expect(arguments['outputHeight'], equals(1050));
+        expect(arguments['timestamps'], equals([200000]));
+        expect(arguments['maxParallelDecoders'], equals(1));
+      },
+    );
+
+    test('is null when the platform returns no frame', () async {
+      answer = (call) async => <Uint8List>[];
+
+      expect(await readDmVideoCardFrame(video), isNull);
+    });
+
+    test(
+      'is null when the platform fails, and keeps the file name out of logs',
+      () async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final reporter = _RecordingCrashReporter();
+        answer = (call) async => throw PlatformException(
+          code: 'decode',
+          message: 'cannot open ${video.path}',
+        );
+
+        final read = await readDmVideoCardFrame(video, reporter: reporter);
+
+        expect(read, isNull);
+        expect(reporter.recorded, isEmpty);
+        final logs = logCapture.getRecentLogs();
+        expect(logs, isNotEmpty);
+        for (final entry in logs) {
+          expect(entry.message, isNot(contains('clip.mp4')));
+          expect(entry.error ?? '', isNot(contains('clip.mp4')));
+        }
       },
     );
   });

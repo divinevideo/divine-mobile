@@ -17,9 +17,9 @@ import 'package:openvine/screens/inbox/conversation/widgets/dm_clip_save_scope.d
 
 /// Plays a received encrypted video DM.
 ///
-/// The page wires [DmVideoPlaybackCubit]; the cubit owns the decrypted temp
-/// file and deletes it when the page closes. The key and nonce never leave
-/// the message metadata.
+/// The page wires [DmVideoPlaybackCubit], which plays the video the account
+/// keeps on this device, downloading and decrypting it the first time. The key
+/// and nonce never leave the message metadata.
 class DmVideoPlayPage extends ConsumerWidget {
   /// Creates a play page for [message], a kind 15 video DM.
   const DmVideoPlayPage({
@@ -51,17 +51,17 @@ class DmVideoPlayPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Both services are stateless and account-independent.
-    final decryptor = ref.watch(dmVideoDecryptorProvider);
+    // The store is the signed-in account's, so a switch rebuilds the cubit.
+    final store = ref.watch(dmVideoStoreProvider);
     final gallerySaveService = ref.watch(gallerySaveServiceProvider);
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          key: ValueKey((decryptor, gallerySaveService)),
+          key: ValueKey((store, gallerySaveService)),
           create: (_) {
             final cubit = DmVideoPlaybackCubit(
               message: message,
-              decryptor: decryptor,
+              store: store,
               gallerySaveService: gallerySaveService,
             );
             unawaited(cubit.load());

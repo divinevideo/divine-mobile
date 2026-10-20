@@ -40,6 +40,7 @@ import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/feed_unavailability_gate.dart';
@@ -479,6 +480,27 @@ final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
 final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
   (ref) => DmVideoDecryptor(),
 );
+
+/// The signed-in account's received video DMs, kept on this device, or null
+/// when no account is signed in.
+///
+/// Rebuilt when the account changes, so each account reads only its own
+/// folder. Prunes old and excess videos once when built.
+final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
+  final owner = ref.watch(currentAccountIdProvider);
+  if (owner == null || owner.isEmpty) return null;
+  final store = DmVideoStore(
+    ownerPubkey: owner,
+    fetchVideo: ref.watch(dmVideoDecryptorProvider).decrypt,
+  );
+  ref.onDispose(() => unawaited(store.dispose()));
+  runProviderDetached(
+    store.prune(),
+    'prune kept video DMs',
+    logName: 'DmVideoStore',
+  );
+  return store;
+});
 
 /// Gallery picker used to choose a video to attach to a DM.
 ///

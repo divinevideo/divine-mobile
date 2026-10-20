@@ -435,11 +435,11 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
             currentPubkey: currentPubkey,
           ),
         ),
-        // Both dependencies are stateless, account-independent services, so
-        // reading them once is safe.
+        // The kept videos are the signed-in account's, so the store is looked
+        // up when a save starts; the gallery service is account-independent.
         BlocProvider(
           create: (_) => EncryptedVideoSaveCubit(
-            decryptor: ref.read(dmVideoDecryptorProvider),
+            resolveStore: () => ref.read(dmVideoStoreProvider),
             gallerySaveService: ref.read(gallerySaveServiceProvider),
           ),
         ),
