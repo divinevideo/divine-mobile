@@ -553,6 +553,52 @@ void main() {
       expect(find.text(l10n.supportContactSupport), findsOneWidget);
     });
 
+    // A bad connection must not swap the closure explanation for the generic
+    // ban and its move-account path (support-trust-safety#260).
+    testWidgets('a failed refresh keeps an age-review closure explained', (
+      tester,
+    ) async {
+      var call = 0;
+      final container = ProviderContainer(
+        overrides: [
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            call++;
+            if (call == 1) {
+              return const AccountEnforcementStatus(
+                kind: AccountEnforcementKind.banned,
+                category: AccountEnforcementCategory.ageReview,
+              );
+            }
+            throw const AccountStatusUnavailable();
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final sub = container.listen(accountEnforcementStatusProvider, (_, _) {});
+      addTearDown(sub.close);
+      await container.read(accountEnforcementStatusProvider.future);
+
+      tester.view.physicalSize = const Size(1080, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AccountStatusScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+      expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
+      expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+    });
+
     testWidgets('an active account is offered no futile retry', (tester) async {
       // The successful response is settled, so there is nothing to retry.
       await _pumpWith(tester, AccountEnforcementKind.noRestrictionReported);
