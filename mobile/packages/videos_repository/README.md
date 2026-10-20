@@ -48,3 +48,14 @@ replaceable-event ordering; a missing or older
 relay result cannot erase it, and a newer signed empty list can supersede it.
 Empty holder results and incomplete reads are never absence proofs.
 The cache is in memory and stores no state across app restarts.
+
+
+Following's badge/direct source selection and fallback live in
+`FollowingVideoFeedSession`. The app injects author-reader callbacks and request
+ownership; the session owns the committed badge pager and prevents superseded
+reads from becoming empty terminal pages. Holder sets are not cached: a
+nonempty-holder cache needs an explicit freshness and revocation policy.
+
+The badge detail Videos action opens the dedicated grid inside the mobile app.
+Its URL is also routable on web; `/badges` URLs are not registered native app
+links on Android or parsed as incoming native deep links.

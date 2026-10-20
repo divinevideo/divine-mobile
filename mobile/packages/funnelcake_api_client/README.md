@@ -19,3 +19,8 @@ array and the existing sort and pagination fields. Each call still accepts up
 to 200 authors; repository chunking is unchanged. Deploy backend POST support
 before releasing this caller. The response shape is unchanged, the POST
 response is not cached, and the client does not fall back to GET.
+
+
+The idempotent author-feed POST retries transient 429/5xx and transport failures
+using the same total timeout budget as GET reads. Other POST calls retain their
+existing behavior.

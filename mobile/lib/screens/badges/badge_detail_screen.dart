@@ -25,6 +25,7 @@ import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badge_revoke_confirmation_sheet.dart';
+import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -460,7 +461,8 @@ class _AcceptedHolders extends ConsumerWidget {
                 return false;
               }
               final previousHolders = previous.holders.toSet();
-              return previous.holdersStatus != BadgeHoldersStatus.preview ||
+              return (previous.holdersStatus != BadgeHoldersStatus.preview &&
+                      previous.holdersStatus != BadgeHoldersStatus.loaded) ||
                   previousHolders.length != current.holders.length ||
                   !previousHolders.containsAll(current.holders);
             },
@@ -642,10 +644,15 @@ class _BadgeVideoGrid extends ConsumerWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(top: 24, bottom: 12),
-            child: Text(
-              context.l10n.profileVideosLabel,
-              style: VineTheme.titleSmallFont(
-                color: context.vineColors.primaryText,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: DivineButton(
+                label: context.l10n.profileVideosLabel,
+                type: DivineButtonType.link,
+                size: DivineButtonSize.small,
+                onPressed: () => context.push<void>(
+                  BadgeVideosScreen.pathFor(coordinate),
+                ),
               ),
             ),
           ),
