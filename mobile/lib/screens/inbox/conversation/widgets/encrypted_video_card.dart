@@ -27,8 +27,8 @@ const double encryptedVideoCardRadius = 16;
 /// owned by the video DM play page; [onTap] is the future hook for it.
 ///
 /// When the sender provided no blurhash there is nothing safe to preview, so
-/// the card shows a neutral play placeholder. Divine's own sender attaches no
-/// blurhash, so this is the normal state for its video DMs, not a failure.
+/// the card shows a neutral play placeholder. Divine's sender attaches one;
+/// older messages and other clients may not.
 class EncryptedVideoCard extends StatefulWidget {
   const EncryptedVideoCard({
     required this.fileMetadata,
@@ -69,10 +69,16 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
             child: SizedBox(
               width: encryptedVideoCardWidth,
               height: encryptedVideoCardHeight,
-              child: BlurhashDisplay(
-                blurhash: blurhash,
-                width: encryptedVideoCardWidth,
-                height: encryptedVideoCardHeight,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  BlurhashDisplay(
+                    blurhash: blurhash,
+                    width: encryptedVideoCardWidth,
+                    height: encryptedVideoCardHeight,
+                  ),
+                  const _PreviewPlayBadge(),
+                ],
               ),
             ),
           );
@@ -117,6 +123,31 @@ class _EncryptedVideoPlaceholderCard extends StatelessWidget {
             icon: DivineIconName.playCircleFill,
             color: context.vineColors.onSurfaceMuted,
             size: 48,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Play affordance over a blurhash preview. The preview can be any colour, so
+/// the glyph carries its own scrim, like the clip badge.
+class _PreviewPlayBadge extends StatelessWidget {
+  const _PreviewPlayBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: VineTheme.scrim65,
+          shape: BoxShape.circle,
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: DivineIcon(
+            icon: DivineIconName.play,
+            color: VineTheme.whiteText,
           ),
         ),
       ),
