@@ -139,28 +139,39 @@ void main() {
         final session = ConsentUploadSession();
         addTearDown(session.dispose);
         final response = Completer<http.Response>();
+        final started = Completer<void>();
         var sends = 0;
-        final api = ApiService(
+        final client = MockClient((request) async {
+          sends++;
+          if (!started.isCompleted) started.complete();
+          return response.future;
+        });
+        final auth = _RecordingNip98AuthService();
+        ApiService api({Duration? timeout}) => ApiService(
           relayManagerBaseUrl: 'https://api.test',
           appVersion: 'test',
-          uploadTimeout: const Duration(milliseconds: 30),
-          authService: _RecordingNip98AuthService(),
-          client: MockClient((request) async {
-            sends++;
-            return response.future;
-          }),
+          uploadTimeout: timeout ?? const Duration(seconds: 120),
+          authService: auth,
+          client: client,
         );
-        Future<void> submit() => api.submitMinorAccountReviewParentConsent(
-          caseId: 'case-123',
-          email: 'parent@example.com',
-          videoPath: clip.path,
-          session: session,
+        Future<void> submit(ApiService service) =>
+            service.submitMinorAccountReviewParentConsent(
+              caseId: 'case-123',
+              email: 'parent@example.com',
+              videoPath: clip.path,
+              session: session,
+            );
+        // Expire only the first caller; Retry uses the real upload budget.
+        await expectLater(
+          submit(api(timeout: Duration.zero)),
+          throwsA(isA<ApiException>()),
         );
-        await expectLater(submit(), throwsA(isA<ApiException>()));
-        final retry = submit();
+        await started.future;
+        final retry = submit(api());
         response.complete(http.Response('', 201));
         await retry;
         expect(sends, 1);
+        expect(auth.createCount, 1);
       },
     );
 
@@ -170,25 +181,33 @@ void main() {
         final session = ConsentUploadSession();
         addTearDown(session.dispose);
         final response = Completer<http.Response>();
+        final started = Completer<void>();
         final auth = _RecordingNip98AuthService();
         var sends = 0;
-        final api = ApiService(
+        final client = MockClient((request) async {
+          sends++;
+          if (!started.isCompleted) started.complete();
+          return response.future;
+        });
+        ApiService api({Duration? timeout}) => ApiService(
           relayManagerBaseUrl: 'https://api.test',
           appVersion: 'test',
-          uploadTimeout: const Duration(milliseconds: 30),
+          uploadTimeout: timeout ?? const Duration(seconds: 120),
           authService: auth,
-          client: MockClient((request) async {
-            sends++;
-            return response.future;
-          }),
+          client: client,
         );
-        Future<void> submit() => api.submitMinorAccountReviewParentConsent(
-          caseId: 'case-123',
-          email: 'parent@example.com',
-          videoPath: clip.path,
-          session: session,
+        Future<void> submit(ApiService service) =>
+            service.submitMinorAccountReviewParentConsent(
+              caseId: 'case-123',
+              email: 'parent@example.com',
+              videoPath: clip.path,
+              session: session,
+            );
+        await expectLater(
+          submit(api(timeout: Duration.zero)),
+          throwsA(isA<ApiException>()),
         );
-        await expectLater(submit(), throwsA(isA<ApiException>()));
+        await started.future;
         // Join only to observe the original transport settling before Retry.
         final settled = session.send(
           prepare: () => throw StateError('must reuse pending upload'),
@@ -196,7 +215,7 @@ void main() {
         );
         response.complete(http.Response('', 201));
         await settled;
-        await submit();
+        await submit(api());
         expect(sends, 1);
         expect(auth.createCount, 1);
       },
