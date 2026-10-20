@@ -113,9 +113,9 @@ class DmVideoStore {
   /// app, is not tried again.
   static const String _frameAttemptSuffix = '.frame-attempt';
 
-  /// Beside a kept video for as long as it stays: the conversation it came
-  /// from and when it was sent, so removing that conversation deletes it
-  /// even once its message row is gone.
+  /// Beside a kept video and its frame for as long as either stays: the
+  /// conversation they came from and when the message was sent, so removing
+  /// that conversation deletes them even once the message row is gone.
   static const String _conversationSuffix = '.conversation';
 
   /// Age past which a part file is taken as left by a crash: a younger one
@@ -402,29 +402,42 @@ class DmVideoStore {
     if (!dir.existsSync()) return;
     final files = dir.listSync().whereType<File>().toList();
     final withVideo = _messageIdsWithVideo(files);
+    final withContent = _messageIdsWithContent(files);
+    final leased = {for (final path in _leases.keys) _messageIdOf(File(path))};
     final now = _now();
     final kept = <({File file, DateTime opened, int size})>[];
     for (final file in files) {
       final stat = file.statSync();
       if (stat.type == FileSystemEntityType.notFound) continue;
       final age = now.difference(stat.modified);
+      final id = _messageIdOf(file);
       // Even a video played this session goes: its sender took it back, or
       // the user removed it. Only a read or a hand-out under way holds it,
-      // and its release prunes again. A part file goes however young, as
-      // its write is no longer wanted.
-      if (gone.contains(_messageIdOf(file))) {
-        if (!_leases.containsKey(file.path)) {
+      // and its release prunes again; the record and mark stay with it, as
+      // that prune may need the record to tell. A part file goes however
+      // young, as its write is no longer wanted.
+      if (gone.contains(id)) {
+        if (_leases.containsKey(file.path)) {
+          _goneWhileLeased.add(file.path);
+        } else if (_isSatellite(file) && leased.contains(id)) {
+          continue;
+        } else {
           _deleteNow(file);
           continue;
         }
-        _goneWhileLeased.add(file.path);
       }
       if (file.path.endsWith(_partSuffix)) {
         if (age > _crashedPartAge) _deleteNow(file);
         continue;
       }
-      if (_livesWithVideo(file)) {
-        if (!withVideo.contains(_messageIdOf(file))) _deleteNow(file);
+      if (file.path.endsWith(_frameAttemptSuffix)) {
+        if (!withVideo.contains(id)) _deleteNow(file);
+        continue;
+      }
+      if (file.path.endsWith(_conversationSuffix)) {
+        if (!withContent.contains(id) && !leased.contains(id)) {
+          _deleteNow(file);
+        }
         continue;
       }
       if (age > maxIdle && !_isInUse(file)) {
@@ -546,13 +559,16 @@ class DmVideoStore {
         .cast<File>()
         .toList();
     final withVideo = _messageIdsWithVideo(files);
+    final withContent = _messageIdsWithContent(files);
     for (final file in files) {
-      if (_livesWithVideo(file)) {
-        if (!withVideo.contains(_messageIdOf(file))) {
-          await _deleteQuietly(file);
-        }
+      final id = _messageIdOf(file);
+      if (file.path.endsWith(_frameAttemptSuffix) && !withVideo.contains(id) ||
+          file.path.endsWith(_conversationSuffix) &&
+              !withContent.contains(id)) {
+        await _deleteQuietly(file);
         continue;
       }
+      if (_isSatellite(file)) continue;
       final age = now.difference(file.statSync().modified);
       final isPart = file.path.endsWith(_partSuffix);
       if (age > maxIdle || (isPart && age > _crashedPartAge)) {
@@ -566,15 +582,23 @@ class DmVideoStore {
     for (final file in files)
       if (!file.path.endsWith(_partSuffix) &&
           !file.path.endsWith(_previewSuffix) &&
-          !_livesWithVideo(file))
+          !_isSatellite(file))
         _messageIdOf(file),
   };
 
-  /// Whether [file] is kept for exactly as long as its video, neither aging
-  /// nor trimmed by itself: a frame-read mark, as a decode that never
-  /// finished must not be retried while the file that caused it is here, and
-  /// a conversation record, which is what lets a removal find the video.
-  static bool _livesWithVideo(File file) =>
+  /// Ids of the messages with a video or a frame among [files], whole or
+  /// still being written.
+  static Set<String> _messageIdsWithContent(List<File> files) => {
+    for (final file in files)
+      if (!_isSatellite(file)) _messageIdOf(file),
+  };
+
+  /// Whether [file] only describes its message's other files, and so never
+  /// ages or is trimmed by itself: a frame-read mark, kept while the video
+  /// stays, as a decode that never finished must not be retried while the
+  /// file that caused it is here; and a conversation record, kept while
+  /// anything of the message stays, as it is what lets a removal find them.
+  static bool _isSatellite(File file) =>
       file.path.endsWith(_frameAttemptSuffix) ||
       file.path.endsWith(_conversationSuffix);
 
@@ -659,7 +683,7 @@ class DmVideoStore {
       if (stillWanted != null && !stillWanted()) {
         throw const DmVideoWithdrawnException();
       }
-      // Written first: a video is never kept without it.
+      // Written first, so a video is never kept without it.
       await _writeAtomically(
         File(
           '${file.parent.path}/${_safeName(message.id)}$_conversationSuffix',

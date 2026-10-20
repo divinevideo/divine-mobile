@@ -1510,6 +1510,95 @@ void main() {
       );
 
       test(
+        'keeps a conversation record while its video is still being written',
+        () async {
+          final record = keptFile(
+            '${'a' * 64}.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now,
+          );
+          keptFile('${'a' * 64}.mp4.0.part', const [1], opened: now);
+
+          await createStore().prune();
+
+          expect(record.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        'keeps a conversation record while its frame outlives its video',
+        () async {
+          var removed = false;
+          final store = createStore(
+            isConversationRemoved: (_, _) async => removed,
+          );
+          final message = _videoMessage();
+          final frame = await store.previewFor(message, download: true);
+          final video = File(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+          );
+          frame!.setLastModifiedSync(now);
+          video.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          await store.prune();
+          expect(video.existsSync(), isFalse);
+          expect(frame.existsSync(), isTrue);
+          removed = true;
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
+        "keeps a gone message's conversation record while a read holds its "
+        'video, so the prune after the read can still tell',
+        () async {
+          final read = Completer<Uint8List?>();
+          final reading = Completer<void>();
+          readFrame = (_) {
+            reading.complete();
+            return read.future;
+          };
+          final message = _videoMessage();
+          keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            opened: now,
+          );
+          keptFile(
+            '${'a' * 64}.conversation',
+            '${message.conversationId}\n${message.createdAt}'.codeUnits,
+            opened: now,
+          );
+          var removed = false;
+          var readEnded = false;
+          final askedAfterRead = Completer<void>();
+          final store = createStore(
+            isMessageGone: (_) async => false,
+            isConversationRemoved: (_, _) async {
+              if (readEnded && !askedAfterRead.isCompleted) {
+                askedAfterRead.complete();
+              }
+              return removed;
+            },
+          );
+          final preview = store.previewFor(message, download: false);
+          await reading.future;
+          removed = true;
+          await store.prune();
+
+          readEnded = true;
+          read.complete(_frame);
+          await preview;
+          await askedAfterRead.future;
+          await pumpEventQueue();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
         'deletes a conversation record and a frame-read mark once their video '
         'is gone',
         () async {
@@ -1849,6 +1938,27 @@ void main() {
         'video stays',
         () async {
           keptFile('recent.mp4', const [1], opened: now);
+          final record = keptFile(
+            'recent.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now.subtract(const Duration(days: 31)),
+          );
+
+          await DmVideoStore.sweepOwners(
+            {_owner},
+            rootDirectory: () async => root,
+            now: () => now,
+          );
+
+          expect(record.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        "sweepOwners keeps a known account's conversation record while its "
+        'frame stays',
+        () async {
+          keptFile('recent.preview.jpg', const [1], opened: now);
           final record = keptFile(
             'recent.conversation',
             'conversation\n1757385263'.codeUnits,
