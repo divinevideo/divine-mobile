@@ -1543,6 +1543,34 @@ void main() {
       );
 
       test(
+        'logs nothing when a record is deleted while its message is looked '
+        'up, as the launch sweep deletes an expired video',
+        () async {
+          keptFile('stale.mp4', const [1], opened: now);
+          keptFile(
+            'stale.conversation',
+            'conversation\n1757385263'.codeUnits,
+            opened: now,
+          );
+          final store = createStore(
+            isMessageGone: (_) async {
+              for (final file in ownerDir().listSync()) {
+                file.deleteSync();
+              }
+              return false;
+            },
+            isConversationRemoved: (_, _) async => false,
+          );
+          await LogCaptureService().clearAllLogs();
+
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+          expect(_loggedLines(), isNot(contains(contains('is gone'))));
+        },
+      );
+
+      test(
         "keeps a kept video's conversation record for as long as the video",
         () async {
           var removed = false;
@@ -1782,10 +1810,15 @@ void main() {
             isMessageGone: (_) async => throw StateError('database closed'),
           );
           final frame = await store.previewFor(message, download: true);
+          await LogCaptureService().clearAllLogs();
 
           await store.prune();
 
           expect(frame!.existsSync(), isTrue);
+          expect(
+            _loggedLines(),
+            contains(contains('is gone: StateError')),
+          );
         },
       );
 

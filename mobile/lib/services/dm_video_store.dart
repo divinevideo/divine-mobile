@@ -905,6 +905,9 @@ class DmVideoStore {
         final lines = (await record.readAsString()).split('\n');
         final sentAt = lines.length == 2 ? int.tryParse(lines[1]) : null;
         if (sentAt != null && await isRemoved(lines[0], sentAt)) gone.add(id);
+      } on PathNotFoundException {
+        // Deleted since the listing, as the launch sweep deletes an expired
+        // video's files: there is nothing left to decide.
       } on Object catch (error) {
         Log.warning(
           'Could not tell whether a kept video DM message is gone: '
