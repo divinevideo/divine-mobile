@@ -32,6 +32,7 @@ typedef BadgeEventSigner =
       required int kind,
       required String content,
       required List<List<String>> tags,
+      int? createdAt,
     });
 
 class BadgeDashboardData {
@@ -515,6 +516,7 @@ class BadgeRepository {
   Future<Set<String>> _loadAcceptedHolders(
     BadgeCoordinate coordinate, {
     void Function()? ensureCurrent,
+    Duration Function()? remainingBudget,
   }) async {
     ensureCurrent?.call();
     final awardsPage = await _nostrClient.readAllEvents(
@@ -523,6 +525,7 @@ class BadgeRepository {
         kinds: [EventKind.badgeAward],
         a: [coordinate.value],
       ),
+      timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
     );
     ensureCurrent?.call();
     if (!awardsPage.isComplete) {
@@ -540,6 +543,7 @@ class BadgeRepository {
           kinds: [EventKind.eventDeletion],
           e: awardIds.skip(i).take(100).toList(),
         ),
+        timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
       );
       ensureCurrent?.call();
       if (!deletions.isComplete) {
@@ -573,6 +577,7 @@ class BadgeRepository {
     final profiles = await _completeProfileBadgesByPubkeyChunked(
       awarded,
       ensureCurrent: ensureCurrent,
+      remainingBudget: remainingBudget,
     );
     return Set.unmodifiable({
       for (final entry in profiles.entries)
@@ -616,6 +621,16 @@ class BadgeRepository {
       return const {};
     }
     var expired = false;
+    final elapsed = Stopwatch()..start();
+    Duration remainingBudget() {
+      final remaining = timeout - elapsed.elapsed;
+      if (remaining <= Duration.zero) {
+        expired = true;
+        throw TimeoutException('Badge subscriptions could not be fully loaded');
+      }
+      return remaining;
+    }
+
     Future<Set<String>> load() async {
       final subscriptions = (await _loadSubscriptions(
         requireComplete: true,
@@ -647,6 +662,7 @@ class BadgeRepository {
           batch.map(
             (coordinate) => _loadAcceptedHolders(
               coordinate,
+              remainingBudget: remainingBudget,
               ensureCurrent: () {
                 if (expired ||
                     !_isSubscriptionSessionCurrent(pubkey, session)) {
@@ -782,7 +798,9 @@ class BadgeRepository {
   /// Add or remove one badge subscription without following its holders.
   ///
   /// Throws [BadgeReadIncompleteException] when the current subscription
-  /// list cannot be completely read, leaving it unchanged.
+  /// list cannot be completely read, leaving it unchanged. Throws
+  /// [BadgeSigningException] if signing fails and [BadgePublishException]
+  /// if no relay confirms the change.
   Future<Set<BadgeCoordinate>> setSubscription(
     BadgeCoordinate coordinate, {
     required bool subscribed,
@@ -799,6 +817,13 @@ class BadgeRepository {
       } else {
         current.remove(coordinate);
       }
+      // NIP-01 replaces by created_at, with event ID as a tie-breaker.
+      // Step past the latest observed revision even within the same second.
+      final now = NostrTimestamp.now();
+      final previous = _observedSubscriptions;
+      final createdAt = previous != null && previous.createdAt >= now
+          ? previous.createdAt + 1
+          : now;
       final tags = [
         ['d', _subscriptionsIdentifier],
         for (final item
@@ -809,6 +834,7 @@ class BadgeRepository {
         kind: EventKind.appSpecificData,
         label: 'badge subscriptions',
         tags: tags,
+        createdAt: createdAt,
         canPublish: (event) =>
             event.pubkey == pubkey &&
             _isSubscriptionSessionCurrent(pubkey, session),
@@ -1398,7 +1424,8 @@ class BadgeRepository {
   ///
   /// * [ArgumentError] if [recipientPubkey] is not a hex pubkey.
   /// * [StateError] if there is no current pubkey, the badge belongs to
-  ///   someone else, or an event cannot be signed.
+  ///   someone else.
+  /// * [BadgeSigningException] if an event cannot be signed.
   /// * [BadgePublishException] when no relay accepts one of the events.
   Future<void> revokeAward({
     required BadgeCoordinate coordinate,
@@ -1479,7 +1506,8 @@ class BadgeRepository {
   /// Throws:
   ///
   /// * [StateError] if there is no current pubkey, the badge belongs to
-  ///   someone else, or the request cannot be signed.
+  ///   someone else.
+  /// * [BadgeSigningException] if the request cannot be signed.
   /// * [BadgePublishException] when no relay accepts the request.
   Future<void> deleteBadge(BadgeCoordinate coordinate) async {
     final pubkey = _requireCurrentPubkey();
@@ -1666,6 +1694,7 @@ class BadgeRepository {
   _completeProfileBadgesByPubkeyChunked(
     Iterable<String> pubkeys, {
     void Function()? ensureCurrent,
+    Duration Function()? remainingBudget,
   }) async {
     final unique = pubkeys.toSet().toList(growable: false);
     final profiles = <String, Nip58ProfileBadges?>{};
@@ -1674,6 +1703,7 @@ class BadgeRepository {
       ensureCurrent?.call();
       final current = await _nostrClient.readAllEvents(
         Filter(authors: chunk, kinds: [EventKind.profileBadges]),
+        timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
       );
       ensureCurrent?.call();
       final legacy = await _nostrClient.readAllEvents(
@@ -1682,6 +1712,7 @@ class BadgeRepository {
           kinds: [EventKind.badgeSet],
           d: ['profile_badges'],
         ),
+        timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
       );
       ensureCurrent?.call();
       if (!current.isComplete || !legacy.isComplete) {
@@ -2020,8 +2051,14 @@ class BadgeRepository {
     required String label,
     required List<List<String>> tags,
     bool Function(Event event)? canPublish,
+    int? createdAt,
   }) async {
-    final event = await _signEvent(kind: kind, content: '', tags: tags);
+    final event = await _signEvent(
+      kind: kind,
+      content: '',
+      tags: tags,
+      createdAt: createdAt,
+    );
     if (event == null) {
       throw BadgeSigningException('Could not sign $label event');
     }
