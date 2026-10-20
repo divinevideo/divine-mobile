@@ -58,6 +58,8 @@ class EncryptedVideoSaveCubit extends Cubit<EncryptedVideoSaveState>
       final video = await store.videoFor(message);
       final result = await _gallerySaveService.saveVideoToGallery(
         EditorVideo.file(video.path),
+        // The kept file is named after its message.
+        copyUnderNeutralName: true,
       );
       emitIfOpen(
         EncryptedVideoSaveState(

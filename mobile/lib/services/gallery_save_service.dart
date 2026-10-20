@@ -69,12 +69,16 @@ class GallerySaveService {
   /// Without [requestPermission] a permission the user has not granted yet is
   /// reported as [GallerySavePermissionDenied] instead of prompting, for
   /// saves that run in the background.
+  /// With [copyUnderNeutralName] the gallery gets a copy named like a
+  /// Downloads save rather than the file itself, whose name it would show:
+  /// for a file named after something private, such as a kept video DM.
   Future<GallerySaveResult> saveVideoToGallery(
     EditorVideo video, {
     model.AspectRatio? aspectRatio,
     String albumName = 'Divine',
     VideoMetadata? metadata,
     bool requestPermission = true,
+    bool copyUnderNeutralName = false,
   }) async {
     Log.info(
       'saveVideoToGallery started: aspectRatio=$aspectRatio album=$albumName',
@@ -83,6 +87,7 @@ class GallerySaveService {
     );
     // Declare filePath outside try so catch blocks can access it.
     String? resolvedPath;
+    String? galleryPath;
 
     try {
       // Crop to aspect ratio if specified
@@ -134,11 +139,20 @@ class GallerySaveService {
         category: LogCategory.video,
       );
 
-      final galFuture = (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
-          ? Gal.putVideo(resolvedPath)
-          : Gal.putVideo(resolvedPath, album: albumName);
+      final galleryFile = copyUnderNeutralName
+          ? await _neutralCopyOf(file)
+          : file;
+      galleryPath = galleryFile.path;
+      try {
+        final galFuture =
+            (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+            ? Gal.putVideo(galleryFile.path)
+            : Gal.putVideo(galleryFile.path, album: albumName);
 
-      await galFuture.timeout(const Duration(seconds: 15));
+        await galFuture.timeout(const Duration(seconds: 15));
+      } finally {
+        if (copyUnderNeutralName) await _deleteQuietly(galleryFile.parent);
+      }
 
       Log.info(
         'Video saved to camera roll successfully',
@@ -160,7 +174,7 @@ class GallerySaveService {
       // description on iOS) is all that survives of the real cause.
       Log.warning(
         'Failed to save video to gallery: ${e.type.name} '
-        '(native: ${_nativeDiagnostic(e.platformException.message, resolvedPath)})',
+        '(native: ${_nativeDiagnostic(e.platformException.message, [resolvedPath, galleryPath])})',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
@@ -273,14 +287,41 @@ class GallerySaveService {
   // temporary/cache roots need not match a standard sandbox-path pattern.
   // A native error can quote the file name alone, or a numbered copy of it,
   // and a kept video DM's file is named after its message.
-  static String _nativeDiagnostic(String? message, String? sourcePath) {
+  static String _nativeDiagnostic(String? message, List<String?> paths) {
     var text = message ?? 'no native message';
-    if (sourcePath != null && sourcePath.isNotEmpty) {
-      text = text.replaceAll(sourcePath, '[REDACTED]');
-      final stem = p.basenameWithoutExtension(sourcePath);
+    for (final path in paths) {
+      if (path == null || path.isEmpty) continue;
+      text = text.replaceAll(path, '[REDACTED]');
+      final stem = p.basenameWithoutExtension(path);
       if (stem.isNotEmpty) text = text.replaceAll(stem, '[REDACTED]');
     }
     return redactFilesystemPaths(text);
+  }
+
+  // In a folder of its own, so two saves never share a copy.
+  static Future<File> _neutralCopyOf(File file) async {
+    final dir = await Directory.systemTemp.createTemp('gallery_save_');
+    final name =
+        'Divine_${DateTime.now().millisecondsSinceEpoch}'
+        '${p.extension(file.path)}';
+    try {
+      return await file.copy(p.join(dir.path, name));
+    } catch (_) {
+      await _deleteQuietly(dir);
+      rethrow;
+    }
+  }
+
+  static Future<void> _deleteQuietly(Directory dir) async {
+    try {
+      await dir.delete(recursive: true);
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not delete a gallery save copy: ${_failureKind(error)}',
+        name: 'GallerySaveService',
+        category: LogCategory.video,
+      );
+    }
   }
 
   // A kept video DM's exact length would identify it in support logs (#6522);

@@ -261,5 +261,95 @@ void main() {
         );
       });
     });
+
+    group('with copyUnderNeutralName', () {
+      const galChannel = MethodChannel('gal');
+
+      late Directory tempDir;
+      late File source;
+      late List<String> galleryPaths;
+      late Object? Function() galleryReply;
+
+      setUp(() async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        galleryPaths = [];
+        galleryReply = () => null;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(galChannel, (call) async {
+              if (call.method != 'putVideo') return true;
+              final args = call.arguments as Map<Object?, Object?>;
+              galleryPaths.add(args['path']! as String);
+              return galleryReply();
+            });
+        await LogCaptureService().clearAllLogs();
+
+        tempDir = Directory.systemTemp.createTempSync('gallery_test_');
+        // Named the way a kept video DM is: after its message.
+        source = File('${tempDir.path}/${'a' * 64}.mov')
+          ..writeAsBytesSync([0, 1, 2, 3]);
+      });
+
+      tearDown(() async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(galChannel, null);
+        await LogCaptureService().clearAllLogs();
+        tempDir.deleteSync(recursive: true);
+      });
+
+      test('hands the gallery a copy named like a Downloads save, keeps the '
+          'file and removes the copy', () async {
+        final result = await service.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        expect(result, isA<GallerySaveSuccess>());
+        final copy = File(galleryPaths.single);
+        expect(
+          copy.uri.pathSegments.last,
+          matches(RegExp(r'^Divine_\d+\.mov$')),
+        );
+        expect(copy.existsSync(), isFalse);
+        expect(source.readAsBytesSync(), equals([0, 1, 2, 3]));
+      });
+
+      test('removes the copy when the gallery rejects it', () async {
+        galleryReply = () =>
+            throw PlatformException(code: 'UNEXPECTED', message: 'rejected');
+
+        final result = await service.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        expect(result, isA<GallerySaveFailure>());
+        expect(File(galleryPaths.single).existsSync(), isFalse);
+        expect(source.existsSync(), isTrue);
+      });
+
+      test("keeps the copy's path out of a native failure", () async {
+        galleryReply = () => throw PlatformException(
+          code: 'UNEXPECTED',
+          message: 'Cannot save ${galleryPaths.single}',
+        );
+
+        await service.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        final logs = LogCaptureService().getRecentLogs();
+        expect(
+          logs.map((entry) => entry.message),
+          contains(contains('Cannot save')),
+        );
+        for (final entry in logs) {
+          expect(
+            '${entry.message} ${entry.error}',
+            isNot(contains(galleryPaths.single)),
+          );
+        }
+      });
+    });
   });
 }

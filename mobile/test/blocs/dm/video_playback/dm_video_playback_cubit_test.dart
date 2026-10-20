@@ -124,7 +124,10 @@ void main() {
 
       test('emits saved on success', () async {
         when(
-          () => gallerySaveService.saveVideoToGallery(any()),
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
         ).thenAnswer((_) async => const GallerySaveSuccess());
         final cubit = createCubit();
         addTearDown(cubit.close);
@@ -137,7 +140,10 @@ void main() {
 
       test('emits permissionDenied when access is refused', () async {
         when(
-          () => gallerySaveService.saveVideoToGallery(any()),
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
         ).thenAnswer((_) async => const GallerySavePermissionDenied());
         final cubit = createCubit();
         addTearDown(cubit.close);

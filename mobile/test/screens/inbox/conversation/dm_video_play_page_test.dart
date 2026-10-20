@@ -355,7 +355,10 @@ void main() {
           return expectedClipPath();
         });
         when(
-          () => gallerySaveService.saveVideoToGallery(any()),
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
         ).thenAnswer((_) async => const GallerySaveSuccess());
         installMockDivineVideoPlayer();
 
@@ -376,7 +379,12 @@ void main() {
         await tester.tap(find.text(l10n.shareSheetSaveToGallery));
         await tester.pumpAndSettle();
 
-        verify(() => gallerySaveService.saveVideoToGallery(any())).called(1);
+        verify(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).called(1);
       });
 
       testWidgets('saves straight to the gallery when clips are not offered', (
@@ -388,7 +396,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.shareSheetAddToClips), findsNothing);
-        verify(() => gallerySaveService.saveVideoToGallery(any())).called(1);
+        verify(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).called(1);
       });
     });
   });

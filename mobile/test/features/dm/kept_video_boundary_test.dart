@@ -15,6 +15,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:permissions_service/permissions_service.dart';
 import 'package:pro_video_editor/core/platform/native_method_channel.dart';
 import 'package:pro_video_editor/core/platform/platform_interface.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
 
 class _NoopInitEditor extends MethodChannelProVideoEditor {
@@ -77,6 +78,11 @@ void main() {
     );
     await LogCaptureService().clearAllLogs();
   });
+
+  File keptVideo(DmMessage message) => File(
+    '${root.path}/${DmVideoStore.dirName}/${'e' * 64}/'
+    '${DmVideoStore.videoFileNameFor(message)}',
+  );
 
   tearDown(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -166,6 +172,37 @@ void main() {
     );
   });
 
+  group('real DM gallery save', () {
+    test('hands the gallery a copy not named after the message, and keeps '
+        'the video', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      String? galleryPath;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(galChannel, (call) async {
+            if (call.method != 'putVideo') return true;
+            final args = call.arguments as Map<Object?, Object?>;
+            galleryPath = args['path']! as String;
+            return null;
+          });
+      final cubit = EncryptedVideoSaveCubit(
+        resolveStore: () => store,
+        gallerySaveService: GallerySaveService(
+          permissionsService: _GrantedPermissions(),
+        ),
+      );
+      addTearDown(cubit.close);
+      final message = _message('a');
+
+      await cubit.save(message);
+
+      expect(cubit.state.status, DmVideoSaveStatus.saved);
+      expect(galleryPath, isNotNull);
+      expect(galleryPath, isNot(contains(message.id)));
+      expect(galleryPath, isNot(contains(DmVideoStore.dirName)));
+      expect(keptVideo(message).existsSync(), isTrue);
+    });
+  });
+
   group('real DM gallery-save diagnostics', () {
     for (final fails in [false, true]) {
       test(
@@ -215,7 +252,8 @@ void main() {
       );
     }
 
-    test('keeps a retained file name out of a native failure', () async {
+    test('keeps a retained file name out of a native failure when handed '
+        'the file itself', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       String? fileName;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -228,18 +266,14 @@ void main() {
               message: 'The file “$fileName” couldn’t be opened.',
             );
           });
-      final cubit = EncryptedVideoSaveCubit(
-        resolveStore: () => store,
-        gallerySaveService: GallerySaveService(
-          permissionsService: _GrantedPermissions(),
-        ),
-      );
-      addTearDown(cubit.close);
+      final video = await store.videoFor(_message('a'));
 
-      await cubit.save(_message('a'));
+      final result = await GallerySaveService(
+        permissionsService: _GrantedPermissions(),
+      ).saveVideoToGallery(EditorVideo.file(video.path));
 
-      expect(fileName, isNotNull);
-      expect(cubit.state.status, DmVideoSaveStatus.failed);
+      expect(fileName, DmVideoStore.videoFileNameFor(_message('a')));
+      expect(result, isA<GallerySaveFailure>());
       final logs = LogCaptureService().getRecentLogs();
       expect(
         logs.map((entry) => entry.message),
@@ -276,7 +310,7 @@ void main() {
     });
 
     test('keeps a name derived from the retained file out of a native '
-        'failure', () async {
+        'failure when handed the file itself', () async {
       // Android's gallery plugin numbers a copy whose name is taken.
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       String? stem;
@@ -291,18 +325,14 @@ void main() {
               message: 'Could not insert ${stem}1.mp4',
             );
           });
-      final cubit = EncryptedVideoSaveCubit(
-        resolveStore: () => store,
-        gallerySaveService: GallerySaveService(
-          permissionsService: _GrantedPermissions(),
-        ),
-      );
-      addTearDown(cubit.close);
+      final video = await store.videoFor(_message('a'));
 
-      await cubit.save(_message('a'));
+      final result = await GallerySaveService(
+        permissionsService: _GrantedPermissions(),
+      ).saveVideoToGallery(EditorVideo.file(video.path));
 
-      expect(stem, isNotNull);
-      expect(cubit.state.status, DmVideoSaveStatus.failed);
+      expect(stem, 'a' * 64);
+      expect(result, isA<GallerySaveFailure>());
       final logs = LogCaptureService().getRecentLogs();
       expect(
         logs.map((entry) => entry.message),
@@ -322,16 +352,18 @@ void main() {
           PathProviderPlatform.instance = _DownloadsPathProvider(
             downloads.path,
           );
-          String? sourcePath;
+          String? galleryPath;
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
               .setMockMethodCallHandler(galChannel, (call) async {
                 if (call.method != 'putVideo') return true;
                 final args = call.arguments as Map<Object?, Object?>;
-                sourcePath = args['path']! as String;
-                if (removeSource) File(sourcePath!).deleteSync();
+                galleryPath = args['path']! as String;
+                // The Downloads fallback copies the kept video, not the
+                // gallery's copy.
+                if (removeSource) keptVideo(_message('a')).deleteSync();
                 throw PlatformException(
                   code: 'UNEXPECTED',
-                  message: 'Cannot save $sourcePath',
+                  message: 'Cannot save $galleryPath',
                 );
               });
           final cubit = EncryptedVideoSaveCubit(
@@ -344,7 +376,7 @@ void main() {
 
           await cubit.save(_message('a'));
 
-          expect(sourcePath, isNotNull);
+          expect(galleryPath, isNotNull);
           expect(
             cubit.state.status,
             removeSource ? DmVideoSaveStatus.failed : DmVideoSaveStatus.saved,

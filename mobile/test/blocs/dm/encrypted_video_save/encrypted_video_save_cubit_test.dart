@@ -61,7 +61,10 @@ void main() {
 
   void stubGallery(GallerySaveResult result) {
     when(
-      () => gallerySaveService.saveVideoToGallery(any()),
+      () => gallerySaveService.saveVideoToGallery(
+        any(),
+        copyUnderNeutralName: true,
+      ),
     ).thenAnswer((_) async => result);
   }
 
@@ -79,7 +82,10 @@ void main() {
         verify: (_) {
           final video =
               verify(
-                    () => gallerySaveService.saveVideoToGallery(captureAny()),
+                    () => gallerySaveService.saveVideoToGallery(
+                      captureAny(),
+                      copyUnderNeutralName: true,
+                    ),
                   ).captured.single
                   as EditorVideo;
           expect(video.file?.path, equals(_keptPath));

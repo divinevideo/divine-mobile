@@ -135,6 +135,8 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
     emit(_withSaveStatus(DmVideoSaveStatus.saving));
     final result = await _gallerySaveService.saveVideoToGallery(
       EditorVideo.file(path),
+      // The kept file is named after its message.
+      copyUnderNeutralName: true,
     );
     emitIfOpen(
       _withSaveStatus(switch (result) {
