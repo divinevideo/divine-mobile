@@ -5,10 +5,20 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/consent_upload.dart';
 import 'package:openvine/services/consent_upload_session.dart';
 
 void main() {
+  test('expected session invalidation is not crash-reportable', () {
+    expect(
+      asReportableError(
+        const ConsentUploadInvalidatedException(),
+        context: 'consent upload',
+      ),
+      isNull,
+    );
+  });
   test(
     'closing during transport releases the snapshot only after transport ends',
     () async {
@@ -74,7 +84,7 @@ void main() {
         videoPath: '/clip.mp4',
         pubkey: secondOwner,
       ),
-      throwsStateError,
+      throwsA(isA<ConsentUploadInvalidatedException>()),
     );
     await expectLater(
       upload.request.finalize().toBytes(),
