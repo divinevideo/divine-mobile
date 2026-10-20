@@ -9,11 +9,16 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class MockNostrClient extends Mock implements NostrClient {}
 
-class MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+class MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {
+  // A live client reports false; an unstubbed mock getter would return null.
+  @override
+  bool isDisposed = false;
+}
 
 class MockVideoLocalStorage extends Mock implements VideoLocalStorage {}
 
@@ -1948,6 +1953,58 @@ void main() {
             nostrClient: mockNostrClient,
             funnelcakeApiClient: mockFunnelcakeClient,
           );
+        });
+
+        // An account switch disposes the outgoing account's Funnelcake client
+        // while its new-videos load can still be hydrating (#10291).
+        group('when the bulk-stats request fails', () {
+          Future<List<LogEntry>> loadWithFailingStats({
+            required bool clientDisposed,
+          }) async {
+            await LogCaptureService().clearAllLogs();
+            mockFunnelcakeClient.isDisposed = clientDisposed;
+            when(
+              () => mockFunnelcakeClient.getRecentVideosPage(
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => _recentPage([
+                _createVideoStats(
+                  id: 'event-1',
+                  pubkey: 'author',
+                  dTag: 'dtag-1',
+                  videoUrl: 'https://example.com/video.mp4',
+                ),
+              ]),
+            );
+            when(
+              () => mockFunnelcakeClient.getBulkVideoStats(['event-1']),
+            ).thenThrow(const FunnelcakeException('Client is already closed'));
+
+            final result = (await repositoryWithApi.getNewVideos()).videos;
+            expect(result.single.id, equals('event-1'));
+            return LogCaptureService()
+                .getRecentLogs()
+                .where(
+                  (entry) => entry.message.contains(
+                    'Failed to hydrate home feed videos with bulk stats',
+                  ),
+                )
+                .toList();
+          }
+
+          test('on a disposed client it is logged at debug', () async {
+            final logs = await loadWithFailingStats(clientDisposed: true);
+
+            expect(logs.map((entry) => entry.level), [LogLevel.debug]);
+          });
+
+          test('on a live client it is logged as an error', () async {
+            final logs = await loadWithFailingStats(clientDisposed: false);
+
+            expect(logs.map((entry) => entry.level), [LogLevel.error]);
+          });
         });
 
         test(

@@ -271,6 +271,7 @@ class ScheduledPostCoordinator {
     if (_stop) return;
 
     pending = await _repository.pending();
+    if (_stop) return;
     final syncDue =
         _lastSyncAt == null ||
         !now.isBefore(_lastSyncAt!.add(_syncInterval)) ||

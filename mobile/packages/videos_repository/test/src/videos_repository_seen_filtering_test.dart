@@ -15,7 +15,11 @@ import 'package:videos_repository/videos_repository.dart';
 
 class MockNostrClient extends Mock implements NostrClient {}
 
-class MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+class MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {
+  // A live client reports false; an unstubbed mock getter would return null.
+  @override
+  bool isDisposed = false;
+}
 
 class StubRandom implements Random {
   StubRandom({int? offsetPage}) : _offsetPage = offsetPage;

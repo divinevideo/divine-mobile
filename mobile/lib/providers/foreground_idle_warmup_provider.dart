@@ -97,6 +97,9 @@ final foregroundIdleWarmupCoordinatorProvider =
               await ref.read(popularVideosFeedProvider.future);
               final popular = ref.read(popularVideosFeedProvider.notifier);
               await popular.preloadVariant(PopularVideosVariant.native);
+              // An account switch can land during the first preload; the
+              // second would then fetch for an account that has left (#10291).
+              if (!ref.mounted) return;
               await popular.preloadVariant(PopularVideosVariant.classic);
             },
           ),

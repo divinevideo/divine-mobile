@@ -366,6 +366,10 @@ class FollowRepository {
   // because its account's clients are torn down with it (#10291).
   bool _isDisposed = false;
 
+  /// The [initialize] run in flight. A second caller waits for it rather than
+  /// loading, querying and subscribing a second time alongside it.
+  Future<void>? _initializing;
+
   // In-memory cache — my followers (populated after first fetch)
   List<String> _cachedMyFollowersPubkeys = [];
   List<String>? _myFollowersLookupSource;
@@ -2025,9 +2029,18 @@ class FollowRepository {
   }
 
   /// Initialize the repository - load from local cache, then sync with network
-  Future<void> initialize() async {
-    if (_isInitialized || _isDisposed) return;
+  ///
+  /// A call while a run is in flight waits for that run. A run that ends
+  /// without initializing, such as one made before the user has keys, leaves
+  /// the next call free to try again. A disposed repository does nothing.
+  Future<void> initialize() {
+    if (_isInitialized || _isDisposed) return Future<void>.value();
+    return _initializing ??= _initialize().whenComplete(
+      () => _initializing = null,
+    );
+  }
 
+  Future<void> _initialize() async {
     // Guard: Skip initialization if user is not authenticated.
     // Don't set _isInitialized = true so we can retry when keys are available.
     if (!_nostrClient.hasKeys) {

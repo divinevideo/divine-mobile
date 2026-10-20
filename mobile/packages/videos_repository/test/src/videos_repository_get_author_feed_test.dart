@@ -12,7 +12,11 @@ import 'package:videos_repository/videos_repository.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {
+  // A live client reports false; an unstubbed mock getter would return null.
+  @override
+  bool isDisposed = false;
+}
 
 const _author = 'author-pubkey';
 

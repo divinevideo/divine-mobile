@@ -636,6 +636,16 @@ class VideosRepository {
         );
       }).toList();
     } on Object catch (e, stackTrace) {
+      // An account switch disposes the client under a load still in flight
+      // (#10291); that failure is expected, not a fault worth an error.
+      if (_funnelcakeApiClient.isDisposed) {
+        Log.debug(
+          'Failed to hydrate home feed videos with bulk stats: $e',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+        return videos;
+      }
       Log.error(
         'Failed to hydrate home feed videos with bulk stats',
         name: 'VideosRepository',
