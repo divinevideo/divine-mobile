@@ -65,6 +65,7 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
     required SharedPreferences sharedPreferences,
     SystemVolumeListener? systemVolumeListener,
   }) : _prefs = sharedPreferences,
+       _mutedBySystem = sharedPreferences.getBool(_systemMutePrefsKey) ?? false,
        super(
          VideoVolumeState(
            // Screenshot capture runs must stay silent.
@@ -85,10 +86,11 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   }
 
   static const _prefsKey = 'video_playback_volume';
+  static const _systemMutePrefsKey = 'video_playback_muted_by_system';
 
   final SharedPreferences _prefs;
   StreamSubscription<double>? _systemVolumeSubscription;
-  bool _mutedBySystem = false;
+  bool _mutedBySystem;
 
   /// Called by the feed player when the user toggles mute or adjusts volume
   /// via the in-app UI.
@@ -120,7 +122,12 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   }
 
   Future<void> _persist() async {
-    await _prefs.setDouble(_prefsKey, state.volume);
+    // Capture both values before awaiting so rapid changes cannot mix a
+    // previous volume with the next change's mute source.
+    await Future.wait([
+      _prefs.setDouble(_prefsKey, state.volume),
+      _prefs.setBool(_systemMutePrefsKey, _mutedBySystem),
+    ]);
   }
 
   @override

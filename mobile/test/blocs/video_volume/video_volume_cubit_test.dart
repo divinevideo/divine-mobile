@@ -183,6 +183,23 @@ void main() {
       expect(prefs.getDouble('video_playback_volume'), 1.0);
     });
 
+    test('system mute can be undone by hardware after reopening', () async {
+      final first = buildCubit();
+      fakeVolumeListener.controller.add(0);
+      await pumpEventQueue();
+      await first.close();
+
+      fakeVolumeListener = _FakeSystemVolumeListener();
+      final reopened = buildCubit();
+      addTearDown(reopened.close);
+      expect(reopened.state.isMuted, isTrue);
+
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+      expect(reopened.state.isMuted, isFalse);
+      expect(prefs.getDouble('video_playback_volume'), 1.0);
+    });
+
     group('close', () {
       test('can be called without error', () async {
         final cubit = buildCubit();
