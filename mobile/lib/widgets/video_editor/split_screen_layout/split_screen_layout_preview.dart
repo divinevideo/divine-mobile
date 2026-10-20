@@ -25,13 +25,17 @@ class SplitScreenLayoutPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (:frameAspectRatio, :borderColor, :rects) = context.select(
+    // The inputs of the cell rects rather than the rects themselves: those
+    // are a new list each time, which would rebuild every cell on every pan.
+    final (:frameAspectRatio, :borderColor, :preset, :gap) = context.select(
       (SplitScreenLayoutCubit cubit) => (
         frameAspectRatio: cubit.state.frameAspectRatio,
         borderColor: cubit.state.borderColor,
-        rects: cubit.state.cellRects,
+        preset: cubit.state.preset,
+        gap: cubit.state.gap,
       ),
     );
+    final rects = preset.cellRects(aspectRatio: frameAspectRatio, gap: gap);
 
     return Center(
       child: AspectRatio(
