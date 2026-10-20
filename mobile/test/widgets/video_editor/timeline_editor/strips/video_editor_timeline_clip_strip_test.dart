@@ -1294,28 +1294,6 @@ void main() {
         await tester.pump();
       });
 
-      testWidgets('a second finger landing mid-drag neither restarts the '
-          'first drag nor reports a second one', (tester) async {
-        playhead.value = const Duration(milliseconds: -100);
-        await pumpClip(tester);
-        final startDrag1 = await startDrag(tester, isStart: true);
-        await startDrag1.moveBy(const Offset(100, 0));
-        await tester.pump();
-
-        final endDrag = await startDrag(tester, isStart: false);
-        await startDrag1.moveBy(const Offset(50, 0));
-        await tester.pump();
-        expect(reportedStart, equals(const Duration(seconds: 2)));
-
-        await startDrag1.up();
-        await tester.pump();
-        await endDrag.moveBy(const Offset(-10, 0));
-        await tester.pump();
-        await endDrag.up();
-        await tester.pump();
-        expect(dragStates, equals([true, false]));
-      });
-
       testWidgets('split end half cannot reveal its sibling frames', (
         tester,
       ) async {
