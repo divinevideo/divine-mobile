@@ -1199,6 +1199,33 @@ void main() {
       );
 
       test(
+        "keeps a gone message's video while a card reads the frame of a "
+        "tap's download",
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final readStarted = Completer<void>();
+          readFrame = (_) {
+            readStarted.complete();
+            return Completer<Uint8List?>().future;
+          };
+          final message = _videoMessage();
+          final store = createStore(isMessageGone: (_) async => true);
+          final tapped = store.videoFor(message);
+          await pumpEventQueue();
+          unawaited(store.previewFor(message, download: true));
+          await pumpEventQueue();
+          release.complete(_plaintext);
+          final video = await tapped;
+          await readStarted.future;
+
+          await store.prune();
+
+          expect(video.existsSync(), isTrue);
+        },
+      );
+
+      test(
         'keeps everything when it cannot tell whether a message is gone',
         () async {
           final message = _videoMessage();
