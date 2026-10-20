@@ -751,6 +751,7 @@ void main() {
             200,
             scrollable: find.byType(Scrollable).first,
           );
+          await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.badgeSubscribeAction));
           await tester.pumpAndSettle();
           expect(
@@ -777,6 +778,7 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.profileVideosLabel));
       await tester.pumpAndSettle();
       expect(find.text('badge video destination'), findsOneWidget);
