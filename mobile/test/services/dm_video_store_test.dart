@@ -134,6 +134,7 @@ void main() {
     late int fetches;
     late List<({int? maxBytes, Duration? timeLimit})> fetchLimits;
     late List<bool Function()?> fetchWanted;
+    late List<bool Function()?> fetchLimitsApply;
     late int frameReads;
     late Future<Uint8List> Function(DmMessage message) fetch;
     late Future<Uint8List?> Function(File video) readFrame;
@@ -144,6 +145,7 @@ void main() {
       fetches = 0;
       fetchLimits = [];
       fetchWanted = [];
+      fetchLimitsApply = [];
       frameReads = 0;
       fetch = (_) async => _plaintext;
       readFrame = (_) async => _frame;
@@ -158,9 +160,10 @@ void main() {
       Future<bool> Function(String messageId)? isMessageGone,
     }) => DmVideoStore(
       ownerPubkey: _owner,
-      fetchVideo: (message, {maxBytes, timeLimit, stillWanted}) {
+      fetchVideo: (message, {maxBytes, timeLimit, limitsApply, stillWanted}) {
         fetches++;
         fetchLimits.add((maxBytes: maxBytes, timeLimit: timeLimit));
+        fetchLimitsApply.add(limitsApply);
         fetchWanted.add(stillWanted);
         return fetch(message);
       },
@@ -705,6 +708,56 @@ void main() {
           tapRelease.complete(_plaintext);
           await tapped;
           expect(await waiting, isNotNull);
+        },
+      );
+
+      test('lift their limits once a tap waits for the same video', () async {
+        final release = Completer<Uint8List>();
+        fetch = (_) => release.future;
+        final store = createStore();
+        final message = _videoMessage();
+
+        final preview = store.previewFor(message, download: true);
+        await pumpEventQueue();
+        final limitsApply = fetchLimitsApply.single!;
+        expect(limitsApply(), isTrue);
+
+        final tapped = store.videoFor(message);
+        expect(limitsApply(), isFalse);
+
+        release.complete(_plaintext);
+        expect((await tapped).readAsBytesSync(), equals(_plaintext));
+        expect(await preview, isNotNull);
+        expect(fetches, equals(1));
+      });
+
+      test(
+        'let other cards download once a tap takes over a running download',
+        () async {
+          final release = Completer<Uint8List>();
+          final joined = _videoMessage(id: '1' * 64);
+          final other = _videoMessage(id: '2' * 64);
+          final fetchedIds = <String>[];
+          fetch = (message) {
+            fetchedIds.add(message.id);
+            return message.id == joined.id
+                ? release.future
+                : Future.value(_plaintext);
+          };
+          final store = createStore();
+          final joinedPreview = store.previewFor(joined, download: true);
+          final otherPreview = store.previewFor(other, download: true);
+          await pumpEventQueue();
+          expect(fetchedIds, equals([joined.id]));
+
+          final tapped = store.videoFor(joined);
+          await pumpEventQueue();
+          expect(fetchedIds, equals([joined.id, other.id]));
+          expect(await otherPreview, isNotNull);
+
+          release.complete(_plaintext);
+          await tapped;
+          expect(await joinedPreview, isNotNull);
         },
       );
 

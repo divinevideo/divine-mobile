@@ -1,6 +1,7 @@
 // ABOUTME: Tests for DmVideoDecryptor: fetch ciphertext, verify, decrypt to bytes.
 // ABOUTME: Uses a mocked Dio returning real AES-GCM ciphertext so decrypt is real.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -13,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_encryption.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -326,6 +328,123 @@ void main() {
         ),
       );
     });
+
+    test(
+      'lets a download past a smaller size limit through once its limits are '
+      'lifted',
+      () async {
+        final produced = await FileEncryption().encrypt(
+          Uint8List.fromList(List<int>.filled(64, 7)),
+        );
+        final length = produced.ciphertext.length;
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer((invocation) async {
+          final token = invocation.namedArguments[#cancelToken] as CancelToken;
+          final progress =
+              invocation.namedArguments[#onReceiveProgress] as ProgressCallback;
+          progress(length, length);
+          if (token.isCancelled) throw await token.whenCancel;
+          return Response<List<int>>(
+            requestOptions: RequestOptions(path: _videoUrl),
+            statusCode: 200,
+            data: produced.ciphertext.toList(),
+          );
+        });
+        final message = _videoMessage(
+          fileHash: HashUtil.sha256Hash(produced.ciphertext),
+          key: produced.key,
+          nonce: produced.nonce,
+        );
+
+        final decrypted = await DmVideoDecryptor(
+          dio: dio,
+        ).decrypt(message, maxBytes: 16, limitsApply: () => false);
+
+        expect(decrypted, equals(List<int>.filled(64, 7)));
+      },
+    );
+
+    test(
+      'still refuses a download past the largest a video can be once its '
+      'limits are lifted',
+      () async {
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer((invocation) async {
+          final token = invocation.namedArguments[#cancelToken] as CancelToken;
+          final progress =
+              invocation.namedArguments[#onReceiveProgress] as ProgressCallback;
+          progress(16, dmVideoMaxCiphertextBytes + 1);
+          throw await token.whenCancel;
+        });
+
+        await expectLater(
+          DmVideoDecryptor(dio: dio).decrypt(
+            _videoMessage(fileHash: 'ab' * 32),
+            maxBytes: 16,
+            limitsApply: () => false,
+          ),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (e) => e.message,
+              'message',
+              contains('size limit'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'keeps a download going past its time limit once its limits are lifted',
+      () async {
+        // Asked when the time limit runs out; the download lands after that.
+        final asked = Completer<void>();
+        when(
+          () => dio.get<List<int>>(
+            _videoUrl,
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        ).thenAnswer((invocation) async {
+          final token = invocation.namedArguments[#cancelToken] as CancelToken;
+          await Future.any([asked.future, token.whenCancel]);
+          if (token.isCancelled) throw await token.whenCancel;
+          return Response<List<int>>(
+            requestOptions: RequestOptions(path: _videoUrl),
+            statusCode: 200,
+            data: const [1, 2, 3],
+          );
+        });
+
+        final decrypted =
+            await DmVideoDecryptor(
+              dio: dio,
+              encryption: _IsolateNamingEncryption(),
+            ).decrypt(
+              _videoMessage(fileHash: ''),
+              timeLimit: const Duration(milliseconds: 20),
+              limitsApply: () {
+                if (!asked.isCompleted) asked.complete();
+                return false;
+              },
+            );
+
+        expect(decrypted, isNotEmpty);
+      },
+    );
 
     test('stops a download its caller no longer wants', () async {
       var wanted = true;

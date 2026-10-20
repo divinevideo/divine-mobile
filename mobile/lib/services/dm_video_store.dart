@@ -14,12 +14,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Downloads, verifies and decrypts a video DM, returning its plaintext. A
-/// null [maxBytes] or [timeLimit] keeps the fetcher's own limit, and a
-/// download may stop once [stillWanted] says no.
+/// null [maxBytes] or [timeLimit] keeps the fetcher's own limit, as does
+/// either once [limitsApply] says no, and a download may stop once
+/// [stillWanted] says no.
 typedef DmVideoFetcher = Future<Uint8List> Function(
   DmMessage message, {
   int? maxBytes,
   Duration? timeLimit,
+  bool Function()? limitsApply,
   bool Function()? stillWanted,
 });
 
@@ -131,8 +133,10 @@ class DmVideoStore {
   final Map<String, Future<File>> _videosInFlight = {};
   final Map<String, Future<File>> _autoDownloadsInFlight = {};
 
-  /// Downloads nobody tapped for that have left the queue and are fetching.
-  final Map<String, Future<File>> _autoFetchesRunning = {};
+  /// Downloads nobody tapped for that are fetching, each with the signal a tap
+  /// completes to take it over.
+  final Map<String, ({Future<File> video, Completer<void> takeover})>
+  _autoFetchesRunning = {};
 
   /// Videos handed to playback or a save. Never pruned while this store
   /// lives: playing or saving one must not find it gone.
@@ -218,14 +222,16 @@ class DmVideoStore {
   Future<File> _tapVideoFor(DmMessage message) async {
     final running = _autoFetchesRunning[message.id];
     if (running != null) {
+      // From here on it runs without the automatic limits, out of the queue.
+      if (!running.takeover.isCompleted) running.takeover.complete();
       try {
         // That download's lease is its card's, released after the frame.
-        final file = await running;
+        final file = await running.video;
         _lease(file);
         return file;
       } on Object {
-        // Most likely the automatic limits, which a tap does not have: fetch
-        // it again in full.
+        // Perhaps a limit it hit before this tap lifted them: fetch it again
+        // in full.
       }
     }
     return _obtainVideo(message);
@@ -497,8 +503,10 @@ class DmVideoStore {
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
   /// for, within their limits, or, when its turn comes, uses the download a
-  /// tap started meanwhile. Dropped at its turn, and stopped while running,
-  /// once [wanted] says no and no tap waits for it.
+  /// tap started meanwhile. A tap that waits for the download once it runs
+  /// takes it over: its limits are lifted and the next turn starts. Dropped
+  /// at its turn, and stopped while running, once [wanted] says no and no tap
+  /// waits for it.
   Future<File> _autoVideoFor(
     DmMessage message, {
     required bool Function() wanted,
@@ -515,39 +523,41 @@ class DmVideoStore {
     bool Function() wanted,
   ) async {
     final id = message.id;
-    final turn = await _autoDownloads.run<_Turn>(() async {
+    // A download a tap waits for is waited for after the turn: it runs
+    // without limits, and other cards' downloads must not wait behind it.
+    final (:download, :leased) = await _autoDownloads.run(() async {
       final tapped = _videosInFlight[id];
-      if (tapped != null) return _TapFetching(tapped);
+      if (tapped != null) return (download: tapped, leased: false);
       if (!wanted()) throw const _DownloadDropped();
+      final takeover = Completer<void>();
       final fetch = _obtainVideo(
         message,
         maxBytes: autoDownloadMaxBytes,
         timeLimit: autoDownloadTimeLimit,
-        stillWanted: () => wanted() || _videosInFlight.containsKey(id),
+        limitsApply: () => !takeover.isCompleted,
+        stillWanted: () => wanted() || takeover.isCompleted,
       );
-      _autoFetchesRunning[id] = fetch;
-      return fetch
-          .then<_Turn>(_Fetched.new)
+      _autoFetchesRunning[id] = (video: fetch, takeover: takeover);
+      // Its outcome reaches the card and any tap through their own waits.
+      fetch
           .whenComplete(
             () => _autoFetchesRunning.removeWhere((key, _) => key == id),
-          );
+          )
+          .ignore();
+      await Future.any<void>([fetch, takeover.future]);
+      return (download: fetch, leased: true);
     });
-    switch (turn) {
-      case _Fetched(:final file):
-        return file;
-      case _TapFetching(:final download):
-        // Waited for after the turn: a tap fetches without limits, and other
-        // cards' downloads must not wait behind it.
-        final file = await download;
-        _lease(file);
-        return file;
-    }
+    final file = await download;
+    // A tap's download is leased for the tap only.
+    if (!leased) _lease(file);
+    return file;
   }
 
   Future<File> _obtainVideo(
     DmMessage message, {
     int? maxBytes,
     Duration? timeLimit,
+    bool Function()? limitsApply,
     bool Function()? stillWanted,
   }) async {
     final file = File(
@@ -565,6 +575,7 @@ class DmVideoStore {
         message,
         maxBytes: maxBytes,
         timeLimit: timeLimit,
+        limitsApply: limitsApply,
         stillWanted: stillWanted,
       );
       // Landed after every card let go of it: keep no plaintext.
@@ -828,25 +839,6 @@ class DmVideoStore {
 /// A queued download no card wants any more when its turn comes.
 class _DownloadDropped implements Exception {
   const _DownloadDropped();
-}
-
-/// What a card's turn in the download queue ended with.
-sealed class _Turn {
-  const _Turn();
-}
-
-/// The card's own download, finished.
-final class _Fetched extends _Turn {
-  const _Fetched(this.file);
-
-  final File file;
-}
-
-/// The download a tap started for the same video, still running.
-final class _TapFetching extends _Turn {
-  const _TapFetching(this.download);
-
-  final Future<File> download;
 }
 
 /// Runs tasks one at a time, each once the one before it has settled.

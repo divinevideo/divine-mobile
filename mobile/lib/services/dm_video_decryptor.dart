@@ -92,9 +92,11 @@ class DmVideoDecryptor {
   ///
   /// The download is cut off past [maxBytes] of ciphertext, which defaults to
   /// [dmVideoMaxCiphertextBytes], and, when [timeLimit] is given, once it has
-  /// run that long; a host can otherwise trickle bytes forever. When
-  /// [stillWanted] is given it is asked as the download progresses, and the
-  /// download stops once it says no.
+  /// run that long; a host can otherwise trickle bytes forever. Once
+  /// [limitsApply] says no, as when someone taps play on the video, the
+  /// download carries on as if neither limit was given. When [stillWanted] is
+  /// given it is asked as the download progresses, and the download stops
+  /// once it says no.
   ///
   /// Throws a [DmVideoUnavailableException] when the message is not a video
   /// or carries a malformed key or nonce (checked before any download, and
@@ -111,6 +113,7 @@ class DmVideoDecryptor {
     DmMessage message, {
     int? maxBytes,
     Duration? timeLimit,
+    bool Function()? limitsApply,
     bool Function()? stillWanted,
   }) async {
     final metadata = message.fileMetadata;
@@ -128,6 +131,7 @@ class DmVideoDecryptor {
       message.content,
       maxBytes: maxBytes ?? dmVideoMaxCiphertextBytes,
       timeLimit: timeLimit,
+      limitsApply: limitsApply,
       stillWanted: stillWanted,
     );
     if (stillWanted != null && !stillWanted()) {
@@ -145,11 +149,13 @@ class DmVideoDecryptor {
 
   /// Fetches the ciphertext at [url], refusing anything but `https`, on the
   /// first request and on every redirect, and aborting as soon as the body
-  /// exceeds [maxBytes] or the download outlasts [timeLimit].
+  /// exceeds [maxBytes] or the download outlasts [timeLimit], while
+  /// [limitsApply] says those apply.
   Future<Uint8List> _download(
     String url, {
     required int maxBytes,
     Duration? timeLimit,
+    bool Function()? limitsApply,
     bool Function()? stillWanted,
   }) async {
     final uri = Uri.tryParse(url);
@@ -157,6 +163,8 @@ class DmVideoDecryptor {
       throw const DmVideoUnavailableException('the video is not on HTTPS');
     }
 
+    bool limited() => limitsApply?.call() ?? true;
+    int sizeLimit() => limited() ? maxBytes : dmVideoMaxCiphertextBytes;
     final cancelToken = CancelToken();
     var oversized = false;
     var outlasted = false;
@@ -164,6 +172,7 @@ class DmVideoDecryptor {
     final deadline = timeLimit == null
         ? null
         : Timer(timeLimit, () {
+            if (!limited()) return;
             outlasted = true;
             cancelToken.cancel('encrypted video download took too long');
           });
@@ -191,7 +200,8 @@ class DmVideoDecryptor {
           ),
           cancelToken: cancelToken,
           onReceiveProgress: (received, total) {
-            if (consumed + received > maxBytes || consumed + total > maxBytes) {
+            final limit = sizeLimit();
+            if (consumed + received > limit || consumed + total > limit) {
               oversized = true;
               cancelToken.cancel('encrypted video exceeds size limit');
             } else if (stillWanted != null && !stillWanted()) {
@@ -261,7 +271,7 @@ class DmVideoDecryptor {
     if (data == null || data.isEmpty) {
       throw const DmVideoUnavailableException('empty ciphertext body');
     }
-    if (consumed + data.length > maxBytes) {
+    if (consumed + data.length > sizeLimit()) {
       throw const DmVideoUnavailableException(
         'ciphertext exceeds the size limit',
       );
