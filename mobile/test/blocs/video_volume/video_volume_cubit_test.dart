@@ -171,7 +171,7 @@ void main() {
       expect(prefs.getDouble('video_playback_volume'), 0.0);
     });
 
-    test('explicit mute overrides an existing system mute', () async {
+    test('player volume synchronization preserves system unmute', () async {
       final cubit = buildCubit();
       addTearDown(cubit.close);
       fakeVolumeListener.controller.add(0);
@@ -179,8 +179,8 @@ void main() {
       cubit.onPlaybackVolumeChanged(0);
       fakeVolumeListener.controller.add(0.7);
       await pumpEventQueue();
-      expect(cubit.state.isMuted, isTrue);
-      expect(prefs.getDouble('video_playback_volume'), 0.0);
+      expect(cubit.state.isMuted, isFalse);
+      expect(prefs.getDouble('video_playback_volume'), 1.0);
     });
 
     group('close', () {

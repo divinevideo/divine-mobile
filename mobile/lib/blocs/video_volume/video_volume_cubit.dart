@@ -96,10 +96,11 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   /// Values are clamped to the binary set `{0.0, 1.0}`: any positive
   /// [newVolume] is treated as unmuted (`1.0`).
   void onPlaybackVolumeChanged(double newVolume) {
-    // An explicit choice takes precedence even when already system-muted.
-    _mutedBySystem = false;
     final clamped = newVolume > 0 ? 1.0 : 0.0;
+    // The player echoes volume synchronization through this callback. Ignore
+    // unchanged values so a system mute keeps its hardware-unmute behavior.
     if (state.volume == clamped) return;
+    _mutedBySystem = false;
     emit(VideoVolumeState(volume: clamped));
     unawaited(_persist());
   }
