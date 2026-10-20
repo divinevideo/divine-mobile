@@ -35,7 +35,7 @@ class _Rendered implements Exception {}
 class _RecordingProVideoEditor extends ProVideoEditor {
   _RecordingProVideoEditor(this.frame);
 
-  final Uint8List frame;
+  Uint8List frame;
   final tasks = <VideoRenderData>[];
   final thumbnailRequests = <ThumbnailConfigs>[];
 
@@ -225,5 +225,21 @@ void main() {
       expect(requested, lessThan(const Duration(seconds: 2)));
       expect(requested, greaterThan(const Duration(milliseconds: 1900)));
     });
+
+    test(
+      'renders without the hold when the last frame cannot be decoded',
+      () async {
+        editor.frame = Uint8List.fromList(const [1, 2, 3]);
+
+        final task = await renderSideBySide([
+          (clip: _clip('long', seconds: 3), zoom: 1),
+          (clip: _clip('short'), zoom: 1),
+        ]);
+
+        expect(editor.thumbnailRequests, hasLength(1));
+        expect(task.endTime, const Duration(seconds: 3));
+        expect(task.imageLayers, isEmpty);
+      },
+    );
   });
 }
