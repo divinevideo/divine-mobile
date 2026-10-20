@@ -469,6 +469,56 @@ void main() {
       },
     );
 
+    test(
+      'removal cleanup survives row clearing before account-store disposal',
+      () async {
+        const sentAt = 1757385263;
+        await db.directMessagesDao.insertMessage(
+          id: messageId,
+          conversationId: 'conversation',
+          senderPubkey: 'b' * 64,
+          content: 'https://media.example/blob',
+          createdAt: sentAt,
+          giftWrapId: 'c' * 64,
+          messageKind: 15,
+          ownerPubkey: owner,
+        );
+        final video = File(
+          '${cache.path}/${DmVideoStore.dirName}/$owner/$messageId.mp4',
+        )..createSync(recursive: true);
+        File('${video.parent.path}/$messageId.conversation')
+            .writeAsStringSync('conversation\n$sentAt');
+        final container = ProviderContainer(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            currentAccountIdProvider.overrideWithValue(owner),
+          ],
+        );
+        final store = container.read(dmVideoStoreProvider)!;
+        final closed = store.kept.drain<void>();
+        var disposed = false;
+        addTearDown(() async {
+          if (!disposed) container.dispose();
+          await closed;
+        });
+        await store.prune();
+        expect(video.existsSync(), isTrue);
+
+        await db.removedConversationsDao.record(
+          conversationId: 'conversation',
+          ownerPubkey: owner,
+          removedAt: sentAt + 1,
+        );
+        await db.directMessagesDao.clearForAccountSwitch(owner);
+        await pumpEventQueue();
+        disposed = true;
+        container.dispose();
+        await closed;
+
+        expect(video.existsSync(), isFalse);
+      },
+    );
+
     test('flushes the pending retraction before disposing the store', () async {
       await db.directMessagesDao.insertMessage(
         id: messageId,
