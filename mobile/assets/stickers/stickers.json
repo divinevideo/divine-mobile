@@ -88,20 +88,12 @@
     "tags": ["lilo", "float", "pool", "summer", "water", "relaxation"]
   },
   {
-    "assetPath": "assets/stickers/foam_finger.svg",
-    "tags": ["foam", "finger", "sports", "fan", "number one", "cheer"]
-  },
-  {
     "assetPath": "assets/stickers/forgot_password.svg",
     "tags": ["password", "forgot", "security", "lock", "login", "key"]
   },
   {
     "assetPath": "assets/stickers/forgot_password_alt.svg",
     "tags": ["password", "forgot", "security", "lock", "login", "reset"]
-  },
-  {
-    "assetPath": "assets/stickers/glitter_donut.svg",
-    "tags": ["donut", "glitter", "sparkle", "food", "sweet", "fancy"]
   },
   {
     "assetPath": "assets/stickers/grandfather.svg",
@@ -230,10 +222,6 @@
   {
     "assetPath": "assets/stickers/teeth.svg",
     "tags": ["teeth", "smile", "dental", "mouth", "grin", "white"]
-  },
-  {
-    "assetPath": "assets/stickers/traffic_cone.svg",
-    "tags": ["traffic", "cone", "construction", "warning", "road", "orange"]
   },
   {
     "assetPath": "assets/stickers/trail_sign.svg",
