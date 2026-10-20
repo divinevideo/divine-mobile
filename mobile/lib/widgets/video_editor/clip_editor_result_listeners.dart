@@ -434,7 +434,12 @@ class _ClipDetachResultListener extends StatelessWidget {
       // The shape mask moves onto the layer: on the canvas it shows the track
       // through what it hides rather than covering it with black, which is
       // what a picture-in-picture shape is for.
-      clip: detachedClip.copyWith(clearMask: true),
+      // A first-position clip may carry the canvas ratio for layer
+      // coordinates. A detached layer is shaped by its rendered media.
+      clip: detachedClip.copyWith(
+        originalAspectRatio: detachedClip.videoAspectRatio,
+        clearMask: true,
+      ),
       layerId: layerId,
       // So putting the clip back can find the slot it left.
       placeholderClipId: placeholderClipId,
@@ -449,7 +454,7 @@ class _ClipDetachResultListener extends StatelessWidget {
       exportConfigs: WidgetLayerExportConfigs(id: layerId, meta: meta),
       mask: maskForDetachedClip(
         detachedClip.mask,
-        boxSize: Size(detachedClip.originalAspectRatio, 1),
+        boxSize: Size(detachedClip.videoAspectRatio, 1),
         targetAspectRatio: detachedClip.targetAspectRatio.value,
       ),
     );

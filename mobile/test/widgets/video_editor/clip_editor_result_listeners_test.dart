@@ -13,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/clip_editor_result_listeners.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -60,12 +61,15 @@ void main() {
       when(() => stateManager.activeMeta).thenReturn({});
     });
 
-    Widget build({Widget child = const SizedBox.shrink()}) => MaterialApp(
+    Widget build({
+      Widget child = const SizedBox.shrink(),
+      ClipEditorBloc? realClipBloc,
+    }) => MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: MultiBlocProvider(
         providers: [
-          BlocProvider<ClipEditorBloc>.value(value: clipBloc),
+          BlocProvider<ClipEditorBloc>.value(value: realClipBloc ?? clipBloc),
           BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
         ],
         child: VideoEditorScope(
@@ -182,6 +186,85 @@ void main() {
         'placeholder_1',
       );
     });
+
+    testWidgets(
+      'a layout inserted first detaches in its rendered media shape',
+      (tester) async {
+        final bloc = (await tester.runAsync(() async {
+          final bloc = ClipEditorBloc(
+            onFinalClipInvalidated: () {},
+            saveClipToLibrary: ({required clip}) async => false,
+          );
+          bloc.add(
+            ClipEditorInitialized([
+              _clip('source').copyWith(originalAspectRatio: 3 / 4),
+            ]),
+          );
+          await bloc.stream.first;
+          bloc.add(
+            ClipEditorSplitScreenLayoutInserted(
+              clip: _clip('layout'),
+              playhead: Duration.zero,
+            ),
+          );
+          await bloc.stream.first;
+          return bloc;
+        }))!;
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(bloc.close);
+        });
+        final inserted = bloc.state;
+        expect(inserted.clips.first.originalAspectRatio, 3 / 4);
+        expect(inserted.clips.first.videoAspectRatio, 9 / 16);
+
+        await tester.pumpWidget(build(realClipBloc: bloc));
+        await tester.runAsync(() async {
+          final detached = bloc.stream.firstWhere(
+            (state) => state.lastDetachResult is ClipDetachSuccess,
+          );
+          bloc.add(const ClipEditorClipDetachRequested(clipId: 'layout'));
+          await detached;
+        });
+        await tester.pumpAndSettle();
+
+        final layer =
+            verify(
+                  () => editor.addHistory(
+                    newLayer: captureAny(named: 'newLayer'),
+                    meta: any(named: 'meta'),
+                  ),
+                ).captured.single
+                as WidgetLayer;
+        final detached = DetachedClipLayerData.fromMeta(
+          DetachedClipLayerData.metaOf(layer),
+          '/documents',
+        )!.clip;
+        // The detached preview and export use this geometry; the canvas
+        // keeps its existing coordinates throughout insertion and detach.
+        expect(detached.originalAspectRatio, 9 / 16);
+        expect(detached.videoAspectRatio, 9 / 16);
+        expect(bloc.state.clips.single.originalAspectRatio, 3 / 4);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Center(
+              child: SizedBox(
+                width: 120,
+                child: FittedBox(
+                  child: DetachedClipPoster(
+                    meta: DetachedClipLayerData.metaOf(layer)!,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final frame = tester.getSize(find.byType(ClipRRect));
+        expect(frame.width / frame.height, closeTo(9 / 16, 1e-9));
+      },
+    );
 
     testWidgets('detaching a wide source keeps its timeline circle round', (
       tester,
