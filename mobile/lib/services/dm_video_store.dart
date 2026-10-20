@@ -599,14 +599,21 @@ class DmVideoStore {
         video = await _autoVideoFor(message, wanted: wanted);
       } on _DownloadDropped {
         return null;
+      } on DmVideoWithdrawnException {
+        // Stopped because no card wanted it: nothing to hold against the next.
+        return null;
       } on Object catch (error) {
-        // Stopped, or failed, after every card stopped waiting: no one to
-        // tell, and nothing to hold against the next one.
+        final mayPass = error is DmVideoUnavailableException && error.mayPass;
+        if (!mayPass) {
+          // It would fail again, for whichever card asks next.
+          _autoDownloadFailures[message.id] = null;
+        } else if (wanted()) {
+          _autoDownloadFailures[message.id] = _now().add(
+            autoDownloadRetryAfter,
+          );
+        }
+        // No card waits: no one to tell.
         if (!wanted()) return null;
-        _autoDownloadFailures[message.id] =
-            error is DmVideoUnavailableException && error.mayPass
-            ? _now().add(autoDownloadRetryAfter)
-            : null;
         rethrow;
       }
     } else {

@@ -30,6 +30,14 @@ class DmVideoUnavailableException implements Exception {
   String toString() => 'DmVideoUnavailableException: $message';
 }
 
+/// Thrown when a download stopped because its caller no longer wanted it,
+/// which says nothing about the video.
+class DmVideoWithdrawnException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoWithdrawnException].
+  const DmVideoWithdrawnException()
+    : super('the download was no longer wanted', mayPass: true);
+}
+
 /// Downloads and decrypts a received encrypted video DM.
 ///
 /// The ciphertext is a public Blossom blob, so the download carries no viewer
@@ -199,10 +207,7 @@ class DmVideoDecryptor {
         );
       }
       if (unwanted && CancelToken.isCancel(error)) {
-        throw const DmVideoUnavailableException(
-          'the download was no longer wanted',
-          mayPass: true,
-        );
+        throw const DmVideoWithdrawnException();
       }
       if (outlasted && CancelToken.isCancel(error)) {
         throw const DmVideoUnavailableException(

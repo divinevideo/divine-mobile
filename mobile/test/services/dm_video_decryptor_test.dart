@@ -350,13 +350,7 @@ void main() {
           _videoMessage(fileHash: 'ab' * 32),
           stillWanted: () => wanted,
         ),
-        throwsA(
-          isA<DmVideoUnavailableException>().having(
-            (e) => e.message,
-            'message',
-            contains('no longer wanted'),
-          ),
-        ),
+        throwsA(isA<DmVideoWithdrawnException>()),
       );
     });
 

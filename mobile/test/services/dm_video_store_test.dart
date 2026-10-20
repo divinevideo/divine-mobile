@@ -725,6 +725,48 @@ void main() {
       });
 
       test(
+        'are not tried again after failing for good, even once no card waits',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+          var wanted = true;
+          final preview = store.previewFor(
+            message,
+            download: true,
+            stillWanted: () => wanted,
+          );
+          await pumpEventQueue();
+          wanted = false;
+          release.completeError(
+            const DmVideoUnavailableException(
+              'ciphertext hash does not match the x tag',
+            ),
+          );
+          expect(await preview, isNull);
+
+          expect(await store.previewFor(message, download: true), isNull);
+          expect(fetches, equals(1));
+        },
+      );
+
+      test(
+        'never hold a download stopped as unwanted against the next card',
+        () async {
+          fetch = (_) async => throw const DmVideoWithdrawnException();
+          final store = createStore();
+          final message = _videoMessage();
+          expect(await store.previewFor(message, download: true), isNull);
+
+          fetch = (_) async => _plaintext;
+
+          expect(await store.previewFor(message, download: true), isNotNull);
+          expect(fetches, equals(2));
+        },
+      );
+
+      test(
         'are tried again after a failure that may pass, once a while has '
         'passed',
         () async {
