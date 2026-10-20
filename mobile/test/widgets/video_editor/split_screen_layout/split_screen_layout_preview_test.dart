@@ -13,6 +13,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -104,6 +105,39 @@ void main() {
       await pump(tester, [_clip('a').copyWith(playbackSpeed: 2)]);
 
       expect(find.text(l10n.libraryClipDuration('1.00')), findsOneWidget);
+    });
+
+    testWidgets('labels a short stop-motion set with its looped length', (
+      tester,
+    ) async {
+      // A pick drops stills whose files are gone, so these have to exist.
+      final directory = Directory.systemTemp.createTempSync('layout_set');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final file = File('${directory.path}/still.jpg')..writeAsBytesSync([0]);
+      final still = StopMotionClipFrame(
+        path: file.path,
+        duration: const Duration(milliseconds: 100),
+      );
+      await pump(tester, [
+        DivineVideoClip(
+          id: 'set',
+          stopMotionFrames: [still, still, still],
+          duration: const Duration(milliseconds: 300),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        ),
+      ]);
+
+      expect(find.text(l10n.libraryClipDuration('1.20')), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.value == l10n.libraryClipDuration('1.20'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows a poster that cannot be decoded as a blank frame', (

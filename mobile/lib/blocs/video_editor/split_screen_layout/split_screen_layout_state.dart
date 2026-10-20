@@ -35,6 +35,18 @@ class SplitScreenLayoutCell extends Equatable {
   /// covering the cell — up to [SplitScreenLayoutGeometry.maxZoom].
   final double zoom;
 
+  /// How long the cell plays in the layout. A stop-motion set shorter than
+  /// the shortest assembly is looped up to it when it is assembled — see
+  /// [StopMotionRenderService.framesForMinOutputDuration].
+  Duration get playbackDuration {
+    final frames = clip.isStopMotion ? clip.stopMotionFrames : null;
+    if (frames == null) return clip.playbackDuration;
+    final assembled = StopMotionRenderService.framesForMinOutputDuration(
+      frames,
+    ).fold(Duration.zero, (total, frame) => total + frame.duration);
+    return clip.copyWith(duration: assembled).playbackDuration;
+  }
+
   SplitScreenLayoutCell copyWith({Alignment? alignment, double? zoom}) =>
       SplitScreenLayoutCell(
         clip: clip,

@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -190,6 +191,59 @@ void main() {
           );
         }
         addTearDown(cubit.close);
+      });
+    });
+
+    group(SplitScreenLayoutCell, () {
+      test('plays a short stop-motion set as long as its assembly', () {
+        const still = StopMotionClipFrame(
+          path: '/frames/f0.jpg',
+          duration: Duration(milliseconds: 100),
+        );
+        final set = DivineVideoClip(
+          id: 'set',
+          stopMotionFrames: const [still, still, still],
+          duration: const Duration(milliseconds: 300),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+
+        // Three 100 ms stills loop four times to reach the 1 s minimum.
+        expect(set.playbackDuration, const Duration(milliseconds: 300));
+        expect(
+          SplitScreenLayoutCell(clip: set).playbackDuration,
+          const Duration(milliseconds: 1200),
+        );
+      });
+
+      test('plays a long enough stop-motion set for its own length', () {
+        const still = StopMotionClipFrame(
+          path: '/frames/f0.jpg',
+          duration: Duration(milliseconds: 300),
+        );
+        final set = DivineVideoClip(
+          id: 'set',
+          stopMotionFrames: const [still, still, still, still],
+          duration: const Duration(milliseconds: 1200),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+
+        expect(
+          SplitScreenLayoutCell(clip: set).playbackDuration,
+          const Duration(milliseconds: 1200),
+        );
+      });
+
+      test('plays a video clip for its own playback length', () {
+        final clip = _clip('a').copyWith(playbackSpeed: 2);
+
+        expect(
+          SplitScreenLayoutCell(clip: clip).playbackDuration,
+          const Duration(seconds: 1),
+        );
       });
     });
 

@@ -178,7 +178,7 @@ class _LayoutCellState extends State<_LayoutCell> {
           value: cell == null
               ? null
               : context.l10n.libraryClipDuration(
-                  cell.clip.playbackDuration.toFormattedSeconds(),
+                  cell.playbackDuration.toFormattedSeconds(),
                 ),
           child: GestureDetector(
             behavior: .opaque,
@@ -218,9 +218,7 @@ class _LayoutCellState extends State<_LayoutCell> {
                       left: widget.badgeOnRight ? null : 6,
                       right: widget.badgeOnRight ? 6 : null,
                       bottom: 6,
-                      child: _DurationBadge(
-                        duration: cell.clip.playbackDuration,
-                      ),
+                      child: _DurationBadge(duration: cell.playbackDuration),
                     ),
                   IgnorePointer(
                     child: AnimatedContainer(
