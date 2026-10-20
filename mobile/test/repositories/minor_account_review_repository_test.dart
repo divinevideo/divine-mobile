@@ -3,6 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/services/consent_upload_session.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,6 +11,7 @@ class MockApiService extends Mock implements ApiService {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  registerFallbackValue(ConsentUploadSession());
 
   group('MinorAccountReviewRepository', () {
     late MockApiService apiService;
@@ -182,6 +184,43 @@ void main() {
           expect(uploadedCase, 'application-1');
         },
       );
+
+      test('retries reuse the first started case and upload session', () async {
+        final submission = ParentConsentSubmission();
+        addTearDown(submission.dispose);
+        when(() => apiService.startGreenlight()).thenAnswer(
+          (_) async => {
+            'restriction': {'status': 'active'},
+            'minorReviewCase': {
+              'id': 'application-1',
+              'state': 'open_reported',
+              'suspectedAgeBand': 'age_13_15',
+              'allowedResolution': 'parent_video_or_email',
+            },
+          },
+        );
+        var attempts = 0;
+        when(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: 'application-1',
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+            session: any(named: 'session'),
+          ),
+        ).thenAnswer((_) async {
+          if (attempts++ == 0) throw const ApiException('offline');
+        });
+        Future<void> submit() => repository.submitParentConsent(
+          caseId: null,
+          email: 'parent@example.com',
+          videoPath: '/tmp/consent.mp4',
+          submission: submission,
+        );
+        await expectLater(submit(), throwsA(isA<ApiException>()));
+        await submit();
+        verify(() => apiService.startGreenlight()).called(1);
+        expect(attempts, 2);
+      });
 
       test(
         'rejects an ineligible case returned by the start endpoint',

@@ -57,6 +57,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
+    ParentConsentSubmission? submission,
   }) async {
     await uploadGate?.future;
     if (throwOnSubmit) {
@@ -686,6 +687,12 @@ void main() {
       expect(
         find.text(l10n.minorAccountReviewRecordConsentSubmitError),
         findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<DivineAuthTextField>(find.byType(DivineAuthTextField))
+            .enabled,
+        isFalse,
       );
       // The retry (submit) control and the email fallback stay visible.
       expect(

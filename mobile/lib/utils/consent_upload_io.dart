@@ -5,12 +5,28 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
-/// A single-use multipart snapshot owned until its HTTP operation finishes.
+/// A multipart snapshot retained for the lifetime of one submission.
 class ConsentUpload {
-  ConsentUpload._(this.request, this.payloadHash, this._directory);
+  ConsentUpload._(
+    this._method,
+    this._url,
+    this._headers,
+    this._file,
+    this._length,
+    this.payloadHash,
+    this._directory,
+  );
 
   /// The immutable body and its original multipart content type.
-  final http.BaseRequest request;
+  http.BaseRequest get request => _FileRequest(_method, _url, _file)
+    ..headers.addAll(_headers)
+    ..contentLength = _length;
+
+  final String _method;
+  final Uri _url;
+  final Map<String, String> _headers;
+  final File _file;
+  final int _length;
 
   /// SHA-256 of the exact bytes [request] sends, including multipart framing.
   final String payloadHash;
@@ -28,10 +44,15 @@ class ConsentUpload {
         await sink.close();
       }
       final digest = await sha256.bind(file.openRead()).first;
-      final request = _FileRequest(multipart.method, multipart.url, file)
-        ..headers.addAll(multipart.headers)
-        ..contentLength = await file.length();
-      return ConsentUpload._(request, digest.toString(), directory);
+      return ConsentUpload._(
+        multipart.method,
+        multipart.url,
+        Map.of(multipart.headers),
+        file,
+        await file.length(),
+        digest.toString(),
+        directory,
+      );
     } catch (_) {
       await directory.delete(recursive: true);
       rethrow;

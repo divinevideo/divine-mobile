@@ -22,6 +22,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
   String? submittedVideoPath;
   MinorReviewInstructions? submittedReceipt;
   int submitCount = 0;
+  ParentConsentSubmission? submittedSession;
 
   @override
   Future<MinorAccountReviewStatus> fetchCurrentStatus() async =>
@@ -40,7 +41,9 @@ class _FakeRepository implements MinorAccountReviewRepository {
     required String email,
     required String videoPath,
     MinorReviewInstructions? localReceipt,
+    ParentConsentSubmission? submission,
   }) async {
+    submittedSession = submission;
     submitCount++;
     await gate?.future;
     final error = failWith;
@@ -124,6 +127,27 @@ void main() {
         expect(cubit.state.status, MinorConsentSubmitStatus.success);
         await cubit.close();
       });
+
+      test(
+        'retries keep one session and the originally confirmed email',
+        () async {
+          final repository = _FakeRepository()..failWith = Exception('offline');
+          final cubit = _buildCubit(repository);
+          await _submit(cubit);
+          final firstSession = repository.submittedSession;
+          repository.failWith = null;
+          await cubit.submit(
+            caseId: 'case-1',
+            email: 'different@example.com',
+            videoPath: '/tmp/consent.mp4',
+            localReceipt: _receipt,
+          );
+          expect(repository.submittedSession, same(firstSession));
+          expect(repository.submittedEmail, 'parent@example.com');
+          expect(cubit.state.submittedEmail, 'parent@example.com');
+          await cubit.close();
+        },
+      );
 
       test('brackets the upload for the clip-retention owner', () async {
         final repository = _FakeRepository()..failWith = Exception('offline');
