@@ -1,7 +1,9 @@
-/// Builds a shareable profile URL from a full NIP-05 identifier and npub.
+/// Builds a shareable profile URL from a verified NIP-05 and an npub.
 ///
-/// Callers must verify the identifier before passing it. Display-only handles
-/// such as `@username` do not contain enough information to build a URL.
+/// Pass `UserProfile.displayNip05` (`@alice.divine.video`), not the raw
+/// claim: legacy `alice@divine.video` and `alice@openvine.co` claims carry
+/// their subdomain only in that normalized form. The short `@alice` handle
+/// has no domain at all.
 ///
 /// Returns the Divine subdomain URL, or the npub profile URL as a fallback.
 String buildProfileUrl(String? nip05, String npub) {

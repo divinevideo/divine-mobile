@@ -736,8 +736,9 @@ class _VerifiedAccountsBlock extends StatelessWidget {
 
 /// Unique identifier display (NIP-05 or full npub with ellipsis).
 /// Uses profile accent color when available, falls back to vineGreen.
-/// Shows warning for failed NIP-05 verification on own profile.
+/// Shows your own Divine username as its `username.divine.video` domain.
 /// Hides unverified NIP-05s for other profiles (potential impersonation).
+/// Tapping copies the subdomain URL only once the claim verifies.
 class _UniqueIdentifier extends ConsumerWidget {
   const _UniqueIdentifier({
     required this.userIdHex,
@@ -776,7 +777,7 @@ class _UniqueIdentifier extends ConsumerWidget {
         verificationStatus == Nip05VerificationStatus.failed;
 
     // For other profiles: hide unverified NIP-05s (show npub instead)
-    // For own profile: show with warning so user knows there's an issue
+    // For own profile: keep showing the claim, even when it failed
     final String displayText;
     if (hasNip05) {
       if (verificationFailed && !isOwnProfile) {
