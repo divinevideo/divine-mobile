@@ -140,31 +140,31 @@ void main() {
     });
 
     group('ConversationStarted', () {
-      for (final messages in [
-        <DmMessage>[],
-        [testMessage],
-      ]) {
-        blocTest<ConversationBloc, ConversationState>(
-          'loads ${messages.length} messages when automatic marking finds no row',
-          setUp: () {
-            when(() => mockDmRepository.markConversationAsRead(conversationId))
-                .thenAnswer((_) async => false);
-            when(() => mockDmRepository.watchMessages(conversationId))
-                .thenAnswer((_) => Stream.value(messages));
-            when(() => mockDmRepository.watchOutgoing(any()))
-                .thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
-          },
-          build: buildBloc,
-          act: (bloc) => bloc.add(const ConversationStarted()),
-          expect: () => [
-            const ConversationState(status: ConversationStatus.loading),
-            ConversationState(
-              status: ConversationStatus.loaded,
-              messages: messages,
-            ),
-          ],
-        );
-      }
+      blocTest<ConversationBloc, ConversationState>(
+        'loads an empty thread whose conversation row does not exist yet',
+        setUp: () {
+          when(
+            () => mockDmRepository.markConversationAsRead(conversationId),
+          ).thenAnswer((_) async => false);
+          when(
+            () => mockDmRepository.watchMessages(conversationId),
+          ).thenAnswer((_) => Stream.value(const <DmMessage>[]));
+          when(
+            () => mockDmRepository.watchOutgoing(any()),
+          ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ConversationStarted()),
+        expect: () => const [
+          ConversationState(status: ConversationStatus.loading),
+          ConversationState(status: ConversationStatus.loaded),
+        ],
+        verify: (_) {
+          verify(
+            () => mockDmRepository.markConversationAsRead(conversationId),
+          ).called(1);
+        },
+      );
 
       blocTest<ConversationBloc, ConversationState>(
         'stays loading while the repository owner is unknown, rather than '
@@ -186,38 +186,41 @@ void main() {
         },
       );
 
-      blocTest<ConversationBloc, ConversationState>(
-        'emits [loading, loaded] when messages stream emits successfully',
-        setUp: () {
-          when(
-            () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async => true);
-          when(
-            () => mockDmRepository.watchMessages(conversationId),
-          ).thenAnswer((_) => Stream.value([testMessage]));
-          when(
-            () => mockDmRepository.watchOutgoing(any()),
-          ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
-        },
-        build: buildBloc,
-        act: (bloc) => bloc.add(const ConversationStarted()),
-        expect: () => [
-          const ConversationState(status: ConversationStatus.loading),
-          const ConversationState(
-            status: ConversationStatus.loaded,
-            messages: [testMessage],
-          ),
-        ],
-        verify: (_) {
-          // Called once on initial open + once per stream emission
-          verify(
-            () => mockDmRepository.markConversationAsRead(conversationId),
-          ).called(2);
-          verify(
-            () => mockDmRepository.watchMessages(conversationId),
-          ).called(1);
-        },
-      );
+      for (final rowFound in [true, false]) {
+        blocTest<ConversationBloc, ConversationState>(
+          'emits [loading, loaded] when messages stream emits successfully '
+          '(conversation row found: $rowFound)',
+          setUp: () {
+            when(
+              () => mockDmRepository.markConversationAsRead(conversationId),
+            ).thenAnswer((_) async => rowFound);
+            when(
+              () => mockDmRepository.watchMessages(conversationId),
+            ).thenAnswer((_) => Stream.value([testMessage]));
+            when(
+              () => mockDmRepository.watchOutgoing(any()),
+            ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(const ConversationStarted()),
+          expect: () => [
+            const ConversationState(status: ConversationStatus.loading),
+            const ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [testMessage],
+            ),
+          ],
+          verify: (_) {
+            // Called once on initial open + once per stream emission
+            verify(
+              () => mockDmRepository.markConversationAsRead(conversationId),
+            ).called(2);
+            verify(
+              () => mockDmRepository.watchMessages(conversationId),
+            ).called(1);
+          },
+        );
+      }
 
       blocTest<ConversationBloc, ConversationState>(
         'arms the one-time history drain, so profile -> Message on a '
