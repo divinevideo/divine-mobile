@@ -35,9 +35,13 @@ class _RecordingCrashReporter implements CrashReporter {
 
 /// Runs [onCancel] where the native cancel would reach the platform.
 class _FakeProVideoEditor extends ProVideoEditor {
-  _FakeProVideoEditor({required this.onCancel});
+  _FakeProVideoEditor({required this.onCancel, this.heldCancels});
 
   final void Function(String taskId) onCancel;
+
+  /// When given, each cancel adds a completer here and returns once the test
+  /// completes it.
+  final List<Completer<void>>? heldCancels;
 
   /// The result of each render started through [renderVideoToFile], by id.
   final renders = <String, Completer<String>>{};
@@ -57,6 +61,11 @@ class _FakeProVideoEditor extends ProVideoEditor {
   Future<void> cancel(String taskId) async {
     onCancel(taskId);
     renders.remove(taskId)?.completeError(const RenderCanceledException());
+    final held = heldCancels;
+    if (held == null) return;
+    final returned = Completer<void>();
+    held.add(returned);
+    await returned.future;
   }
 }
 
@@ -421,6 +430,123 @@ void main() {
           await render;
         },
       );
+
+      test('drops the return of an earlier cancel once another is '
+          'requested', () async {
+        InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
+        final finish = Completer<String>();
+        final render = await startRender(finish, taskId: 'seam');
+        final markersAtPlatformCall = <Map<String, Object?>>[];
+        ProVideoEditor.instance = _FakeProVideoEditor(
+          onCancel: (_) => markersAtPlatformCall.add(readMarker('seam')),
+        );
+
+        await VideoEditorRenderService.cancelTask('seam');
+        expect(readMarker('seam'), contains('cancelReturnedAtMs'));
+        await VideoEditorRenderService.cancelTask('seam');
+
+        expect(markersAtPlatformCall, hasLength(2));
+        final [first, second] = markersAtPlatformCall;
+        expect(second['elapsedMs'], isA<int>());
+        expect(
+          second,
+          containsPair('cancelRequestedAtMs', second['elapsedMs']),
+        );
+        expect(
+          second['cancelRequestedAtMs']! as int,
+          greaterThan(first['cancelRequestedAtMs']! as int),
+        );
+        expect(second, isNot(contains('cancelReturnedAtMs')));
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
+      test('keeps an earlier cancel that comes back late off a newer '
+          'request', () async {
+        final finish = Completer<String>();
+        final render = await startRender(finish, taskId: 'seam');
+        final held = <Completer<void>>[];
+        ProVideoEditor.instance = _FakeProVideoEditor(
+          onCancel: (_) {},
+          heldCancels: held,
+        );
+
+        final earlier = VideoEditorRenderService.cancelTask('seam');
+        final later = VideoEditorRenderService.cancelTask('seam');
+        expect(held, hasLength(2));
+        held.first.complete();
+        await earlier;
+
+        expect(readMarker('seam'), isNot(contains('cancelReturnedAtMs')));
+
+        held.last.complete();
+        await later;
+        expect(readMarker('seam'), contains('cancelReturnedAtMs'));
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
+      test('leaves a render that started after the request without its '
+          'return', () async {
+        final finishNoted = Completer<String>();
+        final noted = await startRender(finishNoted, taskId: 'seam');
+        final held = <Completer<void>>[];
+        ProVideoEditor.instance = _FakeProVideoEditor(
+          onCancel: (_) {},
+          heldCancels: held,
+        );
+
+        final cancel = VideoEditorRenderService.cancelTask('seam');
+        final finishLater = Completer<String>();
+        final later = await startRender(finishLater, taskId: 'seam');
+        held.single.complete();
+        await cancel;
+
+        final markers = markerFiles().map(decodeMarker).toList();
+        expect(markers, hasLength(2));
+        expect(
+          markers.where((marker) => marker.containsKey('cancelReturnedAtMs')),
+          hasLength(1),
+        );
+        for (final marker in markers) {
+          expect(
+            marker.containsKey('cancelReturnedAtMs'),
+            equals(marker.containsKey('cancelRequestedAtMs')),
+          );
+        }
+
+        finishNoted.complete('a.mp4');
+        finishLater.complete('b.mp4');
+        await Future.wait([noted, later]);
+      });
+
+      test('leaves no marker behind when the cancelled render settles '
+          'before the cancel returns', () async {
+        addTearDown(
+          VideoEditorRenderService.resetActiveNativeTaskIdsForTesting,
+        );
+        ProVideoEditor.instance = _FakeProVideoEditor(onCancel: (_) {});
+        final render = VideoEditorRenderService.renderNativeVideoToFile(
+          'out.mp4',
+          VideoRenderData(
+            id: 'seam',
+            videoSegments: [VideoSegment(video: EditorVideo.file('/a.mp4'))],
+          ),
+        );
+        await pumpEventQueue();
+        expect(markerFiles(), hasLength(1));
+
+        final settled = expectLater(
+          render,
+          throwsA(isA<RenderCanceledException>()),
+        );
+        await VideoEditorRenderService.cancelTask('seam');
+        await settled;
+
+        expect(markerFiles(), isEmpty);
+      });
 
       test('lands in the marker of a render a restart under the same id '
           'displaces', () async {

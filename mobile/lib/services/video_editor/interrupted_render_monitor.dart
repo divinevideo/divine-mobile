@@ -234,21 +234,27 @@ class InterruptedRenderMonitor {
       _note(taskId, 'watchdogFiredAtMs');
 
   /// Notes in the marker of every running render of [taskId] that its native
-  /// task is about to be cancelled.
+  /// task is about to be cancelled, and returns the callback that notes the
+  /// cancel came back.
   ///
   /// Called before the platform call: the native cancel runs on the main
   /// thread, and a process that never comes back from it still leaves the
-  /// note on disk.
-  static void noteCancelRequested(String taskId) =>
-      _note(taskId, 'cancelRequestedAtMs');
-
-  /// Notes in the marker of every running render of [taskId] that the native
-  /// cancel came back.
-  ///
-  /// Usually a no-op: a cancelled render settles and drops its marker. A
-  /// marker that has it outlived the cancel, so the cancel did not hang.
-  static void noteCancelReturned(String taskId) =>
-      _note(taskId, 'cancelReturnedAtMs');
+  /// note on disk. The callback stamps only running markers whose latest
+  /// request is this one, so a return never lands on a settled render, or on
+  /// a render or request it does not belong to. It is usually a no-op: a
+  /// cancel that reaches a dispatched render settles that render, which drops
+  /// its marker, before the cancel itself comes back.
+  static void Function() noteCancelRequested(String taskId) {
+    final request = Object();
+    for (final marker in _active) {
+      if (marker.taskId == taskId) marker.noteCancelRequested(request);
+    }
+    return () {
+      for (final marker in _active) {
+        marker.noteCancelReturned(request);
+      }
+    };
+  }
 
   static void _note(String taskId, String field) {
     for (final marker in _active) {
@@ -356,6 +362,9 @@ class _RenderMarker {
   int _samples = 0;
   int? _peakFootprint;
 
+  /// The cancel request noted last, see [noteCancelRequested].
+  Object? _cancelRequest;
+
   /// Writes the marker for a render that is about to start, or returns `null`
   /// when it cannot be written.
   static _RenderMarker? open({
@@ -425,6 +434,18 @@ class _RenderMarker {
     } finally {
       _sampling = false;
     }
+  }
+
+  /// Notes a cancel [request], dropping the return of any earlier one.
+  void noteCancelRequested(Object request) {
+    _cancelRequest = request;
+    _content.remove('cancelReturnedAtMs');
+    noteNow('cancelRequestedAtMs');
+  }
+
+  /// Notes that [request] came back, unless a newer request replaced it.
+  void noteCancelReturned(Object request) {
+    if (identical(_cancelRequest, request)) noteNow('cancelReturnedAtMs');
   }
 
   /// Stamps [field] with the elapsed time and writes the marker at once.

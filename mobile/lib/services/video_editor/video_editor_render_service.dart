@@ -1397,7 +1397,7 @@ class VideoEditorRenderService {
   static Future<void> _cancelNativeTaskOnly(String id) async {
     // Before the platform call: the native cancel runs on the main thread,
     // and a process that never comes back from it still names it.
-    InterruptedRenderMonitor.noteCancelRequested(id);
+    final noteReturned = InterruptedRenderMonitor.noteCancelRequested(id);
     try {
       Log.info(
         '⏹️ Cancelling video render',
@@ -1418,7 +1418,7 @@ class VideoEditorRenderService {
         category: .video,
       );
     } finally {
-      InterruptedRenderMonitor.noteCancelReturned(id);
+      noteReturned();
     }
   }
 
