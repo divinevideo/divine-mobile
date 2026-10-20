@@ -75,7 +75,8 @@ class FileEncryption {
   /// [hexNonce] is the 12-byte nonce as a hex string (from `decryption-nonce` tag).
   ///
   /// Throws [SecretBoxAuthenticationError] if the ciphertext has been tampered
-  /// with or the key/nonce are incorrect.
+  /// with or the key/nonce are incorrect, and an [ArgumentError] if the key or
+  /// nonce is not hex of the right size. No error quotes the key or nonce.
   Future<Uint8List> decrypt({
     required Uint8List ciphertext,
     required String hexKey,
@@ -85,14 +86,10 @@ class FileEncryption {
     final nonceBytes = _hexToBytes(hexNonce);
 
     if (keyBytes.length != 32) {
-      throw ArgumentError.value(hexKey, 'hexKey', 'must be 32 bytes (64 hex)');
+      throw ArgumentError('hexKey must be 32 bytes (64 hex digits)');
     }
     if (nonceBytes.length != 12) {
-      throw ArgumentError.value(
-        hexNonce,
-        'hexNonce',
-        'must be 12 bytes (24 hex)',
-      );
+      throw ArgumentError('hexNonce must be 12 bytes (24 hex digits)');
     }
 
     // Split ciphertext into body + 16-byte GCM authentication tag.
@@ -124,9 +121,12 @@ class FileEncryption {
     return buffer.toString();
   }
 
+  static final RegExp _hexDigits = RegExp(r'^[0-9a-fA-F]*$');
+
+  /// Decodes [hex], which may be a key or a nonce, so no error quotes it.
   static Uint8List _hexToBytes(String hex) {
-    if (hex.length.isOdd) {
-      throw ArgumentError.value(hex, 'hex', 'must have even length');
+    if (hex.length.isOdd || !_hexDigits.hasMatch(hex)) {
+      throw ArgumentError('hex must be an even number of hex digits');
     }
     final bytes = Uint8List(hex.length ~/ 2);
     for (var i = 0; i < hex.length; i += 2) {

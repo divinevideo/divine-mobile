@@ -214,6 +214,76 @@ void main() {
         },
       );
 
+      test('names the key of the wrong size nowhere in its error', () async {
+        final encrypted = await fileEncryption.encrypt(
+          Uint8List.fromList([1, 2, 3, 4]),
+        );
+        final shortKey = '0f' * 16;
+
+        await expectLater(
+          fileEncryption.decrypt(
+            ciphertext: encrypted.ciphertext,
+            hexKey: shortKey,
+            hexNonce: encrypted.nonce,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.toString(),
+              'description',
+              isNot(contains(shortKey)),
+            ),
+          ),
+        );
+      });
+
+      test('names the nonce of the wrong size nowhere in its error', () async {
+        final encrypted = await fileEncryption.encrypt(
+          Uint8List.fromList([1, 2, 3, 4]),
+        );
+        final shortNonce = '0e' * 16;
+
+        await expectLater(
+          fileEncryption.decrypt(
+            ciphertext: encrypted.ciphertext,
+            hexKey: encrypted.key,
+            hexNonce: shortNonce,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.toString(),
+              'description',
+              isNot(contains(shortNonce)),
+            ),
+          ),
+        );
+      });
+
+      test(
+        'throws $ArgumentError for a key with non-hex characters, quoting none '
+        'of them',
+        () async {
+          final encrypted = await fileEncryption.encrypt(
+            Uint8List.fromList([1, 2, 3, 4]),
+          );
+          final keyWithSecretLookingText = 'zq${'0f' * 31}';
+
+          await expectLater(
+            fileEncryption.decrypt(
+              ciphertext: encrypted.ciphertext,
+              hexKey: keyWithSecretLookingText,
+              hexNonce: encrypted.nonce,
+            ),
+            throwsA(
+              isA<ArgumentError>().having(
+                (error) => error.toString(),
+                'description',
+                isNot(contains('zq')),
+              ),
+            ),
+          );
+        },
+      );
+
       test('throws $ArgumentError for odd-length hex key', () async {
         final plaintext = Uint8List.fromList([1, 2, 3, 4]);
         final encrypted = await fileEncryption.encrypt(plaintext);

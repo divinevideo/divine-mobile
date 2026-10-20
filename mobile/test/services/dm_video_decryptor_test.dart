@@ -159,6 +159,61 @@ void main() {
       );
     });
 
+    test(
+      'refuses a key of the wrong size before any request, without naming it',
+      () async {
+        final shortKey = '0f' * 16;
+        final message = _videoMessage(fileHash: 'ab' * 32, key: shortKey);
+
+        await expectLater(
+          DmVideoDecryptor(dio: dio).decrypt(message),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.toString(),
+              'description',
+              isNot(contains(shortKey)),
+            ),
+          ),
+        );
+        verifyNever(
+          () => dio.get<List<int>>(
+            any(),
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'refuses a nonce of the wrong size before any request, without naming '
+      'it',
+      () async {
+        final shortNonce = '0e' * 16;
+        final message = _videoMessage(fileHash: 'ab' * 32, nonce: shortNonce);
+
+        await expectLater(
+          DmVideoDecryptor(dio: dio).decrypt(message),
+          throwsA(
+            isA<DmVideoUnavailableException>().having(
+              (error) => error.toString(),
+              'description',
+              isNot(contains(shortNonce)),
+            ),
+          ),
+        );
+        verifyNever(
+          () => dio.get<List<int>>(
+            any(),
+            options: any(named: 'options'),
+            cancelToken: any(named: 'cancelToken'),
+            onReceiveProgress: any(named: 'onReceiveProgress'),
+          ),
+        );
+      },
+    );
+
     test('rejects a non-video message before making any request', () async {
       final message = _videoMessage(
         fileHash: 'ab' * 32,

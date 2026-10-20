@@ -56,6 +56,9 @@ class DmVideoDecryptor {
   /// Maximum idle time between chunks while downloading the ciphertext.
   static const Duration receiveTimeout = Duration(seconds: 30);
 
+  static final RegExp _hexKey = RegExp(r'^[0-9a-fA-F]{64}$');
+  static final RegExp _hexNonce = RegExp(r'^[0-9a-fA-F]{24}$');
+
   final Dio _dio;
   final FileEncryption _encryption;
 
@@ -66,8 +69,10 @@ class DmVideoDecryptor {
   /// [dmVideoMaxCiphertextBytes], and, when [timeLimit] is given, once it has
   /// run that long; a host can otherwise trickle bytes forever.
   ///
-  /// Throws a [DmVideoUnavailableException] when the message is not a video,
-  /// the ciphertext exceeds [maxBytes], the download outlasts [timeLimit], or
+  /// Throws a [DmVideoUnavailableException] when the message is not a video
+  /// or carries a malformed key or nonce (checked before any download, and
+  /// never quoted), the ciphertext exceeds [maxBytes], the download outlasts
+  /// [timeLimit], or
   /// the ciphertext's SHA-256 does not match the sender's `x` tag; an
   /// [ArgumentError] for a non-HTTPS URL; a [DioException] if the download
   /// fails or stalls; and whatever [FileEncryption.decrypt] throws when the
@@ -81,6 +86,12 @@ class DmVideoDecryptor {
     final metadata = message.fileMetadata;
     if (metadata == null || !metadata.isVideo) {
       throw const DmVideoUnavailableException('message is not a video');
+    }
+    if (!_hexKey.hasMatch(metadata.decryptionKey) ||
+        !_hexNonce.hasMatch(metadata.decryptionNonce)) {
+      throw const DmVideoUnavailableException(
+        'the message carries a malformed key or nonce',
+      );
     }
 
     final ciphertext = await _download(
