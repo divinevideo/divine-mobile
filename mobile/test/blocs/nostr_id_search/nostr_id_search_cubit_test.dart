@@ -55,6 +55,35 @@ void main() {
 
     group('queryChanged', () {
       blocTest<NostrIdSearchCubit, NostrIdSearchState>(
+        'does not open an identifier containing private-key-looking text',
+        build: buildCubit,
+        act: (cubit) => cubit.queryChanged('34236:$authorHex:nsec1'),
+        verify: (cubit) {
+          expect(cubit.state.query, isNot(contains('nsec1')));
+          expect(cubit.state.action, isNull);
+          verifyZeroInteractions(profileRepository);
+          verifyZeroInteractions(videosRepository);
+        },
+      );
+
+      blocTest<NostrIdSearchCubit, NostrIdSearchState>(
+        'clears the current query when private-key-looking text replaces it',
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.queryChanged(npub);
+          await cubit.queryChanged('NSEC1abc');
+        },
+        expect: () => [
+          NostrIdSearchState(query: npub),
+          NostrIdSearchState(
+            query: npub,
+            action: const OpenProfileAction(authorHex),
+          ),
+          const NostrIdSearchState(),
+        ],
+      );
+
+      blocTest<NostrIdSearchCubit, NostrIdSearchState>(
         'opens the profile an npub names without a lookup',
         build: buildCubit,
         act: (cubit) => cubit.queryChanged(' $npub '),
@@ -217,6 +246,13 @@ void main() {
           ),
         ],
       );
+
+      test('does not keep a prefilled query that looks like a private key', () {
+        final cubit = buildCubit(initialQuery: ' nsec1abc ');
+        addTearDown(cubit.close);
+
+        expect(cubit.state.query, isEmpty);
+      });
 
       blocTest<NostrIdSearchCubit, NostrIdSearchState>(
         'leaves a query prefilled by the route unresolved until it changes',

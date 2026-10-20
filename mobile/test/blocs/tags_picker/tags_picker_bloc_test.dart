@@ -8,6 +8,9 @@ import 'package:openvine/blocs/tags_picker/tags_picker_bloc.dart';
 
 class _MockHashtagRepository extends Mock implements HashtagRepository {}
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 void main() {
   group(TagsPickerBloc, () {
     late _MockHashtagRepository repo;
@@ -206,6 +209,29 @@ void main() {
         expect: () => [const TagsPickerState()],
         verify: (_) {
           verifyNever(() => repo.searchHashtags(query: any(named: 'query')));
+        },
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'resets to initial without searching when the query contains a '
+        'private key',
+        build: createBloc,
+        seed: () => const TagsPickerState(
+          query: 'old',
+          searchResults: ['old'],
+          status: TagsPickerStatus.success,
+        ),
+        act: (b) => b.add(const TagsPickerQueryChanged(_privateKeyQuery)),
+        wait: debounce,
+        expect: () => [const TagsPickerState()],
+        verify: (_) {
+          verifyNever(
+            () => repo.searchHashtags(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+            ),
+          );
         },
       );
 

@@ -7717,6 +7717,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchDiscoverSomethingInteresting => '흥미로운 것을 발견해보세요';
 
   @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
+
+  @override
   String get searchPeopleSectionHeader => '사람';
 
   @override

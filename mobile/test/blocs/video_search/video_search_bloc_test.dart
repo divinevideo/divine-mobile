@@ -13,6 +13,9 @@ import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 void main() {
   group(VideoSearchBloc, () {
     late _MockVideosRepository mockVideosRepository;
@@ -104,6 +107,28 @@ void main() {
           verifyNever(
             () => mockVideosRepository.searchVideos(
               query: any(named: 'query'),
+              sort: any(named: 'sort'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoSearchBloc, VideoSearchState>(
+        'does not search and resets when the query contains a private key',
+        build: createBloc,
+        seed: () => const VideoSearchState(
+          status: VideoSearchStatus.success,
+          query: 'cats',
+        ),
+        act: (bloc) =>
+            bloc.add(const VideoSearchQueryChanged(_privateKeyQuery)),
+        wait: debounceDuration,
+        expect: () => [const VideoSearchState()],
+        verify: (_) {
+          verifyNever(
+            () => mockVideosRepository.searchVideos(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
               sort: any(named: 'sort'),
             ),
           );

@@ -7699,6 +7699,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get searchDiscoverSomethingInteresting => '面白いものを見つけよう';
 
   @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
+
+  @override
   String get searchPeopleSectionHeader => 'ユーザー';
 
   @override

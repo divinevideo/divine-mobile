@@ -8194,6 +8194,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get searchDiscoverSomethingInteresting => 'Descubrí algo interesante';
 
   @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
+
+  @override
   String get searchPeopleSectionHeader => 'Personas';
 
   @override

@@ -1,4 +1,5 @@
 import 'package:models/models.dart' show UserProfile;
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 /// A single mention match, as a record so this helper has no dependency on
@@ -62,6 +63,9 @@ Future<({List<MentionMatch> matches, Set<String> seen})> mentionSearchLocal({
 /// Tier-2 REST lookup that merges remote results into [previousMatches],
 /// skipping any pubkey already in [previouslySeen]. Returns at most 5
 /// matches overall.
+///
+/// A query holding a private key is not sent; [previousMatches] come back
+/// unchanged.
 Future<List<MentionMatch>> mentionSearchRemote({
   required String lowercaseQuery,
   required ProfileRepository profileRepository,
@@ -69,6 +73,7 @@ Future<List<MentionMatch>> mentionSearchRemote({
   required Set<String> previouslySeen,
 }) async {
   final merged = List<MentionMatch>.from(previousMatches);
+  if (NostrKeyUtils.containsPrivateKey(lowercaseQuery)) return merged;
   final seen = Set<String>.from(previouslySeen);
 
   final remoteResults = await profileRepository.searchUsersFromApi(

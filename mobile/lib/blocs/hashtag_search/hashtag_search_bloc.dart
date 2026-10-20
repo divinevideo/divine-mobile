@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 part 'hashtag_search_event.dart';
@@ -59,8 +60,10 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
   ) async {
     final query = event.query.trim().toLowerCase();
 
-    // Empty query resets to initial state
-    if (query.isEmpty || query.length < minSearchQueryLength) {
+    // Empty query, or one holding a private key, resets to initial state
+    if (query.isEmpty ||
+        query.length < minSearchQueryLength ||
+        NostrKeyUtils.containsPrivateKey(query)) {
       emit(const HashtagSearchState());
       return;
     }

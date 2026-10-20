@@ -266,6 +266,27 @@ void main() {
       );
     });
 
+    group('with a private key in the search field', () {
+      setUp(() {
+        when(() => mockVideoBloc.state).thenReturn(const VideoSearchState());
+        when(() => mockFilterCubit.state).thenReturn(SearchResultsFilter.all);
+      });
+
+      testWidgets('renders the private key warning instead of results', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        controller.text =
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.text(l10n.searchPrivateKeyWarning), findsOneWidget);
+        expect(find.byType(PeopleSection, skipOffstage: false), findsNothing);
+        expect(find.byType(VideosSection, skipOffstage: false), findsNothing);
+        expect(find.byType(SearchSectionInitialState), findsNothing);
+      });
+    });
+
     // Regression coverage for PR #4290 review feedback: after landing on
     // /search-results/hello and the BLoCs returning to `initial` (which
     // happens whenever the user clears the field or shortens it below

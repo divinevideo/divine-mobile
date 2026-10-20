@@ -10,6 +10,8 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 const _alice =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _privateKeyQuery =
+    'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 const _bob = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
 UserProfile _profile(String pubkey, {String? name}) => UserProfile(
@@ -60,6 +62,30 @@ void main() {
           expect(
             cubit.state.suggestions.map((s) => s.pubkey),
             equals([_alice]),
+          );
+        },
+      );
+
+      test(
+        'does not search the API when the query contains a private key',
+        () async {
+          final cubit = CaptionMentionsCubit(
+            profileRepositoryOf: () => profileRepository,
+            candidatePubkeys: () => [_alice],
+          );
+          addTearDown(cubit.close);
+
+          await cubit.search(_privateKeyQuery);
+
+          expect(cubit.state.suggestions, isEmpty);
+          verifyNever(
+            () => profileRepository.searchUsersFromApi(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
           );
         },
       );

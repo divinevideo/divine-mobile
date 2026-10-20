@@ -5366,6 +5366,10 @@
   "@searchDiscoverSomethingInteresting": {
     "description": "Subtitle of the empty-query placeholder shown on the search results screen before the user has entered a query."
   },
+  "searchPrivateKeyWarning": "That looks like a private key, so we didn't search for it. Never paste or share it.",
+  "@searchPrivateKeyWarning": {
+    "description": "Shown under a search or people-picker field when the typed text looks like a Nostr private key (nsec). The app does not search for that text; this tells the user why and not to paste or share the key."
+  },
   "searchPeopleSectionHeader": "People",
   "searchPeopleLoadingLabel": "Loading people results",
   "searchTagsSectionHeader": "Tags",

@@ -6,6 +6,8 @@ import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
 
 class SearchResultsView extends StatelessWidget {
   /// Use [SearchResultsPage] to ensure BLoC providers are wired.
@@ -59,6 +61,22 @@ class _Body extends StatelessWidget {
     // threshold, so post-mount edits that drop the user back below the
     // threshold also return to the placeholder.
     final isIdle = isInitialStatus && text.trim().length < minSearchQueryLength;
+
+    // The search BLoCs never search for text holding a private key, so the
+    // sections would sit on their skeletons. Explain instead.
+    if (NostrKeyUtils.containsPrivateKey(text)) {
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: PrivateKeySearchWarning(
+              query: text,
+              padding: const EdgeInsets.all(16),
+            ),
+          ),
+          const SliverBottomSafeArea(),
+        ],
+      );
+    }
 
     if (isIdle) {
       return CustomScrollView(

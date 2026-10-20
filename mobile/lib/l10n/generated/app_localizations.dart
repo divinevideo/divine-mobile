@@ -13723,6 +13723,12 @@ abstract class AppLocalizations {
   /// **'Discover something interesting'**
   String get searchDiscoverSomethingInteresting;
 
+  /// Shown under a search or people-picker field when the typed text looks like a Nostr private key (nsec). The app does not search for that text; this tells the user why and not to paste or share the key.
+  ///
+  /// In en, this message translates to:
+  /// **'That looks like a private key, so we didn\'t search for it. Never paste or share it.'**
+  String get searchPrivateKeyWarning;
+
   /// No description provided for @searchPeopleSectionHeader.
   ///
   /// In en, this message translates to:
