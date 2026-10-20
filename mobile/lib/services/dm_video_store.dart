@@ -114,6 +114,10 @@ class DmVideoStore {
 
   /// Paths of the frames this store read or found, by message id.
   final Map<String, String> _knownPreviews = {};
+
+  /// Ids of messages whose frame could not be read. Each read is a native
+  /// decode that can run to its timeout, so it is tried once a session.
+  final Set<String> _unreadableFrames = {};
   int _writes = 0;
   final StreamController<String> _kept = StreamController<String>.broadcast();
 
@@ -161,7 +165,8 @@ class DmVideoStore {
   /// When it is true the video is fetched in turn with other such downloads,
   /// within [autoDownloadMaxBytes] and [autoDownloadTimeLimit]; one declared
   /// bigger is not fetched. Null when there is no video to read or no frame
-  /// can be read from it.
+  /// can be read from it; a frame that cannot be read is not tried again
+  /// until the next session.
   Future<File?> previewFor(DmMessage message, {required bool download}) {
     final key = '${message.id}|$download';
     return _previewsInFlight[key] ??=
@@ -367,6 +372,7 @@ class DmVideoStore {
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
+    if (_unreadableFrames.contains(message.id)) return null;
 
     final keptVideo = File('${dir.path}/${videoFileNameFor(message)}');
     final declaredBytes = message.fileMetadata?.fileSize;
@@ -381,7 +387,10 @@ class DmVideoStore {
     }
 
     final frame = await _readFrame(video);
-    if (frame == null || frame.isEmpty) return null;
+    if (frame == null || frame.isEmpty) {
+      _unreadableFrames.add(message.id);
+      return null;
+    }
     await _writeAtomically(preview, frame);
     _knownPreviews[message.id] = preview.path;
     return preview;

@@ -347,6 +347,22 @@ void main() {
         },
       );
 
+      test(
+        'tries a frame that cannot be read only once a session',
+        () async {
+          readFrame = (_) async => null;
+          final message = _videoMessage();
+          final store = createStore();
+
+          await store.previewFor(message, download: true);
+          await store.previewFor(message, download: true);
+          expect(frameReads, equals(1));
+
+          await createStore().previewFor(message, download: true);
+          expect(frameReads, equals(2));
+        },
+      );
+
       test('keeps nothing when no frame can be read', () async {
         readFrame = (_) async => null;
         final store = createStore();
