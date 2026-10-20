@@ -76,6 +76,79 @@ void main() {
       },
     );
 
+    test('equal event times merge by descending full event id', () async {
+      final client = _Client();
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((invocation) async {
+        final authors = invocation.namedArguments[#authors]! as List<String>;
+        final videos = authors.length == 200
+            ? [_video(3, 300), _video(1, 300)]
+            : [_video(4, 300), _video(2, 300)];
+        return RecentVideosResponse(
+          videos: videos,
+          serverItemCount: videos.length,
+          hasMore: false,
+        );
+      });
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: [
+          for (var i = 0; i < 201; i++) i.toRadixString(16).padLeft(64, '0'),
+        ],
+        transform: (stats) => stats.map((v) => v.toVideoEvent()).toList(),
+      );
+
+      final first = await pager.loadMore(limit: 2);
+      final second = await pager.loadMore(limit: 2);
+
+      expect([...first, ...second].map((video) => video.id), [
+        for (final id in [4, 3, 2, 1]) _video(id, 300).id,
+      ]);
+      expect(pager.hasMore, isFalse);
+    });
+
+    test('absent hasMore exhausts after its buffered videos', () async {
+      final client = _Client();
+      when(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (_) async => RecentVideosResponse(
+          videos: [_video(1, 300), _video(2, 200)],
+          serverItemCount: 2,
+        ),
+      );
+      final pager = BadgeVideoPager(
+        client: client,
+        authors: ['a' * 64],
+        transform: (stats) => stats.map((v) => v.toVideoEvent()).toList(),
+      );
+
+      expect((await pager.loadMore(limit: 1)).single.id, _video(1, 300).id);
+      expect(pager.hasMore, isTrue);
+      expect((await pager.loadMore(limit: 1)).single.id, _video(2, 200).id);
+      expect(pager.hasMore, isFalse);
+      expect(await pager.loadMore(), isEmpty);
+      verify(
+        () => client.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).called(1);
+    });
+
     test('serves concurrent loads in turn without skipping videos', () async {
       // Following can request a page while a refresh is still loading the
       // first one; both calls must not read the same offset.
