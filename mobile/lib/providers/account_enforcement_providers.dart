@@ -49,6 +49,25 @@ class AccountRestrictionMemory {
   }
 }
 
+/// Developer-options simulation of an enforcement state, so the status screen
+/// can be seen in states Funnelcake cannot yet report (support-trust-safety#260).
+///
+/// Held in memory only: a restart always returns to the real status.
+class AccountEnforcementDevOverride
+    extends Notifier<AccountEnforcementStatus?> {
+  @override
+  AccountEnforcementStatus? build() => null;
+
+  void simulate(AccountEnforcementStatus status) => state = status;
+
+  void clear() => state = null;
+}
+
+final accountEnforcementDevOverrideProvider =
+    NotifierProvider<AccountEnforcementDevOverride, AccountEnforcementStatus?>(
+      AccountEnforcementDevOverride.new,
+    );
+
 final activeEnforcementPubkeyProvider = Provider<String?>((ref) {
   final authState = ref.watch(currentAuthStateProvider);
   if (authState != AuthState.authenticated) return null;
@@ -65,6 +84,8 @@ accountEnforcementStatusProvider =
           kind: AccountEnforcementKind.signedOut,
         );
       }
+      final devOverride = ref.watch(accountEnforcementDevOverrideProvider);
+      if (devOverride != null) return devOverride;
       if (pubkey == null) throw const AccountStatusUnavailable();
 
       final authService = ref.watch(authServiceProvider);

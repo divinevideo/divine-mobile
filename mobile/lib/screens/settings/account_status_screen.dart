@@ -23,7 +23,8 @@ import 'package:openvine/widgets/support_contact_action.dart';
 /// Reachable from settings without a failed post, so a restricted user can
 /// find out what happened rather than discovering it by failing repeatedly.
 ///
-/// Renders from [AccountEnforcementKind] alone. Funnelcake deliberately omits
+/// Renders from [AccountEnforcementKind] and, for an age-review closure, the
+/// closed [AccountEnforcementCategory]. Funnelcake deliberately omits
 /// moderation reasons and administrative metadata from the self-status API.
 class AccountStatusScreen extends ConsumerStatefulWidget {
   static const routeName = 'account-status';
@@ -121,7 +122,8 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             // result, report that the lookup is indeterminate rather than
             // presenting an all-clear that Funnelcake never returned.
             error: (_, _) {
-              final cachedKind = async.value?.kind;
+              final cached = async.value;
+              final cachedKind = cached?.kind;
               final retainedKind = cachedKind?.isEnforced ?? false
                   ? cachedKind
                   : publishRestriction;
@@ -133,6 +135,9 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
               }
               return _StatusBody(
                 kind: retainedKind,
+                isAgeReviewClosure:
+                    retainedKind == cachedKind &&
+                    (cached?.isAgeReviewClosure ?? false),
                 isLastKnown: true,
                 onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
                 openSupportMessages: widget.openSupportMessages,
@@ -141,6 +146,7 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             },
             data: (status) => _StatusBody(
               kind: effectiveKind(status.kind),
+              isAgeReviewClosure: status.isAgeReviewClosure,
               openSupportMessages: widget.openSupportMessages,
               composeEmail: widget.composeEmail,
             ),
@@ -191,6 +197,7 @@ class _UnavailableBody extends StatelessWidget {
 class _StatusBody extends StatelessWidget {
   const _StatusBody({
     this.kind,
+    this.isAgeReviewClosure = false,
     this.isLastKnown = false,
     this.onRetry,
     this.openSupportMessages,
@@ -198,6 +205,10 @@ class _StatusBody extends StatelessWidget {
   });
 
   final AccountEnforcementKind? kind;
+
+  /// Whether to explain an age-review closure in place of the generic ban
+  /// (support-trust-safety#260).
+  final bool isAgeReviewClosure;
   final bool isLastKnown;
   final VoidCallback? onRetry;
   final OpenSupportMessages? openSupportMessages;
@@ -218,13 +229,18 @@ class _StatusBody extends StatelessWidget {
     final l10n = context.l10n;
     final isEnforced = kind!.isEnforced;
     final colors = context.vineColors;
-    final body = l10n.accountEnforcementBody(kind!);
+    final heading = isAgeReviewClosure
+        ? l10n.accountStatusAgeClosureHeading
+        : l10n.accountEnforcementHeading(kind!);
+    final body = isAgeReviewClosure
+        ? l10n.accountStatusAgeClosureBody
+        : l10n.accountEnforcementBody(kind!);
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          l10n.accountEnforcementHeading(kind!),
+          heading,
           style: VineTheme.headlineSmallFont(color: colors.primaryText),
         ),
         if (body != null) ...[
@@ -250,7 +266,12 @@ class _StatusBody extends StatelessWidget {
             onPressed: onRetry,
           ),
         ],
-        if (isEnforced) ...[
+        if (isEnforced && isAgeReviewClosure)
+          _AgeReviewClosurePaths(
+            openSupportMessages: openSupportMessages,
+            composeEmail: composeEmail,
+          )
+        else if (isEnforced) ...[
           const SizedBox(height: 32),
           Text(
             l10n.accountStatusKeysUnaffectedHeading,
@@ -294,6 +315,64 @@ class _StatusBody extends StatelessWidget {
                 openExternalLink(context, AppConstants.accountPortabilityUrl),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// The way back and the dispute path for an account closed by age review.
+///
+/// Leaves out the keys and move-account sections on purpose: most readers are
+/// kids, and the honest way back for them is Divine Greenlight, not taking the
+/// account to another app. The dispute path speaks to a parent, or to an adult
+/// closed by mistake.
+class _AgeReviewClosurePaths extends StatelessWidget {
+  const _AgeReviewClosurePaths({this.openSupportMessages, this.composeEmail});
+
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.vineColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          l10n.accountStatusAgeClosureRejoinBody,
+          style: VineTheme.bodyMediumFont(color: colors.primaryText),
+        ),
+        const SizedBox(height: 16),
+        DivineButton(
+          label: l10n.accountStatusAgeClosureGreenlightCta,
+          expanded: true,
+          onPressed: () =>
+              openExternalLink(context, AppConstants.kidsGreenlightUrl),
+        ),
+        const SizedBox(height: 32),
+        Text(
+          l10n.accountStatusAgeClosureMistakeHeading,
+          style: VineTheme.titleMediumFont(color: colors.primaryText),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.accountStatusAgeClosureMistakeBody,
+          style: VineTheme.bodyMediumFont(color: colors.primaryText),
+        ),
+        const SizedBox(height: 16),
+        SupportContactAction(
+          openSupportMessages: openSupportMessages,
+          composeEmail: composeEmail,
+          builder: (context, isOpening, openSupport) => DivineButton(
+            label: l10n.supportContactSupport,
+            type: DivineButtonType.secondary,
+            expanded: true,
+            isLoading: isOpening,
+            onPressed: openSupport,
+          ),
+        ),
       ],
     );
   }

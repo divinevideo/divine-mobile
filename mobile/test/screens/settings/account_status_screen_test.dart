@@ -23,6 +23,7 @@ import '../../helpers/url_launcher_test_double.dart';
 Future<void> _pumpWith(
   WidgetTester tester,
   AccountEnforcementKind kind, {
+  AccountEnforcementCategory? category,
   MockGoRouter? goRouter,
   bool publishRestrictionConfirmed = false,
   OpenSupportMessages? openSupportMessages,
@@ -49,7 +50,8 @@ Future<void> _pumpWith(
     ProviderScope(
       overrides: [
         accountEnforcementStatusProvider.overrideWith(
-          (ref) async => AccountEnforcementStatus(kind: kind),
+          (ref) async =>
+              AccountEnforcementStatus(kind: kind, category: category),
         ),
       ],
       child: goRouter == null
@@ -85,6 +87,87 @@ void main() {
 
       expect(find.text(l10n.accountStatusBannedHeading), findsOneWidget);
       expect(find.text(l10n.supportContactSupport), findsOneWidget);
+    });
+
+    testWidgets('a ban outside any category keeps the generic exit path', (
+      tester,
+    ) async {
+      await _pumpWith(tester, AccountEnforcementKind.banned);
+
+      expect(find.text(l10n.accountStatusAgeClosureHeading), findsNothing);
+      expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
+      expect(
+        find.text(l10n.accountStatusKeysUnaffectedHeading),
+        findsOneWidget,
+      );
+    });
+
+    group('closed by age review (support-trust-safety#260)', () {
+      testWidgets('says why the account closed instead of the generic ban', (
+        tester,
+      ) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(find.text(l10n.accountStatusAgeClosureBody), findsOneWidget);
+        expect(find.text(l10n.accountStatusBannedHeading), findsNothing);
+      });
+
+      // A kid should not be told the account "still belongs to you" or sent
+      // to move it elsewhere: the way back is Greenlight, not portability.
+      testWidgets('drops the keys and move-account paths', (tester) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+
+        expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+        expect(
+          find.text(l10n.accountStatusKeysUnaffectedHeading),
+          findsNothing,
+        );
+      });
+
+      testWidgets('asks a parent to reach support about a mistake', (
+        tester,
+      ) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+
+        expect(
+          find.text(l10n.accountStatusAgeClosureMistakeHeading),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+        expect(find.text(l10n.accountStatusAppealHeading), findsNothing);
+      });
+
+      testWidgets('Greenlight opens the 13-15 section of the kids page', (
+        tester,
+      ) async {
+        final originalPlatform = UrlLauncherPlatform.instance;
+        final launcher = UrlLauncherTestDouble();
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = originalPlatform);
+
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+        await tester.tap(find.text(l10n.accountStatusAgeClosureGreenlightCta));
+        await tester.pumpAndSettle();
+
+        expect(launcher.launched.single.url, AppConstants.kidsGreenlightUrl);
+      });
     });
 
     testWidgets('a publish-confirmed unknown restriction gets an appeal path', (

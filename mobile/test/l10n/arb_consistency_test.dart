@@ -724,6 +724,14 @@ const _knownUntranslatedDebt = <String>{
   'accountStatusAppealBody',
   'accountStatusMoveAccount',
   'accountStatusRetry',
+  // Age-review closure copy (support-trust-safety#260). Kid-facing policy copy
+  // still in review with support, so it waits for the same translation pass.
+  'accountStatusAgeClosureHeading',
+  'accountStatusAgeClosureBody',
+  'accountStatusAgeClosureRejoinBody',
+  'accountStatusAgeClosureGreenlightCta',
+  'accountStatusAgeClosureMistakeHeading',
+  'accountStatusAgeClosureMistakeBody',
   // Restricted-minor age/deletion copy (#8238). This is load-bearing copy,
   // so non-English locales fall back to English until speaker review.
   'minorAccountReviewContentTitle',
@@ -750,6 +758,10 @@ const _knownUntranslatedDebt = <String>{
   'devOptionsMinorReviewResponseClockExpiredToast',
   'devOptionsMinorReviewResponseClockNotApplicableToast',
   'devOptionsMinorReviewResponseClockMalformedToast',
+  // Developer-only simulation of an age-review closure (support-trust-safety#260).
+  'devOptionsAgeReviewClosureTitle',
+  'devOptionsAgeReviewClosureSubtitle',
+  'devOptionsAgeReviewClosureEnabledToast',
   // Restricted-minor appeal policy (#8239). This is load-bearing age and
   // moderation copy, so non-English locales fall back to English until
   // speaker review.

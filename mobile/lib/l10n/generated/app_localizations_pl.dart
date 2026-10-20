@@ -11934,6 +11934,17 @@ class AppLocalizationsPl extends AppLocalizations {
       'Włączono symulowaną sprawę wsparcia poniżej 13 lat';
 
   @override
+  String get devOptionsAgeReviewClosureTitle => 'Simulate age-review closure';
+
+  @override
+  String get devOptionsAgeReviewClosureSubtitle =>
+      'Banned account closed by age review, as seen on Account status';
+
+  @override
+  String get devOptionsAgeReviewClosureEnabledToast =>
+      'Simulated age-review closure enabled';
+
+  @override
   String get devOptionsMinorReviewResponseClockTitle => 'Response clock';
 
   @override
@@ -13687,6 +13698,29 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get accountStatusBannedBody =>
       'You can\'t post, comment, or send messages on Divine, and your videos have been taken down from Divine.';
+
+  @override
+  String get accountStatusAgeClosureHeading => 'Your account has been closed';
+
+  @override
+  String get accountStatusAgeClosureBody =>
+      'You didn\'t do anything wrong. Divine has age rules to keep young people safe online: you need to be at least 13, and if you\'re under 16, you also need a parent\'s permission. Because of these rules, we\'ve closed your account and removed your videos.';
+
+  @override
+  String get accountStatusAgeClosureRejoinBody =>
+      'You\'re welcome to join us again through Divine Greenlight. You need to be at least 13, with a parent\'s permission.';
+
+  @override
+  String get accountStatusAgeClosureGreenlightCta =>
+      'Learn about Divine Greenlight';
+
+  @override
+  String get accountStatusAgeClosureMistakeHeading =>
+      'Think we got this wrong?';
+
+  @override
+  String get accountStatusAgeClosureMistakeBody =>
+      'Ask a parent or guardian to contact us. If you\'re 16 or older, you can contact us yourself.';
 
   @override
   String get accountStatusRestrictedHeading => 'Your account is restricted';

@@ -19689,6 +19689,24 @@ abstract class AppLocalizations {
   /// **'Simulated under-13 support case enabled'**
   String get devOptionsMinorReviewUnder13EnabledToast;
 
+  /// No description provided for @devOptionsAgeReviewClosureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulate age-review closure'**
+  String get devOptionsAgeReviewClosureTitle;
+
+  /// No description provided for @devOptionsAgeReviewClosureSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Banned account closed by age review, as seen on Account status'**
+  String get devOptionsAgeReviewClosureSubtitle;
+
+  /// No description provided for @devOptionsAgeReviewClosureEnabledToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulated age-review closure enabled'**
+  String get devOptionsAgeReviewClosureEnabledToast;
+
   /// No description provided for @devOptionsMinorReviewResponseClockTitle.
   ///
   /// In en, this message translates to:
@@ -22406,6 +22424,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You can\'t post, comment, or send messages on Divine, and your videos have been taken down from Divine.'**
   String get accountStatusBannedBody;
+
+  /// Heading for an account closed by age review (support-trust-safety#260). Read mostly by kids; keep it plain.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been closed'**
+  String get accountStatusAgeClosureHeading;
+
+  /// Explains an age-review closure without saying which age the reader was judged to be, since most closures are a lapsed parent-consent window, not a confirmed under-13. Says videos were removed, not that all data was deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'You didn\'t do anything wrong. Divine has age rules to keep young people safe online: you need to be at least 13, and if you\'re under 16, you also need a parent\'s permission. Because of these rules, we\'ve closed your account and removed your videos.'**
+  String get accountStatusAgeClosureBody;
+
+  /// The way back after an age-review closure: the Divine Greenlight program for 13-15 year olds with parental permission.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re welcome to join us again through Divine Greenlight. You need to be at least 13, with a parent\'s permission.'**
+  String get accountStatusAgeClosureRejoinBody;
+
+  /// Button that opens the Divine Greenlight section of the kids policy page. 'Divine Greenlight' is a program name; do not translate it.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn about Divine Greenlight'**
+  String get accountStatusAgeClosureGreenlightCta;
+
+  /// Heading above the support contact on an age-review closure.
+  ///
+  /// In en, this message translates to:
+  /// **'Think we got this wrong?'**
+  String get accountStatusAgeClosureMistakeHeading;
+
+  /// Routes an age-review closure dispute to a parent, or to the account holder if they are an adult who was closed by mistake.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a parent or guardian to contact us. If you\'re 16 or older, you can contact us yourself.'**
+  String get accountStatusAgeClosureMistakeBody;
 
   /// Heading shown when a publish rejection confirms a restriction this app version does not recognize.
   ///

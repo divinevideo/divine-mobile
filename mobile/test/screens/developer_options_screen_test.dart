@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/account_enforcement_status.dart';
+import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
@@ -263,6 +265,56 @@ void main() {
       final stateRow = find.textContaining('Override: forced protected');
       await tester.scrollUntilVisible(stateRow, 300);
       expect(stateRow, findsOneWidget);
+    });
+  });
+
+  group('age-review closure simulation (support-trust-safety#260)', () {
+    late bool previousHitTestWarningShouldBeFatal;
+
+    setUp(() {
+      previousHitTestWarningShouldBeFatal =
+          WidgetController.hitTestWarningShouldBeFatal;
+      WidgetController.hitTestWarningShouldBeFatal = true;
+    });
+
+    tearDown(() {
+      WidgetController.hitTestWarningShouldBeFatal =
+          previousHitTestWarningShouldBeFatal;
+    });
+
+    AccountEnforcementStatus? enforcementOverride(WidgetTester tester) =>
+        ProviderScope.containerOf(
+          tester.element(find.byType(DeveloperOptionsScreen)),
+        ).read(accountEnforcementDevOverrideProvider);
+
+    testWidgets('simulate sets an age-review closure', (tester) async {
+      final prefs = await mockPrefs();
+      await pumpScreen(tester, prefs);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tapTile(tester, l10n.devOptionsAgeReviewClosureTitle);
+
+      expect(enforcementOverride(tester)?.isAgeReviewClosure, isTrue);
+    });
+
+    testWidgets('clear simulation override returns to the real status', (
+      tester,
+    ) async {
+      final prefs = await mockPrefs();
+      await pumpScreen(tester, prefs);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tapTile(tester, l10n.devOptionsAgeReviewClosureTitle);
+      // The clear tile sits above the simulation, so scroll back up to it.
+      final clearTile = find.widgetWithText(
+        ListTile,
+        l10n.devOptionsMinorReviewClearTitle,
+      );
+      await scrollUntilTappable(tester, clearTile, -300);
+      await tester.tap(clearTile);
+      await tester.pumpAndSettle();
+
+      expect(enforcementOverride(tester), isNull);
     });
   });
 }

@@ -28,11 +28,23 @@ enum AccountEnforcementKind {
       this == AccountEnforcementKind.unknownRestriction;
 }
 
+/// Why an account is enforced, from a closed set with reviewed copy for each.
+///
+/// This is not a moderation reason. Each value selects copy the client owns,
+/// so nothing stored by a moderator or a rule ever reaches the screen
+/// (support-trust-safety#200 R-7).
+enum AccountEnforcementCategory {
+  /// The account was closed by an age review: a suspected minor who was
+  /// denied, or whose parent-consent window ran out (support-trust-safety#260).
+  ageReview,
+}
+
 /// Enforcement state for the authenticated account, as reported by
 /// Funnelcake's self-authenticated status endpoint.
 ///
-/// Deliberately carries no reason or moderation metadata, for two reasons that
-/// are worth keeping apart because only the first survives a change of backend:
+/// Deliberately carries no free-text reason or moderation metadata, for two
+/// reasons that are worth keeping apart because only the first survives a
+/// change of backend:
 ///
 /// 1. Stored moderation reasons are internal operational metadata, not
 ///    reviewed or localised user copy. Account-level notices describe the
@@ -42,11 +54,11 @@ enum AccountEnforcementKind {
 ///    that in its own suite. This is why the omission is currently free.
 ///
 /// Reason (2) arrived with the move from Keycast to Funnelcake and reads like
-/// the whole story; it is not. Copy is chosen from [kind] alone. See #8304 for
-/// the account-level policy decision and `account_status_api_client_test.dart`
-/// for the client-side guard.
+/// the whole story; it is not. Copy is chosen from [kind] and, where set, the
+/// closed [category]. See #8304 for the account-level policy decision and
+/// `account_status_api_client_test.dart` for the client-side guard.
 class AccountEnforcementStatus {
-  const AccountEnforcementStatus({required this.kind});
+  const AccountEnforcementStatus({required this.kind, this.category});
 
   factory AccountEnforcementStatus.fromFunnelcake(
     FunnelcakeAccountStatus status,
@@ -69,5 +81,15 @@ class AccountEnforcementStatus {
 
   final AccountEnforcementKind kind;
 
+  /// Funnelcake does not report one yet, so this is null outside developer
+  /// simulation until the self-status API carries it.
+  final AccountEnforcementCategory? category;
+
   bool get isEnforced => kind.isEnforced;
+
+  /// Whether the account was closed by age review. A suspension in that
+  /// category is an open case, which the review screens handle instead.
+  bool get isAgeReviewClosure =>
+      kind == AccountEnforcementKind.banned &&
+      category == AccountEnforcementCategory.ageReview;
 }

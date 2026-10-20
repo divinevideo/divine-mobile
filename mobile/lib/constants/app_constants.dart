@@ -38,6 +38,10 @@ class AppConstants {
   /// Divine-hosted kids policy page for under-16 account rules.
   static const String kidsPolicyUrl = 'https://divine.video/kids';
 
+  /// The Divine Greenlight (13-15) section of the kids policy page: the way
+  /// back for an account closed by age review.
+  static const String kidsGreenlightUrl = 'https://divine.video/kids#13-15';
+
   /// Divine-hosted flagged-account review page for age-review cases.
   static const String ageReviewUrl = 'https://divine.video/age-review';
 

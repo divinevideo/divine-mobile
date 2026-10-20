@@ -82,6 +82,54 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('accountEnforcementStatusProvider', () {
+    test('a developer override answers without a request', () async {
+      final authService = _MockAuthService();
+      when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyA);
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      final client = _QueueStatusClient([FunnelcakeAccountStatus.active]);
+      final container = _container(authService: authService, client: client);
+      addTearDown(container.dispose);
+      const simulated = AccountEnforcementStatus(
+        kind: AccountEnforcementKind.banned,
+        category: AccountEnforcementCategory.ageReview,
+      );
+
+      container
+          .read(accountEnforcementDevOverrideProvider.notifier)
+          .simulate(
+            simulated,
+          );
+      final result = await container.read(
+        accountEnforcementStatusProvider.future,
+      );
+
+      expect(result, same(simulated));
+      expect(client.requestedPubkeys, isEmpty);
+    });
+
+    test('clearing the developer override asks Funnelcake again', () async {
+      final authService = _MockAuthService();
+      when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyA);
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      final client = _QueueStatusClient([FunnelcakeAccountStatus.active]);
+      final container = _container(authService: authService, client: client);
+      addTearDown(container.dispose);
+      final override = container.read(
+        accountEnforcementDevOverrideProvider.notifier,
+      );
+
+      override.simulate(
+        const AccountEnforcementStatus(kind: AccountEnforcementKind.banned),
+      );
+      override.clear();
+      final result = await container.read(
+        accountEnforcementStatusProvider.future,
+      );
+
+      expect(result.kind, AccountEnforcementKind.noRestrictionReported);
+      expect(client.requestedPubkeys, [_pubkeyA]);
+    });
+
     test('signed out resolves without a request', () async {
       final client = _QueueStatusClient([FunnelcakeAccountStatus.active]);
       final container = ProviderContainer(
