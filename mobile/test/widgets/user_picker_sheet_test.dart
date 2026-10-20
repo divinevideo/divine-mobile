@@ -2162,6 +2162,10 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                nostrSessionProvider.overrideWith(_TestNostrSession.new),
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
                 _noVanishedProfiles,
                 profileRepositoryProvider.overrideWithValue(mockProfileRepo),
                 profileReadRepositoryProvider.overrideWithValue(
