@@ -99,15 +99,22 @@ void main() {
         onAccountCreated: (owner, close) => accountClosers[owner] = close,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async {
-          return signedEvent = _event(
-            id: _eventId(900 + kind),
-            pubkey: _pubkey(1),
-            kind: kind,
-            tags: tags,
-            content: content,
-          );
-        },
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async {
+              return signedEvent = _event(
+                id: _eventId(900 + kind),
+                pubkey: _pubkey(1),
+                kind: kind,
+                tags: tags,
+                content: content,
+                createdAt: createdAt ?? 1000,
+              );
+            },
       );
     });
 
@@ -223,6 +230,144 @@ void main() {
       expect(startedBeforeAwards, isTrue);
     });
 
+    test('an exhausted budget never starts a holder walk', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily',
+      );
+      await repository.setSubscription(coordinate, subscribed: true);
+      await expectLater(
+        repository.loadSubscribedHolders(timeout: Duration.zero),
+        throwsA(isA<TimeoutException>()),
+      );
+      verifyNever(
+        () => nostrClient.readAllEvents(any(), timeout: any(named: 'timeout')),
+      );
+    });
+
+    test(
+      'expired current profiles do not start a legacy profile read',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily',
+        );
+        await repository.setSubscription(coordinate, subscribed: true);
+        final started = Completer<void>();
+        final profiles = Completer<PagedQueryResult>();
+        final kinds = <int>[];
+        _stubPagedReads(nostrClient, (invocation) {
+          final filter = invocation.positionalArguments.single as Filter;
+          kinds.add(filter.kinds!.single);
+          if (filter.kinds!.contains(EventKind.profileBadges)) {
+            started.complete();
+            return profiles.future;
+          }
+          return Future.value(
+            PagedQueryResult(
+              events: filter.kinds!.contains(EventKind.badgeAward)
+                  ? [
+                      _awardEvent(
+                        id: _eventId(751),
+                        issuerPubkey: coordinate.pubkey,
+                        definitionCoordinate: coordinate.value,
+                        recipients: [_pubkey(10)],
+                      ),
+                    ]
+                  : [],
+              isComplete: true,
+              pages: 1,
+            ),
+          );
+        });
+        final walk = repository.loadSubscribedHolders(
+          timeout: const Duration(seconds: 1),
+        );
+        final expired = expectLater(walk, throwsA(isA<TimeoutException>()));
+        await Future.any<void>([started.future, walk.then<void>((_) {})]);
+        await expired;
+        profiles.complete(
+          const PagedQueryResult(events: [], isComplete: true, pages: 1),
+        );
+        await pumpEventQueue();
+        expect(kinds, [
+          EventKind.badgeAward,
+          EventKind.eventDeletion,
+          EventKind.profileBadges,
+        ]);
+      },
+    );
+
+    test(
+      'each subscribed holder read receives only the remaining budget',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily',
+        );
+        await repository.setSubscription(coordinate, subscribed: true);
+        final budgets = <Duration?>[];
+        Future<PagedQueryResult> answer(Invocation invocation) async {
+          budgets.add(invocation.namedArguments[#timeout] as Duration?);
+          final filter = invocation.positionalArguments.single as Filter;
+          return PagedQueryResult(
+            events: filter.kinds!.contains(EventKind.badgeAward)
+                ? [
+                    _awardEvent(
+                      id: _eventId(750),
+                      issuerPubkey: coordinate.pubkey,
+                      definitionCoordinate: coordinate.value,
+                      recipients: [_pubkey(10)],
+                    ),
+                  ]
+                : [],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+
+        _stubPagedReads(nostrClient, answer);
+        when(
+          () =>
+              nostrClient.readAllEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(answer);
+        await repository.loadSubscribedHolders(
+          timeout: const Duration(seconds: 1),
+        );
+        expect(budgets, hasLength(4));
+        expect(budgets, everyElement(isNotNull));
+        for (final budget in budgets) {
+          expect(budget, lessThanOrEqualTo(const Duration(seconds: 1)));
+          expect(budget, greaterThan(Duration.zero));
+        }
+        for (var i = 1; i < budgets.length; i++) {
+          expect(budgets[i], lessThanOrEqualTo(budgets[i - 1]!));
+        }
+      },
+    );
+
+    test(
+      'rapid unsubscribe supersedes the observed subscription event',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily',
+        );
+        await repository.setSubscription(coordinate, subscribed: true);
+        final subscribedEvent = lastSignedEvent()!;
+        await repository.setSubscription(coordinate, subscribed: false);
+        final unsubscribedEvent = lastSignedEvent()!;
+        expect(
+          unsubscribedEvent.createdAt,
+          greaterThan(subscribedEvent.createdAt),
+        );
+        expect(
+          await repository.loadSubscriptions(requireComplete: true),
+          isEmpty,
+        );
+      },
+    );
+
     test('announces a saved subscription change', () async {
       // Following listens for this to reload only its own feed.
       final coordinate = BadgeCoordinate(
@@ -315,8 +460,12 @@ void main() {
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
-                ({required kind, required content, required tags}) async =>
-                    null,
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async => null,
           );
           await expectLater(
             unsigned.setSubscription(
@@ -362,7 +511,7 @@ void main() {
           final started = Completer<void>();
           final awards = Completer<PagedQueryResult>();
           final filters = <Filter>[];
-          when(() => nostrClient.readAllEvents(any())).thenAnswer((invocation) {
+          _stubPagedReads(nostrClient, (invocation) {
             final filter = invocation.positionalArguments.single as Filter;
             filters.add(filter);
             if (filter.kinds!.contains(EventKind.badgeAward)) {
@@ -406,7 +555,7 @@ void main() {
             identifier: 'daily',
           );
           final queriedAuthors = <String>[];
-          when(() => nostrClient.readAllEvents(any())).thenAnswer((
+          _stubPagedReads(nostrClient, (
             invocation,
           ) async {
             final filter = invocation.positionalArguments.single as Filter;
@@ -479,7 +628,12 @@ void main() {
             sharedPreferences: preferences,
             currentPubkey: () => account,
             signEvent:
-                ({required kind, required content, required tags}) async {
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async {
                   signerCalls++;
                   return _event(
                     id: _eventId(705),
@@ -517,13 +671,17 @@ void main() {
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
-                ({required kind, required content, required tags}) async =>
-                    _event(
-                      id: _eventId(706),
-                      pubkey: _pubkey(3),
-                      kind: kind,
-                      tags: tags,
-                    ),
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async => _event(
+                  id: _eventId(706),
+                  pubkey: _pubkey(3),
+                  kind: kind,
+                  tags: tags,
+                ),
           );
           addTearDown(scoped.dispose);
           await expectLater(
@@ -555,10 +713,16 @@ void main() {
               sharedPreferences: preferences,
               currentPubkey: () => account,
               sessionChanges: sessions.stream,
-              signEvent: ({required kind, required content, required tags}) {
-                signing.complete();
-                return signed.future;
-              },
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) {
+                    signing.complete();
+                    return signed.future;
+                  },
             );
             final saving = scoped.setSubscription(
               BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
@@ -632,8 +796,13 @@ void main() {
         nostrClient: nostrClient,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async =>
-            null,
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => null,
       );
       expect(await otherDevice.loadSubscriptions(), {coordinate});
     });
@@ -718,7 +887,7 @@ void main() {
     test('loads the latest definitions from curated issuers', () async {
       final issuer = _pubkey(2);
       final secondIssuer = _pubkey(3);
-      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+      _stubPagedReads(nostrClient, (
         invocation,
       ) async {
         final filter = invocation.positionalArguments.single as Filter;
@@ -764,11 +933,14 @@ void main() {
         'Daily',
         'Weekly',
       ]);
-      verify(() => nostrClient.readAllEvents(any())).called(2);
+      verify(
+        () => nostrClient.readAllEvents(any(), timeout: any(named: 'timeout')),
+      ).called(2);
     });
 
     test('rejects an incomplete curated definition walk', () async {
-      when(() => nostrClient.readAllEvents(any())).thenAnswer(
+      _stubPagedReads(
+        nostrClient,
         (_) async => const PagedQueryResult(
           events: [],
           isComplete: false,
@@ -787,8 +959,13 @@ void main() {
         nostrClient: nostrClient,
         sharedPreferences: preferences,
         currentPubkey: () => null,
-        signEvent: ({required kind, required content, required tags}) async =>
-            null,
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => null,
         definitionRelayUrl: 'wss://relay.example',
       );
       when(
@@ -825,8 +1002,13 @@ void main() {
           nostrClient: nostrClient,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
           isHiddenPubkey: (pubkey) => pubkey == _pubkey(11),
         );
 
@@ -986,7 +1168,7 @@ void main() {
                 noRelays: false,
               ),
             );
-            when(() => nostrClient.readAllEvents(any())).thenAnswer((
+            _stubPagedReads(nostrClient, (
               call,
             ) async {
               final filter = call.positionalArguments.single as Filter;
@@ -1037,7 +1219,8 @@ void main() {
               timedOut: false,
               noRelays: false,
             );
-            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+            _stubPagedReads(
+              nostrClient,
               (_) async => const PagedQueryResult(
                 events: [],
                 isComplete: true,
@@ -1071,7 +1254,8 @@ void main() {
               (_) async =>
                   (events: [subscription()], timedOut: false, noRelays: false),
             );
-            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+            _stubPagedReads(
+              nostrClient,
               (_) async => const PagedQueryResult(
                 events: [],
                 isComplete: true,
@@ -1106,7 +1290,8 @@ void main() {
             expect(await repository.loadSubscriptions(), isNotEmpty);
             expect(await repository.loadSubscriptions(), isNotEmpty);
             await pumpEventQueue();
-            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+            _stubPagedReads(
+              nostrClient,
               (_) async => const PagedQueryResult(
                 events: [],
                 isComplete: true,
@@ -1135,7 +1320,8 @@ void main() {
               () => nostrClient.queryEvents(any()),
             ).thenAnswer((_) async => [subscription()]);
             await repository.loadSubscriptions();
-            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+            _stubPagedReads(
+              nostrClient,
               (_) async => const PagedQueryResult(
                 events: [],
                 isComplete: true,
@@ -1154,7 +1340,12 @@ void main() {
             pending.complete(_emptySubscriptionRead);
             await next;
             expect(completedBeforeRead, isFalse);
-            verify(() => nostrClient.readAllEvents(any())).called(2);
+            verify(
+              () => nostrClient.readAllEvents(
+                any(),
+                timeout: any(named: 'timeout'),
+              ),
+            ).called(2);
           },
         );
 
@@ -1188,7 +1379,8 @@ void main() {
             final pending = Completer<_SubscriptionRead>();
             deferRead(pending);
             final oldRead = repository.loadSubscribedHolders();
-            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+            _stubPagedReads(
+              nostrClient,
               (_) async => const PagedQueryResult(
                 events: [],
                 isComplete: true,
@@ -1201,7 +1393,12 @@ void main() {
             await repository.loadSubscriptions();
             pending.complete(_emptySubscriptionRead);
             expect(await oldRead, isEmpty);
-            verify(() => nostrClient.readAllEvents(any())).called(1);
+            verify(
+              () => nostrClient.readAllEvents(
+                any(),
+                timeout: any(named: 'timeout'),
+              ),
+            ).called(1);
             final nextRead = Completer<_SubscriptionRead>();
             deferRead(nextRead);
             var completed = false;
@@ -1290,8 +1487,12 @@ void main() {
               sharedPreferences: preferences,
               currentPubkey: () => account,
               signEvent:
-                  ({required kind, required content, required tags}) async =>
-                      null,
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
             );
             addTearDown(scoped.dispose);
             await scoped.loadSubscribedHolders();
@@ -1336,13 +1537,17 @@ void main() {
               sharedPreferences: preferences,
               currentPubkey: () => account,
               signEvent:
-                  ({required kind, required content, required tags}) async =>
-                      _event(
-                        id: _eventId(701),
-                        pubkey: account,
-                        kind: kind,
-                        tags: tags,
-                      ),
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => _event(
+                    id: _eventId(701),
+                    pubkey: account,
+                    kind: kind,
+                    tags: tags,
+                  ),
             );
             addTearDown(scoped.dispose);
             await scoped.loadSubscribedHolders();
@@ -1398,8 +1603,12 @@ void main() {
               sharedPreferences: preferences,
               currentPubkey: () => _pubkey(1),
               signEvent:
-                  ({required kind, required content, required tags}) async =>
-                      null,
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
               sessionChanges: resets.stream,
             );
             addTearDown(scoped.dispose);
@@ -1454,7 +1663,8 @@ void main() {
               noRelays: false,
             ));
             await pumpEventQueue();
-            when(() => nostrClient.readAllEvents(any())).thenAnswer(
+            _stubPagedReads(
+              nostrClient,
               (_) async => const PagedQueryResult(
                 events: [],
                 isComplete: true,
@@ -1553,8 +1763,12 @@ void main() {
               sharedPreferences: preferences,
               currentPubkey: () => account,
               signEvent:
-                  ({required kind, required content, required tags}) async =>
-                      null,
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
             );
             addTearDown(scoped.dispose);
             when(
@@ -1569,7 +1783,10 @@ void main() {
             );
             final holders = Completer<PagedQueryResult>();
             when(
-              () => nostrClient.readAllEvents(any()),
+              () => nostrClient.readAllEvents(
+                any(),
+                timeout: any(named: 'timeout'),
+              ),
             ).thenAnswer((_) => holders.future);
             final rejected = expectLater(
               scoped.loadSubscribedHolders(),
@@ -1660,8 +1877,13 @@ void main() {
           nostrClient: nostrClient,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         expect(await signedOut.loadSubscribedHolders(), isEmpty);
@@ -1723,7 +1945,7 @@ void main() {
           );
           final pending = Completer<PagedQueryResult>();
           var reads = 0;
-          when(() => nostrClient.readAllEvents(any())).thenAnswer((_) {
+          _stubPagedReads(nostrClient, (_) {
             reads++;
             return pending.future;
           });
@@ -1779,7 +2001,7 @@ void main() {
             noRelays: false,
           ),
         );
-        when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        _stubPagedReads(nostrClient, (
           invocation,
         ) async {
           final filter = invocation.positionalArguments.single as Filter;
@@ -1844,7 +2066,7 @@ void main() {
           identifier: 'daily-diviner',
         );
         final recipients = [for (var i = 10; i < 215; i++) _pubkey(i)];
-        when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        _stubPagedReads(nostrClient, (
           invocation,
         ) async {
           final filter = invocation.positionalArguments.single as Filter;
@@ -1908,7 +2130,7 @@ void main() {
         pubkey: _pubkey(2),
         identifier: 'daily-diviner',
       );
-      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+      _stubPagedReads(nostrClient, (
         invocation,
       ) async {
         final filter = invocation.positionalArguments.single as Filter;
@@ -1975,7 +2197,8 @@ void main() {
     });
 
     test('Explore definitions ignore events the issuer did not sign', () async {
-      when(() => nostrClient.readAllEvents(any())).thenAnswer(
+      _stubPagedReads(
+        nostrClient,
         (_) async => PagedQueryResult(
           events: [
             _event(
@@ -2007,11 +2230,16 @@ void main() {
         nostrClient: nostrClient,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async =>
-            null,
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => null,
         isHiddenPubkey: (pubkey) => pubkey == _pubkey(11),
       );
-      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+      _stubPagedReads(nostrClient, (
         invocation,
       ) async {
         final filter = invocation.positionalArguments.single as Filter;
@@ -2057,7 +2285,7 @@ void main() {
         pubkey: _pubkey(2),
         identifier: 'daily-diviner',
       );
-      when(() => nostrClient.readAllEvents(any())).thenAnswer((_) async {
+      _stubPagedReads(nostrClient, (_) async {
         return const PagedQueryResult(
           events: [],
           isComplete: false,
@@ -2076,7 +2304,7 @@ void main() {
         pubkey: _pubkey(2),
         identifier: 'daily-diviner',
       );
-      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+      _stubPagedReads(nostrClient, (
         invocation,
       ) async {
         final filter = invocation.positionalArguments.single as Filter;
@@ -2107,12 +2335,48 @@ void main() {
       );
     });
 
+    test('accepted holders reject an incomplete legacy profile read', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(50),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(3)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return PagedQueryResult(
+          events: const [],
+          isComplete: filter.kinds?.contains(EventKind.badgeSet) != true,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
+
     test('accepted holders reject an incomplete revocation read', () async {
       final coordinate = BadgeCoordinate(
         pubkey: _pubkey(2),
         identifier: 'daily-diviner',
       );
-      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+      _stubPagedReads(nostrClient, (
         invocation,
       ) async {
         final filter = invocation.positionalArguments.single as Filter;
@@ -2152,7 +2416,7 @@ void main() {
         recipients: [_pubkey(3)],
       );
       var revoked = true;
-      when(() => nostrClient.readAllEvents(any())).thenAnswer((
+      _stubPagedReads(nostrClient, (
         invocation,
       ) async {
         final filter = invocation.positionalArguments.single as Filter;
@@ -2203,7 +2467,7 @@ void main() {
           definitionCoordinate: coordinate.value,
           recipients: [_pubkey(3)],
         );
-        when(() => nostrClient.readAllEvents(any())).thenAnswer((
+        _stubPagedReads(nostrClient, (
           invocation,
         ) async {
           final filter = invocation.positionalArguments.single as Filter;
@@ -2955,8 +3219,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
           isHiddenPubkey: (pubkey) => pubkey == _pubkey(3),
         );
       });
@@ -3579,8 +3848,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
         final award = _awardEvent(
           id: _eventId(44),
@@ -3646,8 +3920,13 @@ void main() {
         signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => null,
-        signEvent: ({required kind, required content, required tags}) async =>
-            _event(
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => _event(
               id: _eventId(946),
               pubkey: _pubkey(1),
               kind: kind,
@@ -3890,8 +4169,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -4171,8 +4455,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -4249,8 +4538,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -4489,8 +4783,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
         _stubQueries(nostrClient, {
           'awardsFor:${coordinate.value}': [
@@ -4742,7 +5041,7 @@ void main() {
             identifier: ' scene-stealer ',
             name: fields['name']!,
             description: ' Steals the scroll. ',
-            imageUrl: 'https://media.divine.video/scene.png',
+            imageUrl: artworkUri.toString(),
             thumbnailUrl: 'https://media.divine.video/scene-thumb.png',
           ),
         );
@@ -4823,8 +5122,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -4845,8 +5149,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -4876,7 +5185,12 @@ void main() {
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
-                ({required kind, required content, required tags}) async =>
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
                     _event(id: _eventId(80), pubkey: _pubkey(1), kind: kind),
           );
 
@@ -4979,8 +5293,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -4998,8 +5317,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -5026,7 +5350,12 @@ void main() {
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
-                ({required kind, required content, required tags}) async =>
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
                     _event(id: _eventId(81), pubkey: _pubkey(1), kind: kind),
           );
 
@@ -5424,8 +5753,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -5564,8 +5898,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -5724,6 +6063,17 @@ void main() {
       },
     );
   });
+}
+
+// Exercise both public holder walks and subscribed walks with a remaining budget.
+void _stubPagedReads(
+  _MockNostrClient client,
+  Future<PagedQueryResult> Function(Invocation) answer,
+) {
+  when(() => client.readAllEvents(any())).thenAnswer(answer);
+  when(
+    () => client.readAllEvents(any(), timeout: any(named: 'timeout')),
+  ).thenAnswer(answer);
 }
 
 /// Stubs [NostrClient.queryEvents] with answer-keyed canned events and
