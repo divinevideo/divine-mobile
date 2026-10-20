@@ -597,6 +597,25 @@ void main() {
         expect(await restart, equals('second.mp4'));
         expect(markerFiles(), isEmpty);
       });
+
+      test('leaves the marker of the render beside the cancelled one '
+          'alone', () async {
+        final finishCancelled = Completer<String>();
+        final finishBeside = Completer<String>();
+        final cancelled = await startRender(finishCancelled, taskId: 'seam-a');
+        final beside = await startRender(finishBeside, taskId: 'seam-b');
+        ProVideoEditor.instance = _FakeProVideoEditor(onCancel: (_) {});
+
+        await VideoEditorRenderService.cancelTask('seam-a');
+
+        expect(readMarker('seam-a'), contains('cancelRequestedAtMs'));
+        expect(readMarker('seam-b'), isNot(contains('cancelRequestedAtMs')));
+        expect(readMarker('seam-b'), isNot(contains('cancelReturnedAtMs')));
+
+        finishCancelled.complete('a.mp4');
+        finishBeside.complete('b.mp4');
+        await Future.wait([cancelled, beside]);
+      });
     });
 
     group('lifecycle history', () {
