@@ -79,6 +79,16 @@ final RegExp _relayNoticeSigningMaterial = RegExp(
   r'\b(?:nsec1|ncryptsec1)[a-z0-9]+\b',
   caseSensitive: false,
 );
+// Addresses a relay can see and echo back. IPv6 needs `::` or at least four
+// groups, so a clock time like 12:30:45 stays readable. IPv4 runs first, so
+// an IPv4-mapped IPv6 address loses all four of its octets.
+final RegExp _relayNoticeIpv4 = RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b');
+final RegExp _relayNoticeIpv6 = RegExp(
+  r'(?<![0-9a-z:])(?:(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}|'
+  r'(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?::'
+  r'(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4})*)?)(?![0-9a-z:])',
+  caseSensitive: false,
+);
 final RegExp _relayNoticeAuthorization = RegExp(
   r'\bauthorization\s*([:=])\s*[^\s,;]+(?:\s+[^\s,;]+)?',
   caseSensitive: false,
@@ -99,6 +109,8 @@ String relayNoticeForDiagnostics(String message) {
   var sanitized = message
       .replaceAll(_relayNoticeControls, ' ')
       .replaceAll(_relayNoticeSigningMaterial, _redactedRelayNoticeValue)
+      .replaceAll(_relayNoticeIpv4, _redactedRelayNoticeValue)
+      .replaceAll(_relayNoticeIpv6, _redactedRelayNoticeValue)
       .replaceAllMapped(
         _relayNoticeAuthorization,
         (match) => 'authorization${match.group(1)}$_redactedRelayNoticeValue',

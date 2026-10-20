@@ -678,6 +678,24 @@ void main() {
   });
 
   group('relayNoticeForDiagnostics', () {
+    test('redacts IP addresses but keeps ids, times and relay URLs', () {
+      final eventId = 'a' * 64;
+      final notice =
+          'rate-limited: 203.0.113.9, 2001:db8::4, ::ffff:198.51.100.7 and '
+          '2001:0db8:85a3:0000:0000:8a2e:0370:7334 at 12:30:45 for $eventId '
+          'on wss://relay.example:443';
+
+      final sanitized = relayNoticeForDiagnostics(notice);
+
+      expect(sanitized, isNot(contains('203.0.113.9')));
+      expect(sanitized, isNot(contains('2001:db8')));
+      expect(sanitized, isNot(contains('198.51.100.7')));
+      expect(sanitized, isNot(contains('8a2e:0370:7334')));
+      expect(sanitized, contains(eventId));
+      expect(sanitized, contains('12:30:45'));
+      expect(sanitized, contains('wss://relay.example:443'));
+    });
+
     test('strips Unicode controls and format characters, not just ASCII', () {
       // NEL is a C1 line break; the bidi override and zero-width joiner are
       // format characters that leave no visible trace but change how the
