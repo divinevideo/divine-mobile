@@ -64,7 +64,6 @@ import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:stream_transform/stream_transform.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -503,8 +502,11 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
   );
   final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
   ref.onDispose(() {
-    unawaited(goneCleanup.cancel());
-    unawaited(store.dispose());
+    runProviderDetached(
+      goneCleanup.close().whenComplete(store.dispose),
+      'close kept video DM cleanup',
+      logName: 'DmVideoStore',
+    );
   });
   runProviderDetached(
     store.prune(),
@@ -534,18 +536,69 @@ Future<bool> Function(String messageId) dmVideoMessageGone(
 /// Runs [prune] after a DM row in [db] changes or a removed message is
 /// recorded, so a retracted or removed message's kept video goes soon after,
 /// not only at the next launch.
-StreamSubscription<void> pruneWhenDmVideoMessagesGo(
+DmVideoGoneCleanup pruneWhenDmVideoMessagesGo(
   AppDatabase db,
   Future<void> Function() prune,
-) => dmVideoMessageChanges(db)
-    .audit(DmVideoStore.goneCleanupDelay)
-    .listen(
-      (_) => runProviderDetached(
-        prune(),
-        'prune kept video DMs after a message went',
-        logName: 'DmVideoStore',
-      ),
-    );
+) => DmVideoGoneCleanup(changes: dmVideoMessageChanges(db), prune: prune);
+
+/// Owns the delayed cleanup and drains it before its store is disposed.
+final class DmVideoGoneCleanup {
+  /// Starts the audited cleanup, retaining pending work for [close].
+  DmVideoGoneCleanup({
+    required Stream<void> changes,
+    required Future<void> Function() prune,
+    Duration cleanupDelay = DmVideoStore.goneCleanupDelay,
+  }) : _prune = prune {
+    _subscription = changes.listen((_) {
+      if (_closed) return;
+      _pending = true;
+      // Audit, not debounce: continuing writes must not starve cleanup.
+      _timer ??= Timer(cleanupDelay, () {
+        _timer = null;
+        _pending = false;
+        final running = Future<void>.sync(_prune);
+        _running = running;
+        runProviderDetached(
+          running,
+          'prune kept video DMs after a message went',
+          logName: 'DmVideoStore',
+        );
+      });
+    });
+  }
+
+  final Future<void> Function() _prune;
+  late final StreamSubscription<void> _subscription;
+  Timer? _timer;
+  bool _closed = false;
+  bool _pending = false;
+  Future<void>? _running;
+  Future<void>? _closing;
+
+  /// Stops listening, immediately flushes a change still waiting out the
+  /// audit delay, and awaits any cleanup already running. Repeated calls
+  /// share one close. This reads the database as it is at close time: an
+  /// account switch that already cleared DM rows cannot recover a retraction
+  /// from those rows, while conversation-removal tombstones remain available.
+  Future<void> close() {
+    _closed = true;
+    _timer?.cancel();
+    _timer = null;
+    return _closing ??= _close();
+  }
+
+  Future<void> _close() async {
+    await _subscription.cancel();
+    try {
+      await _running;
+    } finally {
+      if (_pending) {
+        _pending = false;
+        await _prune();
+      }
+    }
+  }
+}
 
 /// Whether [owner] removed the conversation [conversationId] at or after
 /// [sentAt], the rule the DM history download applies to old messages. A

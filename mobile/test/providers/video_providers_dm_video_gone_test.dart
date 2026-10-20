@@ -2,13 +2,20 @@
 // ABOUTME: because their message was retracted or removed with its chat.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/dm_video_store.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+
+import '../mocks/mock_path_provider_platform.dart';
 
 void main() {
   group('dmVideoMessageGone', () {
@@ -252,6 +259,56 @@ void main() {
       expect(inserted, isTrue);
     }
 
+    test('flushes a pending cleanup when its listener closes', () async {
+      var prunes = 0;
+      final changes = StreamController<void>();
+      final cleanup = DmVideoGoneCleanup(
+        changes: changes.stream,
+        prune: () async => prunes++,
+        cleanupDelay: const Duration(minutes: 1),
+      );
+      changes.add(null);
+      await pumpEventQueue();
+      expect(prunes, isZero);
+
+      await cleanup.close();
+
+      expect(prunes, 1);
+      await changes.close();
+    });
+
+    test('close is shared and waits for an already running cleanup', () async {
+      final release = Completer<void>();
+      final started = Completer<void>();
+      var prunes = 0;
+      final changes = StreamController<void>();
+      final cleanup = DmVideoGoneCleanup(
+        changes: changes.stream,
+        cleanupDelay: Duration.zero,
+        prune: () {
+          prunes++;
+          started.complete();
+          return release.future;
+        },
+      );
+      changes.add(null);
+      await started.future;
+      expect(prunes, 1);
+
+      var closed = false;
+      final closing = cleanup.close();
+      expect(identical(closing, cleanup.close()), isTrue);
+      unawaited(closing.then((_) => closed = true));
+      await pumpEventQueue();
+      expect(closed, isFalse);
+
+      release.complete();
+      await closing;
+      expect(closed, isTrue);
+      expect(prunes, 1);
+      await changes.close();
+    });
+
     test('prunes once, the cleanup delay after a retraction', () {
       fakeAsync((async) {
         var prunes = 0;
@@ -270,7 +327,7 @@ void main() {
 
         async.elapse(DmVideoStore.goneCleanupDelay * 2);
         expect(prunes, equals(1));
-        unawaited(subscription.cancel());
+        unawaited(subscription.close());
       });
     });
 
@@ -288,7 +345,7 @@ void main() {
         async.elapse(DmVideoStore.goneCleanupDelay * 2);
 
         expect(prunes, equals(1));
-        unawaited(subscription.cancel());
+        unawaited(subscription.close());
       });
     });
 
@@ -307,7 +364,7 @@ void main() {
         }
 
         expect(prunes, greaterThanOrEqualTo(1));
-        unawaited(subscription.cancel());
+        unawaited(subscription.close());
       });
     });
 
@@ -319,13 +376,84 @@ void main() {
           () async => prunes++,
         );
 
-        unawaited(subscription.cancel());
+        unawaited(subscription.close());
         async.elapse(Duration.zero);
         retract(async, 1);
         async.elapse(DmVideoStore.goneCleanupDelay * 2);
 
         expect(prunes, isZero);
       });
+    });
+  });
+
+  group('dmVideoStoreProvider disposal', () {
+    final owner = 'e' * 64;
+    final messageId = '1' * 64;
+    late AppDatabase db;
+    late Directory cache;
+    late PathProviderPlatform originalPaths;
+
+    setUp(() {
+      db = AppDatabase.test(NativeDatabase.memory());
+      cache = Directory.systemTemp.createTempSync('dm_disposal_');
+      originalPaths = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = MockPathProviderPlatform()
+        ..setApplicationCachePath(cache.path);
+    });
+
+    tearDown(() async {
+      PathProviderPlatform.instance = originalPaths;
+      await db.close();
+      cache.deleteSync(recursive: true);
+    });
+
+    test('flushes the pending retraction before disposing the store', () async {
+      await db.directMessagesDao.insertMessage(
+        id: messageId,
+        conversationId: 'conversation',
+        senderPubkey: 'b' * 64,
+        content: 'https://media.example/blob',
+        createdAt: 1757385263,
+        giftWrapId: 'c' * 64,
+        messageKind: 15,
+        ownerPubkey: owner,
+      );
+      final video = File(
+        '${cache.path}/${DmVideoStore.dirName}/$owner/$messageId.mp4',
+      )..createSync(recursive: true);
+      final container = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          currentAccountIdProvider.overrideWithValue(owner),
+        ],
+      );
+      var disposed = false;
+      addTearDown(() {
+        if (!disposed) container.dispose();
+      });
+      final store = container.read(dmVideoStoreProvider)!;
+      await store.prune();
+      expect(video.existsSync(), isTrue);
+      final deleted = Completer<void>();
+      final watch = video.parent.watch(events: FileSystemEvent.delete).listen((
+        event,
+      ) {
+        if (event.path == video.path && !deleted.isCompleted)
+          deleted.complete();
+      });
+      addTearDown(watch.cancel);
+      await db.directMessagesDao.markMessageDeleted(
+        messageId,
+        ownerPubkey: owner,
+      );
+      await pumpEventQueue();
+
+      disposed = true;
+      container.dispose();
+      await deleted.future.timeout(const Duration(seconds: 5));
+      await store.prune();
+
+      expect(video.existsSync(), isFalse);
     });
   });
 }
