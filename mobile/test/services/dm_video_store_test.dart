@@ -350,7 +350,33 @@ void main() {
 
         expect((await allowed)!.readAsBytesSync(), equals(_frame));
         expect((await notAllowed)!.readAsBytesSync(), equals(_frame));
+        expect(frameReads, equals(1));
       });
+
+      test(
+        'never decodes again a video whose last frame read never finished, '
+        'as when the decoder crashed the app',
+        () async {
+          final readStarted = Completer<void>();
+          readFrame = (_) {
+            readStarted.complete();
+            return Completer<Uint8List?>().future;
+          };
+          final message = _videoMessage();
+          unawaited(createStore().previewFor(message, download: true));
+          await readStarted.future;
+          expect(frameReads, equals(1));
+
+          readFrame = (_) async => _frame;
+          final afterRestart = createStore();
+
+          expect(
+            await afterRestart.previewFor(message, download: true),
+            isNull,
+          );
+          expect(frameReads, equals(1));
+        },
+      );
 
       test('downloads nothing when it may not download', () async {
         final store = createStore();
@@ -702,7 +728,7 @@ void main() {
             : blocking.future;
         final store = createStore();
 
-        unawaited(store.previewFor(_videoMessage(), download: true));
+        final first = store.previewFor(_videoMessage(), download: true);
         final closed = store.previewFor(
           shared,
           download: true,
@@ -718,6 +744,7 @@ void main() {
 
         expect(await open, isNotNull);
         expect(await closed, isNotNull);
+        expect(await first, isNotNull);
       });
 
       test('read no frame of a video nobody wants any more', () async {
@@ -872,6 +899,30 @@ void main() {
 
           expect(_loggedLines(), contains(contains('Permission denied')));
           expect(_loggedLines(), everyElement(isNot(contains(root.path))));
+        },
+      );
+
+      test(
+        'keeps the mark of a frame read still running, whatever the cap',
+        () async {
+          final readStarted = Completer<void>();
+          readFrame = (_) {
+            readStarted.complete();
+            return Completer<Uint8List?>().future;
+          };
+          final message = _videoMessage();
+          final store = createStore(maxBytes: 0);
+          unawaited(store.previewFor(message, download: true));
+          await readStarted.future;
+
+          await store.prune();
+
+          readFrame = (_) async => _frame;
+          expect(
+            await createStore().previewFor(message, download: true),
+            isNull,
+          );
+          expect(frameReads, equals(1));
         },
       );
 

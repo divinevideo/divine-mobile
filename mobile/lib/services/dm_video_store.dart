@@ -86,6 +86,10 @@ class DmVideoStore {
 
   static const String _partSuffix = '.part';
 
+  /// Beside a video while its frame is read, so a read that never finishes,
+  /// as when the decoder crashes the app, is not tried again.
+  static const String _frameAttemptSuffix = '.frame-attempt';
+
   /// Age past which a part file is taken as left by a crash: a younger one
   /// may still be being written, by this store or by the one an account
   /// switch replaced.
@@ -128,6 +132,9 @@ class DmVideoStore {
   /// video in memory, and a long thread shows many at once.
   Future<void> _autoDownloadQueue = Future<void>.value();
   final Map<String, Future<File?>> _previewsInFlight = {};
+
+  /// Frame reads by message id, shared by every caller asking at once.
+  final Map<String, Future<File?>> _frameReadsInFlight = {};
 
   /// Whether each caller waiting on a frame still wants it, by preview key.
   final Map<String, List<bool Function()>> _previewWanters = {};
@@ -295,6 +302,11 @@ class DmVideoStore {
       final age = now.difference(stat.modified);
       if (file.path.endsWith(_partSuffix)) {
         if (age > _crashedPartAge) _deleteNow(file);
+        continue;
+      }
+      // Holds no space, and must outlive the read it marks.
+      if (file.path.endsWith(_frameAttemptSuffix)) {
+        if (age > maxIdle) _deleteNow(file);
         continue;
       }
       if (age > maxIdle && !_isInUse(file)) {
@@ -536,6 +548,40 @@ class DmVideoStore {
     try {
       // No card shows it: decode nothing.
       if (!wanted()) return null;
+      final id = message.id;
+      return await (_frameReadsInFlight[id] ??=
+          _readAndKeepFrame(message, video, preview).whenComplete(
+            () => _frameReadsInFlight.removeWhere((key, _) => key == id),
+          ));
+    } finally {
+      _release(video);
+    }
+  }
+
+  Future<File?> _readAndKeepFrame(
+    DmMessage message,
+    File video,
+    File preview,
+  ) async {
+    final attempt = File(
+      '${preview.parent.path}/${_safeName(message.id)}$_frameAttemptSuffix',
+    );
+    // Left by a read that never finished: it could crash the app again each
+    // time the chat opens.
+    if (attempt.existsSync()) {
+      _unreadableFrames.add(message.id);
+      return null;
+    }
+    _throwIfOwnerRemoved();
+    try {
+      attempt.createSync();
+    } on FileSystemException catch (error) {
+      throw DmVideoUnavailableException(
+        'could not start reading the frame: ${_causeOf(error)}',
+        mayPass: true,
+      );
+    }
+    try {
       final frame = await _readFrame(video);
       if (frame == null || frame.isEmpty) {
         _unreadableFrames.add(message.id);
@@ -545,7 +591,7 @@ class DmVideoStore {
       _knownPreviews[message.id] = preview.path;
       return preview;
     } finally {
-      _release(video);
+      _deleteNow(attempt);
     }
   }
 
