@@ -63,51 +63,56 @@ class _TriageActions extends StatelessWidget {
         !cubit.isThreadProtected(participantPubkeys);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          DivineButton(
-            label: context.l10n.inboxThreadMarkRead,
-            type: DivineButtonType.secondary,
-            size: DivineButtonSize.small,
-            leadingIcon: DivineIconName.checks,
-            onPressed: processing
-                ? null
-                : () async {
-                    final success = await cubit.markAsRead(conversationId);
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      DivineSnackbarContainer.snackBar(
-                        success
-                            ? context.l10n.inboxThreadMarkedRead
-                            : context.l10n.commonSomethingWentWrong,
-                        error: !success,
-                      ),
-                    );
-                  },
-          ),
-          if (canDismiss)
+      // Full width, so a button that wraps centers instead of hugging the left.
+      child: SizedBox(
+        width: double.infinity,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
             DivineButton(
-              label: context.l10n.inboxRequestDismiss,
+              label: context.l10n.inboxThreadMarkRead,
               type: DivineButtonType.secondary,
               size: DivineButtonSize.small,
+              leadingIcon: DivineIconName.checks,
               onPressed: processing
                   ? null
                   : () async {
-                      final success = await cubit.setDismissed(
-                        conversationId,
-                        dismissed: true,
-                      );
+                      final success = await cubit.markAsRead(conversationId);
                       if (!context.mounted) return;
-                      if (success) {
-                        context.safePop(fallback: InboxPage.path);
-                      } else {
-                        _showError(context);
-                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        DivineSnackbarContainer.snackBar(
+                          success
+                              ? context.l10n.inboxThreadMarkedRead
+                              : context.l10n.commonSomethingWentWrong,
+                          error: !success,
+                        ),
+                      );
                     },
             ),
-        ],
+            if (canDismiss)
+              DivineButton(
+                label: context.l10n.inboxRequestDismiss,
+                type: DivineButtonType.secondary,
+                size: DivineButtonSize.small,
+                onPressed: processing
+                    ? null
+                    : () async {
+                        final success = await cubit.setDismissed(
+                          conversationId,
+                          dismissed: true,
+                        );
+                        if (!context.mounted) return;
+                        if (success) {
+                          context.safePop(fallback: InboxPage.path);
+                        } else {
+                          _showError(context);
+                        }
+                      },
+              ),
+          ],
+        ),
       ),
     );
   }

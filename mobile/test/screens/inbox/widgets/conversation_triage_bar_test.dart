@@ -2,6 +2,7 @@
 // ABOUTME: Read/dismiss preserve messages and never accept the request.
 
 import 'package:db_client/db_client.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,6 +78,40 @@ void main() {
       await tester.pumpWidget(subject());
       expect(find.text('Mark as read'), findsOneWidget);
       expect(find.text('Dismiss'), findsNothing);
+    });
+
+    testWidgets('centers both buttons when they wrap onto two lines', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(260, 600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(subject());
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final markRead = find.widgetWithText(
+        DivineButton,
+        l10n.inboxThreadMarkRead,
+      );
+      final dismiss = find.widgetWithText(
+        DivineButton,
+        l10n.inboxRequestDismiss,
+      );
+      expect(
+        tester.getTopLeft(dismiss).dy,
+        greaterThan(tester.getBottomLeft(markRead).dy),
+        reason: 'the buttons must not fit side by side at this width',
+      );
+      const screenCenter = 130.0;
+      expect(
+        tester.getCenter(markRead).dx,
+        moreOrLessEquals(screenCenter, epsilon: 0.01),
+      );
+      expect(
+        tester.getCenter(dismiss).dx,
+        moreOrLessEquals(screenCenter, epsilon: 0.01),
+      );
     });
 
     testWidgets('dismiss keeps history and returns to the inbox', (
