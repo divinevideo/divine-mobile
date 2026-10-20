@@ -60,6 +60,26 @@ class _FakeProVideoEditor extends ProVideoEditor {
   }
 }
 
+/// A stopwatch whose every reading is a millisecond past the one before, so
+/// two reads for one marker write never agree. Its other readings throw, so
+/// a marker cannot read a clock this fake does not advance.
+class _TickingStopwatch extends Stopwatch {
+  int _readings = 0;
+
+  @override
+  int get elapsedMilliseconds => ++_readings;
+
+  @override
+  Duration get elapsed => throw UnsupportedError('read elapsedMilliseconds');
+
+  @override
+  int get elapsedMicroseconds =>
+      throw UnsupportedError('read elapsedMilliseconds');
+
+  @override
+  int get elapsedTicks => throw UnsupportedError('read elapsedMilliseconds');
+}
+
 /// The first 24 bytes of a PNG of [width] x [height]: all the monitor reads.
 Uint8List _pngHeader(int width, int height) {
   List<int> uint32(int value) => [
@@ -91,6 +111,7 @@ void main() {
     final originalDirectory = InterruptedRenderMonitor.markerDirectory;
     final originalFootprint = InterruptedRenderMonitor.readFootprintBytes;
     final originalLifecycle = InterruptedRenderMonitor.readLifecycleState;
+    final originalStopwatch = InterruptedRenderMonitor.startStopwatch;
     final originalInterval = InterruptedRenderMonitor.sampleInterval;
     final originalReporter = InterruptedRenderMonitor.crashReporter;
 
@@ -141,6 +162,7 @@ void main() {
       InterruptedRenderMonitor.markerDirectory = originalDirectory;
       InterruptedRenderMonitor.readFootprintBytes = originalFootprint;
       InterruptedRenderMonitor.readLifecycleState = originalLifecycle;
+      InterruptedRenderMonitor.startStopwatch = originalStopwatch;
       InterruptedRenderMonitor.sampleInterval = originalInterval;
       InterruptedRenderMonitor.crashReporter = originalReporter;
       if (markers.existsSync()) markers.deleteSync(recursive: true);
@@ -375,6 +397,31 @@ void main() {
         await render;
       });
 
+      test(
+        'stamps the request with the time its marker write carries',
+        () async {
+          InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
+          final finish = Completer<String>();
+          final render = await startRender(finish, taskId: 'seam');
+          Map<String, Object?>? markerAtPlatformCall;
+          ProVideoEditor.instance = _FakeProVideoEditor(
+            onCancel: (_) => markerAtPlatformCall = readMarker('seam'),
+          );
+
+          await VideoEditorRenderService.cancelTask('seam');
+
+          final elapsedMs = markerAtPlatformCall!['elapsedMs'];
+          expect(elapsedMs, isA<int>());
+          expect(
+            markerAtPlatformCall,
+            containsPair('cancelRequestedAtMs', elapsedMs),
+          );
+
+          finish.complete('out.mp4');
+          await render;
+        },
+      );
+
       test('lands in the marker of a render a restart under the same id '
           'displaces', () async {
         addTearDown(
@@ -472,6 +519,27 @@ void main() {
         finish.complete('out.mp4');
         await render;
       });
+
+      test(
+        'stamps each change with the time its marker write carries',
+        () async {
+          InterruptedRenderMonitor.startStopwatch = _TickingStopwatch.new;
+          final finish = Completer<String>();
+          final render = await startRender(finish);
+
+          moveThrough(const [AppLifecycleState.inactive]);
+
+          final marker = readOnlyMarker();
+          expect(marker['elapsedMs'], isA<int>());
+          expect(
+            marker['lifecycleHistory'],
+            equals(['resumed@0', 'inactive@${marker['elapsedMs']}']),
+          );
+
+          finish.complete('out.mp4');
+          await render;
+        },
+      );
 
       test('does not repeat the state the render started in', () async {
         final finish = Completer<String>();

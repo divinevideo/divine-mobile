@@ -85,6 +85,10 @@ class InterruptedRenderMonitor {
   @visibleForTesting
   static String? Function() readLifecycleState = _readLifecycleState;
 
+  /// Starts the clock a marker times its render with.
+  @visibleForTesting
+  static Stopwatch Function() startStopwatch = _startStopwatch;
+
   /// How often a running render refreshes its marker.
   @visibleForTesting
   static Duration sampleInterval = const Duration(milliseconds: 250);
@@ -314,6 +318,8 @@ class InterruptedRenderMonitor {
     return bytes == null || bytes < 0 ? null : bytes;
   }
 
+  static Stopwatch _startStopwatch() => Stopwatch()..start();
+
   static String? _readLifecycleState() {
     try {
       return SchedulerBinding.instance.lifecycleState?.name;
@@ -343,7 +349,7 @@ class _RenderMarker {
   /// The render task this marker belongs to.
   final String taskId;
   final Map<String, Object?> _content;
-  final Stopwatch _stopwatch = Stopwatch()..start();
+  final Stopwatch _stopwatch = InterruptedRenderMonitor.startStopwatch();
   Timer? _timer;
   bool _sampling = false;
   bool _closed = false;
@@ -424,8 +430,9 @@ class _RenderMarker {
   /// Stamps [field] with the elapsed time and writes the marker at once.
   void noteNow(String field) {
     if (_closed) return;
-    _content[field] = _stopwatch.elapsedMilliseconds;
-    _write();
+    final elapsedMs = _stopwatch.elapsedMilliseconds;
+    _content[field] = elapsedMs;
+    _write(elapsedMs: elapsedMs);
   }
 
   /// Appends [state] to the lifecycle history and writes the marker at once.
@@ -433,13 +440,16 @@ class _RenderMarker {
     if (_closed) return;
     final history = _content['lifecycleHistory']! as List<String>;
     if (history.last.startsWith('$state@')) return;
-    history.add('$state@${_stopwatch.elapsedMilliseconds}');
+    final elapsedMs = _stopwatch.elapsedMilliseconds;
+    history.add('$state@$elapsedMs');
     if (history.length > _lifecycleHistoryLength) history.removeAt(0);
-    _write();
+    _write(elapsedMs: elapsedMs);
   }
 
-  void _write() {
-    _content['elapsedMs'] = _stopwatch.elapsedMilliseconds;
+  /// Writes the marker. A note passes the [elapsedMs] it was stamped with, so
+  /// a marker whose last write is that note shows the same time for both.
+  void _write({int? elapsedMs}) {
+    _content['elapsedMs'] = elapsedMs ?? _stopwatch.elapsedMilliseconds;
     _content['lifecycle'] = InterruptedRenderMonitor.readLifecycleState();
     try {
       _file.writeAsStringSync(jsonEncode(_content));
