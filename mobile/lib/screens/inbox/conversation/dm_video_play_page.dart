@@ -8,7 +8,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart';
+import 'package:models/models.dart' show DmMessage;
 import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
@@ -245,8 +245,9 @@ class _Unavailable extends StatelessWidget {
   }
 }
 
-/// Plays the decrypted clip. Owns the native player controller; a player
-/// failure is reported to the cubit, which deletes the clip.
+/// Plays the decrypted clip on a loop, in its own shape. Owns the native
+/// player controller; a player failure, at start or later, is reported to the
+/// cubit, which deletes the clip.
 class _Player extends StatefulWidget {
   const _Player();
 
@@ -256,6 +257,10 @@ class _Player extends StatefulWidget {
 
 class _PlayerState extends State<_Player> {
   DivineVideoPlayerController? _controller;
+  StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
+
+  /// Width over height as the clip displays; null until the player knows.
+  double? _aspectRatio;
 
   @override
   void initState() {
@@ -272,6 +277,7 @@ class _PlayerState extends State<_Player> {
     try {
       await controller.initialize();
       await controller.setSource(VideoClip.file(path));
+      await controller.setLooping(looping: true);
       await controller.play();
     } catch (error, stackTrace) {
       await controller.dispose();
@@ -285,10 +291,38 @@ class _PlayerState extends State<_Player> {
       return;
     }
     setState(() => _controller = controller);
+    _stateSubscription = controller.stateStream.listen(_onPlayerState);
+    _onPlayerState(controller.state);
+  }
+
+  /// A failure after start would otherwise leave the texture black forever.
+  void _onPlayerState(DivineVideoPlayerState state) {
+    if (!mounted) return;
+    if (state.status == PlaybackStatus.error) {
+      context.read<DmVideoPlaybackCubit>().playbackFailed(
+        _PlayerFailure(state.errorMessage),
+        StackTrace.current,
+      );
+      return;
+    }
+    final aspectRatio = _displayAspectRatio(state);
+    if (aspectRatio != null && aspectRatio != _aspectRatio) {
+      setState(() => _aspectRatio = aspectRatio);
+    }
+  }
+
+  /// The player rotates a clip stored at 90 or 270 degrees, so its displayed
+  /// shape swaps the stored width and height.
+  static double? _displayAspectRatio(DivineVideoPlayerState state) {
+    final width = state.videoWidth;
+    final height = state.videoHeight;
+    if (width <= 0 || height <= 0) return null;
+    return state.rotationDegrees % 180 == 0 ? width / height : height / width;
   }
 
   @override
   void dispose() {
+    unawaited(_stateSubscription?.cancel());
     final controller = _controller;
     if (controller != null) unawaited(controller.dispose());
     super.dispose();
@@ -300,6 +334,20 @@ class _PlayerState extends State<_Player> {
     if (controller == null) {
       return const DivineCircularProgressIndicator(color: VineTheme.whiteText);
     }
-    return DivineVideoPlayer(controller: controller);
+    final player = DivineVideoPlayer(controller: controller);
+    final aspectRatio = _aspectRatio;
+    if (aspectRatio == null) return player;
+    return AspectRatio(aspectRatio: aspectRatio, child: player);
   }
+}
+
+/// The native player reported an error after playback started.
+class _PlayerFailure implements Exception {
+  const _PlayerFailure(this.message);
+
+  /// The player's diagnostic text, when it gave one.
+  final String? message;
+
+  @override
+  String toString() => 'Video player failed: ${message ?? 'unknown error'}';
 }
