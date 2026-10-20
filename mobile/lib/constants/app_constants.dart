@@ -157,6 +157,9 @@ class AppConstants {
   /// each image as a texture with a mip chain, and every MB of cache measured
   /// as about 2 MB of graphics memory on a Galaxy S26 and an iPhone 12 Pro
   /// (#10301). This ceiling therefore costs about 500 MB once browsing fills it.
+  /// The cache is emptied when the app is backgrounded or the OS reports memory
+  /// pressure, and when the camera or editor closes
+  /// (`ReleaseCachedImagesOnDispose`).
   static const int imageCacheMaxBytes = 256 * 1024 * 1024;
 
   /// Smallest RAM-sized [ImageCache] budget, for devices with 4 GB of RAM or

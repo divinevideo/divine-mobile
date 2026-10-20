@@ -14,6 +14,7 @@ import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
+import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
 
 class _FakeGoRouterState extends Fake implements GoRouterState {
   _FakeGoRouterState({
@@ -135,40 +136,48 @@ void main() {
       late VideoEditorScreen draft;
 
       await _buildWithContext(tester, (context) {
-        fromLibrary = editorRoute.builder!(
-          context,
-          _FakeGoRouterState(
-            location: VideoEditorScreen.pathFor(fromLibrary: true),
-            pathParameters: const {},
-          ),
-        ) as VideoEditorScreen;
-        fromRecorder = editorRoute.builder!(
-          context,
-          _FakeGoRouterState(
-            location: VideoEditorScreen.pathFor(),
-            pathParameters: const {},
-          ),
-        ) as VideoEditorScreen;
+        fromLibrary = editorRoute
+            .builder!(
+              context,
+              _FakeGoRouterState(
+                location: VideoEditorScreen.pathFor(fromLibrary: true),
+                pathParameters: const {},
+              ),
+            )
+            .editorScreen;
+        fromRecorder = editorRoute
+            .builder!(
+              context,
+              _FakeGoRouterState(
+                location: VideoEditorScreen.pathFor(),
+                pathParameters: const {},
+              ),
+            )
+            .editorScreen;
         // The map extra this route used to read is no longer consulted, so a
         // restored session cannot resurrect a half-migrated origin (#3335).
-        legacyExtra = editorRoute.builder!(
-          context,
-          _FakeGoRouterState(
-            location: VideoEditorScreen.path,
-            pathParameters: const {},
-            extra: const <Object?, Object?>{'fromLibrary': true},
-          ),
-        ) as VideoEditorScreen;
-        draft = draftRoute.builder!(
-          context,
-          _FakeGoRouterState(
-            location: VideoEditorScreen.pathFor(
-              draftId: 'draft-1',
-              fromLibrary: true,
-            ),
-            pathParameters: const {'draftId': 'draft-1'},
-          ),
-        ) as VideoEditorScreen;
+        legacyExtra = editorRoute
+            .builder!(
+              context,
+              _FakeGoRouterState(
+                location: VideoEditorScreen.path,
+                pathParameters: const {},
+                extra: const <Object?, Object?>{'fromLibrary': true},
+              ),
+            )
+            .editorScreen;
+        draft = draftRoute
+            .builder!(
+              context,
+              _FakeGoRouterState(
+                location: VideoEditorScreen.pathFor(
+                  draftId: 'draft-1',
+                  fromLibrary: true,
+                ),
+                pathParameters: const {'draftId': 'draft-1'},
+              ),
+            )
+            .editorScreen;
       });
 
       expect(fromLibrary.fromLibrary, isTrue);
@@ -314,4 +323,10 @@ Future<void> _buildWithContext(
 
 GoRoute _routeNamed(List<RouteBase> routes, String name) {
   return routes.whereType<GoRoute>().singleWhere((route) => route.name == name);
+}
+
+extension on Widget {
+  /// The editor a video editor route mounts inside its image-release scope.
+  VideoEditorScreen get editorScreen =>
+      (this as ReleaseCachedImagesOnDispose).child as VideoEditorScreen;
 }

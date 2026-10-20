@@ -24,6 +24,7 @@ import 'package:openvine/screens/video_engagement/video_engagement_list_screen.d
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 List<RouteBase> videoRoutes() {
@@ -35,13 +36,15 @@ List<RouteBase> videoRoutes() {
       // flow — open it with the fade-upwards transition.
       pageBuilder: (_, state) => fadeUpwardsPage(
         state: state,
-        child: VideoRecorderRoute(
-          initialSound: extraAs<RecorderSoundSelection>(state.extra),
-          entryPoint: CreationEntryPoint.fromName(
-            state.uri.queryParameters['entry_point'],
-          ),
-          autoRecord: VideoRecorderScreen.autoRecordFromQueryParameters(
-            state.uri.queryParameters,
+        child: ReleaseCachedImagesOnDispose(
+          child: VideoRecorderRoute(
+            initialSound: extraAs<RecorderSoundSelection>(state.extra),
+            entryPoint: CreationEntryPoint.fromName(
+              state.uri.queryParameters['entry_point'],
+            ),
+            autoRecord: VideoRecorderScreen.autoRecordFromQueryParameters(
+              state.uri.queryParameters,
+            ),
           ),
         ),
       ),
@@ -130,8 +133,10 @@ List<RouteBase> videoRoutes() {
     GoRoute(
       path: VideoEditorScreen.path,
       name: VideoEditorScreen.routeName,
-      builder: (_, st) => VideoEditorScreen(
-        fromLibrary: VideoEditorScreen.fromLibraryForRoute(st.uri),
+      builder: (_, st) => ReleaseCachedImagesOnDispose(
+        child: VideoEditorScreen(
+          fromLibrary: VideoEditorScreen.fromLibraryForRoute(st.uri),
+        ),
       ),
     ),
     GoRoute(
@@ -142,9 +147,11 @@ List<RouteBase> videoRoutes() {
         // the draft.
         final draftId = st.pathParameters['draftId'];
 
-        return VideoEditorScreen(
-          draftId: draftId == null || draftId.isEmpty ? null : draftId,
-          fromLibrary: VideoEditorScreen.fromLibraryForRoute(st.uri),
+        return ReleaseCachedImagesOnDispose(
+          child: VideoEditorScreen(
+            draftId: draftId == null || draftId.isEmpty ? null : draftId,
+            fromLibrary: VideoEditorScreen.fromLibraryForRoute(st.uri),
+          ),
         );
       },
     ),
