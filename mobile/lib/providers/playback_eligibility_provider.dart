@@ -3,10 +3,13 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 
-/// Whether window focus gates playback on this platform. Only macOS does;
-/// other platforms retain their existing foreground playback policy.
+/// Whether window focus gates playback on this platform. Only the macOS app
+/// does; other platforms retain their existing foreground playback policy.
+/// The web build is excluded: there defaultTargetPlatform is the browser's
+/// OS, and every window blur arrives as inactive, so a Mac browser alone
+/// would pause on each click into the address bar or another window.
 bool playbackFollowsWindowFocus() =>
-    defaultTargetPlatform == TargetPlatform.macOS;
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
 
 /// Window focus affects playback on macOS without suspending feed readiness.
 /// Other platforms retain their existing foreground playback policy.
