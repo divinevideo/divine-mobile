@@ -1258,6 +1258,40 @@ void main() {
         ).called(4);
       });
 
+      test('keeps the reaction retries already used', () async {
+        var clock = DateTime.utc(2026, 5, 10, 12);
+        when(
+          repository.retryableReactions,
+        ).thenAnswer((_) async => [_target(rumorId: 'r1')]);
+        var calls = 0;
+        when(
+          () => repository.retry(
+            rumorId: 'r1',
+            targetMessageAuthor: _authorPubkey,
+          ),
+        ).thenAnswer(
+          (_) async => DmReactionPublishResult(
+            success: false,
+            rumorId: 'r1',
+            // Only the second attempt finds every relay out of reach.
+            reachedNoRelay: ++calls == 2,
+          ),
+        );
+        final service = buildService(
+          retryConfig: twoAttempts,
+          now: () => clock,
+        );
+
+        for (var pass = 0; pass < 4; pass++) {
+          await service.sweep();
+          clock = clock.add(const Duration(seconds: 10));
+        }
+
+        // Counted, not counted, counted: that spends both retries, so the
+        // fourth pass leaves the row alone.
+        expect(calls, equals(3));
+      });
+
       test('does not use up a removal retry', () async {
         var clock = DateTime.utc(2026, 5, 10, 12);
         when(repository.retryableDeletions).thenAnswer(
