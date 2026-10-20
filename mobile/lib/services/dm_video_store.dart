@@ -32,7 +32,7 @@ typedef DmVideoStoreResolver = DmVideoStore? Function();
 /// the system may clear when storage runs low, under one folder per account.
 /// A file nobody opened for [maxIdle] is deleted, and past [maxBytes] the
 /// least recently opened go first. An account's folder goes when the account
-/// leaves this device ([deleteOwner], [deleteOwnersNotIn]).
+/// leaves this device ([deleteOwner], [sweepOwners]).
 ///
 /// The decryption key and nonce are never written anywhere; only the
 /// plaintext video and its frame are, and neither path is logged.
@@ -67,6 +67,9 @@ class DmVideoStore {
   static const int defaultMaxBytes = 300 * 1024 * 1024;
 
   static const String _partSuffix = '.part';
+
+  /// Age past which [sweepOwners] treats a part file as left by a crash.
+  static const Duration _crashedPartAge = Duration(hours: 1);
 
   /// How many times each account's videos were deleted by [deleteOwner]. A
   /// store remembers the count it was created at, so a download that lands
@@ -190,28 +193,56 @@ class DmVideoStore {
     if (dir.existsSync()) await dir.delete(recursive: true);
   }
 
-  /// Deletes the videos kept for every account not in [keepOwnerPubkeys] and
-  /// returns how many accounts' videos it deleted.
-  static Future<int> deleteOwnersNotIn(
+  /// Deletes the videos kept for every account not in [keepOwnerPubkeys],
+  /// and in the kept accounts' folders whatever nobody opened for [maxIdle]
+  /// and part files a crash left. Returns how many accounts' videos it
+  /// deleted.
+  ///
+  /// Runs at launch for every account, so an account the user switched away
+  /// from does not keep its videos past [maxIdle]: its store prunes only
+  /// while it is the signed-in one.
+  static Future<int> sweepOwners(
     Set<String> keepOwnerPubkeys, {
     Future<Directory> Function()? rootDirectory,
+    DateTime Function()? now,
+    Duration maxIdle = defaultMaxIdle,
   }) async {
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
     final dir = Directory('${root.path}/$dirName');
     if (!dir.existsSync()) return 0;
     final keep = keepOwnerPubkeys.map(_safeName).toSet();
+    final currentTime = (now ?? DateTime.now)();
     var deleted = 0;
     await for (final entity in dir.list()) {
       if (entity is! Directory) continue;
       if (keep.contains(
         entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
       )) {
+        _deleteIdleFiles(entity, currentTime, maxIdle);
         continue;
       }
       await entity.delete(recursive: true);
       deleted++;
     }
     return deleted;
+  }
+
+  /// Deletes files in [dir] unopened for [maxIdle], and part files older than
+  /// [_crashedPartAge]: a younger one may be a download the signed-in
+  /// account's store is still writing.
+  static void _deleteIdleFiles(
+    Directory dir,
+    DateTime now,
+    Duration maxIdle,
+  ) {
+    for (final entity in dir.listSync()) {
+      if (entity is! File) continue;
+      final age = now.difference(entity.statSync().modified);
+      final isPart = entity.path.endsWith(_partSuffix);
+      if (age > maxIdle || (isPart && age > _crashedPartAge)) {
+        _deleteQuietly(entity);
+      }
+    }
   }
 
   Future<File> _obtainVideo(DmMessage message) async {
@@ -306,7 +337,7 @@ class DmVideoStore {
     }
   }
 
-  void _deleteQuietly(File file) {
+  static void _deleteQuietly(File file) {
     try {
       if (file.existsSync()) file.deleteSync();
     } on FileSystemException catch (error) {

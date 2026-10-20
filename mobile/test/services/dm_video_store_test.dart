@@ -344,7 +344,7 @@ void main() {
       });
 
       test(
-        'deleteOwnersNotIn removes accounts the device no longer knows',
+        'sweepOwners removes accounts the device no longer knows',
         () async {
           final known = 'f' * 64;
           final forgotten = '1' * 64;
@@ -354,7 +354,7 @@ void main() {
             ).createSync(recursive: true);
           }
 
-          final deleted = await DmVideoStore.deleteOwnersNotIn({
+          final deleted = await DmVideoStore.sweepOwners({
             known,
             _owner,
           }, rootDirectory: () async => root);
@@ -393,8 +393,42 @@ void main() {
         expect(video.readAsBytesSync(), equals(_plaintext));
       });
 
-      test('deleteOwnersNotIn counts nothing when no video was kept', () async {
-        final deleted = await DmVideoStore.deleteOwnersNotIn(
+      test(
+        'sweepOwners deletes what a known account left unopened for 30 days, '
+        'and part files a crash left',
+        () async {
+          final unopened = keptFile(
+            'unopened.mp4',
+            const [1],
+            opened: now.subtract(const Duration(days: 31)),
+          );
+          final recent = keptFile(
+            'recent.mp4',
+            const [1],
+            opened: now.subtract(const Duration(days: 1)),
+          );
+          final crashed = keptFile(
+            'crashed.mp4.part',
+            const [1],
+            opened: now.subtract(const Duration(hours: 2)),
+          );
+          final writing = keptFile('writing.mp4.part', const [1], opened: now);
+
+          await DmVideoStore.sweepOwners(
+            {_owner},
+            rootDirectory: () async => root,
+            now: () => now,
+          );
+
+          expect(unopened.existsSync(), isFalse);
+          expect(crashed.existsSync(), isFalse);
+          expect(recent.existsSync(), isTrue);
+          expect(writing.existsSync(), isTrue);
+        },
+      );
+
+      test('sweepOwners counts nothing when no video was kept', () async {
+        final deleted = await DmVideoStore.sweepOwners(
           const {},
           rootDirectory: () async => root,
         );

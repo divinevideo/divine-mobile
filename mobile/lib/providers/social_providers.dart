@@ -1135,7 +1135,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
   service
     ..onConversationSweep = db.conversationsDao.deleteForOwnersNotIn
     ..onQueuedViewSweep = db.pendingViewEventsDao.deleteForUsersNotIn
-    ..onKeptDmVideoSweep = DmVideoStore.deleteOwnersNotIn;
+    ..onKeptDmVideoSweep = DmVideoStore.sweepOwners;
   // Kept conversations and queued views outlive their account when it leaves
   // the known-accounts list without its own cleanup; collect those once per
   // launch as well as after every account cleanup (#10276, #10290).
