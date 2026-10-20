@@ -115,7 +115,9 @@ class BadgeHoldersCubit extends Cubit<BadgeHoldersState>
 
   Future<void> _loadSubscription(int generation) async {
     try {
-      final subscriptions = await _repository.loadSubscriptions();
+      final subscriptions = await _repository.loadSubscriptions(
+        requireComplete: true,
+      );
       if (generation != _loadGeneration) return;
       emitIfOpen(
         state.copyWith(

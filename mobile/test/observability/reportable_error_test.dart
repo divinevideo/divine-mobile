@@ -97,6 +97,12 @@ void main() {
   });
 
   group('asReportableError', () {
+    test('declined badge signatures remain local operational failures', () {
+      const error = BadgeSigningException('badge subscriptions');
+      expect(asReportableError(error, context: 'badge subscribe'), isNull);
+      expect(error.toString(), contains('badge subscriptions'));
+    });
+
     test('incomplete badge reads remain local network failures', () {
       const error = BadgeReadIncompleteException('badge read incomplete');
       expect(asReportableError(error, context: 'badge load'), isNull);

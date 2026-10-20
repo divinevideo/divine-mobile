@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for BadgeDetailScreen — which actions each viewer role
 // ABOUTME: gets, and how a badge with no definition event is surfaced.
 
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +19,7 @@ import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
+import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
@@ -64,6 +67,11 @@ void main() {
       final router = GoRouter(
         initialLocation: '/badges/b/badge',
         routes: [
+          GoRoute(
+            path: BadgeVideosScreen.path,
+            builder: (_, _) =>
+                const Scaffold(body: Text('badge video destination')),
+          ),
           GoRoute(
             path: '/badges',
             builder: (_, _) => const Scaffold(body: Text('badge dashboard')),
@@ -123,6 +131,11 @@ void main() {
 
       expect(find.text('Scene Stealer'), findsWidgets);
       expect(find.text(l10n.badgeDetailAwardAction), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text(l10n.badgeDetailNoRecipients),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(l10n.badgeDetailNoRecipients), findsOneWidget);
     });
 
@@ -141,6 +154,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.badgesActionAccept), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text(l10n.badgeDetailBlockClaimantsAction),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(l10n.badgeDetailBlockClaimantsAction), findsOneWidget);
       expect(find.text(l10n.badgeDetailAwardAction), findsNothing);
     });
@@ -688,15 +706,92 @@ void main() {
       expect(find.byType(VideoThumbnailWidget), findsNothing);
     });
 
+    for (final saveFails in [false, true]) {
+      testWidgets(
+        'subscription reads and saves preserve the loaded video pager, save failure $saveFails',
+        (
+          tester,
+        ) async {
+          final subscriptions = Completer<Set<BadgeCoordinate>>();
+          final videos = _MockVideosRepository();
+          final pager = _MockBadgeVideoPager();
+          when(() => repository.loadBadgeDetail(any())).thenAnswer(
+            (_) async => _detail(definition: _definition(), isOwner: false),
+          );
+          when(() => repository.loadAcceptedHolders(any()))
+              .thenAnswer((_) async => {_pubkey(3)});
+          when(() => repository.loadSubscriptions(requireComplete: true))
+              .thenAnswer((_) => subscriptions.future);
+          when(() => repository.setSubscription(_coordinate, subscribed: true))
+              .thenAnswer((_) async {
+                if (saveFails) {
+                  throw const BadgeReadIncompleteException('save refused');
+                }
+                return {_coordinate};
+              });
+          when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
+          when(pager.loadMore).thenAnswer((_) async => [_video()]);
+          when(() => pager.hasMore).thenReturn(false);
+          await tester.pumpWidget(
+            buildSubject(
+              videosRepository: videos,
+              overrides: [
+                authServiceProvider.overrideWithValue(
+                  createMockAuthService(currentPublicKeyHex: _pubkey(1)),
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          subscriptions.complete({});
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(
+            find.text(l10n.badgeSubscribeAction),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.tap(find.text(l10n.badgeSubscribeAction));
+          await tester.pumpAndSettle();
+          expect(
+            find.text(
+              saveFails ? l10n.badgesUpdateError : l10n.badgeSubscribedAction,
+            ),
+            findsOneWidget,
+          );
+          verify(() => videos.createBadgeVideoPager(any())).called(1);
+        },
+      );
+    }
+
+    testWidgets('opens the badge video page from the detail header', (
+      tester,
+    ) async {
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(l10n.profileVideosLabel),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text(l10n.profileVideosLabel));
+      await tester.pumpAndSettle();
+      expect(find.text('badge video destination'), findsOneWidget);
+    });
+
     testWidgets('discloses public subscriptions beside the subscribe action', (
       tester,
     ) async {
       when(() => repository.loadBadgeDetail(any())).thenAnswer(
         (_) async => _detail(definition: _definition(), isOwner: false),
       );
-      when(() => repository.loadSubscriptions()).thenAnswer(
-        (_) async => <BadgeCoordinate>{},
-      );
+      when(() => repository.loadSubscriptions(requireComplete: true))
+          .thenAnswer(
+            (_) async => <BadgeCoordinate>{},
+          );
       await tester.pumpWidget(
         buildSubject(
           overrides: [

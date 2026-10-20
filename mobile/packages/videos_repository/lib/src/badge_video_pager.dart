@@ -65,8 +65,8 @@ class BadgeVideoPager {
   Future<List<VideoEvent>> _loadPage(int limit) async {
     final result = <VideoEvent>[];
     while (result.length < limit) {
-      // A 200-author read is memory-heavy server-side. Walk chunks one at a
-      // time so one viewer cannot multiply that cost by the holder count.
+      // Walk 200-author chunks serially to bound concurrent server requests.
+      // Total request cost still grows with the number of author chunks.
       try {
         for (final chunk in _chunks) {
           await _ensureCandidate(chunk);

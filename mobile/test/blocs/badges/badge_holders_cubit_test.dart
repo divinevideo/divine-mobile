@@ -28,6 +28,52 @@ void main() {
         );
 
     group('load', () {
+      for (final oldFailure in [false, true]) {
+        test(
+          'new load owns holders and subscription after stale completion, failure $oldFailure',
+          () async {
+            final oldHolders = Completer<Set<String>>();
+            final oldSubscriptions = Completer<Set<BadgeCoordinate>>();
+            var holderReads = 0;
+            var subscriptionReads = 0;
+            when(() => repository.loadAcceptedHolders(_coordinate)).thenAnswer(
+              (_) => holderReads++ == 0
+                  ? oldHolders.future
+                  : Future.value({'new-holder'}),
+            );
+            when(() => repository.loadSubscriptions(requireComplete: true))
+                .thenAnswer(
+                  (_) => subscriptionReads++ == 0
+                      ? oldSubscriptions.future
+                      : Future.value({_coordinate}),
+                );
+            final cubit = buildCubit();
+            addTearDown(cubit.close);
+            final oldLoad = cubit.load();
+            await cubit.load();
+            if (oldFailure) {
+              oldHolders.completeError(
+                const BadgeReadIncompleteException('stale'),
+              );
+              oldSubscriptions.completeError(
+                const BadgeReadIncompleteException('stale'),
+              );
+            } else {
+              oldHolders.complete({'old-holder'});
+              oldSubscriptions.complete({});
+            }
+            await oldLoad;
+            expect(cubit.state.holdersStatus, BadgeHoldersStatus.loaded);
+            expect(cubit.state.holders, ['new-holder']);
+            expect(
+              cubit.state.subscriptionStatus,
+              BadgeSubscriptionStatus.ready,
+            );
+            expect(cubit.state.isSubscribed, isTrue);
+          },
+        );
+      }
+
       test('leaves hidden accounts out of the indexed preview', () async {
         final relayResult = Completer<Set<String>>();
         when(
@@ -134,7 +180,7 @@ void main() {
             () => repository.loadAcceptedHolders(_coordinate),
           ).thenAnswer((_) async => {'holder'});
           when(
-            () => repository.loadSubscriptions(),
+            () => repository.loadSubscriptions(requireComplete: true),
           ).thenAnswer((_) async => {_coordinate});
         },
         build: buildCubit,
@@ -164,7 +210,9 @@ void main() {
             cubit.state.subscriptionStatus,
             BadgeSubscriptionStatus.unavailable,
           );
-          verifyNever(() => repository.loadSubscriptions());
+          verifyNever(
+            () => repository.loadSubscriptions(requireComplete: true),
+          );
         },
       );
 
@@ -179,7 +227,7 @@ void main() {
             ),
           );
           when(
-            () => repository.loadSubscriptions(),
+            () => repository.loadSubscriptions(requireComplete: true),
           ).thenThrow(const BadgeReadIncompleteException('relay unavailable'));
         },
         build: buildCubit,

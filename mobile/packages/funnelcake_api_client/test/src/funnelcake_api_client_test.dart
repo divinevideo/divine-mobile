@@ -748,6 +748,32 @@ void main() {
     });
 
     group('getVideosByAuthors', () {
+      for (final failure in [503, 429, 'transport']) {
+        test('retries idempotent author POST after $failure', () async {
+          var attempts = 0;
+          when(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer((_) async {
+            if (attempts++ == 0) {
+              if (failure == 'transport') throw const SocketException('reset');
+              return http.Response('', failure as int);
+            }
+            return http.Response(
+              '{"data":[],"pagination":{"has_more":false}}',
+              200,
+            );
+          });
+          final page = await client.getVideosByAuthors(authors: [testPubkey]);
+          expect(page.videos, isEmpty);
+          expect(page.hasMore, isFalse);
+          expect(attempts, 2);
+        });
+      }
+
       test(
         'posts 200 full authors at a fixed URL and preserves legacy pagination',
         () async {
@@ -938,7 +964,7 @@ void main() {
               headers: any(named: 'headers'),
               body: any(named: 'body'),
             ),
-          ).called(1);
+          ).called(statusCode == 503 ? FunnelcakeApiClient.maxGetAttempts : 1);
           verifyNever(
             () => mockHttpClient.get(any(), headers: any(named: 'headers')),
           );

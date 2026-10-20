@@ -39,6 +39,15 @@ void main() {
     );
 
     group('load', () {
+      test('first video page failure replaces the loading spinner with retry state', () async {
+        when(pager.loadMore).thenThrow(Exception('video page unavailable'));
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        await cubit.loadForHolders({'holder'});
+        expect(cubit.state.status, BadgeVideosStatus.failure);
+        expect(cubit.state.isLoadingMore, isFalse);
+      });
+
       test(
         'holder refresh invalidates an old page before the read completes',
         () async {

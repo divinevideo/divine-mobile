@@ -148,9 +148,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final Future<Iterable<String>> Function()? _badgeAuthors;
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
-  bool _hasBadgeAuthors = false;
-  List<String>? _cachedBadgeAuthors;
-  BadgeVideoPager? _badgeVideoPager;
+  late final _followingFeed = FollowingVideoFeedSession(
+    videosRepository: _videosRepository,
+    directAuthors: () => _followRepository.followingPubkeys,
+    badgeAuthors: _badgeAuthors,
+    userPubkey: _userPubkey,
+  );
 
   /// Owns the cross-restart cache serve / splice / resume-persist logic.
   final HomeFeedResumeManager _resumeManager;
@@ -508,7 +511,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         source.type == VideoFeedSourceType.following) {
       final currentFollowing = _followRepository.followingPubkeys;
       if (currentFollowing.isEmpty &&
-          !_hasBadgeAuthors &&
+          !_followingFeed.hasBadgeAuthors &&
           state.videos.isEmpty &&
           state.status == VideoFeedStatus.success) {
         emit(
@@ -1005,6 +1008,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         return;
       }
 
+      if (e is FollowingReadSuperseded) {
+        emit(state.copyWith(isLoadingMore: false));
+        return;
+      }
       Log.error(
         'VideoFeedBloc: Failed to load more videos - $e',
         name: 'VideoFeedBloc',
@@ -1126,7 +1133,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (state.status == VideoFeedStatus.loading) return;
 
     // Empty follow list → show "follow someone" CTA.
-    if (event.followingPubkeys.isEmpty && !_hasBadgeAuthors) {
+    if (event.followingPubkeys.isEmpty && !_followingFeed.hasBadgeAuthors) {
       emit(
         state.copyWith(
           status: VideoFeedStatus.success,
@@ -1939,111 +1946,17 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   Future<HomeFeedResult> _fetchFollowingWithBadges({
     String? cursor,
     int? paginationGeneration,
-  }) async {
+  }) {
     final requestSequence = _firstPageRequestSequence;
-    bool ownsSnapshot() =>
-        requestSequence == _firstPageRequestSequence &&
-        (paginationGeneration == null ||
-            paginationGeneration == _paginationGeneration) &&
-        !isClosed;
-    final directAuthors = List<String>.of(_followRepository.followingPubkeys);
-    Future<HomeFeedResult> loadDirect() => _videosRepository.getHomeFeedVideos(
-      authors: directAuthors,
-      userPubkey: _userPubkey,
+    return _followingFeed.loadPage(
       cursor: cursor,
+      ownsRequest: () =>
+          requestSequence == _firstPageRequestSequence &&
+          (paginationGeneration == null ||
+              paginationGeneration == _paginationGeneration) &&
+          !isClosed,
+      isActive: () => !isClosed,
     );
-    if (cursor == 'badge-following') {
-      final pager = _badgeVideoPager;
-      if (pager == null || _cachedBadgeAuthors?.isNotEmpty != true) {
-        return const HomeFeedResult(videos: [], hasMore: false);
-      }
-      final videos = await pager.loadMore();
-      if (!identical(pager, _badgeVideoPager) || isClosed) {
-        return const HomeFeedResult(videos: [], hasMore: false);
-      }
-      return HomeFeedResult(
-        videos: videos,
-        hasMore: pager.hasMore,
-        paginationCursor: pager.hasMore ? 'badge-following' : null,
-      );
-    }
-    if (cursor != null || _badgeAuthors == null) return loadDirect();
-    // Observe both outcomes immediately; the badge page may supersede this read.
-    final directPage = directAuthors.isNotEmpty
-        ? Future<HomeFeedResult>.sync(
-            loadDirect,
-          ).then<({HomeFeedResult? value, Object? error, StackTrace? stack})>(
-            (value) => (value: value, error: null, stack: null),
-            onError: (Object error, StackTrace stack) =>
-                (value: null, error: error, stack: stack),
-          )
-        : null;
-    final badgeAuthors = await _loadBadgeAuthors();
-    if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
-    if (badgeAuthors.isNotEmpty) {
-      try {
-        // Keep a first-page pager local until its page is ready and this load
-        // still owns the feed. Stale loads may neither activate nor clear it.
-        final pager = _videosRepository.createBadgeVideoPager([
-          ..._followRepository.followingPubkeys,
-          ...badgeAuthors,
-        ], prioritizeUnseen: true);
-        final videos = await pager.loadMore();
-        if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
-        _cachedBadgeAuthors = badgeAuthors;
-        _hasBadgeAuthors = true;
-        _badgeVideoPager = pager;
-        return HomeFeedResult(
-          videos: videos,
-          hasMore: pager.hasMore,
-          // Resume the live pager's buffers and offsets with an opaque token.
-          paginationCursor: pager.hasMore ? 'badge-following' : null,
-        );
-      } catch (error, stackTrace) {
-        if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
-        if (_followRepository.followingPubkeys.isEmpty) rethrow;
-        Log.warning(
-          'VideoFeedBloc: badge holder videos unavailable, showing follows',
-          name: 'VideoFeedBloc',
-          category: LogCategory.video,
-          error: error,
-          stackTrace: stackTrace,
-        );
-      }
-    }
-    final HomeFeedResult result;
-    if (directPage == null) {
-      result = await loadDirect();
-    } else {
-      final page = await directPage;
-      if (page.error case final error?) {
-        Error.throwWithStackTrace(error, page.stack!);
-      }
-      result = page.value!;
-    }
-    if (!ownsSnapshot()) return const HomeFeedResult(videos: []);
-    _cachedBadgeAuthors = const [];
-    _hasBadgeAuthors = false;
-    _badgeVideoPager = null;
-    return result;
-  }
-
-  /// Subscribed badge holders, falling back only when direct follows exist.
-  /// Without direct follows, preserve failures so the feed offers a retry.
-  Future<List<String>> _loadBadgeAuthors() async {
-    try {
-      return (await _badgeAuthors?.call())?.toList() ?? const <String>[];
-    } catch (error, stackTrace) {
-      if (_followRepository.followingPubkeys.isEmpty) rethrow;
-      Log.warning(
-        'VideoFeedBloc: badge subscriptions unavailable, showing follows',
-        name: 'VideoFeedBloc',
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return const <String>[];
-    }
   }
 
   void _scheduleNostrEnrichment({

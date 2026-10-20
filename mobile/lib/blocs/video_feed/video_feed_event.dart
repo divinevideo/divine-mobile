@@ -116,7 +116,7 @@ final class VideoFeedFollowingListChanged extends VideoFeedEvent {
   List<Object?> get props => [followingPubkeys];
 }
 
-/// The account saved a change to its badge subscriptions.
+/// The account saved or discovered a change to its badge subscriptions.
 ///
 /// Following reloads its merged authors; other sources are unaffected.
 final class VideoFeedBadgeSubscriptionsChanged extends VideoFeedEvent {

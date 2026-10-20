@@ -34,7 +34,11 @@ void main() {
       when(() => auth.authStateStream).thenAnswer((_) => authChanges.stream);
       final client = _MockNostrClient();
       when(
-        () => client.queryEventsDetailed(any(), requireAllRelaysSettled: true),
+        () => client.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
+        ),
       ).thenAnswer(
         (_) async => (events: <Event>[], timedOut: false, noRelays: false),
       );
@@ -61,7 +65,11 @@ void main() {
       final pending =
           Completer<({List<Event> events, bool timedOut, bool noRelays})>();
       when(
-        () => client.queryEventsDetailed(any(), requireAllRelaysSettled: true),
+        () => client.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
+        ),
       ).thenAnswer((_) => pending.future);
       var completed = false;
       final next = repository.loadSubscribedHolders().then(
@@ -92,6 +100,7 @@ void main() {
             () => client.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer(
             (_) async => (events: <Event>[], timedOut: false, noRelays: false),
@@ -124,6 +133,7 @@ void main() {
             () => client.queryEventsDetailed(
               any(),
               requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
             ),
           ).thenAnswer((_) => pending.future);
           var completed = false;
@@ -156,8 +166,11 @@ void main() {
         when(() => auth.authStateStream).thenAnswer((_) => authChanges.stream);
         final client = _MockNostrClient();
         when(
-          () =>
-              client.queryEventsDetailed(any(), requireAllRelaysSettled: true),
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          ),
         ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: false),
         );
@@ -186,8 +199,11 @@ void main() {
         final pending =
             Completer<({List<Event> events, bool timedOut, bool noRelays})>();
         when(
-          () =>
-              client.queryEventsDetailed(any(), requireAllRelaysSettled: true),
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          ),
         ).thenAnswer((_) => pending.future);
         var completed = false;
         final next = container
