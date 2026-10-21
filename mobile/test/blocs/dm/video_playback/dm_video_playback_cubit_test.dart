@@ -121,6 +121,35 @@ void main() {
         expect(cubit.state.status, DmVideoPlaybackStatus.failed);
       });
 
+      test('keeps the status of a save still running', () async {
+        stubKeptVideo();
+        final saving = Completer<GallerySaveResult>();
+        when(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).thenAnswer((_) => saving.future);
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+        final save = cubit.saveToGallery();
+        await pumpEventQueue();
+        expect(cubit.state.saveStatus, DmVideoSaveStatus.saving);
+
+        cubit.playbackFailed(Exception('decode'), StackTrace.current);
+
+        expect(
+          cubit.state,
+          const DmVideoPlaybackState(
+            status: DmVideoPlaybackStatus.failed,
+            saveStatus: DmVideoSaveStatus.saving,
+          ),
+        );
+        saving.complete(const GallerySaveSuccess());
+        await save;
+      });
+
       final failure = Exception('Video player failed: [REDACTED]');
 
       blocTest<DmVideoPlaybackCubit, DmVideoPlaybackState>(

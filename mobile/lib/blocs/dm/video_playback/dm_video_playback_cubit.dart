@@ -144,7 +144,11 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
       stackTrace,
     );
     emitIfOpen(
-      const DmVideoPlaybackState(status: DmVideoPlaybackStatus.failed),
+      DmVideoPlaybackState(
+        status: DmVideoPlaybackStatus.failed,
+        // A save under way goes on, and its outcome is still reported.
+        saveStatus: state.saveStatus,
+      ),
     );
   }
 
