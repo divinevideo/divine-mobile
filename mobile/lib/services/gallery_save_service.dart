@@ -67,10 +67,13 @@ class GallerySaveService {
   /// left behind: plaintext of private videos, in a folder nothing else
   /// cleans. Runs once a process, at launch or before its first copy,
   /// whichever comes first; a save waits for it, so a copy in use is never
-  /// deleted.
-  Future<void> deleteLeftoverCopies() {
+  /// deleted. Fails only through its future, as launch calls it from a
+  /// provider body.
+  Future<void> deleteLeftoverCopies() async {
+    // The web has no temporary folder; reaching for one throws there.
+    if (kIsWeb) return;
     final root = _copyRoot();
-    return _leftoverCopiesRemoved[root.path] ??= _deleteLeftovers(root);
+    await (_leftoverCopiesRemoved[root.path] ??= _deleteLeftovers(root));
   }
 
   /// Platform-aware name for the save destination.

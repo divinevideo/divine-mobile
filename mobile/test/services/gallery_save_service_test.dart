@@ -398,6 +398,21 @@ void main() {
         expect(galleryBytes.single, equals([0, 1, 2, 3]));
       });
 
+      test(
+        'fails only the future it returns when it cannot reach the copies, '
+        'as on the web, so the launch that asks still starts',
+        () async {
+          final unreachable = GallerySaveService(
+            permissionsService: mockPermissionsService,
+            copyRoot: () => throw UnsupportedError('_Namespace'),
+          );
+
+          final deleted = unreachable.deleteLeftoverCopies();
+
+          await expectLater(deleted, throwsUnsupportedError);
+        },
+      );
+
       test('removes copies a killed save left behind when asked at launch, '
           'before any save', () async {
         final leftover = File('${copies.path}/left/Divine_1.mov')
