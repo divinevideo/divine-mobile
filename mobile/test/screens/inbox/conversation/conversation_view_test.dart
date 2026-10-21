@@ -450,6 +450,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         verifyNever(() => followRepository.follow(otherPubkey));
+        verifyNever(() => followRepository.followWithResult(otherPubkey));
         verify(() => followRepository.unfollow(otherPubkey)).called(1);
       });
 

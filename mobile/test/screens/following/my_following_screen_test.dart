@@ -608,7 +608,8 @@ void main() {
     testWidgets('confirming Unfollow on a row unfollows it, never follows it', (
       tester,
     ) async {
-      when(() => mockFollowRepository.follow(any())).thenAnswer((_) async {});
+      when(() => mockFollowRepository.followWithResult(any()))
+          .thenAnswer((_) async => FollowOutcome.published);
       when(
         () => mockFollowRepository.unfollow(any()),
       ).thenAnswer((_) async {});
@@ -623,7 +624,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => mockFollowRepository.unfollow(thirdFollowed)).called(1);
-      verifyNever(() => mockFollowRepository.follow(any()));
+      verifyNever(() => mockFollowRepository.followWithResult(any()));
     });
   });
 }
