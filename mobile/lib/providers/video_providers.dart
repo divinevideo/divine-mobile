@@ -511,6 +511,7 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
           ? null
           : (conversationId: row.conversationId, sentAt: row.createdAt);
     },
+    crashReporter: ref.read(crashReportingServiceProvider),
   );
   final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
   // A kill in the background, routine for the system, then blames no sender

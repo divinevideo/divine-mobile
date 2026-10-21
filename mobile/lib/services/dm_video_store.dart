@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:models/models.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/dm_video_conversation_records.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
@@ -72,6 +73,9 @@ class DmVideoStore {
   /// [findMessageLocation], when supplied, refreshes that record from a live
   /// row after conversation repair; a missing row still uses the kept record.
   ///
+  /// [crashReporter] hears of a gone lookup that fails for a bug, which would
+  /// fail every time and keep a gone message's files.
+  ///
   /// [readFrame] defaults to [readDmVideoCardFrame] without its own timeout:
   /// the store bounds the UI wait separately from native completion.
   /// [rootDirectory] defaults to the app's cache directory, [now] to the
@@ -94,6 +98,7 @@ class DmVideoStore {
     this.frameTurnLimit = defaultFrameTurnLimit,
     this.frameDeadline = defaultFrameDeadline,
     String? launchId,
+    CrashReporter crashReporter = const SilentCrashReporter(),
   }) : _ownerPubkey = ownerPubkey,
        _launchId = launchId,
        _removalsAtCreation = _removals[dmVideoSafeName(ownerPubkey)] ?? 0,
@@ -103,6 +108,7 @@ class DmVideoStore {
        _now = now ?? DateTime.now {
     _gone = DmVideoGoneLookups(
       records: _records,
+      crashReporter: crashReporter,
       isMessageGone: isMessageGone,
       isConversationRemoved: isConversationRemoved,
       findMessageLocation: findMessageLocation,
@@ -993,12 +999,13 @@ class DmVideoStore {
     final bool gone;
     try {
       gone = await _gone.isGone(message, video.parent);
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
       Log.warning(
         'Could not tell whether a video DM message is gone, so its video is '
         'not handed out: ${error.runtimeType}',
         name: _logName,
         category: LogCategory.video,
+        stackTrace: stackTrace,
       );
       throw const DmVideoUnavailableException(
         'could not tell whether the message is gone',

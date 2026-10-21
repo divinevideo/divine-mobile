@@ -6,6 +6,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/dm_video_conversation_records.dart';
 import 'package:openvine/services/dm_video_gone_lookups.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -22,6 +24,23 @@ DmMessage _videoMessage({String? id, String conversationId = 'room'}) =>
       giftWrapId: 'c' * 64,
       messageKind: 15,
     );
+
+class _RecordingCrashReporter implements CrashReporter {
+  final errors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async => errors.add(error);
+}
 
 /// Everything logged since the last clear, error text included.
 List<String> _loggedLines() => [
@@ -227,6 +246,75 @@ void main() {
           cleared = true;
 
           expect(await lookups.isGone(_videoMessage(), dir), isTrue);
+        },
+      );
+
+      test(
+        'reports a lookup that fails for a bug, as it would keep failing',
+        () async {
+          final reporter = _RecordingCrashReporter();
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isMessageGone: (_) async => throw StateError('Too many elements'),
+            crashReporter: reporter,
+          );
+
+          await expectLater(
+            lookups.isGone(_videoMessage(), dir),
+            throwsA(isA<StateError>()),
+          );
+          final (:gone, :decided) = await lookups.goneAmong(
+            {'1' * 64},
+            dir,
+            {},
+          );
+
+          expect(gone, isEmpty);
+          expect(decided, isFalse);
+          expect(reporter.errors, hasLength(2));
+          for (final error in reporter.errors) {
+            expect(
+              error,
+              isA<Reportable<Object>>().having(
+                (reportable) => reportable.unwrap(),
+                'unwrap',
+                isA<StateError>(),
+              ),
+            );
+          }
+        },
+      );
+
+      test(
+        'reports no lookup that fails as a database can, nor one that cannot '
+        'tell',
+        () async {
+          final reporter = _RecordingCrashReporter();
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isMessageGone: (_) async => throw Exception('database is locked'),
+            crashReporter: reporter,
+          );
+          final undecided = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'removed',
+            findMessageLocation: (_) async => null,
+            crashReporter: reporter,
+          );
+          recordOf('a' * 64, 'removed');
+
+          await expectLater(
+            lookups.isGone(_videoMessage(), dir),
+            throwsA(isA<Exception>()),
+          );
+          await lookups.goneAmong({'1' * 64}, dir, {});
+          await expectLater(
+            undecided.isGone(_videoMessage(), dir),
+            throwsA(isA<DmVideoGoneUndecided>()),
+          );
+
+          expect(reporter.errors, isEmpty);
         },
       );
 

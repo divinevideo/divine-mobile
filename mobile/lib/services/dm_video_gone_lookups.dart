@@ -1,9 +1,12 @@
 // ABOUTME: Tells the video DM store which kept videos' messages are gone,
 // ABOUTME: retracted by their sender or removed with their conversation.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:models/models.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/dm_video_conversation_records.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -25,14 +28,17 @@ class DmVideoGoneLookups {
   /// Creates the lookups of one store. [records] are the conversation
   /// records beside its kept videos, which [goneAmong] reads when a message's
   /// row is missing and refreshes when a repair moved the message.
+  /// [crashReporter] hears of a lookup that fails for a bug.
   DmVideoGoneLookups({
     required DmVideoConversationRecords records,
+    CrashReporter crashReporter = const SilentCrashReporter(),
     Future<bool> Function(String messageId)? isMessageGone,
     Future<bool> Function(String conversationId, int sentAt)?
     isConversationRemoved,
     Future<DmVideoMessageLocation?> Function(String messageId)?
     findMessageLocation,
   }) : _records = records,
+       _crashReporter = crashReporter,
        _isMessageGone = isMessageGone,
        _isConversationRemoved = isConversationRemoved,
        _findMessageLocation = findMessageLocation;
@@ -41,6 +47,7 @@ class DmVideoGoneLookups {
   static const String _logName = 'DmVideoStore';
 
   final DmVideoConversationRecords _records;
+  final CrashReporter _crashReporter;
   final Future<bool> Function(String messageId)? _isMessageGone;
   final Future<bool> Function(String conversationId, int sentAt)?
   _isConversationRemoved;
@@ -60,6 +67,15 @@ class DmVideoGoneLookups {
   /// repair; when they do not, it throws [DmVideoGoneUndecided]. Only a
   /// retraction or a row is remembered. Throws what a lookup throws.
   Future<bool> isGone(DmMessage message, Directory dir) async {
+    try {
+      return await _isGone(message, dir);
+    } on Object catch (error, stackTrace) {
+      _reportIfBug(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<bool> _isGone(DmMessage message, Directory dir) async {
     if (_known.contains(message.id)) return true;
     if (await _isMessageGone?.call(message.id) == true) {
       _known.add(message.id);
@@ -84,6 +100,20 @@ class DmVideoGoneLookups {
       throw const DmVideoGoneUndecided();
     }
     return byCopy;
+  }
+
+  /// Reports [error] when it is a bug rather than a lookup that failed, as
+  /// one would fail every time and keep a gone message's files.
+  void _reportIfBug(Object error, StackTrace stackTrace) {
+    final reportable = asReportableError(error, context: 'DmVideoGoneLookups');
+    if (reportable == null) return;
+    unawaited(
+      _crashReporter.recordError(
+        reportable,
+        stackTrace,
+        reason: 'Could not tell whether a kept video DM message is gone',
+      ),
+    );
   }
 
   Future<DmVideoMessageLocation?> _recordedLocation(
@@ -150,14 +180,16 @@ class DmVideoGoneLookups {
       } on PathNotFoundException {
         // Deleted since the listing, as the launch sweep deletes an expired
         // video's files: there is nothing left to decide.
-      } on Object catch (error) {
+      } on Object catch (error, stackTrace) {
         decided = false;
         Log.warning(
           'Could not tell whether a kept video DM message is gone: '
           '${error.runtimeType}',
           name: _logName,
           category: LogCategory.video,
+          stackTrace: stackTrace,
         );
+        _reportIfBug(error, stackTrace);
       }
     }
     return (gone: gone, decided: decided);

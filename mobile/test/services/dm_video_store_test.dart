@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_frame_read_marks.dart';
 import 'package:openvine/services/dm_video_store.dart';
@@ -188,6 +189,23 @@ final class _WriteHooks extends IOOverrides {
   }
 }
 
+class _RecordingCrashReporter implements CrashReporter {
+  final errors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async => errors.add(error);
+}
+
 /// Everything logged since the last clear, error text included.
 List<String> _loggedLines() => [
   for (final entry in LogCaptureService().getRecentLogs())
@@ -235,6 +253,7 @@ void main() {
       Duration frameTurnLimit = const Duration(days: 1),
       Duration frameDeadline = DmVideoStore.defaultFrameDeadline,
       String? launchId,
+      CrashReporter crashReporter = const SilentCrashReporter(),
     }) {
       // Bound to this test's folder: a store an earlier test left behind can
       // still prune, and must not reach this test's files.
@@ -261,6 +280,7 @@ void main() {
         frameTurnLimit: frameTurnLimit,
         frameDeadline: frameDeadline,
         launchId: launchId,
+        crashReporter: crashReporter,
       );
     }
 
@@ -400,6 +420,26 @@ void main() {
             _loggedLines(),
             contains(contains('so its video is not handed out: StateError')),
           );
+        },
+      );
+
+      test(
+        'reports a gone lookup that fails for a bug, and hands out nothing',
+        () async {
+          final reporter = _RecordingCrashReporter();
+          final store = createStore(
+            isMessageGone: (_) async => throw StateError('Too many elements'),
+            crashReporter: reporter,
+          );
+
+          await expectLater(
+            store.videoFor(_videoMessage()),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          await store.prune();
+
+          expect(reporter.errors, isNotEmpty);
+          expect(keptFiles(), isEmpty);
         },
       );
 
