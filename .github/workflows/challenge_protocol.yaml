@@ -26,7 +26,15 @@ permissions:
   contents: read
 
 jobs:
-  conformance:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/challenge_protocol"
+      flutter_version: "3.47.2"
+      min_coverage: 99
+
+  workspace:
+    name: Workspace lockfile resolution
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -42,9 +50,5 @@ jobs:
       - name: Resolve the real workspace
         working-directory: mobile
         run: flutter pub get --enforce-lockfile
-      - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed .
-      - name: Analyze pure Dart package
-        run: dart analyze --fatal-infos
-      - name: Run pinned parser, replay and participant template tests
-        run: dart test
+      - name: Verify pinned Unicode sources and generated tables
+        run: python3 tool/generate_tr46.py --check

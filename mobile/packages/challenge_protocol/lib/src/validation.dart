@@ -41,40 +41,15 @@ void _checkTitle(String value, int maximum) {
 
 void _checkTimeZone(String value) {
   _require(
-    recognizedTimeZones.contains(value.toLowerCase()),
+    value.codeUnits.every((code) => code <= 0x7f) &&
+        recognizedTimeZones.contains(value.toLowerCase()),
     'timezone',
     'Unknown IANA timezone.',
   );
 }
 
 void _checkRelay(String value) {
-  // WHATWG special URLs ignore surrounding C0 whitespace and normalize slashes.
-  final normalized = value
-      .replaceAll(RegExp(r'[\t\r\n]'), '')
-      .replaceAll(RegExp(r'^[\x00-\x20]+|[\x00-\x20]+$'), '')
-      .replaceAll(r'\', '/');
-  final prefix = RegExp(
-    '^(wss?):/*',
-    caseSensitive: false,
-  ).firstMatch(normalized);
-  _require(prefix != null, 'relay', 'Expected a WebSocket relay URL.');
-  Uri? uri;
-  try {
-    uri = Uri.parse(
-      '${prefix!.group(1)!.toLowerCase()}://${normalized.substring(prefix.end)}',
-    );
-  } on FormatException {
-    throw const ContractError('relay', 'Invalid relay URL.');
-  }
-  _require(
-    uri.host.isNotEmpty &&
-        uri.userInfo.isEmpty &&
-        uri.fragment.isEmpty &&
-        !RegExp(r'[\x00-\x20<>^|]').hasMatch(uri.host) &&
-        uri.port <= 65535,
-    'relay',
-    'Expected a WebSocket relay URL.',
-  );
+  _require(_validRelayUrl(value), 'relay', 'Expected a WebSocket relay URL.');
 }
 
 String _actionOf(NostrEvent e) {

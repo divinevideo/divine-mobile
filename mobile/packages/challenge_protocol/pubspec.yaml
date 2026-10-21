@@ -10,6 +10,7 @@ dependencies:
   bip340: ^0.3.0
   characters: ^1.4.1
   crypto: ^3.0.7
+  unorm_dart: 0.3.2
 dev_dependencies:
   test: ^1.31.0
   very_good_analysis: ^10.2.0
