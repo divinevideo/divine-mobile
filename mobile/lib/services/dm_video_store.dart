@@ -433,9 +433,10 @@ class DmVideoStore {
   /// Everything kept for a message that is gone is deleted too, even a video
   /// played this session: a video retracted by its sender or removed with its
   /// conversation goes at the next prune or, while a read or a hand-out of it
-  /// is under way, once that ends. An account the user switched away from
-  /// keeps such videos until it is signed in again or they reach [maxAge],
-  /// since its rows are cleared on the switch.
+  /// is under way, once that ends. Sign-out and an account switch prune
+  /// before they clear the account's rows; a message that goes while another
+  /// account is signed in is found once this one signs in again, or its
+  /// files reach [maxAge].
   ///
   /// A video handed to playback or a save this session, or being read for its
   /// frame, is not deleted for its age or the cap and does not count against

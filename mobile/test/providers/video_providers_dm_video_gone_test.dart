@@ -9,13 +9,18 @@ import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import '../mocks/mock_path_provider_platform.dart';
+
+class _MockAuthService extends Mock implements AuthService {}
 
 void main() {
   group('dmVideoMessageGone', () {
@@ -392,6 +397,13 @@ void main() {
     late AppDatabase db;
     late Directory cache;
     late PathProviderPlatform originalPaths;
+    late _MockAuthService authService;
+    late List<BeforeSessionTeardownCallback> beforeSignOut;
+
+    setUpAll(() {
+      Future<void> fallback() async {}
+      registerFallbackValue(fallback);
+    });
 
     setUp(() {
       db = AppDatabase.test(NativeDatabase.memory());
@@ -399,7 +411,26 @@ void main() {
       originalPaths = PathProviderPlatform.instance;
       PathProviderPlatform.instance = MockPathProviderPlatform()
         ..setApplicationCachePath(cache.path);
+      authService = _MockAuthService();
+      beforeSignOut = [];
+      when(
+        () => authService.registerBeforeSessionTeardownCallback(any()),
+      ).thenAnswer((invocation) {
+        final callback =
+            invocation.positionalArguments.single
+                as BeforeSessionTeardownCallback;
+        beforeSignOut.add(callback);
+        return () => beforeSignOut.remove(callback);
+      });
     });
+
+    ProviderContainer accountContainer() => ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        currentAccountIdProvider.overrideWithValue(owner),
+        authServiceProvider.overrideWithValue(authService),
+      ],
+    );
 
     tearDown(() async {
       PathProviderPlatform.instance = originalPaths;
@@ -426,12 +457,7 @@ void main() {
         )..createSync(recursive: true);
         final record = File('${video.parent.path}/$messageId.conversation')
           ..writeAsStringSync('old-room\n$sentAt');
-        final container = ProviderContainer(
-          overrides: [
-            databaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(owner),
-          ],
-        );
+        final container = accountContainer();
         final store = container.read(dmVideoStoreProvider)!;
         final closed = store.kept.drain<void>();
         addTearDown(() async {
@@ -488,12 +514,7 @@ void main() {
         )..createSync(recursive: true);
         File('${video.parent.path}/$messageId.conversation')
             .writeAsStringSync('conversation\n$sentAt');
-        final container = ProviderContainer(
-          overrides: [
-            databaseProvider.overrideWithValue(db),
-            currentAccountIdProvider.overrideWithValue(owner),
-          ],
-        );
+        final container = accountContainer();
         final store = container.read(dmVideoStoreProvider)!;
         final closed = store.kept.drain<void>();
         var disposed = false;
@@ -519,55 +540,58 @@ void main() {
       },
     );
 
-    test('flushes the pending retraction before disposing the store', () async {
-      await db.directMessagesDao.insertMessage(
-        id: messageId,
-        conversationId: 'conversation',
-        senderPubkey: 'b' * 64,
-        content: 'https://media.example/blob',
-        createdAt: 1757385263,
-        giftWrapId: 'c' * 64,
-        messageKind: 15,
-        ownerPubkey: owner,
-      );
-      final video = File(
-        '${cache.path}/${DmVideoStore.dirName}/$owner/$messageId.mp4',
-      )..createSync(recursive: true);
-      final container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-          currentAccountIdProvider.overrideWithValue(owner),
-        ],
-      );
-      var disposed = false;
-      addTearDown(() {
-        if (!disposed) container.dispose();
-      });
-      final store = container.read(dmVideoStoreProvider)!;
-      final closed = store.kept.drain<void>();
-      await store.prune();
-      expect(video.existsSync(), isTrue);
-      final deleted = Completer<void>();
-      final watch = video.parent.watch(events: FileSystemEvent.delete).listen((
-        event,
-      ) {
-        if (event.path == video.path && !deleted.isCompleted) {
-          deleted.complete();
-        }
-      });
-      addTearDown(watch.cancel);
-      await db.directMessagesDao.markMessageDeleted(
-        messageId,
-        ownerPubkey: owner,
-      );
-      await pumpEventQueue();
+    test(
+      'prunes at sign-out, while the rows that show a retraction are there',
+      () async {
+        await db.directMessagesDao.insertMessage(
+          id: messageId,
+          conversationId: 'conversation',
+          senderPubkey: 'b' * 64,
+          content: 'https://media.example/blob',
+          createdAt: 1757385263,
+          giftWrapId: 'c' * 64,
+          messageKind: 15,
+          ownerPubkey: owner,
+        );
+        final video = File(
+          '${cache.path}/${DmVideoStore.dirName}/$owner/$messageId.mp4',
+        )..createSync(recursive: true);
+        final container = accountContainer();
+        var disposed = false;
+        addTearDown(() {
+          if (!disposed) container.dispose();
+        });
+        final store = container.read(dmVideoStoreProvider)!;
+        final closed = store.kept.drain<void>();
+        await store.prune();
+        expect(video.existsSync(), isTrue);
 
-      disposed = true;
+        await db.directMessagesDao.markMessageDeleted(
+          messageId,
+          ownerPubkey: owner,
+        );
+        // Sign-out runs these first, then clears the account's rows.
+        for (final callback in List.of(beforeSignOut)) {
+          await callback();
+        }
+        await db.directMessagesDao.clearForAccountSwitch(owner);
+        disposed = true;
+        container.dispose();
+        await closed;
+
+        expect(video.existsSync(), isFalse);
+      },
+    );
+
+    test('stops pruning at sign-out once its store is gone', () async {
+      final container = accountContainer();
+      final closed = container.read(dmVideoStoreProvider)!.kept.drain<void>();
+      expect(beforeSignOut, hasLength(1));
+
       container.dispose();
-      await deleted.future.timeout(const Duration(seconds: 5));
       await closed;
 
-      expect(video.existsSync(), isFalse);
+      expect(beforeSignOut, isEmpty);
     });
   });
 }

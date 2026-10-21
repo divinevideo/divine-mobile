@@ -487,7 +487,9 @@ final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
 /// when no account is signed in.
 ///
 /// Rebuilt when the account changes, so each account reads only its own
-/// folder. Prunes old and excess videos once when built.
+/// folder. Prunes old and excess videos once when built, and again at
+/// sign-out before the account's DM rows are cleared: a retraction shows
+/// only in those rows.
 final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
   // The web target has neither filesystem storage nor path_provider support.
   if (kIsWeb) return null;
@@ -510,7 +512,11 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
     },
   );
   final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
+  final unregisterBeforeSignOut = ref
+      .watch(authServiceProvider)
+      .registerBeforeSessionTeardownCallback(store.prune);
   ref.onDispose(() {
+    unregisterBeforeSignOut();
     runProviderDetached(
       goneCleanup.close().whenComplete(store.dispose),
       'close kept video DM cleanup',
@@ -589,6 +595,8 @@ final class DmVideoGoneCleanup {
   /// share one close. This reads the database as it is at close time: an
   /// account switch that already cleared DM rows cannot recover a retraction
   /// from those rows, while conversation-removal tombstones remain available.
+  /// Sign-out and the account swap prune the store before clearing them, so
+  /// this covers what changed after that prune.
   Future<void> close() {
     _closed = true;
     _timer?.cancel();

@@ -12,6 +12,7 @@ import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
@@ -36,6 +37,10 @@ typedef AccountSignIn = Future<void> Function(
 
 const _accountSwitchPushCleanupTimeout = Duration(seconds: 15);
 
+/// How long the swap waits for the outgoing account's kept video DMs to be
+/// pruned, the same budget sign-out gives its own cleanups.
+const _accountSwitchDmVideoPruneTimeout = Duration(seconds: 5);
+
 /// Stops the outgoing account's DM ingest before the incoming container signs
 /// in and wipes shared DM state.
 ///
@@ -57,6 +62,25 @@ Future<bool> _quiesceOutgoingDmIngest(ProviderContainer? outgoing) async {
       name: 'swapAccount',
     );
     return false;
+  }
+}
+
+/// Prunes the outgoing account's kept video DMs while its DM rows still show
+/// which messages were retracted, before the incoming sign-in clears them.
+/// Otherwise a retracted video stays until that account signs in again.
+Future<void> _pruneOutgoingDmVideos(ProviderContainer? outgoing) async {
+  if (outgoing == null || !outgoing.exists(dmVideoStoreProvider)) return;
+  try {
+    await outgoing
+        .read(dmVideoStoreProvider)
+        ?.prune()
+        .timeout(_accountSwitchDmVideoPruneTimeout);
+  } catch (error) {
+    Log.warning(
+      'Pruning the outgoing account kept video DMs before the swap failed: '
+      '$error',
+      name: 'swapAccount',
+    );
   }
 }
 
@@ -290,6 +314,8 @@ Future<void> swapAccount({
       // Before sign-in, because sign-in is what runs the identity-change
       // cleanup that wipes the shared DM tables. See #7318.
       outgoingDmIngestQuiesced = await _quiesceOutgoingDmIngest(current);
+      ensureOutgoingCurrent();
+      await _pruneOutgoingDmVideos(current);
       ensureOutgoingCurrent();
       suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
       await CuratedListSessionCoordinator.forPreferences(
