@@ -292,6 +292,33 @@ void main() {
       );
 
       test(
+        'hands out a video past its age while its frame is being read',
+        () async {
+          final reading = Completer<void>();
+          final read = Completer<Uint8List?>();
+          readFrame = (_) {
+            reading.complete();
+            return read.future;
+          };
+          final store = createStore();
+          final message = _videoMessage();
+          final preview = store.previewFor(message);
+          await reading.future;
+          final video = File(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+          )..setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          final tapped = await store.videoFor(message);
+
+          expect(fetches, equals(1));
+          expect(tapped.path, equals(video.path));
+          expect(video.existsSync(), isTrue);
+          read.complete(_frame);
+          await preview;
+        },
+      );
+
+      test(
         'hands out a video past its age that a caller still holds',
         () async {
           final store = createStore();
@@ -593,6 +620,23 @@ void main() {
     });
 
     group('previewFor', () {
+      test(
+        'reads a new frame once its frame is past its age, though its video '
+        'is not',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          final frame = await store.previewFor(message);
+          frame!.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          final again = await store.previewFor(message);
+
+          expect(again, isNotNull);
+          expect(frameReads, equals(2));
+          expect(fetches, equals(1));
+        },
+      );
+
       test(
         'reads no frame from a video past its age that a caller holds, and '
         'leaves it',
