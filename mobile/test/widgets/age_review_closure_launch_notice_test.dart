@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -281,9 +282,10 @@ void main() {
       expect(find.text('account-status'), findsOneWidget);
     });
 
-    // A status something else already holds answers inside initState, during
-    // the build. Recording it as shown there modified a provider mid-build,
-    // which threw in debug and left it marked shown but never shown.
+    // A status something else already holds answers synchronously as soon as
+    // the notice listens. Recording it as shown on the spot once modified a
+    // provider mid-build, which threw in debug and left it marked shown but
+    // never shown.
     testWidgets('shows an answer that was already cached when it mounts', (
       tester,
     ) async {
@@ -443,6 +445,43 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(fetches, 1);
+    });
+
+    // For a local key the status request is signed synchronously inside the
+    // read that starts it, so starting the read from initState put that work
+    // in the build of the frame where the feed first appears.
+    testWidgets('starts the status read after the first frame', (
+      tester,
+    ) async {
+      SchedulerPhase? phase;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            phase = SchedulerBinding.instance.schedulerPhase;
+            return const AccountEnforcementStatus(
+              kind: AccountEnforcementKind.noRestrictionReported,
+            );
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(phase, SchedulerPhase.postFrameCallbacks);
     });
 
     // The notice lets go of the status once it has answered, so the screen it

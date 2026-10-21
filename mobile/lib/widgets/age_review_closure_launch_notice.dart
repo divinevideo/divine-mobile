@@ -43,6 +43,12 @@ class _AgeReviewClosureLaunchNoticeState
   @override
   void initState() {
     super.initState();
+    // For a local key, starting the read signs its request synchronously.
+    // Waiting for the first frame keeps that out of the frame's build.
+    addPostFrameCallbackIfMounted(_listen);
+  }
+
+  void _listen() {
     _status = ref.listenManual<AsyncValue<AccountEnforcementStatus>>(
       accountEnforcementStatusProvider,
       (_, next) {
@@ -76,10 +82,9 @@ class _AgeReviewClosureLaunchNoticeState
   }
 
   void _showOnce() {
-    // A listener can fire during a build, including inside initState for a
-    // status already cached, and a build may neither navigate nor modify a
-    // provider. So marking it shown waits for the frame too, which also means
-    // a notice whose shell is gone by then is not marked.
+    // A listener can fire during a build, and a build may neither navigate
+    // nor modify a provider. So marking it shown waits for the frame too,
+    // which also means a notice whose shell is gone by then is not marked.
     addPostFrameCallbackIfMounted(() {
       final pubkey = ref.read(activeEnforcementPubkeyProvider);
       if (pubkey == null) return;
