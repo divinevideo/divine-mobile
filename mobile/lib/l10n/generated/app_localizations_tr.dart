@@ -13979,4 +13979,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time paylaşıldı';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videon incelenmek üzere gönderildi.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video gönderildi';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Videonuz incelenmek üzere Divine Destek ve Güven ve Güvenlik ekiplerine özel olarak gönderilir. Yayınlanmaz veya diğer kullanıcılarla paylaşılmaz.';
 }

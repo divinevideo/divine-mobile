@@ -13707,4 +13707,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String userRowPosted(String time) {
     return 'የተለጠፈው $time';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => 'ቪዲዮዎ ለግምገማ ተልኳል።';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'ቪዲዮው ተልኳል';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'ቪዲዮዎ ለግምገማ በግል ወደ Divine ድጋፍ እና እምነትና ደህንነት ቡድኖች ይላካል። አይታተምም ወይም ከሌሎች ተጠቃሚዎች ጋር አይጋራም።';
 }

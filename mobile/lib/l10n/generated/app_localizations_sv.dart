@@ -14062,4 +14062,15 @@ class AppLocalizationsSv extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicerat $time';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Din video har skickats för granskning.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Videon har skickats';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Din video skickas privat till Divines team för support samt tillit och säkerhet för granskning. Den publiceras inte och delas inte med andra användare.';
 }

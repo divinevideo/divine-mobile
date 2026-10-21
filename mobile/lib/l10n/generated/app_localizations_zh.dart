@@ -13210,4 +13210,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String userRowPosted(String time) {
     return '发布于$time';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => '你的视频已提交审核。';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => '视频已提交';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      '你的视频将私下发送给 Divine 支持及信任与安全团队审核，不会公开发布或与其他用户分享。';
 }

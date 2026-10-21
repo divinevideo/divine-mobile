@@ -14228,4 +14228,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Pubblicato $time';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Il tuo video è stato inviato per la revisione.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video inviato';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Il tuo video viene inviato privatamente ai team di assistenza e di fiducia e sicurezza di Divine per la revisione. Non viene pubblicato né condiviso con altri utenti.';
 }
