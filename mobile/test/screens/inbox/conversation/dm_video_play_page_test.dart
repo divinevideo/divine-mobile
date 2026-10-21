@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -28,6 +29,17 @@ import '../../../mocks/mock_path_provider_platform.dart';
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _MockGallerySaveService extends Mock implements GallerySaveService {}
+
+/// Records the errors blocs created while it is the observer add.
+class _ErrorRecorder extends BlocObserver {
+  final List<Object> errors = [];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 /// Native player events the test sends once the controller is listening.
 class _PlayerEvents extends MockStreamHandler {
@@ -285,6 +297,73 @@ void main() {
         final size = tester.getSize(find.byType(DivineVideoPlayer));
         expect(size.width / size.height, closeTo(9 / 16, 0.01));
       });
+
+      group(
+        "keeps the kept file's path and name out of the error it records",
+        () {
+          late _ErrorRecorder recorder;
+
+          setUp(() {
+            final previous = Bloc.observer;
+            recorder = _ErrorRecorder();
+            // Before the page builds its cubit, which takes the observer then.
+            Bloc.observer = recorder;
+            addTearDown(() => Bloc.observer = previous);
+          });
+
+          void expectNoFileIn(Iterable<Object> errors) {
+            final recorded = errors.map((error) => '$error').join('\n');
+            expect(recorded, isNotEmpty);
+            expect(recorded, isNot(contains(expectedClipPath())));
+            expect(recorded, isNot(contains(_videoMessage().id)));
+          }
+
+          testWidgets('when the player fails after starting', (tester) async {
+            await openPlayer(tester);
+            final quoting = {
+              'status': 'error',
+              'errorMessage': 'Cannot open ${expectedClipPath()}',
+            };
+
+            events
+              ..emit(quoting)
+              ..emit(quoting);
+            await tester.pump(const Duration(seconds: 3));
+            await tester.pump();
+
+            expectNoFileIn(recorder.errors);
+          });
+
+          testWidgets('when the player cannot take the file', (tester) async {
+            stubKeptVideo(() async {
+              File(expectedClipPath())
+                ..createSync(recursive: true)
+                ..writeAsBytesSync(const [1, 2, 3]);
+              return expectedClipPath();
+            });
+            installMockDivineVideoPlayer(
+              onMethodCall: (call) async {
+                if (call.method == 'setClips') {
+                  throw PlatformException(
+                    code: 'source',
+                    message: 'No file named ${_videoMessage().id}.mp4',
+                  );
+                }
+                return null;
+              },
+              streamHandler: _PlayerEvents(),
+            );
+
+            await tester.pumpWidget(host());
+            await tester.pump();
+            // The failed player's teardown answers on real platform channels.
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+
+            expectNoFileIn(recorder.errors);
+          });
+        },
+      );
 
       testWidgets(
         'tells the viewer the video could not be opened when the player fails '

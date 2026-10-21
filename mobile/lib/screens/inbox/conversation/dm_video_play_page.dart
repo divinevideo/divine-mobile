@@ -5,11 +5,13 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show DmMessage;
 import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
@@ -262,6 +264,7 @@ class _PlayerState extends State<_Player> {
   static const _errorGrace = Duration(seconds: 3);
 
   DivineVideoPlayerController? _controller;
+  String? _path;
   StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
   Timer? _errorGraceTimer;
 
@@ -276,6 +279,7 @@ class _PlayerState extends State<_Player> {
   }
 
   Future<void> _start(String path) async {
+    _path = path;
     final controller = DivineVideoPlayerController(
       useTexture: true,
       debugLabel: 'dm_video_play',
@@ -288,7 +292,12 @@ class _PlayerState extends State<_Player> {
     } catch (error, stackTrace) {
       await controller.dispose();
       if (mounted) {
-        context.read<DmVideoPlaybackCubit>().playbackFailed(error, stackTrace);
+        context.read<DmVideoPlaybackCubit>().playbackFailed(
+          error is PlatformException
+              ? _PlayerFailure('${error.code}: ${error.message}', path)
+              : error,
+          stackTrace,
+        );
       }
       return;
     }
@@ -329,7 +338,7 @@ class _PlayerState extends State<_Player> {
     unawaited(_stateSubscription?.cancel());
     _stateSubscription = null;
     context.read<DmVideoPlaybackCubit>().playbackFailed(
-      _PlayerFailure(state.errorMessage),
+      _PlayerFailure(state.errorMessage, _path),
       StackTrace.current,
     );
   }
@@ -358,10 +367,21 @@ class _PlayerState extends State<_Player> {
 
 /// The native player reported an error after playback started.
 class _PlayerFailure implements Exception {
-  const _PlayerFailure(this.message);
+  /// Keeps [path] and the file's name out of [text]: they name the account
+  /// and the message, and a native player can quote either.
+  _PlayerFailure(String? text, String? path)
+    : message = text == null ? null : _withoutFile(text, path);
 
   /// The player's diagnostic text, when it gave one.
   final String? message;
+
+  static String _withoutFile(String text, String? path) {
+    if (path == null) return redactFilesystemPaths(text);
+    final name = path.split('/').last.split('.').first;
+    return redactFilesystemPaths(
+      text.replaceAll(path, '[REDACTED]'),
+    ).replaceAll(name, '[REDACTED]');
+  }
 
   @override
   String toString() => 'Video player failed: ${message ?? 'unknown error'}';
