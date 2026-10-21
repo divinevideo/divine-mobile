@@ -52,11 +52,15 @@ class AccountRestrictionMemory {
 /// Developer-options simulation of an enforcement state, so the status screen
 /// can be seen in states Funnelcake cannot yet report (support-trust-safety#260).
 ///
-/// Held in memory only: a restart always returns to the real status.
+/// Held in memory only, for the account it was turned on for: a restart, or
+/// any change of account, returns to the real status.
 class AccountEnforcementDevOverride
     extends Notifier<AccountEnforcementStatus?> {
   @override
-  AccountEnforcementStatus? build() => null;
+  AccountEnforcementStatus? build() {
+    ref.watch(activeEnforcementPubkeyProvider);
+    return null;
+  }
 
   void simulate(AccountEnforcementStatus status) => state = status;
 

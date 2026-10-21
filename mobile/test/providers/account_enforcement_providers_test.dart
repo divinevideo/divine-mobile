@@ -54,6 +54,13 @@ class _ControlledStatusClient extends AccountStatusApiClient {
   }) => results.removeAt(0).future.then(FunnelcakeAccountStatusResponse.new);
 }
 
+class _ActivePubkey extends Notifier<String?> {
+  @override
+  String? build() => _pubkeyA;
+
+  void switchTo(String pubkey) => state = pubkey;
+}
+
 const _pubkeyA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _pubkeyB =
@@ -145,6 +152,58 @@ void main() {
       expect(simulated.kind, AccountEnforcementKind.banned);
       expect(cleared.kind, AccountEnforcementKind.noRestrictionReported);
       expect(client.requestedPubkeys, [_pubkeyA, _pubkeyA]);
+    });
+
+    // Signing out and in again keeps the container, so a simulation turned on
+    // for one account must not follow the developer onto the next.
+    test('a developer override ends when the account changes', () async {
+      final authService = _MockAuthService();
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      final client = _QueueStatusClient([FunnelcakeAccountStatus.active]);
+      final active = NotifierProvider<_ActivePubkey, String?>(
+        _ActivePubkey.new,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          currentAuthRpcCapabilityProvider.overrideWithValue(
+            AuthRpcCapability.rpcReady,
+          ),
+          authServiceProvider.overrideWithValue(authService),
+          accountEnforcementRepositoryProvider.overrideWithValue(
+            AccountEnforcementRepository(apiClient: client),
+          ),
+          activeEnforcementPubkeyProvider.overrideWith(
+            (ref) => ref.watch(active),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(accountEnforcementDevOverrideProvider.notifier)
+          .simulate(
+            const AccountEnforcementStatus(
+              kind: AccountEnforcementKind.banned,
+              category: AccountEnforcementCategory.ageReview,
+            ),
+          );
+      final subscription = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final simulated = await container.read(
+        accountEnforcementStatusProvider.future,
+      );
+
+      container.read(active.notifier).switchTo(_pubkeyB);
+      final next = await container.read(
+        accountEnforcementStatusProvider.future,
+      );
+
+      expect(simulated.isAgeReviewClosure, isTrue);
+      expect(next.kind, AccountEnforcementKind.noRestrictionReported);
+      expect(client.requestedPubkeys, [_pubkeyB]);
     });
 
     test('signed out resolves without a request', () async {
