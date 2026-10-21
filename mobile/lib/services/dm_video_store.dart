@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' show Random;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -70,8 +71,10 @@ class DmVideoStore {
   ///
   /// [readFrame] defaults to [readDmVideoCardFrame] without its own timeout:
   /// the store bounds the UI wait separately from native completion.
-  /// [rootDirectory] defaults to the app's cache directory and [now] to the
-  /// wall clock; they exist so tests can inject fakes.
+  /// [rootDirectory] defaults to the app's cache directory, [now] to the
+  /// wall clock and [launchId], which each frame read's mark names, to this
+  /// launch of the app's; they exist so tests can inject fakes, such as a
+  /// store of an earlier launch.
   DmVideoStore({
     required String ownerPubkey,
     required DmVideoFetcher fetchVideo,
@@ -87,7 +90,9 @@ class DmVideoStore {
     this.maxBytes = defaultMaxBytes,
     this.frameTurnLimit = defaultFrameTurnLimit,
     this.frameDeadline = defaultFrameDeadline,
+    String? launchId,
   }) : _ownerPubkey = ownerPubkey,
+       _launchId = launchId ?? _thisLaunch,
        _removalsAtCreation = _removals[_safeName(ownerPubkey)] ?? 0,
        _fetchVideo = fetchVideo,
        _readFrame = readFrame ?? _readCardFrameUntilSettled,
@@ -147,8 +152,21 @@ class DmVideoStore {
 
   /// Beside a video from the start of its frame read until a frame is kept,
   /// so a read that fails or never finishes, as when the decoder crashes the
-  /// app, is not tried again.
+  /// app, is not tried again. While the read runs it names the launch and the
+  /// sender; a read that ends without a frame empties it. One a later launch
+  /// finds still naming them never finished, and its sender is remembered.
   static const String _frameAttemptSuffix = '.frame-attempt';
+
+  /// Left for a sender one of whose frame reads an earlier launch never
+  /// finished, as when the decoder crashed the app: their videos are neither
+  /// fetched nor read for a frame by themselves until it is [maxAge] old, so
+  /// a sender cannot crash the app once per video. A tap still plays them.
+  /// Empty, named after the sender, and never trimmed for the cap.
+  static const String _hungSenderSuffix = '.decoder-hung';
+  static const String _hungSenderPrefix = 'sender-';
+
+  /// Names this launch of the app in the frame-read marks its stores write.
+  static final String _thisLaunch = _newLaunchId();
 
   /// Beside a kept video and its frame for as long as either stays: the
   /// conversation they came from and when the message was sent, so removing
@@ -178,6 +196,14 @@ class DmVideoStore {
   static Future<Uint8List?> _readCardFrameUntilSettled(File video) =>
       readDmVideoCardFrame(video, timeout: null);
 
+  static String _newLaunchId() {
+    final random = Random.secure();
+    return [
+      for (var i = 0; i < 16; i++)
+        random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ].join();
+  }
+
   /// How long after it was kept [prune] deletes a file.
   final Duration maxAge;
 
@@ -193,6 +219,7 @@ class DmVideoStore {
   final Duration frameDeadline;
 
   final String _ownerPubkey;
+  final String _launchId;
   final int _removalsAtCreation;
   final DmVideoFetcher _fetchVideo;
   final DmVideoFrameReader _readFrame;
@@ -266,6 +293,11 @@ class DmVideoStore {
 
   /// How many downloads nobody tapped for failed this session, by message id.
   final Map<String, int> _autoDownloadFailureCounts = {};
+
+  /// Senders one of whose frame reads an earlier launch never finished, and
+  /// whether this store looked for such reads yet.
+  final Set<String> _hungSenders = {};
+  bool _lookedForUnfinishedReads = false;
   // An account switch can leave a tapped download running in an older store.
   // Number writes across stores so their sibling part files cannot collide.
   static int _writes = 0;
@@ -354,7 +386,9 @@ class DmVideoStore {
   /// would repeat is not tried again by itself, this session or a later one,
   /// until [maxAge] has passed; one that may pass is tried again after
   /// [autoDownloadRetryAfter], and at most [autoDownloadMaxTries] times a
-  /// session. A tap on play still fetches it.
+  /// session. A tap on play still fetches it. Nothing is fetched or read by
+  /// itself for a sender one of whose frame reads an earlier launch never
+  /// finished, until that is [maxAge] old; a tap still plays their videos.
   ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
@@ -492,7 +526,7 @@ class DmVideoStore {
         continue;
       }
       // Empty, so trimming it would free nothing.
-      if (_isFailureMark(file)) continue;
+      if (_isMark(file)) continue;
       kept.add((file: file, keptAt: stat.modified, size: stat.size));
     }
     _trimToCap(kept);
@@ -686,13 +720,13 @@ class DmVideoStore {
     for (final file in files)
       if (!file.path.endsWith(_partSuffix) &&
           !file.path.endsWith(_previewSuffix) &&
-          !_isFailureMark(file) &&
+          !_isMark(file) &&
           !_isSatellite(file))
         _messageIdOf(file),
   };
 
-  /// Ids of the messages with a video, a frame or a failure mark among
-  /// [files], whole or still being written: a removal must still find them.
+  /// Ids of the messages with a video, a frame or a mark among [files], whole
+  /// or still being written: a removal must still find them.
   /// A record still being written counts too, which only keeps its message's
   /// record until the part goes.
   static Set<String> _messageIdsWithContent(List<File> files) => {
@@ -709,7 +743,11 @@ class DmVideoStore {
       file.path.endsWith(_frameAttemptSuffix) ||
       file.path.endsWith(_conversationSuffix);
 
-  static bool _isFailureMark(File file) => file.path.endsWith(_failedSuffix);
+  /// Whether [file] is an empty mark, of a failed download or of a sender
+  /// whose frame read never finished: it ages, but is never trimmed.
+  static bool _isMark(File file) =>
+      file.path.endsWith(_failedSuffix) ||
+      file.path.endsWith(_hungSenderSuffix);
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
   /// for, within their limits, or, when its turn comes, uses the download a
@@ -815,13 +853,17 @@ class DmVideoStore {
     required bool Function() wanted,
   }) async {
     final dir = await _ownerDirectory();
+    _rememberSendersOfUnfinishedReads(dir);
     final preview = File('${dir.path}/${_previewFileNameFor(message)}');
     if (preview.existsSync()) {
       await _recordConversationQuietly(message, dir);
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
-    if (_unreadableFrames.contains(message.id)) return null;
+    if (_unreadableFrames.contains(message.id) ||
+        _senderHungTheDecoder(dir, message.senderPubkey)) {
+      return null;
+    }
 
     final keptVideo = File('${dir.path}/${videoFileNameFor(message)}');
     final declaredBytes = message.fileMetadata?.fileSize;
@@ -1004,17 +1046,23 @@ class DmVideoStore {
     }
     _throwIfOwnerRemoved();
     try {
-      attempt.createSync();
+      attempt.writeAsStringSync('$_launchId\n${message.senderPubkey}');
     } on FileSystemException catch (error) {
       throw DmVideoStorageException(
         'could not start reading the frame: ${_causeOf(error)}',
       );
     }
     final videoStat = video.statSync();
-    final frame = await _readFrame(video);
+    Uint8List? frame;
+    try {
+      frame = await _readFrame(video);
+    } finally {
+      // The mark stays when the decoder cannot produce a frame, emptied as
+      // the read ended. A decode that never settles leaves it naming the
+      // launch and the sender, even across an app restart.
+      if (frame == null || frame.isEmpty) _markReadEnded(attempt);
+    }
     if (frame == null || frame.isEmpty) {
-      // The mark stays when the decoder cannot produce a frame. A decode
-      // that never settles also leaves its mark, even across an app restart.
       _unreadableFrames.add(message.id);
       return null;
     }
@@ -1123,6 +1171,85 @@ class DmVideoStore {
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not remember a failed video DM download: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  /// Remembers, once for this store and before it fetches or reads anything
+  /// for a card, the senders of frame reads an earlier launch never finished.
+  void _rememberSendersOfUnfinishedReads(Directory dir) {
+    if (_lookedForUnfinishedReads) return;
+    _lookedForUnfinishedReads = true;
+    final List<File> files;
+    try {
+      if (!dir.existsSync()) return;
+      files = dir.listSync().whereType<File>().toList();
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not look for video DM frame reads an earlier launch left: '
+        '${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return;
+    }
+    for (final file in files) {
+      if (!file.path.endsWith(_frameAttemptSuffix)) continue;
+      try {
+        final lines = file.readAsLinesSync();
+        if (lines.length == 2 && lines.first != _launchId) {
+          _rememberHungSender(dir, lines.last);
+        }
+      } on PathNotFoundException {
+        // Deleted since the listing, with its video: nothing to remember.
+      } on FileSystemException catch (error) {
+        Log.warning(
+          'Could not read a video DM frame-read mark: ${_causeOf(error)}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      }
+    }
+  }
+
+  void _rememberHungSender(Directory dir, String senderPubkey) {
+    _hungSenders.add(senderPubkey);
+    // Writing it would bring a removed account's folder back.
+    if (_ownerRemoved) return;
+    try {
+      _hungSenderMarkOf(dir, senderPubkey).createSync();
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not remember a sender whose video DM frame read never '
+        'finished: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  bool _senderHungTheDecoder(Directory dir, String senderPubkey) {
+    if (_hungSenders.contains(senderPubkey)) return true;
+    if (!_hungSenderMarkOf(dir, senderPubkey).existsSync()) return false;
+    _hungSenders.add(senderPubkey);
+    return true;
+  }
+
+  static File _hungSenderMarkOf(Directory dir, String senderPubkey) => File(
+    '${dir.path}/$_hungSenderPrefix${_safeName(senderPubkey)}'
+    '$_hungSenderSuffix',
+  );
+
+  /// Empties [attempt], saying its frame read ended.
+  static void _markReadEnded(File attempt) {
+    try {
+      attempt.writeAsStringSync('');
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not record that a video DM frame read ended: '
+        '${_causeOf(error)}',
         name: _logName,
         category: LogCategory.video,
       );

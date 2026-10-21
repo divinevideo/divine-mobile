@@ -24,10 +24,11 @@ DmMessage _videoMessage({
   String conversationId = 'conversation',
   String fileType = 'video/mp4',
   int? fileSize,
+  String? senderPubkey,
 }) => DmMessage(
   id: id ?? 'a' * 64,
   conversationId: conversationId,
-  senderPubkey: 'b' * 64,
+  senderPubkey: senderPubkey ?? 'b' * 64,
   content: 'https://media.divine.video/${'d' * 64}',
   createdAt: 1757385263,
   giftWrapId: 'c' * 64,
@@ -216,6 +217,7 @@ void main() {
       // turn-limit warning into a later suite of the merged test isolate.
       Duration frameTurnLimit = const Duration(days: 1),
       Duration frameDeadline = DmVideoStore.defaultFrameDeadline,
+      String? launchId,
     }) => DmVideoStore(
       ownerPubkey: _owner,
       fetchVideo: (message, {maxBytes, timeLimit, limitsApply, stillWanted}) {
@@ -236,6 +238,7 @@ void main() {
       isConversationRemoved: isConversationRemoved,
       frameTurnLimit: frameTurnLimit,
       frameDeadline: frameDeadline,
+      launchId: launchId,
     );
 
     Directory ownerDir([String? owner]) =>
@@ -454,6 +457,161 @@ void main() {
           expect(frameReads, equals(1));
         },
       );
+
+      group('after a frame read an earlier launch never finished', () {
+        late Completer<void> readStarted;
+
+        /// Starts a frame read of [message] that never finishes, as when the
+        /// decoder crashed the app, in a store of an earlier launch unless
+        /// [store] is given, and returns once it runs.
+        Future<void> leaveHungRead(
+          DmMessage message, {
+          DmVideoStore? store,
+        }) async {
+          readStarted = Completer<void>();
+          readFrame = (_) {
+            readStarted.complete();
+            return Completer<Uint8List?>().future;
+          };
+          unawaited(
+            (store ?? createStore(launchId: 'earlier')).previewFor(message),
+          );
+          await readStarted.future;
+          readFrame = (_) async => _frame;
+        }
+
+        test(
+          "neither fetches nor reads that sender's other videos by itself, "
+          'while a tap still plays them',
+          () async {
+            await leaveHungRead(_videoMessage(id: '1' * 64));
+            final later = createStore();
+            final other = _videoMessage(id: '2' * 64);
+
+            expect(await later.previewFor(other), isNull);
+            expect(fetches, equals(1));
+
+            expect(
+              (await later.videoFor(other)).readAsBytesSync(),
+              equals(_plaintext),
+            );
+            expect(await later.previewFor(other), isNull);
+            expect(frameReads, equals(1));
+          },
+        );
+
+        test("still reads other senders' videos", () async {
+          await leaveHungRead(_videoMessage(id: '1' * 64));
+
+          final preview = await createStore().previewFor(
+            _videoMessage(id: '2' * 64, senderPubkey: '9' * 64),
+          );
+
+          expect(preview, isNotNull);
+          expect(frameReads, equals(2));
+        });
+
+        test(
+          "reads that sender's videos again once it is 30 days old",
+          () async {
+            await leaveHungRead(_videoMessage(id: '1' * 64));
+            await createStore().previewFor(_videoMessage(id: '2' * 64));
+            for (final file in keptFiles()) {
+              file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+            }
+            await createStore().prune();
+
+            final preview = await createStore().previewFor(
+              _videoMessage(id: '3' * 64),
+            );
+
+            expect(preview, isNotNull);
+            expect(frameReads, equals(2));
+          },
+        );
+
+        test(
+          'keeps what it remembers of that sender while trimming for the cap',
+          () async {
+            await leaveHungRead(_videoMessage(id: '1' * 64));
+            await createStore().previewFor(_videoMessage(id: '2' * 64));
+            for (final file in keptFiles()) {
+              file.setLastModifiedSync(now.subtract(const Duration(hours: 2)));
+            }
+            keptFile(
+              '${'3' * 64}.mp4',
+              const [1, 2, 3, 4],
+              keptAt: now.subtract(const Duration(hours: 1)),
+            );
+            await createStore(maxBytes: 2).prune();
+
+            expect(
+              await createStore().previewFor(_videoMessage(id: '4' * 64)),
+              isNull,
+            );
+            expect(frameReads, equals(1));
+          },
+        );
+
+        test(
+          'takes no read still running in another store of the account for '
+          'one an earlier launch left',
+          () async {
+            await leaveHungRead(
+              _videoMessage(id: '1' * 64),
+              store: createStore(),
+            );
+
+            final preview = await createStore().previewFor(
+              _videoMessage(id: '2' * 64),
+            );
+
+            expect(preview, isNotNull);
+            expect(frameReads, equals(2));
+          },
+        );
+      });
+
+      group("after a sender's frame read finished without a frame", () {
+        test("still reads that sender's other videos", () async {
+          readFrame = (_) async => null;
+          expect(
+            await createStore(
+              launchId: 'earlier',
+            ).previewFor(_videoMessage(id: '1' * 64)),
+            isNull,
+          );
+          readFrame = (_) async => _frame;
+
+          final preview = await createStore().previewFor(
+            _videoMessage(id: '2' * 64),
+          );
+
+          expect(preview, isNotNull);
+          expect(frameReads, equals(2));
+        });
+
+        test(
+          "still reads that sender's other videos when the read failed",
+          () async {
+            readFrame = (_) async => throw StateError('decoder failed');
+            await expectLater(
+              createStore(
+                launchId: 'earlier',
+              ).previewFor(_videoMessage(id: '1' * 64)),
+              throwsStateError,
+            );
+            readFrame = (_) async => _frame;
+
+            final preview = await createStore().previewFor(
+              _videoMessage(id: '2' * 64),
+            );
+
+            expect(preview, isNotNull);
+            expect(frameReads, equals(2));
+          },
+        );
+      });
 
       test(
         'reads the frame from a video already kept, without fetching it again',
