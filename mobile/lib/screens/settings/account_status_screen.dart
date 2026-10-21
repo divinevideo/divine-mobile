@@ -82,13 +82,16 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
     final l10n = context.l10n;
     final async = ref.watch(accountEnforcementStatusProvider);
     final publishRestriction = widget.publishRestrictionConfirmed
-        ? AccountEnforcementKind.unknownRestriction
+        ? const AccountEnforcementStatus(
+            kind: AccountEnforcementKind.unknownRestriction,
+          )
         : null;
-    AccountEnforcementKind effectiveKind(AccountEnforcementKind kind) {
-      if (kind.isEnforced || kind == AccountEnforcementKind.signedOut) {
-        return kind;
+    AccountEnforcementStatus effective(AccountEnforcementStatus status) {
+      if (status.isEnforced ||
+          status.kind == AccountEnforcementKind.signedOut) {
+        return status;
       }
-      return publishRestriction ?? kind;
+      return publishRestriction ?? status;
     }
 
     return Scaffold(
@@ -113,7 +116,7 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             loading: () => publishRestriction == null
                 ? const Center(child: DivineCircularProgressIndicator())
                 : _StatusBody(
-                    kind: publishRestriction,
+                    status: publishRestriction,
                     openSupportMessages: widget.openSupportMessages,
                     composeEmail: widget.composeEmail,
                   ),
@@ -123,21 +126,17 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             // presenting an all-clear that Funnelcake never returned.
             error: (_, _) {
               final cached = async.value;
-              final cachedKind = cached?.kind;
-              final retainedKind = cachedKind?.isEnforced ?? false
-                  ? cachedKind
+              final retained = cached?.isEnforced ?? false
+                  ? cached
                   : publishRestriction;
-              if (retainedKind == null) {
+              if (retained == null) {
                 return _UnavailableBody(
                   onRetry: () =>
                       ref.invalidate(accountEnforcementStatusProvider),
                 );
               }
               return _StatusBody(
-                kind: retainedKind,
-                // A closure is a ban, which is enforced, so when the cache
-                // holds one it is also the kind retained above.
-                isAgeReviewClosure: cached?.isAgeReviewClosure ?? false,
+                status: retained,
                 isLastKnown: true,
                 onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
                 openSupportMessages: widget.openSupportMessages,
@@ -145,8 +144,7 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
               );
             },
             data: (status) => _StatusBody(
-              kind: effectiveKind(status.kind),
-              isAgeReviewClosure: status.isAgeReviewClosure,
+              status: effective(status),
               openSupportMessages: widget.openSupportMessages,
               composeEmail: widget.composeEmail,
             ),
@@ -196,19 +194,17 @@ class _UnavailableBody extends StatelessWidget {
 
 class _StatusBody extends StatelessWidget {
   const _StatusBody({
-    this.kind,
-    this.isAgeReviewClosure = false,
+    required this.status,
     this.isLastKnown = false,
     this.onRetry,
     this.openSupportMessages,
     this.composeEmail,
   });
 
-  final AccountEnforcementKind? kind;
-
-  /// Whether to explain an age-review closure in place of the generic ban
-  /// (support-trust-safety#260).
-  final bool isAgeReviewClosure;
+  /// The status to explain. Its category, not a separate flag, decides
+  /// whether an age-review closure replaces the generic ban
+  /// (support-trust-safety#260), so the two cannot disagree.
+  final AccountEnforcementStatus status;
   final bool isLastKnown;
   final VoidCallback? onRetry;
   final OpenSupportMessages? openSupportMessages;
@@ -216,25 +212,27 @@ class _StatusBody extends StatelessWidget {
 
   /// Whether relay enforcement has anything to say about this account.
   ///
-  /// A null kind and [AccountEnforcementKind.noRestrictionReported] mean no
-  /// restriction to report; the relay reports a real one at the moment of
-  /// action, so neither is worth telling the user Divine does not know.
+  /// [AccountEnforcementKind.noRestrictionReported] means no restriction to
+  /// report; the relay reports a real one at the moment of action, so it is
+  /// not worth telling the user Divine does not know.
   bool get _hasEnforcementToReport =>
-      kind != null && kind != AccountEnforcementKind.noRestrictionReported;
+      status.kind != AccountEnforcementKind.noRestrictionReported;
 
   @override
   Widget build(BuildContext context) {
     if (!_hasEnforcementToReport) return const _AllClearBody();
 
     final l10n = context.l10n;
-    final isEnforced = kind!.isEnforced;
+    final kind = status.kind;
+    final isEnforced = kind.isEnforced;
+    final isAgeReviewClosure = status.isAgeReviewClosure;
     final colors = context.vineColors;
     final heading = isAgeReviewClosure
         ? l10n.accountStatusAgeClosureHeading
-        : l10n.accountEnforcementHeading(kind!);
+        : l10n.accountEnforcementHeading(kind);
     final body = isAgeReviewClosure
         ? l10n.accountStatusAgeClosureBody
-        : l10n.accountEnforcementBody(kind!);
+        : l10n.accountEnforcementBody(kind);
 
     return ListView(
       padding: const EdgeInsets.all(16),

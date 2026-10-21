@@ -87,7 +87,12 @@ class AccountEnforcementStatus {
 
   /// Whether the account was closed by age review. A suspension in that
   /// category is an open case, which the review screens handle instead.
-  bool get isAgeReviewClosure =>
-      kind == AccountEnforcementKind.banned &&
-      category == AccountEnforcementCategory.ageReview;
+  ///
+  /// A switch over every category, so a new one has to be decided here
+  /// before it compiles rather than falling through to the generic ban.
+  bool get isAgeReviewClosure => switch (category) {
+    AccountEnforcementCategory.ageReview =>
+      kind == AccountEnforcementKind.banned,
+    null => false,
+  };
 }
