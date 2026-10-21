@@ -66,50 +66,21 @@ void main() {
     'wss://\u200D.example': false,
     'wss://\uFF0F.example': false,
   };
-  for (final item in relays.entries) {
-    test('signed relay normalization ${item.key}', () {
-      final replacement = signer.definition(createdAt: 110, relay: item.key);
-      final parsed = parseChallengeEvent(replacement);
-      expect(parsed.ok, item.value);
-      if (!item.value) expect(parsed.code, 'relay');
-      for (final events in [
-        [original.event, replacement],
-        [replacement, original.event],
-      ]) {
-        expect(
-          reduceChallenge(events, original.coordinate, 150, (_) => true).state,
-          item.value ? 'open' : 'unavailable',
-        );
-      }
-    });
-  }
 
-  for (final item in <String, bool>{
-    'wss://a${'\u0301' * 28000}': true,
-    'wss://xn--${'a' * 58000}': false,
-  }.entries) {
-    test(
-      'signed long ${item.value ? 'combining' : 'ACE'} host at 64 KiB',
-      () {
-        Map<String, Object?> event(int padding) => signer.definition(
-          createdAt: 110,
-          relay: item.key,
-          extra: [
-            ['padding', 'a' * padding],
-          ],
-        );
-        final baseSize = utf8.encode(jsonEncode(event(0))).length;
-        final atLimit = event(65536 - baseSize);
-        expect(utf8.encode(jsonEncode(atLimit)).length, 65536);
-        final parsed = parseChallengeEvent(atLimit);
-        expect(parsed.ok, item.value);
-        if (!item.value) expect(parsed.code, 'relay');
-        final overLimit = event(65537 - baseSize);
-        expect(parseChallengeEvent(overLimit).code, 'size');
-        for (final newest in [atLimit, overLimit]) {
+  group('parseChallengeEvent and reduceChallenge', () {
+    group('relay normalization', () {
+      for (final item in relays.entries) {
+        test('signed relay normalization ${item.key}', () {
+          final replacement = signer.definition(
+            createdAt: 110,
+            relay: item.key,
+          );
+          final parsed = parseChallengeEvent(replacement);
+          expect(parsed.ok, item.value);
+          if (!item.value) expect(parsed.code, 'relay');
           for (final events in [
-            [original.event, newest],
-            [newest, original.event],
+            [original.event, replacement],
+            [replacement, original.event],
           ]) {
             expect(
               reduceChallenge(
@@ -118,44 +89,92 @@ void main() {
                 150,
                 (_) => true,
               ).state,
-              identical(newest, atLimit) && item.value ? 'open' : 'unavailable',
+              item.value ? 'open' : 'unavailable',
             );
           }
-        }
-      },
-      // Regression budget only, not a performance guarantee for callers.
-      timeout: const Timeout(Duration(seconds: 30)),
-    );
-  }
+        });
+      }
+    });
 
-  for (final zone in [
-    'Pacific/\u212Airitimati',
-    'Europe/\u212Aiev',
-    'America/New_Yor\u212A',
-  ]) {
-    for (final endField in [false, true]) {
-      test('ASCII timezone matching $zone end=$endField', () {
-        final replacement = signer.definition(
-          createdAt: 110,
-          timezone: endField ? 'UTC' : zone,
-          endTimezone: endField ? zone : 'UTC',
+    group('signed relay size limits', () {
+      for (final item in <String, bool>{
+        'wss://a${'\u0301' * 28000}': true,
+        'wss://xn--${'a' * 58000}': false,
+      }.entries) {
+        test(
+          'signed long ${item.value ? 'combining' : 'ACE'} host at 64 KiB',
+          () {
+            Map<String, Object?> event(int padding) => signer.definition(
+              createdAt: 110,
+              relay: item.key,
+              extra: [
+                ['padding', 'a' * padding],
+              ],
+            );
+            final baseSize = utf8.encode(jsonEncode(event(0))).length;
+            final atLimit = event(65536 - baseSize);
+            expect(utf8.encode(jsonEncode(atLimit)).length, 65536);
+            final parsed = parseChallengeEvent(atLimit);
+            expect(parsed.ok, item.value);
+            if (!item.value) expect(parsed.code, 'relay');
+            final overLimit = event(65537 - baseSize);
+            expect(parseChallengeEvent(overLimit).code, 'size');
+            for (final newest in [atLimit, overLimit]) {
+              for (final events in [
+                [original.event, newest],
+                [newest, original.event],
+              ]) {
+                expect(
+                  reduceChallenge(
+                    events,
+                    original.coordinate,
+                    150,
+                    (_) => true,
+                  ).state,
+                  identical(newest, atLimit) && item.value
+                      ? 'open'
+                      : 'unavailable',
+                );
+              }
+            }
+          },
+          // Regression budget only, not a performance guarantee for callers.
+          timeout: const Timeout(Duration(seconds: 30)),
         );
-        expect(parseChallengeEvent(replacement).code, 'timezone');
-        for (final events in [
-          [original.event, replacement],
-          [replacement, original.event],
-        ]) {
-          expect(
-            reduceChallenge(
-              events,
-              original.coordinate,
-              150,
-              (_) => true,
-            ).state,
-            'unavailable',
-          );
+      }
+    });
+
+    group('timezone matching', () {
+      for (final zone in [
+        'Pacific/\u212Airitimati',
+        'Europe/\u212Aiev',
+        'America/New_Yor\u212A',
+      ]) {
+        for (final endField in [false, true]) {
+          test('ASCII timezone matching $zone end=$endField', () {
+            final replacement = signer.definition(
+              createdAt: 110,
+              timezone: endField ? 'UTC' : zone,
+              endTimezone: endField ? zone : 'UTC',
+            );
+            expect(parseChallengeEvent(replacement).code, 'timezone');
+            for (final events in [
+              [original.event, replacement],
+              [replacement, original.event],
+            ]) {
+              expect(
+                reduceChallenge(
+                  events,
+                  original.coordinate,
+                  150,
+                  (_) => true,
+                ).state,
+                'unavailable',
+              );
+            }
+          });
         }
-      });
-    }
-  }
+      }
+    });
+  });
 }

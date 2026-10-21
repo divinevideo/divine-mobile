@@ -1,5 +1,6 @@
 // Reproducible local measurement, not a latency guarantee or CI speed test.
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:challenge_protocol/challenge_protocol.dart';
 
@@ -99,8 +100,7 @@ void _measure(String name, Object? Function() action) {
   }
   samples.sort();
   // This command-line benchmark writes its measurements to standard output.
-  // ignore: avoid_print
-  print(
+  stdout.writeln(
     jsonEncode({'case': name, 'median_ms': samples[2], 'samples_ms': samples}),
   );
 }
