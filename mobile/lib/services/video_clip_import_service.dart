@@ -257,7 +257,9 @@ class VideoClipImportService {
   }) {
     return _importVerifiedClip(
       source: source,
-      clipId: 'dm_clip_${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}',
+      clipId:
+          '${DivineVideoClip.receivedDmClipIdPrefix}'
+          '${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}',
       c2paManifestId: c2paManifestId,
       senderPubkey: senderPubkey,
       targetAspectRatio: targetAspectRatio,
