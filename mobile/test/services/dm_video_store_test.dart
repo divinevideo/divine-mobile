@@ -3015,8 +3015,8 @@ void main() {
         );
 
         test(
-          'is left, with its read mark, while that store reads it, though '
-          'this one refuses it as gone',
+          'is left, with its read mark, while that store reads it, and '
+          'deleted once the read ends, when this one refuses it as gone',
           () async {
             final message = _videoMessage();
             final preview = await startRead(createStore(), message);
@@ -3030,6 +3030,7 @@ void main() {
             expect(markOf(message).existsSync(), isTrue);
             read.complete(_frame);
             await preview;
+            expect(keptFiles(), isEmpty);
           },
         );
 
@@ -3045,8 +3046,8 @@ void main() {
         });
 
         test(
-          'is left, with its read mark, while that store reads it, though its '
-          'message is gone',
+          'is left, with its read mark, while that store reads it, and '
+          'deleted once the read ends, when its message is gone',
           () async {
             final message = _videoMessage();
             final preview = await startRead(createStore(), message);
@@ -3057,6 +3058,7 @@ void main() {
             expect(markOf(message).existsSync(), isTrue);
             read.complete(_frame);
             await preview;
+            expect(keptFiles(), isEmpty);
           },
         );
 

@@ -590,9 +590,11 @@ class DmVideoStore {
       if (gone.contains(id)) {
         if (_leases.containsKey(file.path)) {
           _goneWhileLeased.add(file.path);
-        } else if (_isSatellite(file) && leased.contains(id) ||
-            _usedByStores(file, except: this, holds: false)) {
-          // Another store's read lets go of it before a later prune.
+        } else if (_isSatellite(file) && leased.contains(id)) {
+          continue;
+        } else if (_usedByStores(file, except: this, holds: false)) {
+          // That store deletes it once its read lets go of it.
+          _markGoneInOtherStores(file);
           continue;
         } else {
           _deleteNow(file);
@@ -980,6 +982,7 @@ class DmVideoStore {
     }
     if (!gone) return;
     _goneWhileLeased.add(video.path);
+    _markGoneInOtherStores(video);
     throw const DmVideoGoneException();
   }
 
@@ -1414,6 +1417,23 @@ class DmVideoStore {
       }
     }
     return false;
+  }
+
+  /// Marks the videos of [file]'s message that other stores lease as gone,
+  /// so each store deletes what is kept for the message once it lets go.
+  void _markGoneInOtherStores(File file) {
+    final id = _messageIdOf(file);
+    for (final entry in _stores) {
+      final store = entry.target;
+      if (store == null || identical(store, this)) continue;
+      for (final path in store._leases.keys) {
+        final leased = File(path);
+        if (leased.parent.path == file.parent.path &&
+            _messageIdOf(leased) == id) {
+          store._goneWhileLeased.add(path);
+        }
+      }
+    }
   }
 
   static void _deleteUnusedByStores(File file) {
