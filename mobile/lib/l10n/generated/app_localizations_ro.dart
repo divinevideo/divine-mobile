@@ -16234,4 +16234,15 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videoclipul tău a fost trimis pentru verificare.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Videoclip trimis';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Videoclipul tău este trimis în privat echipelor de asistență și de încredere și siguranță ale Divine pentru verificare. Nu este publicat sau distribuit altor utilizatori.';
 }

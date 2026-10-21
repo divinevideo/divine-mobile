@@ -16046,4 +16046,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Your video has been submitted for review.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video submitted';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.';
 }
