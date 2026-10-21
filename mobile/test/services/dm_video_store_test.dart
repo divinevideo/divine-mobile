@@ -3500,17 +3500,25 @@ void main() {
       );
 
       test('never deletes a video whose frame is being read', () async {
+        final frameReadStarted = Completer<void>();
         final frameRead = Completer<Uint8List?>();
-        readFrame = (_) => frameRead.future;
-        final store = createStore();
+        readFrame = (_) {
+          frameReadStarted.complete();
+          return frameRead.future;
+        };
+        // Over the size cap from the start.
+        final store = createStore(maxBytes: 1);
         final message = _videoMessage();
         final video = keptFile(
           DmVideoStore.videoFileNameFor(message),
           _plaintext,
-          keptAt: now.subtract(const Duration(days: 31)),
+          keptAt: now,
         );
         final preview = store.previewFor(message);
-        await pumpEventQueue();
+        await frameReadStarted.future;
+        // And past its age before the prune runs: one past its age when the
+        // card asks is fetched again instead.
+        now = now.add(const Duration(days: 31));
 
         await store.prune();
         expect(video.existsSync(), isTrue);
