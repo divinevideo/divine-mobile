@@ -9,6 +9,7 @@ import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/services/haptic_service.dart';
+import 'package:openvine/services/temp_render_janitor.dart';
 import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:path/path.dart' as p;
@@ -316,6 +317,10 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
 
   static Future<Directory> _defaultScratchDirectory() async {
     final temporary = await getTemporaryDirectory();
-    return Directory(p.join(temporary.path, 'sound_recordings'));
+    // The Storage screen clears this folder, which is how a recording cut
+    // off by the app being killed gets removed.
+    return Directory(
+      p.join(temporary.path, TempRenderDirectories.soundRecordings),
+    );
   }
 }

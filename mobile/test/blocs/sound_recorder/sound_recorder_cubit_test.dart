@@ -7,7 +7,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/sound_recorder/sound_recorder_cubit.dart';
+import 'package:openvine/services/temp_render_janitor.dart';
 import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:sound_service/sound_service.dart';
 
@@ -280,6 +283,33 @@ void main() {
         await cubit.close();
 
         expect(unclaimed.existsSync(), isFalse);
+      });
+    });
+
+    group('scratch folder', () {
+      // A recording cut off by the app being killed is never deleted by the
+      // recorder, so its folder must be one the Storage screen clears.
+      test('is one the Storage screen counts and clears', () async {
+        final cubit = SoundRecorderCubit(
+          permissionsService: permissions,
+          audioSessionService: audioSession,
+          recorder: recorder,
+          now: () => recorder.now,
+        );
+        // Runs after close(), which deletes the in-progress file, so the
+        // shared temp folder is left as it was found.
+        addTearDown(() {
+          final folder = File(recorder.path!).parent;
+          if (folder.listSync().isEmpty) folder.deleteSync();
+        });
+        addTearDown(cubit.close);
+
+        await cubit.start();
+
+        final folder = File(recorder.path!).parent;
+        final temporary = await getTemporaryDirectory();
+        expect(folder.parent.path, temporary.path);
+        expect(TempRenderDirectories.all, contains(p.basename(folder.path)));
       });
     });
 
