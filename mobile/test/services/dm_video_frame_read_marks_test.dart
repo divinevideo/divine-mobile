@@ -223,6 +223,26 @@ void main() {
       );
 
       test(
+        "goes on skipping the sender while another store's read of theirs "
+        'hangs',
+        () {
+          final first = markOf('1');
+          final second = markOf('2');
+          final marks = createMarks(launchId: 'this')
+            ..readStarted(first, _sender)
+            ..readHung(first);
+          final other = createMarks(launchId: 'this')
+            ..readStarted(second, _sender)
+            ..readHung(second);
+
+          marks.frameKept(first);
+
+          expect(marks.senderHungTheDecoder(dir, _sender), isTrue);
+          expect(other.senderHungTheDecoder(dir, _sender), isTrue);
+        },
+      );
+
+      test(
         'stops skipping the sender once a later hung read keeps a frame, '
         'though an earlier one ended without',
         () {
