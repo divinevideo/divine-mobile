@@ -78,6 +78,7 @@ class _FakeAttribution extends Fake implements AudioShareAttribution {}
 class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   final loadedPaths = <String>[];
   Completer<void>? _playing;
+  Completer<void>? stopGate;
 
   @override
   Future<Duration?> loadAudioFromFile(String filePath) async {
@@ -95,7 +96,10 @@ class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   Future<void> pause() async => _resolvePlay();
 
   @override
-  Future<void> stop() async => _resolvePlay();
+  Future<void> stop() async {
+    await stopGate?.future;
+    _resolvePlay();
+  }
 
   void _resolvePlay() {
     final playing = _playing;
@@ -785,7 +789,7 @@ void main() {
         await pumpView(tester);
 
         await tester.tap(find.byKey(const Key('add_sound_record')));
-        await tester.pumpAndSettle();
+        await settleRecorder(tester);
         expect(find.text(l10n.soundsRecordFailed), findsOneWidget);
 
         // Let the first snackbar time out so the second has to be a new one.
@@ -794,7 +798,7 @@ void main() {
         expect(find.text(l10n.soundsRecordFailed), findsNothing);
 
         await tester.tap(find.byKey(const Key('add_sound_record')));
-        await tester.pumpAndSettle();
+        await settleRecorder(tester);
         expect(find.text(l10n.soundsRecordFailed), findsOneWidget);
       });
 
@@ -886,6 +890,35 @@ void main() {
         expect(File(recorder.path!).existsSync(), isFalse);
       });
 
+      testWidgets(
+        'does not start capture under a covering screen after permission',
+        (
+          tester,
+        ) async {
+          final permission = Completer<PermissionStatus>();
+          when(permissions.checkMicrophoneStatus)
+              .thenAnswer((_) => permission.future);
+          await pumpView(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pump();
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text('covering')),
+            ),
+          );
+          await tester.pump();
+
+          permission.complete(PermissionStatus.granted);
+          await tester.pumpAndSettle();
+          await settleRecorder(tester);
+
+          expect(cubit.state.isRecording, isFalse);
+          expect(recorder.path, isNull);
+        },
+      );
+
       testWidgets('stops a recording when the app is hidden and keeps it', (
         tester,
       ) async {
@@ -911,6 +944,39 @@ void main() {
 
         expect(find.byKey(const Key('add_sound_record_again')), findsOneWidget);
       });
+
+      testWidgets(
+        'rechecks visibility after stopping a preview before recording again',
+        (
+          tester,
+        ) async {
+          await pumpView(tester);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          recorder.emitLevel(0.6);
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+          await settleRecorder(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pumpAndSettle();
+          audio.stopGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text('covering')),
+            ),
+          );
+          await tester.pump();
+
+          audio.stopGate!.complete();
+          await settleRecorder(tester);
+
+          expect(cubit.state.isRecording, isFalse);
+        },
+      );
 
       testWidgets('blocks back navigation while sharing', (tester) async {
         final gate = Completer<LocalAudioPublishResult>();

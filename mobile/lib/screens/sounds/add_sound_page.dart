@@ -151,6 +151,8 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
     context.read<SoundRecorderCubit>().dismissPermissionNotice();
     await _stopPreview();
     if (!mounted) return;
+    final recorder = context.read<SoundRecorderCubit>().state;
+    if (recorder.isStarting || recorder.isActive) return;
     await context.read<AddSoundCubit>().pickFileAndImport();
   }
 
@@ -158,6 +160,15 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
     // The microphone would pick up the preview.
     await _stopPreview();
     if (!mounted) return;
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (ModalRoute.isCurrentOf(context) == false ||
+        lifecycle == AppLifecycleState.hidden ||
+        lifecycle == AppLifecycleState.paused ||
+        lifecycle == AppLifecycleState.detached) {
+      return;
+    }
+    final sound = context.read<AddSoundCubit>().state;
+    if (sound.isBusy || sound.isPublished) return;
     await context.read<SoundRecorderCubit>().start();
   }
 
@@ -167,7 +178,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
   /// while the recorder is on screen.
   void _stopRecordingOutOfSight() {
     final recorder = context.read<SoundRecorderCubit>();
-    if (!recorder.state.isRecording) return;
+    if (!recorder.state.isRecording && !recorder.state.isStarting) return;
     runDetached(
       recorder.stop(),
       'stop a recording that went out of sight',

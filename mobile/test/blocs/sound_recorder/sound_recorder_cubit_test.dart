@@ -247,6 +247,40 @@ void main() {
     });
 
     group('stop', () {
+      test('does not miss a system pause during native startup', () async {
+        recorder.startGate = Completer<void>();
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+
+        await recorder.pauseBySystem();
+        recorder.startGate!.complete();
+        await starting;
+
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+        expect(recorder.stopCount, 1);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      test(
+        'aborts an in-flight native start when visibility requests stop',
+        () async {
+          recorder.startGate = Completer<void>();
+          final cubit = build();
+          final starting = cubit.start();
+          await pumpEventQueue();
+          expect(cubit.state.isStarting, isTrue);
+
+          await cubit.stop();
+          recorder.startGate!.complete();
+          await starting;
+
+          expect(cubit.state.status, SoundRecorderStatus.idle);
+          expect(recorder.stopCount, 1);
+          expect(File(recorder.path!).existsSync(), isFalse);
+        },
+      );
+
       test(
         'uses elapsed clock time instead of counting meter samples',
         () async {

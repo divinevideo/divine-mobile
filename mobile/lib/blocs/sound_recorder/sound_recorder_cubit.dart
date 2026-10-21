@@ -88,6 +88,9 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   // step that resumes after an await checks this instead, so nothing it
   // creates outlives the cleanup close() has already done.
   bool _closing = false;
+  bool _startCancelled = false;
+
+  bool get _shouldAbortStart => _closing || _startCancelled;
 
   /// Asks for microphone access if needed, then starts recording.
   ///
@@ -96,16 +99,17 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   Future<void> start() async {
     if (state.isActive || _isTransitioning) return;
     _isTransitioning = true;
+    _startCancelled = false;
     // Announced before the permission prompt and the native start, so the
     // screen can lock the file picker meanwhile. It also makes a repeated
     // failure a new status transition for the view's error listener.
     emitIfOpen(state.copyWith(status: SoundRecorderStatus.starting));
     try {
       var permission = await _permissionsService.checkMicrophoneStatus();
-      if (_closing) return;
+      if (_shouldAbortStart) return;
       if (permission == PermissionStatus.canRequest) {
         permission = await _permissionsService.requestMicrophonePermission();
-        if (_closing) return;
+        if (_shouldAbortStart) return;
       }
       if (permission != PermissionStatus.granted) {
         emitIfOpen(
@@ -119,6 +123,13 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       emitIfOpen(state.copyWith(status: SoundRecorderStatus.failed));
     } finally {
       _isTransitioning = false;
+      if (_startCancelled && !_closing) {
+        if (state.isRecording) {
+          await stop();
+        } else if (state.isStarting) {
+          emitIfOpen(state.copyWith(status: SoundRecorderStatus.idle));
+        }
+      }
     }
   }
 
@@ -127,6 +138,12 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   ///
   /// A sample-less recording shorter than one metering interval is discarded.
   Future<void> stop() async {
+    // Losing visibility while the permission prompt/native start is pending
+    // must prevent that work from opening a microphone under another screen.
+    if (state.isStarting || (_isTransitioning && state.isRecording)) {
+      _startCancelled = true;
+      return;
+    }
     if (!state.isRecording || _isTransitioning) return;
     _isTransitioning = true;
     emitIfOpen(state.copyWith(status: SoundRecorderStatus.stopping));
@@ -208,7 +225,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     // the screen never claimed.
     _deleteFile(state.recordingPath);
     final directory = await _scratchDirectoryProvider();
-    if (_closing) return;
+    if (_shouldAbortStart) return;
     directory.createSync(recursive: true);
 
     final path = p.join(
@@ -216,20 +233,26 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       'sound_${DateTime.now().microsecondsSinceEpoch}.m4a',
     );
     _currentPath = path;
+    // Listen before the native await: an interruption can arrive while the
+    // microphone is opening, before the start acknowledgement reaches Dart.
+    _systemPauseSubscription = _recorder.systemPauses.listen(
+      (_) => _stopOnItsOwn('stop a recording the system paused'),
+    );
     try {
       await _recorder.start(path);
     } catch (_) {
+      await _stopMetering();
       await _safeResetSession();
       _deleteFile(path);
       _currentPath = null;
       rethrow;
     }
 
-    // close() ran while the recorder started, before this file existed and
-    // while the take was not yet active, so it neither stopped the recorder
-    // nor reset the session. Undo the start here, and never arm the length
-    // timer or announce a recording.
-    if (_closing) {
+    // A close or loss of visibility can land before native startup settles.
+    // Undo that unfinished start here, and never arm the length timer or
+    // announce a recording behind the covering screen.
+    if (_shouldAbortStart) {
+      await _stopMetering();
       await _safeStopRecorder();
       await _safeResetSession();
       _deleteFile(path);
@@ -254,12 +277,6 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     );
     unawaited(HapticService.recordingFeedback());
     _amplitudeSubscription = _recorder.amplitudeStream.listen(_onAmplitude);
-    // A call, Siri or another app taking audio focus pauses capture, and
-    // nothing resumes it. End the take there, as the length limit does,
-    // rather than keep showing a recording that is not recording.
-    _systemPauseSubscription = _recorder.systemPauses.listen(
-      (_) => _stopOnItsOwn('stop a recording the system paused'),
-    );
   }
 
   /// Stops the take without the person tapping stop, keeping it.
