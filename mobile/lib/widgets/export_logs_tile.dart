@@ -11,6 +11,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_position_origin.dart';
+import 'package:openvine/widgets/support_tile.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Hands the captured log file to the system share sheet.
@@ -55,25 +56,10 @@ class _ExportLogsTileView extends StatelessWidget {
     return BlocListener<ExportLogsCubit, ExportLogsState>(
       listenWhen: (previous, current) => previous.status != current.status,
       listener: _showOutcome,
-      child: ListTile(
-        leading: DivineIcon(
-          icon: DivineIconName.save,
-          color: context.vineColors.accentPositive,
-        ),
-        title: Text(
-          l10n.supportSaveLogs,
-          style: VineTheme.titleMediumFont(
-            color: context.vineColors.primaryText,
-          ),
-        ),
-        subtitle: Text(
-          l10n.supportSaveLogsSubtitle,
-          style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
-        ),
-        trailing: DivineIcon(
-          icon: DivineIconName.caretRight,
-          color: context.vineColors.mutedText,
-        ),
+      child: SupportTile(
+        icon: DivineIconName.save,
+        title: l10n.supportSaveLogs,
+        subtitle: l10n.supportSaveLogsSubtitle,
         // Resolve the popover anchor before the cubit's first await — the
         // iPad idiom (including iOS builds on Apple Silicon Macs) rejects the
         // share sheet without it.

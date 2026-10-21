@@ -22,6 +22,7 @@ import 'package:openvine/widgets/delete_account_action.dart';
 import 'package:openvine/widgets/export_logs_tile.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
 import 'package:openvine/widgets/support_contact_action.dart';
+import 'package:openvine/widgets/support_tile.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -64,14 +65,14 @@ class SupportCenterScreen extends ConsumerWidget {
                 composeEmail: composeEmail,
               ),
               if (isAuthenticated)
-                _SupportTile(
+                SupportTile(
                   icon: DivineIconName.warningCircle,
                   title: l10n.supportReportBug,
                   subtitle: l10n.supportReportBugSubtitle,
                   onTap: () => _showBugReport(context, userPubkey),
                 ),
               if (isAuthenticated)
-                _SupportTile(
+                SupportTile(
                   icon: DivineIconName.sparkle,
                   title: l10n.supportRequestFeature,
                   subtitle: l10n.supportRequestFeatureSubtitle,
@@ -84,20 +85,18 @@ class SupportCenterScreen extends ConsumerWidget {
               // above the outbound links rather than last so it stays on
               // screen without scrolling on a 667pt phone.
               if (isAuthenticated)
-                _SupportTile(
+                SupportTile(
                   icon: DivineIconName.trash,
                   title: l10n.nostrSettingsDeleteAccount,
                   subtitle: l10n.nostrSettingsDeleteAccountSubtitle,
-                  iconColor: VineTheme.error,
-                  titleColor: VineTheme.error,
-                  trailingColor: VineTheme.error,
+                  destructive: true,
                   onTap: () => startAccountDeletionFlow(
                     context: context,
                     ref: ref,
                     screenName: 'SupportCenterScreen',
                   ),
                 ),
-              _SupportTile(
+              SupportTile(
                 icon: DivineIconName.question,
                 title: l10n.supportFaq,
                 subtitle: l10n.supportFaqSubtitle,
@@ -107,7 +106,7 @@ class SupportCenterScreen extends ConsumerWidget {
                   l10n.supportFaq,
                 ),
               ),
-              _SupportTile(
+              SupportTile(
                 icon: DivineIconName.users,
                 title: l10n.supportFamily,
                 subtitle: l10n.supportFamilySubtitle,
@@ -117,7 +116,7 @@ class SupportCenterScreen extends ConsumerWidget {
                   l10n.supportFamily,
                 ),
               ),
-              _SupportTile(
+              SupportTile(
                 icon: DivineIconName.userFocus,
                 title: l10n.supportKids,
                 subtitle: l10n.supportKidsSubtitle,
@@ -127,7 +126,7 @@ class SupportCenterScreen extends ConsumerWidget {
                   l10n.supportKids,
                 ),
               ),
-              _SupportTile(
+              SupportTile(
                 icon: DivineIconName.shieldCheck,
                 title: l10n.supportProofMode,
                 subtitle: l10n.supportProofModeSubtitle,
@@ -209,57 +208,6 @@ class SupportCenterScreen extends ConsumerWidget {
   }
 }
 
-class _SupportTile extends StatelessWidget {
-  const _SupportTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.iconColor,
-    this.titleColor,
-    this.trailingColor,
-    this.trailing,
-  });
-
-  final DivineIconName icon;
-  final Color? iconColor;
-
-  /// Overrides the title colour, for destructive entries.
-  final Color? titleColor;
-  final Color? trailingColor;
-  final Widget? trailing;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: DivineIcon(
-        icon: icon,
-        color: iconColor ?? context.vineColors.accentPositive,
-      ),
-      title: Text(
-        title,
-        style: VineTheme.titleMediumFont(
-          color: titleColor ?? context.vineColors.primaryText,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
-      ),
-      trailing:
-          trailing ??
-          DivineIcon(
-            icon: DivineIconName.caretRight,
-            color: trailingColor ?? context.vineColors.mutedText,
-          ),
-      onTap: onTap,
-    );
-  }
-}
-
 class _SupportContactTile extends StatelessWidget {
   const _SupportContactTile({
     this.openSupportMessages,
@@ -276,7 +224,7 @@ class _SupportContactTile extends StatelessWidget {
       openSupportMessages: openSupportMessages,
       composeEmail: composeEmail,
       builder: (context, isOpening, openSupport) {
-        return _SupportTile(
+        return SupportTile(
           icon: DivineIconName.chat,
           title: l10n.supportContactSupport,
           subtitle: l10n.supportContactSupportSubtitle,
@@ -327,7 +275,7 @@ class _ClearLogsTileView extends StatelessWidget {
             DivineSnackbarContainer.snackBar(context.l10n.supportLogsCleared),
           );
       },
-      child: _SupportTile(
+      child: SupportTile(
         icon: DivineIconName.trashSimple,
         title: l10n.supportClearLogs,
         subtitle: l10n.supportClearLogsSubtitle,

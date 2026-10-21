@@ -22,6 +22,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/delete_account_action.dart';
 import 'package:openvine/widgets/export_logs_tile.dart';
 import 'package:openvine/widgets/support_contact_action.dart';
+import 'package:openvine/widgets/support_tile.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -412,27 +413,11 @@ class _LoadedView extends ConsumerWidget {
         // Keyed like the appeal, so a refresh that adds a primary action
         // above it moves the tile rather than dropping an export in flight.
         const ExportLogsTile(key: ValueKey('exportLogs')),
-        ListTile(
-          leading: DivineIcon(
-            icon: DivineIconName.trash,
-            color: context.vineColors.onErrorContainer,
-          ),
-          title: Text(
-            l10n.nostrSettingsDeleteAccount,
-            style: VineTheme.titleMediumFont(
-              color: context.vineColors.onErrorContainer,
-            ),
-          ),
-          subtitle: Text(
-            l10n.nostrSettingsDeleteAccountSubtitle,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.mutedText,
-            ),
-          ),
-          trailing: DivineIcon(
-            icon: DivineIconName.caretRight,
-            color: context.vineColors.onErrorContainer,
-          ),
+        SupportTile(
+          icon: DivineIconName.trash,
+          title: l10n.nostrSettingsDeleteAccount,
+          subtitle: l10n.nostrSettingsDeleteAccountSubtitle,
+          destructive: true,
           onTap: onDeleteAccount,
         ),
         const SizedBox(height: 24),
