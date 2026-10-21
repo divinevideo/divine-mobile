@@ -12,6 +12,7 @@ import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_files.dart';
 import 'package:openvine/services/dm_video_frame_read_marks.dart';
+import 'package:openvine/services/dm_video_gone_lookups.dart';
 import 'package:openvine/services/dm_video_preview.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/one_at_a_time.dart';
@@ -98,11 +99,14 @@ class DmVideoStore {
        _removalsAtCreation = _removals[dmVideoSafeName(ownerPubkey)] ?? 0,
        _fetchVideo = fetchVideo,
        _readFrame = readFrame ?? _readCardFrameUntilSettled,
-       _isMessageGone = isMessageGone,
-       _isConversationRemoved = isConversationRemoved,
-       _findMessageLocation = findMessageLocation,
        _rootDirectory = rootDirectory ?? getApplicationCacheDirectory,
        _now = now ?? DateTime.now {
+    _gone = DmVideoGoneLookups(
+      records: _records,
+      isMessageGone: isMessageGone,
+      isConversationRemoved: isConversationRemoved,
+      findMessageLocation: findMessageLocation,
+    );
     _stores.removeWhere((entry) => entry.target == null);
     _stores.add(WeakReference(this));
   }
@@ -202,11 +206,7 @@ class DmVideoStore {
   final int _removalsAtCreation;
   final DmVideoFetcher _fetchVideo;
   final DmVideoFrameReader _readFrame;
-  final Future<bool> Function(String messageId)? _isMessageGone;
-  final Future<bool> Function(String conversationId, int sentAt)?
-  _isConversationRemoved;
-  final Future<DmVideoMessageLocation?> Function(String messageId)?
-  _findMessageLocation;
+  late final DmVideoGoneLookups _gone;
   final Future<Directory> Function() _rootDirectory;
   final DateTime Function() _now;
 
@@ -565,8 +565,19 @@ class DmVideoStore {
     // Before a gone message's frame-read mark can be deleted unread.
     _frameReadMarks.lookForUnfinishedReads(dir);
     if (!dir.existsSync()) return;
-    final gone = await _goneMessageIds(
-      await dir.list().where((entity) => entity is File).cast<File>().toList(),
+    final listed = await dir
+        .list()
+        .where((entity) => entity is File)
+        .cast<File>()
+        .toList();
+    final gone = await _gone.goneAmong(
+      {for (final file in listed) _messageIdOf(file)},
+      dir,
+      {
+        for (final file in listed)
+          if (DmVideoConversationRecords.isRecord(file))
+            _messageIdOf(file): file,
+      },
     );
     // Listed again where nothing awaits: a frame written during the lookups
     // is seen too, and no file can be handed out between the check that it
@@ -961,13 +972,7 @@ class DmVideoStore {
   Future<void> _refuseIfGone(DmMessage message, File video) async {
     final bool gone;
     try {
-      gone =
-          await _isMessageGone?.call(message.id) == true ||
-          await _isConversationRemoved?.call(
-                message.conversationId,
-                message.createdAt,
-              ) ==
-              true;
+      gone = await _gone.isGone(message);
     } on Object catch (error) {
       Log.warning(
         'Could not tell whether a video DM message is gone, so its video is '
@@ -1179,62 +1184,6 @@ class DmVideoStore {
     // Its late native reply still supplies a frame without another decode.
     if (!_kept.isClosed) _kept.add(message.id);
     return preview;
-  }
-
-  /// Ids of the messages behind [files] that are gone. A lookup that fails
-  /// keeps its message's files. On the way, the record of a message a repair
-  /// moved to another conversation is rewritten to say where it is now.
-  Future<Set<String>> _goneMessageIds(List<File> files) async {
-    final isGone = _isMessageGone;
-    final isRemoved = _isConversationRemoved;
-    if (isGone == null && isRemoved == null) return const {};
-    final ids = {for (final file in files) _messageIdOf(file)};
-    final records = {
-      for (final file in files)
-        if (DmVideoConversationRecords.isRecord(file)) _messageIdOf(file): file,
-    };
-    final gone = <String>{};
-    for (final id in ids) {
-      try {
-        if (isGone != null && await isGone(id)) {
-          gone.add(id);
-          continue;
-        }
-        if (isRemoved == null) continue;
-        final current = await _findMessageLocation?.call(id);
-        if (current != null) {
-          if (await isRemoved(current.conversationId, current.sentAt)) {
-            gone.add(id);
-          } else {
-            // A group repair may have moved this message since it was kept.
-            await _records.refresh(
-              records[id] ??
-                  DmVideoConversationRecords.recordOf(files.first.parent, id),
-              id,
-              current,
-            );
-          }
-          continue;
-        }
-        final record = records[id];
-        if (record == null) continue;
-        final said = await DmVideoConversationRecords.read(record);
-        if (said != null && await isRemoved(said.conversationId, said.sentAt)) {
-          gone.add(id);
-        }
-      } on PathNotFoundException {
-        // Deleted since the listing, as the launch sweep deletes an expired
-        // video's files: there is nothing left to decide.
-      } on Object catch (error) {
-        Log.warning(
-          'Could not tell whether a kept video DM message is gone: '
-          '${error.runtimeType}',
-          name: _logName,
-          category: LogCategory.video,
-        );
-      }
-    }
-    return gone;
   }
 
   /// The message id a kept file is named after: its name up to the first dot.

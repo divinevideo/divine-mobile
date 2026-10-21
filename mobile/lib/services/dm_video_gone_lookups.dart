@@ -1,0 +1,103 @@
+// ABOUTME: Tells the video DM store which kept videos' messages are gone,
+// ABOUTME: retracted by their sender or removed with their conversation.
+
+import 'dart:io';
+
+import 'package:models/models.dart';
+import 'package:openvine/services/dm_video_conversation_records.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+/// Whether the messages of one account's kept video DMs are gone: retracted
+/// by their sender, or removed with their conversation. Answered by the
+/// lookups the store was given; without them, nothing is gone.
+class DmVideoGoneLookups {
+  /// Creates the lookups of one store. [records] are the conversation
+  /// records beside its kept videos, which [goneAmong] reads when a message's
+  /// row is missing and refreshes when a repair moved the message.
+  DmVideoGoneLookups({
+    required DmVideoConversationRecords records,
+    Future<bool> Function(String messageId)? isMessageGone,
+    Future<bool> Function(String conversationId, int sentAt)?
+    isConversationRemoved,
+    Future<DmVideoMessageLocation?> Function(String messageId)?
+    findMessageLocation,
+  }) : _records = records,
+       _isMessageGone = isMessageGone,
+       _isConversationRemoved = isConversationRemoved,
+       _findMessageLocation = findMessageLocation;
+
+  // The lookups decide what the store deletes, so they log under its name.
+  static const String _logName = 'DmVideoStore';
+
+  final DmVideoConversationRecords _records;
+  final Future<bool> Function(String messageId)? _isMessageGone;
+  final Future<bool> Function(String conversationId, int sentAt)?
+  _isConversationRemoved;
+  final Future<DmVideoMessageLocation?> Function(String messageId)?
+  _findMessageLocation;
+
+  /// Whether [message] was retracted or removed with its conversation.
+  /// Throws what a lookup throws.
+  Future<bool> isGone(DmMessage message) async =>
+      await _isMessageGone?.call(message.id) == true ||
+      await _isConversationRemoved?.call(
+            message.conversationId,
+            message.createdAt,
+          ) ==
+          true;
+
+  /// The ids among [ids] of messages kept in [dir] that are gone, with
+  /// [records] their conversation records by message id. A lookup that
+  /// fails keeps its message's files. On the way, the record of a message a
+  /// repair moved to another conversation is rewritten to say where it is.
+  Future<Set<String>> goneAmong(
+    Set<String> ids,
+    Directory dir,
+    Map<String, File> records,
+  ) async {
+    final isGone = _isMessageGone;
+    final isRemoved = _isConversationRemoved;
+    if (isGone == null && isRemoved == null) return const {};
+    final gone = <String>{};
+    for (final id in ids) {
+      try {
+        if (isGone != null && await isGone(id)) {
+          gone.add(id);
+          continue;
+        }
+        if (isRemoved == null) continue;
+        final current = await _findMessageLocation?.call(id);
+        if (current != null) {
+          if (await isRemoved(current.conversationId, current.sentAt)) {
+            gone.add(id);
+          } else {
+            // A group repair may have moved this message since it was kept.
+            await _records.refresh(
+              records[id] ?? DmVideoConversationRecords.recordOf(dir, id),
+              id,
+              current,
+            );
+          }
+          continue;
+        }
+        final record = records[id];
+        if (record == null) continue;
+        final said = await DmVideoConversationRecords.read(record);
+        if (said != null && await isRemoved(said.conversationId, said.sentAt)) {
+          gone.add(id);
+        }
+      } on PathNotFoundException {
+        // Deleted since the listing, as the launch sweep deletes an expired
+        // video's files: there is nothing left to decide.
+      } on Object catch (error) {
+        Log.warning(
+          'Could not tell whether a kept video DM message is gone: '
+          '${error.runtimeType}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      }
+    }
+    return gone;
+  }
+}
