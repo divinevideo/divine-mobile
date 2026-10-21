@@ -3125,9 +3125,10 @@ void main() {
           expect(prunes, equals(2));
 
           now = now.add(DmVideoStore.foregroundPruneInterval);
-          store
-            ..appInForeground = false
-            ..appInForeground = true;
+          store.appInForeground = false;
+          // Going to the background prunes nothing.
+          expect(prunes, equals(2));
+          store.appInForeground = true;
           await store.prune();
           // Coming back pruned, and the prune asked for meanwhile ran after.
           expect(prunes, equals(4));
