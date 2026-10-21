@@ -23,6 +23,11 @@ import '../../helpers/url_launcher_test_double.dart';
 const _pubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
+const _closure = AccountEnforcementStatus(
+  kind: AccountEnforcementKind.banned,
+  category: AccountEnforcementCategory.ageReview,
+);
+
 Future<void> _pumpWith(
   WidgetTester tester,
   AccountEnforcementKind kind, {
@@ -181,6 +186,101 @@ void main() {
 
         expect(launcher.launched.single.url, AppConstants.kidsGreenlightUrl);
       });
+
+      // A rejected like or upload opens the screen with publish evidence while
+      // the status reloads. That evidence cannot tell a closure from any other
+      // ban, so the reload must not swap in the generic paths a closure drops.
+      testWidgets(
+        'keeps the closure while a publish-confirmed screen reloads',
+        (
+          tester,
+        ) async {
+          final reload = Completer<AccountEnforcementStatus>();
+          var fetches = 0;
+          final container = ProviderContainer(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountEnforcementStatusProvider.overrideWith((ref) {
+                fetches++;
+                return fetches == 1 ? Future.value(_closure) : reload.future;
+              }),
+            ],
+          );
+          addTearDown(container.dispose);
+          final settings = container.listen(
+            accountEnforcementStatusProvider,
+            (_, _) {},
+          );
+          addTearDown(settings.close);
+          await container.read(accountEnforcementStatusProvider.future);
+          tester.view.physicalSize = const Size(1080, 2600);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
+
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: AccountStatusScreen(publishRestrictionConfirmed: true),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(fetches, 2);
+          expect(
+            find.text(l10n.accountStatusAgeClosureHeading),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+          reload.complete(_closure);
+          await tester.pumpAndSettle();
+        },
+      );
+
+      // The usual case once the launch notice has let go of the status: the
+      // screen opens with nothing cached and only the session's memory.
+      testWidgets(
+        'explains a closure confirmed earlier while the status loads',
+        (
+          tester,
+        ) async {
+          final load = Completer<AccountEnforcementStatus>();
+          tester.view.physicalSize = const Size(1080, 2600);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+                accountRestrictionMemoryProvider.overrideWithValue(
+                  AccountRestrictionMemory()..record(_pubkey, _closure),
+                ),
+                accountEnforcementStatusProvider.overrideWith(
+                  (ref) => load.future,
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: AccountStatusScreen(publishRestrictionConfirmed: true),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.accountStatusAgeClosureHeading),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+          load.complete(_closure);
+          await tester.pumpAndSettle();
+        },
+      );
     });
 
     testWidgets('a publish-confirmed unknown restriction gets an appeal path', (

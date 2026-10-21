@@ -40,7 +40,8 @@ class AccountStatusScreen extends ConsumerStatefulWidget {
   /// Whether an authoritative publish response just confirmed enforcement.
   ///
   /// The publish result cannot distinguish suspended from banned, so it uses
-  /// generic restriction copy while the status refresh resolves.
+  /// generic restriction copy while the status refresh resolves, unless this
+  /// session already confirmed an age-review closure, which keeps its own.
   final bool publishRestrictionConfirmed;
   final OpenSupportMessages? openSupportMessages;
   final ComposeSupportEmail? composeEmail;
@@ -112,15 +113,26 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             // Show the spinner while refreshing rather than Riverpod's default
             // of holding the previous value on screen. A status cached before
             // the user was suspended must not remain visible while the refetch
-            // is in flight; not knowing yet is the honest state.
+            // is in flight; not knowing yet is the honest state. Publish
+            // evidence is the exception: a restriction is then known, so the
+            // loading branch shows it instead of the spinner.
             skipLoadingOnRefresh: false,
-            loading: () => publishRestriction == null
-                ? const Center(child: DivineCircularProgressIndicator())
-                : _StatusBody(
-                    status: publishRestriction,
-                    openSupportMessages: widget.openSupportMessages,
-                    composeEmail: widget.composeEmail,
-                  ),
+            loading: () {
+              if (publishRestriction == null) {
+                return const Center(child: DivineCircularProgressIndicator());
+              }
+              // The publish result cannot tell a closure from any other ban,
+              // so a closure this session already confirmed keeps its own
+              // explanation instead of the generic paths it leaves out.
+              return _StatusBody(
+                status: switch (lastConfirmed) {
+                  final known? when known.isAgeReviewClosure => known,
+                  _ => publishRestriction,
+                },
+                openSupportMessages: widget.openSupportMessages,
+                composeEmail: widget.composeEmail,
+              );
+            },
             // Keep a confirmed restriction through a failed read so its appeal
             // and exit paths survive a bad connection. Without a confirmed
             // result, report that the lookup is indeterminate rather than
