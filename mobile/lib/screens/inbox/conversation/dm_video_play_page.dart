@@ -16,6 +16,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/dm_clip_save_scope.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Plays a received encrypted video DM.
 ///
@@ -290,7 +292,14 @@ class _PlayerState extends State<_Player> {
       await controller.setLooping(looping: true);
       await controller.play();
     } catch (error, stackTrace) {
-      await controller.dispose();
+      // Torn down after the failure is told: a teardown that fails too must
+      // not leave the page loading.
+      runDetached(
+        controller.dispose(),
+        'dispose a DM video player that failed to start',
+        logName: 'DmVideoPlayPage',
+        category: LogCategory.video,
+      );
       if (mounted) {
         context.read<DmVideoPlaybackCubit>().playbackFailed(
           _PlayerFailure(

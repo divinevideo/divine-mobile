@@ -438,6 +438,51 @@ void main() {
       );
 
       testWidgets(
+        'tells the viewer the video could not be opened when the player that '
+        'failed to start cannot be torn down either',
+        (tester) async {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(
+                const MethodChannel('divine_video_player'),
+                (call) async {
+                  if (call.method == 'create') {
+                    return <String, Object?>{'textureId': 1};
+                  }
+                  if (call.method == 'dispose') {
+                    throw PlatformException(code: 'dispose');
+                  }
+                  return null;
+                },
+              );
+          stubKeptVideo(() async {
+            File(expectedClipPath())
+              ..createSync(recursive: true)
+              ..writeAsBytesSync(const [1, 2, 3]);
+            return expectedClipPath();
+          });
+          installMockDivineVideoPlayer(
+            onMethodCall: (call) async {
+              if (call.method == 'setClips') {
+                throw PlatformException(code: 'source');
+              }
+              return null;
+            },
+            streamHandler: _PlayerEvents(),
+          );
+
+          await tester.pumpWidget(host());
+          await tester.pump();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+
+          expect(
+            find.text(AppLocalizationsEn().dmVideoUnavailable),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
         'tells the viewer the video could not be opened when the player fails '
         'after starting, instead of leaving a black screen',
         (tester) async {
