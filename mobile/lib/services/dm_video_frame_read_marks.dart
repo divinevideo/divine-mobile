@@ -18,7 +18,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// While the app is in the background, the marks of reads under way are left
 /// empty: the system kills apps there, and that is no crash. A read past its
 /// turn limit hung: its mark names the sender until the read ends, even in
-/// the background, and the sender is skipped for the rest of the session.
+/// the background, and every store skips the sender for the rest of the
+/// launch, unless that read keeps a frame after all.
 class DmVideoFrameReadMarks {
   /// Creates the marks of one store, whose account [ownerRemoved] says was
   /// removed from this device: a sender is then not remembered on disk, as
@@ -55,9 +56,17 @@ class DmVideoFrameReadMarks {
   /// The marks of reads under way, by path, with the sender each names.
   final Map<String, String> _running = {};
 
-  /// Senders one of whose frame reads an earlier launch never finished, or
-  /// this one found hung, and whether these marks looked for such reads yet.
+  /// Senders one of whose frame reads an earlier launch never finished, and
+  /// whether these marks looked for such reads yet.
   final Set<String> _hungSenders = {};
+
+  /// Senders whose frame read hung in a launch, by launch and folder, so a
+  /// store rebuilt in the same launch skips them too.
+  static final Map<String, Set<String>> _hungInLaunch = {};
+
+  /// The marks of reads that hung and have not ended, by launch and folder,
+  /// then by path, with the sender each names.
+  static final Map<String, Map<String, String>> _hung = {};
   bool _lookedForUnfinishedReads = false;
 
   /// The mark of [messageId]'s frame read in [dir].
@@ -97,23 +106,34 @@ class DmVideoFrameReadMarks {
   /// video is not read again while it is kept, but blames no one.
   void readEnded(File mark) {
     _running.remove(mark.path);
+    _hung[_launchKeyOf(mark.parent)]?.remove(mark.path);
     _rewrite(mark, '');
   }
 
   /// Names [mark]'s sender until the read ends: it outlived its turn, so it
   /// hung, and a kill meanwhile, even in the background, still blames them.
   /// Their other videos are not read by themselves for the rest of the
-  /// session either. Does nothing once the read ended.
+  /// launch either, unless it keeps a frame after all. Does nothing once the
+  /// read ended.
   void readHung(File mark) {
     final senderPubkey = _running.remove(mark.path);
     if (senderPubkey == null) return;
-    _hungSenders.add(senderPubkey);
+    final key = _launchKeyOf(mark.parent);
+    (_hung[key] ??= {})[mark.path] = senderPubkey;
+    (_hungInLaunch[key] ??= {}).add(senderPubkey);
     _rewrite(mark, '$_launchId\n$senderPubkey');
   }
 
-  /// Deletes [mark], whose read kept a frame.
+  /// Deletes [mark], whose read kept a frame. A read that hung was slow, not
+  /// stuck: unless another of theirs hangs, its sender is read again.
   void frameKept(File mark) {
     _running.remove(mark.path);
+    final key = _launchKeyOf(mark.parent);
+    final hung = _hung[key];
+    final hungSender = hung?.remove(mark.path);
+    if (hungSender != null && !hung!.containsValue(hungSender)) {
+      _hungInLaunch[key]?.remove(hungSender);
+    }
     try {
       mark.deleteSync();
     } on PathNotFoundException {
@@ -169,13 +189,18 @@ class DmVideoFrameReadMarks {
 
   /// Whether one of [senderPubkey]'s frame reads in [dir] never finished in
   /// an earlier launch, while the mark that remembers it is kept, or hung in
-  /// this one.
+  /// this one without keeping a frame since.
   bool senderHungTheDecoder(Directory dir, String senderPubkey) {
-    if (_hungSenders.contains(senderPubkey)) return true;
+    if (_hungSenders.contains(senderPubkey) ||
+        (_hungInLaunch[_launchKeyOf(dir)]?.contains(senderPubkey) ?? false)) {
+      return true;
+    }
     if (!_senderMarkOf(dir, senderPubkey).existsSync()) return false;
     _hungSenders.add(senderPubkey);
     return true;
   }
+
+  String _launchKeyOf(Directory dir) => '$_launchId ${dir.path}';
 
   String _contentFor(String senderPubkey) =>
       _appInForeground ? '$_launchId\n$senderPubkey' : '';

@@ -1202,6 +1202,42 @@ void main() {
       );
 
       test(
+        "reads that sender's videos again once the decode that ran past the "
+        'turn limit keeps its frame after all',
+        () async {
+          final hung = _videoMessage(id: '1' * 64);
+          final slowDecode = Completer<Uint8List?>();
+          final nextStarted = Completer<void>();
+          readFrame = (video) {
+            if (video.path.contains(hung.id)) return slowDecode.future;
+            if (!nextStarted.isCompleted) nextStarted.complete();
+            return Future.value(_frame);
+          };
+          final store = createStore(
+            frameTurnLimit: const Duration(milliseconds: 1),
+            frameDeadline: const Duration(milliseconds: 1),
+          );
+          expect(await store.previewFor(hung), isNull);
+          // The next read starts only once the slow one used up its turn.
+          final next = store.previewFor(
+            _videoMessage(id: '2' * 64, senderPubkey: '9' * 64),
+          );
+          await nextStarted.future.timeout(const Duration(seconds: 5));
+          await next;
+          expect(await store.previewFor(_videoMessage(id: '3' * 64)), isNull);
+
+          final hungFrameKept = store.kept.firstWhere((id) => id == hung.id);
+          slowDecode.complete(_frame);
+          await hungFrameKept.timeout(const Duration(seconds: 5));
+
+          expect(
+            await store.previewFor(_videoMessage(id: '4' * 64)),
+            isNotNull,
+          );
+        },
+      );
+
+      test(
         'keeps a frame that arrives after its card stopped waiting, and says '
         'so, so the card shows it without another decode',
         () async {

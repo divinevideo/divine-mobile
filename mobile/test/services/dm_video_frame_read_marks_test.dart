@@ -167,6 +167,81 @@ void main() {
         },
       );
 
+      test(
+        'skips the sender in marks a store of the same launch makes later',
+        () {
+          final mark = markOf('1');
+          createMarks(launchId: 'this')
+            ..readStarted(mark, _sender)
+            ..readHung(mark);
+
+          final rebuilt = createMarks(launchId: 'this');
+
+          expect(rebuilt.senderHungTheDecoder(dir, _sender), isTrue);
+          expect(
+            createMarks(
+              launchId: 'next',
+            ).senderHungTheDecoder(dir, _sender),
+            isFalse,
+          );
+        },
+      );
+
+      test('stops skipping the sender once that read keeps a frame', () {
+        final marks = createMarks(launchId: 'this');
+        final mark = markOf('1');
+        marks
+          ..readStarted(mark, _sender)
+          ..readHung(mark);
+        expect(marks.senderHungTheDecoder(dir, _sender), isTrue);
+
+        marks.frameKept(mark);
+
+        expect(marks.senderHungTheDecoder(dir, _sender), isFalse);
+        expect(
+          createMarks(launchId: 'this').senderHungTheDecoder(dir, _sender),
+          isFalse,
+        );
+      });
+
+      test(
+        'goes on skipping the sender while another of their reads hangs',
+        () {
+          final marks = createMarks(launchId: 'this');
+          final first = markOf('1');
+          final second = markOf('2');
+          marks
+            ..readStarted(first, _sender)
+            ..readStarted(second, _sender)
+            ..readHung(first)
+            ..readHung(second);
+
+          marks.frameKept(first);
+
+          expect(marks.senderHungTheDecoder(dir, _sender), isTrue);
+        },
+      );
+
+      test(
+        'stops skipping the sender once a later hung read keeps a frame, '
+        'though an earlier one ended without',
+        () {
+          final marks = createMarks(launchId: 'this');
+          final first = markOf('1');
+          final second = markOf('2');
+          marks
+            ..readStarted(first, _sender)
+            ..readStarted(second, _sender)
+            ..readHung(first)
+            ..readHung(second)
+            ..readEnded(first);
+
+          marks.frameKept(second);
+
+          expect(marks.senderHungTheDecoder(dir, _sender), isFalse);
+        },
+      );
+
       test('does nothing once the read ended', () {
         final marks = createMarks(launchId: 'earlier');
         final mark = markOf('1');

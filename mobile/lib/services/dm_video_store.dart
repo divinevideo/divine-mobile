@@ -433,9 +433,9 @@ class DmVideoStore {
   /// [autoDownloadRetryAfter], and at most [autoDownloadMaxTries] times a
   /// session. A tap on play still fetches it. Nothing is fetched or read by
   /// itself for a sender one of whose frame reads hung: for the rest of the
-  /// session once it outlived [frameTurnLimit], and until [maxAge] after a
-  /// launch that left it unfinished, in the foreground or once it outlived
-  /// that limit. A tap still plays their videos.
+  /// launch once it outlived [frameTurnLimit], unless it keeps a frame after
+  /// all, and for [maxAge] after a launch left it unfinished, in the
+  /// foreground or past that limit. A tap still plays their videos.
   ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
