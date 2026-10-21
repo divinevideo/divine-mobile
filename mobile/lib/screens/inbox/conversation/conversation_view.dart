@@ -1848,11 +1848,19 @@ class _MessageList extends StatelessWidget {
     // for members the user does not know: only the ones they follow load.
     // Nor does posting in a thread whose members did not load.
     final hasOwnMessage = messages.any(
-      (message) => message.senderPubkey == currentPubkey,
+      (message) => pubkeysEqual(message.senderPubkey, currentPubkey),
     );
     bool isOneToOneWith(String sender) =>
         participantPubkeys.length == 1 &&
         pubkeysEqual(participantPubkeys.single, sender);
+    // In lowercase: a seal can spell its signer's key in uppercase and still
+    // verify, and an exact lookup would then miss a blocked or muted sender.
+    final blockedSenders = {
+      for (final pubkey in blockedPubkeys) pubkey.toLowerCase(),
+    };
+    final mutedSenders = {
+      for (final pubkey in mutedPubkeys) pubkey.toLowerCase(),
+    };
 
     return ListView.builder(
       reverse: true,
@@ -2036,16 +2044,17 @@ class _MessageList extends StatelessWidget {
             encryptedVideoFramePath: encryptedVideoFramePath,
             encryptedVideoHold: encryptedVideoHold,
           );
+          final sender = message.senderPubkey.toLowerCase();
           final bubble = message.fileMetadata?.isVideo == true
               ? DmVideoPreviewScope(
                   message: message,
                   accepted:
-                      isSent ||
-                      (hasOwnMessage && isOneToOneWith(message.senderPubkey)),
+                      pubkeysEqual(sender, currentPubkey) ||
+                      (hasOwnMessage && isOneToOneWith(sender)),
                   blocked:
-                      blockedPubkeys.contains(message.senderPubkey) &&
-                      !mutedPubkeys.contains(message.senderPubkey),
-                  muted: mutedPubkeys.contains(message.senderPubkey),
+                      blockedSenders.contains(sender) &&
+                      !mutedSenders.contains(sender),
+                  muted: mutedSenders.contains(sender),
                   builder: (_, framePath, hold) => bubbleWith(
                     encryptedVideoFramePath: framePath,
                     encryptedVideoHold: hold,

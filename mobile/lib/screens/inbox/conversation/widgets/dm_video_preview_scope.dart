@@ -68,7 +68,7 @@ class DmVideoPreviewScope extends ConsumerWidget {
     // `value`, not `asData`: while the relationship reloads it keeps the
     // previous answer, so the preview is not torn down and started again.
     final relationship = ref
-        .watch(followRelationshipProvider(message.senderPubkey))
+        .watch(followRelationshipProvider(message.senderPubkey.toLowerCase()))
         .value;
     final trusted =
         accepted ||

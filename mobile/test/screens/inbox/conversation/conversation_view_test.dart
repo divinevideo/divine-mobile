@@ -5380,6 +5380,85 @@ void main() {
         });
       });
 
+      group('from a key a seal spells in uppercase', () {
+        // Hex letters, so the uppercase spelling differs from the stored one.
+        const lettered =
+            'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+        testWidgets("holds back a blocked sender's video, in a 1:1 the user "
+            'posted in', (tester) async {
+          when(() => mockBlocklist.dmHiddenPubkeys)
+              .thenReturn(const {lettered});
+          when(() => mockBlocklist.isBlocked(lettered)).thenReturn(true);
+          final video = videoFrom(lettered.toUpperCase());
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [lettered],
+            follows: const {},
+          );
+
+          expectHeldBack(video);
+          expect(
+            find.text(l10n.dmVideoCardHiddenSenderBlocked),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets("holds back a muted sender's video, in a 1:1 the user "
+            'posted in', (tester) async {
+          when(() => mockBlocklist.dmHiddenPubkeys)
+              .thenReturn(const {lettered});
+          final video = videoFrom(lettered.toUpperCase());
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [lettered],
+            follows: const {},
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardHiddenSenderMuted), findsOneWidget);
+        });
+
+        testWidgets('holds back the video of a sender a block list spells in '
+            'uppercase', (tester) async {
+          final listed = lettered.toUpperCase();
+          when(() => mockBlocklist.dmHiddenPubkeys).thenReturn({listed});
+          when(() => mockBlocklist.isBlocked(listed)).thenReturn(true);
+          final video = videoFrom(lettered);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [lettered],
+            follows: const {},
+          );
+
+          expectHeldBack(video);
+          expect(
+            find.text(l10n.dmVideoCardHiddenSenderBlocked),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('loads a video from someone the user follows', (
+          tester,
+        ) async {
+          final video = videoFrom(lettered.toUpperCase());
+          await pumpThread(
+            tester,
+            [video],
+            members: const [lettered],
+            follows: {
+              lettered: FollowRelationship.youFollow,
+              lettered.toUpperCase(): FollowRelationship.none,
+            },
+          );
+
+          expectLoaded(video);
+        });
+      });
+
       testWidgets(
         'holds back a video in a thread whose members did not load, though '
         'the user posted there',
