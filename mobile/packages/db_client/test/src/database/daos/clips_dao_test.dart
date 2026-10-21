@@ -920,7 +920,9 @@ void main() {
         await insertClip('live', draftId: testDraftId);
         await insertClip('library');
 
-        final deleted = await dao.deleteOrphanedDraftClips();
+        final deleted = await dao.deleteOrphanedDraftClips(
+          keepDraftIds: const {},
+        );
 
         expect(
           deleted.map((row) => row.id),
@@ -949,17 +951,36 @@ void main() {
         await insertClip('trashed', draftId: deletedDraftId);
         await dao.softDeleteClip(id: 'trashed', deletedAt: DateTime(2026));
 
-        final deleted = await dao.deleteOrphanedDraftClips();
+        final deleted = await dao.deleteOrphanedDraftClips(
+          keepDraftIds: const {},
+        );
 
         expect(deleted, isEmpty);
         expect(await remainingIds(), equals({'trashed'}));
       });
 
+      test('keeps library rows when no draft rows exist', () async {
+        await draftsDao.clearAll();
+        await insertClip('library');
+
+        expect(
+          await dao.deleteOrphanedDraftClips(keepDraftIds: const {}),
+          isEmpty,
+        );
+        expect(await remainingIds(), equals({'library'}));
+      });
+
       test('is a no-op on a second run', () async {
         await insertClip('orphan', draftId: deletedDraftId);
-        expect(await dao.deleteOrphanedDraftClips(), hasLength(1));
+        expect(
+          await dao.deleteOrphanedDraftClips(keepDraftIds: const {}),
+          hasLength(1),
+        );
 
-        expect(await dao.deleteOrphanedDraftClips(), isEmpty);
+        expect(
+          await dao.deleteOrphanedDraftClips(keepDraftIds: const {}),
+          isEmpty,
+        );
       });
     });
 

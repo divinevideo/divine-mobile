@@ -241,7 +241,7 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   /// or not that draft row exists. Trashed rows are left to the trash purge,
   /// and library rows (`draft_id` NULL) are never candidates.
   Future<List<ClipRow>> deleteOrphanedDraftClips({
-    Set<String> keepDraftIds = const {},
+    required Set<String> keepDraftIds,
   }) {
     Expression<bool> isOrphan($ClipsTable t) =>
         t.draftId.isNotNull() &
