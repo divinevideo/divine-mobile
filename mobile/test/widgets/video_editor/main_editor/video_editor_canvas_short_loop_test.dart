@@ -376,9 +376,12 @@ void main() {
         1,
         reason: 'the gated native render completed',
       );
-      // Publishing the cache performs copy, rename and delete I/O. Let those
-      // real completions and their fake-zone continuations reach metadata.
-      for (var i = 0; i < 5; i++) {
+      // Publishing the cache does copy, rename and delete I/O; each completion
+      // needs a runAsync turn, then a pump for its fake-zone continuation.
+      // Under disk load that takes more turns, so drain until the reload.
+      final drain = Stopwatch()..start();
+      while (!nextReload.isCompleted &&
+          drain.elapsed < const Duration(seconds: 10)) {
         await tester.runAsync(pumpEventQueue);
         await tester.pump();
       }
