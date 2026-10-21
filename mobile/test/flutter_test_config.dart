@@ -11,11 +11,9 @@ import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/widgets/avatar_failure_cache.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show ProVideoEditor;
 
 import 'helpers/shared_channel_override.dart';
 import 'helpers/shared_hive_box_guard.dart';
-import 'helpers/streamless_pro_video_editor.dart';
 import 'test_setup.dart';
 
 const _runGoldenSetup = bool.fromEnvironment('DIVINE_GOLDEN_TESTS');
@@ -37,13 +35,6 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   setupTestEnvironment();
 
   if (!kIsWeb) {
-    // The real pro_video_editor plugin listens on its native event channels
-    // when the first read of ProVideoEditor.instance builds it, except on
-    // Linux and Windows. Nothing answers them, so on macOS that failed
-    // whichever test was running when the reply came back (#10352). Install
-    // a default that never listens before any test can read the instance.
-    ProVideoEditor.instance = StreamlessProVideoEditor();
-
     // ThemeData captures defaultTargetPlatform when it is built, while these
     // app themes are lazy process-cached values. Build both at flutter_test's
     // Android baseline before a test-scoped platform override can permanently
