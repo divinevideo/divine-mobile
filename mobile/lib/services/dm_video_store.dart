@@ -366,7 +366,8 @@ class DmVideoStore {
   /// [autoDownloadRetryAfter], and at most [autoDownloadMaxTries] times a
   /// session. A tap on play still fetches it. Nothing is fetched or read by
   /// itself for a sender one of whose frame reads an earlier launch never
-  /// finished, until that is [maxAge] old; a tap still plays their videos.
+  /// finished with the app in the foreground, until that is [maxAge] old; a
+  /// tap still plays their videos.
   ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
@@ -402,6 +403,15 @@ class DmVideoStore {
     _knownPreviews.remove(message.id);
     return null;
   }
+
+  /// Whether the app is in the foreground, as its provider reports. While it
+  /// is not, frame reads under way leave their marks empty: the system kills
+  /// apps in the background, and that must not count as a decode crashing
+  /// the app, nor blame the video's sender.
+  bool get appInForeground => _frameReadMarks.appInForeground;
+
+  set appInForeground(bool inForeground) =>
+      _frameReadMarks.appInForeground = inForeground;
 
   /// Deletes files kept more than [maxAge] ago, then, until this account's
   /// files fit in [maxBytes], the oldest videos and, only after every video,

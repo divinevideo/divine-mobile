@@ -15,6 +15,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/view_event_drop_reason.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
@@ -512,6 +513,13 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
     },
   );
   final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
+  // A kill in the background, routine for the system, then blames no sender
+  // whose video's frame was being read.
+  ref.listen<bool>(
+    appForegroundProvider,
+    (_, inForeground) => store.appInForeground = inForeground,
+    fireImmediately: true,
+  );
   final unregisterBeforeSignOut = ref
       .watch(authServiceProvider)
       .registerBeforeSessionTeardownCallback(store.prune);

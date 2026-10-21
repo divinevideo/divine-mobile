@@ -571,6 +571,23 @@ void main() {
         );
 
         test(
+          'blames no sender for a read under way while the app was in the '
+          'background, where the system kills apps',
+          () async {
+            final earlier = createStore(launchId: 'earlier');
+            await leaveHungRead(_videoMessage(id: '1' * 64), store: earlier);
+
+            earlier.appInForeground = false;
+            final preview = await createStore().previewFor(
+              _videoMessage(id: '2' * 64),
+            );
+
+            expect(preview, isNotNull);
+            expect(frameReads, equals(2));
+          },
+        );
+
+        test(
           'takes no read still running in another store of the account for '
           'one an earlier launch left',
           () async {

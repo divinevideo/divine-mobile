@@ -10,6 +10,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
@@ -417,7 +418,7 @@ void main() {
     });
   });
 
-  group('dmVideoStoreProvider retention', () {
+  group('dmVideoStoreProvider', () {
     final owner = 'e' * 64;
     final messageId = '1' * 64;
     late AppDatabase db;
@@ -608,6 +609,38 @@ void main() {
         expect(video.existsSync(), isFalse);
       },
     );
+
+    group('foreground', () {
+      /// The store of a new account container, closed after the test.
+      DmVideoStore storeOf(ProviderContainer container) {
+        final store = container.read(dmVideoStoreProvider)!;
+        final closed = store.kept.drain<void>();
+        addTearDown(() async {
+          container.dispose();
+          await closed;
+        });
+        return store;
+      }
+
+      test('tells its store when the app leaves and returns', () {
+        final container = accountContainer();
+        final store = storeOf(container);
+        expect(store.appInForeground, isTrue);
+
+        container.read(appForegroundProvider.notifier).setForeground(false);
+        expect(store.appInForeground, isFalse);
+
+        container.read(appForegroundProvider.notifier).setForeground(true);
+        expect(store.appInForeground, isTrue);
+      });
+
+      test('starts a store made while the app is in the background there', () {
+        final container = accountContainer();
+        container.read(appForegroundProvider.notifier).setForeground(false);
+
+        expect(storeOf(container).appInForeground, isFalse);
+      });
+    });
 
     test('stops pruning at sign-out once its store is gone', () async {
       final container = accountContainer();

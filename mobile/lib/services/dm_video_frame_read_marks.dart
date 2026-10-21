@@ -15,6 +15,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// read that ends without a frame empties it. One a later launch finds still
 /// naming them never finished, and its sender is remembered with an empty
 /// mark named after them, so one sender cannot crash the app once per video.
+/// While the app is in the background, the marks of reads under way are left
+/// empty: the system kills apps there, and that is no crash.
 class DmVideoFrameReadMarks {
   /// Creates the marks of one store, whose account [ownerRemoved] says was
   /// removed from this device: a sender is then not remembered on disk, as
@@ -46,6 +48,10 @@ class DmVideoFrameReadMarks {
 
   final bool Function() _ownerRemoved;
   final String _launchId;
+  bool _appInForeground = true;
+
+  /// The marks of reads under way, by path, with the sender each names.
+  final Map<String, String> _running = {};
 
   /// Senders one of whose frame reads an earlier launch never finished, and
   /// whether these marks looked for such reads yet.
@@ -63,16 +69,32 @@ class DmVideoFrameReadMarks {
   /// earlier launch never finished.
   static bool isSenderMark(File file) => file.path.endsWith(_senderMarkSuffix);
 
+  /// Whether the app is in the foreground, which it is until told otherwise.
+  /// Going to the background empties the marks of reads under way; coming
+  /// back names their senders again.
+  bool get appInForeground => _appInForeground;
+
+  set appInForeground(bool inForeground) {
+    if (inForeground == _appInForeground) return;
+    _appInForeground = inForeground;
+    for (final MapEntry(key: path, value: senderPubkey) in _running.entries) {
+      _rewrite(File(path), _contentFor(senderPubkey));
+    }
+  }
+
   /// Writes [mark] as its frame read starts, naming this launch and
-  /// [senderPubkey].
+  /// [senderPubkey] while the app is in the foreground.
   ///
   /// Throws a [FileSystemException] when the mark cannot be written.
-  void readStarted(File mark, String senderPubkey) =>
-      mark.writeAsStringSync('$_launchId\n$senderPubkey');
+  void readStarted(File mark, String senderPubkey) {
+    mark.writeAsStringSync(_contentFor(senderPubkey));
+    _running[mark.path] = senderPubkey;
+  }
 
   /// Empties [mark], saying its read ended without a frame. It stays, so the
   /// video is not read again while it is kept, but blames no one.
   void readEnded(File mark) {
+    _running.remove(mark.path);
     try {
       mark.writeAsStringSync('');
     } on FileSystemException catch (error) {
@@ -87,6 +109,7 @@ class DmVideoFrameReadMarks {
 
   /// Deletes [mark], whose read kept a frame.
   void frameKept(File mark) {
+    _running.remove(mark.path);
     try {
       mark.deleteSync();
     } on PathNotFoundException {
@@ -147,6 +170,25 @@ class DmVideoFrameReadMarks {
     if (!_senderMarkOf(dir, senderPubkey).existsSync()) return false;
     _hungSenders.add(senderPubkey);
     return true;
+  }
+
+  String _contentFor(String senderPubkey) =>
+      _appInForeground ? '$_launchId\n$senderPubkey' : '';
+
+  /// Rewrites [mark] while it is still there: a mark the system cleared, or
+  /// one of an account removed from this device, is not written back.
+  void _rewrite(File mark, String content) {
+    if (_ownerRemoved() || !mark.existsSync()) return;
+    try {
+      mark.writeAsStringSync(content);
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not update a video DM frame-read mark: '
+        '${dmVideoFileErrorCause(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
   }
 
   void _rememberHungSender(Directory dir, String senderPubkey) {

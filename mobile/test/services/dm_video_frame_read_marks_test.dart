@@ -147,6 +147,123 @@ void main() {
       });
     });
 
+    group('appInForeground', () {
+      test('is true until the app is reported in the background', () {
+        final marks = createMarks();
+        expect(marks.appInForeground, isTrue);
+
+        marks.appInForeground = false;
+
+        expect(marks.appInForeground, isFalse);
+      });
+
+      test(
+        'empties the mark of a read under way when the app goes to the '
+        'background, so a kill there blames no one',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          final mark = markOf('1');
+          marks.readStarted(mark, _sender);
+
+          marks.appInForeground = false;
+
+          expect(mark.existsSync(), isTrue);
+          expect(laterLaunchBlamesTheSender(), isFalse);
+        },
+      );
+
+      test(
+        'names the sender again when the app returns with the read still '
+        'under way, so a crash then is still caught',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          marks
+            ..readStarted(markOf('1'), _sender)
+            ..appInForeground = false
+            ..appInForeground = true;
+
+          expect(laterLaunchBlamesTheSender(), isTrue);
+        },
+      );
+
+      test(
+        'starts a read in the background with an empty mark, naming the '
+        'sender once the app returns',
+        () {
+          final marks = createMarks(launchId: 'earlier')
+            ..appInForeground = false
+            ..readStarted(markOf('1'), _sender);
+          expect(markOf('1').existsSync(), isTrue);
+          expect(laterLaunchBlamesTheSender(), isFalse);
+
+          marks.appInForeground = true;
+
+          expect(laterLaunchBlamesTheSender(), isTrue);
+        },
+      );
+
+      test(
+        'leaves the mark of a read that ended meanwhile empty on return',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          final mark = markOf('1');
+          marks
+            ..readStarted(mark, _sender)
+            ..appInForeground = false
+            ..readEnded(mark)
+            ..appInForeground = true;
+
+          expect(mark.existsSync(), isTrue);
+          expect(laterLaunchBlamesTheSender(), isFalse);
+        },
+      );
+
+      test('does not bring back the mark of a frame kept meanwhile', () {
+        final marks = createMarks(launchId: 'earlier');
+        final mark = markOf('1');
+        marks
+          ..readStarted(mark, _sender)
+          ..appInForeground = false
+          ..frameKept(mark)
+          ..appInForeground = true;
+
+        expect(mark.existsSync(), isFalse);
+      });
+
+      test(
+        'writes no mark back once it is gone, as when the system cleared '
+        'the folder',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          final mark = markOf('1');
+          marks.readStarted(mark, _sender);
+          mark.deleteSync();
+
+          marks
+            ..appInForeground = false
+            ..appInForeground = true;
+
+          expect(mark.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'writes nothing for an account removed from the device meanwhile',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          final mark = markOf('1');
+          marks
+            ..readStarted(mark, _sender)
+            ..appInForeground = false;
+          ownerRemoved = true;
+
+          marks.appInForeground = true;
+
+          expect(mark.readAsStringSync(), isEmpty);
+        },
+      );
+    });
+
     group('senderHungTheDecoder', () {
       test('is false for a sender no launch left a read of', () {
         createMarks(launchId: 'earlier').readStarted(markOf('1'), 'c' * 64);
