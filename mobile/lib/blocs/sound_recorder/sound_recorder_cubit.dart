@@ -189,6 +189,10 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
 
   /// Stops and deletes the recording in progress.
   Future<void> cancel() async {
+    if (state.isStarting) {
+      _startCancelled = true;
+      return;
+    }
     if (!state.isRecording || _isTransitioning) return;
     _isTransitioning = true;
     try {

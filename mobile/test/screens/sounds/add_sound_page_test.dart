@@ -81,18 +81,25 @@ class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   final loadedPaths = <String>[];
   Completer<void>? _playing;
   Completer<void>? stopGate;
+  Completer<void>? loadGate;
+  Completer<void>? seekGate;
+  int playCount = 0;
 
   @override
   Future<Duration?> loadAudioFromFile(String filePath) async {
     loadedPaths.add(filePath);
+    await loadGate?.future;
     return const Duration(seconds: 3);
   }
 
   @override
-  Future<void> seek(Duration position) async {}
+  Future<void> seek(Duration position) async => seekGate?.future;
 
   @override
-  Future<void> play() => (_playing = Completer<void>()).future;
+  Future<void> play() {
+    playCount++;
+    return (_playing = Completer<void>()).future;
+  }
 
   @override
   Future<void> pause() async => _resolvePlay();
@@ -328,6 +335,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> recordTake(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('add_sound_record')));
+    await tester.pumpAndSettle();
+    recorder.emitLevel(0.6);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+    await settleRecorder(tester);
+  }
+
   Future<void> sharePublicly(WidgetTester tester) async {
     await tester.tap(find.byKey(const Key('add_sound_share_publicly')));
     await tester.pumpAndSettle();
@@ -459,6 +475,96 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('locks the previous take while a replacement starts', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await recordTake(tester);
+        expect(saveButton(tester).onPressed, isNotNull);
+        final permission = Completer<PermissionStatus>();
+        when(permissions.checkMicrophoneStatus)
+            .thenAnswer((_) => permission.future);
+        await tester.tap(find.byKey(const Key('add_sound_record_again')));
+        await tester.pump();
+
+        try {
+          expect(saveButton(tester).onPressed, isNull);
+          expect(
+            tester
+                .widget<DivineIconButton>(
+                  find.byKey(const Key('add_sound_preview')),
+                )
+                .onPressed,
+            isNull,
+          );
+          expect(
+            tester
+                .widget<DivineTextField>(
+                  find.byKey(const Key('add_sound_name_field')),
+                )
+                .enabled,
+            isFalse,
+          );
+          expect(
+            tester
+                .widget<DivineSwitchTile>(
+                  find.byKey(const Key('add_sound_share_publicly')),
+                )
+                .onChanged,
+            isNull,
+          );
+        } finally {
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+        }
+      });
+
+      testWidgets(
+        'Back cancels a pending replacement without leaving the take',
+        (tester) async {
+          final router = await pumpView(tester);
+          await recordTake(tester);
+          final permission = Completer<PermissionStatus>();
+          when(permissions.checkMicrophoneStatus)
+              .thenAnswer((_) => permission.future);
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          await tester.tap(
+            find.bySemanticsIdentifier(
+              DiVineAppBarLeading.backButtonSemanticId,
+            ),
+          );
+          await tester.pump();
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+
+          expect(router.state.uri.path, '/add');
+          expect(
+            find.byKey(const Key('add_sound_record_again')),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'a preview still loading cannot play after recording starts',
+        (tester) async {
+          await pumpView(tester);
+          await recordTake(tester);
+          audio.loadGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pump();
+          expect(audio.playCount, 0);
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await settleRecorder(tester);
+
+          audio.loadGate!.complete();
+          await settleRecorder(tester);
+
+          expect(audio.playCount, 0);
+        },
+      );
+
       testWidgets(
         'keeps the waveform moving for equal samples after the buffer fills',
         (

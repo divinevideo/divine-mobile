@@ -140,7 +140,6 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
   }
 
   Future<void> _stopPreview() async {
-    if (!_playing) return;
     _previewSession++;
     await _audioService.stop();
     if (mounted) setState(() => _playing = false);
@@ -248,6 +247,8 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
   }
 
   Future<void> _togglePreview(AudioEvent audio) async {
+    final recorder = context.read<SoundRecorderCubit>().state;
+    if (recorder.isStarting || recorder.isActive) return;
     final path = audio.localFilePath;
     if (path == null || path.isEmpty) return;
     final service = _audioService;
@@ -269,6 +270,8 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
         await service.seek(Duration.zero);
       }
       if (!mounted || session != _previewSession) return;
+      final recorder = context.read<SoundRecorderCubit>().state;
+      if (recorder.isStarting || recorder.isActive) return;
       setState(() => _playing = true);
       await service.play();
     } catch (error, stackTrace) {
@@ -309,6 +312,14 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
       ),
     );
     context.safePop();
+  }
+
+  Future<void> _saveSound() async {
+    final recorder = context.read<SoundRecorderCubit>().state;
+    if (recorder.isStarting || recorder.isActive) return;
+    await context.read<AddSoundCubit>().save(
+      personalLabel: _nameController.text,
+    );
   }
 
   void _onFailure(BuildContext context, AddSoundFailure failure) {
@@ -366,16 +377,17 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
           final isRecorderStarting = context.select(
             (SoundRecorderCubit c) => c.state.isStarting,
           );
+          final isRecorderBusy = isRecorderActive || isRecorderStarting;
           final isMicrophoneDenied = context.select(
             (SoundRecorderCubit c) =>
                 c.state.status == SoundRecorderStatus.permissionDenied,
           );
           final isRecordedSound = state.source == AddSoundSource.recording;
           return PopScope(
-            canPop: !state.isBusy && !isRecorderActive,
+            canPop: !state.isBusy && !isRecorderBusy,
             // Leaving while recording cancels the recording, not the flow.
             onPopInvokedWithResult: (didPop, _) {
-              if (!didPop && isRecorderActive) _cancelRecording();
+              if (!didPop && isRecorderBusy) _cancelRecording();
             },
             child: Scaffold(
               backgroundColor: context.vineColors.surface,
@@ -386,7 +398,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                 // Always a callback: the app bar's null fallback is a bare
                 // Navigator.pop, which would sidestep the PopScope above.
                 onBackPressed: () {
-                  if (isRecorderActive) {
+                  if (isRecorderBusy) {
                     _cancelRecording();
                   } else if (!state.isBusy) {
                     context.safePop();
@@ -415,7 +427,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                     _PickedSound(
                       sound: audio,
                       isPlaying: _playing,
-                      canPreview: !state.isBusy,
+                      canPreview: !state.isBusy && !isRecorderStarting,
                       canChange: state.canEdit && !isRecorderStarting,
                       isRecordedSound: isRecordedSound,
                       onTogglePreview: () => _togglePreview(audio),
@@ -429,7 +441,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                               child: DivineTextField(
                                 key: const Key('add_sound_name_field'),
                                 controller: _nameController,
-                                enabled: !state.isBusy,
+                                enabled: !state.isBusy && !isRecorderStarting,
                                 filled: true,
                                 labelText: context.l10n.savedSoundYourLabel,
                                 textInputAction: TextInputAction.done,
@@ -447,7 +459,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                           value: state.sharePublicly,
                           title: context.l10n.soundsAddSharePublicly,
                           subtitle: context.l10n.soundUploadReuseNotice,
-                          onChanged: state.canEdit
+                          onChanged: state.canEdit && !isRecorderStarting
                               ? cubit.setSharePublicly
                               : null,
                         ),
@@ -461,9 +473,9 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                           // would publish a credit other than the one on
                           // screen.
                           ? ExcludeFocus(
-                              excluding: !state.canEdit,
+                              excluding: !state.canEdit || isRecorderStarting,
                               child: IgnorePointer(
-                                ignoring: !state.canEdit,
+                                ignoring: !state.canEdit || isRecorderStarting,
                                 child: PublicAudioCreditEditor(
                                   key: ValueKey(audio.id),
                                   attribution: attribution,
@@ -485,9 +497,8 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                           ? context.l10n.soundUploadShareAction
                           : context.l10n.savedSoundSaveAction,
                       isSaving: state.status == AddSoundStatus.saving,
-                      onSave: state.canSave
-                          ? () =>
-                                cubit.save(personalLabel: _nameController.text)
+                      onSave: state.canSave && !isRecorderStarting
+                          ? _saveSound
                           : null,
                     ),
             ),
