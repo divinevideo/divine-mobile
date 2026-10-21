@@ -25,6 +25,7 @@ class DivineSlider extends StatelessWidget {
     this.inactiveColor,
     this.thumbColor,
     this.semanticLabel,
+    this.semanticValue,
     super.key,
   }) : assert(min <= max, 'min must be <= max'),
        assert(divisions == null || divisions > 0, 'divisions must be > 0'),
@@ -86,6 +87,12 @@ class DivineSlider extends StatelessWidget {
   /// value bubble because the theme sets [ShowValueIndicator.never].
   final String? semanticLabel;
 
+  /// What screen readers announce as the value, from the slider's value.
+  ///
+  /// Defaults to the share of the range as a percentage, which suits a
+  /// strength; pass this for a value that is a count or has a unit.
+  final String Function(double value)? semanticValue;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
@@ -112,6 +119,7 @@ class DivineSlider extends StatelessWidget {
         // Lands on the slider's own semantics boundary node; renders no
         // visible bubble under ShowValueIndicator.never.
         label: semanticLabel,
+        semanticFormatterCallback: semanticValue,
         onChanged: onChanged,
         onChangeEnd: onChangeEnd,
       ),
