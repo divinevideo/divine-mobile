@@ -70,11 +70,13 @@ final accountEnforcementDevOverrideProvider =
 
 /// Accounts already shown their age-review closure on launch this session.
 ///
-/// In memory on purpose: the notice comes back on the next cold launch, but a
-/// resume refetch in the same session must not push it again
-/// (support-trust-safety#260). It lives in the account's container, which an
-/// account switch rebuilds, so switching back to a closed account shows the
-/// notice again; switching in is opening that account.
+/// In memory on purpose, so the notice comes back on the next cold launch
+/// (support-trust-safety#260). Within a session it stops the notice from
+/// pushing again when the shell mounts again; resume refetches do not reach
+/// the notice once it has answered. The set lives in the account's container,
+/// which an account switch rebuilds, so switching back to a closed account
+/// shows the notice again. Signing out and back in keeps the container, and
+/// with it the mark.
 class AgeReviewClosureLaunchShown extends Notifier<Set<String>> {
   @override
   Set<String> build() => const {};
