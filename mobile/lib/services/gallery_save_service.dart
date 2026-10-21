@@ -63,6 +63,16 @@ class GallerySaveService {
   // Folders whose leftovers this process already removed.
   static final Map<String, Future<void>> _leftoverCopiesRemoved = {};
 
+  /// Deletes the neutrally named copies saves the app did not live to finish
+  /// left behind: plaintext of private videos, in a folder nothing else
+  /// cleans. Runs once a process, at launch or before its first copy,
+  /// whichever comes first; a save waits for it, so a copy in use is never
+  /// deleted.
+  Future<void> deleteLeftoverCopies() {
+    final root = _copyRoot();
+    return _leftoverCopiesRemoved[root.path] ??= _deleteLeftovers(root);
+  }
+
   /// Platform-aware name for the save destination.
   ///
   /// Returns "Camera Roll" on iOS and "Gallery" on Android.
@@ -312,13 +322,10 @@ class GallerySaveService {
     return redactFilesystemPaths(text);
   }
 
-  // In a folder of its own, so two saves never share a copy. A copy is
-  // plaintext of a private video, and a save the app did not live to finish
-  // leaves one behind: before this process makes its first copy, everything
-  // there is such a leftover, so it all goes then and never after.
+  // In a folder of its own, so two saves never share a copy.
   Future<File> _neutralCopyOf(File file) async {
     final root = _copyRoot();
-    await (_leftoverCopiesRemoved[root.path] ??= _deleteLeftovers(root));
+    await deleteLeftoverCopies();
     await root.create(recursive: true);
     final dir = await root.createTemp();
     final name =

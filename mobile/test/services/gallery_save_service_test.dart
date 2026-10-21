@@ -398,6 +398,17 @@ void main() {
         expect(galleryBytes.single, equals([0, 1, 2, 3]));
       });
 
+      test('removes copies a killed save left behind when asked at launch, '
+          'before any save', () async {
+        final leftover = File('${copies.path}/left/Divine_1.mov')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync([9, 9, 9]);
+
+        await copyingService.deleteLeftoverCopies();
+
+        expect(leftover.parent.existsSync(), isFalse);
+      });
+
       test('never removes a copy a save still running uses', () async {
         final firstAtGallery = Completer<void>();
         final firstSaveHeld = Completer<void>();

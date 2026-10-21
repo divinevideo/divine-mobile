@@ -29,6 +29,7 @@ import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -41,6 +42,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
+import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/upload_manager.dart';
@@ -49,6 +51,7 @@ import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upload_repository/upload_repository.dart' as hive_model;
 
@@ -60,6 +63,8 @@ class _MockDmRepository extends Mock implements DmRepository {}
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockPermissionsService extends Mock implements PermissionsService {}
 
 const _pubkeyA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -193,6 +198,12 @@ void main() {
             await service.loadCustomSounds();
             return service;
           }),
+          gallerySaveServiceProvider.overrideWithValue(
+            GallerySaveService(
+              permissionsService: _MockPermissionsService(),
+              copyRoot: () => Directory('${tempDir.path}/gallery_copies'),
+            ),
+          ),
         ],
       );
     });
@@ -2935,6 +2946,30 @@ void main() {
         addTearDown(subscription.close);
         return subscription.read();
       }
+
+      test('launch removes gallery copies a killed save left behind', () async {
+        final copies = Directory('${tempDir.path}/gallery_copies');
+        File('${copies.path}/left/Divine_1.mov')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync([9, 9, 9]);
+        final deleted = Completer<void>();
+        final watcher = tempDir.watch(events: FileSystemEvent.delete).listen((
+          event,
+        ) {
+          if (event.path == copies.path && !deleted.isCompleted) {
+            deleted.complete();
+          }
+        });
+        addTearDown(watcher.cancel);
+
+        readCleanupService();
+        await deleted.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => fail('the leftover copies were never removed'),
+        );
+
+        expect(copies.existsSync(), isFalse);
+      });
 
       test('launch removes obsolete decrypted playback clips only', () async {
         final legacy = Directory('${tempDir.path}/dm_video_playback')

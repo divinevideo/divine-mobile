@@ -25,6 +25,7 @@ import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
@@ -1147,6 +1148,11 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
   runProviderDetached(
     DmVideoStore.deleteLegacyPlaybackClips(),
     'remove obsolete decrypted playback clips',
+    logName: 'UserDataCleanup',
+  );
+  runProviderDetached(
+    ref.read(gallerySaveServiceProvider).deleteLeftoverCopies(),
+    'remove copies a gallery save the app did not finish left behind',
     logName: 'UserDataCleanup',
   );
 
