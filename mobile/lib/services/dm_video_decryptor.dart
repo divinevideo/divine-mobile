@@ -45,6 +45,14 @@ class DmVideoWithdrawnException extends DmVideoUnavailableException {
     : super('the download was no longer wanted', mayPass: true);
 }
 
+/// Thrown when a kept video or frame could not be written to the device.
+/// Trying again later may work, once there is room; downloading the video
+/// again at once would only fail the same way.
+class DmVideoStorageException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoStorageException] with a diagnostic [message].
+  const DmVideoStorageException(super.message) : super(mayPass: true);
+}
+
 /// Downloads and decrypts a received encrypted video DM.
 ///
 /// The ciphertext is a public Blossom blob, so the download carries no viewer

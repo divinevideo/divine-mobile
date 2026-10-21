@@ -14,6 +14,7 @@ import 'package:openvine/services/dm_video_files.dart';
 import 'package:openvine/services/dm_video_frame_read_marks.dart';
 import 'package:openvine/services/dm_video_preview.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/one_at_a_time.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -240,14 +241,14 @@ class DmVideoStore {
 
   /// Downloads without a tap on play run one at a time: each holds a whole
   /// video in memory, and a long thread shows many at once.
-  final _OneAtATime _autoDownloads = _OneAtATime();
+  final OneAtATime _autoDownloads = OneAtATime();
 
   /// Frame reads run one at a time too: a crash then marks only the video
   /// being read, and a long thread does not start a native decoder per card.
   /// The getThumbnails call used here has no confirmed cancellation: a read
   /// that never replies holds this turn for [frameTurnLimit], then the next
   /// read starts beside it, while its file stays leased until it replies.
-  final _OneAtATime _frameReads = _OneAtATime();
+  final OneAtATime _frameReads = OneAtATime();
   final Map<String, Future<File?>> _previewsInFlight = {};
 
   /// Frame reads by message id, shared by every caller asking at once. The
@@ -1400,27 +1401,7 @@ class DmVideoStore {
   }
 }
 
-/// Thrown when a kept video or frame could not be written to the device.
-/// Trying again later may work, once there is room; downloading the video
-/// again at once would only fail the same way.
-class DmVideoStorageException extends DmVideoUnavailableException {
-  /// Creates a [DmVideoStorageException] with a diagnostic [message].
-  const DmVideoStorageException(super.message) : super(mayPass: true);
-}
-
 /// A queued download no card wants any more when its turn comes.
 class _DownloadDropped implements Exception {
   const _DownloadDropped();
-}
-
-/// Runs tasks one at a time, each once the one before it has settled.
-class _OneAtATime {
-  Future<void> _tail = Future<void>.value();
-
-  Future<T> run<T>(Future<T> Function() task) {
-    final turn = _tail.then((_) => task());
-    // The next task waits for this one to settle, failed or not.
-    _tail = turn.then<void>((_) {}, onError: (Object _) {});
-    return turn;
-  }
 }
