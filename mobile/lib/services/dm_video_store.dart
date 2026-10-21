@@ -317,10 +317,11 @@ class DmVideoStore {
   /// goes when its message does. One kept past [maxAge] that nothing uses is
   /// fetched again rather than handed out.
   ///
-  /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`) or
-  /// a [DmVideoUnavailableException] when the message was retracted or
-  /// removed with its conversation, or the video cannot be stored, naming
-  /// the cause but not the file. Nothing is kept on a failure.
+  /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`), a
+  /// [DmVideoGoneException] when the message was retracted or removed with
+  /// its conversation, or a [DmVideoUnavailableException] when the video
+  /// cannot be stored, naming the cause but not the file. Nothing is kept on
+  /// a failure.
   Future<File> videoFor(DmMessage message) {
     final id = message.id;
     _videoCallers.update(id, (count) => count + 1, ifAbsent: () => 1);
@@ -930,15 +931,13 @@ class DmVideoStore {
     return file;
   }
 
-  /// Throws a [DmVideoUnavailableException] once [message] is gone. What is
-  /// kept for it goes when [video], which the caller leased, is released by
-  /// every caller.
+  /// Throws a [DmVideoGoneException] once [message] is gone. What is kept
+  /// for it goes when [video], which the caller leased, is released by every
+  /// caller.
   Future<void> _refuseIfGone(DmMessage message, File video) async {
     if (!await _isGone(message)) return;
     _goneWhileLeased.add(video.path);
-    throw const DmVideoUnavailableException(
-      'the message was retracted or removed',
-    );
+    throw const DmVideoGoneException();
   }
 
   /// Whether [message] was retracted or removed with its conversation. A
@@ -1003,6 +1002,9 @@ class DmVideoStore {
         return null;
       } on DmVideoWithdrawnException {
         // Stopped because no card wanted it: nothing to hold against the next.
+        return null;
+      } on DmVideoGoneException {
+        // Its files go with it; there is nothing to remember or try again.
         return null;
       } on Object catch (error) {
         final mayPass = error is DmVideoUnavailableException && error.mayPass;

@@ -45,6 +45,13 @@ class DmVideoWithdrawnException extends DmVideoUnavailableException {
     : super('the download was no longer wanted', mayPass: true);
 }
 
+/// Thrown when a video's message was retracted by its sender or removed with
+/// its conversation: its video is neither fetched nor handed out.
+class DmVideoGoneException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoGoneException].
+  const DmVideoGoneException() : super('the message was retracted or removed');
+}
+
 /// Thrown when a kept video or frame could not be written to the device.
 /// Trying again later may work, once there is room; downloading the video
 /// again at once would only fail the same way.

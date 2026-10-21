@@ -311,7 +311,7 @@ void main() {
 
         await expectLater(
           store.videoFor(_videoMessage()),
-          throwsA(isA<DmVideoUnavailableException>()),
+          throwsA(isA<DmVideoGoneException>()),
         );
         expect(fetches, equals(0));
         expect(keptFiles(), isEmpty);
@@ -331,7 +331,7 @@ void main() {
 
           await expectLater(
             store.videoFor(message),
-            throwsA(isA<DmVideoUnavailableException>()),
+            throwsA(isA<DmVideoGoneException>()),
           );
           expect(fetches, equals(1));
         },
@@ -349,7 +349,7 @@ void main() {
 
           await expectLater(
             store.videoFor(message),
-            throwsA(isA<DmVideoUnavailableException>()),
+            throwsA(isA<DmVideoGoneException>()),
           );
 
           expect(keptFiles(), isEmpty);
@@ -375,7 +375,7 @@ void main() {
 
               await expectLater(
                 tapped,
-                throwsA(isA<DmVideoUnavailableException>()),
+                throwsA(isA<DmVideoGoneException>()),
               );
             },
             _WriteHooks((part) {
@@ -413,7 +413,7 @@ void main() {
 
               await expectLater(
                 tapped,
-                throwsA(isA<DmVideoUnavailableException>()),
+                throwsA(isA<DmVideoGoneException>()),
               );
               expect(fetches, equals(1));
               expect(await preview, isNull);
@@ -1521,6 +1521,19 @@ void main() {
         expect(await store.previewFor(message), isNull);
         expect(fetches, equals(1));
       });
+
+      test(
+        'are refused without a lasting failure once their message is gone',
+        () async {
+          final store = createStore(isMessageGone: (_) async => true);
+          final message = _videoMessage();
+
+          expect(await store.previewFor(message), isNull);
+
+          expect(fetches, equals(0));
+          expect(keptFiles(), isEmpty);
+        },
+      );
 
       test(
         'are not tried again after failing for good, even once no card waits',
