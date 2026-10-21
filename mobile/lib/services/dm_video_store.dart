@@ -147,7 +147,7 @@ class DmVideoStore {
   /// that may pass, such as a dropped connection.
   static const Duration autoDownloadRetryAfter = Duration(minutes: 2);
 
-  /// How many downloads nobody tapped for may fail for one message before
+  /// How many downloads nobody tapped for may start for one message before
   /// the store stops fetching it by itself for the session: each try tells
   /// the sender's media server that the thread is open. A tap on play still
   /// fetches it.
@@ -289,8 +289,9 @@ class DmVideoStore {
   /// may fetch it again by itself, or null when it may not this session.
   final Map<String, DateTime?> _autoDownloadFailures = {};
 
-  /// How many downloads nobody tapped for failed this session, by message id.
-  final Map<String, int> _autoDownloadFailureCounts = {};
+  /// How many downloads nobody tapped for started this session, by message id.
+  /// A withdrawn request still reached the sender's server and counts too.
+  final Map<String, int> _autoDownloadAttempts = {};
 
   /// Marks around each frame read, so a decode that crashed the app is not
   /// tried again: nothing of a sender one of whose reads an earlier launch
@@ -966,6 +967,16 @@ class DmVideoStore {
         _deleteKeptFor(file);
         _lease(file);
       }
+      // Count at the network boundary, not on failure: a withdrawn fetch has
+      // already contacted the sender's server. A queued card dropped before
+      // its turn and a cached copy cost no request and consume no attempt.
+      if (maxBytes != null) {
+        _autoDownloadAttempts.update(
+          message.id,
+          (count) => count + 1,
+          ifAbsent: () => 1,
+        );
+      }
       final plaintext = await _fetchVideo(
         message,
         maxBytes: maxBytes,
@@ -1071,24 +1082,20 @@ class DmVideoStore {
       } on _DownloadDropped {
         return null;
       } on DmVideoWithdrawnException {
-        // Stopped because no card wanted it: nothing to hold against the next.
+        // No failure cooldown, but the request still consumed an attempt.
         return null;
       } on DmVideoGoneException {
         // Its files go with it; there is nothing to remember or try again.
         return null;
       } on Object catch (error) {
         final mayPass = error is DmVideoUnavailableException && error.mayPass;
-        final failures = _autoDownloadFailureCounts.update(
-          message.id,
-          (count) => count + 1,
-          ifAbsent: () => 1,
-        );
         if (!mayPass) {
           // It would fail again, for whichever card asks next, in this
           // session or a later one.
           _autoDownloadFailures[message.id] = null;
           await _rememberLastingFailure(dir, message);
-        } else if (failures >= autoDownloadMaxTries) {
+        } else if ((_autoDownloadAttempts[message.id] ?? 0) >=
+            autoDownloadMaxTries) {
           // Each try tells the sender's server that the thread is open.
           _autoDownloadFailures[message.id] = null;
         } else if (wanted()) {
@@ -1243,6 +1250,9 @@ class DmVideoStore {
       file.uri.pathSegments.last.split('.').first;
 
   bool _mayAutoDownload(Directory dir, String messageId) {
+    if ((_autoDownloadAttempts[messageId] ?? 0) >= autoDownloadMaxTries) {
+      return false;
+    }
     if (!_autoDownloadFailures.containsKey(messageId)) {
       if (!_failureMarkOf(dir, messageId).existsSync()) return true;
       // An earlier session's download failed in a way that would repeat.

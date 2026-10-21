@@ -2256,6 +2256,43 @@ void main() {
       );
 
       test(
+        'spend no automatic tries when a card is dropped before fetching',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          for (var attempt = 0; attempt < 5; attempt++) {
+            expect(
+              await store.previewFor(message, stillWanted: () => false),
+              isNull,
+            );
+          }
+          expect(fetches, equals(0));
+          expect(await store.previewFor(message), isNotNull);
+          expect(fetches, equals(1));
+        },
+      );
+
+      test(
+        'count withdrawn fetches toward the automatic try cap, but leave a tap '
+        'free to fetch',
+        () async {
+          fetch = (_) async => throw const DmVideoWithdrawnException();
+          final store = createStore();
+          final message = _videoMessage();
+          for (var attempt = 0; attempt < 5; attempt++) {
+            expect(await store.previewFor(message), isNull);
+          }
+          expect(fetches, equals(DmVideoStore.autoDownloadMaxTries));
+
+          fetch = (_) async => _plaintext;
+          final video = await store.videoFor(message);
+          expect(video.readAsBytesSync(), equals(_plaintext));
+          expect(fetches, equals(DmVideoStore.autoDownloadMaxTries + 1));
+          store.releaseVideo(video);
+        },
+      );
+
+      test(
         'are tried again after a failure that may pass, once a while has '
         'passed',
         () async {
