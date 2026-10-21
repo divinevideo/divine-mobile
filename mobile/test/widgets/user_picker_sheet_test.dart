@@ -918,28 +918,38 @@ void main() {
       testWidgets('ranking failure still excludes ineligible mutuals', (
         tester,
       ) async {
-        final messages = <String>[];
-        final previousDebugPrint = debugPrint;
-        debugPrint = (message, {wrapWidth}) {
-          if (message != null) messages.add(message);
-        };
-        try {
-          when(() => rankingLoader.load(any()))
-              .thenThrow(StateError('local signals'));
-          when(() => rankingLoader.isEligible(a)).thenReturn(false);
-          await pumpLocal(
-            tester,
-            profiles: [profile(a, 'Blocked'), profile(b, 'Visible')],
-          );
-          expect(rows(tester), ['Visible']);
-          expect(tester.takeException(), isNull);
-          expect(
-            messages.single,
-            contains('Failed to load follow ranking: Bad state: local signals'),
-          );
-        } finally {
-          debugPrint = previousDebugPrint;
-        }
+        final previousCategories = Set<LogCategory>.from(
+          UnifiedLogger.enabledCategories,
+        );
+        UnifiedLogger.enableCategories({LogCategory.relay});
+        addTearDown(() => UnifiedLogger.enableCategories(previousCategories));
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        when(() => rankingLoader.load(any()))
+            .thenThrow(StateError('local signals'));
+        when(() => rankingLoader.isEligible(a)).thenReturn(false);
+        await pumpLocal(
+          tester,
+          profiles: [profile(a, 'Blocked'), profile(b, 'Visible')],
+        );
+        expect(rows(tester), ['Visible']);
+        expect(tester.takeException(), isNull);
+        final rankingFailures = logCapture
+            .getRecentLogs()
+            .where(
+              (entry) =>
+                  entry.name == 'UserPickerSheet' &&
+                  entry.level == LogLevel.error &&
+                  entry.message.startsWith('Failed to load follow ranking:'),
+            )
+            .toList();
+        expect(rankingFailures, hasLength(1));
+        expect(rankingFailures.single.category, LogCategory.system);
+        expect(
+          rankingFailures.single.message,
+          contains('Failed to load follow ranking: Bad state: local signals'),
+        );
       });
     });
 

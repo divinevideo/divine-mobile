@@ -5,7 +5,6 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -15,6 +14,7 @@ import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dar
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:user_ranking/user_ranking.dart';
 
 class _RecordingObserver extends BlocObserver {
@@ -445,34 +445,44 @@ void main() {
       );
 
       test('ranking failure reports error and still excludes ineligible candidates', () async {
-        final messages = <String>[];
-        final previousDebugPrint = debugPrint;
-        debugPrint = (message, {wrapWidth}) {
-          if (message != null) messages.add(message);
-        };
-        try {
-          when(() => followRepository.followingPubkeys)
-              .thenReturn([_alicePubkey, _bobPubkey]);
-          final observer = _RecordingObserver();
-          final previousObserver = Bloc.observer;
-          Bloc.observer = observer;
-          addTearDown(() => Bloc.observer = previousObserver);
-          when(() => rankingLoader.load(any()))
-              .thenThrow(StateError('local signals'));
-          when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
-          final cubit = createCubit();
-          await cubit.started();
-          expect(cubit.state.status, AddPeopleToListStatus.ready);
-          expect(order(cubit), [_bobPubkey]);
-          expect(observer.errors.single, isA<ReportableError>());
-          expect(
-            messages.single,
-            contains('Failed to load follow ranking: Bad state: local signals'),
-          );
-          await cubit.close();
-        } finally {
-          debugPrint = previousDebugPrint;
-        }
+        final previousCategories = Set<LogCategory>.from(
+          UnifiedLogger.enabledCategories,
+        );
+        UnifiedLogger.enableCategories({LogCategory.relay});
+        addTearDown(() => UnifiedLogger.enableCategories(previousCategories));
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        when(() => followRepository.followingPubkeys)
+            .thenReturn([_alicePubkey, _bobPubkey]);
+        final observer = _RecordingObserver();
+        final previousObserver = Bloc.observer;
+        Bloc.observer = observer;
+        addTearDown(() => Bloc.observer = previousObserver);
+        when(() => rankingLoader.load(any()))
+            .thenThrow(StateError('local signals'));
+        when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
+        final cubit = createCubit();
+        await cubit.started();
+        expect(cubit.state.status, AddPeopleToListStatus.ready);
+        expect(order(cubit), [_bobPubkey]);
+        expect(observer.errors.single, isA<ReportableError>());
+        final rankingFailures = logCapture
+            .getRecentLogs()
+            .where(
+              (entry) =>
+                  entry.name == 'AddPeopleToListCubit' &&
+                  entry.level == LogLevel.error &&
+                  entry.message.startsWith('Failed to load follow ranking:'),
+            )
+            .toList();
+        expect(rankingFailures, hasLength(1));
+        expect(rankingFailures.single.category, LogCategory.system);
+        expect(
+          rankingFailures.single.message,
+          contains('Failed to load follow ranking: Bad state: local signals'),
+        );
+        await cubit.close();
       });
 
       test(

@@ -10,8 +10,14 @@ void main() {
   group('LogMessageBatcher', () {
     late LogMessageBatcher batcher;
     late LogCaptureService logCapture;
+    late Set<LogCategory> previousCategories;
+    late LogLevel previousLevel;
 
     setUp(() async {
+      previousCategories = Set<LogCategory>.from(
+        UnifiedLogger.enabledCategories,
+      );
+      previousLevel = UnifiedLogger.currentLevel;
       batcher = LogMessageBatcher();
       logCapture = LogCaptureService();
 
@@ -23,6 +29,8 @@ void main() {
 
     tearDown(() async {
       batcher.dispose();
+      UnifiedLogger.enableCategories(previousCategories);
+      UnifiedLogger.setLogLevel(previousLevel);
       await logCapture.clearAllLogs();
     });
 

@@ -179,6 +179,9 @@ void main() {
           mockFollowRepository: followRepository,
           additionalOverrides: [
             curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+            vanishedProfilePubkeysProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
             ...overrides,
           ],
           home: Builder(
@@ -1411,6 +1414,7 @@ void main() {
             () => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
           ).thenAnswer((_) async => []);
           final follows = _MockFollowRepository();
+          when(() => follows.isInitialized).thenReturn(true);
           when(() => follows.followingPubkeys).thenReturn([]);
           when(
             follows.streamMyFollowers,
@@ -1421,9 +1425,6 @@ void main() {
             profileRepository: profiles,
             followRepository: follows,
             overrides: [
-              vanishedProfilePubkeysProvider.overrideWith(
-                (ref) => Stream.value(const <String>{}),
-              ),
               userProfileReactiveProvider(
                 _collaborator,
               ).overrideWith((ref) => Stream.value(null)),
@@ -1540,9 +1541,6 @@ void main() {
           followRepository: follows,
           overrides: [
             contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
-            vanishedProfilePubkeysProvider.overrideWith(
-              (ref) => Stream.value(const <String>{}),
-            ),
           ],
         );
         await tester.enterText(find.byType(TextField).first, 'Shared List');
