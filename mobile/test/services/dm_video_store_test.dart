@@ -2927,6 +2927,40 @@ void main() {
       );
 
       test(
+        'sweepOwners keeps the marks of a message whose video a live store is '
+        'still fetching, and only those',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final message = _videoMessage();
+          final store = createStore();
+          final download = store.videoFor(message);
+          await pumpEventQueue();
+          final fetching = keptFile(
+            '${message.id}.frame-attempt',
+            const [],
+            keptAt: now,
+          );
+          final unrelated = keptFile(
+            '${'9' * 64}.frame-attempt',
+            const [],
+            keptAt: now,
+          );
+
+          await DmVideoStore.sweepOwners(
+            {_owner},
+            rootDirectory: () async => root,
+            now: () => now,
+          );
+
+          expect(fetching.existsSync(), isTrue);
+          expect(unrelated.existsSync(), isFalse);
+          release.complete(_plaintext);
+          await download;
+        },
+      );
+
+      test(
         "sweepOwners keeps a known account's conversation record while its "
         'video stays',
         () async {
