@@ -348,7 +348,8 @@ class DmVideoStore {
 
   /// Lets go of [video], which a call to [videoFor] handed out; each call
   /// that completed is let go of once. Kept past [maxAge] only because it was
-  /// held, it is deleted as soon as nothing holds it.
+  /// in use, it goes with what else is kept for its message once nothing
+  /// uses it.
   void releaseVideo(File video) {
     final count = _holds[video.path];
     if (count == null) return;
@@ -357,8 +358,14 @@ class DmVideoStore {
       return;
     }
     _holds.remove(video.path);
-    // Not left for a prune that may be days away.
-    if (!_isInUse(video) && _isPastMaxAge(video)) _deleteNow(video);
+    _deleteIfExpired(video);
+  }
+
+  /// Deletes what is kept for [video]'s message once nothing uses the video
+  /// and it is past [maxAge], rather than leave it for a prune that may be
+  /// days away.
+  void _deleteIfExpired(File video) {
+    if (!_isInUse(video) && _isPastMaxAge(video)) _deleteKeptFor(video);
   }
 
   bool _isPastMaxAge(File file) {
@@ -1302,20 +1309,23 @@ class DmVideoStore {
     }
     _leases.remove(file.path);
     if (_goneWhileLeased.remove(file.path)) {
-      _deleteKeptForGoneMessage(file);
+      _deleteKeptFor(file);
       runDetached(
         prune(),
         'prune a released kept video DM whose message is gone',
         logName: _logName,
         category: LogCategory.video,
       );
+    } else {
+      _deleteIfExpired(file);
     }
   }
 
-  /// Deletes everything kept for [file]'s message, which a prune found gone
-  /// while it was held. Not asked again: the rows that said so may be cleared
-  /// by now, as an account switch does.
-  void _deleteKeptForGoneMessage(File file) {
+  /// Deletes everything kept for [file]'s message that no read or hand-out
+  /// holds: its message went while it was held, as a prune found, or it is
+  /// past [maxAge]. A gone message is not asked about again: the rows that
+  /// said so may be cleared by now, as an account switch does.
+  void _deleteKeptFor(File file) {
     final id = _messageIdOf(file);
     final List<File> files;
     try {

@@ -2511,6 +2511,24 @@ void main() {
         });
 
         test(
+          'takes its frame and record along when let go past its age',
+          () async {
+            final store = createStore();
+            final message = _videoMessage();
+            final file = await store.videoFor(message);
+            await store.previewFor(message);
+            for (final kept in keptFiles()) {
+              kept.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+            }
+            expect(keptFiles(), hasLength(3));
+
+            store.releaseVideo(file);
+
+            expect(keptFiles(), isEmpty);
+          },
+        );
+
+        test(
           'stays kept for the next play when let go before its age',
           () async {
             final store = createStore();
@@ -2575,6 +2593,7 @@ void main() {
             expect(file.existsSync(), isTrue);
             read.complete(_frame);
             await preview;
+            expect(keptFiles(), isEmpty);
           },
         );
       });
