@@ -13,7 +13,6 @@ import 'package:models/models.dart' show DmMessage;
 import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/dm_clip_save_scope.dart';
@@ -264,8 +263,6 @@ class _PlayerState extends State<_Player> {
   /// the error meanwhile; a player that recovers must keep playing.
   static const _errorGrace = Duration(seconds: 3);
 
-  static const _startContext = 'DmVideoPlayPage._start';
-
   DivineVideoPlayerController? _controller;
   String? _path;
   StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
@@ -295,18 +292,15 @@ class _PlayerState extends State<_Player> {
     } catch (error, stackTrace) {
       await controller.dispose();
       if (mounted) {
-        final failure = _PlayerFailure(
-          error is PlatformException
-              ? '${error.code}: ${error.message}'
-              : '${error.runtimeType}: $error',
-          path,
-        );
         context.read<DmVideoPlaybackCubit>().playbackFailed(
-          // A programming error is still reported, scrubbed.
-          asReportableError(error, context: _startContext) == null
-              ? failure
-              : Reportable(failure, context: _startContext),
+          _PlayerFailure(
+            error is PlatformException
+                ? '${error.code}: ${error.message}'
+                : '${error.runtimeType}: $error',
+            path,
+          ),
           stackTrace,
+          cause: error,
         );
       }
       return;

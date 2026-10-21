@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/gallery_save_service.dart';
@@ -119,6 +120,36 @@ void main() {
 
         expect(cubit.state.status, DmVideoPlaybackStatus.failed);
       });
+
+      final failure = Exception('Video player failed: [REDACTED]');
+
+      blocTest<DmVideoPlaybackCubit, DmVideoPlaybackState>(
+        'reports the failure as a crash when a bug in the app caused it',
+        build: createCubit,
+        act: (cubit) => cubit.playbackFailed(
+          failure,
+          StackTrace.current,
+          cause: StateError('cast'),
+        ),
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (reportable) => reportable.unwrap(),
+            'unwrap',
+            same(failure),
+          ),
+        ],
+      );
+
+      blocTest<DmVideoPlaybackCubit, DmVideoPlaybackState>(
+        'reports the failure only to the log when the player caused it',
+        build: createCubit,
+        act: (cubit) => cubit.playbackFailed(
+          failure,
+          StackTrace.current,
+          cause: Exception('source'),
+        ),
+        errors: () => [same(failure)],
+      );
     });
 
     group('saveToGallery', () {

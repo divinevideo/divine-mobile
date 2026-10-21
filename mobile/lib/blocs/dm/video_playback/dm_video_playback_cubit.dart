@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/gallery_save_service.dart';
@@ -131,9 +132,17 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
     }
   }
 
-  /// Reports that the player could not open the video.
-  void playbackFailed(Object error, StackTrace stackTrace) {
-    addError(error, stackTrace);
+  /// Reports that the player could not open the video. [error] is what is
+  /// reported, already rid of anything private; [cause], what raised it,
+  /// decides whether it is a bug worth a crash report.
+  void playbackFailed(Object error, StackTrace stackTrace, {Object? cause}) {
+    final asBug = cause == null
+        ? null
+        : asReportableError(cause, context: 'playbackFailed');
+    addError(
+      asBug == null ? error : Reportable(error, context: 'playbackFailed'),
+      stackTrace,
+    );
     emitIfOpen(
       const DmVideoPlaybackState(status: DmVideoPlaybackStatus.failed),
     );
