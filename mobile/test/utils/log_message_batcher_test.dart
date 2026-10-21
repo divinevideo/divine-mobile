@@ -12,6 +12,18 @@ void main() {
     late LogCaptureService logCapture;
     late Set<LogCategory> previousCategories;
     late LogLevel previousLevel;
+    late Set<LogCategory> initialCategories;
+    late LogLevel initialLevel;
+
+    setUpAll(() {
+      initialCategories = Set.of(UnifiedLogger.enabledCategories);
+      initialLevel = UnifiedLogger.currentLevel;
+    });
+
+    tearDownAll(() {
+      expect(UnifiedLogger.enabledCategories, initialCategories);
+      expect(UnifiedLogger.currentLevel, initialLevel);
+    });
 
     setUp(() async {
       previousCategories = Set<LogCategory>.from(
