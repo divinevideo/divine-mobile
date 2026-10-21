@@ -276,6 +276,12 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     ref.watch(blocklistVersionProvider);
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
     final blockedReactors = blocklistRepository.dmHiddenPubkeys;
+    // Of those, the ones muted rather than blocked: a video card says which
+    // of the two holds its preview back.
+    final mutedSenders = {
+      for (final pubkey in blockedReactors)
+        if (!blocklistRepository.isBlocked(pubkey)) pubkey,
+    };
 
     final otherPubkey = _otherPubkey;
     // A group is titled for the room, and `otherPubkey` is then whichever
@@ -596,6 +602,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   otherPubkey: otherPubkey,
                                   participantPubkeys: widget.participantPubkeys,
                                   blockedPubkeys: blockedReactors,
+                                  mutedPubkeys: mutedSenders,
                                   displayName: conversationDisplayName,
                                   moderation: moderation,
                                   isResolving: isIdentityResolving,
@@ -1354,6 +1361,7 @@ class _ConversationContent extends StatelessWidget {
     required this.otherPubkey,
     required this.participantPubkeys,
     required this.blockedPubkeys,
+    required this.mutedPubkeys,
     required this.displayName,
     required this.moderation,
     required this.isResolving,
@@ -1373,6 +1381,9 @@ class _ConversationContent extends StatelessWidget {
 
   /// Effective block/mute set; reactions from these pubkeys are hidden.
   final Set<String> blockedPubkeys;
+
+  /// The part of [blockedPubkeys] the user muted rather than blocked.
+  final Set<String> mutedPubkeys;
   final String displayName;
 
   /// How the counterparty is presented; the empty state's artwork follows it
@@ -1451,6 +1462,7 @@ class _ConversationContent extends StatelessWidget {
                     currentPubkey: currentPubkey,
                     participantPubkeys: participantPubkeys,
                     blockedPubkeys: blockedPubkeys,
+                    mutedPubkeys: mutedPubkeys,
                     senderDisplayName: displayName,
                     reactionsEnabled: reactionsEnabled,
                     retractionsEnabled: retractionsEnabled,
@@ -1498,6 +1510,7 @@ class _MessageList extends StatelessWidget {
     required this.currentPubkey,
     required this.participantPubkeys,
     required this.blockedPubkeys,
+    required this.mutedPubkeys,
     required this.senderDisplayName,
     required this.reactionsEnabled,
     required this.retractionsEnabled,
@@ -1510,6 +1523,9 @@ class _MessageList extends StatelessWidget {
 
   /// Effective block/mute set; reactions from these pubkeys are hidden.
   final Set<String> blockedPubkeys;
+
+  /// The part of [blockedPubkeys] the user muted rather than blocked.
+  final Set<String> mutedPubkeys;
   final String senderDisplayName;
   final bool reactionsEnabled;
 
@@ -1938,7 +1954,10 @@ class _MessageList extends StatelessWidget {
           DmDeliveryStatus status, {
           DmPeerNameResolution? author,
         }) {
-          Widget bubbleWith({String? encryptedVideoFramePath}) => MessageBubble(
+          Widget bubbleWith({
+            String? encryptedVideoFramePath,
+            DmVideoHold? encryptedVideoHold,
+          }) => MessageBubble(
             message: message.content,
             timestamp: LocalizedTimeFormatter.formatMessageTime(
               context.l10n,
@@ -2009,14 +2028,20 @@ class _MessageList extends StatelessWidget {
                   )
                 : null,
             encryptedVideoFramePath: encryptedVideoFramePath,
+            encryptedVideoHold: encryptedVideoHold,
           );
           final bubble = message.fileMetadata?.isVideo == true
               ? DmVideoPreviewScope(
                   message: message,
                   accepted: isSent || hasOwnMessage,
-                  blocked: blockedPubkeys.contains(message.senderPubkey),
-                  builder: (_, framePath) =>
-                      bubbleWith(encryptedVideoFramePath: framePath),
+                  blocked:
+                      blockedPubkeys.contains(message.senderPubkey) &&
+                      !mutedPubkeys.contains(message.senderPubkey),
+                  muted: mutedPubkeys.contains(message.senderPubkey),
+                  builder: (_, framePath, hold) => bubbleWith(
+                    encryptedVideoFramePath: framePath,
+                    encryptedVideoHold: hold,
+                  ),
                 )
               : bubbleWith();
           return Column(

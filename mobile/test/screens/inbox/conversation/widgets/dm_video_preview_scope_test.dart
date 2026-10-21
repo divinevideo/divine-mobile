@@ -1,5 +1,5 @@
 // ABOUTME: Tests for DmVideoPreviewScope: which video DMs download as soon as
-// ABOUTME: they show, and the kept frame reaching the bubble it builds.
+// ABOUTME: they show, which hold back their preview and why, and the frame.
 
 import 'dart:async';
 import 'dart:io';
@@ -16,6 +16,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/dm_video_preview_scope.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart'
+    show DmVideoHold;
 import 'package:openvine/services/dm_video_store.dart';
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
@@ -68,13 +70,14 @@ void main() {
   Widget host({
     required bool accepted,
     bool blocked = false,
-    FollowRelationship relationship = FollowRelationship.none,
-    List<String?>? framePaths,
+    bool muted = false,
+    Stream<FollowRelationship>? relationship,
+    List<(String?, DmVideoHold?)>? built,
   }) => ProviderScope(
     overrides: [
       dmVideoStoreProvider.overrideWithValue(store),
       followRelationshipProvider.overrideWith(
-        (ref, pubkey) => Stream.value(relationship),
+        (ref, pubkey) => relationship ?? Stream.value(FollowRelationship.none),
       ),
     ],
     child: MaterialApp(
@@ -84,77 +87,134 @@ void main() {
         message: _videoMessage(),
         accepted: accepted,
         blocked: blocked,
-        builder: (context, framePath) {
-          framePaths?.add(framePath);
-          return Text(framePath ?? 'no frame');
+        muted: muted,
+        builder: (context, framePath, hold) {
+          built?.add((framePath, hold));
+          return Text('${framePath ?? 'no frame'} ${hold?.name ?? 'shown'}');
         },
       ),
     ),
   );
 
+  void expectNoStoreRead() => verifyNever(
+    () => store.previewFor(
+      any(),
+      download: any(named: 'download'),
+      decode: any(named: 'decode'),
+      stillWanted: any(named: 'stillWanted'),
+    ),
+  );
+
+  void expectDownloadedOnce() => verify(
+    () => store.previewFor(
+      any(),
+      download: true,
+      decode: any(named: 'decode'),
+      stillWanted: any(named: 'stillWanted'),
+    ),
+  ).called(1);
+
   group(DmVideoPreviewScope, () {
-    group('download', () {
+    group('trusted', () {
       testWidgets('downloads at once in a chat the user has posted in', (
         tester,
       ) async {
-        await tester.pumpWidget(host(accepted: true));
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(host(accepted: true, built: built));
         await tester.pump();
 
-        verify(
-          () => store.previewFor(
-            any(),
-            download: true,
-            decode: any(named: 'decode'),
-            stillWanted: any(named: 'stillWanted'),
-          ),
-        ).called(1);
+        expectDownloadedOnce();
+        expect(built.map((entry) => entry.$2), everyElement(isNull));
       });
 
       testWidgets('downloads at once from someone the user follows', (
         tester,
       ) async {
         await tester.pumpWidget(
-          host(accepted: false, relationship: FollowRelationship.youFollow),
+          host(
+            accepted: false,
+            relationship: Stream.value(FollowRelationship.youFollow),
+          ),
         );
         await tester.pump();
         await tester.pump();
 
-        verify(
-          () => store.previewFor(
-            any(),
-            download: true,
-            decode: any(named: 'decode'),
-            stillWanted: any(named: 'stillWanted'),
+        expectDownloadedOnce();
+      });
+    });
+
+    group('held back', () {
+      testWidgets('holds back a request: no download, no frame, and asks for a '
+          'tap', (tester) async {
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(
+            accepted: false,
+            relationship: Stream.value(FollowRelationship.followsYou),
+            built: built,
           ),
-        ).called(1);
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expectNoStoreRead();
+        expect(built.last, (null, DmVideoHold.request));
       });
 
-      testWidgets(
-        'waits for a tap on a request from someone the user does not follow',
-        (tester) async {
+      for (final (name, blocked, muted, hold) in [
+        ('blocked', true, false, DmVideoHold.blocked),
+        ('muted', false, true, DmVideoHold.muted),
+      ]) {
+        testWidgets('holds back a $name sender, even in a chat the user '
+            'posted in and from someone they follow', (tester) async {
+          final built = <(String?, DmVideoHold?)>[];
           await tester.pumpWidget(
-            host(accepted: false, relationship: FollowRelationship.followsYou),
+            host(
+              accepted: true,
+              blocked: blocked,
+              muted: muted,
+              relationship: Stream.value(FollowRelationship.youFollow),
+              built: built,
+            ),
           );
           await tester.pump();
           await tester.pump();
 
-          verifyNever(
-            () => store.previewFor(
-              any(),
-              download: true,
-              decode: any(named: 'decode'),
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          );
-          verify(
-            () => store.previewFor(
-              any(),
-              download: false,
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          ).called(1);
-        },
-      );
+          expectNoStoreRead();
+          expect(built.last, (null, hold));
+        });
+      }
+
+      testWidgets('never shows a frame read before the sender was blocked', (
+        tester,
+      ) async {
+        when(() => store.knownPreviewPathFor(any())).thenReturn(_framePath);
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(accepted: true, blocked: true, built: built),
+        );
+        await tester.pump();
+
+        expect(built, everyElement((null, DmVideoHold.blocked)));
+      });
+
+      testWidgets('neither downloads nor says why until it knows whether the '
+          'user follows the sender', (tester) async {
+        final relationship = StreamController<FollowRelationship>();
+        addTearDown(relationship.close);
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(
+            accepted: false,
+            relationship: relationship.stream,
+            built: built,
+          ),
+        );
+        await tester.pump();
+
+        expectNoStoreRead();
+        expect(built, everyElement((null, null)));
+      });
     });
 
     group('follow state', () {
@@ -186,7 +246,8 @@ void main() {
                   message: _videoMessage(),
                   accepted: false,
                   blocked: false,
-                  builder: (context, framePath) =>
+                  muted: false,
+                  builder: (context, framePath, hold) =>
                       Text(framePath ?? 'no frame'),
                 ),
               ),
@@ -195,14 +256,7 @@ void main() {
           relationships.single.add(FollowRelationship.youFollow);
           await tester.pump();
           await tester.pump();
-          verify(
-            () => store.previewFor(
-              any(),
-              download: true,
-              decode: any(named: 'decode'),
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          ).called(1);
+          expectDownloadedOnce();
 
           // The follower cache lands, so the relationship rebuilds and has
           // not answered yet.
@@ -215,119 +269,64 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          verifyNever(
-            () => store.previewFor(
-              any(),
-              download: true,
-              decode: any(named: 'decode'),
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          );
+          expectNoStoreRead();
         },
       );
     });
 
-    group('blocked senders', () {
-      testWidgets(
-        'never downloads by itself from a blocked or muted sender, even in a '
-        'chat the user posted in or from someone they follow',
-        (tester) async {
-          await tester.pumpWidget(
-            host(
-              accepted: true,
-              blocked: true,
-              relationship: FollowRelationship.youFollow,
-            ),
-          );
-          await tester.pump();
-          await tester.pump();
-
-          verifyNever(
-            () => store.previewFor(
-              any(),
-              download: true,
-              decode: any(named: 'decode'),
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          );
-          verify(
-            () => store.previewFor(
-              any(),
-              download: false,
-              decode: false,
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          ).called(1);
-        },
-      );
-    });
-
-    group('blocked senders, later', () {
-      testWidgets(
-        "stops decoding a stranger's video once they are blocked while it "
-        'shows',
-        (tester) async {
-          final blocked = ValueNotifier(false);
-          addTearDown(blocked.dispose);
-          await tester.pumpWidget(
-            ProviderScope(
-              overrides: [
-                dmVideoStoreProvider.overrideWithValue(store),
-                followRelationshipProvider.overrideWith(
-                  (ref, pubkey) => Stream.value(FollowRelationship.none),
-                ),
-              ],
-              child: MaterialApp(
-                localizationsDelegates: appLocalizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: ValueListenableBuilder<bool>(
-                  valueListenable: blocked,
-                  builder: (context, isBlocked, _) => DmVideoPreviewScope(
-                    message: _videoMessage(),
-                    accepted: false,
-                    blocked: isBlocked,
-                    builder: (context, framePath) =>
-                        Text(framePath ?? 'no frame'),
-                  ),
+    group('blocked later', () {
+      testWidgets('drops the frame once the sender is blocked while it shows', (
+        tester,
+      ) async {
+        final blocked = ValueNotifier(false);
+        addTearDown(blocked.dispose);
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              dmVideoStoreProvider.overrideWithValue(store),
+              followRelationshipProvider.overrideWith(
+                (ref, pubkey) => Stream.value(FollowRelationship.none),
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: ValueListenableBuilder<bool>(
+                valueListenable: blocked,
+                builder: (context, isBlocked, _) => DmVideoPreviewScope(
+                  message: _videoMessage(),
+                  accepted: true,
+                  blocked: isBlocked,
+                  muted: false,
+                  builder: (context, framePath, hold) {
+                    built.add((framePath, hold));
+                    return Text(framePath ?? 'no frame');
+                  },
                 ),
               ),
             ),
-          );
-          await tester.pump();
-          await tester.pump();
-          verify(
-            () => store.previewFor(
-              any(),
-              download: false,
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          ).called(1);
+          ),
+        );
+        await tester.pump();
+        expect(built.last, (_framePath, null));
 
-          blocked.value = true;
-          await tester.pump();
-          await tester.pump();
+        blocked.value = true;
+        await tester.pump();
 
-          verify(
-            () => store.previewFor(
-              any(),
-              download: false,
-              decode: false,
-              stillWanted: any(named: 'stillWanted'),
-            ),
-          ).called(1);
-        },
-      );
+        expect(built.last, (null, DmVideoHold.blocked));
+      });
     });
 
     group('renders', () {
       testWidgets('builds the bubble with the kept frame', (tester) async {
-        final framePaths = <String?>[];
-        await tester.pumpWidget(host(accepted: true, framePaths: framePaths));
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(host(accepted: true, built: built));
         await tester.pump();
 
-        expect(find.text(_framePath), findsOneWidget);
-        expect(framePaths.first, isNull);
-        expect(framePaths.last, equals(_framePath));
+        expect(find.text('$_framePath shown'), findsOneWidget);
+        expect(built.first, (null, null));
+        expect(built.last, (_framePath, null));
       });
     });
   });

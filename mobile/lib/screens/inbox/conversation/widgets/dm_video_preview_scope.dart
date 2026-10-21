@@ -1,5 +1,5 @@
-// ABOUTME: Provides one video DM's kept preview frame to the bubble it builds;
-// ABOUTME: a stranger's video downloads only once the user plays it.
+// ABOUTME: Provides one video DM's kept preview frame to the bubble it builds,
+// ABOUTME: or why it holds the preview back: requests, blocked and muted.
 
 import 'dart:async';
 
@@ -12,21 +12,26 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/video_preview/dm_video_preview_cubit.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart'
+    show DmVideoHold;
 
-/// Builds a video DM's bubble with the frame this device keeps for it.
+/// Builds a video DM's bubble with the frame this device keeps for it, or
+/// with why its preview is held back.
 ///
-/// The video downloads as soon as the bubble shows when the conversation is
-/// [accepted] or the user follows the sender, unless the sender is [blocked].
-/// Otherwise nothing downloads until the user plays it: a stranger or a
-/// blocked sender cannot make the device fetch and decode a file, or learn
-/// from their host when the thread was opened. A blocked sender's video is
-/// not decoded for its frame even once kept; only a frame read before shows.
+/// The video downloads as soon as the bubble shows, and the card shows a
+/// frame of it, when the message is the user's own, the user has posted in
+/// the 1:1 chat, or the user follows the sender. Anyone else's card holds its
+/// preview back: a request downloads nothing until the user plays it, and a
+/// blocked or muted sender's card shows nothing of the video, not even a
+/// frame read before. Either way a tap still plays it. A held card never
+/// reads the kept file, so viewing it keeps nothing longer.
 class DmVideoPreviewScope extends ConsumerWidget {
   /// Creates a [DmVideoPreviewScope] for [message].
   const DmVideoPreviewScope({
     required this.message,
     required this.accepted,
     required this.blocked,
+    required this.muted,
     required this.builder,
     super.key,
   });
@@ -34,46 +39,65 @@ class DmVideoPreviewScope extends ConsumerWidget {
   /// The kind 15 video message.
   final DmMessage message;
 
-  /// Whether the message is the user's own or the user has posted in this
-  /// conversation.
+  /// Whether the message is the user's own, or the user has posted in this
+  /// 1:1 conversation.
   final bool accepted;
 
-  /// Whether the user blocked or muted the sender. Overrides [accepted] and
-  /// following: a thread reached from the Blocked chip is still readable.
+  /// Whether the user blocked the sender. Overrides [accepted] and following:
+  /// a thread reached from the Blocked chip is still readable.
   final bool blocked;
 
-  /// Builds the bubble with the frame's path, null until there is one.
-  final Widget Function(BuildContext context, String? framePath) builder;
+  /// Whether the user muted the sender, without blocking them. Overrides
+  /// [accepted] and following, as [blocked] does.
+  final bool muted;
+
+  /// Builds the bubble with the frame's path, null until there is one, and
+  /// why its preview is held back, null when it is not.
+  final Widget Function(
+    BuildContext context,
+    String? framePath,
+    DmVideoHold? hold,
+  )
+  builder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (blocked) return builder(context, null, DmVideoHold.blocked);
+    if (muted) return builder(context, null, DmVideoHold.muted);
     final store = ref.watch(dmVideoStoreProvider);
     // `value`, not `asData`: while the relationship reloads it keeps the
     // previous answer, so the preview is not torn down and started again.
     final relationship = ref
         .watch(followRelationshipProvider(message.senderPubkey))
         .value;
-    final download =
-        !blocked &&
-        (accepted ||
-            relationship == FollowRelationship.youFollow ||
-            relationship == FollowRelationship.mutual);
+    final trusted =
+        accepted ||
+        relationship == FollowRelationship.youFollow ||
+        relationship == FollowRelationship.mutual;
+    if (!trusted) {
+      // Until the relationship is known, neither download nor say why.
+      return builder(
+        context,
+        null,
+        relationship == null ? null : DmVideoHold.request,
+      );
+    }
     return BlocProvider(
-      // A new account, a newly followed sender or a block starts a fresh read.
-      key: ValueKey((store, message.id, download, blocked)),
+      // A new account starts a fresh read.
+      key: ValueKey((store, message.id)),
       create: (_) {
         final cubit = DmVideoPreviewCubit(
           message: message,
           store: store,
-          download: download,
-          decode: !blocked,
+          download: true,
+          decode: true,
         );
         unawaited(cubit.load());
         return cubit;
       },
       child: BlocSelector<DmVideoPreviewCubit, DmVideoPreviewState, String?>(
         selector: (state) => state.framePath,
-        builder: builder,
+        builder: (context, framePath) => builder(context, framePath, null),
       ),
     );
   }
