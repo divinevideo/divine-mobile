@@ -47,3 +47,44 @@ regenerating with the latest dependency.
 | lib/statusMapping.js | `ab7f706a1e3e74f4efd276560bb50e15f71dd0b20f85e87e21d1c18259420064` |
 | package.json | `3cc81081409bea2f0fd4ec18d64c542a18e0ac6f7f970c7f7be4139aaa8d140f` |
 | punycode.js | `6052a80eac47e46bd4de17ae0095e0192c336d3d7c387d292ad2176ebfc53d04` |
+
+## Bounded normalization and codec traversal
+
+The NFC adapter in `lib/src/normalization.dart` uses only the pinned 0.3.2
+`UChar` lookup and Hangul routines, deliberately isolating that internal API
+behind one import. The exact version and artifact lock protect this dependency
+boundary. It does not call the package's iterator buffers, whose front removal
+and insertion ordering are quadratic on long combining sequences. Canonical
+decomposition appends to a list; each nonstarter run is sorted by canonical
+class and original position (stable), then composition writes an append-only
+output. Unicode decomposition depth is fixed by the pinned data. Ordering is
+O(n log n); the other stages are linear in the decomposed length.
+
+Dependency source SHA-256 values (from the locked published artifact):
+
+| Source | SHA-256 |
+| --- | --- |
+| lib/src/uchar.dart | `76092cd836be925a4a13d9033e9348fab141626f3e0454dda7eb243416b73a26` |
+| lib/src/unormdata.dart | `3c25b618fef2ccce2d5e5b47eac096948c9900e5f3c2da7d39fe56f8ad77cc74` |
+| LICENSE (MIT) | `8884fc22f0944465ab8fca4e934fef3db9ab2b3b14f95874f1d833aa75f81553` |
+
+The codec keeps punycode.js's checked arithmetic. Decoding records insertion
+ranks, then reconstructs the sequence backwards using a Fenwick tree of empty
+slots. Encoding sorts codepoint/position pairs once and uses prefix counts to
+compute the same increments as RFC 3492's input scans. Each traversal is
+O(n log n), plus output digit processing. This changes traversal, not accepted
+wire lengths, normalization data, scalar ordering or overflow decisions.
+
+`tool/generate_punycode_cases.cjs` runs the retained, checksummed upstream codec
+offline with a fixed PRNG seed. Its reference fixture contains 201 encode and
+337 decode vectors, including invalid/overflow inputs, repeated marks and
+12,000 distinct scalar values in both orders. The Dart test checks the fixture
+hash before comparing every result. Regenerate with Node, then review any hash
+change rather than silently updating the expected checksum:
+
+`node tool/generate_punycode_cases.cjs`
+
+Fixture SHA-256:
+`213029748b3be88c148212cb3a49a8d0ec2ffb02fea2d301f248824ff78ca5f4`.
+The original upstream license and hashes above remain unchanged. All official
+Unicode 17 NFC and IDNA corpus rows continue to run against the optimized path.

@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:challenge_protocol/src/idna.dart';
+import 'package:challenge_protocol/src/normalization.dart';
 import 'package:crypto/crypto.dart';
 import 'package:test/test.dart';
-import 'package:unorm_dart/unorm_dart.dart' as normalization;
 
 String _read(String name, String hash) {
   final bytes = File('test/fixtures/unicode17/$name').readAsBytesSync();
@@ -74,7 +74,7 @@ void main() {
           .toList();
       for (var i = 0; i < 5; i++) {
         expect(
-          normalization.nfc(fields[i]),
+          normalizeNfc(fields[i]),
           fields[i < 3 ? 1 : 3],
           reason: 'NormalizationTest row ${count + 1}, column ${i + 1}',
         );

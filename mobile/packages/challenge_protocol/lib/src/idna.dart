@@ -1,8 +1,8 @@
 // Port of jsdom/tr46 6.0.0's nontransitional WHATWG processing path.
 // Copyright tr46 contributors. MIT license and provenance in third_party/tr46.
+import 'package:challenge_protocol/src/normalization.dart';
 import 'package:challenge_protocol/src/punycode.dart';
 import 'package:challenge_protocol/src/tr46_data.g.dart' as data;
-import 'package:unorm_dart/unorm_dart.dart' as normalization;
 
 /// WHATWG domain-to-ASCII processing (Unicode 17, nontransitional).
 ///
@@ -23,7 +23,7 @@ String? domainToAscii(String input) {
         mapped.writeCharCode(rune);
     }
   }
-  final labels = normalization.nfc(mapped.toString()).split('.');
+  final labels = normalizeNfc(mapped.toString()).split('.');
   final bidiDomain = data.bidiDomain.hasMatch(
     labels
         .map((label) {
@@ -78,7 +78,7 @@ bool _nonAscii(String text) => text.codeUnits.any((code) => code > 0x7f);
 
 bool _validLabel(String label, bool bidiDomain) {
   if (label.isEmpty) return true;
-  if (normalization.nfc(label) != label ||
+  if (normalizeNfc(label) != label ||
       label.startsWith('xn--') ||
       label.contains('.')) {
     return false;

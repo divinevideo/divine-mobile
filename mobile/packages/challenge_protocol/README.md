@@ -78,12 +78,16 @@ TypeScript runtime and rerun signed parser/replay comparisons. This finite audit
 records the runtime used, not a promise about future timezone database versions.
 
 Relay URLs use WHATWG special-URL authority parsing and a pure Dart port of
-tr46 6.0.0's nontransitional UTS46 path with Unicode 17 data and NFC from exactly
-`unorm_dart` 0.3.2. This includes percent-decoding, forbidden host characters,
+tr46 6.0.0's nontransitional UTS46 path with Unicode 17 data. NFC uses
+lookup and Hangul data from exactly `unorm_dart` 0.3.2 with an append-only
+normalizer and stable canonical-class ordering. Punycode uses prefix-count trees
+to avoid quadratic list insertion and repeated full input scans. This includes percent-decoding, forbidden host characters,
 Bidi/joiner rules, ACE labels and numeric IPv4 processing. The original signed
 URL is preserved. There is no native or WASM initialization requirement. See
 [upstream attribution and generation](third_party/tr46/SOURCE.md) and
 [official Unicode corpus provenance](test/fixtures/unicode17/SOURCE.md).
+A local timing probe is available as `dart run tool/benchmark_validation.dart`.
+Its measurements are not device latency guarantees.
 Unicode version pins make this behavior reproducible; they do not promise
 compatibility with future canonical runtime versions. Callers must still bound
 transport bytes before decoding untrusted data, and retained batch size.
