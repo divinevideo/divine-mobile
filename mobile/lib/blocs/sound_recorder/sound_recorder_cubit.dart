@@ -87,6 +87,11 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   Future<void> start() async {
     if (state.isActive || _isTransitioning) return;
     _isTransitioning = true;
+    if (state.status == SoundRecorderStatus.failed) {
+      // A repeated failure must be a new status transition for the view's
+      // error listener, even when the recorder fails before its first sample.
+      emitIfOpen(state.copyWith(status: SoundRecorderStatus.idle));
+    }
     try {
       var permission = await _permissionsService.checkMicrophoneStatus();
       if (isClosed) return;
@@ -112,7 +117,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   /// Stops recording and publishes the file in
   /// [SoundRecorderState.recordingPath].
   ///
-  /// A recording stopped before its first level sample is discarded.
+  /// A sample-less recording shorter than one metering interval is discarded.
   Future<void> stop() async {
     if (!state.isRecording || _isTransitioning) return;
     _isTransitioning = true;
@@ -123,7 +128,11 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       final path = await _recorder.stop() ?? _currentPath;
       _currentPath = null;
       await _audioSessionService.resetAudioSession();
-      final recorded = state.elapsed > Duration.zero;
+      // Native capture can continue while level updates stall. Keep such a
+      // take, but still discard an immediate tap before the first interval.
+      final recorded =
+          state.elapsed > Duration.zero ||
+          _now().difference(_startedAt) >= amplitudeInterval;
       if (isClosed || !recorded) _deleteFile(path);
       emitIfOpen(
         state.copyWith(

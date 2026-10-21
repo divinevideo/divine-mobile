@@ -123,6 +123,28 @@ void main() {
         expect(audioSession.resetCount, 1);
       });
 
+      test(
+        'reports each consecutive failed start to status listeners',
+        () async {
+          recorder.throwOnStart = true;
+          final cubit = build();
+          final statuses = <SoundRecorderStatus>[];
+          final subscription = cubit.stream.listen(
+            (state) => statuses.add(state.status),
+          );
+          addTearDown(subscription.cancel);
+
+          await cubit.start();
+          await cubit.start();
+          await pumpEventQueue();
+
+          expect(
+            statuses.where((status) => status == SoundRecorderStatus.failed),
+            hasLength(2),
+          );
+        },
+      );
+
       test('the next recording deletes an unclaimed one', () async {
         final cubit = build();
         await cubit.start();
@@ -167,6 +189,23 @@ void main() {
 
           expect(cubit.state.isActive, isFalse);
           expect(audioSession.resetCount, 1);
+          expect(cubit.state.recordingPath, isNotNull);
+          expect(File(cubit.state.recordingPath!).existsSync(), isTrue);
+        },
+      );
+
+      test(
+        'keeps a manually stopped recording when meter samples stall',
+        () async {
+          final cubit = build();
+          await cubit.start();
+          recorder.now = recorder.now.add(const Duration(minutes: 1));
+
+          await cubit.stop();
+
+          expect(cubit.state.status, SoundRecorderStatus.idle);
+          expect(cubit.state.recordingPath, recorder.path);
+          expect(File(recorder.path!).existsSync(), isTrue);
         },
       );
 
