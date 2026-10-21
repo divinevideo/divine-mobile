@@ -988,6 +988,10 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
   private static let playerId = Int.max - 50
   private static let channel = "divine_video_player/player_\(playerId)"
   private static let codec = FlutterStandardMethodCodec.sharedInstance()
+  /// How long a wait may take when AVFoundation prepares an item for it. On a
+  /// starved CI simulator one step of that preparation, about 1 ms otherwise,
+  /// has stalled for 7 to 19 s, holding up the main thread with it.
+  private static let mediaTimeout: TimeInterval = 60
 
   private var registrar: FakePluginRegistrar!
   private var plugin: DivineVideoPlayerPlugin!
@@ -1065,7 +1069,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
       rateWhenAnswered = player.rate
       sought.fulfill()
     }
-    wait(for: [sought], timeout: 10)
+    wait(for: [sought], timeout: Self.mediaTimeout)
     XCTAssertGreaterThan(rateWhenAnswered, 0, "the seek must resume playback")
 
     // A fresh end proves the clock ran; sampling a 1 s clip mid-play misses
@@ -1110,7 +1114,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     XCTAssertFalse(seekAnswered, "pause must precede seek completion")
     // Deliver pause before allowing the asynchronous seek completion to run.
     _ = try invoke("pause")
-    wait(for: [sought], timeout: 10)
+    wait(for: [sought], timeout: Self.mediaTimeout)
 
     RunLoop.main.run(until: Date().addingTimeInterval(0.5))
     let state = try XCTUnwrap(latestState())
@@ -1139,7 +1143,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
       rateWhenSecondAnswered = player.rate
       second.fulfill()
     }
-    wait(for: [first, second], timeout: 10)
+    wait(for: [first, second], timeout: Self.mediaTimeout)
     // Playback only moves on from where the winning seek put it, so a starved
     // runner can push this later but never back below 400 ms.
     XCTAssertGreaterThanOrEqual(player.currentTime().seconds, 0.39, "the latest seek must win")
@@ -1164,7 +1168,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
       methodName: "seekTo", arguments: ["positionMs": 0]
     ))) { _ in sought.fulfill() }
     _ = try invoke("stop")
-    wait(for: [sought], timeout: 10)
+    wait(for: [sought], timeout: Self.mediaTimeout)
     RunLoop.main.run(until: Date().addingTimeInterval(0.5))
     let state = try XCTUnwrap(latestState())
     XCTAssertEqual(state["status"] as? String, "idle")
@@ -1184,7 +1188,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
       methodName: "seekTo", arguments: ["positionMs": 0]
     ))) { _ in sought.fulfill() }
     _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
-    wait(for: [sought], timeout: 10)
+    wait(for: [sought], timeout: Self.mediaTimeout)
     try waitForState("replacement loads paused") { $0["status"] as? String == "paused" }
     let loadedPosition = try XCTUnwrap(latestState()?["positionMs"] as? Int)
     RunLoop.main.run(until: Date().addingTimeInterval(0.5))
@@ -1211,7 +1215,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     defer {
       NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
     }
-    wait(for: [sought], timeout: 10)
+    wait(for: [sought], timeout: Self.mediaTimeout)
     RunLoop.main.run(until: Date().addingTimeInterval(0.5))
     // Dart hears nothing while inactive, so ask the player itself.
     XCTAssertEqual(player.rate, 0, "the seek must not play while inactive")
@@ -1323,7 +1327,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
       answer = reply.flatMap { Self.codec.decodeEnvelope($0) }
       answered.fulfill()
     }
-    wait(for: [answered], timeout: 10)
+    wait(for: [answered], timeout: Self.mediaTimeout)
     if let error = answer as? FlutterError {
       XCTFail("\(method) failed: \(error.code) \(error.message ?? "")")
     }
@@ -1353,7 +1357,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
   private func waitForState(
     _ description: String,
     since firstMessage: Int? = nil,
-    timeout: TimeInterval = 10,
+    timeout: TimeInterval = DivineVideoPlayerPlaybackEndTests.mediaTimeout,
     _ matches: ([String: Any]) -> Bool
   ) throws {
     let deadline = Date().addingTimeInterval(timeout)
