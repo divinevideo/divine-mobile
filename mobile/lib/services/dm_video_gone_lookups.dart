@@ -40,26 +40,43 @@ class DmVideoGoneLookups {
   /// cleared, as an account switch clears them.
   final Set<String> _known = {};
 
-  /// Whether [message] was retracted or removed with its conversation, the
-  /// one its row is in now: a caller can hold a message from before a repair
-  /// moved it. Throws what a lookup throws.
-  Future<bool> isGone(DmMessage message) async {
+  /// Whether [message], kept in [dir], was retracted or removed with its
+  /// conversation: the one its row is in now, as a caller can hold a message
+  /// from before a repair moved it, else the one its record names, else the
+  /// caller's. Only a retraction or a row is remembered, since a record or a
+  /// caller's copy can predate a repair. Throws what a lookup throws.
+  Future<bool> isGone(DmMessage message, Directory dir) async {
     if (_known.contains(message.id)) return true;
-    final gone =
-        await _isMessageGone?.call(message.id) == true ||
-        await _isRemovedNow(message);
-    if (gone) _known.add(message.id);
-    return gone;
-  }
-
-  Future<bool> _isRemovedNow(DmMessage message) async {
+    if (await _isMessageGone?.call(message.id) == true) {
+      _known.add(message.id);
+      return true;
+    }
     final isRemoved = _isConversationRemoved;
     if (isRemoved == null) return false;
     final current = await _findMessageLocation?.call(message.id);
+    if (current != null) {
+      final gone = await isRemoved(current.conversationId, current.sentAt);
+      if (gone) _known.add(message.id);
+      return gone;
+    }
+    final said = await _recordedLocation(dir, message.id);
     return isRemoved(
-      current?.conversationId ?? message.conversationId,
-      current?.sentAt ?? message.createdAt,
+      said?.conversationId ?? message.conversationId,
+      said?.sentAt ?? message.createdAt,
     );
+  }
+
+  Future<DmVideoMessageLocation?> _recordedLocation(
+    Directory dir,
+    String messageId,
+  ) async {
+    try {
+      return await DmVideoConversationRecords.read(
+        DmVideoConversationRecords.recordOf(dir, messageId),
+      );
+    } on PathNotFoundException {
+      return null;
+    }
   }
 
   /// The ids among [ids] of messages kept in [dir] that are gone, with

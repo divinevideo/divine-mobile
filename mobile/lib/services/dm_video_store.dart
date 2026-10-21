@@ -987,7 +987,7 @@ class DmVideoStore {
   Future<void> _refuseIfGone(DmMessage message, File video) async {
     final bool gone;
     try {
-      gone = await _gone.isGone(message);
+      gone = await _gone.isGone(message, video.parent);
     } on Object catch (error) {
       Log.warning(
         'Could not tell whether a video DM message is gone, so its video is '

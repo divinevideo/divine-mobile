@@ -57,8 +57,8 @@ void main() {
           isMessageGone: (id) async => id == 'a' * 64,
         );
 
-        expect(await lookups.isGone(_videoMessage()), isTrue);
-        expect(await lookups.isGone(_videoMessage(id: 'e' * 64)), isFalse);
+        expect(await lookups.isGone(_videoMessage(), dir), isTrue);
+        expect(await lookups.isGone(_videoMessage(id: 'e' * 64), dir), isFalse);
       });
 
       test(
@@ -75,10 +75,13 @@ void main() {
           );
 
           expect(
-            await lookups.isGone(_videoMessage(conversationId: 'removed')),
+            await lookups.isGone(_videoMessage(conversationId: 'removed'), dir),
             isTrue,
           );
-          expect(await lookups.isGone(_videoMessage(id: 'e' * 64)), isFalse);
+          expect(
+            await lookups.isGone(_videoMessage(id: 'e' * 64), dir),
+            isFalse,
+          );
           expect(asked, equals([('removed', _sentAt), ('room', _sentAt)]));
         },
       );
@@ -95,7 +98,10 @@ void main() {
           );
 
           expect(
-            await lookups.isGone(_videoMessage(conversationId: 'old-room')),
+            await lookups.isGone(
+              _videoMessage(conversationId: 'old-room'),
+              dir,
+            ),
             isFalse,
           );
         },
@@ -111,13 +117,16 @@ void main() {
             isMessageGone: (_) async => retracted,
           );
           await lookups.goneAmong({'1' * 64}, dir, {});
-          expect(await lookups.isGone(_videoMessage()), isTrue);
+          expect(await lookups.isGone(_videoMessage(), dir), isTrue);
 
           // As an account switch clears the rows.
           retracted = false;
 
-          expect(await lookups.isGone(_videoMessage()), isTrue);
-          expect(await lookups.isGone(_videoMessage(id: '1' * 64)), isTrue);
+          expect(await lookups.isGone(_videoMessage(), dir), isTrue);
+          expect(
+            await lookups.isGone(_videoMessage(id: '1' * 64), dir),
+            isTrue,
+          );
           expect(
             (await lookups.goneAmong({'1' * 64}, dir, {})).gone,
             {'1' * 64},
@@ -125,9 +134,74 @@ void main() {
         },
       );
 
+      test(
+        'judges a message whose row is missing by its record before the '
+        "caller's copy",
+        () async {
+          recordOf('a' * 64, 'repaired');
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'old-room',
+            findMessageLocation: (_) async => null,
+          );
+
+          expect(
+            await lookups.isGone(
+              _videoMessage(conversationId: 'old-room'),
+              dir,
+            ),
+            isFalse,
+          );
+        },
+      );
+
+      test(
+        "does not remember a verdict from a record or the caller's copy, "
+        'either of which can predate a repair',
+        () async {
+          DmVideoMessageLocation? row;
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'old-room',
+            findMessageLocation: (_) async => row,
+          );
+          final stale = _videoMessage(conversationId: 'old-room');
+          expect(await lookups.isGone(stale, dir), isTrue);
+          recordOf(stale.id, 'old-room');
+          expect(await lookups.isGone(stale, dir), isTrue);
+
+          row = (conversationId: 'repaired', sentAt: _sentAt);
+
+          expect(await lookups.isGone(stale, dir), isFalse);
+        },
+      );
+
+      test(
+        'remembers a removal the row decided, once the rows that said so are '
+        'cleared',
+        () async {
+          var cleared = false;
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                !cleared && conversationId == 'removed',
+            findMessageLocation: (_) async =>
+                cleared ? null : (conversationId: 'removed', sentAt: _sentAt),
+          );
+          expect(await lookups.isGone(_videoMessage(), dir), isTrue);
+
+          cleared = true;
+
+          expect(await lookups.isGone(_videoMessage(), dir), isTrue);
+        },
+      );
+
       test('says nothing is gone without lookups', () async {
         expect(
-          await DmVideoGoneLookups(records: records).isGone(_videoMessage()),
+          await DmVideoGoneLookups(records: records)
+              .isGone(_videoMessage(), dir),
           isFalse,
         );
       });
@@ -139,7 +213,7 @@ void main() {
         );
 
         await expectLater(
-          lookups.isGone(_videoMessage()),
+          lookups.isGone(_videoMessage(), dir),
           throwsA(isA<StateError>()),
         );
       });
