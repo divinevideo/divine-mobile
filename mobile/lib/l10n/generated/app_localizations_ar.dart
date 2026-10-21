@@ -516,8 +516,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileInvalidId => 'معرّف الملف الشخصي غير صالح';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'شاهد $displayName على Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'شاهد $displayName على Divine!\n\n$url';
   }
 
   @override
@@ -7911,6 +7911,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get followSortTitle => 'الترتيب حسب';
 
   @override
+  String get followSortSmart => 'ذكي';
+
+  @override
   String get followSortNewest => 'الأحدث أولاً';
 
   @override
@@ -8091,6 +8094,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get searchDiscoverSomethingInteresting =>
       'اكتشف شيئًا مثيرًا للاهتمام';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'الأشخاص';
@@ -13923,4 +13930,106 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'تم التحديد كمقروء';
+
+  @override
+  String get videoEditorLayoutLabel => 'التخطيط';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'ترتيب المقاطع في شاشة مقسّمة';
+
+  @override
+  String get videoEditorLayoutTitle => 'التخطيط';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'إغلاق التخطيط';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'وضع التخطيط';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'جنبًا إلى جنب';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'فوق بعضها';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'ثلاثة صفوف';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'واحد فوق اثنين';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'شبكة من أربعة';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'ثلاثة جنبًا إلى جنب';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'اثنان فوق واحد';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'واحد بجانب اثنين';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'اثنان بجانب واحد';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'واحد فوق ثلاثة';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'صورة داخل صورة، أعلى اليسار';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'صورة داخل صورة، أعلى اليمين';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'صورة داخل صورة، أسفل اليسار';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'صورة داخل صورة، أسفل اليمين';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'الخلية $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'الخلية $number، فارغة';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'إزالة المقطع من الخلية';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'المسافة';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'لون الإطار';
+
+  @override
+  String get videoEditorLayoutApplying => 'جارٍ ترتيب التخطيط…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'الخطوة $step من $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'تعذّر وضع التخطيط. يمكن إعادة المحاولة.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'بعض المقاطع لم تتّسع: كل الخلايا ممتلئة.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'نُشر $time';
+  }
 }

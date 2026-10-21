@@ -84,7 +84,8 @@ void main() {
         when(
           () => repo.watchRefiledFrom(any()),
         ).thenAnswer((_) => const Stream<Set<String>>.empty());
-        when(() => repo.markConversationAsRead(any())).thenAnswer((_) async {});
+        when(() => repo.markConversationAsRead(any()))
+            .thenAnswer((_) async => true);
         when(repo.backfillHistoryIfNeeded).thenAnswer((_) async {});
         when(
           () => repo.watchMessages(any()),
@@ -362,7 +363,7 @@ void main() {
       ).thenAnswer((_) async {});
       when(
         () => mockDmRepository.markConversationAsRead(any()),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
       when(
         () => mockDmRepository.watchMessages(any()),
       ).thenAnswer((_) => const Stream<List<DmMessage>>.empty());

@@ -471,8 +471,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileInvalidId => '无效的个人资料 ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return '快来 Divine 看看 $displayName！\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return '快来 Divine 看看 $displayName！\n\n$url';
   }
 
   @override
@@ -7453,6 +7453,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get followSortTitle => '排序方式';
 
   @override
+  String get followSortSmart => '智能';
+
+  @override
   String get followSortNewest => '最新优先';
 
   @override
@@ -7619,6 +7622,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchDiscoverSomethingInteresting => '发现点有意思的东西';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => '用户';
@@ -13086,4 +13093,99 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => '已标为已读';
+
+  @override
+  String get videoEditorLayoutLabel => '布局';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel => '把片段排成分屏';
+
+  @override
+  String get videoEditorLayoutTitle => '布局';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => '关闭布局';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => '放置布局';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => '左右并排';
+
+  @override
+  String get videoEditorLayoutPresetStacked => '上下堆叠';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => '三行';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => '上一下二';
+
+  @override
+  String get videoEditorLayoutPresetGrid => '四宫格';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => '三列并排';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => '上二下一';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => '左一右二';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => '左二右一';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => '上一下三';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft => '画中画，左上';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight => '画中画，右上';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft => '画中画，左下';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight => '画中画，右下';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return '格子 $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return '格子 $number，空';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => '从格子中移除片段';
+
+  @override
+  String get videoEditorLayoutGapLabel => '间距';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => '边框颜色';
+
+  @override
+  String get videoEditorLayoutApplying => '正在排布你的布局…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return '第 $step 步，共 $count 步';
+  }
+
+  @override
+  String get videoEditorLayoutFailed => '没能放置布局。再试一次吧。';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit => '有些片段放不下了：所有格子都满了。';
+
+  @override
+  String userRowPosted(String time) {
+    return '发布于$time';
+  }
 }

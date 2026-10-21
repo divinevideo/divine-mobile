@@ -533,8 +533,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileInvalidId => 'Ungültige Profil-ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Schau dir $displayName auf Divine an!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Schau dir $displayName auf Divine an!\n\n$url';
   }
 
   @override
@@ -8037,6 +8037,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get followSortTitle => 'Sortieren nach';
 
   @override
+  String get followSortSmart => 'Intelligent';
+
+  @override
   String get followSortNewest => 'Neueste zuerst';
 
   @override
@@ -8219,6 +8222,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get searchDiscoverSomethingInteresting =>
       'Entdecke etwas Interessantes';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'Personen';
@@ -14100,4 +14107,106 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Als gelesen markiert';
+
+  @override
+  String get videoEditorLayoutLabel => 'Layout';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Clips im Split-Screen anordnen';
+
+  @override
+  String get videoEditorLayoutTitle => 'Layout';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Layout schließen';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Layout einfügen';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Nebeneinander';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Übereinander';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Drei Reihen';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Eins über zwei';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Vierer-Raster';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Drei nebeneinander';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Zwei über eins';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Eins neben zwei';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Zwei neben eins';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Eins über drei';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Bild im Bild, oben links';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Bild im Bild, oben rechts';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Bild im Bild, unten links';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Bild im Bild, unten rechts';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Zelle $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Zelle $number, leer';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Clip aus der Zelle entfernen';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Abstand';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Rahmenfarbe';
+
+  @override
+  String get videoEditorLayoutApplying => 'Dein Layout wird angeordnet …';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Schritt $step von $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Das Layout konnte nicht eingefügt werden. Versuch es noch mal.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Nicht alle Clips haben gepasst – alle Zellen sind voll.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Gepostet $time';
+  }
 }

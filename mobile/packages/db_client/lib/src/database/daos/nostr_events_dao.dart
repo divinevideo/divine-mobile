@@ -30,6 +30,42 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     with _$NostrEventsDaoMixin {
   NostrEventsDao(super.attachedDatabase);
 
+  /// Returns each author's newest cached timestamp across [kinds].
+  ///
+  /// Authors without matching events are omitted, and so are events dated
+  /// after [notAfter], in epoch seconds. Queries group in SQLite and read at
+  /// most 500 authors per batch.
+  Future<Map<String, int>> newestCreatedAtByAuthor({
+    required List<String> authors,
+    required List<int> kinds,
+    int? notAfter,
+  }) async {
+    if (authors.isEmpty || kinds.isEmpty) return {};
+
+    const batchSize = 500;
+    final results = <String, int>{};
+    final newest = nostrEvents.createdAt.max();
+    for (var start = 0; start < authors.length; start += batchSize) {
+      final end = start + batchSize < authors.length
+          ? start + batchSize
+          : authors.length;
+      var filter =
+          nostrEvents.pubkey.isIn(authors.sublist(start, end)) &
+          nostrEvents.kind.isIn(kinds);
+      if (notAfter != null) {
+        filter = filter & nostrEvents.createdAt.isSmallerOrEqualValue(notAfter);
+      }
+      final query = selectOnly(nostrEvents)
+        ..addColumns([nostrEvents.pubkey, newest])
+        ..where(filter)
+        ..groupBy([nostrEvents.pubkey]);
+      for (final row in await query.get()) {
+        results[row.read(nostrEvents.pubkey)!] = row.read(newest)!;
+      }
+    }
+    return results;
+  }
+
   /// Calculate expire_at Unix timestamp for an event using default expiry.
   int _defaultExpireAt() {
     return DateTime.now().add(defaultEventCacheExpiry).millisecondsSinceEpoch ~/

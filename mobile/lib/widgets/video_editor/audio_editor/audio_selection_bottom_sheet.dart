@@ -21,6 +21,7 @@ import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.d
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart';
@@ -738,36 +739,49 @@ class _PickerSearchInput extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       color: context.vineColors.surface,
-      child: Semantics(
-        identifier: SemanticIds.audioSearchField,
-        textField: true,
-        child: TextField(
-          controller: controller,
-          onChanged: onChanged,
-          style: TextStyle(color: context.vineColors.primaryText),
-          decoration: InputDecoration(
-            hintText: context.l10n.soundsSearchHint,
-            hintStyle: TextStyle(color: context.vineColors.onSurfaceMuted),
-            prefixIconConstraints: const BoxConstraints(),
-            prefixIcon: Padding(
-              padding: const EdgeInsetsDirectional.only(start: 12, end: 8),
-              child: DivineIcon(
-                icon: DivineIconName.search,
-                color: context.vineColors.onSurfaceMuted,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            identifier: SemanticIds.audioSearchField,
+            textField: true,
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              style: TextStyle(color: context.vineColors.primaryText),
+              decoration: InputDecoration(
+                hintText: context.l10n.soundsSearchHint,
+                hintStyle: TextStyle(color: context.vineColors.onSurfaceMuted),
+                prefixIconConstraints: const BoxConstraints(),
+                prefixIcon: Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 12, end: 8),
+                  child: DivineIcon(
+                    icon: DivineIconName.search,
+                    color: context.vineColors.onSurfaceMuted,
+                  ),
+                ),
+                filled: true,
+                fillColor: context.vineColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
-            filled: true,
-            fillColor: context.vineColors.background,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
+          ),
+          ValueListenableBuilder(
+            valueListenable: controller,
+            builder: (context, value, _) => PrivateKeySearchWarning(
+              query: value.text,
+              padding: const EdgeInsets.only(top: 12),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

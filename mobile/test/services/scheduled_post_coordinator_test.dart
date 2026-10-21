@@ -28,6 +28,32 @@ class _MockCollaboratorInviteService extends Mock
 
 class _FakeEvent extends Fake implements Event {}
 
+/// Holds the [pendingCallToGate]th [pending] read until [gate] completes.
+class _GatedPendingRepository extends ScheduledPostsRepository {
+  _GatedPendingRepository({
+    required super.dao,
+    required super.client,
+    required super.ownerPubkey,
+    required super.now,
+    required this.pendingCallToGate,
+  });
+
+  final int pendingCallToGate;
+  final gate = Completer<void>();
+  final reachedGate = Completer<void>();
+  var _pendingCalls = 0;
+
+  @override
+  Future<List<ScheduledPost>> pending() async {
+    _pendingCalls++;
+    if (_pendingCalls == pendingCallToGate) {
+      reachedGate.complete();
+      await gate.future;
+    }
+    return super.pending();
+  }
+}
+
 void main() {
   const owner =
       'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
@@ -740,6 +766,56 @@ void main() {
           expect(coordinator.isInitialized, isFalse);
         },
       );
+
+      // An account switch disposes the coordinator while a sweep is reading
+      // the outbox, just before it would sync with the relay (#10291).
+      test('a sweep disposed while reading the outbox does not sync', () async {
+        final gated = _GatedPendingRepository(
+          dao: database.scheduledPostsDao,
+          client: client,
+          ownerPubkey: owner,
+          now: () => now,
+          pendingCallToGate: 2,
+        );
+        addTearDown(gated.dispose);
+        await gated.enqueue(
+          event: buildEvent(),
+          draftId: 'draft-1',
+          uploadId: 'upload-1',
+          expireAfterSecs: 86400,
+        );
+        await database.scheduledPostsDao.updateStatus(
+          eventId: buildEvent().id,
+          status: ScheduledPostStatus.scheduled,
+        );
+        final sweeping = ScheduledPostCoordinator(
+          repository: gated,
+          broadcast: (event, {isRetry = false}) async =>
+              EventPublishOutcome.published,
+          recordPublish: (event, {uploadId}) async {},
+          sign: ({
+            required int kind,
+            required String content,
+            List<List<String>>? tags,
+            int? createdAt,
+          }) async => null,
+          draftService: draftService,
+          collaboratorInviteService: inviteService,
+          appForegroundStream: foreground.stream,
+          retryTriggerStream: reconnect.stream,
+          outboxChangedStream: gated.changes,
+          currentPubkey: () => owner,
+          now: () => now,
+        );
+
+        final sweep = sweeping.sweep(force: true);
+        await gated.reachedGate.future;
+        await sweeping.dispose();
+        gated.gate.complete();
+        await sweep;
+
+        verifyNever(() => client.list());
+      });
 
       test('arms no timer with an empty outbox', () async {
         await coordinator.initialize();

@@ -496,8 +496,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get profileInvalidId => 'ID profil tidak sah';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Lihat $displayName di Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Lihat $displayName di Divine!\n\n$url';
   }
 
   @override
@@ -7938,6 +7938,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get followSortTitle => 'Isih mengikut';
 
   @override
+  String get followSortSmart => 'Pintar';
+
+  @override
   String get followSortNewest => 'Terbaharu dahulu';
 
   @override
@@ -8117,6 +8120,10 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get searchDiscoverSomethingInteresting => 'Temui sesuatu yang menarik';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'Orang';
@@ -13928,4 +13935,107 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Ditandakan sudah dibaca';
+
+  @override
+  String get videoEditorLayoutLabel => 'Susun atur';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Susun klip dalam skrin terbahagi';
+
+  @override
+  String get videoEditorLayoutTitle => 'Susun atur';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Tutup susun atur';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Letakkan susun atur';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Sebelah-menyebelah';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Atas bawah';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Tiga baris';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Satu atas dua';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Grid empat';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Tiga sebelah-menyebelah';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Dua atas satu';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Satu sebelah dua';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Dua sebelah satu';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Satu atas tiga';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Gambar dalam gambar, kiri atas';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Gambar dalam gambar, kanan atas';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Gambar dalam gambar, kiri bawah';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Gambar dalam gambar, kanan bawah';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Sel $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Sel $number, kosong';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel =>
+      'Alih keluar klip daripada sel';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Jarak';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Warna sempadan';
+
+  @override
+  String get videoEditorLayoutApplying => 'Menyusun susun atur anda…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Langkah $step daripada $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Susun atur tidak dapat diletakkan. Cuba lagi.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Sesetengah klip tidak muat — semua sel sudah penuh.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Disiarkan $time';
+  }
 }

@@ -29,6 +29,8 @@ const _fourPubkey =
     '4444444444444444444444444444444444444444444444444444444444444444';
 const _fivePubkey =
     '5555555555555555555555555555555555555555555555555555555555555555';
+const _privateKey =
+    'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
 void main() {
   late _MockProfileRepository profileRepository;
@@ -277,6 +279,36 @@ void main() {
             limit: any(named: 'limit'),
           ),
         );
+        verifyNever(
+          () => profileRepository.searchUsersFromApi(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'does not search the API for a typed mention holding a private key',
+      () async {
+        when(
+          () => profileRepository.searchCachedProfilesByIdentity(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+        when(
+          () => profileRepository.searchUsersFromApi(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => []);
+
+        final result = await service.resolveTextMentions(
+          rawText: 'hi @$_privateKey',
+        );
+
+        expect(result.resolvedPubkeys, isEmpty);
         verifyNever(
           () => profileRepository.searchUsersFromApi(
             query: any(named: 'query'),

@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:stream_transform/stream_transform.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -65,7 +66,9 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
   ) async {
     final query = event.query.trim();
 
-    if (query.isEmpty || query.length < minSearchQueryLength) {
+    if (query.isEmpty ||
+        query.length < minSearchQueryLength ||
+        NostrKeyUtils.containsPrivateKey(query)) {
       _invalidateSearchSession();
       emit(const VideoSearchState());
       return;

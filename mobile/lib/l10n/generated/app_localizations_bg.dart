@@ -535,8 +535,8 @@ class AppLocalizationsBg extends AppLocalizations {
   String get profileInvalidId => 'Невалиден ID на профил';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Виж $displayName в Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Виж $displayName в Divine!\n\n$url';
   }
 
   @override
@@ -8008,6 +8008,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get followSortTitle => 'Сортиране по';
 
   @override
+  String get followSortSmart => 'Интелигентно';
+
+  @override
   String get followSortNewest => 'Първо най-новите';
 
   @override
@@ -8189,6 +8192,10 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get searchDiscoverSomethingInteresting => 'Открийте нещо интересно';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'Хора';
@@ -14067,4 +14074,106 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Отбелязано като прочетено';
+
+  @override
+  String get videoEditorLayoutLabel => 'Оформление';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Подреди клипове на разделен екран';
+
+  @override
+  String get videoEditorLayoutTitle => 'Оформление';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Затвори оформлението';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Постави оформлението';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Един до друг';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Един над друг';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Три реда';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Един над два';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Мрежа от четири';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Три един до друг';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Два над един';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Един до два';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Два до един';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Един над три';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Картина в картината, горе вляво';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Картина в картината, горе вдясно';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Картина в картината, долу вляво';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Картина в картината, долу вдясно';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Клетка $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Клетка $number, празна';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Махни клипа от клетката';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Разстояние';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Цвят на рамката';
+
+  @override
+  String get videoEditorLayoutApplying => 'Подреждаме оформлението ти…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Стъпка $step от $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Оформлението не можа да се постави. Опитай пак.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Някои клипове не се събраха — всички клетки са пълни.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Публикувано $time';
+  }
 }

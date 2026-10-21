@@ -30,6 +30,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/camera_permission_gate.dart';
+import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
@@ -125,6 +126,7 @@ class VideoRecorderScreen extends ConsumerWidget {
     super.key,
     this.fromEditor = false,
     this.entryPoint = CreationEntryPoint.direct,
+    this.cropGuideAspectRatio,
   });
 
   /// Whether the screen is opened from the video editor.
@@ -134,6 +136,11 @@ class VideoRecorderScreen extends ConsumerWidget {
   final bool fromEditor;
 
   final String entryPoint;
+
+  /// The shape the take will be cropped to, drawn over the viewfinder — a
+  /// split-screen cell's, when the editor records straight into one. `null`
+  /// shows the whole frame.
+  final double? cropGuideAspectRatio;
 
   /// Route name for this screen.
   static const routeName = 'video-recorder';
@@ -164,8 +171,18 @@ class VideoRecorderScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final view = VideoRecorderView(
+      fromEditor: fromEditor,
+      entryPoint: entryPoint,
+    );
     return _VideoRecorderBlocScope(
-      child: VideoRecorderView(fromEditor: fromEditor, entryPoint: entryPoint),
+      child: switch (cropGuideAspectRatio) {
+        final aspectRatio? => ClipCropGuide(
+          aspectRatio: aspectRatio,
+          child: view,
+        ),
+        null => view,
+      },
     );
   }
 }

@@ -537,8 +537,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get profileInvalidId => 'ID profilo non valido';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Dai un\'occhiata a $displayName su Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Dai un\'occhiata a $displayName su Divine!\n\n$url';
   }
 
   @override
@@ -8019,6 +8019,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get followSortTitle => 'Ordina per';
 
   @override
+  String get followSortSmart => 'Intelligente';
+
+  @override
   String get followSortNewest => 'Prima i più recenti';
 
   @override
@@ -8203,6 +8206,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get searchDiscoverSomethingInteresting =>
       'Scopri qualcosa di interessante';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'Persone';
@@ -14109,4 +14116,106 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Segnato come letto';
+
+  @override
+  String get videoEditorLayoutLabel => 'Layout';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Disponi le clip in schermo diviso';
+
+  @override
+  String get videoEditorLayoutTitle => 'Layout';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Chiudi layout';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Inserisci layout';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Affiancate';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Sovrapposte';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Tre righe';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Una sopra due';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Griglia da quattro';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Tre affiancate';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Due sopra una';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Una accanto a due';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Due accanto a una';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Una sopra tre';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Immagine nell\'immagine, in alto a sinistra';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Immagine nell\'immagine, in alto a destra';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Immagine nell\'immagine, in basso a sinistra';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Immagine nell\'immagine, in basso a destra';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Cella $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Cella $number, vuota';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Rimuovi la clip dalla cella';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Spaziatura';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Colore del bordo';
+
+  @override
+  String get videoEditorLayoutApplying => 'Sto disponendo il layout…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Passaggio $step di $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Non è stato possibile inserire il layout. Riprova.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Alcune clip non ci stavano: tutte le celle sono piene.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Pubblicato $time';
+  }
 }

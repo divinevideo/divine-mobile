@@ -48,7 +48,7 @@ final class MyFollowingSortOrderChanged extends MyFollowingEvent {
   const MyFollowingSortOrderChanged(this.sortOrder);
 
   /// The order the user picked.
-  final FollowSortOrder sortOrder;
+  final FollowListSort sortOrder;
 }
 
 final class _MyFollowingRepositoryUpdated extends MyFollowingEvent {

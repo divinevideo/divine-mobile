@@ -25,10 +25,27 @@ final class MyFollowersState extends Equatable {
     this.followersPubkeys = const [],
     this.rawFollowersPubkeys = const [],
     this.rawDatedCount = 0,
-    this.sortOrder = FollowSortOrder.newestFirst,
+    this.sortOrder = FollowListSort.smart,
     this.authoritativeFollowerCount = 0,
     this.isRefreshing = false,
+    this.smartOrder = const [],
+    this.rankingSignals = const {},
+    this.isSmartOrderReady = false,
+    this.eligibilityRevision = 0,
   });
+
+  /// Block-policy version used to retry snapshots read during a policy change.
+  final int eligibilityRevision;
+
+  /// Frozen first-load ranking, with later arrivals appended.
+  final List<String> smartOrder;
+
+  /// Local signals for every member, neutral where the loader had none; rows
+  /// also read them for presentation.
+  final Map<String, UserRankingSignals> rankingSignals;
+
+  /// Whether the initial local ranking has completed, including empty lists.
+  final bool isSmartOrderReady;
 
   /// The current status of the followers list
   final MyFollowersStatus status;
@@ -50,7 +67,7 @@ final class MyFollowersState extends Equatable {
   final int rawDatedCount;
 
   /// The order [followersPubkeys] is presented in.
-  final FollowSortOrder sortOrder;
+  final FollowListSort sortOrder;
 
   /// Follower count as reported by the repository, before local safety filters.
   ///
@@ -80,9 +97,13 @@ final class MyFollowersState extends Equatable {
     List<String>? followersPubkeys,
     List<String>? rawFollowersPubkeys,
     int? rawDatedCount,
-    FollowSortOrder? sortOrder,
+    FollowListSort? sortOrder,
     int? authoritativeFollowerCount,
     bool? isRefreshing,
+    List<String>? smartOrder,
+    Map<String, UserRankingSignals>? rankingSignals,
+    bool? isSmartOrderReady,
+    int? eligibilityRevision,
   }) {
     return MyFollowersState(
       status: status ?? this.status,
@@ -93,6 +114,10 @@ final class MyFollowersState extends Equatable {
       authoritativeFollowerCount:
           authoritativeFollowerCount ?? this.authoritativeFollowerCount,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      smartOrder: smartOrder ?? this.smartOrder,
+      rankingSignals: rankingSignals ?? this.rankingSignals,
+      isSmartOrderReady: isSmartOrderReady ?? this.isSmartOrderReady,
+      eligibilityRevision: eligibilityRevision ?? this.eligibilityRevision,
     );
   }
 
@@ -105,5 +130,9 @@ final class MyFollowersState extends Equatable {
     sortOrder,
     authoritativeFollowerCount,
     isRefreshing,
+    smartOrder,
+    rankingSignals,
+    isSmartOrderReady,
+    eligibilityRevision,
   ];
 }

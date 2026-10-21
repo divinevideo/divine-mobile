@@ -1,4 +1,4 @@
-import 'package:count_formatter/count_formatter.dart';
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -15,20 +15,34 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 
 /// Reusable tile widget for displaying a user profile in search results.
 ///
 /// Shows avatar, display name, account details, and bio. Uses [ConsumerWidget] for
 /// the providers that gate the add-to-list action and NIP-05 verification.
 class SearchUserTile extends ConsumerWidget {
-  const SearchUserTile({required this.profile, this.onTap, super.key});
+  const SearchUserTile({
+    required this.profile,
+    this.onTap,
+    this.videoCount,
+    this.lastPostedAt,
+    super.key,
+  });
 
   final UserProfile profile;
+  final int? videoCount;
+  final DateTime? lastPostedAt;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final videoCount = profile.restVideoCount;
+    // A positive people-search count is current evidence. Search responses
+    // can also carry an ambiguous zero, so retain cached activity in that case.
+    final currentCount = profile.restVideoCount;
+    final videoCount = currentCount != null && currentCount > 0
+        ? currentCount
+        : this.videoCount ?? currentCount;
     final claimedNip05 = profile.shortDisplayNip05;
     final shouldCheckNip05 = claimedNip05 != null && claimedNip05.isNotEmpty;
     final verificationStatus = shouldCheckNip05
@@ -41,12 +55,6 @@ class SearchUserTile extends ConsumerWidget {
     final relationship =
         ref.watch(followRelationshipProvider(profile.pubkey)).value ??
         FollowRelationship.none;
-    final relationshipLabel = switch (relationship) {
-      FollowRelationship.mutual => context.l10n.socialProofMutual,
-      FollowRelationship.followsYou => context.l10n.socialProofFollowsYou,
-      FollowRelationship.youFollow => context.l10n.socialProofYouFollow,
-      FollowRelationship.none => null,
-    };
     final isOgViner = ref.watch(
       ogVinerCacheServiceProvider.select(
         (service) => service.isOgViner(profile.pubkey),
@@ -64,16 +72,15 @@ class SearchUserTile extends ConsumerWidget {
       isOwnProfile: profile.pubkey == ownPubkey,
       followerCount: profile.restFollowerCount,
     );
-    final details = [
-      ?relationshipLabel,
-      if (identifier != null && identifier.isNotEmpty) identifier,
-      if (isOgViner) context.l10n.ogVinerBadgeLabel,
-      if (videoCount != null && videoCount > 0)
-        context.l10n.searchUserVideoCount(
-          videoCount,
-          CountFormatter.formatCompact(videoCount, locale: locale),
-        ),
-    ].join(' · ');
+    final indicators = UserIndicatorLine(
+      identifier: identifier,
+      relationship: relationship,
+      isOgViner: isOgViner,
+      videoCount: videoCount,
+      lastPostedAt: lastPostedAt,
+      now: clock.now(),
+      style: VineTheme.bodyMediumFont(color: context.vineColors.secondaryText),
+    );
     final bio = profile.about?.trim();
 
     final profileListFeaturesEnabled = ref.watch(
@@ -118,15 +125,7 @@ class SearchUserTile extends ConsumerWidget {
                         color: context.vineColors.primaryText,
                       ),
                     ),
-                    if (details.isNotEmpty)
-                      Text(
-                        details,
-                        style: VineTheme.bodyMediumFont(
-                          color: context.vineColors.secondaryText,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    if (indicators.hasContent) indicators,
                     if (bio != null && bio.isNotEmpty)
                       Text(
                         bio.replaceAll(RegExp(r'\s+'), ' '),

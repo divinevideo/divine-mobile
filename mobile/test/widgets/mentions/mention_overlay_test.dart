@@ -41,7 +41,7 @@ void main() {
     testWidgets(
       'shows verified NIP-05 instead of npub when suggestion has one',
       (tester) async {
-        const claim = MentionNip05Claim(
+        const claim = Nip05Claim(
           pubkey: pubkey,
           nip05: 'garyvee@example.com',
         );
@@ -49,7 +49,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              mentionNip05VerificationProvider(
+              nip05ClaimVerificationProvider(
                 claim,
               ).overrideWith((ref) async => Nip05VerificationStatus.verified),
             ],
@@ -82,7 +82,7 @@ void main() {
     testWidgets('falls back to npub when NIP-05 verification fails', (
       tester,
     ) async {
-      const claim = MentionNip05Claim(
+      const claim = Nip05Claim(
         pubkey: pubkey,
         nip05: 'garyvee@example.com',
       );
@@ -90,7 +90,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            mentionNip05VerificationProvider(
+            nip05ClaimVerificationProvider(
               claim,
             ).overrideWith((ref) async => Nip05VerificationStatus.failed),
           ],

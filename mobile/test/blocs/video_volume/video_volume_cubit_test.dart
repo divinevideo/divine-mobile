@@ -98,15 +98,21 @@ void main() {
         'mutes when system volume drops to zero',
         build: buildCubit,
         act: (cubit) => fakeVolumeListener.controller.add(0),
-        expect: () => const [VideoVolumeState(volume: 0)],
+        expect: () => const [VideoVolumeState(volume: 0, mutedBySystem: true)],
       );
 
       blocTest<VideoVolumeCubit, VideoVolumeState>(
         'unmutes when system volume rises above zero',
         build: buildCubit,
-        seed: () => const VideoVolumeState(volume: 0),
-        act: (cubit) => fakeVolumeListener.controller.add(0.5),
-        expect: () => const [VideoVolumeState()],
+        act: (cubit) async {
+          fakeVolumeListener.controller.add(0);
+          await pumpEventQueue();
+          fakeVolumeListener.controller.add(0.5);
+        },
+        expect: () => const [
+          VideoVolumeState(volume: 0, mutedBySystem: true),
+          VideoVolumeState(),
+        ],
       );
 
       blocTest<VideoVolumeCubit, VideoVolumeState>(
@@ -138,7 +144,7 @@ void main() {
         final cubit = buildCubit();
         addTearDown(cubit.close);
 
-        cubit.onPlaybackVolumeChanged(0);
+        fakeVolumeListener.controller.add(0);
         await pumpEventQueue();
 
         fakeVolumeListener.controller.add(0.7);
@@ -146,6 +152,77 @@ void main() {
 
         expect(prefs.getDouble('video_playback_volume'), equals(1.0));
       });
+    });
+
+    test('restored app mute survives system volume notifications', () async {
+      final first = buildCubit();
+      first.onPlaybackVolumeChanged(0);
+      await pumpEventQueue();
+      await first.close();
+
+      fakeVolumeListener = _FakeSystemVolumeListener();
+      final reopened = buildCubit();
+      addTearDown(reopened.close);
+      expect(reopened.state.isMuted, isTrue);
+
+      fakeVolumeListener.controller.add(0.7);
+      fakeVolumeListener.controller.add(0);
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+
+      expect(reopened.state.isMuted, isTrue);
+      expect(prefs.getDouble('video_playback_volume'), 0.0);
+    });
+
+    test('player volume synchronization preserves system unmute', () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      fakeVolumeListener.controller.add(0);
+      await pumpEventQueue();
+      cubit.onPlaybackVolumeChanged(0);
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+      expect(cubit.state.isMuted, isFalse);
+      expect(prefs.getDouble('video_playback_volume'), 1.0);
+    });
+
+    test('system mute can be undone by hardware after reopening', () async {
+      final first = buildCubit();
+      fakeVolumeListener.controller.add(0);
+      await pumpEventQueue();
+      await first.close();
+
+      fakeVolumeListener = _FakeSystemVolumeListener();
+      final reopened = buildCubit();
+      addTearDown(reopened.close);
+      expect(
+        reopened.state,
+        const VideoVolumeState(volume: 0, mutedBySystem: true),
+      );
+
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+      expect(reopened.state.isMuted, isFalse);
+      expect(prefs.getDouble('video_playback_volume'), 1.0);
+    });
+
+    test('legacy saved mute stays silent until explicitly unmuted', () async {
+      await prefs.setDouble('video_playback_volume', 0);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      expect(cubit.state, const VideoVolumeState(volume: 0));
+      fakeVolumeListener.controller.add(0.7);
+      await pumpEventQueue();
+      expect(cubit.state, const VideoVolumeState(volume: 0));
+      cubit.onPlaybackVolumeChanged(1);
+      expect(cubit.state, const VideoVolumeState());
+    });
+
+    test('mute source participates in state equality', () {
+      expect(
+        const VideoVolumeState(volume: 0),
+        isNot(const VideoVolumeState(volume: 0, mutedBySystem: true)),
+      );
     });
 
     group('close', () {

@@ -151,6 +151,29 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
     return query.getSingleOrNull();
   }
 
+  /// Reads existing rows in batches of at most 500 without expiry checking.
+  ///
+  /// Missing pubkeys are omitted. Consumers interpret [ProfileStatRow.cachedAt]
+  /// themselves, as with [getStatsRaw].
+  Future<Map<String, ProfileStatRow>> getStatsRawMany(
+    List<String> pubkeys,
+  ) async {
+    const batchSize = 500;
+    final results = <String, ProfileStatRow>{};
+    for (var start = 0; start < pubkeys.length; start += batchSize) {
+      final end = start + batchSize < pubkeys.length
+          ? start + batchSize
+          : pubkeys.length;
+      final rows = await (select(
+        profileStats,
+      )..where((t) => t.pubkey.isIn(pubkeys.sublist(start, end)))).get();
+      for (final row in rows) {
+        results[row.pubkey] = row;
+      }
+    }
+    return results;
+  }
+
   /// Watch stats for a pubkey.
   ///
   /// Returns a stream that emits the current [ProfileStatRow] whenever

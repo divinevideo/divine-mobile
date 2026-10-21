@@ -95,11 +95,15 @@ void main() {
     ClipsLibraryBloc createBloc({
       LibraryClipTypeFilter clipTypeFilter = LibraryClipTypeFilter.all,
       bool allowsMixedClipTypes = false,
+      bool allowsMixedAspectRatios = false,
+      int? maxSelectedClips,
     }) => ClipsLibraryBloc(
       clipLibraryService: mockClipLibraryService,
       sharedPreferences: sharedPreferences,
       clipTypeFilter: clipTypeFilter,
       allowsMixedClipTypes: allowsMixedClipTypes,
+      allowsMixedAspectRatios: allowsMixedAspectRatios,
+      maxSelectedClips: maxSelectedClips,
     );
 
     test('initial state is correct', () async {
@@ -633,6 +637,74 @@ void main() {
       );
     });
 
+    group('maxSelectedClips', () {
+      DivineVideoClip pick(String id) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file('/path/to/$id.mp4'),
+        duration: const Duration(seconds: 1),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      final a = pick('a');
+      final b = pick('b');
+      final c = pick('c');
+
+      ClipsLibraryState seedWith(
+        int limit, {
+        Set<String> selected = const {},
+      }) => ClipsLibraryState(
+        status: ClipsLibraryStatus.loaded,
+        clips: [a, b, c],
+        sortedClips: [a, b, c],
+        selectedClipIds: selected,
+        selectedDuration: Duration(seconds: selected.length),
+        maxSelectedClips: limit,
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'swaps the picked clip when there is room for one',
+        seed: () => seedWith(1, selected: {'a'}),
+        build: () => createBloc(maxSelectedClips: 1),
+        act: (bloc) => bloc.add(ClipsLibraryToggleSelection(b)),
+        expect: () => [
+          isA<ClipsLibraryState>()
+              .having((s) => s.selectedClipIds, 'selectedClipIds', {'b'})
+              .having(
+                (s) => s.selectedDuration,
+                'selectedDuration',
+                const Duration(seconds: 1),
+              ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'picks nothing more once the limit is reached',
+        seed: () => seedWith(2, selected: {'a', 'b'}),
+        build: () => createBloc(maxSelectedClips: 2),
+        act: (bloc) => bloc.add(ClipsLibraryToggleSelection(c)),
+        expect: () => const <ClipsLibraryState>[],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'stops a drag selection at the limit',
+        seed: () => seedWith(2),
+        build: () => createBloc(maxSelectedClips: 2),
+        act: (bloc) => bloc
+          ..add(ClipsLibraryDragSelectionStarted(a))
+          ..add(ClipsLibraryDragSelectionExtended(c)),
+        expect: () => [
+          isA<ClipsLibraryState>(),
+          isA<ClipsLibraryState>().having(
+            (s) => s.selectedClipIds,
+            'selectedClipIds',
+            {'a', 'b'},
+          ),
+        ],
+      );
+    });
+
     group('drag selection', () {
       DivineVideoClip gridClip(
         String id, {
@@ -660,6 +732,7 @@ void main() {
         Set<String> selectedClipIds = const {},
         Set<String> disabledClipIds = const {},
         bool allowsMixedClipTypes = false,
+        bool allowsMixedAspectRatios = false,
       }) => ClipsLibraryState(
         status: ClipsLibraryStatus.loaded,
         clips: clips,
@@ -667,6 +740,7 @@ void main() {
         selectedClipIds: selectedClipIds,
         disabledClipIds: disabledClipIds,
         allowsMixedClipTypes: allowsMixedClipTypes,
+        allowsMixedAspectRatios: allowsMixedAspectRatios,
       );
 
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
@@ -841,6 +915,49 @@ void main() {
             (s) => s.selectedClipIds.toList(),
             'selectedClipIds',
             equals(['a', 'c']),
+          ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'takes the shape from the first clip picked up when none is set',
+        seed: () => seedWith([a, gridClip('sq', aspectRatio: .square), c]),
+        build: createBloc,
+        act: (bloc) => bloc
+          ..add(ClipsLibraryDragSelectionStarted(a))
+          ..add(ClipsLibraryDragSelectionExtended(c)),
+        expect: () => [
+          isA<ClipsLibraryState>(),
+          isA<ClipsLibraryState>().having(
+            (s) => s.selectedClipIds.toList(),
+            'selectedClipIds',
+            equals(['a', 'c']),
+          ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'picks up every shape along the range when mixing shapes is allowed, '
+        'whatever shape the drag was given',
+        seed: () => seedWith(
+          [a, gridClip('sq', aspectRatio: .square), c],
+          allowsMixedAspectRatios: true,
+        ),
+        build: () => createBloc(allowsMixedAspectRatios: true),
+        act: (bloc) => bloc
+          ..add(
+            ClipsLibraryDragSelectionStarted(
+              a,
+              targetAspectRatio: model.AspectRatio.square.value,
+            ),
+          )
+          ..add(ClipsLibraryDragSelectionExtended(c)),
+        expect: () => [
+          isA<ClipsLibraryState>(),
+          isA<ClipsLibraryState>().having(
+            (s) => s.selectedClipIds.toList(),
+            'selectedClipIds',
+            equals(['a', 'sq', 'c']),
           ),
         ],
       );

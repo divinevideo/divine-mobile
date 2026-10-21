@@ -70,6 +70,33 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   static const _confirmRetryDelay = Duration(seconds: 2);
   static const _confirmWindow = Duration(seconds: 10);
 
+  /// Reads whether the verifier has this platform's sign-in turned on.
+  ///
+  /// Uses the answer the platform list was drawn from, waiting for a refresh
+  /// already in flight, and asks the verifier when there is no answer yet (a
+  /// link straight to this screen). The repository decides what an
+  /// unanswered or unlisted platform offers. An answer it can't read is
+  /// reported, and the screen keeps the platform it opened with.
+  Future<void> loadPlatform() async {
+    final VerifierPlatform platform;
+    try {
+      platform = await _repository.platform(state.platform.key);
+    } on Object catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      return;
+    }
+    // Dropped once a sign-in has started. Turning sign-in off under it would
+    // hide the card that approves or cancels what it returns, while the
+    // proof form stays closed until it is. The browser is open while
+    // authorizing; from its return until the account is linked or let go,
+    // the sign-in is pending.
+    if (state.status == VerifyConnectStatus.authorizing || _pending != null) {
+      return;
+    }
+    emitIfOpen(state.copyWith(platform: platform));
+  }
+
   /// Records the account handle the user is claiming.
   void identityChanged(String identity) {
     emit(state.copyWith(identity: identity.trim(), clearError: true));

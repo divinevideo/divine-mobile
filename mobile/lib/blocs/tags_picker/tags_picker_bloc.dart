@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 part 'tags_picker_event.dart';
 part 'tags_picker_state.dart';
@@ -144,7 +145,9 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
     Emitter<TagsPickerState> emit,
   ) async {
     final query = event.query.trim();
-    if (query.isEmpty) {
+    // Text holding a private key is never searched for; it resets like an
+    // empty field.
+    if (query.isEmpty || NostrKeyUtils.containsPrivateKey(query)) {
       // Every commit clears the field, which lands here one debounce later,
       // so the notice is kept until the user types a new tag.
       emit(

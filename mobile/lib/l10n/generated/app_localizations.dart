@@ -922,8 +922,8 @@ abstract class AppLocalizations {
   /// No description provided for @profileShareText.
   ///
   /// In en, this message translates to:
-  /// **'Check out {displayName} on Divine!\n\nhttps://divine.video/profile/{npub}'**
-  String profileShareText(String displayName, String npub);
+  /// **'Check out {displayName} on Divine!\n\n{url}'**
+  String profileShareText(String displayName, String url);
 
   /// No description provided for @profileShareSubject.
   ///
@@ -13411,6 +13411,12 @@ abstract class AppLocalizations {
   /// **'Sort by'**
   String get followSortTitle;
 
+  /// Sort option that puts people you are closer to first, using recent interactions, follow relationships, and locally cached activity. Shared by your followers and following lists.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart'**
+  String get followSortSmart;
+
   /// Sort option showing the most recent follow at the top of the list. Shared by the followers and following lists.
   ///
   /// In en, this message translates to:
@@ -13722,6 +13728,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discover something interesting'**
   String get searchDiscoverSomethingInteresting;
+
+  /// Shown under a search or people-picker field when the typed text looks like a Nostr private key (nsec). The app does not search for that text; this tells the user why and not to paste or share the key.
+  ///
+  /// In en, this message translates to:
+  /// **'That looks like a private key, so we didn\'t search for it. Never paste or share it.'**
+  String get searchPrivateKeyWarning;
 
   /// No description provided for @searchPeopleSectionHeader.
   ///
@@ -23234,6 +23246,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Marked as read'**
   String get inboxThreadMarkedRead;
+
+  /// Label of the add-sheet action that opens the split-screen layout tool.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get videoEditorLayoutLabel;
+
+  /// Screen reader label for the add-sheet action that opens the split-screen layout tool.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrange clips in a split screen'**
+  String get videoEditorOpenLayoutSemanticLabel;
+
+  /// Title of the split-screen layout screen, where several clips are arranged side by side, stacked or in a grid.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get videoEditorLayoutTitle;
+
+  /// Screen reader label for the close button of the split-screen layout screen. Closing discards the layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Close layout'**
+  String get videoEditorLayoutCloseSemanticLabel;
+
+  /// Screen reader label for the done button of the split-screen layout screen, which puts the layout into the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Place layout'**
+  String get videoEditorLayoutDoneSemanticLabel;
+
+  /// Name of the layout with two clips next to each other, each half the width.
+  ///
+  /// In en, this message translates to:
+  /// **'Side by side'**
+  String get videoEditorLayoutPresetSideBySide;
+
+  /// Name of the layout with two clips on top of each other, each half the height.
+  ///
+  /// In en, this message translates to:
+  /// **'Stacked'**
+  String get videoEditorLayoutPresetStacked;
+
+  /// Name of the layout with three clips in three equal rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Three rows'**
+  String get videoEditorLayoutPresetThreeStacked;
+
+  /// Name of the layout with one clip across the top half and two clips side by side underneath.
+  ///
+  /// In en, this message translates to:
+  /// **'One over two'**
+  String get videoEditorLayoutPresetOneOverTwo;
+
+  /// Name of the layout with four clips in a two-by-two grid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid of four'**
+  String get videoEditorLayoutPresetGrid;
+
+  /// Name of the layout with three clips next to each other in three equal columns.
+  ///
+  /// In en, this message translates to:
+  /// **'Three side by side'**
+  String get videoEditorLayoutPresetThreeColumns;
+
+  /// Name of the layout with two clips side by side across the top half and one clip across the bottom half.
+  ///
+  /// In en, this message translates to:
+  /// **'Two over one'**
+  String get videoEditorLayoutPresetTwoOverOne;
+
+  /// Name of the layout with one clip down the left half and two clips stacked on the right half.
+  ///
+  /// In en, this message translates to:
+  /// **'One beside two'**
+  String get videoEditorLayoutPresetOneBesideTwo;
+
+  /// Name of the layout with two clips stacked on the left half and one clip down the right half.
+  ///
+  /// In en, this message translates to:
+  /// **'Two beside one'**
+  String get videoEditorLayoutPresetTwoBesideOne;
+
+  /// Name of the layout with one clip across the top two thirds and three clips in a row underneath.
+  ///
+  /// In en, this message translates to:
+  /// **'One over three'**
+  String get videoEditorLayoutPresetOneOverThree;
+
+  /// Name of the layout with one clip filling the frame and a small one in its top-left corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture in picture, top left'**
+  String get videoEditorLayoutPresetPictureInPictureTopLeft;
+
+  /// Name of the layout with one clip filling the frame and a small one in its top-right corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture in picture, top right'**
+  String get videoEditorLayoutPresetPictureInPictureTopRight;
+
+  /// Name of the layout with one clip filling the frame and a small one in its bottom-left corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture in picture, bottom left'**
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft;
+
+  /// Name of the layout with one clip filling the frame and a small one in its bottom-right corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture in picture, bottom right'**
+  String get videoEditorLayoutPresetPictureInPictureBottomRight;
+
+  /// Screen reader label for a filled cell of the split-screen layout. {number} is the cell's position, counted from 1 and already formatted. Tapping selects the cell; dragging moves the picture inside it.
+  ///
+  /// In en, this message translates to:
+  /// **'Cell {number}'**
+  String videoEditorLayoutCellSemanticLabel(String number);
+
+  /// Screen reader label for an empty cell of the split-screen layout. {number} is the cell's position, counted from 1 and already formatted.
+  ///
+  /// In en, this message translates to:
+  /// **'Cell {number}, empty'**
+  String videoEditorLayoutCellEmptySemanticLabel(String number);
+
+  /// Screen reader label for the button that empties the selected cell of the split-screen layout. The clip stays in the library.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove clip from cell'**
+  String get videoEditorLayoutRemoveClipLabel;
+
+  /// Label of the slider that sets the space around and between the cells of the split-screen layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Gap'**
+  String get videoEditorLayoutGapLabel;
+
+  /// Label of the color row that sets the color shown in the gaps and empty cells of the split-screen layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Border color'**
+  String get videoEditorLayoutBorderColorLabel;
+
+  /// Progress label while the clips of a split-screen layout are cropped to their cells.
+  ///
+  /// In en, this message translates to:
+  /// **'Arranging your layout…'**
+  String get videoEditorLayoutApplying;
+
+  /// Which render of the split-screen layout is running, e.g. 'Step 2 of 5'. Both are positions, already formatted.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {count}'**
+  String videoEditorLayoutApplyStep(String step, String count);
+
+  /// Snackbar when rendering a split-screen layout failed. The layout stays on screen, so trying again is one tap.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t place the layout. Give it another go.'**
+  String get videoEditorLayoutFailed;
+
+  /// Snackbar when more clips were picked than the split-screen layout has empty cells for.
+  ///
+  /// In en, this message translates to:
+  /// **'Some clips didn\'t fit — every cell is full.'**
+  String get videoEditorLayoutClipsDidNotFit;
+
+  /// Recent cached video posting time shown on a user row. The time is already a localized relative phrase, such as "2h ago".
+  ///
+  /// In en, this message translates to:
+  /// **'Posted {time}'**
+  String userRowPosted(String time);
 }
 
 class _AppLocalizationsDelegate

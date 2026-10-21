@@ -817,26 +817,13 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
   /// `null` when the playhead is outside the clip.
   Duration? _playheadSourcePosition(ClipEditorState state) {
     final selectedClip = state.clips[state.currentClipIndex];
-
-    // The playhead is in playback time; preceding clips must be accumulated
-    // with playbackDuration (not trimmedDuration) to stay in the same
-    // coordinate space.
-    final globalPosition = widget.playheadPosition.value;
-    var clipStart = Duration.zero;
-    for (var i = 0; i < state.currentClipIndex; i++) {
-      clipStart += state.clips[i].playbackDuration;
-    }
-    final localPlaybackPosition = globalPosition - clipStart;
-
-    // Bounds-check in playback time.
-    if (localPlaybackPosition < Duration.zero ||
-        localPlaybackPosition > selectedClip.playbackDuration) {
-      return null;
-    }
-
-    // Convert to source time: source = playback × speed (since
-    // playbackDuration = trimmedDuration / speed).
-    return selectedClip.playbackDurationToSourceDuration(localPlaybackPosition);
+    final sourcePosition = timelinePositionToClipSourcePosition(
+      state.clips,
+      clipId: selectedClip.id,
+      position: widget.playheadPosition.value,
+    );
+    if (sourcePosition == null) return null;
+    return sourcePosition - selectedClip.trimStart;
   }
 
   void _splitClip(BuildContext context) {

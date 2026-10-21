@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 26** (see `app_database.dart`).
+**Version: 27** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -244,6 +244,21 @@ clear when the timestamp changes, and are deleted with their owning row.
 The v26 upgrade repeats v25's idempotent dismissal repair because upgrades skip
 the guarded `beforeOpen` recovery. Current-version recovery also probes and
 restores both new columns without losing the other kept account state.
+
+Version 27 adds `my_followers`, an owner-scoped durable follower cache. Its
+composite primary key `(owner_pubkey, follower_pubkey)` isolates accounts and
+covers owner lookups. Sync merges retain the newest known `followed_at`; full
+reconciliation replaces one owner's snapshot transactionally. Account cleanup
+clears that owner's follower rows.
+
+Canonical v1–v26 snapshots stay unchanged. The
+v27 step preserves queued sound jobs, conversation dismissal flags, independent
+markers and their known replay IDs. It also accepts the earlier ranking-preview
+v24 shape (main v23 plus followers, without sound jobs), the v25 shape
+(without dismissal storage), and v26 (without retained-conversation storage). It adds
+the missing dismissal and retained-conversation columns and table without
+recreating the follower table or losing follower timestamps. Upgrade tests exercise canonical v25/v26 and ranking-preview v24/v25/v26 shapes, replay after
+account cleanup, and owner isolation.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

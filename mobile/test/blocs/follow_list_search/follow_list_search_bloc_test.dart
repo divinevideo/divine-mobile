@@ -38,6 +38,9 @@ const String _subjectPubkey =
 
 const List<String> _allPubkeys = [_alicePubkey, _bobPubkey, _carolPubkey];
 
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
 /// Advance fake time beyond the 300 ms search debounce.
 const _pastDebounce = Duration(milliseconds: 400);
 
@@ -103,6 +106,55 @@ void main() {
       );
     }
 
+    test(
+      'fresh dependencies resume unresolved names in an inherited query',
+      () {
+        fakeAsync((clock) {
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            profileRepository: profileRepository,
+            subjectPubkey: _subjectPubkey,
+            listKind: FollowListKind.followers,
+            initialState: const FollowListSearchState(
+              query: 'alice',
+              candidatePubkeys: _allPubkeys,
+            ),
+          );
+          expect(bloc.state.query, 'alice');
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+          verify(
+            () => profileRepository.fetchBatchProfiles(pubkeys: _allPubkeys),
+          ).called(1);
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
+    test('resolves names in key order, not the list order on screen', () {
+      fakeAsync((clock) {
+        final bloc = createBloc();
+        bloc.add(
+          const FollowListSearchQueryChanged('alice', [
+            _carolPubkey,
+            _alicePubkey,
+            _bobPubkey,
+          ]),
+        );
+        clock.flushMicrotasks();
+        clock.elapse(_pastDebounce);
+        clock.flushMicrotasks();
+        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+        verify(
+          () => profileRepository.fetchBatchProfiles(pubkeys: _allPubkeys),
+        ).called(1);
+        unawaited(bloc.close());
+        clock.flushMicrotasks();
+      });
+    });
+
     test('starts with no query and shows every pubkey', () {
       final bloc = createBloc();
       addTearDown(bloc.close);
@@ -126,6 +178,40 @@ void main() {
           verifyNever(
             () => profileRepository.fetchBatchProfiles(
               pubkeys: any(named: 'pubkeys'),
+            ),
+          );
+
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
+    test(
+      'treats a query holding a private key as no query and never sends it',
+      () {
+        fakeAsync((clock) {
+          final bloc = createBloc();
+          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.query, 'ali');
+
+          bloc.add(
+            const FollowListSearchQueryChanged(_privateKeyQuery, _allPubkeys),
+          );
+          clock.flushMicrotasks();
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+
+          expect(bloc.state.query, isEmpty);
+          expect(bloc.state.visibleFrom(_allPubkeys), _allPubkeys);
+          verifyNever(
+            () => followRepository.searchFollowList(
+              pubkey: any(named: 'pubkey'),
+              query: any(named: 'query', that: contains('nsec1')),
+              kind: any(named: 'kind'),
             ),
           );
 
@@ -627,7 +713,7 @@ void main() {
     );
 
     test(
-      'runs the API search once the subject pubkey arrives',
+      'a replacement built for the arrived subject pubkey runs the API search',
       () {
         fakeAsync((clock) {
           // Nothing resolves on device, so only the API can produce this match.
@@ -644,19 +730,27 @@ void main() {
             ),
           ).thenAnswer((_) async => const {_alicePubkey});
 
-          final bloc = FollowListSearchBloc(
+          final coldStart = FollowListSearchBloc(
             followRepository: followRepository,
             subjectPubkey: '',
             listKind: FollowListKind.followers,
             profileRepository: profileRepository,
           );
 
-          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          coldStart.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
           clock.elapse(_pastDebounce);
           clock.flushMicrotasks();
-          expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+          expect(coldStart.state.visibleFrom(_allPubkeys), isEmpty);
 
-          bloc.add(const FollowListSearchSubjectPubkeyChanged(_subjectPubkey));
+          // What RetainedBlocProvider does once the signed-in key resolves.
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            subjectPubkey: _subjectPubkey,
+            listKind: FollowListKind.followers,
+            profileRepository: profileRepository,
+            initialState: coldStart.state,
+          );
+          unawaited(coldStart.close());
 
           clock.flushMicrotasks();
           clock.elapse(_pastDebounce);

@@ -21,8 +21,8 @@ export 'package:openvine/services/nip05_verification_service.dart'
 part 'nip05_verification_provider.g.dart';
 
 @immutable
-class MentionNip05Claim {
-  const MentionNip05Claim({required this.pubkey, required this.nip05});
+class Nip05Claim {
+  const Nip05Claim({required this.pubkey, required this.nip05});
 
   final String pubkey;
   final String nip05;
@@ -30,7 +30,7 @@ class MentionNip05Claim {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is MentionNip05Claim &&
+      other is Nip05Claim &&
           runtimeType == other.runtimeType &&
           pubkey == other.pubkey &&
           nip05 == other.nip05;
@@ -41,8 +41,8 @@ class MentionNip05Claim {
 
 // Riverpod's family builder preserves its full generic type when inferred.
 // ignore: specify_nonobvious_property_types
-final mentionNip05VerificationProvider =
-    FutureProvider.family<Nip05VerificationStatus, MentionNip05Claim>((
+final nip05ClaimVerificationProvider =
+    FutureProvider.family<Nip05VerificationStatus, Nip05Claim>((
       ref,
       claim,
     ) {
@@ -103,7 +103,7 @@ Future<Nip05VerificationStatus> nip05Verification(
   }
 
   // Check memory cache first for instant response
-  final cachedStatus = verificationService.getCachedStatus(pubkey);
+  final cachedStatus = verificationService.getCachedStatus(pubkey, nip05);
   if (cachedStatus != null && cachedStatus != Nip05VerificationStatus.pending) {
     return cachedStatus;
   }
@@ -116,7 +116,7 @@ Future<Nip05VerificationStatus> nip05Verification(
     final completer = Completer<Nip05VerificationStatus>();
 
     void listener() {
-      final updated = verificationService.getCachedStatus(pubkey);
+      final updated = verificationService.getCachedStatus(pubkey, nip05);
       if (updated != null && updated != Nip05VerificationStatus.pending) {
         verificationService.removeListener(listener);
         if (!completer.isCompleted) {
@@ -188,7 +188,7 @@ Stream<Nip05VerificationStatus> nip05VerificationStream(
     final controller = StreamController<Nip05VerificationStatus>();
 
     void listener() {
-      final updated = verificationService.getCachedStatus(pubkey);
+      final updated = verificationService.getCachedStatus(pubkey, nip05);
       if (updated != null && updated != Nip05VerificationStatus.pending) {
         if (!controller.isClosed) {
           controller.add(updated);

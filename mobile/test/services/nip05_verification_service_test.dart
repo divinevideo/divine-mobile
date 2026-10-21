@@ -48,7 +48,7 @@ void main() {
       );
 
       expect(status, Nip05VerificationStatus.verified);
-      expect(service.getCachedStatus(pubkey), status);
+      expect(service.getCachedStatus(pubkey, 'alice@example.com'), status);
     });
 
     test('batches and deduplicates verification for one pubkey', () async {
@@ -70,7 +70,7 @@ void main() {
       final second = service.getVerificationStatus(pubkey, 'alice@example.com');
       await pumpEventQueue();
       expect(
-        service.getCachedStatus(pubkey),
+        service.getCachedStatus(pubkey, 'alice@example.com'),
         anyOf(
           Nip05VerificationStatus.pending,
           Nip05VerificationStatus.verified,
@@ -110,6 +110,56 @@ void main() {
       },
     );
 
+    test(
+      'revalidates when the same pubkey claims a different username',
+      () async {
+        final pubkey = 'f' * 64;
+        final validatedClaims = <String>[];
+        final service = Nip05VerificationService(
+          dao,
+          validator: (nip05, _) async {
+            validatedClaims.add(nip05);
+            return nip05 == '_@alice.divine.video';
+          },
+          batchDebounceDuration: Duration.zero,
+        );
+        addTearDown(service.dispose);
+
+        expect(
+          await service.getVerificationStatus(pubkey, '_@alice.divine.video'),
+          Nip05VerificationStatus.verified,
+        );
+        expect(
+          await service.getVerificationStatus(pubkey, '_@bob.divine.video'),
+          Nip05VerificationStatus.failed,
+        );
+        expect(validatedClaims, ['_@alice.divine.video', '_@bob.divine.video']);
+      },
+    );
+
+    test(
+      'keeps in-flight verifications for different claims separate',
+      () async {
+        final pubkey = 'f' * 64;
+        final service = Nip05VerificationService(
+          dao,
+          validator: (nip05, _) async => nip05 == '_@alice.divine.video',
+          batchDebounceDuration: Duration.zero,
+        );
+        addTearDown(service.dispose);
+
+        final results = await Future.wait([
+          service.getVerificationStatus(pubkey, '_@alice.divine.video'),
+          service.getVerificationStatus(pubkey, '_@bob.divine.video'),
+        ]);
+
+        expect(results, [
+          Nip05VerificationStatus.verified,
+          Nip05VerificationStatus.failed,
+        ]);
+      },
+    );
+
     test('clearAll removes memory and persistent cache', () async {
       final pubkey = 'e' * 64;
       await dao.upsertVerification(
@@ -120,11 +170,14 @@ void main() {
       final service = Nip05VerificationService(dao);
       addTearDown(service.dispose);
       await service.preloadFromCache([pubkey]);
-      expect(service.getCachedStatus(pubkey), Nip05VerificationStatus.error);
+      expect(
+        service.getCachedStatus(pubkey, 'alice@example.com'),
+        Nip05VerificationStatus.error,
+      );
 
       await service.clearAll();
 
-      expect(service.getCachedStatus(pubkey), isNull);
+      expect(service.getCachedStatus(pubkey, 'alice@example.com'), isNull);
       expect(await dao.getVerification(pubkey), isNull);
     });
   });

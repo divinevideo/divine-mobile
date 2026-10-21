@@ -6,18 +6,20 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:db_client/db_client.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/constants/hive_box_names.dart';
@@ -117,12 +119,14 @@ void main() {
     late Directory tempDir;
     late PathProviderPlatform originalPathProviderInstance;
     late ProviderContainer container;
+    FollowRepository? activeFollowerRepository;
 
     setUpAll(() async {
       await initializeServiceTestEnvironment();
     });
 
     setUp(() async {
+      activeFollowerRepository = null;
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
       db = AppDatabase.test(NativeDatabase.memory());
@@ -171,6 +175,9 @@ void main() {
           databaseProvider.overrideWithValue(db),
           sharedPreferencesProvider.overrideWithValue(prefs),
           dmRepositoryProvider.overrideWithValue(dmRepository),
+          followRepositoryProvider.overrideWith(
+            (ref) => activeFollowerRepository!,
+          ),
           openVineImageCacheClearProvider.overrideWithValue(() async {}),
           uploadManagerProvider.overrideWithValue(uploadManager),
         ],
@@ -248,6 +255,213 @@ void main() {
         expect(box.get(a1.id), isNull);
         expect(box.get(a2.id), isNull);
         expect(box.get(b1.id), isNotNull);
+      },
+    );
+
+    test(
+      'account switch clears the departing owner my_followers rows and keeps the other owner',
+      () async {
+        final checkpoints = MyFollowersSyncState();
+        await checkpoints.stampFull(_pubkeyA, 123);
+        await checkpoints.stampFullAttempt(_pubkeyA, 456);
+        await checkpoints.stampFull(_pubkeyB, 789);
+        await checkpoints.stampFullAttempt(_pubkeyB, 900);
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyA,
+          followers: [(pubkey: _reactionIdA, followedAt: 100)],
+          seenAt: 200,
+        );
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyB,
+          followers: [(pubkey: _reactionIdB, followedAt: 150)],
+          seenAt: 200,
+        );
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), [
+          (pubkey: _reactionIdA, followedAt: 100),
+        ]);
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        expect(await checkpoints.read(_pubkeyA), (
+          full: null,
+          incremental: null,
+          attempt: null,
+          fullAttempt: null,
+        ));
+        expect(await checkpoints.read(_pubkeyB), (
+          full: 789,
+          incremental: 789,
+          attempt: 900,
+          fullAttempt: 900,
+        ));
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+      },
+    );
+
+    for (final incremental in [false, true]) {
+      test(
+        'cleanup rejects a late ${incremental ? 'incremental' : 'full'} '
+        'follower response before auth identity changes',
+        () async {
+          registerFallbackValue(<Filter>[]);
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_pubkeyA);
+          when(() => client.hasKeys).thenReturn(true);
+          final started = Completer<void>();
+          final response = Completer<List<Event>>();
+          when(() => client.queryEvents(any())).thenAnswer((_) {
+            if (!started.isCompleted) started.complete();
+            return response.future;
+          });
+          when(() => client.readEvents(any(), requireAllRelaysSettled: true))
+              .thenAnswer((_) async {
+                if (!started.isCompleted) started.complete();
+                return QueryResult(
+                  events: await response.future,
+                  endedBy: QueryEnd.complete,
+                );
+              });
+          final repository = FollowRepository(
+            nostrClient: client,
+            myFollowersDao: db.myFollowersDao,
+            indexerRelayUrls: const [],
+            nowSeconds: () => 1700000000,
+          );
+          addTearDown(repository.dispose);
+          activeFollowerRepository = repository;
+          container.read(followRepositoryProvider);
+          final checkpoints = MyFollowersSyncState();
+          if (incremental) await checkpoints.stampFull(_pubkeyA, 1699999000);
+          final sync = repository.syncMyFollowers();
+          await started.future;
+          final subscription = container.listen(
+            userDataCleanupServiceProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+          // The old signer remains usable throughout cleanup. It must not
+          // authorize a late read to restore deleted rows or preferences.
+          expect(client.publicKey, _pubkeyA);
+          response.complete([
+            Event(
+              _pubkeyB,
+              EventKind.contactList,
+              [
+                ['p', _pubkeyA],
+              ],
+              '',
+              createdAt: 1699999900,
+            ),
+          ]);
+          await sync;
+          expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+          expect(await checkpoints.read(_pubkeyA), (
+            full: null,
+            incremental: null,
+            attempt: null,
+            fullAttempt: null,
+          ));
+          await repository.syncMyFollowers();
+          expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+        },
+      );
+    }
+
+    test(
+      'follower cache cleanup failure does not skip account history cleanup',
+      () async {
+        await db.seenVideosDao.markSeenBatch([
+          const SeenVideoRow(
+            videoId: _reactionIdA,
+            firstSeenAt: 100,
+            lastSeenAt: 100,
+          ),
+        ]);
+        await db.customStatement('DROP TABLE my_followers');
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+        expect(await db.seenVideosDao.getAll(), isEmpty);
+      },
+    );
+
+    test(
+      'destructive account deletion reports follower cache cleanup failure',
+      () async {
+        await db.customStatement('DROP TABLE my_followers');
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await expectLater(
+          subscription.read().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            deleteUserData: true,
+          ),
+          throwsA(isA<SqliteException>()),
+        );
+      },
+    );
+
+    test(
+      'deleting an inactive account clears its my_followers rows and keeps the active account',
+      () async {
+        final checkpoints = MyFollowersSyncState();
+        await checkpoints.stampFull(_pubkeyA, 123);
+        await checkpoints.stampFull(_pubkeyB, 789);
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyA,
+          followers: [(pubkey: _reactionIdA, followedAt: 100)],
+          seenAt: 200,
+        );
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: _pubkeyB,
+          followers: [(pubkey: _reactionIdB, followedAt: 150)],
+          seenAt: 200,
+        );
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), [
+          (pubkey: _reactionIdA, followedAt: 100),
+        ]);
+        expect((await checkpoints.read(_pubkeyA)).full, 123);
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+          preserveActiveSession: true,
+        );
+
+        expect(await db.myFollowersDao.followersOf(_pubkeyA), isEmpty);
+        expect(await checkpoints.read(_pubkeyA), (
+          full: null,
+          incremental: null,
+          attempt: null,
+          fullAttempt: null,
+        ));
+        expect(await db.myFollowersDao.followersOf(_pubkeyB), [
+          (pubkey: _reactionIdB, followedAt: 150),
+        ]);
+        expect((await checkpoints.read(_pubkeyB)).full, 789);
       },
     );
 

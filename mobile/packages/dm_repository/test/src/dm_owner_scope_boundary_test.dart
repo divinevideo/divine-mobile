@@ -38,9 +38,8 @@ void main() {
       messagesDao = DirectMessagesDao(db);
       conversationId = DmRepository.computeConversationId([_ownerA, _peer]);
 
-      // `conversations` keys on `id` alone, so one row per conversation id —
-      // it belongs to A. `direct_messages` keys on the rumor id, so the two
-      // accounts' messages do coexist under that one conversation.
+      // Seed A's conversation view. The composite (id, ownerPubkey) key also
+      // permits a legacy view of that same conversation on the device.
       await conversationsDao.upsertConversation(
         id: conversationId,
         participantPubkeys: '["$_ownerA","$_peer"]',
@@ -158,6 +157,112 @@ void main() {
       },
     );
 
+    group('read-marking outcomes', () {
+      test('reports an existing row and repeated reads as success', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(await repository.markConversationAsRead(conversationId), isTrue);
+        expect(await repository.markConversationAsRead(conversationId), isTrue);
+        final row = await conversationsDao.getConversation(conversationId);
+        expect(row!.isRead, isTrue);
+      });
+
+      test('reports missing and other-account rows as unavailable', () async {
+        final repository = buildRepository(userPubkey: _ownerB);
+        expect(
+          await repository.markConversationAsRead(conversationId),
+          isFalse,
+        );
+        expect(await repository.markConversationAsRead('missing'), isFalse);
+        expect(
+          await repository.markConversationsAsRead([conversationId]),
+          isFalse,
+        );
+        final row = await conversationsDao.getConversation(conversationId);
+        expect(row!.isRead, isFalse);
+      });
+
+      // A legacy ownerless view of A's conversation, beside the owned row.
+      Future<void> seedLegacyCopy() => conversationsDao.upsertConversation(
+        id: conversationId,
+        participantPubkeys: '["$_ownerA","$_peer"]',
+        isGroup: false,
+        createdAt: _createdAt,
+        isRead: false,
+      );
+
+      test('batch counts a legacy and owned copy once', () async {
+        await seedLegacyCopy();
+        final repository = buildRepository(userPubkey: _ownerA);
+        addTearDown(repository.stopListening);
+
+        expect(
+          await repository.markConversationsAsRead([conversationId]),
+          isTrue,
+        );
+        expect(
+          (await repository.getConversation(conversationId))!.isRead,
+          isTrue,
+        );
+      });
+
+      test('batch with a legacy copy still reports a missing id', () async {
+        await seedLegacyCopy();
+        final repository = buildRepository(userPubkey: _ownerA);
+        addTearDown(repository.stopListening);
+
+        expect(
+          await repository.markConversationsAsRead([conversationId, 'missing']),
+          isFalse,
+        );
+        expect(
+          (await repository.getConversation(conversationId))!.isRead,
+          isTrue,
+        );
+      });
+
+      test('batch reports a partial write but marks the rows found', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(
+          await repository.markConversationsAsRead([conversationId, 'missing']),
+          isFalse,
+        );
+        expect(
+          (await conversationsDao.getConversation(conversationId))!.isRead,
+          isTrue,
+        );
+      });
+
+      test('batch counts a repeated id once', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(
+          await repository.markConversationsAsRead([
+            conversationId,
+            conversationId,
+          ]),
+          isTrue,
+        );
+      });
+
+      test('batch reports success for a row that is already read', () async {
+        await conversationsDao.markAsRead(conversationId, ownerPubkey: _ownerA);
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(
+          await repository.markConversationsAsRead([conversationId]),
+          isTrue,
+        );
+      });
+
+      test('batch of only missing ids reports failure', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(await repository.markConversationsAsRead(['missing']), isFalse);
+      });
+
+      test('an empty batch reports success', () async {
+        final repository = buildRepository(userPubkey: _ownerA);
+        expect(await repository.markConversationsAsRead([]), isTrue);
+      });
+    });
+
     test('an uninitialized repository marks nobody read', () async {
       // `ConversationsDao.markAsRead` drops its owner clause entirely for a
       // null owner, leaving `UPDATE conversations SET is_read = 1 WHERE
@@ -165,8 +270,11 @@ void main() {
       // cannot name an owner at all.
       final repository = buildRepository(userPubkey: '');
 
-      await repository.markConversationAsRead(conversationId);
-      await repository.markConversationsAsRead([conversationId]);
+      expect(await repository.markConversationAsRead(conversationId), isFalse);
+      expect(
+        await repository.markConversationsAsRead([conversationId]),
+        isFalse,
+      );
 
       final row = await conversationsDao.getConversation(
         conversationId,

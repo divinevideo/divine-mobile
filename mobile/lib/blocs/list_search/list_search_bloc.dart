@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -68,7 +69,9 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
   ) async {
     final query = event.query.trim();
 
-    if (query.isEmpty || query.length < minSearchQueryLength) {
+    if (query.isEmpty ||
+        query.length < minSearchQueryLength ||
+        NostrKeyUtils.containsPrivateKey(query)) {
       emit(const ListSearchState());
       return;
     }

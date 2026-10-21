@@ -42,7 +42,8 @@ class _PluginVolumeListener implements SystemVolumeListener {
 /// The cubit bridges the hardware volume buttons to the app's video
 /// playback volume: when the user sets the device volume to zero, the
 /// video feed is muted; when the device volume rises above zero, volume
-/// is restored.
+/// is restored only if the system muted it. An explicit in-app mute always
+/// survives system volume notifications.
 ///
 /// Volume is binary: `1.0` (unmuted) or `0.0` (muted). The actual loudness
 /// is controlled by the device's hardware volume.
@@ -66,6 +67,10 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   }) : _prefs = sharedPreferences,
        super(
          VideoVolumeState(
+           // Legacy saved mutes have no provenance: preserve silence until
+           // the user explicitly unmutes in the app.
+           mutedBySystem:
+               sharedPreferences.getBool(_systemMutePrefsKey) ?? false,
            // Screenshot capture runs must stay silent.
            volume: ScreenshotMode.enabled
                ? 0.0
@@ -84,6 +89,13 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   }
 
   static const _prefsKey = 'video_playback_volume';
+  static const _systemMutePrefsKey = 'video_playback_muted_by_system';
+
+  /// Playback audio belongs to the device and survives account switches.
+  static const List<String> deviceScopedPrefsKeys = [
+    _prefsKey,
+    _systemMutePrefsKey,
+  ];
 
   final SharedPreferences _prefs;
   StreamSubscription<double>? _systemVolumeSubscription;
@@ -95,6 +107,8 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   /// [newVolume] is treated as unmuted (`1.0`).
   void onPlaybackVolumeChanged(double newVolume) {
     final clamped = newVolume > 0 ? 1.0 : 0.0;
+    // The player echoes volume synchronization through this callback. Ignore
+    // unchanged values so a system mute keeps its hardware-unmute behavior.
     if (state.volume == clamped) return;
     emit(VideoVolumeState(volume: clamped));
     unawaited(_persist());
@@ -103,17 +117,22 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
   void _onSystemVolumeChanged(double systemVolume) {
     if (systemVolume == 0 && state.volume > 0) {
       // Device muted → mute video
-      emitIfOpen(const VideoVolumeState(volume: 0));
+      emitIfOpen(const VideoVolumeState(volume: 0, mutedBySystem: true));
       unawaited(_persist());
-    } else if (systemVolume > 0 && state.volume == 0) {
-      // Device unmuted → unmute video
+    } else if (systemVolume > 0 && state.mutedBySystem) {
+      // Restore only a system-driven mute, never a saved in-app choice.
       emitIfOpen(const VideoVolumeState());
       unawaited(_persist());
     }
   }
 
   Future<void> _persist() async {
-    await _prefs.setDouble(_prefsKey, state.volume);
+    // Capture both values before awaiting so rapid changes cannot mix a
+    // previous volume with the next change's mute source.
+    await Future.wait([
+      _prefs.setDouble(_prefsKey, state.volume),
+      _prefs.setBool(_systemMutePrefsKey, state.mutedBySystem),
+    ]);
   }
 
   @override

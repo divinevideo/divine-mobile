@@ -544,8 +544,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileInvalidId => 'ID de profil invalide';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Découvre $displayName sur Divine !\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Découvre $displayName sur Divine !\n\n$url';
   }
 
   @override
@@ -8044,6 +8044,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get followSortTitle => 'Trier par';
 
   @override
+  String get followSortSmart => 'Intelligent';
+
+  @override
   String get followSortNewest => 'Plus récents d\'abord';
 
   @override
@@ -8229,6 +8232,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get searchDiscoverSomethingInteresting =>
       'Découvre quelque chose d\'intéressant';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'Personnes';
@@ -14152,4 +14159,106 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Marqué comme lu';
+
+  @override
+  String get videoEditorLayoutLabel => 'Disposition';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Disposer des clips en écran partagé';
+
+  @override
+  String get videoEditorLayoutTitle => 'Disposition';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Fermer la disposition';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Placer la disposition';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Côte à côte';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Superposés';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Trois rangées';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Un sur deux';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Grille de quatre';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Trois côte à côte';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Deux sur un';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Un à côté de deux';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Deux à côté d\'un';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Un sur trois';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Image dans l\'image, en haut à gauche';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Image dans l\'image, en haut à droite';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Image dans l\'image, en bas à gauche';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Image dans l\'image, en bas à droite';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Case $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Case $number, vide';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Retirer le clip de la case';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Espacement';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Couleur de bordure';
+
+  @override
+  String get videoEditorLayoutApplying => 'Disposition en cours…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Étape $step sur $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Impossible de placer la disposition. Réessaie.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Certains clips n\'ont pas trouvé de place : toutes les cases sont pleines.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publié $time';
+  }
 }

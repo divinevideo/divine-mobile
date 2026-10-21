@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/blocs/background_publish/publish_foreground_session.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/providers/active_video_provider.dart';
-import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/background_activity_provider.dart';
@@ -15,6 +14,7 @@ import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -233,7 +233,7 @@ final uploadBackpressureActiveProvider = Provider<bool>((ref) {
   if (ref.watch(activeVideoIdProvider) != null) return true;
 
   final isHomeFeedActive =
-      ref.watch(appForegroundProvider) &&
+      ref.watch(playbackEligibleProvider) &&
       ref.watch(activeBranchIndexProvider) == 0 &&
       !ref.watch(shellObscuredProvider) &&
       !ref.watch(overlayVisibilityProvider).hasVisibleOverlay;

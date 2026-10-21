@@ -130,6 +130,10 @@ class ScheduledPostsRepository {
 
   final _changes = StreamController<void>.broadcast();
 
+  /// Set by [dispose]. An account switch disposes this repository and closes
+  /// its client while a sync for the outgoing account can be in flight.
+  bool _isDisposed = false;
+
   static const _logName = 'ScheduledPostsRepository';
 
   ScheduledPostRetryConfig get config => _config;
@@ -138,6 +142,7 @@ class ScheduledPostsRepository {
   Stream<void> get changes => _changes.stream;
 
   void dispose() {
+    _isDisposed = true;
     // Broadcast controller with no pending adds: close() completes as soon
     // as its listeners are done, and the caller is tearing the repository
     // down rather than waiting on it.
@@ -364,11 +369,19 @@ class ScheduledPostsRepository {
     final result = await _client.list();
     if (result is! ScheduleListLoaded) {
       final failure = result as ScheduleListFailure;
-      Log.warning(
-        'Scheduled-post sync failed: ${failure.reason}',
-        name: _logName,
-        category: LogCategory.video,
-      );
+      if (_isDisposed) {
+        Log.debug(
+          'Scheduled-post sync ended after dispose: ${failure.reason}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      } else {
+        Log.warning(
+          'Scheduled-post sync failed: ${failure.reason}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      }
       return const ScheduledPostSyncResult(succeeded: false);
     }
 

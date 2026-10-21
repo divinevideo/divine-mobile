@@ -198,6 +198,7 @@ class VerifyConnectState extends Equatable {
 
   /// Copy of this state with the given fields replaced.
   VerifyConnectState copyWith({
+    VerifierPlatform? platform,
     VerifyConnectStatus? status,
     String? identity,
     String? proof,
@@ -209,7 +210,7 @@ class VerifyConnectState extends Equatable {
     bool clearSignedInAccount = false,
   }) {
     return VerifyConnectState(
-      platform: platform,
+      platform: platform ?? this.platform,
       status: status ?? this.status,
       identity: identity ?? this.identity,
       proof: proof ?? this.proof,

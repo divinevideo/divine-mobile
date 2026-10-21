@@ -13,18 +13,24 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 class _MockVideoSharingService extends Mock implements VideoSharingService {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
@@ -82,6 +88,7 @@ void main() {
     late _MockVideoSharingService mockSharingService;
     late _MockProfileRepository mockProfileRepository;
     late _MockFollowRepository mockFollowRepository;
+    late _MockRankingSignalsLoader mockRankingSignalsLoader;
     late _MockBookmarksRepository mockBookmarksRepository;
     late VideoEvent testVideo;
 
@@ -105,6 +112,29 @@ void main() {
       mockSharingService = _MockVideoSharingService();
       mockProfileRepository = _MockProfileRepository();
       mockFollowRepository = _MockFollowRepository();
+      mockRankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => mockRankingSignalsLoader.isEligible(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first != currentUserPubkey,
+      );
+      when(
+        () => mockRankingSignalsLoader.load(
+          any(),
+          includeDmCounterparts: true,
+        ),
+      ).thenAnswer((invocation) async {
+        final keys = invocation.positionalArguments.first as Iterable<String>;
+        return {
+          for (final (index, key) in keys.indexed)
+            if (key != currentUserPubkey)
+              key: UserRankingSignals(
+                pubkey: key,
+                lastInteractionAt: DateTime.utc(2026).subtract(
+                  Duration(days: index),
+                ),
+              ),
+        };
+      });
       mockBookmarksRepository = _MockBookmarksRepository();
 
       testVideo = VideoEvent(
@@ -154,6 +184,7 @@ void main() {
       videoSharingService: mockSharingService,
       profileRepository: mockProfileRepository,
       followRepository: followRepository ?? mockFollowRepository,
+      rankingSignalsLoader: mockRankingSignalsLoader,
       currentUserPubkey: currentUserPubkey,
       bookmarksRepository: withBookmarksRepository
           ? (bookmarksRepository ?? mockBookmarksRepository)
@@ -179,6 +210,434 @@ void main() {
     // -----------------------------------------------------------------------
     // Contact loading
     // -----------------------------------------------------------------------
+
+    group('contact ranking', () {
+      final alice = 'a' * 64;
+      final bob = 'b' * 64;
+      final carol = 'c' * 64;
+      final dave = 'd' * 64;
+
+      UserProfile profile(String key, String name) => UserProfile(
+        pubkey: key,
+        createdAt: DateTime.utc(2026),
+        eventId: 'e' * 64,
+        rawData: const {},
+        name: name,
+      );
+
+      void signals(Map<String, UserRankingSignals> snapshot) {
+        when(
+          () => mockRankingSignalsLoader.load(
+            any(),
+            includeDmCounterparts: true,
+          ),
+        ).thenAnswer((_) async => snapshot);
+      }
+
+      TypeMatcher<ShareSheetState> readyWith(List<String> keys) =>
+          isA<ShareSheetState>()
+              .having((s) => s.status, 'status', ShareSheetStatus.ready)
+              .having((s) => s.contacts.map((c) => c.pubkey), 'contacts', keys);
+
+      setUp(() {
+        when(() => mockFollowRepository.followingPubkeys)
+            .thenReturn([alice, bob, carol, dave]);
+        when(
+          () => mockProfileRepository.getCachedProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            profile(alice, 'Alice'),
+            profile(bob, 'Bob'),
+            profile(carol, 'Carol'),
+            profile(dave, 'Dave'),
+          ],
+        );
+      });
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'contacts are ordered by last DM, then score',
+        setUp: () => signals({
+          alice: UserRankingSignals(pubkey: alice, followsYou: true),
+          bob: UserRankingSignals(
+            pubkey: bob,
+            lastInteractionAt: DateTime.utc(2026, 1, 2),
+          ),
+          carol: UserRankingSignals(
+            pubkey: carol,
+            lastInteractionAt: DateTime.utc(2026, 1, 3),
+          ),
+          dave: UserRankingSignals(pubkey: dave, youFollow: true),
+        }),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([carol, bob, dave, alice]),
+        ],
+        verify: (bloc) {
+          verify(
+            () => mockRankingSignalsLoader.load(
+              [alice, bob, carol, dave],
+              includeDmCounterparts: true,
+            ),
+          ).called(1);
+          verify(
+            () => mockRankingSignalsLoader.refreshInBackground(
+              [carol, bob, dave, alice],
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'looks up uncached contacts in key order, not closeness order',
+        setUp: () {
+          signals({
+            alice: UserRankingSignals(pubkey: alice, followsYou: true),
+            bob: UserRankingSignals(
+              pubkey: bob,
+              lastInteractionAt: DateTime.utc(2026, 1, 2),
+            ),
+            carol: UserRankingSignals(
+              pubkey: carol,
+              lastInteractionAt: DateTime.utc(2026, 1, 3),
+            ),
+            dave: UserRankingSignals(pubkey: dave, youFollow: true),
+          });
+          when(
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => <UserProfile>[]);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        verify: (bloc) {
+          verify(
+            () => mockRankingSignalsLoader.refreshInBackground(
+              [carol, bob, dave, alice],
+            ),
+          ).called(1);
+          verify(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: [alice, bob, carol, dave],
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'ties use cached names',
+        setUp: () {
+          signals({
+            alice: UserRankingSignals(pubkey: alice),
+            bob: UserRankingSignals(pubkey: bob),
+          });
+          when(
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              profile(alice, 'Zebra'),
+              profile(bob, 'Alpha'),
+            ],
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([bob, alice]),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'ties use pubkeys for absent names',
+        setUp: () {
+          signals({
+            alice: UserRankingSignals(pubkey: alice),
+            bob: UserRankingSignals(pubkey: bob),
+          });
+          when(
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => [profile(bob, 'A')]);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([bob, alice]),
+          readyWith([bob]),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'an account with no follows still includes a DM-only counterpart',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
+          signals({
+            bob: UserRankingSignals(
+              pubkey: bob,
+              lastInteractionAt: DateTime.utc(2026),
+            ),
+          });
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([bob]),
+        ],
+        verify: (_) {
+          verify(
+            () => mockRankingSignalsLoader.load(
+              <String>{},
+              includeDmCounterparts: true,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'recent shares stay first and unfollowed DM counterparts appear once',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys).thenReturn([alice]);
+          when(() => mockSharingService.recentlySharedWith).thenReturn([
+            ShareableUser(pubkey: alice, displayName: 'Recent Alice'),
+          ]);
+          signals({
+            alice: UserRankingSignals(pubkey: alice),
+            bob: UserRankingSignals(
+              pubkey: bob,
+              lastInteractionAt: DateTime.utc(2026, 1, 3),
+            ),
+          });
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([alice, bob]).having(
+            (s) => s.contacts.first.displayName,
+            'recent identity',
+            'Recent Alice',
+          ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'successful signal keys exclude blocked recent shares and self',
+        setUp: () {
+          when(() => mockSharingService.recentlySharedWith).thenReturn([
+            viewerAsRecipient,
+            ShareableUser(pubkey: bob, displayName: 'Blocked'),
+          ]);
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn([currentUserPubkey, alice, bob]);
+          signals({alice: UserRankingSignals(pubkey: alice)});
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([alice]),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'successful empty signals never restore excluded recent shares',
+        setUp: () {
+          when(() => mockSharingService.recentlySharedWith).thenReturn([
+            ShareableUser(pubkey: bob, displayName: 'Blocked'),
+          ]);
+          signals({});
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([]),
+        ],
+      );
+
+      for (final source in ['follows', 'recents']) {
+        for (final snapshotFails in [false, true]) {
+          final retired = kLegacyModerationPubkeys.first;
+          final failure = Exception('local signal read failed');
+          blocTest<ShareSheetBloc, ShareSheetState>(
+            'excludes retired moderation $source when signals '
+            '${snapshotFails ? 'fail' : 'load'}',
+            setUp: () {
+              when(() => mockFollowRepository.followingPubkeys).thenReturn([
+                alice,
+                if (source == 'follows') retired,
+              ]);
+              when(() => mockSharingService.recentlySharedWith).thenReturn([
+                if (source == 'recents')
+                  ShareableUser(pubkey: retired, displayName: 'Retired'),
+              ]);
+              when(
+                () => mockProfileRepository.getCachedProfiles(
+                  pubkeys: any(named: 'pubkeys'),
+                ),
+              ).thenAnswer(
+                (_) async => [
+                  profile(alice, 'Alice'),
+                  profile(retired, 'Retired'),
+                ],
+              );
+              if (snapshotFails) {
+                when(
+                  () => mockRankingSignalsLoader.load(
+                    any(),
+                    includeDmCounterparts: true,
+                  ),
+                ).thenThrow(failure);
+              }
+            },
+            build: createBloc,
+            act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+            expect: () => [
+              const ShareSheetState(status: ShareSheetStatus.loading),
+              readyWith([alice]),
+            ],
+            errors: () => [if (snapshotFails) failure],
+          );
+        }
+      }
+
+      final fallbackFailure = Exception('local signal read failed');
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'throwing loader fallback excludes blocked recent shares and followed contacts',
+        setUp: () {
+          when(() => mockSharingService.recentlySharedWith).thenReturn([
+            ShareableUser(pubkey: bob, displayName: 'Blocked recent'),
+            ShareableUser(pubkey: dave, displayName: 'Eligible recent'),
+          ]);
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn([alice, carol]);
+          when(
+            () => mockRankingSignalsLoader.load(
+              any(),
+              includeDmCounterparts: true,
+            ),
+          ).thenThrow(fallbackFailure);
+          when(() => mockRankingSignalsLoader.isEligible(alice))
+              .thenReturn(false);
+          when(() => mockRankingSignalsLoader.isEligible(bob))
+              .thenReturn(false);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        expect: () => [
+          const ShareSheetState(status: ShareSheetStatus.loading),
+          readyWith([dave, carol]),
+        ],
+        errors: () => [fallbackFailure],
+        verify: (bloc) {
+          verify(
+            () => mockProfileRepository.getCachedProfiles(pubkeys: [carol]),
+          ).called(1);
+          verify(
+            () => mockRankingSignalsLoader.refreshInBackground([dave, carol]),
+          ).called(1);
+        },
+      );
+
+      for (final error in [
+        Exception('local read failed'),
+        StateError('invariant'),
+        RangeError('index'),
+      ]) {
+        blocTest<ShareSheetBloc, ShareSheetState>(
+          'ranking load $error falls back to old order and adds classified error',
+          setUp: () {
+            when(() => mockSharingService.recentlySharedWith).thenReturn([
+              ShareableUser(pubkey: dave, displayName: 'Recent Dave'),
+            ]);
+            when(
+              () => mockRankingSignalsLoader.load(
+                any(),
+                includeDmCounterparts: true,
+              ),
+            ).thenThrow(error);
+          },
+          build: createBloc,
+          act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+          expect: () => [
+            const ShareSheetState(status: ShareSheetStatus.loading),
+            readyWith([dave, alice, bob, carol]),
+          ],
+          errors: () => [
+            if (error is StateError || error is RangeError)
+              isA<Reportable<Object>>().having(
+                (e) => e.unwrap(),
+                'unwrap',
+                same(error),
+              )
+            else
+              same(error),
+          ],
+        );
+      }
+
+      test(
+        'hydration keeps existing order and a picked contact stays first',
+        () async {
+          final hydration = Completer<Map<String, UserProfile>>();
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn([alice, bob]);
+          when(
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) async => [profile(alice, 'Alpha')]);
+          when(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) => hydration.future);
+          signals({
+            alice: UserRankingSignals(pubkey: alice),
+            bob: UserRankingSignals(pubkey: bob),
+          });
+          final bloc = createBloc();
+          when(() => mockRankingSignalsLoader.refreshInBackground(any()))
+              .thenAnswer((_) {
+                expect(bloc.state.status, ShareSheetStatus.ready);
+                expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob]);
+                verifyNever(
+                  () => mockProfileRepository.fetchBatchProfiles(
+                    pubkeys: any(named: 'pubkeys'),
+                  ),
+                );
+              });
+          bloc.add(const ShareSheetContactsLoadRequested());
+          await bloc.stream.firstWhere(
+            (s) => s.status == ShareSheetStatus.ready,
+          );
+          expect(bloc.state.contacts.map((c) => c.pubkey), [alice, bob]);
+          bloc.add(
+            ShareSheetRecipientToggled(
+              ShareableUser(pubkey: carol, displayName: 'Picked Carol'),
+            ),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.contacts.map((c) => c.pubkey), [carol, alice, bob]);
+          hydration.complete({bob: profile(bob, 'Zebra')});
+          await pumpEventQueue();
+          expect(bloc.state.contacts.map((c) => c.pubkey), [carol, alice, bob]);
+          expect(bloc.state.contacts[2].displayName, 'Zebra');
+          expect(bloc.state.selectedRecipients.single.pubkey, carol);
+          await bloc.close();
+        },
+      );
+    });
 
     group('excludes the current user (#8351)', () {
       blocTest<ShareSheetBloc, ShareSheetState>(
@@ -534,11 +993,11 @@ void main() {
             'status',
             ShareSheetStatus.ready,
           ),
-          // The toggle prepends the picked stranger.
+          // The toggle prepends the pick while retaining the pending row.
           isA<ShareSheetState>()
               .having(
                 (s) => s.contacts.first.displayName,
-                'picked first',
+                'picked prepended',
                 'Picked Stranger',
               )
               .having((s) => s.selectedRecipients.length, 'selected', 1),
@@ -609,7 +1068,7 @@ void main() {
           isA<ShareSheetState>()
               .having(
                 (s) => s.contacts.first.displayName,
-                'picked first',
+                'picked prepended',
                 'Picked Stranger',
               )
               .having((s) => s.selectedRecipients.length, 'selected', 1),
@@ -913,6 +1372,20 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('ShareSheetRecipientToggled', () {
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'ignores a Find People selection of a retired moderation account',
+        build: createBloc,
+        act: (bloc) => bloc.add(
+          ShareSheetRecipientToggled(
+            ShareableUser(
+              pubkey: kLegacyModerationPubkeys.first,
+              displayName: 'Retired',
+            ),
+          ),
+        ),
+        expect: () => <ShareSheetState>[],
+      );
+
       const otherRecipient = ShareableUser(
         pubkey:
             'bbbb456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -983,8 +1456,40 @@ void main() {
         ],
       );
 
+      final longContactRow = List.generate(
+        40,
+        (index) => ShareableUser(
+          pubkey: (index + 1).toRadixString(16).padLeft(64, '0'),
+          displayName: 'Contact $index',
+        ),
+      );
+
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'inserts a Find People pick missing from contacts at the front',
+        'new Find People pick appears first in a long contact row',
+        seed: () => ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: longContactRow,
+          selectedRecipients: [longContactRow[10]],
+        ),
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(const ShareSheetRecipientToggled(testRecipient)),
+        expect: () => [
+          isA<ShareSheetState>()
+              .having((s) => s.contacts.map((c) => c.pubkey), 'contacts', [
+                testRecipient.pubkey,
+                ...longContactRow.map((c) => c.pubkey),
+              ])
+              .having(
+                (s) => s.selectedRecipients.map((c) => c.pubkey),
+                'selection',
+                [longContactRow[10].pubkey, testRecipient.pubkey],
+              ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'prepends a Find People pick without reordering existing contacts',
         seed: () => const ShareSheetState(
           status: ShareSheetStatus.ready,
           contacts: [otherRecipient],
@@ -2082,6 +2587,7 @@ void main() {
           videoSharingService: mockSharingService,
           profileRepository: mockProfileRepository,
           followRepository: mockFollowRepository,
+          rankingSignalsLoader: mockRankingSignalsLoader,
           currentUserPubkey: currentUserPubkey,
         ),
         act: (bloc) => bloc.add(const ShareSheetCopyEventJsonRequested()),
@@ -2134,6 +2640,7 @@ void main() {
           videoSharingService: mockSharingService,
           profileRepository: mockProfileRepository,
           followRepository: mockFollowRepository,
+          rankingSignalsLoader: mockRankingSignalsLoader,
           currentUserPubkey: currentUserPubkey,
         ),
         act: (bloc) => bloc.add(const ShareSheetCopyEventIdRequested()),

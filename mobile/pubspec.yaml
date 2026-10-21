@@ -18,7 +18,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 # Marketing-version changes are release decisions. Keep the current train until
 # approval; ask a maintainer and follow ../docs/RELEASE_CHECKLIST.md before editing.
-version: 1.0.25+820
+version: 1.0.26+820
 
 environment:
   sdk: ^3.13.0
@@ -86,6 +86,7 @@ workspace:
   - packages/tv_static_effect
   - packages/unified_logger
   - packages/upload_repository
+  - packages/user_ranking
   - packages/verifier_client
   - packages/video_event_cache
   - packages/videos_repository
@@ -360,6 +361,9 @@ dependencies:
 
   # Upload Repository - persistent upload orchestration and recovery
   upload_repository:
+
+  # User Ranking - local closeness scoring and user-list ordering
+  user_ranking:
 
   # Verifier Client - HTTP client for verifier.divine.video identity attestations
   verifier_client:

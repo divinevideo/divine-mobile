@@ -467,8 +467,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileInvalidId => 'Geçersiz profil kimliği';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return '$displayName adlı kişiye Divine\'de göz at!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return '$displayName adlı kişiye Divine\'de göz at!\n\n$url';
   }
 
   @override
@@ -7853,6 +7853,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get followSortTitle => 'Sıralama ölçütü';
 
   @override
+  String get followSortSmart => 'Akıllı';
+
+  @override
   String get followSortNewest => 'Önce en yeniler';
 
   @override
@@ -8032,6 +8035,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get searchDiscoverSomethingInteresting => 'İlginç bir şey keşfet';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'Kişiler';
@@ -13857,4 +13864,106 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Okundu olarak işaretlendi';
+
+  @override
+  String get videoEditorLayoutLabel => 'Düzen';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Klipleri bölünmüş ekranda düzenle';
+
+  @override
+  String get videoEditorLayoutTitle => 'Düzen';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Düzeni kapat';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Düzeni yerleştir';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Yan yana';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Üst üste';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Üç satır';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Üstte bir, altta iki';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Dörtlü ızgara';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Yan yana üç';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Üstte iki, altta bir';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Solda bir, sağda iki';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Solda iki, sağda bir';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Üstte bir, altta üç';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Resim içinde resim, sol üst';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Resim içinde resim, sağ üst';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Resim içinde resim, sol alt';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Resim içinde resim, sağ alt';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Hücre $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Hücre $number, boş';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Klibi hücreden çıkar';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Boşluk';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Kenarlık rengi';
+
+  @override
+  String get videoEditorLayoutApplying => 'Düzenin hazırlanıyor…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Adım $step/$count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Düzen yerleştirilemedi. Bir daha dene.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Bazı klipler sığmadı: tüm hücreler dolu.';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time paylaşıldı';
+  }
 }

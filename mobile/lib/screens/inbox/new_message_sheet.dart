@@ -2,21 +2,31 @@
 // ABOUTME: Shows a searchable user list for picking one DM recipient, or
 // ABOUTME: several for a group. Uses NewMessageSearchBloc for its state.
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/moderation_presentation.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/utils/user_identifier_line_resolver.dart';
+import 'package:openvine/widgets/private_key_search_warning.dart';
+import 'package:openvine/widgets/retained_bloc_provider.dart';
 import 'package:openvine/widgets/user_avatar.dart';
-import 'package:profile_repository/profile_repository.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 /// Widest a picked person's name runs on their chip before it is ellipsized,
 /// so one long name cannot push every other chip out of the strip.
@@ -31,17 +41,12 @@ const double _chipRadius = 16;
 /// field queries for users by name or npub. Tapping a user returns them and
 /// dismisses the sheet. With [allowGroups], a "New group" row switches the
 /// sheet to picking several people, which "Start chat" returns together.
-class NewMessageSheet extends ConsumerWidget {
+class NewMessageSheet extends ConsumerStatefulWidget {
   const NewMessageSheet({
-    required this.profileRepository,
-    required this.followRepository,
     required this.currentUserPubkey,
     required this.allowGroups,
     super.key,
   });
-
-  final ProfileRepository profileRepository;
-  final FollowRepository followRepository;
 
   /// The signed-in user, excluded from the candidate list — Divine does not
   /// support a self-addressed conversation (#8351).
@@ -59,8 +64,6 @@ class NewMessageSheet extends ConsumerWidget {
   /// were picked. Null if the user dismissed without choosing.
   static Future<List<UserProfile>?> show(
     BuildContext context, {
-    required ProfileRepository profileRepository,
-    required FollowRepository followRepository,
     required String currentUserPubkey,
     required bool allowGroups,
   }) {
@@ -70,8 +73,6 @@ class NewMessageSheet extends ConsumerWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => NewMessageSheet(
-        profileRepository: profileRepository,
-        followRepository: followRepository,
         currentUserPubkey: currentUserPubkey,
         allowGroups: allowGroups,
       ),
@@ -79,19 +80,41 @@ class NewMessageSheet extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return BlocProvider(
-      create: (_) => NewMessageSearchBloc(
-        profileRepository: profileRepository,
-        followRepository: followRepository,
-        currentUserPubkey: currentUserPubkey,
-        moderationPresentation: ref.read(
-          moderationPresentationResolverProvider,
-        ),
+  ConsumerState<NewMessageSheet> createState() => _NewMessageScopeState();
+}
+
+class _NewMessageScopeState extends ConsumerState<NewMessageSheet> {
+  bool _retired = false;
+  bool _owns(NostrSessionReadiness session) =>
+      session.phase != NostrSessionPhase.signedOut &&
+      session.phase != NostrSessionPhase.tearingDown &&
+      session.pubkey != null &&
+      pubkeysEqual(session.pubkey!, widget.currentUserPubkey);
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(nostrSessionProvider, (_, next) {
+      if (!_owns(next)) _retired = true;
+    });
+    if (!_owns(ref.watch(nostrSessionProvider))) _retired = true;
+    if (_retired) return const SizedBox.shrink();
+    final profiles = ref.watch(profileRepositoryProvider);
+    final follows = ref.watch(followRepositoryProvider);
+    final loader = ref.watch(userRankingSignalsLoaderProvider);
+    final moderation = ref.watch(moderationPresentationResolverProvider);
+    return RetainedBlocProvider<NewMessageSearchBloc, NewMessageSearchState>(
+      dependencies: (profiles, follows, loader, moderation),
+      create: (snapshot) => NewMessageSearchBloc(
+        profileRepository: profiles,
+        followRepository: follows,
+        rankingSignalsLoader: loader,
+        currentUserPubkey: widget.currentUserPubkey,
+        moderationPresentation: moderation,
+        initialState: snapshot,
       )..add(const NewMessageSearchStarted()),
       child: _PeerLabelSync(
         child: _NewMessageSheetView(
-          allowGroups: allowGroups && !ref.watch(isDmRestrictedProvider),
+          allowGroups: widget.allowGroups && !ref.watch(isDmRestrictedProvider),
         ),
       ),
     );
@@ -140,6 +163,12 @@ class _NewMessageSheetViewState extends State<_NewMessageSheetView> {
   @override
   void didUpdateWidget(covariant _NewMessageSheetView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final bloc = context.read<NewMessageSearchBloc>();
+    if (_searchController.text.trim().isNotEmpty &&
+        (bloc.state.query != _searchController.text.trim() ||
+            bloc.state.status == NewMessageSearchStatus.searching)) {
+      bloc.add(NewMessageSearchQueryChanged(_searchController.text));
+    }
     // Groups were withdrawn while the sheet was open, so a group being picked
     // must not survive it.
     if (oldWidget.allowGroups && !widget.allowGroups) {
@@ -191,6 +220,13 @@ class _NewMessageSheetViewState extends State<_NewMessageSheetView> {
               child: _SearchField(
                 controller: _searchController,
                 onChanged: _onSearchChanged,
+              ),
+            ),
+            ValueListenableBuilder(
+              valueListenable: _searchController,
+              builder: (context, value, _) => PrivateKeySearchWarning(
+                query: value.text,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               ),
             ),
             if (!isGroupMode && widget.allowGroups) const _NewGroupRow(),
@@ -702,14 +738,14 @@ class _StartGroupFooter extends StatelessWidget {
               semanticIdentifier: SemanticIds.newMessageStartGroupButton,
               expanded: true,
               onPressed: canStartGroup
-                  ? () => Navigator.of(context).pop(
-                      List<UserProfile>.of(
-                        context
-                            .read<NewMessageSearchBloc>()
-                            .state
-                            .selectedRecipients,
-                      ),
-                    )
+                  ? () {
+                      if (!context.mounted) return;
+                      final bloc = context.read<NewMessageSearchBloc>();
+                      if (bloc.isClosed) return;
+                      Navigator.of(context).pop(
+                        List<UserProfile>.of(bloc.state.selectedRecipients),
+                      );
+                    }
                   : null,
             ),
           ),
@@ -788,30 +824,42 @@ class _CandidateRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (isGroupMode, isSelected, isGroupFull) = context.select(
+    final (isGroupMode, isSelected, isGroupFull, signals) = context.select(
       (NewMessageSearchBloc bloc) => (
         bloc.state.isGroupMode,
         bloc.state.isSelected(profile.pubkey),
         bloc.state.isGroupFull,
+        bloc.state.rankingSignals[profile.pubkey],
       ),
     );
 
     if (!isGroupMode) {
       return _UserTile(
         profile: profile,
-        onTap: () => Navigator.of(context).pop(<UserProfile>[profile]),
+        signals: signals,
+        onTap: () {
+          if (context.mounted &&
+              !context.read<NewMessageSearchBloc>().isClosed) {
+            Navigator.of(context).pop(<UserProfile>[profile]);
+          }
+        },
       );
     }
 
     return _UserTile(
       profile: profile,
+      signals: signals,
       isSelected: isSelected,
       // A full group takes nobody new, but whoever is in it can still leave.
       onTap: isGroupFull && !isSelected
           ? null
-          : () => context.read<NewMessageSearchBloc>().add(
-              NewMessageSearchRecipientToggled(profile),
-            ),
+          : () {
+              if (!context.mounted) return;
+              final bloc = context.read<NewMessageSearchBloc>();
+              if (!bloc.isClosed) {
+                bloc.add(NewMessageSearchRecipientToggled(profile));
+              }
+            },
     );
   }
 }
@@ -828,9 +876,11 @@ class _UserTile extends ConsumerWidget {
     required this.profile,
     required this.onTap,
     this.isSelected,
+    this.signals,
   });
 
   final UserProfile profile;
+  final UserRankingSignals? signals;
 
   /// What a tap does. Null makes the row inert and dims it.
   final VoidCallback? onTap;
@@ -864,6 +914,28 @@ class _UserTile extends ConsumerWidget {
           handle: profile.handle,
         ) ??
         '';
+    final suppressIndicators =
+        isVanished || moderation == ModerationPresentation.former;
+    final relationship = switch ((signals?.youFollow, signals?.followsYou)) {
+      (true, true) => FollowRelationship.mutual,
+      (true, _) => FollowRelationship.youFollow,
+      (_, true) => FollowRelationship.followsYou,
+      _ => FollowRelationship.none,
+    };
+    final indicators = UserIndicatorLine(
+      identifier: suppressIndicators
+          ? null
+          : resolveUserIdentifierLine(
+              l10n: context.l10n,
+              locale: Localizations.localeOf(context).toLanguageTag(),
+              handle: handle,
+            ),
+      relationship: suppressIndicators ? FollowRelationship.none : relationship,
+      videoCount: suppressIndicators ? null : signals?.videoCount,
+      lastPostedAt: suppressIndicators ? null : signals?.lastPostedAt,
+      now: clock.now(),
+      style: VineTheme.bodyMediumFont(color: context.vineColors.primaryText),
+    );
     final isSelected = this.isSelected;
 
     final content = Padding(
@@ -894,15 +966,7 @@ class _UserTile extends ConsumerWidget {
                     color: context.vineColors.primaryText,
                   ),
                 ),
-                if (handle.isNotEmpty)
-                  Text(
-                    handle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
+                if (indicators.hasContent) indicators,
               ],
             ),
           ),

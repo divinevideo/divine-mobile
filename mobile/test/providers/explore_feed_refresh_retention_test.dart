@@ -12,6 +12,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/playback_eligibility_provider.dart';
 import 'package:openvine/providers/popular_videos_feed_provider.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -730,6 +731,98 @@ void main() {
         ]);
         expect(loadedState.hasMoreContent, isTrue);
         expect(requestedCursors, [null, 'cursor-2']);
+      },
+    );
+    test(
+      'window focus changes retain loaded recommendations and pagination',
+      () async {
+        final requestedCursors = <String?>[];
+        var recommendationsCallCount = 0;
+
+        when(
+          () => mockVideosRepository.getRecommendedVideos(
+            userPubkey: any(named: 'userPubkey'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((invocation) {
+          requestedCursors.add(invocation.namedArguments[#cursor] as String?);
+          recommendationsCallCount += 1;
+          if (recommendationsCallCount == 1) {
+            return Future.value(
+              _recommendedResult([
+                'for-you-a',
+                'for-you-b',
+              ], nextCursor: 'cursor-2'),
+            );
+          }
+          return Future.value(
+            _recommendedResult([
+              'for-you-b',
+              'for-you-c',
+            ], nextCursor: 'cursor-3'),
+          );
+        });
+
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklistRepository,
+            ),
+            videosRepositoryProvider.overrideWithValue(mockVideosRepository),
+            authServiceProvider.overrideWithValue(mockAuthService),
+            funnelcakeAvailableProvider.overrideWith(
+              _AlwaysAvailableFunnelcake.new,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(funnelcakeAvailableProvider.future);
+        final subscription = container.listen(forYouFeedProvider, (_, _) {});
+        addTearDown(subscription.close);
+
+        final initialState = await container.read(forYouFeedProvider.future);
+        expect(initialState.videos.map((video) => video.id), [
+          'for-you-a',
+          'for-you-b',
+        ]);
+        expect(initialState.hasMoreContent, isTrue);
+
+        await container.read(forYouFeedProvider.notifier).loadMore();
+
+        final loadedState = container.read(forYouFeedProvider).value;
+        expect(loadedState, isNotNull);
+        expect(loadedState!.videos.map((video) => video.id), [
+          'for-you-a',
+          'for-you-b',
+          'for-you-c',
+        ]);
+        expect(loadedState.hasMoreContent, isTrue);
+        expect(requestedCursors, [null, 'cursor-2']);
+        container
+            .read(playbackWindowFocusedProvider.notifier)
+            .setFocused(false);
+        await container.pump();
+        expect(container.read(playbackEligibleProvider), isFalse);
+        expect(container.read(appReadyProvider), isTrue);
+        container.read(playbackWindowFocusedProvider.notifier).setFocused(true);
+        await container.pump();
+        expect(container.read(playbackEligibleProvider), isTrue);
+        final restored = await container.read(forYouFeedProvider.future);
+        expect(restored.videos.map((video) => video.id), [
+          'for-you-a',
+          'for-you-b',
+          'for-you-c',
+        ]);
+        expect(requestedCursors, [null, 'cursor-2']);
+        await container.read(forYouFeedProvider.notifier).loadMore();
+        expect(requestedCursors, [null, 'cursor-2', 'cursor-3']);
       },
     );
 

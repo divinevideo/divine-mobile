@@ -78,8 +78,14 @@ class _TestPopularVideosFeed extends PopularVideosFeed {
   @override
   Future<void> preloadVariant(PopularVideosVariant variant) async {
     _feedBuilds.add('popular:${variant.name}');
+    if (variant == PopularVideosVariant.native) {
+      await _nativePreloadGate?.future;
+    }
   }
 }
+
+/// Holds the popular task inside its first preload step.
+Completer<void>? _nativePreloadGate;
 
 void main() {
   group('foregroundIdleWarmupCoordinatorProvider', () {
@@ -121,6 +127,7 @@ void main() {
       _feedBuilds.clear();
       _funnelcakeAvailabilityCompleter = null;
       _newVideosBuildGate = null;
+      _nativePreloadGate = null;
     });
 
     test(
@@ -174,6 +181,30 @@ void main() {
           completes,
         );
         expect(_feedBuilds, ['forYou', 'newVideos']);
+      },
+    );
+
+    test(
+      'the popular task skips its second preload when the container is '
+      'disposed during the first',
+      () async {
+        _nativePreloadGate = Completer<void>();
+        final container = createContainer();
+        await container.read(funnelcakeAvailableProvider.future);
+
+        final pass = container
+            .read(foregroundIdleWarmupCoordinatorProvider)
+            .requestWarmup(trigger: ForegroundIdleWarmupTrigger.startupSettled);
+        await pumpEventQueue();
+        expect(_feedBuilds, contains('popular:native'));
+
+        // A switch landing inside the popular task: its second preload would
+        // fetch for the account that has left (#10291).
+        container.dispose();
+        _nativePreloadGate!.complete();
+        await pass.timeout(const Duration(seconds: 5));
+
+        expect(_feedBuilds, isNot(contains('popular:classic')));
       },
     );
 

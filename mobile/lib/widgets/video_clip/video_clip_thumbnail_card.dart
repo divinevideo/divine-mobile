@@ -7,6 +7,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
+import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
 
@@ -149,6 +150,13 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                   children: [
                     /// Thumbnail or placeholder
                     _Thumbnail(clip: widget.clip),
+
+                    /// The part of the frame a picker above will keep
+                    if (ClipCropGuide.maybeOf(context) case final guide?)
+                      ClipCropGuideOverlay(
+                        aspectRatio: guide.aspectRatio,
+                        contentAspectRatio: widget.clip.videoAspectRatio,
+                      ),
 
                     /// Stop-motion marker + still count and the archived
                     /// marker - top left

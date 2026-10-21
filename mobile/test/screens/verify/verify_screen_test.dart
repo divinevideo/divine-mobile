@@ -19,6 +19,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
+import 'package:openvine/screens/verify/widgets/verify_platform_row.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -255,6 +256,48 @@ void main() {
       // GitHub and Twitter appear as linked rows, not as offers.
       expect(find.text('GitHub'), findsOneWidget);
       expect(find.text(l10n.verifyOneTapBadge), findsNothing);
+    });
+
+    testWidgets('marks one-tap only where the verifier has sign-in on', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        ready(
+          claims: const [],
+          verifiedKeys: const {},
+          platforms: const [
+            VerifierPlatform(
+              key: 'twitter',
+              label: 'Twitter / X',
+              supported: true,
+              oauth: false,
+            ),
+            VerifierPlatform(
+              key: 'bluesky',
+              label: 'Bluesky',
+              supported: true,
+              oauth: true,
+            ),
+            // A verifier answer with no flag: the app's own list decides.
+            VerifierPlatform(key: 'youtube', label: 'YouTube', supported: true),
+            VerifierPlatform(key: 'github', label: 'GitHub', supported: true),
+          ],
+        ),
+      );
+
+      Finder badgeOn(String label) => find.descendant(
+        of: find.ancestor(
+          of: find.text(label),
+          matching: find.byType(VerifyPlatformRow),
+        ),
+        matching: find.text(l10n.verifyOneTapBadge),
+      );
+
+      expect(badgeOn('Twitter / X'), findsNothing);
+      expect(badgeOn('Bluesky'), findsOneWidget);
+      expect(badgeOn('YouTube'), findsOneWidget);
+      expect(badgeOn('GitHub'), findsNothing);
     });
 
     testWidgets('says so when every platform is linked', (tester) async {

@@ -13,11 +13,13 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile/follow_sort_menu.dart';
 import 'package:openvine/widgets/profile/follower_count_title.dart';
 import 'package:openvine/widgets/profile/searchable_follow_list.dart';
+import 'package:openvine/widgets/retained_bloc_provider.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 
 /// Page widget for displaying current user's following list.
@@ -30,32 +32,42 @@ class MyFollowingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final rankingSignalsLoader = ref.watch(
+      ownFollowListRankingSignalsLoaderProvider,
+    );
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
     final currentUserPubkey = ref.watch(nostrServiceProvider).publicKey;
+    final sessionOwner = ref.watch(
+      nostrSessionProvider.select((session) => session.pubkey),
+    );
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) => MyFollowingBloc(
-            followRepository: followRepository,
-            contentBlocklistRepository: blocklistRepository,
-          )..add(const MyFollowingListLoadRequested()),
+    return RetainedBlocProvider<MyFollowingBloc, MyFollowingState>(
+      key: ValueKey(sessionOwner),
+      dependencies: (
+        followRepository,
+        blocklistRepository,
+        rankingSignalsLoader,
+      ),
+      create: (snapshot) => MyFollowingBloc(
+        rankForList: true,
+        followRepository: followRepository,
+        contentBlocklistRepository: blocklistRepository,
+        rankingSignalsLoader: rankingSignalsLoader,
+        initialState: snapshot,
+      )..add(const MyFollowingListLoadRequested()),
+      child: RetainedBlocProvider<FollowListSearchBloc, FollowListSearchState>(
+        dependencies: (followRepository, profileRepository, currentUserPubkey),
+        create: (snapshot) => FollowListSearchBloc(
+          followRepository: followRepository,
+          subjectPubkey: currentUserPubkey,
+          listKind: FollowListKind.following,
+          profileRepository: profileRepository,
+          initialState: snapshot ?? const FollowListSearchState(),
         ),
-        // Deliberately not keyed on profileRepository: it resolves from null
-        // shortly after mount, and a ValueKey here would re-inflate the whole
-        // view. The late instance is pushed in by the ref.listen below.
-        BlocProvider(
-          create: (_) => FollowListSearchBloc(
-            followRepository: followRepository,
-            subjectPubkey: currentUserPubkey,
-            listKind: FollowListKind.following,
-            profileRepository: profileRepository,
-          ),
-        ),
-      ],
-      child: _MyFollowingView(displayName: displayName),
+        child: _MyFollowingView(displayName: displayName),
+      ),
     );
   }
 }
@@ -69,19 +81,6 @@ class _MyFollowingView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen(blocklistVersionProvider, (_, _) {
       context.read<MyFollowingBloc>().add(const MyFollowingBlocklistChanged());
-    });
-    ref.listen(profileRepositoryProvider, (_, repository) {
-      context.read<FollowListSearchBloc>().add(
-        FollowListSearchProfileRepositoryChanged(repository),
-      );
-    });
-    // The client is rebuilt when the key container changes, which is how the
-    // cold-start empty pubkey becomes the signed-in one. Without this the
-    // search BLoC would keep the empty one and never search server-side.
-    ref.listen(nostrServiceProvider, (_, client) {
-      context.read<FollowListSearchBloc>().add(
-        FollowListSearchSubjectPubkeyChanged(client.publicKey),
-      );
     });
 
     final appBarTitle = displayName?.isNotEmpty == true
@@ -135,6 +134,12 @@ class _MyFollowingView extends ConsumerWidget {
           }
         },
         builder: (context, state) {
+          // Cached relationship state remains synchronous for buttons/counts;
+          // this list waits for its local ranking before exposing any rows.
+          if (!state.isSmartOrderReady &&
+              state.status != MyFollowingStatus.failure) {
+            return const Center(child: BrandedLoadingIndicator());
+          }
           final body = switch (state.status) {
             MyFollowingStatus.initial => const Center(
               child: BrandedLoadingIndicator(),
@@ -158,14 +163,15 @@ class _MyFollowingView extends ConsumerWidget {
   }
 
   Future<void> _openSortMenu(BuildContext context) async {
-    final bloc = context.read<MyFollowingBloc>();
     final selected = await showFollowSortMenu(
       context: context,
-      current: bloc.state.sortOrder,
+      current: context.read<MyFollowingBloc>().state.sortOrder,
     );
 
-    if (selected == null) return;
-    bloc.add(MyFollowingSortOrderChanged(selected));
+    if (selected == null || !context.mounted) return;
+    // Read again: a dependency refresh can replace the bloc while the sheet
+    // is open, and the replaced one is already closed.
+    context.read<MyFollowingBloc>().add(MyFollowingSortOrderChanged(selected));
   }
 }
 
@@ -180,6 +186,10 @@ class _FollowingListBody extends StatelessWidget {
       return const _FollowingEmptyState();
     }
 
+    final rankingSignals = context.select(
+      (MyFollowingBloc bloc) => bloc.state.rankingSignals,
+    );
+
     return SearchableFollowList(
       pubkeys: following,
       onRefresh: () async {
@@ -193,6 +203,8 @@ class _FollowingListBody extends StatelessWidget {
           builder: (context, isFollowing) {
             return UserProfileTile(
               pubkey: userPubkey,
+              videoCount: rankingSignals[userPubkey]?.videoCount,
+              lastPostedAt: rankingSignals[userPubkey]?.lastPostedAt,
               onTap: () => context.pushOtherProfile(userPubkey),
               isFollowing: isFollowing,
               index: index,

@@ -15,6 +15,7 @@ import 'package:openvine/screens/inbox/widgets/conversation_triage_bar.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   final owner = 'a' * 64;
   final peer = 'b' * 64;
   final id = 'c' * 64;
@@ -166,6 +167,20 @@ void main() {
         await tester.runAsync(() => repository.getMessages(id)),
         hasLength(1),
       );
+    });
+
+    testWidgets('does not report success when the conversation disappeared', (
+      tester,
+    ) async {
+      await database.conversationsDao.deleteConversation(id);
+      await tester.pumpWidget(subject());
+      await tester.runAsync(() async {
+        await tester.tap(find.text(l10n.inboxThreadMarkRead));
+        await database.conversationsDao.getConversation(id, ownerPubkey: owner);
+      });
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.inboxThreadMarkedRead), findsNothing);
+      expect(find.byType(SnackBar), findsOneWidget);
     });
 
     testWidgets('mark as read affects only this thread without accepting it', (

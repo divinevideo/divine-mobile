@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/screens/search_results/widgets/search_section_empty_sta
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -76,6 +78,37 @@ void main() {
         ),
       );
     }
+
+    testWidgets('renders cached ranking activity on search results', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      when(() => mockBloc.state).thenReturn(
+        UserSearchState(
+          status: UserSearchStatus.success,
+          results: [testProfile],
+          rankingSignals: {
+            testProfile.pubkey: UserRankingSignals(
+              pubkey: testProfile.pubkey,
+              videoCount: 18,
+              lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+            ),
+          },
+        ),
+      );
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2))),
+        ),
+        findsOneWidget,
+      );
+    });
 
     group('showAll: false (All tab preview)', () {
       testWidgets('hides entirely when success with empty results', (

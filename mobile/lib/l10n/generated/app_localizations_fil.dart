@@ -501,8 +501,8 @@ class AppLocalizationsFil extends AppLocalizations {
   String get profileInvalidId => 'Invalid ang profile ID';
 
   @override
-  String profileShareText(String displayName, String npub) {
-    return 'Tingnan si $displayName sa Divine!\n\nhttps://divine.video/profile/$npub';
+  String profileShareText(String displayName, String url) {
+    return 'Tingnan si $displayName sa Divine!\n\n$url';
   }
 
   @override
@@ -7987,6 +7987,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get followSortTitle => 'Ayusin ayon sa';
 
   @override
+  String get followSortSmart => 'Matalino';
+
+  @override
   String get followSortNewest => 'Pinakabago muna';
 
   @override
@@ -8170,6 +8173,10 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get searchDiscoverSomethingInteresting => 'Tumuklas ng kawili-wili';
+
+  @override
+  String get searchPrivateKeyWarning =>
+      'That looks like a private key, so we didn\'t search for it. Never paste or share it.';
 
   @override
   String get searchPeopleSectionHeader => 'Mga tao';
@@ -14055,4 +14062,106 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Minarkahang nabasa';
+
+  @override
+  String get videoEditorLayoutLabel => 'Layout';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Ayusin ang mga clip sa split screen';
+
+  @override
+  String get videoEditorLayoutTitle => 'Layout';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Isara ang layout';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Ilagay ang layout';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Magkatabi';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Magkapatong';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Tatlong hilera';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Isa sa ibabaw ng dalawa';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Grid na apat';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Tatlong magkakatabi';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Dalawa sa ibabaw ng isa';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Isa sa tabi ng dalawa';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Dalawa sa tabi ng isa';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Isa sa ibabaw ng tatlo';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Picture in picture, kaliwa sa itaas';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Picture in picture, kanan sa itaas';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Picture in picture, kaliwa sa ibaba';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Picture in picture, kanan sa ibaba';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Cell $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Cell $number, walang laman';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Alisin ang clip sa cell';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Pagitan';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Kulay ng border';
+
+  @override
+  String get videoEditorLayoutApplying => 'Inaayos ang layout mo…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Hakbang $step sa $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Hindi mailagay ang layout. Subukan ulit.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'May mga clip na hindi nagkasya — puno na lahat ng cell.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Na-post $time';
+  }
 }

@@ -257,6 +257,7 @@ const tablesDroppedBySalvage = <String>[
   'event',
   'video_metrics',
   'profile_statistics',
+  'my_followers',
   'user_profiles',
   'notifications',
   'nip05_verifications',

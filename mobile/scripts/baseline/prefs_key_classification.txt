@@ -71,6 +71,5 @@ user_removed_relays
 video_cache_max_bytes
 video_editor_recent_colors
 video_format_preference
-video_playback_volume
 video_quality_preference
 why_six_seconds_shown # ambiguous: comment says "once per user", key is device-wide

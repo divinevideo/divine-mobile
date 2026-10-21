@@ -136,6 +136,55 @@ void main() {
       );
 
       blocTest<VerifyCubit, VerifyState>(
+        'lists platforms with sign-in on before those the verifier has off',
+        build: build,
+        setUp: () {
+          when(() => repository.supportedPlatforms()).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(key: 'github', label: 'GitHub', supported: true),
+              VerifierPlatform(
+                key: 'twitter',
+                label: 'Twitter / X',
+                supported: true,
+                oauth: false,
+              ),
+              VerifierPlatform(
+                key: 'tiktok',
+                label: 'TikTok',
+                supported: true,
+                oauth: false,
+              ),
+              VerifierPlatform(
+                key: 'bluesky',
+                label: 'Bluesky',
+                supported: true,
+                oauth: true,
+              ),
+              VerifierPlatform(
+                key: 'mastodon',
+                label: 'Mastodon',
+                supported: true,
+              ),
+            ],
+          );
+          when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+            (_) async => const IdentityClaimStatus(
+              claims: [],
+              verifiedKeys: {},
+              verifierReachable: true,
+            ),
+          );
+        },
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(
+            cubit.state.linkablePlatforms.map((p) => p.key),
+            equals(['bluesky', 'twitter', 'tiktok', 'mastodon', 'github']),
+          );
+        },
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
         'puts a platform the order does not name last, in arrival order',
         build: build,
         setUp: () {

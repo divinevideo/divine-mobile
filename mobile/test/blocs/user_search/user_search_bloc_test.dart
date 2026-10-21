@@ -11,14 +11,22 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _MockFeedPerformanceTracker extends Mock
     implements FeedPerformanceTracker {}
+
+const _privateKeyQuery =
+    'my key nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
 void main() {
   setUpAll(() {
@@ -58,10 +66,12 @@ void main() {
     UserSearchBloc createBloc({
       Duration? searchTimeout = const Duration(seconds: 20),
       String? excludedPubkey,
+      UserRankingSignalsLoader? rankingSignalsLoader,
     }) => UserSearchBloc(
       profileRepository: mockProfileRepository,
       searchTimeout: searchTimeout,
       excludedPubkey: excludedPubkey,
+      rankingSignalsLoader: rankingSignalsLoader,
       searchRunner: mockSearchRunner,
     );
 
@@ -225,6 +235,596 @@ void main() {
       },
     );
 
+    group('page-local ranking', () {
+      late _MockRankingSignalsLoader loader;
+      late List<UserProfile> profiles;
+
+      setUp(() {
+        loader = _MockRankingSignalsLoader();
+        profiles = createTestProfiles(4);
+        when(() => loader.isEligible(any())).thenReturn(true);
+        when(() => loader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final key
+                in invocation.positionalArguments.single as Iterable<String>)
+              key: UserRankingSignals(
+                pubkey: key,
+                youFollow: key == profiles[1].pubkey,
+              ),
+          },
+        );
+        when(() => loader.refreshInBackground(any())).thenReturn(null);
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer(
+          (invocation) => progressive(
+            invocation.namedArguments[#offset] == 0
+                ? profiles.take(2).toList()
+                : profiles.skip(2).toList(),
+            restHasMore: invocation.namedArguments[#offset] == 0,
+          ),
+        );
+      });
+
+      Future<void> search(UserSearchBloc bloc) async {
+        final completed = bloc.stream.firstWhere(
+          (s) => s.status == UserSearchStatus.success,
+        );
+        bloc.add(const UserSearchQueryChanged('alice'));
+        await completed;
+      }
+
+      Future<void> loadMore(UserSearchBloc bloc) async {
+        final completed = bloc.stream.firstWhere((s) => !s.isLoadingMore);
+        bloc.add(const UserSearchLoadMore());
+        await completed;
+      }
+
+      test(
+        'first page puts known users first and refreshes after emission',
+        () async {
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          when(() => loader.refreshInBackground(any())).thenAnswer((_) {
+            expect(bloc.state.results, [profiles[1], profiles[0]]);
+          });
+          await search(bloc);
+          expect(bloc.state.results, [profiles[1], profiles[0]]);
+          expect(
+            bloc.state.rankingSignals[profiles[1].pubkey]?.youFollow,
+            isTrue,
+          );
+          verify(
+            () => loader.refreshInBackground([
+              profiles[1].pubkey,
+              profiles[0].pubkey,
+            ]),
+          ).called(1);
+        },
+      );
+
+      test('load more promotes only within the new page', () async {
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        await search(bloc);
+        expect(bloc.state.results, [profiles[1], profiles[0]]);
+        when(() => loader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final key
+                in invocation.positionalArguments.single as Iterable<String>)
+              key: UserRankingSignals(
+                pubkey: key,
+                youFollow: key == profiles[3].pubkey,
+              ),
+          },
+        );
+        await loadMore(bloc);
+        expect(bloc.state.results, [
+          profiles[1],
+          profiles[0],
+          profiles[3],
+          profiles[2],
+        ]);
+        expect(
+          bloc.state.rankingSignals.keys,
+          containsAll(profiles.map((p) => p.pubkey)),
+        );
+        expect(bloc.state.offset, 4);
+      });
+
+      test(
+        'progressive snapshots retain visible rows and rank only new arrivals',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          when(() => loader.load(any())).thenAnswer(
+            (invocation) async => {
+              for (final key
+                  in invocation.positionalArguments.single as Iterable<String>)
+                key: UserRankingSignals(
+                  pubkey: key,
+                  youFollow:
+                      key == profiles[1].pubkey || key == profiles[3].pubkey,
+                ),
+            },
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final first = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: profiles.take(2).toList(),
+              sources: const {},
+              isComplete: false,
+            ),
+          );
+          await first;
+          expect(bloc.state.results, [profiles[1], profiles[0]]);
+          final updated = profiles[0].copyWith(displayName: 'Updated');
+          final second = bloc.stream.firstWhere((s) => s.results.length == 4);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [profiles[2], updated, profiles[3], profiles[1]],
+              sources: const {},
+              isComplete: true,
+            ),
+          );
+          await second;
+          expect(bloc.state.results, [
+            profiles[1],
+            updated,
+            profiles[3],
+            profiles[2],
+          ]);
+          // UserProfile equality ignores the display name, so the list match
+          // above cannot tell the updated row from the stale one.
+          expect(bloc.state.results[1].displayName, 'Updated');
+          verify(() => loader.load([profiles[2].pubkey, profiles[3].pubkey]))
+              .called(1);
+        },
+      );
+
+      test('load more keeps an exact match ahead of known accounts', () async {
+        final exact = createTestProfile('e' * 64, 'Alice');
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer(
+          (invocation) => progressive(
+            invocation.namedArguments[#offset] == 0
+                ? profiles.take(2).toList()
+                : [profiles[2], exact, profiles[3]],
+            restHasMore: invocation.namedArguments[#offset] == 0,
+          ),
+        );
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        await search(bloc);
+        when(() => loader.load(any())).thenAnswer(
+          (invocation) async => {
+            for (final key
+                in invocation.positionalArguments.single as Iterable<String>)
+              key: UserRankingSignals(
+                pubkey: key,
+                youFollow: key == profiles[3].pubkey,
+              ),
+          },
+        );
+        await loadMore(bloc);
+        expect(bloc.state.results, [
+          profiles[1],
+          profiles[0],
+          exact,
+          profiles[3],
+          profiles[2],
+        ]);
+      });
+
+      test('a retained snapshot keeps the viewer on global search', () {
+        final viewer = createTestProfile('f' * 64, 'Me');
+        when(() => loader.isEligible(viewer.pubkey)).thenReturn(false);
+        final bloc = UserSearchBloc(
+          profileRepository: mockProfileRepository,
+          searchRunner: mockSearchRunner,
+          rankingSignalsLoader: loader,
+          viewerPubkey: viewer.pubkey,
+          initialState: UserSearchState(
+            status: UserSearchStatus.success,
+            query: 'me',
+            results: [viewer, profiles[0]],
+          ),
+        );
+        addTearDown(bloc.close);
+        expect(bloc.state.results, [viewer, profiles[0]]);
+      });
+
+      test('an exact match leads its page ahead of known accounts', () async {
+        final exact = createTestProfile('e' * 64, 'Alice');
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) => progressive([exact, profiles[0], profiles[1]]));
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        await search(bloc);
+        expect(bloc.state.results, [exact, profiles[1], profiles[0]]);
+      });
+
+      test(
+        'an exact match from a later source moves ahead of shown rows',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final exact = createTestProfile('e' * 64, 'Alice');
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final first = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: profiles.take(2).toList(),
+              sources: const {},
+              isComplete: false,
+            ),
+          );
+          await first;
+          expect(bloc.state.results, [profiles[1], profiles[0]]);
+          final second = bloc.stream.firstWhere((s) => s.results.length == 3);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [exact, ...profiles.take(2)],
+              sources: const {},
+              isComplete: true,
+            ),
+          );
+          await second;
+          expect(bloc.state.results, [exact, profiles[1], profiles[0]]);
+        },
+      );
+
+      test(
+        'resuming the same query retains the inherited progressive prefix',
+        () async {
+          final prefix = profiles.take(2).toList();
+          final bloc = UserSearchBloc(
+            profileRepository: mockProfileRepository,
+            searchRunner: mockSearchRunner,
+            rankingSignalsLoader: loader,
+            initialState: UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'alice',
+              results: prefix,
+              rankingSignals: {
+                for (final profile in prefix)
+                  profile.pubkey: UserRankingSignals(pubkey: profile.pubkey),
+              },
+            ),
+          );
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, prefix);
+          expect(bloc.state.rankingSignals.keys, prefix.map((p) => p.pubkey));
+          verifyNever(() => loader.load(any()));
+        },
+      );
+
+      test(
+        'inherited prefix survives incomplete cache replay until completion',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final prefix = profiles.take(2).toList();
+          final bloc = UserSearchBloc(
+            profileRepository: mockProfileRepository,
+            searchRunner: mockSearchRunner,
+            rankingSignalsLoader: loader,
+            initialState: UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'alice',
+              results: prefix,
+              rankingSignals: {
+                for (final profile in prefix)
+                  profile.pubkey: UserRankingSignals(pubkey: profile.pubkey),
+              },
+            ),
+          );
+          addTearDown(bloc.close);
+          final emitted = <UserSearchState>[];
+          final subscription = bloc.stream.listen(emitted.add);
+          addTearDown(subscription.cancel);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final cached = bloc.stream.firstWhere(
+            (state) =>
+                state.sourceOutcomes.containsKey(SearchSource.localCache),
+          );
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [profiles[1]],
+              sources: const {
+                SearchSource.localCache: SearchSourceSuccess(
+                  resultCount: 1,
+                  latencyMs: 1,
+                ),
+              },
+              isComplete: false,
+            ),
+          );
+          await cached;
+          expect(bloc.state.results, prefix);
+          expect(bloc.state.rankingSignals.keys, prefix.map((p) => p.pubkey));
+          final completed = bloc.stream.firstWhere(
+            (state) => state.status == UserSearchStatus.success,
+          );
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: prefix,
+              sources: const {},
+              isComplete: true,
+            ),
+          );
+          await stream.close();
+          await completed;
+          expect(emitted, isNotEmpty);
+          for (final state in emitted) {
+            expect(state.results, prefix);
+            expect(state.rankingSignals.keys, prefix.map((p) => p.pubkey));
+          }
+          verifyNever(() => loader.load(any()));
+        },
+      );
+
+      test(
+        'inherited rows lose blocked signals immediately and omitted signals on completion',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final prefix = profiles.take(2).toList();
+          final bloc = UserSearchBloc(
+            profileRepository: mockProfileRepository,
+            searchRunner: mockSearchRunner,
+            rankingSignalsLoader: loader,
+            initialState: UserSearchState(
+              status: UserSearchStatus.loading,
+              query: 'alice',
+              results: prefix,
+              rankingSignals: {
+                for (final profile in prefix)
+                  profile.pubkey: UserRankingSignals(pubkey: profile.pubkey),
+              },
+            ),
+          );
+          addTearDown(bloc.close);
+          when(() => loader.isEligible(prefix.first.pubkey)).thenReturn(false);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final cached = bloc.stream.firstWhere(
+            (state) =>
+                state.sourceOutcomes.containsKey(SearchSource.localCache),
+          );
+          stream.add(
+            const ProgressiveSearchResult(
+              profiles: [],
+              isComplete: false,
+              sources: {
+                SearchSource.localCache: SearchSourceSuccess(
+                  resultCount: 0,
+                  latencyMs: 1,
+                ),
+              },
+            ),
+          );
+          await cached;
+          expect(bloc.state.results, [prefix.last]);
+          expect(bloc.state.rankingSignals.keys, [prefix.last.pubkey]);
+          final completed = bloc.stream.firstWhere(
+            (state) => state.status == UserSearchStatus.success,
+          );
+          stream.add(
+            const ProgressiveSearchResult(
+              profiles: [],
+              sources: {},
+              isComplete: true,
+            ),
+          );
+          await stream.close();
+          await completed;
+          expect(bloc.state.results, isEmpty);
+          expect(bloc.state.rankingSignals, isEmpty);
+        },
+      );
+
+      test('progressive prefix drops newly blocked and omitted rows', () async {
+        final stream = StreamController<ProgressiveSearchResult>();
+        addTearDown(stream.close);
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) => stream.stream);
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        bloc.add(const UserSearchQueryChanged('alice'));
+        final first = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+        stream.add(
+          ProgressiveSearchResult(
+            profiles: profiles.take(2).toList(),
+            sources: const {},
+            isComplete: false,
+          ),
+        );
+        await first;
+        when(() => loader.isEligible(profiles[1].pubkey)).thenReturn(false);
+        final second = bloc.stream.firstWhere(
+          (s) => s.results.contains(profiles[2]),
+        );
+        stream.add(
+          ProgressiveSearchResult(
+            profiles: [profiles[1], profiles[2]],
+            sources: const {},
+            isComplete: true,
+          ),
+        );
+        await second;
+        expect(bloc.state.results, [profiles[2]]);
+        expect(bloc.state.rankingSignals.keys, [profiles[2].pubkey]);
+      });
+
+      test('load more revalidates the complete visible prefix', () async {
+        final bloc = createBloc(rankingSignalsLoader: loader);
+        addTearDown(bloc.close);
+        await search(bloc);
+        when(() => loader.isEligible(profiles[1].pubkey)).thenReturn(false);
+        await loadMore(bloc);
+        expect(bloc.state.results, [profiles[0], profiles[2], profiles[3]]);
+        expect(bloc.state.rankingSignals, isNot(contains(profiles[1].pubkey)));
+      });
+
+      test('null loader keeps server order', () async {
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        await search(bloc);
+        expect(bloc.state.results, profiles.take(2));
+        await loadMore(bloc);
+        expect(bloc.state.results, profiles);
+        verifyNever(() => loader.load(any()));
+      });
+
+      test(
+        'snapshot keys exclude self and blocked users on every page',
+        () async {
+          when(() => loader.load(any())).thenAnswer(
+            (invocation) async => {
+              for (final key
+                  in invocation.positionalArguments.single as Iterable<String>)
+                if (key == profiles[1].pubkey || key == profiles[3].pubkey)
+                  key: UserRankingSignals(pubkey: key),
+            },
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, [profiles[1]]);
+          expect(bloc.state.offset, 2);
+          await loadMore(bloc);
+          expect(bloc.state.results, [profiles[1], profiles[3]]);
+          expect(bloc.state.offset, 4);
+        },
+      );
+
+      blocTest<UserSearchBloc, UserSearchState>(
+        'snapshot failure keeps eligible server order and reports the error',
+        setUp: () {
+          when(() => loader.load(any()))
+              .thenThrow(const FormatException('local snapshot'));
+          when(() => loader.isEligible(profiles[0].pubkey)).thenReturn(false);
+        },
+        build: () => createBloc(rankingSignalsLoader: loader),
+        act: search,
+        verify: (bloc) {
+          expect(bloc.state.status, UserSearchStatus.success);
+          expect(bloc.state.results, [profiles[1]]);
+          expect(bloc.state.rankingSignals, isEmpty);
+        },
+        errors: () => [isA<FormatException>()],
+      );
+
+      for (final fails in [false, true]) {
+        test(
+          'superseded signal ${fails ? 'failure' : 'success'} cannot finish the new query',
+          () async {
+            final stale = Completer<Map<String, UserRankingSignals>>();
+            final current = Completer<Map<String, UserRankingSignals>>();
+            final firstStarted = Completer<void>();
+            final secondStarted = Completer<void>();
+            when(() => loader.load(any())).thenAnswer((_) {
+              if (!firstStarted.isCompleted) {
+                firstStarted.complete();
+                return stale.future;
+              }
+              secondStarted.complete();
+              return current.future;
+            });
+            final bloc = createBloc(rankingSignalsLoader: loader);
+            addTearDown(bloc.close);
+            bloc.add(const UserSearchQueryChanged('first'));
+            await firstStarted.future;
+            bloc.add(const UserSearchQueryChanged('second'));
+            await secondStarted.future;
+            expect(bloc.state.query, 'second');
+            expect(bloc.state.status, UserSearchStatus.loading);
+            if (fails) {
+              stale.completeError(const FormatException('stale snapshot'));
+            } else {
+              stale.complete({
+                for (final p in profiles)
+                  p.pubkey: UserRankingSignals(pubkey: p.pubkey),
+              });
+            }
+            await pumpEventQueue();
+            expect(bloc.state.query, 'second');
+            expect(bloc.state.status, UserSearchStatus.loading);
+            verifyNever(() => loader.refreshInBackground(any()));
+            final completed = bloc.stream.firstWhere(
+              (s) => s.status == UserSearchStatus.success,
+            );
+            current.complete({
+              for (final p in profiles)
+                p.pubkey: UserRankingSignals(pubkey: p.pubkey),
+            });
+            await completed;
+            verify(() => loader.refreshInBackground(any())).called(1);
+          },
+        );
+      }
+    });
+
     group('UserSearchQueryChanged', () {
       blocTest<UserSearchBloc, UserSearchState>(
         'emits [searching, searching(results), success] when search succeeds',
@@ -346,6 +946,67 @@ void main() {
           verifyNever(
             () => mockProfileRepository.searchUsersProgressive(
               query: any(named: 'query'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'private-key input clears retained results before profiles are ready',
+        () {
+          fakeAsync((clock) {
+            final bloc = UserSearchBloc(
+              profileRepository: null,
+              initialState: UserSearchState(
+                status: UserSearchStatus.success,
+                query: 'flutter',
+                results: [createTestProfile('a' * 64, 'Flutter Dev')],
+              ),
+            );
+            try {
+              bloc.add(const UserSearchQueryChanged(_privateKeyQuery));
+              clock.elapse(debounceDuration);
+              clock.flushMicrotasks();
+              expect(bloc.state, const UserSearchState());
+            } finally {
+              unawaited(bloc.close());
+              clock.flushMicrotasks();
+            }
+          });
+        },
+      );
+
+      blocTest<UserSearchBloc, UserSearchState>(
+        'does not search and resets when the query contains a private key',
+        setUp: () {
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
+            ),
+          ).thenAnswer((_) => const Stream.empty());
+        },
+        build: createBloc,
+        seed: () => UserSearchState(
+          status: UserSearchStatus.success,
+          query: 'flutter',
+          results: [createTestProfile('a' * 64, 'Flutter Dev')],
+          offset: 1,
+        ),
+        act: (bloc) => bloc.add(const UserSearchQueryChanged(_privateKeyQuery)),
+        wait: debounceDuration,
+        expect: () => [const UserSearchState()],
+        verify: (_) {
+          verifyNever(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+              boostPubkeys: any(named: 'boostPubkeys'),
             ),
           );
         },
@@ -1528,6 +2189,7 @@ void main() {
           true,
           false,
           <SearchSource, SearchSourceStatus>{},
+          <String, UserRankingSignals>{},
         ]);
       });
     });

@@ -56,6 +56,21 @@ class NostrKeyUtils {
     return isKey ? compact : input.trim();
   }
 
+  /// Whether [text] contains something that looks like a private key: an
+  /// `nsec1` or `ncryptsec1` string anywhere in it, in any case.
+  ///
+  /// Search and lookup entry points call this before sending typed text
+  /// anywhere, and show a warning instead when it matches. It matches on the
+  /// prefix alone, without a checksum, so an incomplete or mistyped key is
+  /// caught too. Zero-width characters a copy can leave inside the prefix
+  /// are ignored. A bare 64-character hex value is not matched, because a
+  /// public key and an event id look the same.
+  static bool containsPrivateKey(String text) {
+    final compact = text.replaceAll(_zeroWidth, '').toLowerCase();
+    return compact.contains('nsec1') || compact.contains('ncryptsec1');
+  }
+
+  static final _zeroWidth = RegExp(r'[\u200B-\u200D\u2060\uFEFF]');
   static final _copyArtifacts = RegExp(r'[\s\u200B-\u200D\u2060]');
   static final _hexKey = RegExp(r'^[0-9a-f]{64}$');
 

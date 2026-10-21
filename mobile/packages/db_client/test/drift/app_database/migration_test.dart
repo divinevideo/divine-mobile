@@ -28,6 +28,83 @@ void main() {
   });
 
   group('schema validation', () {
+    test('a v21 database gains my_followers', () async {
+      final schema = await verifier.schemaAt(21);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 27);
+      final owner = 'a' * 64;
+      final follower = 'b' * 64;
+      await db.myFollowersDao.upsertAll(
+        ownerPubkey: owner,
+        followers: [(pubkey: follower, followedAt: 1700000000)],
+        seenAt: 1700000100,
+      );
+      expect(await db.myFollowersDao.followersOf(owner), [
+        (pubkey: follower, followedAt: 1700000000),
+      ]);
+    });
+
+    test('a v22 database gains my_followers', () async {
+      final schema = await verifier.schemaAt(22);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 27);
+      final owner = 'a' * 64;
+      final follower = 'b' * 64;
+      await db.myFollowersDao.upsertAll(
+        ownerPubkey: owner,
+        followers: [(pubkey: follower, followedAt: 1700000000)],
+        seenAt: 1700000100,
+      );
+      expect(await db.myFollowersDao.followersOf(owner), [
+        (pubkey: follower, followedAt: 1700000000),
+      ]);
+    });
+
+    test('a v23 database gains my_followers', () async {
+      final schema = await verifier.schemaAt(23);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 27);
+      final owner = 'a' * 64;
+      final follower = 'b' * 64;
+      await db.myFollowersDao.upsertAll(
+        ownerPubkey: owner,
+        followers: [(pubkey: follower, followedAt: 1700000000)],
+        seenAt: 1700000100,
+      );
+      expect(await db.myFollowersDao.followersOf(owner), [
+        (pubkey: follower, followedAt: 1700000000),
+      ]);
+    });
+
+    test('v24 sound workflow data survives the v27 follower migration', () async {
+      final schema = await verifier.schemaAt(24);
+      final owner = 'a' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO sound_request_states (owner_pubkey, section, record_key, value) '
+        'VALUES (?, ?, ?, ?)',
+        [owner, 'jobs', 'pending', 'queued workflow'],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 27);
+      final soundState = await db.soundRequestStateDao.readAccount(owner);
+      expect(soundState, hasLength(1));
+      expect(soundState.single.section, 'jobs');
+      expect(soundState.single.recordKey, 'pending');
+      expect(soundState.single.value, 'queued workflow');
+      await db.myFollowersDao.upsertAll(
+        ownerPubkey: owner,
+        followers: [(pubkey: 'b' * 64, followedAt: 1700000000)],
+        seenAt: 1700000100,
+      );
+      expect(await db.myFollowersDao.followersOf(owner), [
+        (pubkey: 'b' * 64, followedAt: 1700000000),
+      ]);
+    });
+
     for (final version in [1, 11]) {
       test('v$version schema migrates directly to v26', () async {
         final schema = await verifier.schemaAt(version);
@@ -51,8 +128,31 @@ void main() {
       });
     }
 
-    test('current schema version is 26', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 26);
+    for (final version in [1, 11]) {
+      test('v$version schema migrates directly to v27', () async {
+        final schema = await verifier.schemaAt(version);
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 27);
+        await db.conversationsDao.upsertConversation(
+          id: 'upgraded',
+          participantPubkeys: '["a","b"]',
+          isGroup: false,
+          createdAt: 1700000000,
+          lastMessageCreatedAt: 1700000105,
+          ownerPubkey: 'a' * 64,
+        );
+        final row = await db.conversationsDao.getConversation(
+          'upgraded',
+          ownerPubkey: 'a' * 64,
+        );
+        expect(row!.lastMessageCreatedAt, 1700000105);
+      });
+    }
+
+    test('current schema version is 27', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 27);
     });
 
     test(
@@ -500,6 +600,13 @@ void main() {
       final schema = await verifier.schemaAt(26);
       final db = AppDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 26);
+      await db.close();
+    });
+
+    test('v27 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(27);
+      final db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 27);
       await db.close();
     });
 

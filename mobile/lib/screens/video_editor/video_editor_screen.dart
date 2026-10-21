@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
@@ -48,6 +49,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/repositories/sticker_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/library_screen.dart';
+import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/screens/video_editor/video_text_editor_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_take_commit.dart';
@@ -626,6 +628,127 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         ClipEditorLibraryClipsImportRequested(newClips, audioTitle: audioTitle),
       );
     }
+  }
+
+  /// Opens the split-screen layout screen and, once it hands back the clip
+  /// the layout was rendered into, gives that to the bloc to put on the
+  /// timeline after the clip under the playhead.
+  ///
+  /// The layout screen renders the clip; nothing changes here until the user
+  /// confirms, so closing it costs nothing.
+  Future<void> _openSplitScreenLayout({
+    required VideoEditorMainBloc mainBloc,
+    required ClipEditorBloc clipEditorBloc,
+  }) async {
+    final clips = clipEditorBloc.state.clips;
+    if (clips.isEmpty) return;
+    final playhead = mainBloc.state.currentPosition;
+    final videoEditor = ref.read(videoEditorProvider.notifier);
+    final clipManager = ref.read(clipManagerProvider.notifier);
+
+    mainBloc
+      ..add(const VideoEditorMainOpenSubEditor(.layout))
+      ..add(const VideoEditorExternalPauseRequested(isPaused: true));
+    final layoutClip = await VideoEditorSplitScreenLayoutScreen.push(
+      context,
+      aspectRatio: clips.first.targetAspectRatio,
+      pickFromLibrary: _pickLayoutCellClips,
+      recordWithCamera: _recordLayoutCellClips,
+      bakeCapturedChromaKey: clipManager.bakeCapturedChromaKey,
+      deferFileCleanup: videoEditor.deferFileCleanup,
+    );
+    // The editor can be torn down while the layout screen is up; a bare add
+    // would throw before the rendered clip below is handed to cleanup.
+    mainBloc.addIfOpen(const VideoEditorMainSubEditorClosed());
+    if (layoutClip == null) return;
+    if (!mounted || clipEditorBloc.isClosed) {
+      videoEditor.deferFileCleanup(layoutClip.ownedFilePaths);
+      return;
+    }
+
+    Log.info(
+      '🔲 Placing split-screen layout clip ${layoutClip.id} at '
+      '${playhead.inMilliseconds}ms',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+    clipEditorBloc.add(
+      ClipEditorSplitScreenLayoutInserted(
+        clip: layoutClip,
+        playhead: playhead,
+      ),
+    );
+  }
+
+  /// The library, for picking clips to fill a split-screen cell.
+  ///
+  /// Every clip in the library can be picked, the ones already on the
+  /// timeline too — a reaction next to the take it reacts to is the point of
+  /// a layout. Each thumbnail shows the cell's crop, and no more clips can be
+  /// picked than [maxClips], the cells the layout has room for.
+  Future<List<DivineVideoClip>?> _pickLayoutCellClips(
+    BuildContext context, {
+    required double cellAspectRatio,
+    required int maxClips,
+  }) {
+    return VineBottomSheet.show<List<DivineVideoClip>>(
+      context: context,
+      maxChildSize: 1,
+      initialChildSize: 0.9,
+      minChildSize: VineTheme.bottomSheetDismissFloor,
+      buildScrollBody: (scrollController) => LibraryScreen(
+        initialTabIndex: 1,
+        selectionMode: true,
+        allowsMixedClipTypes: true,
+        scrollController: scrollController,
+        cropGuideAspectRatio: cellAspectRatio,
+        maxSelectedClips: maxClips,
+      ),
+    );
+  }
+
+  /// The camera, for recording straight into a split-screen cell.
+  ///
+  /// The recorder shows the cell's crop over the viewfinder. Its takes land in
+  /// the clip manager like any other; they are taken back out, because they
+  /// belong in the cell rather than on the timeline, and stay in the library
+  /// the recorder saved them to. The handoff waits for trimming, metadata,
+  /// posters and the enriched library save, so the cell gets the finished take.
+  Future<List<DivineVideoClip>?> _recordLayoutCellClips(
+    BuildContext context, {
+    required double cellAspectRatio,
+    required int maxClips,
+  }) async {
+    final notifier = ref.read(clipManagerProvider.notifier);
+    final initialIds = notifier.clips.map((c) => c.id).toSet();
+
+    final result = await Navigator.of(context).push<bool>(
+      editorRecorderRoute(
+        VideoRecorderScreen(
+          fromEditor: true,
+          entryPoint: CreationEntryPoint.editor,
+          cropGuideAspectRatio: cellAspectRatio,
+        ),
+      ),
+    );
+    if (!mounted) return null;
+
+    final takes = notifier.clips
+        .where((c) => !initialIds.contains(c.id))
+        .toList();
+    if (takes.isEmpty) return null;
+    if (result != true) {
+      for (final take in takes) {
+        await notifier.removeClipById(take.id);
+      }
+      return null;
+    }
+
+    final finished = await notifier.extractClips({
+      for (final take in takes) take.id,
+    });
+    if (!mounted) return null;
+    return finished;
   }
 
   /// Syncs the current clip list from [clipManagerProvider] into the
@@ -1239,6 +1362,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                     clipEditorBloc: clipEditorBloc,
                   ),
                   'open clips editor',
+                );
+              },
+              onOpenLayout: () {
+                final mainBloc = context.read<VideoEditorMainBloc>();
+                final clipEditorBloc = context.read<ClipEditorBloc>();
+                _runDetached(
+                  _openSplitScreenLayout(
+                    mainBloc: mainBloc,
+                    clipEditorBloc: clipEditorBloc,
+                  ),
+                  'open split-screen layout',
                 );
               },
               onAddStickers: () =>

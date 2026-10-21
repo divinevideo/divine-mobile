@@ -41,6 +41,32 @@ Duration? clipSourcePositionToTimelinePosition(
   return null;
 }
 
+/// Inverse of [clipSourcePositionToTimelinePosition]: converts a composite
+/// playback [position] to the matching source position inside the untrimmed
+/// clip [clipId], or `null` when [position] falls outside that clip.
+Duration? timelinePositionToClipSourcePosition(
+  List<DivineVideoClip> clips, {
+  required String clipId,
+  required Duration position,
+}) {
+  var clipStart = Duration.zero;
+  for (final clip in clips) {
+    if (clip.id == clipId) {
+      final relativePlayback = position - clipStart;
+      if (relativePlayback < Duration.zero ||
+          relativePlayback > clip.playbackDuration) {
+        return null;
+      }
+      return clip.trimStart +
+          clip.playbackDurationToSourceDuration(relativePlayback);
+    }
+
+    clipStart += clip.playbackDuration;
+  }
+
+  return null;
+}
+
 /// Returns the source offset and anchor state for an audio track after its
 /// timeline start handle moves to [newStartTime].
 ///

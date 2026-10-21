@@ -14,12 +14,16 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/share_sheet/reportable_sites.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 part 'share_sheet_event.dart';
 part 'share_sheet_state.dart';
@@ -27,20 +31,23 @@ part 'share_sheet_state.dart';
 /// BLoC for the unified share bottom sheet.
 ///
 /// Manages:
-/// - Contact loading (recent + followed users)
+/// - Contact loading (recent recipients, then followed and previously
+///   messaged users in closeness order)
 /// - Recipient selection (select-then-send: tapping a contact only selects;
 ///   the DM goes out on an explicit [ShareSheetSendRequested])
 /// - One-shot actions (save, copy link, copy JSON, copy event ID, share via)
 ///
 /// Emits [ShareSheetActionResult] as one-shot side effects for the UI
 /// to handle (snackbars, clipboard, sheet dismissal).
-class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
+class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
+    with CloseGuardedEmit<ShareSheetState> {
   ShareSheetBloc({
     required VideoEvent video,
     required String relayUrl,
     required VideoSharingService videoSharingService,
     required ProfileReader profileRepository,
     required FollowRepository followRepository,
+    required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
     BookmarksRepository? bookmarksRepository,
     BaseCacheManager? cacheManager,
@@ -50,6 +57,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
        _videoSharingService = videoSharingService,
        _profileRepository = profileRepository,
        _followRepository = followRepository,
+       _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
        _bookmarksRepository = bookmarksRepository,
        _cacheManager = cacheManager,
@@ -78,6 +86,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
   final VideoSharingService _videoSharingService;
   final ProfileReader _profileRepository;
   final FollowRepository _followRepository;
+  final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
   final BookmarksRepository? _bookmarksRepository;
   final BaseCacheManager? _cacheManager;
@@ -107,18 +116,60 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
       // Divine does not support a self-addressed conversation (#8351), so
       // the viewer is never a share target. Both sources can carry them: a
       // contact list written by another Nostr client can self-follow, and
-      // recents accumulate whoever a share was sent to.
-      final recentUsers = _videoSharingService.recentlySharedWith
-          .where((user) => !_isSelf(user.pubkey))
+      // recents accumulate whoever a share was sent to. Retired moderation
+      // accounts refuse sends, so they cannot be offered as recipients either.
+      var recentUsers = _videoSharingService.recentlySharedWith
+          .where((user) => _isSupportedRecipient(user.pubkey))
           .toList();
-      final followList = _followRepository.followingPubkeys.where(
-        (pubkey) => !_isSelf(pubkey),
-      );
+      final followList = _followRepository.followingPubkeys
+          .where(_isSupportedRecipient)
+          .toSet();
+      final candidates = {
+        ...followList,
+        for (final user in recentUsers) user.pubkey,
+      };
+      Map<String, UserRankingSignals>? signals;
+      try {
+        signals = await _rankingSignalsLoader.load(
+          candidates,
+          includeDmCounterparts: true,
+        );
+      } catch (error, stackTrace) {
+        // An unavailable local snapshot preserves the pre-ranking order. A
+        // successful snapshot, including an empty one, is authoritative for
+        // eligibility so excluded contacts cannot return through recents.
+        addError(
+          asReportableError(
+                error,
+                context: ShareSheetBlocReportableSites.onContactsLoadRequested,
+              ) ??
+              error,
+          stackTrace,
+        );
+      }
+      if (isClosed) return;
+      final snapshot = signals;
+      if (snapshot != null) {
+        recentUsers = recentUsers
+            .where((user) => snapshot.containsKey(user.pubkey))
+            .toList();
+      } else {
+        recentUsers = recentUsers
+            .where((user) => _rankingSignalsLoader.isEligible(user.pubkey))
+            .toList();
+        followList.removeWhere(
+          (pubkey) => !_rankingSignalsLoader.isEligible(pubkey),
+        );
+      }
       final recentPubkeys = recentUsers.map((u) => u.pubkey).toSet();
-
-      final remainingFollows = followList
-          .where((pk) => !recentPubkeys.contains(pk))
+      var remainingPubkeys = (snapshot?.keys ?? followList)
+          .where(
+            (pk) => _isSupportedRecipient(pk) && !recentPubkeys.contains(pk),
+          )
           .toList();
+      final excludedPubkeys = snapshot == null
+          ? <String>{}
+          : candidates.difference(snapshot.keys.toSet());
 
       ShareableUser? identifiedContact(
         String pubkey,
@@ -133,21 +184,37 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
         required bool includeMisses,
       }) => [
         ...recentUsers,
-        for (final pubkey in remainingFollows)
+        for (final pubkey in remainingPubkeys)
           if (identifiedContact(pubkey, profiles[pubkey]) case final contact?)
             contact
           else if (includeMisses)
             ShareableUser.fromProfile(pubkey, null),
       ];
 
-      List<ShareableUser> mergeVisibleExtras(List<ShareableUser> base) {
-        final basePubkeys = {for (final contact in base) contact.pubkey};
+      List<ShareableUser> mergeVisibleContacts(List<ShareableUser> base) {
+        final updates = {
+          for (final contact in base)
+            if (snapshot != null ||
+                _rankingSignalsLoader.isEligible(contact.pubkey))
+              contact.pubkey: contact,
+        };
+        final loadedPubkeys = {...recentPubkeys, ...remainingPubkeys};
         return [
+          // Preserve the first visible order, including recipients selected
+          // while the cache read or hydration was in flight. Identity-less
+          // misses disappear after hydration; a miss that hydration identifies
+          // keeps its place, and only rows not shown before append.
           for (final contact in state.contacts)
-            if (contact.hasVisibleIdentity &&
-                !basePubkeys.contains(contact.pubkey))
-              contact,
-          ...base,
+            if (_isSupportedRecipient(contact.pubkey) &&
+                !excludedPubkeys.contains(contact.pubkey) &&
+                (snapshot != null ||
+                    _rankingSignalsLoader.isEligible(contact.pubkey)))
+              if (updates.remove(contact.pubkey) case final updated?)
+                updated
+              else if (!loadedPubkeys.contains(contact.pubkey) &&
+                  contact.hasVisibleIdentity)
+                contact,
+          ...updates.values,
         ];
       }
 
@@ -159,34 +226,55 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
       // to empty on app restart, so a stale avatar or name is visible at most
       // within the same session until the user shares with that contact
       // again. See #5391.
-      final cached = remainingFollows.isEmpty
+      final cached = remainingPubkeys.isEmpty
           ? const <UserProfile>[]
           : await _profileRepository.getCachedProfiles(
-              pubkeys: remainingFollows,
+              pubkeys: remainingPubkeys,
             );
       final cachedByPubkey = {
         for (final profile in cached)
           if (identifiedContact(profile.pubkey, profile) != null)
             profile.pubkey: profile,
       };
+      if (snapshot != null) {
+        remainingPubkeys = rankUsers(
+          remainingPubkeys.map((pubkey) => snapshot[pubkey]!),
+          now: DateTime.now(),
+          nameOf: (pubkey) {
+            final name = ShareableUser.fromProfile(
+              pubkey,
+              cachedByPubkey[pubkey],
+            ).displayName?.trim();
+            return name == null || name.isEmpty ? pubkey : name;
+          },
+          interactionTierFirst: true,
+        );
+      }
       final cacheFirstContacts = buildContacts(
         cachedByPubkey,
         includeMisses: true,
       );
 
-      emit(
+      if (!emitIfOpen(
         state.copyWith(
           status: ShareSheetStatus.ready,
-          contacts: mergeVisibleExtras(cacheFirstContacts),
+          contacts: mergeVisibleContacts(cacheFirstContacts),
           clearActionResult: true,
         ),
-      );
+      )) {
+        return;
+      }
+      _rankingSignalsLoader.refreshInBackground([
+        for (final contact in state.contacts) contact.pubkey,
+      ]);
 
-      if (remainingFollows.isEmpty) return;
+      if (remainingPubkeys.isEmpty) return;
+      // Sorted so the lookup carries which contacts are uncached, not how
+      // close each one is: the ranked order comes from message history.
       final cacheMisses = [
-        for (final pubkey in remainingFollows)
+        for (final pubkey in remainingPubkeys)
           if (!cachedByPubkey.containsKey(pubkey)) pubkey,
-      ];
+      ]..sort();
       if (cacheMisses.isEmpty) return;
 
       // Hydrate the misses in the background and re-emit only when the row
@@ -202,11 +290,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
           {...cachedByPubkey, ...profiles},
           includeMisses: false,
         );
-        // A recipient picked via Find People mid-hydration was prepended to
-        // the row by the toggle handler; keep any still-visible extra contacts
-        // in their current order through the swap.
-        final merged = mergeVisibleExtras(hydrated);
-        emit(
+        final merged = mergeVisibleContacts(hydrated);
+        emitIfOpen(
           state.copyWith(
             status: ShareSheetStatus.ready,
             contacts: merged,
@@ -236,7 +321,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
         name: 'ShareSheetBloc',
         category: LogCategory.ui,
       );
-      emit(
+      emitIfOpen(
         state.copyWith(
           status: ShareSheetStatus.ready,
           contacts: [],
@@ -246,11 +331,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
     }
   }
 
-  /// Whether [pubkey] addresses the viewer.
+  /// Whether [pubkey] can receive a share through Divine.
   ///
-  /// Case-insensitive, because a pubkey that reaches Divine from another
-  /// client may be upper-case hex.
-  bool _isSelf(String pubkey) => pubkeysEqual(pubkey, _currentUserPubkey);
+  /// Compare the viewer case-insensitively because other clients may supply
+  /// upper-case hex. Retired moderation accounts follow the shared send policy.
+  bool _isSupportedRecipient(String pubkey) =>
+      !pubkeysEqual(pubkey, _currentUserPubkey) &&
+      !isRetiredModerationAccount(pubkey);
 
   // --------------------------------------------------------------------------
   // Recipient selection
@@ -261,9 +348,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
     Emitter<ShareSheetState> emit,
   ) {
     final recipient = event.recipient;
-    // Find People searches all users, so it can surface the viewer even
-    // though neither contact source offers them (#8351).
-    if (_isSelf(recipient.pubkey)) return;
+    // Find People searches all users, including unsupported share recipients.
+    if (!_isSupportedRecipient(recipient.pubkey)) return;
 
     final updatedSelection = state.isSelected(recipient)
         ? [
@@ -273,9 +359,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
         : [...state.selectedRecipients, recipient];
 
     // Find People can pick someone who isn't in the contacts row yet —
-    // surface them at the front so their selection tick is visible.
-    // Existing contacts stay in place: reordering under the user's
-    // finger while multi-selecting is disorienting.
+    // prepend them so the selected contact is visible when the picker closes.
+    // Keep every existing contact in its current relative order.
     final inContacts = state.contacts.any((c) => c.pubkey == recipient.pubkey);
     final updatedContacts = inContacts
         ? state.contacts

@@ -10,6 +10,8 @@ import 'package:divine_video_player/divine_video_player.dart'
     show NativePlaybackDiagnostics;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart'
+    show WidgetsBinding, WidgetsBindingObserver;
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -44,7 +46,12 @@ class InterruptedRenderException implements Exception {
 ///
 /// The footprint trend is what tells the causes apart: a footprint climbing
 /// right up to the last sample points at a memory kill, a flat one at a crash
-/// or a force quit. The lifecycle state separates a background termination.
+/// or a force quit. The lifecycle history separates a background termination
+/// (ends in `paused`) and an app-switcher quit (ends in `inactive`) from a
+/// main thread that stopped answering while the app was in front (stays
+/// `resumed`). Each running marker also notes the last thing done to its
+/// render, see [noteWatchdogFired] and [noteCancelRequested], so a marker
+/// whose last write is one of them names it as the trigger.
 ///
 /// Markers are written synchronously and without `flush`: a write that
 /// returned is in the kernel and survives the process being killed, and a
@@ -92,6 +99,9 @@ class InterruptedRenderMonitor {
   /// Where markers are written, once [initialize] resolved it.
   static Directory? _directory;
 
+  static final _lifecycleObserver = _LifecycleObserver();
+  static bool _observingLifecycle = false;
+
   /// Resolves where markers live, then reports and deletes every marker a
   /// previous process left behind.
   ///
@@ -111,6 +121,7 @@ class InterruptedRenderMonitor {
       return;
     }
     _directory = directory;
+    _observeLifecycle();
     if (!directory.existsSync()) return;
 
     final files = directory.listSync().whereType<File>().where(
@@ -210,6 +221,61 @@ class InterruptedRenderMonitor {
     };
   }
 
+  /// Notes in the marker of every running render of [taskId] that its
+  /// watchdog gave up on it.
+  ///
+  /// Called before the timeout is reported and the native task cancelled, so
+  /// a process that dies in either still leaves the note on disk.
+  static void noteWatchdogFired(String taskId) =>
+      _note(taskId, 'watchdogFiredAtMs');
+
+  /// Notes in the marker of every running render of [taskId] that its native
+  /// task is about to be cancelled, and returns the callback that notes the
+  /// cancel came back.
+  ///
+  /// Called before the platform call: the native cancel runs on the main
+  /// thread, and a process that never comes back from it still leaves the
+  /// note on disk. The callback stamps only running markers whose latest
+  /// request is this one, so a return never lands on a settled render, or on
+  /// a render or request it does not belong to. It is usually a no-op: a
+  /// cancel that reaches a dispatched render settles that render, which drops
+  /// its marker, before the cancel itself comes back.
+  static void Function() noteCancelRequested(String taskId) {
+    final request = Object();
+    for (final marker in _active) {
+      if (marker.taskId == taskId) marker.noteCancelRequested(request);
+    }
+    return () {
+      for (final marker in _active) {
+        marker.noteCancelReturned(request);
+      }
+    };
+  }
+
+  static void _note(String taskId, String field) {
+    for (final marker in _active) {
+      if (marker.taskId == taskId) marker.noteNow(field);
+    }
+  }
+
+  /// Appends [state] to the lifecycle history of every running render.
+  static void _recordLifecycleChange(AppLifecycleState state) {
+    for (final marker in _active) {
+      marker.noteLifecycle(state.name);
+    }
+  }
+
+  static void _observeLifecycle() {
+    if (_observingLifecycle) return;
+    try {
+      WidgetsBinding.instance.addObserver(_lifecycleObserver);
+      _observingLifecycle = true;
+    } on Object {
+      // No binding (pure Dart tests): there is no lifecycle to observe, and
+      // markers record the state as unknown.
+    }
+  }
+
   /// Refreshes every running render's marker right away.
   @visibleForTesting
   static Future<void> sampleActiveRendersForTesting() =>
@@ -223,6 +289,10 @@ class InterruptedRenderMonitor {
     }
     _active.clear();
     _directory = null;
+    if (_observingLifecycle) {
+      WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+      _observingLifecycle = false;
+    }
   }
 
   static Map<String, Object?>? _readMarker(File file) {
@@ -260,11 +330,24 @@ class InterruptedRenderMonitor {
   }
 }
 
+/// Forwards app lifecycle changes to the running markers.
+class _LifecycleObserver with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      InterruptedRenderMonitor._recordLifecycleChange(state);
+}
+
 /// One running render's marker file.
 class _RenderMarker {
-  _RenderMarker._(this._file, this._content);
+  _RenderMarker._(this._file, this.taskId, this._content);
+
+  /// How many lifecycle states [noteLifecycle] keeps, oldest dropped first.
+  static const _lifecycleHistoryLength = 5;
 
   final File _file;
+
+  /// The render task this marker belongs to.
+  final String taskId;
   final Map<String, Object?> _content;
   final Stopwatch _stopwatch = Stopwatch()..start();
   Timer? _timer;
@@ -272,6 +355,9 @@ class _RenderMarker {
   bool _closed = false;
   int _samples = 0;
   int? _peakFootprint;
+
+  /// The cancel request noted last, see [noteCancelRequested].
+  Object? _cancelRequest;
 
   /// Writes the marker for a render that is about to start, or returns `null`
   /// when it cannot be written.
@@ -288,11 +374,15 @@ class _RenderMarker {
           '${taskId.replaceAll(RegExp('[^A-Za-z0-9_-]'), '_')}.json';
       final marker = _RenderMarker._(
         File(p.join(directory.path, name)),
+        taskId,
         <String, Object?>{
           'session': InterruptedRenderMonitor._sessionId,
           'kind': kind,
           'startedAt': DateTime.now().toUtc().toIso8601String(),
           'details': details,
+          'lifecycleHistory': <String>[
+            '${InterruptedRenderMonitor.readLifecycleState() ?? 'unknown'}@0',
+          ],
         },
       ).._write();
       marker._timer = Timer.periodic(
@@ -338,6 +428,35 @@ class _RenderMarker {
     } finally {
       _sampling = false;
     }
+  }
+
+  /// Notes a cancel [request], dropping the return of any earlier one.
+  void noteCancelRequested(Object request) {
+    _cancelRequest = request;
+    _content.remove('cancelReturnedAtMs');
+    noteNow('cancelRequestedAtMs');
+  }
+
+  /// Notes that [request] came back, unless a newer request replaced it.
+  void noteCancelReturned(Object request) {
+    if (identical(_cancelRequest, request)) noteNow('cancelReturnedAtMs');
+  }
+
+  /// Stamps [field] with the elapsed time and writes the marker at once.
+  void noteNow(String field) {
+    if (_closed) return;
+    _content[field] = _stopwatch.elapsedMilliseconds;
+    _write();
+  }
+
+  /// Appends [state] to the lifecycle history and writes the marker at once.
+  void noteLifecycle(String state) {
+    if (_closed) return;
+    final history = _content['lifecycleHistory']! as List<String>;
+    if (history.last.startsWith('$state@')) return;
+    history.add('$state@${_stopwatch.elapsedMilliseconds}');
+    if (history.length > _lifecycleHistoryLength) history.removeAt(0);
+    _write();
   }
 
   void _write() {
@@ -388,6 +507,13 @@ String summarizeMarker(Map<String, Object?> marker) {
     'footprintMb': marker['footprintMb'],
     'peakFootprintMb': marker['peakFootprintMb'],
     'lifecycle': marker['lifecycle'],
+    'lifecycleHistory': switch (marker['lifecycleHistory']) {
+      final List<Object?> history => history.join(','),
+      _ => null,
+    },
+    'watchdogFiredAtMs': marker['watchdogFiredAtMs'],
+    'cancelRequestedAtMs': marker['cancelRequestedAtMs'],
+    'cancelReturnedAtMs': marker['cancelReturnedAtMs'],
     if (details is Map) ...details.cast<String, Object?>(),
   };
   return fields.entries

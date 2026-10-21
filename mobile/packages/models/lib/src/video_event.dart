@@ -1189,25 +1189,39 @@ class VideoEvent {
   static final _lineToken = RegExp(r'\S+');
   static final _hashtagToken = RegExp(r'^#([^#]+)$');
 
-  /// [displayContent] without the lines made up entirely of [chips], for
+  /// [displayContent] without the hashtags it repeats from [chips], for
   /// surfaces that show those hashtags as chips.
   ///
-  /// The Vine archive import repeats the caption's hashtags on a line of their
-  /// own, so the raw description would show them as text twice above the
-  /// chips. Only a line holding nothing but [chips] is dropped, which includes
-  /// a caption written entirely in them; any other line is kept as written. A
-  /// dropped line between two blank lines takes one of them along; everything
-  /// else is returned trimmed and otherwise as written.
-  String descriptionWithoutChipLines(Iterable<String> chips) {
+  /// A line made up entirely of [chips] is dropped, which removes the line the
+  /// Vine archive import appends with the caption's hashtags. For an imported
+  /// Vine ([isOriginalVine]) the hashtags on such a line are also dropped
+  /// where they end another line, such as the caption's closing tags, so a
+  /// Vine caption whose last word is one of them loses it. Any other caption
+  /// keeps every word of its remaining lines. A dropped line between two blank
+  /// lines takes one of them along; everything else is returned trimmed and
+  /// otherwise as written.
+  String descriptionWithoutRepeatedChips(Iterable<String> chips) {
     final chipSet = {for (final tag in chips) tag.toLowerCase()};
+    final lines = [
+      for (final (text, lineBreak) in _linesOf(displayContent))
+        (text, lineBreak, _lineToken.allMatches(text).toList()),
+    ];
+    final repeated = {
+      for (final (_, _, tokens) in lines)
+        if (tokens.isNotEmpty &&
+            tokens.every((token) => _isChipHashtag(token[0]!, chipSet)))
+          for (final token in tokens) token[0]!.substring(1).toLowerCase(),
+    };
     final kept = StringBuffer();
     var lastKeptBlank = false;
     var dropBlankLine = false;
-    for (final (line, lineBreak) in _linesOf(displayContent)) {
-      final tokens = _lineToken.allMatches(line);
+    for (final (text, lineBreak, tokens) in lines) {
       final isBlank = tokens.isEmpty;
-      if (!isBlank &&
-          tokens.every((token) => _isChipHashtag(token[0]!, chipSet))) {
+      var keep = tokens.length;
+      while (keep > 0 && _isChipHashtag(tokens[keep - 1][0]!, repeated)) {
+        keep--;
+      }
+      if (!isBlank && keep == 0) {
         dropBlankLine = lastKeptBlank;
         continue;
       }
@@ -1218,7 +1232,11 @@ class VideoEvent {
       dropBlankLine = false;
       lastKeptBlank = isBlank;
       kept
-        ..write(line)
+        ..write(
+          isOriginalVine && keep < tokens.length
+              ? text.substring(0, tokens[keep - 1].end)
+              : text,
+        )
         ..write(lineBreak);
     }
     return kept.toString().trim();
