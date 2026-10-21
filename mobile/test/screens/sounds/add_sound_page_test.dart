@@ -978,6 +978,103 @@ void main() {
         },
       );
 
+      testWidgets(
+        'does not record when the app is hidden while a preview stops',
+        (tester) async {
+          addTearDown(
+            () => tester.binding.handleAppLifecycleStateChanged(
+              AppLifecycleState.resumed,
+            ),
+          );
+          await pumpView(tester);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          recorder.emitLevel(0.6);
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+          await settleRecorder(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pumpAndSettle();
+          audio.stopGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          // The recorder is still idle here, so hiding has nothing to stop:
+          // only the recheck after the preview stops can keep the mic off.
+          tester.binding
+            ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+            ..handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+          await tester.pump();
+
+          audio.stopGate!.complete();
+          await settleRecorder(tester);
+
+          expect(cubit.state.isRecording, isFalse);
+        },
+      );
+
+      testWidgets(
+        'does not record when a save starts while a preview stops',
+        (tester) async {
+          final service = _HeldSavedSoundsService(sharedPreferences);
+          await pumpView(tester, savedSoundsService: service);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          recorder.emitLevel(0.6);
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+          await settleRecorder(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pumpAndSettle();
+          audio.stopGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_save')));
+          await tester.pump();
+          expect(service.isHolding, isTrue);
+
+          audio.stopGate!.complete();
+          // Not settleRecorder: the save spinner keeps animating while the
+          // Sounds write is held, so pumpAndSettle would never return.
+          await tester.pump();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+
+          expect(cubit.state.isRecording, isFalse);
+          service.release();
+          await tester.pumpAndSettle();
+        },
+      );
+
+      testWidgets('titles a recording in 24-hour time when the device uses '
+          'it', (tester) async {
+        tester.binding.platformDispatcher.alwaysUse24HourFormatTestValue = true;
+        addTearDown(
+          tester.binding.platformDispatcher.clearAlwaysUse24HourTestValue,
+        );
+        await pumpView(tester);
+        // The test value does not notify the view, so MediaQuery would keep
+        // reading the old setting without a metrics change.
+        tester.binding.handleMetricsChanged();
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pumpAndSettle();
+
+        final title = librarySounds().single.audio.title;
+        expect(title, startsWith('Recording '));
+        expect(title, matches(RegExp(r' \d{2}:\d{2}$')));
+      });
+
       testWidgets('blocks back navigation while sharing', (tester) async {
         final gate = Completer<LocalAudioPublishResult>();
         when(
