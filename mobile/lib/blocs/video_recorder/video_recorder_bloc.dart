@@ -59,6 +59,14 @@ const _kLastUsedCameraLensKey = 'camera_last_used_lens';
 /// SharedPreferences key for the last-used video stabilization mode.
 const _kLastUsedStabilizationModeKey = 'camera_last_used_stabilization';
 
+/// Stabilization for a recorder that has no saved choice yet.
+///
+/// Not [DivineVideoStabilizationMode.auto]: on iOS it usually resolves to a
+/// look-ahead mode that holds every stop ~1.6s before the next take can
+/// start, and Android does not offer it at all.
+const DivineVideoStabilizationMode _kDefaultStabilizationMode =
+    DivineVideoStabilizationMode.standard;
+
 /// SharedPreferences key for the last grid-lines on/off choice.
 const _kGridLinesEnabledKey = 'camera_grid_lines_enabled';
 
@@ -602,7 +610,7 @@ class VideoRecorderBloc
     // Leaving the Upload tab resumes the camera it paused, into whichever
     // mode the user switched to meanwhile.
     if (event.state == AppLifecycleState.resumed) {
-      await _applyStabilizationForRecorderMode();
+      await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
     }
   }
 
@@ -1816,7 +1824,7 @@ class VideoRecorderBloc
     // Leaving Upload resumes a paused camera: a rebind while paused would
     // restart it on Android, so the resume applies the mode instead.
     if (previousMode != VideoRecorderMode.upload) {
-      await _applyStabilizationForRecorderMode();
+      await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
     }
   }
 
@@ -2564,7 +2572,7 @@ class VideoRecorderBloc
   }
 
   /// The persisted stabilization mode, as last picked in a mode that shows
-  /// the control.
+  /// the control, or [_kDefaultStabilizationMode] before any pick.
   ///
   /// The native controller is recreated (mode reset to off) on every init, so
   /// the preference travels with each one (see [_stabilizationModeFor]). The
@@ -2573,7 +2581,7 @@ class VideoRecorderBloc
     SharedPreferences prefs,
   ) {
     final saved = prefs.getString(_kLastUsedStabilizationModeKey);
-    if (saved == null) return DivineVideoStabilizationMode.off;
+    if (saved == null) return _kDefaultStabilizationMode;
     return DivineVideoStabilizationMode.fromNativeString(saved);
   }
 
@@ -2592,15 +2600,25 @@ class VideoRecorderBloc
   ///
   /// A saved mode the current lens cannot take is left alone: the camera
   /// already opened with off for it, and requesting it again would rebind the
-  /// camera for nothing on Android.
-  Future<void> _applyStabilizationForRecorderMode() async {
+  /// camera for nothing on Android. Explicit mode switches clear any retained
+  /// native request when the target is off, even if this lens reports off.
+  Future<void> _applyStabilizationForRecorderMode({
+    bool clearRetainedRequest = false,
+  }) async {
     final mode = state.recorderMode;
     // Upload pauses the camera and records nothing.
     if (mode == VideoRecorderMode.upload || !_cameraService.isInitialized) {
       return;
     }
     final target = _stabilizationModeFor(mode, _readSharedPreferences());
-    if (target == _cameraService.videoStabilizationMode ||
+    // Off must clear the native request even when this lens already reports
+    // off: an unsupported lens can retain a non-off request for the next lens.
+    // Otherwise switching to Classic here would enable stabilization again
+    // as soon as the user switches to a supported lens.
+    final mustClearRequest =
+        clearRetainedRequest && target == DivineVideoStabilizationMode.off;
+    if ((!mustClearRequest &&
+            target == _cameraService.videoStabilizationMode) ||
         !_cameraService.availableVideoStabilizationModes.contains(target)) {
       return;
     }

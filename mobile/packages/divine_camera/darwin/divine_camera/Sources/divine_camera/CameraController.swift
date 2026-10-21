@@ -266,8 +266,14 @@ class CameraController: NSObject {
     // Requested video stabilization mode. Applied to the video connection,
     // so it affects both the live preview texture and the recorded file.
     // Defaults to .off to preserve existing behaviour until the user opts in.
+    // Kept across lens switches: a lens that cannot take it records with off,
+    // and the next lens that can gets it back.
     // macOS has no stabilization API, so the mode only exists on iOS.
     private var requestedStabilizationMode: AVCaptureVideoStabilizationMode = .off
+
+    /// Whether the current lens took `requestedStabilizationMode`. When it did
+    /// not, the camera records with off and reports off.
+    private var requestedStabilizationApplied = true
     #endif
 
     /// True once `previewOutput` is wired and able to carry `.previewOptimized`.
@@ -1362,13 +1368,10 @@ class CameraController: NSObject {
 
         #if os(iOS)
         // Apply the stabilization mode initialize asked for on the freshly
-        // built video connection (a no-op while the mode is .off). A mode the
-        // connection or format cannot take falls back to off, as a rejected
-        // setVideoStabilizationMode would.
-        if !applyVideoStabilization() && requestedStabilizationMode != .off {
-            requestedStabilizationMode = .off
-            applyVideoStabilization()
-        }
+        // built video connection (a no-op while the mode is .off). A lens the
+        // mode does not suit records with off, but the request is kept, so
+        // switching to a lens that takes it turns it on.
+        applyVideoStabilization()
 
         // Set initial zoom to 1.0x (wide angle) for virtual multi-camera devices.
         // Without this, the camera starts at native 1.0 which is the ultra-wide (0.5x).
@@ -2530,6 +2533,7 @@ class CameraController: NSObject {
     @discardableResult
     private func applyVideoStabilization() -> Bool {
         let applied = applyRecordingStabilization()
+        requestedStabilizationApplied = applied
         // Only hand the preview to the preview-optimized output when the
         // recording connection actually carries a non-off mode. A requested
         // mode that could not be applied (e.g. unsupported after a lens/format
@@ -2677,8 +2681,12 @@ class CameraController: NSObject {
     /// nearby mode. `auto` is reported verbatim because it expresses intent
     /// ("let the system pick") rather than a concrete target, and an idle
     /// session falls back to the requested value to avoid surfacing a
-    /// transient `.off` before the connection has configured.
+    /// transient `.off` before the connection has configured. A request the
+    /// current lens could not take reports off, which is what it records with.
     private func reportedStabilizationString() -> String {
+        if requestedStabilizationMode != .off && !requestedStabilizationApplied {
+            return "off"
+        }
         guard requestedStabilizationMode != .auto,
             captureSession?.isRunning == true,
             let connection = videoOutput?.connection(with: .video),

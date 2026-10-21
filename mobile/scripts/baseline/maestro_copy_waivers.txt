@@ -6,7 +6,6 @@
 # while the file is absent from origin/main; after it lands, branches may
 # remove rows but cannot add them.
 #vine	dynamic	Hashtag supplied by seeded search data
-.*(Standard|Cinematic|Preview Optimized|Low Latency|Auto).*	regex	Matches the active capture-quality option
 .*10 seconds.*	regex	Matches the rendered capture-duration label
 .*3 seconds.*	regex	Matches the rendered capture-duration label
 .*Auto.*	regex	Matches the current flash-mode semantics
