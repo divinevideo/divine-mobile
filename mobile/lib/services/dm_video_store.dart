@@ -461,8 +461,20 @@ class DmVideoStore {
   /// the app, nor blame the video's sender.
   bool get appInForeground => _frameReadMarks.appInForeground;
 
-  set appInForeground(bool inForeground) =>
-      _frameReadMarks.appInForeground = inForeground;
+  set appInForeground(bool inForeground) {
+    final returned = inForeground && !_frameReadMarks.appInForeground;
+    _frameReadMarks.appInForeground = inForeground;
+    // A long-lived app can go days without a prune: what is past its age
+    // goes when the app comes back.
+    if (returned) {
+      runDetached(
+        prune(),
+        'prune kept video DMs on return to the foreground',
+        logName: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
 
   /// Deletes files kept more than [maxAge] ago, then, until this account's
   /// files fit in [maxBytes], the oldest videos and, only after every video,

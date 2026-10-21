@@ -2674,6 +2674,27 @@ void main() {
         );
       });
 
+      test('prunes when the app comes back to the foreground', () async {
+        final expired = keptFile(
+          '${'a' * 64}.mp4',
+          const [1],
+          keptAt: now.subtract(const Duration(days: 31)),
+        );
+        final pruning = Completer<void>();
+        final store = createStore(
+          isMessageGone: (_) async {
+            if (!pruning.isCompleted) pruning.complete();
+            return false;
+          },
+        )..appInForeground = false;
+
+        store.appInForeground = true;
+        await pruning.future.timeout(const Duration(seconds: 5));
+        await store.prune();
+
+        expect(expired.existsSync(), isFalse);
+      });
+
       test('clears a part file a crash left', () async {
         final crashed = keptFile(
           '${'a' * 64}.mp4.0.part',
