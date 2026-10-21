@@ -78,7 +78,7 @@ void main() {
             await lookups.isGone(_videoMessage(conversationId: 'removed')),
             isTrue,
           );
-          expect(await lookups.isGone(_videoMessage()), isFalse);
+          expect(await lookups.isGone(_videoMessage(id: 'e' * 64)), isFalse);
           expect(asked, equals([('removed', _sentAt), ('room', _sentAt)]));
         },
       );
@@ -98,6 +98,27 @@ void main() {
             await lookups.isGone(_videoMessage(conversationId: 'old-room')),
             isFalse,
           );
+        },
+      );
+
+      test(
+        'remembers a message it found gone, once the rows that said so are '
+        'cleared',
+        () async {
+          var retracted = true;
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isMessageGone: (_) async => retracted,
+          );
+          await lookups.goneAmong({'1' * 64}, dir, {});
+          expect(await lookups.isGone(_videoMessage()), isTrue);
+
+          // As an account switch clears the rows.
+          retracted = false;
+
+          expect(await lookups.isGone(_videoMessage()), isTrue);
+          expect(await lookups.isGone(_videoMessage(id: '1' * 64)), isTrue);
+          expect(await lookups.goneAmong({'1' * 64}, dir, {}), {'1' * 64});
         },
       );
 

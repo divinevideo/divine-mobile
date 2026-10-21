@@ -564,14 +564,21 @@ class DmVideoStore {
     final dir = await _ownerDirectory();
     // Before a gone message's frame-read mark can be deleted unread.
     _frameReadMarks.lookForUnfinishedReads(dir);
-    if (!dir.existsSync()) return;
-    final listed = await dir
-        .list()
-        .where((entity) => entity is File)
-        .cast<File>()
-        .toList();
+    final listed = dir.existsSync()
+        ? await dir
+              .list()
+              .where((entity) => entity is File)
+              .cast<File>()
+              .toList()
+        : const <File>[];
     final gone = await _gone.goneAmong(
-      {for (final file in listed) _messageIdOf(file)},
+      {
+        for (final file in listed) _messageIdOf(file),
+        // Still being fetched, so not kept yet: the rows that would refuse it
+        // may be cleared by the time it lands.
+        for (final path in _leases.keys)
+          if (File(path).parent.path == dir.path) _messageIdOf(File(path)),
+      },
       dir,
       {
         for (final file in listed)

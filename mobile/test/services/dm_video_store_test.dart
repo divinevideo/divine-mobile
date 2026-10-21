@@ -473,6 +473,27 @@ void main() {
       );
 
       test(
+        'refuses a video whose message went while it downloaded, though the '
+        'rows that said so were cleared before it landed',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          var retracted = false;
+          final store = createStore(isMessageGone: (_) async => retracted);
+          final tapped = store.videoFor(_videoMessage());
+          await pumpEventQueue();
+          retracted = true;
+          // As sign-out and an account switch prune before clearing the rows.
+          await store.prune();
+          retracted = false;
+          release.complete(_plaintext);
+
+          await expectLater(tapped, throwsA(isA<DmVideoGoneException>()));
+          expect(keptFiles(), isEmpty);
+        },
+      );
+
+      test(
         "refuses a card's download it took over once its message is gone",
         () async {
           final release = Completer<Uint8List>();

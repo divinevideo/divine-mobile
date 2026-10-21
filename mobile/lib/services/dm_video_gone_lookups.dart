@@ -36,11 +36,23 @@ class DmVideoGoneLookups {
   final Future<DmVideoMessageLocation?> Function(String messageId)?
   _findMessageLocation;
 
+  /// Messages found gone, which stay gone once the rows that said so are
+  /// cleared, as an account switch clears them.
+  final Set<String> _known = {};
+
   /// Whether [message] was retracted or removed with its conversation, the
   /// one its row is in now: a caller can hold a message from before a repair
   /// moved it. Throws what a lookup throws.
   Future<bool> isGone(DmMessage message) async {
-    if (await _isMessageGone?.call(message.id) == true) return true;
+    if (_known.contains(message.id)) return true;
+    final gone =
+        await _isMessageGone?.call(message.id) == true ||
+        await _isRemovedNow(message);
+    if (gone) _known.add(message.id);
+    return gone;
+  }
+
+  Future<bool> _isRemovedNow(DmMessage message) async {
     final isRemoved = _isConversationRemoved;
     if (isRemoved == null) return false;
     final current = await _findMessageLocation?.call(message.id);
@@ -65,7 +77,7 @@ class DmVideoGoneLookups {
     final gone = <String>{};
     for (final id in ids) {
       try {
-        if (isGone != null && await isGone(id)) {
+        if (_known.contains(id) || isGone != null && await isGone(id)) {
           gone.add(id);
           continue;
         }
@@ -102,6 +114,7 @@ class DmVideoGoneLookups {
         );
       }
     }
+    _known.addAll(gone);
     return gone;
   }
 }
