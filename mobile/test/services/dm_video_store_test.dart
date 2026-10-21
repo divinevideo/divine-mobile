@@ -616,6 +616,44 @@ void main() {
       );
 
       test(
+        'keeps and announces no frame of a video refused as gone while the '
+        'frame decoded',
+        () async {
+          final frameReadStarted = Completer<void>();
+          final frameRead = Completer<Uint8List?>();
+          readFrame = (_) {
+            frameReadStarted.complete();
+            return frameRead.future;
+          };
+          var gone = false;
+          final message = _videoMessage();
+          keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            keptAt: now,
+          );
+          final store = createStore(isMessageGone: (_) async => gone);
+          final announced = <String>[];
+          final announcements = store.kept.listen(announced.add);
+          addTearDown(announcements.cancel);
+          final preview = store.previewFor(message);
+          await frameReadStarted.future;
+          gone = true;
+          await expectLater(
+            store.videoFor(message),
+            throwsA(isA<DmVideoGoneException>()),
+          );
+
+          frameRead.complete(_frame);
+
+          expect(await preview, isNull);
+          await pumpEventQueue();
+          expect(announced, isEmpty);
+          expect(keptFiles(), isEmpty);
+        },
+      );
+
+      test(
         'downloads and decrypts a video once and keeps it for the account',
         () async {
           final store = createStore();

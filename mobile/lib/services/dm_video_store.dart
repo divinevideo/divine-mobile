@@ -1189,6 +1189,8 @@ class DmVideoStore {
       return null;
     }
     try {
+      // Refused as gone while it decoded: its files go once the read ends.
+      if (_goneWhileLeased.contains(video.path)) return null;
       await _writeAtomically(preview, frame);
     } finally {
       _frameReadMarks.frameKept(mark);
