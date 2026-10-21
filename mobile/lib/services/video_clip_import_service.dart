@@ -246,9 +246,10 @@ class VideoClipImportService {
   /// duplicate or overwriting edits made to it since, and restores it when it
   /// is in the trash.
   ///
-  /// [beforeCopy], when given, is awaited just before [source] is copied
-  /// in, once the slower lookups are done, so the caller can still refuse:
-  /// an error it throws fails the import with nothing copied.
+  /// [beforeSave], when given, is awaited just before the clip is saved to
+  /// the library, once the lookups, the copy and its frames are done, so the
+  /// caller can still refuse: an error it throws fails the import and deletes
+  /// the copy and its frames.
   ///
   /// [source] is copied, never moved; the caller still owns it.
   Future<VideoClipImportResult> importReceivedClip({
@@ -258,7 +259,7 @@ class VideoClipImportService {
     required String c2paManifestId,
     models.AspectRatio? targetAspectRatio,
     List<String> contributorPubkeys = const [],
-    Future<void> Function()? beforeCopy,
+    Future<void> Function()? beforeSave,
   }) {
     return _importVerifiedClip(
       source: source,
@@ -269,7 +270,7 @@ class VideoClipImportService {
       senderPubkey: senderPubkey,
       targetAspectRatio: targetAspectRatio,
       contributorPubkeys: contributorPubkeys,
-      beforeCopy: beforeCopy,
+      beforeSave: beforeSave,
     );
   }
 
@@ -376,7 +377,7 @@ class VideoClipImportService {
     String? senderPubkey,
     String? videoHash,
     models.AspectRatio? targetAspectRatio,
-    Future<void> Function()? beforeCopy,
+    Future<void> Function()? beforeSave,
   }) async {
     final documentsPath = await _getDocumentsPath();
     if (documentsPath.isEmpty) {
@@ -410,6 +411,8 @@ class VideoClipImportService {
     final importedAt = _now();
 
     File? copiedVideo;
+    String? thumbnailPath;
+    String? ghostFramePath;
     try {
       final hash = videoHash ?? await _hashFile(source.path);
       final PublishedClipSource? published;
@@ -426,7 +429,6 @@ class VideoClipImportService {
         );
       }
 
-      await beforeCopy?.call();
       await Directory(documentsPath).create(recursive: true);
       copiedVideo = await _copyVideoIntoDocuments(
         source,
@@ -447,7 +449,8 @@ class VideoClipImportService {
         videoPath: copiedVideo.path,
         targetTimestamp: _thumbnailTimestampFor(duration),
       );
-      final ghostFramePath = await _extractLastFrame(
+      thumbnailPath = thumbnail?.path;
+      ghostFramePath = await _extractLastFrame(
         videoPath: copiedVideo.path,
         videoDuration: duration,
       );
@@ -491,6 +494,7 @@ class VideoClipImportService {
         ],
       );
 
+      await beforeSave?.call();
       await _clipLibraryService.saveClip(clip);
       return VideoClipImportSuccess(clip);
     } on FileSystemException catch (e) {
@@ -499,7 +503,11 @@ class VideoClipImportService {
         name: _logName,
         category: LogCategory.video,
       );
-      if (copiedVideo != null) await _deleteQuietly(copiedVideo);
+      await _deleteAllQuietly([
+        copiedVideo?.path,
+        thumbnailPath,
+        ghostFramePath,
+      ]);
       return const VideoClipImportFailure(
         VideoClipImportFailureReason.copyFailed,
       );
@@ -509,7 +517,11 @@ class VideoClipImportService {
         name: _logName,
         category: LogCategory.video,
       );
-      if (copiedVideo != null) await _deleteQuietly(copiedVideo);
+      await _deleteAllQuietly([
+        copiedVideo?.path,
+        thumbnailPath,
+        ghostFramePath,
+      ]);
       return const VideoClipImportFailure(
         VideoClipImportFailureReason.saveFailed,
       );
@@ -682,6 +694,13 @@ class VideoClipImportService {
       if (file.existsSync()) await file.delete();
     } on FileSystemException {
       // Best effort: the library's orphan sweep reclaims a leftover copy.
+    }
+  }
+
+  /// Deletes what an import that failed had written, the files at [paths].
+  Future<void> _deleteAllQuietly(List<String?> paths) async {
+    for (final path in paths) {
+      if (path != null) await _deleteQuietly(File(path));
     }
   }
 

@@ -99,7 +99,7 @@ void main() {
         c2paManifestId: any(named: 'c2paManifestId'),
         targetAspectRatio: any(named: 'targetAspectRatio'),
         contributorPubkeys: any(named: 'contributorPubkeys'),
-        beforeCopy: any(named: 'beforeCopy'),
+        beforeSave: any(named: 'beforeSave'),
       ),
     ).thenAnswer(
       (_) async => VideoClipImportSuccess(
@@ -143,7 +143,7 @@ void main() {
                       targetAspectRatio: AspectRatio.square,
                       // Everyone the clip's signed history credits.
                       contributorPubkeys: [_recorderPubkey],
-                      beforeCopy: any(named: 'beforeCopy'),
+                      beforeSave: any(named: 'beforeSave'),
                     ),
                   ).captured.single
                   as File;
@@ -168,7 +168,7 @@ void main() {
               senderPubkey: any(named: 'senderPubkey'),
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
-              beforeCopy: any(named: 'beforeCopy'),
+              beforeSave: any(named: 'beforeSave'),
             ),
           );
         },
@@ -190,7 +190,7 @@ void main() {
             senderPubkey: any(named: 'senderPubkey'),
             c2paManifestId: any(named: 'c2paManifestId'),
             targetAspectRatio: any(named: 'targetAspectRatio'),
-            beforeCopy: any(named: 'beforeCopy'),
+            beforeSave: any(named: 'beforeSave'),
           ),
         ),
       );
@@ -262,7 +262,7 @@ void main() {
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,
-            beforeCopy: any(named: 'beforeCopy'),
+            beforeSave: any(named: 'beforeSave'),
           ),
         ).called(1);
         verifyZeroInteractions(otherAccountImport);
@@ -279,7 +279,7 @@ void main() {
               senderPubkey: any(named: 'senderPubkey'),
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
-              beforeCopy: any(named: 'beforeCopy'),
+              beforeSave: any(named: 'beforeSave'),
             ),
           ).thenAnswer(
             (_) async => const VideoClipImportFailure(
@@ -317,7 +317,7 @@ void main() {
             c2paManifestId: any(named: 'c2paManifestId'),
             targetAspectRatio: any(named: 'targetAspectRatio'),
             contributorPubkeys: any(named: 'contributorPubkeys'),
-            beforeCopy: any(named: 'beforeCopy'),
+            beforeSave: any(named: 'beforeSave'),
           ),
         ).thenAnswer((_) => importing.future);
         final cubit = buildCubit();
@@ -337,7 +337,7 @@ void main() {
         expect((released.single as File).path, equals(_decryptedPath));
       });
 
-      group('just before the library copies the clip', () {
+      group('just before the library saves the clip', () {
         DivineVideoClip savedClip() => DivineVideoClip(
           id: 'dm_clip_1',
           video: EditorVideo.file('/documents/dm_clip_1.mp4'),
@@ -347,7 +347,7 @@ void main() {
           originalAspectRatio: 9 / 16,
         );
 
-        /// Stubs the import to run its pre-copy check the way the library
+        /// Stubs the import to run its pre-save check the way the library
         /// does, failing the import when the check refuses.
         void stubImportRunningItsCheck({void Function()? beforeTheCheck}) {
           when(
@@ -358,12 +358,12 @@ void main() {
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
               contributorPubkeys: any(named: 'contributorPubkeys'),
-              beforeCopy: any(named: 'beforeCopy'),
+              beforeSave: any(named: 'beforeSave'),
             ),
           ).thenAnswer((invocation) async {
             beforeTheCheck?.call();
             final check =
-                invocation.namedArguments[#beforeCopy]
+                invocation.namedArguments[#beforeSave]
                     as Future<void> Function()?;
             if (check != null) {
               try {
@@ -485,7 +485,7 @@ void main() {
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,
-            beforeCopy: any(named: 'beforeCopy'),
+            beforeSave: any(named: 'beforeSave'),
           ),
         ).called(1);
       });

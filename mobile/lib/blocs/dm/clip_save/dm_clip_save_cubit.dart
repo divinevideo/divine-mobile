@@ -14,7 +14,7 @@ import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 
 /// Adds a verified received clip to one account's clip library, awaiting
-/// [beforeCopy] just before it copies the clip in.
+/// [beforeSave] just before it saves the clip there.
 typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
   required File source,
   required String messageId,
@@ -22,7 +22,7 @@ typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
   required String c2paManifestId,
   AspectRatio? targetAspectRatio,
   List<String> contributorPubkeys,
-  Future<void> Function()? beforeCopy,
+  Future<void> Function()? beforeSave,
 });
 
 /// Returns the [ReceivedClipImporter] for the signed-in account's library.
@@ -147,9 +147,10 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
           c2paManifestId: provenance.activeManifestId!,
           targetAspectRatio: message.clipTargetAspectRatio,
           contributorPubkeys: provenance.contributors,
-          // Asked again: the check and the import's lookups take seconds,
-          // and a message retracted meanwhile must not reach the library.
-          beforeCopy: () async => store.releaseVideo(
+          // Asked again just before the save: the check, the import's lookups
+          // and its frames take seconds, and a message retracted by then must
+          // not reach the library.
+          beforeSave: () async => store.releaseVideo(
             await store.videoFor(message),
           ),
         );

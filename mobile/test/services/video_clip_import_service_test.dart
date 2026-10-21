@@ -1041,8 +1041,8 @@ void main() {
     });
 
     test(
-      'asks whether it may still keep the clip just before copying it, after '
-      'the slower lookup, and copies nothing when it may not',
+      'asks whether it may still keep the clip just before saving it, once '
+      'the lookup, the copy and its frames are done',
       () async {
         final order = <String>[];
         final resolver = _MockPublishedClipSourceResolver();
@@ -1050,9 +1050,76 @@ void main() {
           order.add('lookup');
           return null;
         });
+        when(() => clipLibraryService.saveClip(any())).thenAnswer((_) async {
+          order.add('save');
+        });
         final service = buildService(
           readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
           publishedSourceResolver: resolver,
+          extractThumbnail:
+              ({required videoPath, required targetTimestamp}) async {
+                order.add('thumbnail');
+                return null;
+              },
+          extractLastFrame:
+              ({required videoPath, required videoDuration}) async {
+                order.add('last frame');
+                return null;
+              },
+        );
+
+        await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+          beforeSave: () async => order.add('check'),
+        );
+
+        expect(
+          order,
+          equals(['lookup', 'thumbnail', 'last frame', 'check', 'save']),
+        );
+      },
+    );
+
+    test(
+      'leaves neither the copy nor its frames behind, and saves nothing, when '
+      'it may not keep the clip',
+      () async {
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+        int? filesWhenAsked;
+
+        final result = await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+          beforeSave: () async {
+            filesWhenAsked = docsDir.listSync().whereType<File>().length;
+            throw StateError('the message was retracted');
+          },
+        );
+
+        expect(result, isA<VideoClipImportFailure>());
+        // The copy, its thumbnail and its last frame.
+        expect(filesWhenAsked, equals(3));
+        expect(docsDir.listSync(), isEmpty);
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      },
+    );
+
+    test(
+      'leaves neither the copy nor its frames behind when the library cannot '
+      'save the clip',
+      () async {
+        when(
+          () => clipLibraryService.saveClip(any()),
+        ).thenThrow(StateError('database closed'));
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
         );
 
         final result = await service.importReceivedClip(
@@ -1060,16 +1127,17 @@ void main() {
           messageId: _messageId,
           senderPubkey: _senderPubkey,
           c2paManifestId: _c2paManifestId,
-          beforeCopy: () async {
-            order.add('check');
-            throw StateError('the message was retracted');
-          },
         );
 
-        expect(order, equals(['lookup', 'check']));
-        expect(result, isA<VideoClipImportFailure>());
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.saveFailed,
+          ),
+        );
         expect(docsDir.listSync(), isEmpty);
-        verifyNever(() => clipLibraryService.saveClip(any()));
       },
     );
 
