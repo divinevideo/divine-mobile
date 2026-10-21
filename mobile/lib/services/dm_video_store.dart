@@ -680,7 +680,9 @@ class DmVideoStore {
       if (DmVideoFrameReadMarks.isReadMark(file) && !withVideo.contains(id) ||
           DmVideoConversationRecords.isRecord(file) &&
               !withContent.contains(id) &&
-              !leased.contains(id)) {
+              !leased.contains(id) &&
+              // Written before the video another store is storing.
+              !_usedByStores(file, except: this, holds: false)) {
         _deleteNow(file);
       }
     }

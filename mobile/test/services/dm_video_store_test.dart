@@ -3121,6 +3121,30 @@ void main() {
           },
         );
 
+        test(
+          "keeps the record of a video that store is still storing",
+          () async {
+            final release = Completer<Uint8List>();
+            fetch = (_) => release.future;
+            final message = _videoMessage();
+            final downloading = createStore().videoFor(message);
+            await pumpEventQueue();
+            // Written before the video, as that store does once its download
+            // lands.
+            final record = keptFile(
+              '${message.id}.conversation',
+              'conversation\n${message.createdAt}'.codeUnits,
+              keptAt: now,
+            );
+
+            await createStore().prune();
+
+            expect(record.existsSync(), isTrue);
+            release.complete(_plaintext);
+            await downloading;
+          },
+        );
+
         test('is kept past its age while that store holds it', () async {
           final holder = createStore();
           final held = await holder.videoFor(_videoMessage());
