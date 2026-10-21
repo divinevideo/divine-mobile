@@ -610,7 +610,7 @@ class VideoRecorderBloc
     // Leaving the Upload tab resumes the camera it paused, into whichever
     // mode the user switched to meanwhile.
     if (event.state == AppLifecycleState.resumed) {
-      await _applyStabilizationForRecorderMode();
+      await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
     }
   }
 

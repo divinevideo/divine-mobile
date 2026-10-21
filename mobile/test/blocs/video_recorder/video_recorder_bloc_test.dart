@@ -3758,6 +3758,43 @@ void main() {
         );
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'clears the retained request after upload resumes into classic '
+          'on an unsupported lens',
+          setUp: () {
+            cameraRuns(DivineVideoStabilizationMode.off);
+            when(
+              () => cameraService.availableVideoStabilizationModes,
+            ).thenReturn(const [DivineVideoStabilizationMode.off]);
+          },
+          build: buildBloc,
+          seed: () => const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.upload,
+          ),
+          act: (bloc) async {
+            final classic = bloc.stream.firstWhere(
+              (state) => state.recorderMode == VideoRecorderMode.classic,
+            );
+            bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+            );
+            await classic;
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+          },
+          verify: (_) {
+            verify(
+              () => cameraService.setVideoStabilizationMode(
+                DivineVideoStabilizationMode.off,
+              ),
+            ).called(1);
+            verifyNever(
+              () => prefs.setString('camera_last_used_stabilization', any()),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
           'restores the saved choice when switching back to capture',
           setUp: () => cameraRuns(DivineVideoStabilizationMode.off),
           build: buildBloc,
