@@ -95,19 +95,49 @@ void main() {
       expect(find.text('account-status'), findsNothing);
     });
 
-    // A resume refetches the status. Pushing the screen again every time the
-    // app comes back to the foreground would trap the account on it.
+    // A resume refetches the status whenever something else keeps it alive,
+    // such as the account's own profile. Pushing the screen again every time
+    // the app comes back to the foreground would trap the account on it.
     testWidgets('does not show it again after a refetch in the same session', (
       tester,
     ) async {
-      final container = await _pumpShell(tester, _closure);
-      final router = GoRouter.of(tester.element(find.text('account-status')));
+      var fetches = 0;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            fetches++;
+            return _closure;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final ownProfile = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      addTearDown(ownProfile.close);
+      final router = _router();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('account-status'), findsOneWidget);
 
       router.pop();
       await tester.pumpAndSettle();
       container.invalidate(accountEnforcementStatusProvider);
       await tester.pumpAndSettle();
 
+      expect(fetches, 2);
       expect(find.text('home'), findsOneWidget);
       expect(find.text('account-status'), findsNothing);
     });
