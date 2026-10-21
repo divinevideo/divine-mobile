@@ -432,6 +432,7 @@ void main() {
       ]) {
         await tester.pumpWidget(
           ProviderScope(
+            key: ValueKey(ageBand),
             overrides: [
               ..._diagnosticOverrides(),
               currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
@@ -494,6 +495,7 @@ void main() {
       ]) {
         await tester.pumpWidget(
           ProviderScope(
+            key: ValueKey(ageBand),
             overrides: [
               ..._diagnosticOverrides(),
               currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
