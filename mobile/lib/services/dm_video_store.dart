@@ -1326,6 +1326,9 @@ class DmVideoStore {
     final List<File> files;
     try {
       files = file.parent.listSync().whereType<File>().toList();
+    } on PathNotFoundException {
+      // Nothing was ever kept for the account: there is nothing to delete.
+      return;
     } on FileSystemException catch (error) {
       Log.warning(
         "Could not delete a kept video DM message's files: "

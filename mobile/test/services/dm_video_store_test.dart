@@ -440,6 +440,28 @@ void main() {
       );
 
       test(
+        'refuses a gone message by its own name, and warns of nothing, when '
+        'nothing was ever kept for the account',
+        () async {
+          final store = createStore(isMessageGone: (_) async => true);
+          await LogCaptureService().clearAllLogs();
+
+          await expectLater(
+            store.videoFor(_videoMessage()),
+            throwsA(
+              isA<DmVideoGoneException>().having(
+                (error) => error.toString(),
+                'toString',
+                startsWith('DmVideoGoneException'),
+              ),
+            ),
+          );
+
+          expect(_loggedLines(), isNot(contains(contains('Could not'))));
+        },
+      );
+
+      test(
         'keeps no video whose message went while it downloaded',
         () async {
           final release = Completer<Uint8List>();

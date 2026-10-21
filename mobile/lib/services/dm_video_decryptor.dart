@@ -50,6 +50,9 @@ class DmVideoWithdrawnException extends DmVideoUnavailableException {
 class DmVideoGoneException extends DmVideoUnavailableException {
   /// Creates a [DmVideoGoneException].
   const DmVideoGoneException() : super('the message was retracted or removed');
+
+  @override
+  String toString() => 'DmVideoGoneException: $message';
 }
 
 /// Thrown when a kept video or frame could not be written to the device.
