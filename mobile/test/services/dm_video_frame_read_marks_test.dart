@@ -90,6 +90,30 @@ void main() {
         expect(mark.existsSync(), isTrue);
         expect(laterLaunchBlamesTheSender(), isFalse);
       });
+
+      test('writes no mark back once it is gone', () {
+        final marks = createMarks(launchId: 'earlier');
+        final mark = markOf('1');
+        marks.readStarted(mark, _sender);
+        mark.deleteSync();
+
+        marks.readEnded(mark);
+
+        expect(mark.existsSync(), isFalse);
+      });
+
+      test('writes nothing for an account removed from the device', () {
+        final marks = createMarks(launchId: 'earlier');
+        final mark = markOf('1');
+        marks.readStarted(mark, _sender);
+        final named = mark.readAsStringSync();
+        ownerRemoved = true;
+
+        marks.readEnded(mark);
+
+        expect(named, isNotEmpty);
+        expect(mark.readAsStringSync(), equals(named));
+      });
     });
 
     group('readHung', () {

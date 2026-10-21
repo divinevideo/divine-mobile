@@ -96,16 +96,7 @@ class DmVideoFrameReadMarks {
   /// video is not read again while it is kept, but blames no one.
   void readEnded(File mark) {
     _running.remove(mark.path);
-    try {
-      mark.writeAsStringSync('');
-    } on FileSystemException catch (error) {
-      Log.warning(
-        'Could not record that a video DM frame read ended: '
-        '${dmVideoFileErrorCause(error)}',
-        name: _logName,
-        category: LogCategory.video,
-      );
-    }
+    _rewrite(mark, '');
   }
 
   /// Names [mark]'s sender for good: its read outlived its turn, so it hung,
