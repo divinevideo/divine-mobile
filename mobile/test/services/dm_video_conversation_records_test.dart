@@ -88,21 +88,17 @@ void main() {
         expect(writes, equals(1));
       });
 
-      test(
-        'writes again when told to, or when the record went missing',
-        () async {
-          final records = createRecords();
-          final message = _videoMessage();
-          await records.write(message, dir);
+      test('writes again when the record went missing', () async {
+        final records = createRecords();
+        final message = _videoMessage();
+        await records.write(message, dir);
 
-          await records.write(message, dir, force: true);
-          recordOf(message).deleteSync();
-          await records.write(message, dir);
+        recordOf(message).deleteSync();
+        await records.write(message, dir);
 
-          expect(writes, equals(3));
-          expect(recordOf(message).existsSync(), isTrue);
-        },
-      );
+        expect(writes, equals(2));
+        expect(recordOf(message).existsSync(), isTrue);
+      });
 
       test(
         "leaves a record it has to a refresh, whatever a caller's copy says, "
@@ -157,8 +153,8 @@ void main() {
           final record = recordOf(message);
           const location = (conversationId: 'moved', sentAt: 1757385263);
 
-          await records.refresh(record, message.id, location);
-          await records.refresh(record, message.id, location);
+          await records.refresh(record, location);
+          await records.refresh(record, location);
 
           expect(record.readAsStringSync(), equals('moved\n1757385263'));
           expect(writes, equals(2));
@@ -174,9 +170,9 @@ void main() {
           failWrites = true;
           const moved = (conversationId: 'moved', sentAt: 1757385263);
 
-          await records.refresh(recordOf(message), message.id, moved);
+          await records.refresh(recordOf(message), moved);
           failWrites = false;
-          await records.refresh(recordOf(message), message.id, moved);
+          await records.refresh(recordOf(message), moved);
 
           expect(
             recordOf(message).readAsStringSync(),

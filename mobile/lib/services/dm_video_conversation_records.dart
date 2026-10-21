@@ -49,22 +49,17 @@ class DmVideoConversationRecords {
 
   final DmVideoAtomicWriter _writeAtomically;
 
-  /// Writes [message]'s record in [dir] when it has none, or with [force].
-  /// A record it has is otherwise left to [refresh], which follows the
-  /// message's row: a caller can hold the message from before a repair
-  /// moved it to another conversation.
+  /// Writes [message]'s record in [dir] when it has none. A record it has is
+  /// left to [refresh], which follows the message's row: a caller can hold
+  /// the message from before a repair moved it to another conversation.
   ///
   /// Throws a [DmVideoUnavailableException] when the record cannot be
   /// written.
-  Future<void> write(
-    DmMessage message,
-    Directory dir, {
-    bool force = false,
-  }) async {
+  Future<void> write(DmMessage message, Directory dir) async {
     final record = recordOf(dir, message.id);
     // A record can go from outside the store too: the launch sweep, or the
     // system clearing the cache folder.
-    if (!force && record.existsSync()) return;
+    if (record.existsSync()) return;
     await _writeAtomically(
       record,
       utf8.encode(_contentOf(message.conversationId, message.createdAt)),
@@ -85,17 +80,12 @@ class DmVideoConversationRecords {
     }
   }
 
-  /// Rewrites [record], of the message [messageId], to name [location] when
-  /// it says otherwise: a group repair can move a message after its video
+  /// Rewrites [record] to name [location] when it says otherwise: a group repair can move a message after its video
   /// was kept, and its record must say where it is before an account switch
   /// drops its row. Read from disk, as another store of the same account can
   /// write it. One that cannot be written is logged and tried again by the
   /// next refresh.
-  Future<void> refresh(
-    File record,
-    String messageId,
-    DmVideoMessageLocation location,
-  ) async {
+  Future<void> refresh(File record, DmVideoMessageLocation location) async {
     final content = _contentOf(location.conversationId, location.sentAt);
     if (await _readQuietly(record) == content) return;
     try {

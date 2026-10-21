@@ -165,7 +165,6 @@ class DmVideoGoneLookups {
             // A group repair may have moved this message since it was kept.
             await _records.refresh(
               records[id] ?? DmVideoConversationRecords.recordOf(dir, id),
-              id,
               current,
             );
           }
