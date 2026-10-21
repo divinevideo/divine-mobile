@@ -54,7 +54,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Divine needs access to your camera to record short videos.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Divine needs access to your microphone to record audio with videos.</string>
+	<string>Divine needs access to your microphone to record audio for your videos and sounds.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Divine needs access to save videos to your Photos library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
