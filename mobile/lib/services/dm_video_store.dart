@@ -143,7 +143,8 @@ class DmVideoStore {
   /// Longest a frame read keeps the decoder from the next one. A decode that
   /// outlasts it keeps its video leased until it returns, but the next read
   /// starts beside it: a native call that never replies must not leave
-  /// every other card on its fallback until the store is rebuilt.
+  /// every other card on its fallback until the store is rebuilt. It counts
+  /// as hung, so its sender is blamed as [previewFor] says.
   static const Duration defaultFrameTurnLimit = Duration(seconds: 60);
 
   /// How long a card waits for its frame by default; see [frameDeadline].
@@ -423,9 +424,10 @@ class DmVideoStore {
   /// until [maxAge] has passed; one that may pass is tried again after
   /// [autoDownloadRetryAfter], and at most [autoDownloadMaxTries] times a
   /// session. A tap on play still fetches it. Nothing is fetched or read by
-  /// itself for a sender one of whose frame reads an earlier launch never
-  /// finished with the app in the foreground, until that is [maxAge] old; a
-  /// tap still plays their videos.
+  /// itself for a sender one of whose frame reads hung: for the rest of the
+  /// session once it outlived [frameTurnLimit], and until [maxAge] after a
+  /// launch that left it unfinished, in the foreground or once it outlived
+  /// that limit. A tap still plays their videos.
   ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
@@ -453,8 +455,9 @@ class DmVideoStore {
   static bool _alwaysWanted() => true;
 
   /// The path of [message]'s frame when this store already read or found it,
-  /// so a card built again shows it at once. Null once the file is gone: the
-  /// system can clear the cache directory while the app runs.
+  /// so a card built again shows it at once. Null once the file is gone, as
+  /// the system can clear the cache directory while the app runs, or past
+  /// [maxAge].
   String? knownPreviewPathFor(DmMessage message) {
     final path = _knownPreviews[message.id];
     if (path == null) return null;
@@ -467,7 +470,8 @@ class DmVideoStore {
   /// Whether the app is in the foreground, as its provider reports. While it
   /// is not, frame reads under way leave their marks empty: the system kills
   /// apps in the background, and that must not count as a decode crashing
-  /// the app, nor blame the video's sender.
+  /// the app, nor blame the video's sender, unless the read outlived
+  /// [frameTurnLimit]. Coming back to the foreground prunes.
   bool get appInForeground => _frameReadMarks.appInForeground;
 
   set appInForeground(bool inForeground) {
@@ -501,10 +505,9 @@ class DmVideoStore {
   /// by this store or another of the account's, is not deleted for its age
   /// or the cap and does not count against [maxBytes]; a gone message's goes
   /// once no read or hand-out uses it. In-use videos can keep the folder over
-  /// [maxBytes]. Part files are
-  /// deleted once old enough to be a crash's, or as soon as their message is
-  /// gone. A folder that cannot be read is logged, without its path, and
-  /// left.
+  /// [maxBytes]. Part files are deleted once old enough to be a crash's, or as
+  /// soon as their message is gone. A folder that cannot be read is logged,
+  /// without its path, and left.
   ///
   /// One prune runs at a time. Asked for while one runs, it runs once more
   /// after it, for every caller asking meanwhile, and completes with that.
@@ -1345,7 +1348,7 @@ class DmVideoStore {
       files = file.parent.listSync().whereType<File>().toList();
     } on FileSystemException catch (error) {
       Log.warning(
-        "Could not delete a gone video DM message's files: "
+        "Could not delete a kept video DM message's files: "
         '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
