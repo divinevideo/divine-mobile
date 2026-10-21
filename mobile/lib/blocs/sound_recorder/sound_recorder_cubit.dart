@@ -71,6 +71,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   final DateTime Function() _now;
 
   StreamSubscription<double>? _amplitudeSubscription;
+  StreamSubscription<void>? _systemPauseSubscription;
   Timer? _durationLimit;
   late DateTime _startedAt;
 
@@ -95,11 +96,10 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   Future<void> start() async {
     if (state.isActive || _isTransitioning) return;
     _isTransitioning = true;
-    if (state.status == SoundRecorderStatus.failed) {
-      // A repeated failure must be a new status transition for the view's
-      // error listener, even when the recorder fails before its first sample.
-      emitIfOpen(state.copyWith(status: SoundRecorderStatus.idle));
-    }
+    // Announced before the permission prompt and the native start, so the
+    // screen can lock the file picker meanwhile. It also makes a repeated
+    // failure a new status transition for the view's error listener.
+    emitIfOpen(state.copyWith(status: SoundRecorderStatus.starting));
     try {
       var permission = await _permissionsService.checkMicrophoneStatus();
       if (_closing) return;
@@ -196,6 +196,13 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   /// permanent refusal.
   Future<void> openSettings() => _permissionsService.openAppSettings();
 
+  /// Clears a refusal the person chose to work around, e.g. by picking a file
+  /// instead, so its notice does not linger.
+  void dismissPermissionNotice() {
+    if (state.status != SoundRecorderStatus.permissionDenied) return;
+    emitIfOpen(state.copyWith(status: SoundRecorderStatus.idle));
+  }
+
   Future<void> _start() async {
     // Taken over recordings were moved away already; this only deletes one
     // the screen never claimed.
@@ -235,12 +242,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       // Meter samples can stall independently of native capture. The length
       // limit must not depend on the number of samples delivered to Dart.
       emitIfOpen(state.copyWith(elapsed: state.maxDuration));
-      runDetached(
-        stop(),
-        'stop a recording at its length limit',
-        logName: _logName,
-        category: LogCategory.video,
-      );
+      _stopOnItsOwn('stop a recording at its length limit');
     });
     emitIfOpen(
       state.copyWith(
@@ -252,6 +254,22 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     );
     unawaited(HapticService.recordingFeedback());
     _amplitudeSubscription = _recorder.amplitudeStream.listen(_onAmplitude);
+    // A call, Siri or another app taking audio focus pauses capture, and
+    // nothing resumes it. End the take there, as the length limit does,
+    // rather than keep showing a recording that is not recording.
+    _systemPauseSubscription = _recorder.systemPauses.listen(
+      (_) => _stopOnItsOwn('stop a recording the system paused'),
+    );
+  }
+
+  /// Stops the take without the person tapping stop, keeping it.
+  void _stopOnItsOwn(String description) {
+    runDetached(
+      stop(),
+      description,
+      logName: _logName,
+      category: LogCategory.video,
+    );
   }
 
   void _onAmplitude(double amplitude) {
@@ -263,12 +281,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     final elapsed = _now().difference(_startedAt);
     emitIfOpen(state.copyWith(waveformBars: bars, elapsed: elapsed));
     if (elapsed >= state.maxDuration) {
-      runDetached(
-        stop(),
-        'stop a recording at its length limit',
-        logName: _logName,
-        category: LogCategory.video,
-      );
+      _stopOnItsOwn('stop a recording at its length limit');
     }
   }
 
@@ -277,6 +290,8 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     _durationLimit = null;
     await _amplitudeSubscription?.cancel();
     _amplitudeSubscription = null;
+    await _systemPauseSubscription?.cancel();
+    _systemPauseSubscription = null;
   }
 
   Future<void> _safeStopRecorder() async {

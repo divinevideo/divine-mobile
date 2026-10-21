@@ -163,7 +163,8 @@ class AddSoundCubit extends Cubit<AddSoundState>
   }
 
   /// Takes over the microphone recording at [path] as the sound to add, under
-  /// [title].
+  /// [title] while it stays private; a public share starts with an empty
+  /// title for the person to fill in.
   ///
   /// The recording is moved into library storage rather than copied, so the
   /// recorder's scratch file does not outlive a successful import. Otherwise
@@ -249,7 +250,12 @@ class AddSoundCubit extends Cubit<AddSoundState>
         // The credit opens as the publisher's own work: that is the case
         // sharing exists for, and turning it off is one tap.
         attribution: AudioShareAttribution(
-          title: audio.title ?? '',
+          // A recording's title is a local date and time in the app's
+          // language: fine for the private copy, but published it would give
+          // away the recorder's timezone and language. A share starts blank.
+          title: import.source == AddSoundSource.recording
+              ? ''
+              : audio.title ?? '',
           creatorName: _publisherName,
           creatorPubkey: _publisherPubkey,
           publicTags: const [],

@@ -25,6 +25,9 @@ class _FakeRecorder implements VoiceOverRecorderService {
   Stream<double> get amplitudeStream => _controller.stream;
 
   @override
+  Stream<void> get systemPauses => const Stream.empty();
+
+  @override
   Future<void> start(String path) async {
     lastPath = path;
     // Mirror the native recorder, which opens (creates) the output file as

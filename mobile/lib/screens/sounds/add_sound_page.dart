@@ -113,15 +113,25 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
   String? _loadedPath;
   bool _playing = false;
   int _previewSession = 0;
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
     _audioService = ref.read(audioPlaybackServiceProvider);
+    _lifecycle = AppLifecycleListener(onHide: _stopRecordingOutOfSight);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Another screen opened over this one, e.g. from a notification tap.
+    if (ModalRoute.isCurrentOf(context) == false) _stopRecordingOutOfSight();
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _previewSession++;
     _nameController.dispose();
     // Stop on navigation so a preview cannot outlive this route.
@@ -137,6 +147,8 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
   }
 
   Future<void> _pickFile() async {
+    // Picking a file is the way around a refused microphone.
+    context.read<SoundRecorderCubit>().dismissPermissionNotice();
     await _stopPreview();
     if (!mounted) return;
     await context.read<AddSoundCubit>().pickFileAndImport();
@@ -147,6 +159,21 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
     await _stopPreview();
     if (!mounted) return;
     await context.read<SoundRecorderCubit>().start();
+  }
+
+  /// Ends a recording the person can no longer see — another screen opened
+  /// over this one, or the app left the foreground — and keeps the take for
+  /// when they come back, as the length limit does. The microphone only runs
+  /// while the recorder is on screen.
+  void _stopRecordingOutOfSight() {
+    final recorder = context.read<SoundRecorderCubit>();
+    if (!recorder.state.isRecording) return;
+    runDetached(
+      recorder.stop(),
+      'stop a recording that went out of sight',
+      logName: _logName,
+      category: LogCategory.video,
+    );
   }
 
   void _cancelRecording() {
@@ -160,9 +187,18 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
 
   /// Moves a finished recording into the flow, titled after when it was made
   /// until the user names it.
+  ///
+  /// The title is local time in the app's language, so it only names the
+  /// private copy: a public share starts with an empty title (see
+  /// `AddSoundCubit.importRecording`).
   void _takeOverRecording(BuildContext context, String path) {
     final locale = Localizations.localeOf(context).toString();
-    final recordedAt = DateFormat.MMMd(locale).add_jm().format(DateTime.now());
+    final date = DateFormat.MMMd(locale);
+    final recordedAt =
+        (MediaQuery.alwaysUse24HourFormatOf(context)
+                ? date.add_Hm()
+                : date.add_jm())
+            .format(DateTime.now());
     runDetached(
       context.read<AddSoundCubit>().importRecording(
         path: path,
@@ -194,6 +230,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
         );
       case SoundRecorderStatus.idle:
       case SoundRecorderStatus.permissionDenied:
+      case SoundRecorderStatus.starting:
       case SoundRecorderStatus.stopping:
         break;
     }
@@ -315,6 +352,9 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
           final isRecorderActive = context.select(
             (SoundRecorderCubit c) => c.state.isActive,
           );
+          final isRecorderStarting = context.select(
+            (SoundRecorderCubit c) => c.state.isStarting,
+          );
           final isMicrophoneDenied = context.select(
             (SoundRecorderCubit c) =>
                 c.state.status == SoundRecorderStatus.permissionDenied,
@@ -352,8 +392,10 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                     const _RecordingPanel()
                   else if (audio == null)
                     _SourcePrompt(
-                      importing: state.status == AddSoundStatus.importing
+                      inFlight: state.status == AddSoundStatus.importing
                           ? state.source
+                          : isRecorderStarting
+                          ? AddSoundSource.recording
                           : null,
                       onPick: _pickFile,
                       onRecord: _startRecording,
@@ -363,7 +405,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                       sound: audio,
                       isPlaying: _playing,
                       canPreview: !state.isBusy,
-                      canChange: state.canEdit,
+                      canChange: state.canEdit && !isRecorderStarting,
                       isRecordedSound: isRecordedSound,
                       onTogglePreview: () => _togglePreview(audio),
                       onChange: isRecordedSound ? _startRecording : _pickFile,
@@ -448,19 +490,21 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
 /// The two ways to add a sound: pick a file or record one.
 class _SourcePrompt extends StatelessWidget {
   const _SourcePrompt({
-    required this.importing,
+    required this.inFlight,
     required this.onPick,
     required this.onRecord,
   });
 
-  /// Where the sound being imported comes from, or null when nothing is.
-  final AddSoundSource? importing;
+  /// The source being worked on — a file importing, or the microphone
+  /// starting or a recording importing — or null when nothing is. Both
+  /// buttons wait for it.
+  final AddSoundSource? inFlight;
   final VoidCallback onPick;
   final VoidCallback onRecord;
 
   @override
   Widget build(BuildContext context) {
-    final busy = importing != null;
+    final busy = inFlight != null;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -486,7 +530,7 @@ class _SourcePrompt extends StatelessWidget {
             label: context.l10n.soundUploadChooseFile,
             leadingIcon: DivineIconName.folderOpen,
             expanded: true,
-            isLoading: importing == AddSoundSource.file,
+            isLoading: inFlight == AddSoundSource.file,
             onPressed: busy ? null : onPick,
           ),
           const SizedBox(height: 12),
@@ -504,7 +548,7 @@ class _SourcePrompt extends StatelessWidget {
             leadingIcon: DivineIconName.microphone,
             type: DivineButtonType.secondary,
             expanded: true,
-            isLoading: importing == AddSoundSource.recording,
+            isLoading: inFlight == AddSoundSource.recording,
             onPressed: busy ? null : onRecord,
           ),
         ],

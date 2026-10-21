@@ -10,6 +10,10 @@ enum SoundRecorderStatus {
   /// Microphone access was refused; the user has to allow it in settings.
   permissionDenied,
 
+  /// Microphone access is being checked or asked for, or the recorder is
+  /// starting.
+  starting,
+
   /// The microphone is recording.
   recording,
 
@@ -53,6 +57,8 @@ class SoundRecorderState extends Equatable {
   final String? recordingPath;
 
   bool get isRecording => status == SoundRecorderStatus.recording;
+
+  bool get isStarting => status == SoundRecorderStatus.starting;
 
   /// Whether a recording is running or still being finished.
   bool get isActive =>

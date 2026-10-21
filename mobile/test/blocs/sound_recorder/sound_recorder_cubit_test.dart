@@ -55,8 +55,13 @@ class _FakeRecorder implements VoiceOverRecorderService {
   /// trip that keeps close() from finishing straight away.
   Completer<void>? disposeGate;
 
+  final _pauses = StreamController<void>.broadcast();
+
   @override
   Stream<double> get amplitudeStream => _levels.stream;
+
+  @override
+  Stream<void> get systemPauses => _pauses.stream;
 
   Future<T> _oneAtATime<T>(Future<T> Function() call) async {
     for (var pending = _inFlight; pending != null; pending = _inFlight) {
@@ -94,7 +99,14 @@ class _FakeRecorder implements VoiceOverRecorderService {
   Future<void> dispose() => _oneAtATime(() async {
     await disposeGate?.future;
     await _levels.close();
+    await _pauses.close();
   });
+
+  /// A call, Siri or another app taking audio focus.
+  Future<void> pauseBySystem() async {
+    _pauses.add(null);
+    await pumpEventQueue();
+  }
 
   Future<void> emitLevel(double level) async {
     now = now.add(SoundRecorderCubit.amplitudeInterval);
@@ -320,6 +332,18 @@ void main() {
 
         expect(cubit.state.recordingPath, isNull);
         expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      test('stops on its own when the system pauses capture', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+
+        await recorder.pauseBySystem();
+
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+        expect(cubit.state.recordingPath, recorder.path);
+        expect(File(recorder.path!).existsSync(), isTrue);
       });
 
       test('stops on its own at the length limit', () async {

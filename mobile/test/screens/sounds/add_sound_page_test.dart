@@ -53,6 +53,9 @@ class _FakeRecorder implements VoiceOverRecorderService {
   Stream<double> get amplitudeStream => _levels.stream;
 
   @override
+  Stream<void> get systemPauses => const Stream.empty();
+
+  @override
   Future<void> start(String path) async {
     this.path = path;
     File(path).writeAsBytesSync([7, 8, 9]);
@@ -810,6 +813,103 @@ void main() {
         expect(find.text(l10n.soundsRecordPermissionBody), findsOneWidget);
         expect(recorder.path, isNull);
         verify(permissions.openAppSettings).called(1);
+      });
+
+      testWidgets('hides the microphone notice once a file is picked', (
+        tester,
+      ) async {
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) async => PermissionStatus.requiresSettings);
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.soundsRecordPermissionBody), findsOneWidget);
+
+        await pickFile(tester);
+
+        expect(find.text(l10n.soundsRecordPermissionBody), findsNothing);
+      });
+
+      testWidgets('locks the file picker while the microphone starts', (
+        tester,
+      ) async {
+        final permission = Completer<PermissionStatus>();
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) => permission.future);
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<DivineButton>(find.byKey(const Key('add_sound_pick')))
+              .onPressed,
+          isNull,
+        );
+
+        permission.complete(PermissionStatus.granted);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('add_sound_stop_recording')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('stops a recording another screen covers and keeps it', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+
+        final navigator = Navigator.of(
+          tester.element(find.byType(AddSoundView)),
+        );
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('covering')),
+          ),
+        );
+        // The covered page notices on the frames of the push, so the recorder
+        // settles after them.
+        await tester.pumpAndSettle();
+        await settleRecorder(tester);
+        navigator.pop();
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('add_sound_record_again')), findsOneWidget);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('stops a recording when the app is hidden and keeps it', (
+        tester,
+      ) async {
+        addTearDown(
+          () => tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          ),
+        );
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        await settleRecorder(tester);
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('add_sound_record_again')), findsOneWidget);
       });
 
       testWidgets('blocks back navigation while sharing', (tester) async {

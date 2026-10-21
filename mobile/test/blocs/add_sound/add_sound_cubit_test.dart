@@ -291,7 +291,9 @@ void main() {
         expect(cubit.state.status, AddSoundStatus.ready);
         expect(cubit.state.source, AddSoundSource.recording);
         expect(cubit.state.audio!.title, 'Recording');
-        expect(cubit.state.attribution!.title, 'Recording');
+        // The private title is a local date; a public share starts blank so
+        // it never publishes the recorder's timezone or language.
+        expect(cubit.state.attribution!.title, isEmpty);
         expect(
           await File(cubit.state.audio!.localFilePath!).readAsBytes(),
           equals([4, 5, 6]),
