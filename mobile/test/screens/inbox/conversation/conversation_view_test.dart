@@ -37,6 +37,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
@@ -5379,6 +5380,30 @@ void main() {
             find.text(l10n.dmVideoCardHiddenSenderBlocked),
             findsOneWidget,
           );
+        });
+
+        testWidgets("opens a blocked sender's video on tap", (tester) async {
+          when(
+            () => mockBlocklist.dmHiddenPubkeys,
+          ).thenReturn(const {otherPubkey});
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+          // The play page stays loading; that it opened is the point.
+          when(
+            () => store.videoFor(any()),
+          ).thenAnswer((_) => Completer<File>().future);
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {otherPubkey: FollowRelationship.mutual},
+          );
+
+          await tester.tap(find.byType(EncryptedVideoCard));
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.byType(DmVideoPlayPage), findsOneWidget);
+          verify(() => store.videoFor(video)).called(1);
         });
 
         testWidgets("holds back a muted sender's video, though the user "

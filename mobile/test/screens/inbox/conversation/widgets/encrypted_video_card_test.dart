@@ -286,6 +286,27 @@ void main() {
         });
       }
 
+      for (final hold in DmVideoHold.values) {
+        testWidgets('still plays a ${hold.name} card on tap', (tester) async {
+          var taps = 0;
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: framePath,
+                hold: hold,
+                onTap: () => taps++,
+              ),
+            ),
+          );
+
+          await tester.tap(find.byType(EncryptedVideoCard));
+
+          expect(taps, 1);
+        });
+      }
+
       testWidgets('tells screen readers why there is no preview', (
         tester,
       ) async {
