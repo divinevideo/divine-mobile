@@ -223,6 +223,58 @@ void main() {
       );
 
       test(
+        'stops skipping the sender only once a launch, so a second read of '
+        'theirs that hangs keeps them skipped even once it keeps a frame',
+        () {
+          final marks = createMarks(launchId: 'this');
+          final first = markOf('1');
+          final second = markOf('2');
+          marks
+            ..readStarted(first, _sender)
+            ..readHung(first)
+            ..frameKept(first);
+          expect(marks.senderHungTheDecoder(dir, _sender), isFalse);
+
+          marks
+            ..readStarted(second, _sender)
+            ..readHung(second)
+            ..frameKept(second);
+
+          expect(marks.senderHungTheDecoder(dir, _sender), isTrue);
+          expect(
+            createMarks(launchId: 'this').senderHungTheDecoder(dir, _sender),
+            isTrue,
+          );
+          final third = markOf('3');
+          final nextLaunch = createMarks(launchId: 'next')
+            ..readStarted(third, _sender)
+            ..readHung(third)
+            ..frameKept(third);
+          expect(nextLaunch.senderHungTheDecoder(dir, _sender), isFalse);
+        },
+      );
+
+      test(
+        'forgives the sender when their last hung read keeps a frame, though '
+        'an earlier one kept its own while that read still hung',
+        () {
+          final marks = createMarks(launchId: 'this');
+          final first = markOf('1');
+          final second = markOf('2');
+          marks
+            ..readStarted(first, _sender)
+            ..readStarted(second, _sender)
+            ..readHung(first)
+            ..readHung(second)
+            ..frameKept(first);
+
+          marks.frameKept(second);
+
+          expect(marks.senderHungTheDecoder(dir, _sender), isFalse);
+        },
+      );
+
+      test(
         "goes on skipping the sender while another store's read of theirs "
         'hangs',
         () {

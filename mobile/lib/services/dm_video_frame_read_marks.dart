@@ -19,7 +19,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// empty: the system kills apps there, and that is no crash. A read past its
 /// turn limit hung: its mark names the sender until the read ends, even in
 /// the background, and every store skips the sender for the rest of the
-/// launch, unless that read keeps a frame after all.
+/// launch, unless that read keeps a frame after all, which forgives a sender
+/// once a launch.
 class DmVideoFrameReadMarks {
   /// Creates the marks of one store, whose account [ownerRemoved] says was
   /// removed from this device: a sender is then not remembered on disk, as
@@ -67,6 +68,10 @@ class DmVideoFrameReadMarks {
   /// The marks of reads that hung and have not ended, by launch and folder,
   /// then by path, with the sender each names.
   static final Map<String, Map<String, String>> _hung = {};
+
+  /// Senders a hung read of which kept a frame, by launch and folder: each
+  /// is read again once a launch, not each time.
+  static final Map<String, Set<String>> _forgivenInLaunch = {};
   bool _lookedForUnfinishedReads = false;
 
   /// The mark of [messageId]'s frame read in [dir].
@@ -113,8 +118,8 @@ class DmVideoFrameReadMarks {
   /// Names [mark]'s sender until the read ends: it outlived its turn, so it
   /// hung, and a kill meanwhile, even in the background, still blames them.
   /// Their other videos are not read by themselves for the rest of the
-  /// launch either, unless it keeps a frame after all. Does nothing once the
-  /// read ended.
+  /// launch either, unless it keeps a frame after all and they were not
+  /// forgiven once already. Does nothing once the read ended.
   void readHung(File mark) {
     final senderPubkey = _running.remove(mark.path);
     if (senderPubkey == null) return;
@@ -125,13 +130,17 @@ class DmVideoFrameReadMarks {
   }
 
   /// Deletes [mark], whose read kept a frame. A read that hung was slow, not
-  /// stuck: unless another of theirs hangs, its sender is read again.
+  /// stuck: unless another of theirs hangs, its sender is read again, once a
+  /// launch, as each such read holds up every other sender's frames for its
+  /// whole turn.
   void frameKept(File mark) {
     _running.remove(mark.path);
     final key = _launchKeyOf(mark.parent);
     final hung = _hung[key];
     final hungSender = hung?.remove(mark.path);
-    if (hungSender != null && !hung!.containsValue(hungSender)) {
+    if (hungSender != null &&
+        !hung!.containsValue(hungSender) &&
+        (_forgivenInLaunch[key] ??= {}).add(hungSender)) {
       _hungInLaunch[key]?.remove(hungSender);
     }
     try {
