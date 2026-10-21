@@ -15329,4 +15329,15 @@ class AppLocalizationsMs extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Video anda telah dihantar untuk semakan.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video dihantar';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain.';
 }

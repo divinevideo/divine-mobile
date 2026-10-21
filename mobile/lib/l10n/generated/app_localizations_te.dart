@@ -15698,4 +15698,15 @@ class AppLocalizationsTe extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'మీ వీడియో సమీక్ష కోసం సమర్పించబడింది.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'వీడియో సమర్పించబడింది';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'మీ వీడియో సమీక్ష కోసం Divine మద్దతు మరియు నమ్మకం, భద్రత బృందాలకు ప్రైవేట్‌గా పంపబడుతుంది. ఇది ప్రచురించబడదు లేదా ఇతర వినియోగదారులతో పంచుకోబడదు.';
 }

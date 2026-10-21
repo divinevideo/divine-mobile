@@ -15279,4 +15279,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Video của bạn đã được gửi để xem xét.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Đã gửi video';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Video của bạn được gửi riêng tư đến các nhóm Hỗ trợ và Tin cậy và An toàn của Divine để xem xét. Video không được đăng công khai hoặc chia sẻ với người dùng khác.';
 }

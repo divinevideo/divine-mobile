@@ -15264,4 +15264,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Videon incelenmek üzere gönderildi.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video gönderildi';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Videonuz incelenmek üzere Divine Destek ve Güven ve Güvenlik ekiplerine özel olarak gönderilir. Yayınlanmaz veya diğer kullanıcılarla paylaşılmaz.';
 }

@@ -15432,4 +15432,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Your video has been submitted for review.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video submitted';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.';
 }

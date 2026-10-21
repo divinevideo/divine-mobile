@@ -15415,4 +15415,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Je video is ingediend voor beoordeling.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video ingediend';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Je video wordt vertrouwelijk naar de teams voor ondersteuning en vertrouwen en veiligheid van Divine gestuurd voor beoordeling. De video wordt niet gepubliceerd of met andere gebruikers gedeeld.';
 }

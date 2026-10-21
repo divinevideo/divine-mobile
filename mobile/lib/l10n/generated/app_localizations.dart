@@ -25634,6 +25634,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Organizer time: {deadline} ({timeZone})'**
   String challengeOrganizerTime(String deadline, String timeZone);
+
+  /// No description provided for @minorAccountReviewVideoSubmittedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your video has been submitted for review.'**
+  String get minorAccountReviewVideoSubmittedBody;
+
+  /// No description provided for @minorAccountReviewVideoSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Video submitted'**
+  String get minorAccountReviewVideoSubmittedTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentPrivacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.'**
+  String get minorAccountReviewRecordConsentPrivacyBody;
 }
 
 class _AppLocalizationsDelegate
