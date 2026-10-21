@@ -73,6 +73,11 @@ class BuildConfiguration {
         // Default OFF: the POC signs with the account's real key into a
         // stream anyone can read, so only reviewer builds opt in (#10094).
         return const bool.fromEnvironment('FF_CONCORD_CHAT');
+      case FeatureFlag.minorConsentInAppRecording:
+        // Default OFF: parents opt in from Settings → Feature Flags. A
+        // release build may pre-enable it with the dart-define once the
+        // rollout is approved; the route ships server-side either way.
+        return const bool.fromEnvironment('FF_MINOR_CONSENT_IN_APP_RECORDING');
     }
   }
 
@@ -123,6 +128,8 @@ class BuildConfiguration {
         return 'FF_GROUP_MESSAGES';
       case FeatureFlag.concordChat:
         return 'FF_CONCORD_CHAT';
+      case FeatureFlag.minorConsentInAppRecording:
+        return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
     }
   }
 }

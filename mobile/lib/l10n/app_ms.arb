@@ -7047,5 +7047,8 @@
       }
     }
   },
-  "userRowPosted": "Disiarkan {time}"
+  "userRowPosted": "Disiarkan {time}",
+  "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain."
 }

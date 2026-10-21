@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
+import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
@@ -36,6 +37,12 @@ List<RouteBase> minorAccountReviewRoutes() {
       name: MinorAccountReviewParentConsentScreen.routeName,
       parentNavigatorKey: NavigatorKeys.root,
       builder: (ctx, st) => const MinorAccountReviewParentConsentScreen(),
+    ),
+    GoRoute(
+      path: MinorAccountReviewRecordConsentScreen.path,
+      name: MinorAccountReviewRecordConsentScreen.routeName,
+      parentNavigatorKey: NavigatorKeys.root,
+      builder: (ctx, st) => const MinorAccountReviewRecordConsentScreen(),
     ),
     GoRoute(
       path: MinorAccountReviewParentContactScreen.path,

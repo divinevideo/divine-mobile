@@ -2,7 +2,6 @@
 // ABOUTME: cases. Sends a parent or guardian email to the backend.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -99,35 +98,18 @@ class _MinorAccountReviewParentContactScreenState
     });
 
     try {
-      if (kDebugMode) {
-        final overrideService = ref.read(
-          minorAccountReviewOverrideServiceProvider,
-        );
-        final localOverride = overrideService.getOverride();
-        if (localOverride?.currentCase?.id == reviewCase.id) {
-          await overrideService.setOverride(
-            localOverride!.copyWith(
-              currentCase: localOverride.currentCase!.copyWith(
-                state: MinorReviewCaseState.submittedForReview,
-                instructions: MinorReviewInstructions(
-                  title: context.l10n.minorAccountReviewSubmissionReceivedTitle,
-                  body: context
-                      .l10n
-                      .minorAccountReviewSubmissionReceivedLocalBody,
-                ),
-              ),
+      await ref
+          .read(minorAccountReviewRepositoryProvider)
+          .submitParentContact(
+            caseId: reviewCase.id,
+            email: email,
+            // Used only when a developer override is simulating this case; the
+            // repository decides, so the copy is resolved here where l10n lives.
+            localReceipt: MinorReviewInstructions(
+              title: context.l10n.minorAccountReviewSubmissionReceivedTitle,
+              body: context.l10n.minorAccountReviewSubmissionReceivedLocalBody,
             ),
           );
-        } else {
-          await ref
-              .read(minorAccountReviewRepositoryProvider)
-              .submitParentContact(caseId: reviewCase.id, email: email);
-        }
-      } else {
-        await ref
-            .read(minorAccountReviewRepositoryProvider)
-            .submitParentContact(caseId: reviewCase.id, email: email);
-      }
       ref.invalidate(currentMinorAccountReviewStatusProvider);
       if (!mounted) return;
       setState(() {

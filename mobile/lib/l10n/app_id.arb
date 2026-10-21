@@ -5746,5 +5746,8 @@
       }
     }
   },
-  "userRowPosted": "Diposting {time}"
+  "userRowPosted": "Diposting {time}",
+  "minorAccountReviewVideoSubmittedBody": "Videomu telah dikirim untuk ditinjau.",
+  "minorAccountReviewVideoSubmittedTitle": "Video terkirim",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video Anda dikirim secara pribadi ke tim Dukungan serta Kepercayaan dan Keamanan Divine untuk ditinjau. Video tidak dipublikasikan atau dibagikan kepada pengguna lain."
 }
