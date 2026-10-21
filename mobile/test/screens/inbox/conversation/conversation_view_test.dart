@@ -5319,6 +5319,17 @@ void main() {
           expect(find.text(l10n.dmVideoCardTapToLoad), findsNothing);
         });
 
+        testWidgets('loads a video from a mutual follow', (tester) async {
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {otherPubkey: FollowRelationship.mutual},
+          );
+
+          expectLoaded(video);
+        });
+
         testWidgets('loads a video in a chat the user posted in, from someone '
             'they do not follow', (tester) async {
           final video = videoFrom(otherPubkey);
