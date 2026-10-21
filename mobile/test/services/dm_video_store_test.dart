@@ -1498,10 +1498,19 @@ void main() {
           slowDecode.complete(_frame);
           await hungFrameKept.timeout(const Duration(seconds: 5));
 
-          expect(
-            await store.previewFor(_videoMessage(id: '4' * 64)),
-            isNotNull,
+          // Kept already, so its one announcement is its frame's; waited for
+          // rather than the card, which gives up after its deadline whether
+          // or not the frame is written yet.
+          final fourth = _videoMessage(id: '4' * 64);
+          keptFile(
+            DmVideoStore.videoFileNameFor(fourth),
+            _plaintext,
+            keptAt: now,
           );
+          final fourthKept = store.kept.firstWhere((id) => id == fourth.id);
+          await store.previewFor(fourth);
+          await fourthKept.timeout(const Duration(seconds: 5));
+          expect(store.knownPreviewPathFor(fourth), isNotNull);
         },
       );
 
