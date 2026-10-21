@@ -1085,7 +1085,8 @@ class DmVideoStore {
   }
 
   /// Ids of the messages behind [files] that are gone. A lookup that fails
-  /// keeps its message's files.
+  /// keeps its message's files. On the way, the record of a message a repair
+  /// moved to another conversation is rewritten to say where it is now.
   Future<Set<String>> _goneMessageIds(List<File> files) async {
     final isGone = _isMessageGone;
     final isRemoved = _isConversationRemoved;
@@ -1120,7 +1121,18 @@ class DmVideoStore {
               current.sentAt,
             );
             if (await _readQuietly(record) != content) {
-              await _writeAtomically(record, utf8.encode(content));
+              try {
+                await _writeAtomically(record, utf8.encode(content));
+              } on DmVideoUnavailableException catch (error) {
+                // The message is not gone; only its record is out of date.
+                Log.warning(
+                  'Could not refresh a kept video DM conversation record: '
+                  '${error.message}',
+                  name: _logName,
+                  category: LogCategory.video,
+                );
+                continue;
+              }
             }
             _currentRecords[id] = content;
           }

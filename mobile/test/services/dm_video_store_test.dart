@@ -212,6 +212,8 @@ void main() {
       Future<bool> Function(String messageId)? isMessageGone,
       Future<bool> Function(String conversationId, int sentAt)?
       isConversationRemoved,
+      Future<DmVideoMessageLocation?> Function(String messageId)?
+      findMessageLocation,
       Future<Directory> Function()? rootDirectory,
       // Not the default minute: a decode a test leaves running would log a
       // turn-limit warning into a later suite of the merged test isolate.
@@ -236,6 +238,7 @@ void main() {
       maxBytes: maxBytes,
       isMessageGone: isMessageGone,
       isConversationRemoved: isConversationRemoved,
+      findMessageLocation: findMessageLocation,
       frameTurnLimit: frameTurnLimit,
       frameDeadline: frameDeadline,
       launchId: launchId,
@@ -2313,6 +2316,42 @@ void main() {
           await createStore().prune();
 
           expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
+        'logs a conversation record it could not refresh as such, not as a '
+        'message it could not look up',
+        () async {
+          final message = _videoMessage(conversationId: 'old-room');
+          keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            keptAt: now,
+          );
+          keptFile(
+            '${message.id}.conversation',
+            'old-room\n${message.createdAt}'.codeUnits,
+            keptAt: now,
+          );
+          final store = createStore(
+            isConversationRemoved: (_, _) async => false,
+            findMessageLocation: (_) async =>
+                (conversationId: 'repaired', sentAt: message.createdAt),
+          );
+          await LogCaptureService().clearAllLogs();
+
+          await IOOverrides.runWithIOOverrides(
+            store.prune,
+            _WriteHooks((part) {
+              if (part.path.contains('.conversation.')) {
+                throw const FileSystemException('cannot write');
+              }
+            }),
+          );
+
+          expect(_loggedLines(), contains(contains('Could not refresh')));
+          expect(_loggedLines(), isNot(contains(contains('is gone'))));
         },
       );
 
