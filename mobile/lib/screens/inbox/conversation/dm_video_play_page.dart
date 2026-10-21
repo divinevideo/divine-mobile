@@ -247,7 +247,7 @@ class _Unavailable extends StatelessWidget {
 
 /// Plays the decrypted clip on a loop, in its own shape. Owns the native
 /// player controller; a player failure, at start or later, is reported to the
-/// cubit, which deletes the clip.
+/// cubit, which shows the clip as unavailable and keeps the kept video.
 class _Player extends StatefulWidget {
   const _Player();
 

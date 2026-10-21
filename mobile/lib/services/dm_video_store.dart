@@ -328,8 +328,6 @@ class DmVideoStore {
   Future<File> videoFor(DmMessage message) {
     final id = message.id;
     _videoCallers.update(id, (count) => count + 1, ifAbsent: () => 1);
-    // removeWhere, not remove: remove hands back this very future, and
-    // whenComplete waits for a future its callback returns.
     return _videosInFlight[id] ??= _tapVideoFor(message)
         .then((file) {
           // Each caller that asked meanwhile holds it until it lets go.
@@ -343,8 +341,9 @@ class DmVideoStore {
           return file;
         })
         .whenComplete(() {
+          // removeWhere: remove hands back this very future, left unawaited.
           _videosInFlight.removeWhere((key, _) => key == id);
-          _videoCallers.removeWhere((key, _) => key == id);
+          _videoCallers.remove(id);
         });
   }
 
@@ -556,11 +555,11 @@ class DmVideoStore {
       final age = now.difference(stat.modified);
       final id = _messageIdOf(file);
       // Even a video being played goes: its sender took it back, or the user
-      // removed it. Only a read or a hand-out under way holds it, and its
-      // release deletes what is kept for the message; the record and mark
-      // stay with it meanwhile, so a later launch can still tell if the read
-      // never ends. A part file goes however young, as its write is no longer
-      // wanted.
+      // removed it. Only a lease, a read or a hand-out under way, keeps it,
+      // and its release deletes what is kept for the message; the record and
+      // mark stay with it meanwhile, so a later launch can still tell if the
+      // read never ends. A part file goes however young, as its write is no
+      // longer wanted.
       if (gone.contains(id)) {
         if (_leases.containsKey(file.path)) {
           _goneWhileLeased.add(file.path);
