@@ -1,14 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:challenge_protocol/src/punycode.dart';
 import 'package:crypto/crypto.dart';
 import 'package:test/test.dart';
 
+import 'fixture_file.dart';
+
 void main() {
   test('optimized codec matches pinned punycode.js source', () {
-    final bytes = File('test/fixtures/punycode-reference.json')
-        .readAsBytesSync();
+    final bytes = fixtureFile('punycode-reference.json').readAsBytesSync();
     expect(
       sha256.convert(bytes).toString(),
       '213029748b3be88c148212cb3a49a8d0ec2ffb02fea2d301f248824ff78ca5f4',

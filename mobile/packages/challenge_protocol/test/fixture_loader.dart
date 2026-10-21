@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+
+import 'fixture_file.dart';
 
 const fixtureHashes = {
   'events.json':
@@ -18,5 +19,5 @@ Map<String, Object?> decodeFixture(String name, List<int> bytes) {
 
 Map<String, Object?> fixture(String name) => decodeFixture(
   name,
-  File('test/fixtures/v1/$name').readAsBytesSync(),
+  fixtureFile('v1/$name').readAsBytesSync(),
 );

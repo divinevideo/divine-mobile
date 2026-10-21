@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:challenge_protocol/challenge_protocol.dart';
 import 'package:test/test.dart';
 
+import 'fixture_file.dart';
 import 'fixture_loader.dart';
 
 void main() {
@@ -11,7 +11,7 @@ void main() {
   final cases = data['cases']! as List<Object?>;
   test('pinned manifest and complete parser corpus', () {
     final manifest = jsonDecode(
-      File('test/fixtures/v1/manifest.json').readAsStringSync(),
+      fixtureFile('v1/manifest.json').readAsStringSync(),
     ) as Map<String, Object?>;
     expect(manifest['version'], 1);
     expect(manifest['convention'], 'divine-challenge');

@@ -1,13 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:challenge_protocol/src/idna.dart';
 import 'package:challenge_protocol/src/normalization.dart';
 import 'package:crypto/crypto.dart';
 import 'package:test/test.dart';
 
+import 'fixture_file.dart';
+
 String _read(String name, String hash) {
-  final bytes = File('test/fixtures/unicode17/$name').readAsBytesSync();
+  final bytes = fixtureFile('unicode17/$name').readAsBytesSync();
   expect(sha256.convert(bytes).toString(), hash);
   return utf8.decode(bytes);
 }
