@@ -247,6 +247,11 @@ void main() {
           ..writeAsBytesSync(bytes)
           ..setLastModifiedSync(keptAt);
 
+    /// Everything kept for the account, none when nothing ever was.
+    List<File> keptFiles() => ownerDir().existsSync()
+        ? ownerDir().listSync().whereType<File>().toList()
+        : const [];
+
     group('videoFor', () {
       test(
         'downloads and decrypts a video once and keeps it for the account',
@@ -1164,6 +1169,111 @@ void main() {
         },
       );
 
+      test(
+        'stop fetching a video by themselves after three failed tries this '
+        'session, while a tap still fetches it',
+        () async {
+          fetch = (_) async => throw const DmVideoUnavailableException(
+            'the download failed: connectionError',
+            mayPass: true,
+          );
+          final store = createStore();
+          final message = _videoMessage();
+          for (
+            var tries = 0;
+            tries < DmVideoStore.autoDownloadMaxTries;
+            tries++
+          ) {
+            await expectLater(
+              store.previewFor(message),
+              throwsA(isA<DmVideoUnavailableException>()),
+            );
+            now = now.add(DmVideoStore.autoDownloadRetryAfter);
+          }
+          expect(fetches, equals(3));
+
+          expect(await store.previewFor(message), isNull);
+          expect(fetches, equals(3));
+
+          await expectLater(
+            store.videoFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          expect(fetches, equals(4));
+        },
+      );
+
+      test(
+        'are not tried in a later session after failing for good, while a tap '
+        'still fetches it',
+        () async {
+          fetch = (_) async => throw const DmVideoUnavailableException(
+            'the download failed: badResponse, HTTP 404',
+          );
+          final message = _videoMessage();
+          await expectLater(
+            createStore().previewFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          expect(fetches, equals(1));
+
+          final later = createStore();
+          expect(await later.previewFor(message), isNull);
+          expect(fetches, equals(1));
+
+          fetch = (_) async => _plaintext;
+          expect(
+            (await later.videoFor(message)).readAsBytesSync(),
+            equals(_plaintext),
+          );
+          expect(fetches, equals(2));
+        },
+      );
+
+      test(
+        'are tried again in a later session after a failure that may pass',
+        () async {
+          fetch = (_) async => fetches == 1
+              ? throw const DmVideoUnavailableException(
+                  'the download failed: connectionError',
+                  mayPass: true,
+                )
+              : _plaintext;
+          final message = _videoMessage();
+          await expectLater(
+            createStore().previewFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+
+          expect(await createStore().previewFor(message), isNotNull);
+          expect(fetches, equals(2));
+        },
+      );
+
+      test(
+        'are tried again once a failure remembered from an earlier session is '
+        '30 days old',
+        () async {
+          fetch = (_) async => fetches == 1
+              ? throw const DmVideoUnavailableException(
+                  'the download failed: badResponse, HTTP 404',
+                )
+              : _plaintext;
+          final message = _videoMessage();
+          await expectLater(
+            createStore().previewFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          for (final file in keptFiles()) {
+            file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+          }
+          await createStore().prune();
+
+          expect(await createStore().previewFor(message), isNotNull);
+          expect(fetches, equals(2));
+        },
+      );
+
       test('drop a queued download nobody wants any more', () async {
         final blocking = Completer<Uint8List>();
         final unwanted = _videoMessage(id: '9' * 64);
@@ -1387,6 +1497,55 @@ void main() {
           expect(oldest.existsSync(), isFalse);
           expect(middle.existsSync(), isTrue);
           expect(newest.existsSync(), isTrue);
+        },
+      );
+
+      test(
+        'leaves nothing of a gone message whose download failed for good',
+        () async {
+          fetch = (_) async => throw const DmVideoUnavailableException(
+            'the download failed: badResponse, HTTP 404',
+          );
+          final message = _videoMessage();
+          var gone = false;
+          final store = createStore(isMessageGone: (_) async => gone);
+          await expectLater(
+            store.previewFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          gone = true;
+
+          await store.prune();
+
+          expect(keptFiles(), isEmpty);
+        },
+      );
+
+      test(
+        'keeps what it remembers of a download that failed for good while '
+        'trimming for the cap',
+        () async {
+          final failed = _videoMessage(id: '1' * 64);
+          fetch = (_) async => throw const DmVideoUnavailableException(
+            'the download failed: badResponse, HTTP 404',
+          );
+          await expectLater(
+            createStore().previewFor(failed),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          for (final file in keptFiles()) {
+            file.setLastModifiedSync(now.subtract(const Duration(hours: 2)));
+          }
+          keptFile(
+            '${'2' * 64}.mp4',
+            const [1, 2, 3, 4],
+            keptAt: now.subtract(const Duration(hours: 1)),
+          );
+
+          await createStore(maxBytes: 2).prune();
+
+          expect(await createStore().previewFor(failed), isNull);
+          expect(fetches, equals(1));
         },
       );
 
@@ -2460,6 +2619,33 @@ void main() {
           release.complete(_plaintext);
 
           await expectLater(video, throwsA(isA<DmVideoUnavailableException>()));
+          expect(ownerDir().existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'remembers no failed download for an account removed during it',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+
+          final preview = store.previewFor(_videoMessage());
+          await pumpEventQueue();
+          await DmVideoStore.deleteOwner(
+            _owner,
+            rootDirectory: () async => root,
+          );
+          release.completeError(
+            const DmVideoUnavailableException(
+              'the download failed: badResponse, HTTP 404',
+            ),
+          );
+
+          await expectLater(
+            preview,
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
           expect(ownerDir().existsSync(), isFalse);
         },
       );

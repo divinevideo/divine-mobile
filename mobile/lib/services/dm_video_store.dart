@@ -127,6 +127,12 @@ class DmVideoStore {
   /// that may pass, such as a dropped connection.
   static const Duration autoDownloadRetryAfter = Duration(minutes: 2);
 
+  /// How many downloads nobody tapped for may fail for one message before
+  /// the store stops fetching it by itself for the session: each try tells
+  /// the sender's media server that the thread is open. A tap on play still
+  /// fetches it.
+  static const int autoDownloadMaxTries = 3;
+
   /// Longest a frame read keeps the decoder from the next one. A decode that
   /// outlasts it keeps its video leased until it returns, but the next read
   /// starts beside it: a native call that never replies must not leave
@@ -148,6 +154,12 @@ class DmVideoStore {
   /// conversation they came from and when the message was sent, so removing
   /// that conversation deletes them even once the message row is gone.
   static const String _conversationSuffix = '.conversation';
+
+  /// Left for a message whose download failed in a way that would repeat, so
+  /// no later session fetches it by itself either. Empty; it goes with its
+  /// message, or [maxAge] after it was left, and is never trimmed for the
+  /// cap.
+  static const String _failedSuffix = '.failed';
 
   /// Age past which a part file is taken as left by a crash: a younger one
   /// may still be being written, by this store or by the one an account
@@ -249,8 +261,11 @@ class DmVideoStore {
   final Set<String> _unreadableFrames = {};
 
   /// Downloads nobody tapped for that failed, by message id, with when a card
-  /// may fetch it again by itself, or null when the failure will repeat.
+  /// may fetch it again by itself, or null when it may not this session.
   final Map<String, DateTime?> _autoDownloadFailures = {};
+
+  /// How many downloads nobody tapped for failed this session, by message id.
+  final Map<String, int> _autoDownloadFailureCounts = {};
   // An account switch can leave a tapped download running in an older store.
   // Number writes across stores so their sibling part files cannot collide.
   static int _writes = 0;
@@ -335,10 +350,11 @@ class DmVideoStore {
   /// there is no video to read or no frame can be read from it; a frame that
   /// could not be read, or whose read never finished, is not tried again.
   /// Null too when the decode outlasts [frameDeadline]; its frame is still
-  /// kept, and announced on [kept]. A download that failed is not tried again
-  /// by itself this session when the failure will repeat, nor for
-  /// [autoDownloadRetryAfter] when it may pass; a tap on play still fetches
-  /// it.
+  /// kept, and announced on [kept]. A download that failed in a way that
+  /// would repeat is not tried again by itself, this session or a later one,
+  /// until [maxAge] has passed; one that may pass is tried again after
+  /// [autoDownloadRetryAfter], and at most [autoDownloadMaxTries] times a
+  /// session. A tap on play still fetches it.
   ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
@@ -475,6 +491,8 @@ class DmVideoStore {
         _deleteNow(file);
         continue;
       }
+      // Empty, so trimming it would free nothing.
+      if (_isFailureMark(file)) continue;
       kept.add((file: file, keptAt: stat.modified, size: stat.size));
     }
     _trimToCap(kept);
@@ -668,13 +686,15 @@ class DmVideoStore {
     for (final file in files)
       if (!file.path.endsWith(_partSuffix) &&
           !file.path.endsWith(_previewSuffix) &&
+          !_isFailureMark(file) &&
           !_isSatellite(file))
         _messageIdOf(file),
   };
 
-  /// Ids of the messages with a video or a frame among [files], whole or
-  /// still being written. A record still being written counts too, which
-  /// only keeps its message's record until the part goes.
+  /// Ids of the messages with a video, a frame or a failure mark among
+  /// [files], whole or still being written: a removal must still find them.
+  /// A record still being written counts too, which only keeps its message's
+  /// record until the part goes.
   static Set<String> _messageIdsWithContent(List<File> files) => {
     for (final file in files)
       if (!_isSatellite(file)) _messageIdOf(file),
@@ -688,6 +708,8 @@ class DmVideoStore {
   static bool _isSatellite(File file) =>
       file.path.endsWith(_frameAttemptSuffix) ||
       file.path.endsWith(_conversationSuffix);
+
+  static bool _isFailureMark(File file) => file.path.endsWith(_failedSuffix);
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
   /// for, within their limits, or, when its turn comes, uses the download a
@@ -808,7 +830,7 @@ class DmVideoStore {
       _lease(keptVideo);
       video = keptVideo;
       await _recordConversationQuietly(message, dir);
-    } else if (_mayAutoDownload(message.id) &&
+    } else if (_mayAutoDownload(dir, message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
       try {
         video = await _autoVideoFor(message, wanted: wanted);
@@ -819,8 +841,18 @@ class DmVideoStore {
         return null;
       } on Object catch (error) {
         final mayPass = error is DmVideoUnavailableException && error.mayPass;
+        final failures = _autoDownloadFailureCounts.update(
+          message.id,
+          (count) => count + 1,
+          ifAbsent: () => 1,
+        );
         if (!mayPass) {
-          // It would fail again, for whichever card asks next.
+          // It would fail again, for whichever card asks next, in this
+          // session or a later one.
+          _autoDownloadFailures[message.id] = null;
+          await _rememberLastingFailure(dir, message);
+        } else if (failures >= autoDownloadMaxTries) {
+          // Each try tells the sender's server that the thread is open.
           _autoDownloadFailures[message.id] = null;
         } else if (wanted()) {
           _autoDownloadFailures[message.id] = _now().add(
@@ -1067,10 +1099,34 @@ class DmVideoStore {
   static String _messageIdOf(File file) =>
       file.uri.pathSegments.last.split('.').first;
 
-  bool _mayAutoDownload(String messageId) {
-    if (!_autoDownloadFailures.containsKey(messageId)) return true;
+  bool _mayAutoDownload(Directory dir, String messageId) {
+    if (!_autoDownloadFailures.containsKey(messageId)) {
+      if (!_failureMarkOf(dir, messageId).existsSync()) return true;
+      // An earlier session's download failed in a way that would repeat.
+      _autoDownloadFailures[messageId] = null;
+      return false;
+    }
     final retryAt = _autoDownloadFailures[messageId];
     return retryAt != null && !_now().isBefore(retryAt);
+  }
+
+  static File _failureMarkOf(Directory dir, String messageId) =>
+      File('${dir.path}/${_safeName(messageId)}$_failedSuffix');
+
+  /// Leaves the mark that keeps later sessions from fetching [message]'s
+  /// video by themselves: its download failed in a way that would repeat.
+  Future<void> _rememberLastingFailure(Directory dir, DmMessage message) async {
+    // Writing it would bring a removed account's folder back.
+    if (_ownerRemoved) return;
+    try {
+      await _failureMarkOf(dir, message.id).create(recursive: true);
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not remember a failed video DM download: ${_causeOf(error)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
   }
 
   Future<Directory> _ownerDirectory() async {
@@ -1101,8 +1157,11 @@ class DmVideoStore {
     }
   }
 
+  bool get _ownerRemoved =>
+      (_removals[_safeName(_ownerPubkey)] ?? 0) != _removalsAtCreation;
+
   void _throwIfOwnerRemoved() {
-    if ((_removals[_safeName(_ownerPubkey)] ?? 0) != _removalsAtCreation) {
+    if (_ownerRemoved) {
       throw const DmVideoUnavailableException(
         'the account was removed from this device',
       );
