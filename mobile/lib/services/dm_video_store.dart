@@ -1184,8 +1184,11 @@ class DmVideoStore {
   Future<void> _rememberLastingFailure(Directory dir, DmMessage message) async {
     // Writing it would bring a removed account's folder back.
     if (_ownerRemoved) return;
+    final mark = _failureMarkOf(dir, message.id);
     try {
-      await _failureMarkOf(dir, message.id).create(recursive: true);
+      await mark.create(recursive: true);
+      // Removed while it was written: keep nothing for that account.
+      if (_ownerRemoved) await _deleteQuietly(mark);
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not remember a failed video DM download: ${_causeOf(error)}',

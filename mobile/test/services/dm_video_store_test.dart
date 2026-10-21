@@ -154,6 +154,12 @@ class _WriteHookFile implements File {
   }
 
   @override
+  Future<File> create({bool recursive = false, bool exclusive = false}) {
+    beforeWrite(this);
+    return file.create(recursive: recursive, exclusive: exclusive);
+  }
+
+  @override
   Future<File> rename(String newPath) => file.rename(newPath);
 
   @override
@@ -175,7 +181,9 @@ final class _WriteHooks extends IOOverrides {
   @override
   File createFile(String path) {
     final file = super.createFile(path);
-    return path.endsWith('.part') ? _WriteHookFile(file, beforeWrite) : file;
+    return path.endsWith('.part') || path.endsWith('.failed')
+        ? _WriteHookFile(file, beforeWrite)
+        : file;
   }
 }
 
@@ -2860,6 +2868,39 @@ void main() {
             throwsA(isA<DmVideoUnavailableException>()),
           );
           expect(ownerDir().existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'remembers no failure for an account removed while the mark is '
+        'written',
+        () async {
+          fetch = (_) async => throw const DmVideoUnavailableException(
+            'the download failed: badResponse, HTTP 404',
+          );
+          final store = createStore();
+
+          await IOOverrides.runWithIOOverrides(
+            () => expectLater(
+              store.previewFor(_videoMessage()),
+              throwsA(isA<DmVideoUnavailableException>()),
+            ),
+            _WriteHooks((file) {
+              if (!file.path.endsWith('.failed')) return;
+              // The account goes between the store's check and the write.
+              unawaited(
+                DmVideoStore.deleteOwner(
+                  _owner,
+                  rootDirectory: () => Completer<Directory>().future,
+                ),
+              );
+              if (ownerDir().existsSync()) {
+                ownerDir().deleteSync(recursive: true);
+              }
+            }),
+          );
+
+          expect(keptFiles(), isEmpty);
         },
       );
 
