@@ -2,12 +2,12 @@
 // ABOUTME: one download per video, a preview frame, and pruning by age and size.
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:models/models.dart';
+import 'package:openvine/services/dm_video_conversation_records.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_files.dart';
@@ -17,6 +17,9 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/one_at_a_time.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+export 'package:openvine/services/dm_video_conversation_records.dart'
+    show DmVideoMessageLocation;
 
 /// Downloads, verifies and decrypts a video DM, returning its plaintext. A
 /// null [maxBytes] or [timeLimit] keeps the fetcher's own limit, as does
@@ -35,9 +38,6 @@ typedef DmVideoFetcher = Future<Uint8List> Function(
 /// timeout: the store leases the file until completion, and holds the frame
 /// queue until then or for at most [DmVideoStore.frameTurnLimit].
 typedef DmVideoFrameReader = Future<Uint8List?> Function(File video);
-
-/// Current conversation metadata for a message whose row is still available.
-typedef DmVideoMessageLocation = ({String conversationId, int sentAt});
 
 /// The [DmVideoStore] of the account signed in now, or null when none is.
 ///
@@ -152,11 +152,6 @@ class DmVideoStore {
   static const String _partSuffix = '.part';
   static const String _legacyPlaybackDirName = 'dm_video_playback';
 
-  /// Beside a kept video and its frame for as long as either stays: the
-  /// conversation they came from and when the message was sent, so removing
-  /// that conversation deletes them even once the message row is gone.
-  static const String _conversationSuffix = '.conversation';
-
   /// Left for a message whose download failed in a way that would repeat, so
   /// no later session fetches it by itself either. Empty; it goes with its
   /// message, or [maxAge] after it was left, and is never trimmed for the
@@ -262,9 +257,10 @@ class DmVideoStore {
   /// Paths of the frames this store read or found, by message id.
   final Map<String, String> _knownPreviews = {};
 
-  /// What each message's conversation record says, by message id, once this
-  /// store wrote it or found it current.
-  final Map<String, String> _currentRecords = {};
+  /// The conversation record beside each kept video.
+  late final DmVideoConversationRecords _records = DmVideoConversationRecords(
+    writeAtomically: _writeAtomically,
+  );
 
   /// Ids of messages whose frame could not be read this session. The mark
   /// beside the video keeps the read from being tried in later sessions too.
@@ -623,7 +619,7 @@ class DmVideoStore {
     for (final file in files) {
       final id = _messageIdOf(file);
       if (DmVideoFrameReadMarks.isReadMark(file) && !withVideo.contains(id) ||
-          file.path.endsWith(_conversationSuffix) &&
+          DmVideoConversationRecords.isRecord(file) &&
               !withContent.contains(id) &&
               !leased.contains(id)) {
         _deleteNow(file);
@@ -768,7 +764,7 @@ class DmVideoStore {
     for (final file in files) {
       final id = _messageIdOf(file);
       if (DmVideoFrameReadMarks.isReadMark(file) && !withVideo.contains(id) ||
-          file.path.endsWith(_conversationSuffix) &&
+          DmVideoConversationRecords.isRecord(file) &&
               !withContent.contains(id)) {
         _deleteUnusedByStores(file);
       }
@@ -801,7 +797,7 @@ class DmVideoStore {
   /// anything of the message stays, as it is what lets a removal find them.
   static bool _isSatellite(File file) =>
       DmVideoFrameReadMarks.isReadMark(file) ||
-      file.path.endsWith(_conversationSuffix);
+      DmVideoConversationRecords.isRecord(file);
 
   /// Whether [file] is an empty mark, of a failed download or of a sender
   /// whose frame read never finished: it ages, but is never trimmed.
@@ -889,7 +885,7 @@ class DmVideoStore {
         if (!_isPastMaxAge(file) ||
             _leases[file.path]! > 1 ||
             _holds.containsKey(file.path)) {
-          await _recordConversationQuietly(message, file.parent);
+          await _records.writeQuietly(message, file.parent);
           return file;
         }
         _leases.remove(file.path);
@@ -908,7 +904,7 @@ class DmVideoStore {
         throw const DmVideoWithdrawnException();
       }
       // Written first, so a video is never kept without it.
-      await _recordConversation(message, file.parent, force: true);
+      await _records.write(message, file.parent, force: true);
       await _writeAtomically(file, plaintext);
     } on Object {
       _release(file);
@@ -964,7 +960,7 @@ class DmVideoStore {
       _deleteNow(preview);
     }
     if (preview.existsSync()) {
-      await _recordConversationQuietly(message, dir);
+      await _records.writeQuietly(message, dir);
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
@@ -978,7 +974,7 @@ class DmVideoStore {
     if (keptVideo.existsSync()) {
       _lease(keptVideo);
       video = keptVideo;
-      await _recordConversationQuietly(message, dir);
+      await _records.writeQuietly(message, dir);
     } else if (_mayAutoDownload(dir, message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
       try {
@@ -1089,61 +1085,6 @@ class DmVideoStore {
     return (started: started.future, settled: settled);
   }
 
-  /// Writes [message]'s conversation record in [dir], unless this store knows
-  /// it already says the same or, without [force], finds that it does: a
-  /// repair can move a message to another conversation after its video was
-  /// kept, and a removal must still find the video.
-  ///
-  /// Throws a [DmVideoStorageException] when the record cannot be written.
-  Future<void> _recordConversation(
-    DmMessage message,
-    Directory dir, {
-    bool force = false,
-  }) async {
-    final content = _conversationRecordContent(
-      message.conversationId,
-      message.createdAt,
-    );
-    final record = File(
-      '${dir.path}/${dmVideoSafeName(message.id)}$_conversationSuffix',
-    );
-    // What this store wrote can still be deleted from outside it: the launch
-    // sweep, or the system clearing the cache folder.
-    final known = _currentRecords[message.id] == content && record.existsSync();
-    if (force || (!known && await _readQuietly(record) != content)) {
-      await _writeAtomically(record, utf8.encode(content));
-    }
-    _currentRecords[message.id] = content;
-  }
-
-  /// [_recordConversation], logging rather than throwing: a video or frame
-  /// already kept is still handed out when its record cannot be written.
-  Future<void> _recordConversationQuietly(
-    DmMessage message,
-    Directory dir,
-  ) async {
-    try {
-      await _recordConversation(message, dir);
-    } on DmVideoUnavailableException catch (error) {
-      Log.warning(
-        "Could not record a kept video DM's conversation: ${error.message}",
-        name: _logName,
-        category: LogCategory.video,
-      );
-    }
-  }
-
-  static Future<String?> _readQuietly(File file) async {
-    try {
-      return await file.readAsString();
-    } on FileSystemException {
-      return null;
-    }
-  }
-
-  static String _conversationRecordContent(String conversationId, int sentAt) =>
-      '$conversationId\n$sentAt';
-
   Future<File?> _readAndKeepFrame(
     DmMessage message,
     File video,
@@ -1203,7 +1144,7 @@ class DmVideoStore {
     final ids = {for (final file in files) _messageIdOf(file)};
     final records = {
       for (final file in files)
-        if (file.path.endsWith(_conversationSuffix)) _messageIdOf(file): file,
+        if (DmVideoConversationRecords.isRecord(file)) _messageIdOf(file): file,
     };
     final gone = <String>{};
     for (final id in ids) {
@@ -1219,39 +1160,21 @@ class DmVideoStore {
             gone.add(id);
           } else {
             // A group repair may have moved this message since it was kept.
-            // Refresh the durable record before a later account switch drops
-            // its row. Check disk, not just this store's metadata cache:
-            // another same-account store can write the same record.
-            final record =
-                records[id] ??
-                File('${files.first.parent.path}/$id$_conversationSuffix');
-            final content = _conversationRecordContent(
-              current.conversationId,
-              current.sentAt,
+            await _records.refresh(
+              records[id] ??
+                  DmVideoConversationRecords.recordOf(files.first.parent, id),
+              id,
+              current,
             );
-            if (await _readQuietly(record) != content) {
-              try {
-                await _writeAtomically(record, utf8.encode(content));
-              } on DmVideoUnavailableException catch (error) {
-                // The message is not gone; only its record is out of date.
-                Log.warning(
-                  'Could not refresh a kept video DM conversation record: '
-                  '${error.message}',
-                  name: _logName,
-                  category: LogCategory.video,
-                );
-                continue;
-              }
-            }
-            _currentRecords[id] = content;
           }
           continue;
         }
         final record = records[id];
         if (record == null) continue;
-        final lines = (await record.readAsString()).split('\n');
-        final sentAt = lines.length == 2 ? int.tryParse(lines[1]) : null;
-        if (sentAt != null && await isRemoved(lines[0], sentAt)) gone.add(id);
+        final said = await DmVideoConversationRecords.read(record);
+        if (said != null && await isRemoved(said.conversationId, said.sentAt)) {
+          gone.add(id);
+        }
       } on PathNotFoundException {
         // Deleted since the listing, as the launch sweep deletes an expired
         // video's files: there is nothing left to decide.
