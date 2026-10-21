@@ -486,6 +486,8 @@ class DmVideoStore {
 
   Future<void> _prune() async {
     final dir = await _ownerDirectory();
+    // Before a gone message's frame-read mark can be deleted unread.
+    _rememberSendersOfUnfinishedReads(dir);
     if (!dir.existsSync()) return;
     final gone = await _goneMessageIds(
       await dir.list().where((entity) => entity is File).cast<File>().toList(),
@@ -1193,7 +1195,8 @@ class DmVideoStore {
   }
 
   /// Remembers, once for this store and before it fetches or reads anything
-  /// for a card, the senders of frame reads an earlier launch never finished.
+  /// for a card or prunes, the senders of frame reads an earlier launch never
+  /// finished.
   void _rememberSendersOfUnfinishedReads(Directory dir) {
     if (_lookedForUnfinishedReads) return;
     _lookedForUnfinishedReads = true;

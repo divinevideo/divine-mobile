@@ -53,17 +53,23 @@ class _UnreadableDirectory implements Directory {
   @override
   bool existsSync() => true;
 
+  FileSystemException get _denied => FileSystemException(
+    'Directory listing failed',
+    path,
+    const OSError('Permission denied', 13),
+  );
+
   @override
   Stream<FileSystemEntity> list({
     bool recursive = false,
     bool followLinks = true,
-  }) => Stream.error(
-    FileSystemException(
-      'Directory listing failed',
-      path,
-      const OSError('Permission denied', 13),
-    ),
-  );
+  }) => Stream.error(_denied);
+
+  @override
+  List<FileSystemEntity> listSync({
+    bool recursive = false,
+    bool followLinks = true,
+  }) => throw _denied;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -499,6 +505,22 @@ void main() {
               equals(_plaintext),
             );
             expect(await later.previewFor(other), isNull);
+            expect(frameReads, equals(1));
+          },
+        );
+
+        test(
+          'remembers that sender even when the message is pruned as gone '
+          'before any card asks for a frame',
+          () async {
+            await leaveHungRead(_videoMessage(id: '1' * 64));
+            final later = createStore(
+              isMessageGone: (id) async => id == '1' * 64,
+            );
+            await later.prune();
+
+            expect(await later.previewFor(_videoMessage(id: '2' * 64)), isNull);
+            expect(fetches, equals(1));
             expect(frameReads, equals(1));
           },
         );
