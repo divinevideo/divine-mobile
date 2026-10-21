@@ -118,7 +118,10 @@ void main() {
 
           expect(await lookups.isGone(_videoMessage()), isTrue);
           expect(await lookups.isGone(_videoMessage(id: '1' * 64)), isTrue);
-          expect(await lookups.goneAmong({'1' * 64}, dir, {}), {'1' * 64});
+          expect(
+            (await lookups.goneAmong({'1' * 64}, dir, {})).gone,
+            {'1' * 64},
+          );
         },
       );
 
@@ -149,9 +152,14 @@ void main() {
           isMessageGone: (id) async => id == '1' * 64,
         );
 
-        final gone = await lookups.goneAmong({'1' * 64, '2' * 64}, dir, {});
+        final (:gone, :decided) = await lookups.goneAmong(
+          {'1' * 64, '2' * 64},
+          dir,
+          {},
+        );
 
         expect(gone, equals({'1' * 64}));
+        expect(decided, isTrue);
       });
 
       test(
@@ -169,7 +177,7 @@ void main() {
                 : null,
           );
 
-          final gone = await lookups.goneAmong(
+          final (:gone, decided: _) = await lookups.goneAmong(
             {withRow, withoutRow},
             dir,
             {
@@ -191,9 +199,14 @@ void main() {
               (conversationId: 'repaired', sentAt: _sentAt),
         );
 
-        final gone = await lookups.goneAmong({id}, dir, {id: record});
+        final (:gone, :decided) = await lookups.goneAmong(
+          {id},
+          dir,
+          {id: record},
+        );
 
         expect(gone, isEmpty);
+        expect(decided, isTrue);
         expect(record.readAsStringSync(), equals('repaired\n$_sentAt'));
       });
 
@@ -207,16 +220,17 @@ void main() {
           );
           await LogCaptureService().clearAllLogs();
 
-          final gone = await lookups.goneAmong({id}, dir, {});
+          final (:gone, :decided) = await lookups.goneAmong({id}, dir, {});
 
           expect(gone, isEmpty);
+          expect(decided, isFalse);
           expect(_loggedLines(), contains(contains('is gone: StateError')));
           expect(_loggedLines(), isNot(contains(contains(id))));
         },
       );
 
       test(
-        'decides nothing, and says nothing, for a record deleted since the '
+        'finds nothing gone, and no failure, for a record deleted since the '
         'listing',
         () async {
           final id = '1' * 64;
@@ -226,7 +240,7 @@ void main() {
           );
           await LogCaptureService().clearAllLogs();
 
-          final gone = await lookups.goneAmong(
+          final (:gone, :decided) = await lookups.goneAmong(
             {id},
             dir,
             {
@@ -235,6 +249,7 @@ void main() {
           );
 
           expect(gone, isEmpty);
+          expect(decided, isTrue);
           expect(_loggedLines(), isNot(contains(contains('is gone'))));
         },
       );

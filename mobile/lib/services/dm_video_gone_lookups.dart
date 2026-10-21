@@ -63,18 +63,21 @@ class DmVideoGoneLookups {
   }
 
   /// The ids among [ids] of messages kept in [dir] that are gone, with
-  /// [records] their conversation records by message id. A lookup that
-  /// fails keeps its message's files. On the way, the record of a message a
-  /// repair moved to another conversation is rewritten to say where it is.
-  Future<Set<String>> goneAmong(
+  /// [records] their conversation records by message id, and whether every
+  /// message was decided: a lookup that fails keeps its message's files. On
+  /// the way, the record of a message a repair moved is rewritten.
+  Future<({Set<String> gone, bool decided})> goneAmong(
     Set<String> ids,
     Directory dir,
     Map<String, File> records,
   ) async {
     final isGone = _isMessageGone;
     final isRemoved = _isConversationRemoved;
-    if (isGone == null && isRemoved == null) return const {};
+    if (isGone == null && isRemoved == null) {
+      return (gone: const <String>{}, decided: true);
+    }
     final gone = <String>{};
+    var decided = true;
     for (final id in ids) {
       try {
         if (_known.contains(id) || isGone != null && await isGone(id)) {
@@ -106,6 +109,7 @@ class DmVideoGoneLookups {
         // Deleted since the listing, as the launch sweep deletes an expired
         // video's files: there is nothing left to decide.
       } on Object catch (error) {
+        decided = false;
         Log.warning(
           'Could not tell whether a kept video DM message is gone: '
           '${error.runtimeType}',
@@ -115,6 +119,6 @@ class DmVideoGoneLookups {
       }
     }
     _known.addAll(gone);
-    return gone;
+    return (gone: gone, decided: decided);
   }
 }

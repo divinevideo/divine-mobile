@@ -240,7 +240,7 @@ class DmVideoStore {
   Future<void>? _pruning;
   bool _pruneAgain = false;
 
-  /// When the last prune finished, if one has.
+  /// When the last prune that decided every message finished, if one has.
   DateTime? _lastPruned;
 
   /// Downloads without a tap on play run one at a time: each holds a whole
@@ -534,11 +534,13 @@ class DmVideoStore {
 
   Future<void> _pruneWhileAsked() async {
     (Object, StackTrace)? unexpected;
+    var decided = false;
     try {
       do {
         _pruneAgain = false;
+        decided = false;
         try {
-          await _prune();
+          decided = await _prune();
         } on FileSystemException catch (error) {
           Log.warning(
             'Could not prune kept video DMs: ${dmVideoFileErrorCause(error)}',
@@ -553,14 +555,17 @@ class DmVideoStore {
     } finally {
       // Cleared before this run completes, so a later ask starts a new run.
       _pruning = null;
-      _lastPruned = _now();
+      // One that could not decide is tried again on the next return.
+      _lastPruned = decided ? _now() : null;
     }
     if (unexpected case (final error, final stackTrace)) {
       Error.throwWithStackTrace(error, stackTrace);
     }
   }
 
-  Future<void> _prune() async {
+  /// Prunes once, returning whether it could tell of every message whether
+  /// it is gone.
+  Future<bool> _prune() async {
     final dir = await _ownerDirectory();
     // Before a gone message's frame-read mark can be deleted unread.
     _frameReadMarks.lookForUnfinishedReads(dir);
@@ -571,7 +576,7 @@ class DmVideoStore {
               .cast<File>()
               .toList()
         : const <File>[];
-    final gone = await _gone.goneAmong(
+    final (:gone, :decided) = await _gone.goneAmong(
       {
         for (final file in listed) _messageIdOf(file),
         // Still being fetched, so not kept yet: the rows that would refuse it
@@ -589,7 +594,7 @@ class DmVideoStore {
     // Listed again where nothing awaits: a frame written during the lookups
     // is seen too, and no file can be handed out between the check that it
     // is free and its deletion.
-    if (!dir.existsSync()) return;
+    if (!dir.existsSync()) return decided;
     final files = dir.listSync().whereType<File>().toList();
     final leased = {for (final path in _leases.keys) _messageIdOf(File(path))};
     final now = _now();
@@ -635,6 +640,7 @@ class DmVideoStore {
     }
     _trimToCap(kept);
     _deleteOrphanedSatellites(dir, leased);
+    return decided;
   }
 
   /// Deletes the oldest of [kept] until what is not in use fits in

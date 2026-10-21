@@ -3214,6 +3214,40 @@ void main() {
         },
       );
 
+      test(
+        'prunes again on coming back within the hour when the last prune '
+        'could not tell whether a message is gone',
+        () async {
+          var lookupFails = false;
+          var gone = false;
+          var prunes = 0;
+          final store = createStore(
+            isMessageGone: (_) async =>
+                lookupFails ? throw StateError('database closed') : gone,
+            rootDirectory: () async {
+              prunes++;
+              return root;
+            },
+          );
+          final video = keptFile('${'a' * 64}.mp4', const [1], keptAt: now);
+          await store.prune();
+          lookupFails = true;
+          gone = true;
+          await store.prune();
+          expect(video.existsSync(), isTrue);
+          lookupFails = false;
+
+          store
+            ..appInForeground = false
+            ..appInForeground = true;
+          await store.prune();
+
+          // Coming back pruned, and the prune asked for meanwhile ran after.
+          expect(prunes, equals(4));
+          expect(video.existsSync(), isFalse);
+        },
+      );
+
       test('clears a part file a crash left', () async {
         final crashed = keptFile(
           '${'a' * 64}.mp4.0.part',
