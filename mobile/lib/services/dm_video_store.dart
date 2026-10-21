@@ -441,7 +441,7 @@ class DmVideoStore {
   /// kept, and announced on [kept]. A download that failed in a way that
   /// would repeat is not tried again by itself, this session or a later one,
   /// until [maxAge] has passed; one that may pass is tried again after
-  /// [autoDownloadRetryAfter], and at most [autoDownloadMaxTries] times a
+  /// [autoDownloadRetryAfter]. At most [autoDownloadMaxTries] start a
   /// session. A tap on play still fetches it. Nothing is fetched or read by
   /// itself for a sender one of whose frame reads hung: for the rest of the
   /// launch once it outlived [frameTurnLimit], unless it returns a frame after
