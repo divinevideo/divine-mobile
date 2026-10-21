@@ -104,6 +104,27 @@ void main() {
         },
       );
 
+      test(
+        "leaves a record it has to a refresh, whatever a caller's copy says, "
+        'as that copy can predate a repair',
+        () async {
+          final records = createRecords();
+          await records.write(_videoMessage(conversationId: 'repaired'), dir);
+
+          await records.write(_videoMessage(conversationId: 'old-room'), dir);
+          await createRecords().write(
+            _videoMessage(conversationId: 'old-room'),
+            dir,
+          );
+
+          expect(
+            recordOf(_videoMessage()).readAsStringSync(),
+            equals('repaired\n1757385263'),
+          );
+          expect(writes, equals(1));
+        },
+      );
+
       test('throws when the record cannot be written', () async {
         failWrites = true;
 
@@ -144,25 +165,26 @@ void main() {
         },
       );
 
-      test('leaves a record it could not rewrite to the next write', () async {
-        final records = createRecords();
-        final message = _videoMessage(conversationId: 'misfiled');
-        await records.write(message, dir);
-        failWrites = true;
+      test(
+        'leaves a record it could not rewrite to the next refresh',
+        () async {
+          final records = createRecords();
+          final message = _videoMessage(conversationId: 'misfiled');
+          await records.write(message, dir);
+          failWrites = true;
+          const moved = (conversationId: 'moved', sentAt: 1757385263);
 
-        await records.refresh(recordOf(message), message.id, (
-          conversationId: 'moved',
-          sentAt: message.createdAt,
-        ));
-        failWrites = false;
-        await records.write(_videoMessage(conversationId: 'moved'), dir);
+          await records.refresh(recordOf(message), message.id, moved);
+          failWrites = false;
+          await records.refresh(recordOf(message), message.id, moved);
 
-        expect(
-          recordOf(message).readAsStringSync(),
-          equals('moved\n1757385263'),
-        );
-        expect(writes, equals(3));
-      });
+          expect(
+            recordOf(message).readAsStringSync(),
+            equals('moved\n1757385263'),
+          );
+          expect(writes, equals(3));
+        },
+      );
     });
 
     group('read', () {

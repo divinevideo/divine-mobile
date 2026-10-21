@@ -49,14 +49,10 @@ class DmVideoConversationRecords {
 
   final DmVideoAtomicWriter _writeAtomically;
 
-  /// What each message's record says, by message id, once these records
-  /// wrote it or found it current.
-  final Map<String, String> _current = {};
-
-  /// Writes [message]'s record in [dir], unless these records know it
-  /// already says the same or, without [force], find that it does: a repair
-  /// can move a message to another conversation after its video was kept,
-  /// and a removal must still find the video.
+  /// Writes [message]'s record in [dir] when it has none, or with [force].
+  /// A record it has is otherwise left to [refresh], which follows the
+  /// message's row: a caller can hold the message from before a repair
+  /// moved it to another conversation.
   ///
   /// Throws a [DmVideoUnavailableException] when the record cannot be
   /// written.
@@ -65,15 +61,14 @@ class DmVideoConversationRecords {
     Directory dir, {
     bool force = false,
   }) async {
-    final content = _contentOf(message.conversationId, message.createdAt);
     final record = recordOf(dir, message.id);
-    // What was written can still be deleted from outside the store: the
-    // launch sweep, or the system clearing the cache folder.
-    final known = _current[message.id] == content && record.existsSync();
-    if (force || (!known && await _readQuietly(record) != content)) {
-      await _writeAtomically(record, utf8.encode(content));
-    }
-    _current[message.id] = content;
+    // A record can go from outside the store too: the launch sweep, or the
+    // system clearing the cache folder.
+    if (!force && record.existsSync()) return;
+    await _writeAtomically(
+      record,
+      utf8.encode(_contentOf(message.conversationId, message.createdAt)),
+    );
   }
 
   /// [write], logging rather than throwing: a video or frame already kept is
@@ -93,30 +88,27 @@ class DmVideoConversationRecords {
   /// Rewrites [record], of the message [messageId], to name [location] when
   /// it says otherwise: a group repair can move a message after its video
   /// was kept, and its record must say where it is before an account switch
-  /// drops its row. Read from disk rather than trusted from memory, as
-  /// another store of the same account can write it. One that cannot be
-  /// written is logged and tried again by the next write or refresh.
+  /// drops its row. Read from disk, as another store of the same account can
+  /// write it. One that cannot be written is logged and tried again by the
+  /// next refresh.
   Future<void> refresh(
     File record,
     String messageId,
     DmVideoMessageLocation location,
   ) async {
     final content = _contentOf(location.conversationId, location.sentAt);
-    if (await _readQuietly(record) != content) {
-      try {
-        await _writeAtomically(record, utf8.encode(content));
-      } on DmVideoUnavailableException catch (error) {
-        // The message is not gone; only its record is out of date.
-        Log.warning(
-          'Could not refresh a kept video DM conversation record: '
-          '${error.message}',
-          name: _logName,
-          category: LogCategory.video,
-        );
-        return;
-      }
+    if (await _readQuietly(record) == content) return;
+    try {
+      await _writeAtomically(record, utf8.encode(content));
+    } on DmVideoUnavailableException catch (error) {
+      // The message is not gone; only its record is out of date.
+      Log.warning(
+        'Could not refresh a kept video DM conversation record: '
+        '${error.message}',
+        name: _logName,
+        category: LogCategory.video,
+      );
     }
-    _current[messageId] = content;
   }
 
   static Future<String?> _readQuietly(File file) async {

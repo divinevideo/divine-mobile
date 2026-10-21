@@ -440,6 +440,32 @@ void main() {
       );
 
       test(
+        'hands out the video of a message a repair moved by the conversation '
+        'its record names, while its row is missing',
+        () async {
+          final stale = _videoMessage(conversationId: 'old-room');
+          DmVideoMessageLocation? row = (
+            conversationId: 'repaired',
+            sentAt: stale.createdAt,
+          );
+          final store = createStore(
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'old-room',
+            findMessageLocation: (_) async => row,
+          );
+          store.releaseVideo(
+            await store.videoFor(_videoMessage(conversationId: 'repaired')),
+          );
+          row = null;
+
+          final video = await store.videoFor(stale);
+
+          expect(video.existsSync(), isTrue);
+          store.releaseVideo(video);
+        },
+      );
+
+      test(
         'refuses a gone message by its own name, and warns of nothing, when '
         'nothing was ever kept for the account',
         () async {
@@ -2807,18 +2833,26 @@ void main() {
       );
 
       test(
-        "moves a kept video's record when a card shows its message in another "
-        'conversation',
+        "moves a kept video's record to the conversation its row is in, so "
+        'removing that one still deletes the video once the row is gone',
         () async {
+          final message = _videoMessage(conversationId: 'misfiled');
+          DmVideoMessageLocation? row = (
+            conversationId: 'moved',
+            sentAt: message.createdAt,
+          );
+          var removed = false;
           final store = createStore(
             isConversationRemoved: (conversationId, _) async =>
-                conversationId == 'moved',
+                removed && conversationId == 'moved',
+            findMessageLocation: (_) async => row,
           );
-          await store.videoFor(_videoMessage(conversationId: 'misfiled'));
+          store.releaseVideo(await store.videoFor(message));
+          await store.prune();
 
-          await store.previewFor(
-            _videoMessage(conversationId: 'moved'),
-          );
+          // As an account switch drops the rows.
+          row = null;
+          removed = true;
           await store.prune();
 
           expect(ownerDir().listSync(), isEmpty);
@@ -2826,20 +2860,51 @@ void main() {
       );
 
       test(
-        "moves a kept frame's record when a card shows it from another "
-        'conversation',
+        "moves a kept frame's record to the conversation its row is in",
         () async {
+          final message = _videoMessage(conversationId: 'misfiled');
+          DmVideoMessageLocation? row = (
+            conversationId: 'moved',
+            sentAt: message.createdAt,
+          );
+          var removed = false;
           final store = createStore(
             isConversationRemoved: (conversationId, _) async =>
-                conversationId == 'moved',
+                removed && conversationId == 'moved',
+            findMessageLocation: (_) async => row,
           );
-          await store.previewFor(
-            _videoMessage(conversationId: 'misfiled'),
-          );
+          await store.previewFor(message);
+          await store.prune();
 
-          await store.previewFor(
-            _videoMessage(conversationId: 'moved'),
+          row = null;
+          removed = true;
+          await store.prune();
+
+          expect(ownerDir().listSync(), isEmpty);
+        },
+      );
+
+      test(
+        'leaves a kept record where the row put it when a card shows the '
+        'message from before a repair',
+        () async {
+          final stale = _videoMessage(conversationId: 'misfiled');
+          DmVideoMessageLocation? row = (
+            conversationId: 'moved',
+            sentAt: stale.createdAt,
           );
+          var removed = false;
+          final store = createStore(
+            isConversationRemoved: (conversationId, _) async =>
+                removed && conversationId == 'moved',
+            findMessageLocation: (_) async => row,
+          );
+          await store.previewFor(_videoMessage(conversationId: 'moved'));
+          await store.prune();
+
+          await store.previewFor(stale);
+          row = null;
+          removed = true;
           await store.prune();
 
           expect(ownerDir().listSync(), isEmpty);
@@ -2865,25 +2930,6 @@ void main() {
           expect(record.existsSync(), isTrue);
           release.complete(_plaintext);
           await tapped;
-        },
-      );
-
-      test(
-        "moves a kept video's record when a tap plays its message from "
-        'another conversation',
-        () async {
-          var removed = false;
-          final store = createStore(
-            isConversationRemoved: (conversationId, _) async =>
-                removed && conversationId == 'moved',
-          );
-          await store.videoFor(_videoMessage(conversationId: 'misfiled'));
-
-          await store.videoFor(_videoMessage(conversationId: 'moved'));
-          removed = true;
-          await store.prune();
-
-          expect(ownerDir().listSync(), isEmpty);
         },
       );
 
