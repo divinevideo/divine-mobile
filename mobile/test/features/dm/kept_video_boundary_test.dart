@@ -81,6 +81,12 @@ void main() {
     await LogCaptureService().clearAllLogs();
   });
 
+  // Its own folder for gallery copies, apart from other test files' runs.
+  GallerySaveService gallery() => GallerySaveService(
+    permissionsService: _GrantedPermissions(),
+    copyRoot: () => Directory('${root.path}/gallery_copies'),
+  );
+
   File keptVideo(DmMessage message) => File(
     '${root.path}/${DmVideoStore.dirName}/${'e' * 64}/'
     '${DmVideoStore.videoFileNameFor(message)}',
@@ -188,9 +194,7 @@ void main() {
           });
       final cubit = EncryptedVideoSaveCubit(
         resolveStore: () => store,
-        gallerySaveService: GallerySaveService(
-          permissionsService: _GrantedPermissions(),
-        ),
+        gallerySaveService: gallery(),
       );
       addTearDown(cubit.close);
       final message = _message('a');
@@ -227,9 +231,7 @@ void main() {
               });
           final cubit = EncryptedVideoSaveCubit(
             resolveStore: () => store,
-            gallerySaveService: GallerySaveService(
-              permissionsService: _GrantedPermissions(),
-            ),
+            gallerySaveService: gallery(),
           );
           addTearDown(cubit.close);
 
@@ -270,9 +272,9 @@ void main() {
           });
       final video = await store.videoFor(_message('a'));
 
-      final result = await GallerySaveService(
-        permissionsService: _GrantedPermissions(),
-      ).saveVideoToGallery(EditorVideo.file(video.path));
+      final result = await gallery().saveVideoToGallery(
+        EditorVideo.file(video.path),
+      );
 
       expect(fileName, DmVideoStore.videoFileNameFor(_message('a')));
       expect(result, isA<GallerySaveFailure>());
@@ -296,9 +298,7 @@ void main() {
           );
       final cubit = EncryptedVideoSaveCubit(
         resolveStore: () => store,
-        gallerySaveService: GallerySaveService(
-          permissionsService: _GrantedPermissions(),
-        ),
+        gallerySaveService: gallery(),
       );
       addTearDown(cubit.close);
 
@@ -331,9 +331,9 @@ void main() {
           });
       final video = await store.videoFor(_message('a'));
 
-      final result = await GallerySaveService(
-        permissionsService: _GrantedPermissions(),
-      ).saveVideoToGallery(EditorVideo.file(video.path));
+      final result = await gallery().saveVideoToGallery(
+        EditorVideo.file(video.path),
+      );
 
       expect(stem, 'a' * 64);
       expect(result, isA<GallerySaveFailure>());
@@ -372,9 +372,7 @@ void main() {
               });
           final cubit = EncryptedVideoSaveCubit(
             resolveStore: () => store,
-            gallerySaveService: GallerySaveService(
-              permissionsService: _GrantedPermissions(),
-            ),
+            gallerySaveService: gallery(),
           );
           addTearDown(cubit.close);
 

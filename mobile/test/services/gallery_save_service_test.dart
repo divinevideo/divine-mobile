@@ -1,6 +1,7 @@
 // ABOUTME: Tests for GallerySaveService result types and error handling
 // ABOUTME: Validates the gallery save result sealed class hierarchy
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -266,24 +267,35 @@ void main() {
       const galChannel = MethodChannel('gal');
 
       late Directory tempDir;
+      late Directory copies;
+      late GallerySaveService copyingService;
       late File source;
       late List<String> galleryPaths;
-      late Object? Function() galleryReply;
+      late List<List<int>> galleryBytes;
+      late Future<Object?> Function() galleryReply;
 
       setUp(() async {
         TestWidgetsFlutterBinding.ensureInitialized();
         galleryPaths = [];
-        galleryReply = () => null;
+        galleryBytes = [];
+        galleryReply = () async => null;
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(galChannel, (call) async {
               if (call.method != 'putVideo') return true;
               final args = call.arguments as Map<Object?, Object?>;
-              galleryPaths.add(args['path']! as String);
+              final path = args['path']! as String;
+              galleryPaths.add(path);
+              galleryBytes.add(File(path).readAsBytesSync());
               return galleryReply();
             });
         await LogCaptureService().clearAllLogs();
 
         tempDir = Directory.systemTemp.createTempSync('gallery_test_');
+        copies = Directory('${tempDir.path}/copies');
+        copyingService = GallerySaveService(
+          permissionsService: mockPermissionsService,
+          copyRoot: () => copies,
+        );
         // Named the way a kept video DM is: after its message.
         source = File('${tempDir.path}/${'a' * 64}.mov')
           ..writeAsBytesSync([0, 1, 2, 3]);
@@ -296,9 +308,9 @@ void main() {
         tempDir.deleteSync(recursive: true);
       });
 
-      test('hands the gallery a copy named like a Downloads save, keeps the '
-          'file and removes the copy', () async {
-        final result = await service.saveVideoToGallery(
+      test('hands the gallery a copy named like a Downloads save, with the '
+          "video's bytes, keeps the file and removes the copy", () async {
+        final result = await copyingService.saveVideoToGallery(
           EditorVideo.file(source.path),
           copyUnderNeutralName: true,
         );
@@ -309,31 +321,32 @@ void main() {
           copy.uri.pathSegments.last,
           matches(RegExp(r'^Divine_\d+\.mov$')),
         );
-        expect(copy.existsSync(), isFalse);
+        expect(galleryBytes.single, equals([0, 1, 2, 3]));
+        expect(copy.parent.existsSync(), isFalse);
         expect(source.readAsBytesSync(), equals([0, 1, 2, 3]));
       });
 
       test('removes the copy when the gallery rejects it', () async {
-        galleryReply = () =>
+        galleryReply = () async =>
             throw PlatformException(code: 'UNEXPECTED', message: 'rejected');
 
-        final result = await service.saveVideoToGallery(
+        final result = await copyingService.saveVideoToGallery(
           EditorVideo.file(source.path),
           copyUnderNeutralName: true,
         );
 
         expect(result, isA<GallerySaveFailure>());
-        expect(File(galleryPaths.single).existsSync(), isFalse);
+        expect(File(galleryPaths.single).parent.existsSync(), isFalse);
         expect(source.existsSync(), isTrue);
       });
 
       test("keeps the copy's path out of a native failure", () async {
-        galleryReply = () => throw PlatformException(
+        galleryReply = () async => throw PlatformException(
           code: 'UNEXPECTED',
           message: 'Cannot save ${galleryPaths.single}',
         );
 
-        await service.saveVideoToGallery(
+        await copyingService.saveVideoToGallery(
           EditorVideo.file(source.path),
           copyUnderNeutralName: true,
         );
@@ -349,6 +362,53 @@ void main() {
             isNot(contains(galleryPaths.single)),
           );
         }
+      });
+
+      test('removes copies a save that never ended left behind, before its '
+          'first copy', () async {
+        // As an earlier run of the app leaves them when it is killed mid-save.
+        final leftover = File('${copies.path}/left/Divine_1.mov')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync([9, 9, 9]);
+
+        await copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        expect(leftover.parent.existsSync(), isFalse);
+        expect(galleryBytes.single, equals([0, 1, 2, 3]));
+      });
+
+      test('never removes a copy a save still running uses', () async {
+        final firstAtGallery = Completer<void>();
+        final firstSaveHeld = Completer<void>();
+        galleryReply = () async {
+          if (galleryPaths.length == 1) {
+            firstAtGallery.complete();
+            await firstSaveHeld.future;
+          }
+          return null;
+        };
+
+        final first = copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+        await firstAtGallery.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => fail('the first save never reached the gallery'),
+        );
+        final second = await copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+        final firstCopyKept = File(galleryPaths.first).existsSync();
+        firstSaveHeld.complete();
+
+        expect(firstCopyKept, isTrue);
+        expect(second, isA<GallerySaveSuccess>());
+        expect(await first, isA<GallerySaveSuccess>());
       });
     });
   });

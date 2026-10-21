@@ -45,10 +45,23 @@ class GallerySavePermissionDenied extends GallerySaveResult {
 /// package and never throws exceptions - instead returning a result object.
 class GallerySaveService {
   /// Creates a [GallerySaveService] with the given [permissionsService].
-  const GallerySaveService({required PermissionsService permissionsService})
-    : _permissionsService = permissionsService;
+  ///
+  /// [copyRoot] is where neutrally named copies are made; tests give each
+  /// run its own.
+  const GallerySaveService({
+    required PermissionsService permissionsService,
+    @visibleForTesting Directory Function()? copyRoot,
+  }) : _permissionsService = permissionsService,
+       _copyRoot = copyRoot ?? _defaultCopyRoot;
 
   final PermissionsService _permissionsService;
+  final Directory Function() _copyRoot;
+
+  static Directory _defaultCopyRoot() =>
+      Directory(p.join(Directory.systemTemp.path, 'divine_gallery_copies'));
+
+  // Folders whose leftovers this process already removed.
+  static final Map<String, Future<void>> _leftoverCopiesRemoved = {};
 
   /// Platform-aware name for the save destination.
   ///
@@ -299,9 +312,15 @@ class GallerySaveService {
     return redactFilesystemPaths(text);
   }
 
-  // In a folder of its own, so two saves never share a copy.
-  static Future<File> _neutralCopyOf(File file) async {
-    final dir = await Directory.systemTemp.createTemp('gallery_save_');
+  // In a folder of its own, so two saves never share a copy. A copy is
+  // plaintext of a private video, and a save the app did not live to finish
+  // leaves one behind: before this process makes its first copy, everything
+  // there is such a leftover, so it all goes then and never after.
+  Future<File> _neutralCopyOf(File file) async {
+    final root = _copyRoot();
+    await (_leftoverCopiesRemoved[root.path] ??= _deleteLeftovers(root));
+    await root.create(recursive: true);
+    final dir = await root.createTemp();
     final name =
         'Divine_${DateTime.now().millisecondsSinceEpoch}'
         '${p.extension(file.path)}';
@@ -311,6 +330,10 @@ class GallerySaveService {
       await _deleteQuietly(dir);
       rethrow;
     }
+  }
+
+  static Future<void> _deleteLeftovers(Directory root) async {
+    if (root.existsSync()) await _deleteQuietly(root);
   }
 
   static Future<void> _deleteQuietly(Directory dir) async {
