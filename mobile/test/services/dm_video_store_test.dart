@@ -2336,17 +2336,18 @@ void main() {
         },
       );
 
-      test('opening a kept video keeps it from expiring', () async {
-        final store = createStore();
-        final message = _videoMessage();
-        final file = await store.videoFor(message);
-        file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+      test(
+        'never deletes for its age a video handed to playback this session',
+        () async {
+          final store = createStore();
+          final file = await store.videoFor(_videoMessage());
+          file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
 
-        await store.videoFor(message);
-        await store.prune();
+          await store.prune();
 
-        expect(file.existsSync(), isTrue);
-      });
+          expect(file.existsSync(), isTrue);
+        },
+      );
 
       test('clears a part file a crash left', () async {
         final crashed = keptFile(
