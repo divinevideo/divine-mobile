@@ -188,8 +188,9 @@ class DmVideoStore {
   /// store remembers the count it was created at, so a download that lands
   /// after its account was removed cannot write the video back.
   static final Map<String, int> _removals = {};
-  // The static launch sweep must honor real file users, not persisted auth
-  // identity. Weak references do not keep disposed/unreachable stores alive.
+
+  /// Every store still reachable, so [sweepOwners] leaves alone what any of
+  /// them leased or handed out. Weak, so the list keeps no store alive.
   static final List<WeakReference<DmVideoStore>> _stores = [];
   static const String _logName = 'DmVideoStore';
 
@@ -611,9 +612,9 @@ class DmVideoStore {
   ///
   /// Runs at launch for every account, so an account the user switched away
   /// from does not keep its videos past [maxAge]: its store prunes only
-  /// while it is the signed-in one.
-  /// Actual file leases and live-store handouts are respected across stores;
-  /// a stale persisted identity cannot suppress expiry of unused files.
+  /// while it is the signed-in one. In a kept account's folder it leaves
+  /// alone what a live store leased or handed out; the folder of an account
+  /// not in [keepOwnerPubkeys] goes whole.
   static Future<int> sweepOwners(
     Set<String> keepOwnerPubkeys, {
     Future<Directory> Function()? rootDirectory,
