@@ -481,14 +481,13 @@ void main() {
       );
 
       test(
-        'hands out the video of a message a repair moved by the conversation '
-        'its record names, while its row is missing',
+        'refuses, and keeps, the video of a message whose record and copy '
+        'disagree on whether it is gone while its row is missing, and hands '
+        'it out once the row is back',
         () async {
           final stale = _videoMessage(conversationId: 'old-room');
-          DmVideoMessageLocation? row = (
-            conversationId: 'repaired',
-            sentAt: stale.createdAt,
-          );
+          final current = (conversationId: 'repaired', sentAt: stale.createdAt);
+          DmVideoMessageLocation? row = current;
           final store = createStore(
             isConversationRemoved: (conversationId, _) async =>
                 conversationId == 'old-room',
@@ -499,8 +498,23 @@ void main() {
           );
           row = null;
 
-          final video = await store.videoFor(stale);
+          await expectLater(
+            store.videoFor(stale),
+            throwsA(
+              isA<DmVideoUnavailableException>()
+                  .having((error) => error.mayPass, 'mayPass', isTrue)
+                  .having(
+                    (error) => error,
+                    'kind',
+                    isNot(isA<DmVideoGoneException>()),
+                  ),
+            ),
+          );
+          await store.prune();
+          expect(keptFiles(), isNotEmpty);
 
+          row = current;
+          final video = await store.videoFor(stale);
           expect(video.existsSync(), isTrue);
           store.releaseVideo(video);
         },

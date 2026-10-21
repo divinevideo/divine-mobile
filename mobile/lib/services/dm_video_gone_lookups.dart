@@ -7,6 +7,17 @@ import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_conversation_records.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Thrown by [DmVideoGoneLookups.isGone] when a message's row is missing and
+/// the record kept beside its video and the caller's copy of it disagree on
+/// whether its conversation was removed: either can predate a repair.
+class DmVideoGoneUndecided implements Exception {
+  /// Creates a [DmVideoGoneUndecided].
+  const DmVideoGoneUndecided();
+
+  @override
+  String toString() => 'DmVideoGoneUndecided';
+}
+
 /// Whether the messages of one account's kept video DMs are gone: retracted
 /// by their sender, or removed with their conversation. Answered by the
 /// lookups the store was given; without them, nothing is gone.
@@ -44,9 +55,10 @@ class DmVideoGoneLookups {
 
   /// Whether [message], kept in [dir], was retracted or removed with its
   /// conversation: the one its row is in now, as a caller can hold a message
-  /// from before a repair moved it, else the one its record names, else the
-  /// caller's. Only a retraction or a row is remembered, since a record or a
-  /// caller's copy can predate a repair. Throws what a lookup throws.
+  /// from before a repair moved it. Without a row, the record kept beside
+  /// its video and the caller's copy must agree, as either can predate a
+  /// repair; when they do not, it throws [DmVideoGoneUndecided]. Only a
+  /// retraction or a row is remembered. Throws what a lookup throws.
   Future<bool> isGone(DmMessage message, Directory dir) async {
     if (_known.contains(message.id)) return true;
     if (await _isMessageGone?.call(message.id) == true) {
@@ -61,11 +73,17 @@ class DmVideoGoneLookups {
       if (gone) _known.add(message.id);
       return gone;
     }
+    final byCopy = await isRemoved(message.conversationId, message.createdAt);
     final said = await _recordedLocation(dir, message.id);
-    return isRemoved(
-      said?.conversationId ?? message.conversationId,
-      said?.sentAt ?? message.createdAt,
-    );
+    if (said == null ||
+        said.conversationId == message.conversationId &&
+            said.sentAt == message.createdAt) {
+      return byCopy;
+    }
+    if (await isRemoved(said.conversationId, said.sentAt) != byCopy) {
+      throw const DmVideoGoneUndecided();
+    }
+    return byCopy;
   }
 
   Future<DmVideoMessageLocation?> _recordedLocation(

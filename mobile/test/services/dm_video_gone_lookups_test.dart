@@ -134,27 +134,59 @@ void main() {
         },
       );
 
-      test(
-        'judges a message whose row is missing by its record before the '
-        "caller's copy",
-        () async {
-          recordOf('a' * 64, 'repaired');
-          final lookups = DmVideoGoneLookups(
-            records: records,
-            isConversationRemoved: (conversationId, _) async =>
-                conversationId == 'old-room',
-            findMessageLocation: (_) async => null,
-          );
+      group('with its row missing', () {
+        DmVideoGoneLookups lookupsWithoutRows() => DmVideoGoneLookups(
+          records: records,
+          isConversationRemoved: (conversationId, _) async =>
+              conversationId == 'removed',
+          findMessageLocation: (_) async => null,
+        );
 
-          expect(
-            await lookups.isGone(
-              _videoMessage(conversationId: 'old-room'),
-              dir,
-            ),
-            isFalse,
-          );
-        },
-      );
+        test(
+          "cannot tell when its record and the caller's copy disagree on "
+          'whether its conversation was removed, as either can predate a '
+          'repair',
+          () async {
+            final lookups = lookupsWithoutRows();
+            recordOf('a' * 64, 'room');
+            recordOf('e' * 64, 'removed');
+
+            await expectLater(
+              lookups.isGone(_videoMessage(conversationId: 'removed'), dir),
+              throwsA(isA<DmVideoGoneUndecided>()),
+            );
+            await expectLater(
+              // In the conversation the helper names by default, 'room'.
+              lookups.isGone(_videoMessage(id: 'e' * 64), dir),
+              throwsA(isA<DmVideoGoneUndecided>()),
+            );
+          },
+        );
+
+        test(
+          "goes by its record and the caller's copy where they agree",
+          () async {
+            final lookups = lookupsWithoutRows();
+            recordOf('a' * 64, 'removed');
+            recordOf('e' * 64, 'room');
+
+            expect(
+              await lookups.isGone(
+                _videoMessage(conversationId: 'removed'),
+                dir,
+              ),
+              isTrue,
+            );
+            expect(
+              await lookups.isGone(
+                _videoMessage(id: 'e' * 64, conversationId: 'other-room'),
+                dir,
+              ),
+              isFalse,
+            );
+          },
+        );
+      });
 
       test(
         "does not remember a verdict from a record or the caller's copy, "
