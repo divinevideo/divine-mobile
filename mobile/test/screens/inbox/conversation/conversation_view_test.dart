@@ -5343,6 +5343,24 @@ void main() {
           expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
         });
 
+        testWidgets('holds back a video from someone else filed into a chat '
+            'the user posted in, whom they do not follow', (tester) async {
+          const strangerPubkey =
+              '5566778855667788556677885566778855667788556677885566778855667788';
+          final video = videoFrom(strangerPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              strangerPubkey: FollowRelationship.none,
+            },
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
+        });
+
         testWidgets("holds back a blocked sender's video, though the user "
             'follows them and posted there', (tester) async {
           when(
@@ -5522,6 +5540,8 @@ void main() {
             follows: {
               otherPubkey: FollowRelationship.none,
               memberPubkey: FollowRelationship.none,
+              // Trusted for being the user's, not for any relationship.
+              currentPubkey: FollowRelationship.none,
             },
           );
 

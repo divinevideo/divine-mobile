@@ -424,6 +424,37 @@ void main() {
       );
 
       test(
+        'prunes once a video a tap downloads lands, while the tap still holds '
+        'it',
+        () async {
+          final other = _videoMessage(id: '1' * 64);
+          keptFile(
+            DmVideoStore.videoFileNameFor(other),
+            _plaintext,
+            keptAt: now,
+          );
+          final otherLookedUp = Completer<void>();
+          final store = createStore(
+            isMessageGone: (id) async {
+              if (id == other.id && !otherLookedUp.isCompleted) {
+                otherLookedUp.complete();
+              }
+              return false;
+            },
+          );
+
+          final video = await store.videoFor(_videoMessage(id: '2' * 64));
+
+          // Only a prune asks after a message the tap did not ask for.
+          await expectLater(
+            otherLookedUp.future.timeout(const Duration(seconds: 5)),
+            completes,
+          );
+          store.releaseVideo(video);
+        },
+      );
+
+      test(
         'reports a gone lookup that fails for a bug, and hands out nothing',
         () async {
           final reporter = _RecordingCrashReporter();

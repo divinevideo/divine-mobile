@@ -23,6 +23,20 @@ import '../mocks/mock_path_provider_platform.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
+/// Says when something first asks for the cache folder, as a prune does
+/// before anything else.
+class _SignallingPathProvider extends MockPathProviderPlatform {
+  _SignallingPathProvider(this.asked);
+
+  final Completer<void> asked;
+
+  @override
+  Future<String?> getApplicationCachePath() {
+    if (!asked.isCompleted) asked.complete();
+    return super.getApplicationCachePath();
+  }
+}
+
 void main() {
   group('dmVideoMessageGone', () {
     final owner = 'e' * 64;
@@ -640,6 +654,23 @@ void main() {
 
         expect(storeOf(container).appInForeground, isFalse);
       });
+    });
+
+    test('prunes once its store is built', () async {
+      final asked = Completer<void>();
+      PathProviderPlatform.instance = _SignallingPathProvider(asked)
+        ..setApplicationCachePath(cache.path);
+      final container = accountContainer();
+      final closed = container.read(dmVideoStoreProvider)!.kept.drain<void>();
+      addTearDown(() async {
+        container.dispose();
+        await closed;
+      });
+
+      await expectLater(
+        asked.future.timeout(const Duration(seconds: 2)),
+        completes,
+      );
     });
 
     test('stops pruning at sign-out once its store is gone', () async {
