@@ -506,10 +506,9 @@ class _LoadedView extends ConsumerWidget {
       return null;
     }
 
-    // No primary action for a case with nothing left for the user to do. A
-    // support contact is already offered below the reconsideration card
-    // (#8239), so a primary one here would duplicate it in `openReported`,
-    // `cleared`, `deniedClosed` and `unknown`.
+    // A case with nothing left for the user to do gets the appeal and no next
+    // step. Neither the parent-contact route nor its screen checks the case
+    // state, and on the under-13 path a next step would replace the appeal.
     if (!reviewCase.needsUserAction) {
       return null;
     }

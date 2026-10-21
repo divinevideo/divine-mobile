@@ -1287,6 +1287,38 @@ void main() {
         },
       );
 
+      // A decided case gets the appeal and no next step. Neither the
+      // parent-contact route nor its screen checks the case state, so this
+      // screen is what keeps a closed case out of the parent-contact form.
+      testWidgets('a decided parent-contact case offers the appeal, not '
+          'Continue', (tester) async {
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.age13To15,
+          state: MinorReviewCaseState.deniedClosed,
+        );
+
+        expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+      });
+
+      // On the under-13 path a next step goes where the appeal goes, so it
+      // would replace the appeal with first-contact parent instructions.
+      testWidgets('a decided under-13 case offers the appeal, not parent '
+          'instructions', (tester) async {
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.under13,
+          state: MinorReviewCaseState.deniedClosed,
+        );
+
+        expect(
+          find.text(l10n.minorAccountReviewParentSupportInstructions),
+          findsNothing,
+        );
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+      });
+
       // An under-13 case that still needs action already offers "Parent
       // Support Instructions", which opens the same parent-support screen, so
       // a second button to it would only add a choice with no difference.
