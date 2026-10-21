@@ -1,5 +1,5 @@
 // ABOUTME: Client-side account enforcement state derived from Funnelcake's relay-backed status.
-// ABOUTME: Carries no moderation internals; the API deliberately returns status only.
+// ABOUTME: Carries no moderation internals: a status and, at most, a closed category.
 
 import 'package:openvine/services/account_status_api_client.dart';
 
@@ -61,28 +61,26 @@ class AccountEnforcementStatus {
   const AccountEnforcementStatus({required this.kind, this.category});
 
   factory AccountEnforcementStatus.fromFunnelcake(
-    FunnelcakeAccountStatus status,
+    FunnelcakeAccountStatusResponse response,
   ) {
-    switch (status) {
-      case FunnelcakeAccountStatus.active:
-        return const AccountEnforcementStatus(
-          kind: AccountEnforcementKind.noRestrictionReported,
-        );
-      case FunnelcakeAccountStatus.suspended:
-        return const AccountEnforcementStatus(
-          kind: AccountEnforcementKind.suspended,
-        );
-      case FunnelcakeAccountStatus.banned:
-        return const AccountEnforcementStatus(
-          kind: AccountEnforcementKind.banned,
-        );
-    }
+    final kind = switch (response.status) {
+      FunnelcakeAccountStatus.active =>
+        AccountEnforcementKind.noRestrictionReported,
+      FunnelcakeAccountStatus.suspended => AccountEnforcementKind.suspended,
+      FunnelcakeAccountStatus.banned => AccountEnforcementKind.banned,
+    };
+    final category = switch (response.category) {
+      FunnelcakeEnforcementCategory.ageReview =>
+        AccountEnforcementCategory.ageReview,
+      null => null,
+    };
+    return AccountEnforcementStatus(kind: kind, category: category);
   }
 
   final AccountEnforcementKind kind;
 
-  /// Funnelcake does not report one yet, so this is null outside developer
-  /// simulation until the self-status API carries it.
+  /// Null when Funnelcake names no category, including every response from a
+  /// Funnelcake that predates the field.
   final AccountEnforcementCategory? category;
 
   bool get isEnforced => kind.isEnforced;

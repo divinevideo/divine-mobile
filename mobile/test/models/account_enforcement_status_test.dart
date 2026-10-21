@@ -9,7 +9,7 @@ void main() {
   group('AccountEnforcementStatus.fromFunnelcake', () {
     test('active reports no restriction', () {
       final status = AccountEnforcementStatus.fromFunnelcake(
-        FunnelcakeAccountStatus.active,
+        const FunnelcakeAccountStatusResponse(FunnelcakeAccountStatus.active),
       );
       expect(status.kind, AccountEnforcementKind.noRestrictionReported);
       expect(status.isEnforced, isFalse);
@@ -18,29 +18,44 @@ void main() {
     test('suspended and banned are enforced', () {
       expect(
         AccountEnforcementStatus.fromFunnelcake(
-          FunnelcakeAccountStatus.suspended,
+          const FunnelcakeAccountStatusResponse(
+            FunnelcakeAccountStatus.suspended,
+          ),
         ).kind,
         AccountEnforcementKind.suspended,
       );
       expect(
         AccountEnforcementStatus.fromFunnelcake(
-          FunnelcakeAccountStatus.banned,
+          const FunnelcakeAccountStatusResponse(FunnelcakeAccountStatus.banned),
         ).kind,
         AccountEnforcementKind.banned,
       );
     });
 
-    // Funnelcake's self-status API carries no category yet, so nothing it
-    // returns may claim one. A category reaching the screen from here would
-    // show age-review copy to an account banned for something else.
-    test('carries no category, whatever the status', () {
+    // A category appearing from nowhere would show age-review copy to an
+    // account banned for something else.
+    test('carries no category when Funnelcake names none', () {
       for (final status in FunnelcakeAccountStatus.values) {
         expect(
-          AccountEnforcementStatus.fromFunnelcake(status).category,
+          AccountEnforcementStatus.fromFunnelcake(
+            FunnelcakeAccountStatusResponse(status),
+          ).category,
           isNull,
           reason: '$status',
         );
       }
+    });
+
+    test('carries the age-review category Funnelcake names', () {
+      final status = AccountEnforcementStatus.fromFunnelcake(
+        const FunnelcakeAccountStatusResponse(
+          FunnelcakeAccountStatus.banned,
+          category: FunnelcakeEnforcementCategory.ageReview,
+        ),
+      );
+
+      expect(status.kind, AccountEnforcementKind.banned);
+      expect(status.category, AccountEnforcementCategory.ageReview);
     });
   });
 

@@ -43,7 +43,7 @@ void main() {
       );
 
       expect(
-        await client.fetchStatus(expectedPubkey: _pubkey),
+        (await client.fetchStatus(expectedPubkey: _pubkey)).status,
         FunnelcakeAccountStatus.active,
       );
     });
@@ -60,7 +60,10 @@ void main() {
             200,
           ),
         );
-        expect(await client.fetchStatus(expectedPubkey: _pubkey), entry.value);
+        expect(
+          (await client.fetchStatus(expectedPubkey: _pubkey)).status,
+          entry.value,
+        );
       }
     });
 
@@ -89,7 +92,7 @@ void main() {
         ),
       );
       expect(
-        await client.fetchStatus(expectedPubkey: _pubkey),
+        (await client.fetchStatus(expectedPubkey: _pubkey)).status,
         FunnelcakeAccountStatus.active,
       );
     });
@@ -144,10 +147,14 @@ void main() {
     // client side, so a server that starts sending one cannot silently make it
     // renderable here.
     test('ignores moderation metadata a 200 response might carry', () async {
-      Future<FunnelcakeAccountStatus> statusFor(String body) {
-        return _client(
+      // Everything the client keeps from a response, so any field leaking
+      // through from moderation metadata shows up as a difference.
+      Future<(FunnelcakeAccountStatus, FunnelcakeEnforcementCategory?)>
+      statusFor(String body) async {
+        final response = await _client(
           handler: (_) async => http.Response(body, 200),
         ).fetchStatus(expectedPubkey: _pubkey);
+        return (response.status, response.category);
       }
 
       const plain = '{"pubkey":"$_pubkey","status":"suspended"}';
@@ -158,10 +165,19 @@ void main() {
       const withOtherReason =
           '{"pubkey":"$_pubkey","status":"suspended",'
           '"reason":"policy_violation"}';
+      // The raw reason relay-manager stores for an age-review closure. Only
+      // Funnelcake's closed `category` may select copy, never the reason.
+      const withAgeReviewReason =
+          '{"pubkey":"$_pubkey","status":"suspended",'
+          '"reason":"age_review_denied"}';
 
       expect(await statusFor(withReason), await statusFor(plain));
       expect(await statusFor(withOtherReason), await statusFor(plain));
-      expect(await statusFor(withReason), FunnelcakeAccountStatus.suspended);
+      expect(await statusFor(withAgeReviewReason), await statusFor(plain));
+      expect(await statusFor(withReason), (
+        FunnelcakeAccountStatus.suspended,
+        null,
+      ));
     });
 
     test('reports missing signer, transport failure, and timeout', () async {

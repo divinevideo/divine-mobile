@@ -27,12 +27,14 @@ class _QueueStatusClient extends AccountStatusApiClient {
   final List<String> requestedPubkeys = [];
 
   @override
-  Future<FunnelcakeAccountStatus> fetchStatus({
+  Future<FunnelcakeAccountStatusResponse> fetchStatus({
     required String expectedPubkey,
   }) async {
     requestedPubkeys.add(expectedPubkey);
     final result = results.removeAt(0);
-    if (result is FunnelcakeAccountStatus) return result;
+    if (result is FunnelcakeAccountStatus) {
+      return FunnelcakeAccountStatusResponse(result);
+    }
     throw result;
   }
 }
@@ -47,9 +49,9 @@ class _ControlledStatusClient extends AccountStatusApiClient {
   final List<Completer<FunnelcakeAccountStatus>> results;
 
   @override
-  Future<FunnelcakeAccountStatus> fetchStatus({
+  Future<FunnelcakeAccountStatusResponse> fetchStatus({
     required String expectedPubkey,
-  }) => results.removeAt(0).future;
+  }) => results.removeAt(0).future.then(FunnelcakeAccountStatusResponse.new);
 }
 
 const _pubkeyA =
