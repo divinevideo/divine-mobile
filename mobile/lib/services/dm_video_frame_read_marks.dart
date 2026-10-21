@@ -19,8 +19,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// empty: the system kills apps there, and that is no crash. A read past its
 /// turn limit hung: its mark names the sender until the read ends, even in
 /// the background, and every store skips the sender for the rest of the
-/// launch, unless that read keeps a frame after all, which forgives a sender
-/// once a launch.
+/// launch, unless that read returns a frame after all, which forgives a
+/// sender once a launch.
 class DmVideoFrameReadMarks {
   /// Creates the marks of one store, whose account [ownerRemoved] says was
   /// removed from this device: a sender is then not remembered on disk, as
@@ -122,7 +122,7 @@ class DmVideoFrameReadMarks {
   /// Names [mark]'s sender until the read ends: it outlived its turn, so it
   /// hung, and a kill meanwhile, even in the background, still blames them.
   /// Their other videos are not read by themselves for the rest of the
-  /// launch either, unless it keeps a frame after all and they were not
+  /// launch either, unless it returns a frame after all and they were not
   /// forgiven once already. Does nothing once the read ended.
   void readHung(File mark) {
     final senderPubkey = _running.remove(mark.path);
@@ -133,8 +133,8 @@ class DmVideoFrameReadMarks {
     _rewrite(mark, '$_launchId\n$senderPubkey');
   }
 
-  /// Deletes [mark], whose read kept a frame. A read that hung was slow, not
-  /// stuck: unless another of theirs hangs, its sender is read again, once a
+  /// Deletes [mark], whose read returned a frame, kept or not. A read that
+  /// hung was slow, not stuck: unless another of theirs hangs, its sender is read again, once a
   /// launch, as each such read holds up every other sender's frames for its
   /// whole turn.
   void frameKept(File mark) {

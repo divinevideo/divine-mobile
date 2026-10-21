@@ -1018,8 +1018,8 @@ class DmVideoStore {
     }
     if (!gone) return;
     _goneWhileLeased.add(video.path);
-    // The prune this store's release runs marks them too, but not when it
-    // cannot list the folder.
+    // The prune this store's release runs marks them too, but only for files
+    // it lists.
     _markGoneInOtherStores(video);
     throw const DmVideoGoneException();
   }
