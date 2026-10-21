@@ -993,13 +993,20 @@ class DmVideoStore {
             .then<void>((_) {}, onError: (Object _) {})
             .timeout(
               frameTurnLimit,
-              onTimeout: () => Log.warning(
-                'A video DM frame decode still ran '
-                '${frameTurnLimit.inSeconds} s after it started; the next '
-                'frame read no longer waits for it',
-                name: _logName,
-                category: LogCategory.video,
-              ),
+              onTimeout: () {
+                // It hung: a kill from here on, even in the background,
+                // still blames the sender.
+                _frameReadMarks.readHung(
+                  DmVideoFrameReadMarks.readMarkOf(preview.parent, id),
+                );
+                Log.warning(
+                  'A video DM frame decode still ran '
+                  '${frameTurnLimit.inSeconds} s after it started; the next '
+                  'frame read no longer waits for it',
+                  name: _logName,
+                  category: LogCategory.video,
+                );
+              },
             );
       }),
     );
@@ -1090,7 +1097,7 @@ class DmVideoStore {
       frame = await _readFrame(video);
     } finally {
       // The mark stays when the decoder cannot produce a frame, emptied as
-      // the read ended. A decode that never settles leaves it naming the
+      // the read ended. A decode that outlives its turn leaves it naming the
       // launch and the sender, even across an app restart.
       if (frame == null || frame.isEmpty) _frameReadMarks.readEnded(mark);
     }

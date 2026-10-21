@@ -16,7 +16,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// naming them never finished, and its sender is remembered with an empty
 /// mark named after them, so one sender cannot crash the app once per video.
 /// While the app is in the background, the marks of reads under way are left
-/// empty: the system kills apps there, and that is no crash.
+/// empty: the system kills apps there, and that is no crash. A read past its
+/// turn limit hung, and its mark names the sender whatever happens next.
 class DmVideoFrameReadMarks {
   /// Creates the marks of one store, whose account [ownerRemoved] says was
   /// removed from this device: a sender is then not remembered on disk, as
@@ -105,6 +106,14 @@ class DmVideoFrameReadMarks {
         category: LogCategory.video,
       );
     }
+  }
+
+  /// Names [mark]'s sender for good: its read outlived its turn, so it hung,
+  /// and a kill from here on, even in the background, still blames them.
+  /// Does nothing once the read ended.
+  void readHung(File mark) {
+    final senderPubkey = _running.remove(mark.path);
+    if (senderPubkey != null) _rewrite(mark, '$_launchId\n$senderPubkey');
   }
 
   /// Deletes [mark], whose read kept a frame.

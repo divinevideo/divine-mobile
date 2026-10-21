@@ -92,6 +92,52 @@ void main() {
       });
     });
 
+    group('readHung', () {
+      test(
+        'names the sender for good, so a kill in the background still blames '
+        'them',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          final mark = markOf('1');
+          marks
+            ..readStarted(mark, _sender)
+            ..readHung(mark)
+            ..appInForeground = false;
+
+          expect(laterLaunchBlamesTheSender(), isTrue);
+        },
+      );
+
+      test(
+        'names the sender of a read found hung while the app was in the '
+        'background',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          final mark = markOf('1');
+          marks
+            ..readStarted(mark, _sender)
+            ..appInForeground = false;
+          expect(laterLaunchBlamesTheSender(), isFalse);
+
+          marks.readHung(mark);
+
+          expect(laterLaunchBlamesTheSender(), isTrue);
+        },
+      );
+
+      test('does nothing once the read ended', () {
+        final marks = createMarks(launchId: 'earlier');
+        final mark = markOf('1');
+        marks
+          ..readStarted(mark, _sender)
+          ..readEnded(mark)
+          ..readHung(mark);
+
+        expect(mark.existsSync(), isTrue);
+        expect(laterLaunchBlamesTheSender(), isFalse);
+      });
+    });
+
     group('frameKept', () {
       test('deletes the mark', () {
         final marks = createMarks(launchId: 'earlier');

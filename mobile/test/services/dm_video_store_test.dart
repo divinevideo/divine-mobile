@@ -571,6 +571,37 @@ void main() {
         );
 
         test(
+          'still blames the sender of a read that hung past its turn, '
+          'though the app went to the background after',
+          () async {
+            final earlier = createStore(
+              launchId: 'earlier',
+              frameTurnLimit: const Duration(milliseconds: 1),
+            );
+            await leaveHungRead(_videoMessage(id: '1' * 64), store: earlier);
+            // The next read starts only once the hung one used up its turn.
+            final nextStarted = Completer<void>();
+            readFrame = (_) async {
+              nextStarted.complete();
+              return _frame;
+            };
+            final next = earlier.previewFor(
+              _videoMessage(id: '2' * 64, senderPubkey: '9' * 64),
+            );
+            await nextStarted.future;
+            await next;
+
+            earlier.appInForeground = false;
+            final preview = await createStore().previewFor(
+              _videoMessage(id: '3' * 64),
+            );
+
+            expect(preview, isNull);
+            expect(frameReads, equals(2));
+          },
+        );
+
+        test(
           'blames no sender for a read under way while the app was in the '
           'background, where the system kills apps',
           () async {
