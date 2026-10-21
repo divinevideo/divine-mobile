@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
@@ -1253,6 +1254,37 @@ void main() {
         final log = importLog();
         expectNoFileNamed(log);
         expect(log, contains(contains('StateError')));
+      });
+
+      test('when the copy cannot be probed', () async {
+        kept
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(List<int>.filled(16, 7));
+        final service = buildService(
+          readVideoMetadata: (video) async => throw PlatformException(
+            code: 'METADATA_ERROR',
+            message: 'Cannot open ${video.file!.path}',
+          ),
+        );
+
+        final result = await service.importReceivedClip(
+          source: kept,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.unreadableVideo,
+          ),
+        );
+        final log = importLog();
+        expectNoFileNamed(log);
+        expect(log, contains(contains('PlatformException')));
       });
     });
 

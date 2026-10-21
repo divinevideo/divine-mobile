@@ -665,7 +665,7 @@ class VideoClipImportService {
       return await _readVideoMetadata(EditorVideo.file(copiedVideo.path));
     } catch (e) {
       Log.warning(
-        'Failed to read video metadata for ${copiedVideo.path}: $e',
+        'Failed to read video metadata: ${_failureKind(e)}',
         name: _logName,
         category: LogCategory.video,
       );
