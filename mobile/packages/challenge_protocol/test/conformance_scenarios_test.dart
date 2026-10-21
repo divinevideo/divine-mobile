@@ -8,7 +8,7 @@ void main() {
   final scenarios = data['scenarios']! as List<Object?>;
   test('complete versioned replay corpus', () {
     expect(data['version'], 1);
-    expect(scenarios, hasLength(22));
+    expect(scenarios, hasLength(26));
   });
   for (final item in scenarios) {
     final s = item! as Map<String, Object?>;

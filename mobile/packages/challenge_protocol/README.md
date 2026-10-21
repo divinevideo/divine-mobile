@@ -6,7 +6,7 @@ and builds unsigned participant entry and withdrawal templates. It does not
 contain networking, signing, key storage, widgets, or discovery enablement.
 
 The canonical contract is divinevideo/divine-challenges at commit
-5800cf866d7a5b1a1fb38201f58044e4dc024a3d. See
+49c3e2ee8e9aa3d1a34af042c2edc78b3d2c4de6. See
 [test/fixtures/SOURCE.md](test/fixtures/SOURCE.md) for fixture provenance.
 This is an application convention layered on Nostr, not a new standard NIP.
 
@@ -104,7 +104,7 @@ python3 tool/generate_tr46.py --check
 dart test
 ```
 
-Tests verify pinned checksums before decoding, all 29 parser cases and all 22
+Tests verify pinned checksums before decoding, all 89 parser cases and all 26
 replay scenarios in normal and reversed order, plus independently assembled
 participant, mutation, Unicode, byte-boundary, snapshot, and replay cases.
 Synthetic test signers generate fresh throwaway identities in memory; no signing

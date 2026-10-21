@@ -5,9 +5,9 @@ import 'package:crypto/crypto.dart';
 
 const fixtureHashes = {
   'events.json':
-      'aef551d33e5f95004d5c3104be11959ae5e6c24ca2a30b07ef9566161b979699',
+      '7a070f57f2246ab2897fc5bd7e5442ec5fc698058a2bdf10df6cc124a8858b37',
   'scenarios.json':
-      '7e455dadfdac2430b9c454842358d8868f8bfd0ace499b2c6fcb1fb0d9986efa',
+      '003ceae2356b3e5324f21adad253539f68f01eb895530deb366722c723d1d20b',
 };
 Map<String, Object?> decodeFixture(String name, List<int> bytes) {
   if (sha256.convert(bytes).toString() != fixtureHashes[name]) {

@@ -3854,6 +3854,746 @@
         ],
         "unavailableWinnerIds": []
       }
+    },
+    {
+      "name": "relay-bidi-unicode-latest-definition",
+      "events": [
+        {
+          "kind": 31923,
+          "created_at": 1799999900,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://relay.example"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e",
+          "sig": "85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269"
+        },
+        {
+          "kind": 1111,
+          "created_at": 1800000010,
+          "content": "nostr:note1zcnds7xjd873g5ee72mmx8rdhcxw8fcrru3ngydes9c8d0funasq83d0rt",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "entry"
+            ],
+            [
+              "A",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "K",
+              "31923"
+            ],
+            [
+              "P",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "a",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "k",
+              "31923"
+            ],
+            [
+              "p",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "e",
+              "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e"
+            ],
+            [
+              "q",
+              "1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60"
+            ],
+            [
+              "challenge_snapshot",
+              "{\"kind\":31923,\"created_at\":1799999900,\"content\":\"A synthetic creative prompt.\",\"tags\":[[\"t\",\"divine-challenge\"],[\"challenge\",\"1\",\"definition\"],[\"d\",\"synthetic-weekend\"],[\"title\",\"Synthetic weekend\"],[\"start\",\"1800000000\"],[\"end\",\"1800086400\"],[\"start_tzid\",\"Pacific/Auckland\"],[\"D\",\"20833\"],[\"D\",\"20834\"],[\"challenge_status\",\"active\"],[\"challenge_relay\",\"wss://relay.example\"]],\"pubkey\":\"1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f\",\"id\":\"3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e\",\"sig\":\"85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269\"}"
+            ],
+            [
+              "video_snapshot",
+              "{\"kind\":34236,\"created_at\":1800000000,\"content\":\"Synthetic video.\",\"tags\":[[\"d\",\"synthetic-video\"],[\"imeta\",\"url https://media.example/synthetic.mp4\",\"m video/mp4\"]],\"pubkey\":\"4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766\",\"id\":\"1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60\",\"sig\":\"cea6456c5a0bbb7a1bf2670e593f347b95981d9d870adbe6fb98f2360d844fe2ac2f0db45fe2db3c503d64690a7d5f450814b7a425ee9c862aad75ca2aad2f3c\"}"
+            ]
+          ],
+          "pubkey": "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+          "id": "575c77428781c40ef824746ab0ca16748153f3506c7e4e02d76c64099da8ef26",
+          "sig": "d7cfb5e6efc5bc247e4e5104323bb4d14e7f0454a8a86c811909926f964c8d2b7cdb53643860e8ae33a0b66ba2f2da013d6eefd479e4487ae7047b43e90f70c1"
+        },
+        {
+          "kind": 31923,
+          "created_at": 1800000000,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://àא"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "d2a895c449cd8c742dba1766a65cc4c33b26bc1ef67b84e986047c48e95bb4b3",
+          "sig": "c049f1acccaef251974dac49223bc28daf09f096918aa5f9626de422f61117393937f4594d0cf6b6f8e7e5fd6cff47be4fee6cc18c8bb27347e001661eab691b"
+        }
+      ],
+      "coordinate": "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend",
+      "now": 1800000020,
+      "hiddenIds": [],
+      "expected": {
+        "state": "unavailable",
+        "entryIds": [],
+        "resultId": null,
+        "pending": [],
+        "unavailableWinnerIds": []
+      }
+    },
+    {
+      "name": "relay-bidi-ace-latest-definition",
+      "events": [
+        {
+          "kind": 31923,
+          "created_at": 1799999900,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://relay.example"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e",
+          "sig": "85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269"
+        },
+        {
+          "kind": 1111,
+          "created_at": 1800000010,
+          "content": "nostr:note1zcnds7xjd873g5ee72mmx8rdhcxw8fcrru3ngydes9c8d0funasq83d0rt",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "entry"
+            ],
+            [
+              "A",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "K",
+              "31923"
+            ],
+            [
+              "P",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "a",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "k",
+              "31923"
+            ],
+            [
+              "p",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "e",
+              "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e"
+            ],
+            [
+              "q",
+              "1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60"
+            ],
+            [
+              "challenge_snapshot",
+              "{\"kind\":31923,\"created_at\":1799999900,\"content\":\"A synthetic creative prompt.\",\"tags\":[[\"t\",\"divine-challenge\"],[\"challenge\",\"1\",\"definition\"],[\"d\",\"synthetic-weekend\"],[\"title\",\"Synthetic weekend\"],[\"start\",\"1800000000\"],[\"end\",\"1800086400\"],[\"start_tzid\",\"Pacific/Auckland\"],[\"D\",\"20833\"],[\"D\",\"20834\"],[\"challenge_status\",\"active\"],[\"challenge_relay\",\"wss://relay.example\"]],\"pubkey\":\"1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f\",\"id\":\"3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e\",\"sig\":\"85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269\"}"
+            ],
+            [
+              "video_snapshot",
+              "{\"kind\":34236,\"created_at\":1800000000,\"content\":\"Synthetic video.\",\"tags\":[[\"d\",\"synthetic-video\"],[\"imeta\",\"url https://media.example/synthetic.mp4\",\"m video/mp4\"]],\"pubkey\":\"4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766\",\"id\":\"1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60\",\"sig\":\"cea6456c5a0bbb7a1bf2670e593f347b95981d9d870adbe6fb98f2360d844fe2ac2f0db45fe2db3c503d64690a7d5f450814b7a425ee9c862aad75ca2aad2f3c\"}"
+            ]
+          ],
+          "pubkey": "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+          "id": "575c77428781c40ef824746ab0ca16748153f3506c7e4e02d76c64099da8ef26",
+          "sig": "d7cfb5e6efc5bc247e4e5104323bb4d14e7f0454a8a86c811909926f964c8d2b7cdb53643860e8ae33a0b66ba2f2da013d6eefd479e4487ae7047b43e90f70c1"
+        },
+        {
+          "kind": 31923,
+          "created_at": 1800000000,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://xn--0ca24w"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "42b8cf0b1550fde02dd4f4a7cfd92e7a6c0647c47ad12b8cd8c504d3e22e3ce8",
+          "sig": "454d61c4166fbe0f193e381a1fc7e54ba065b4e17b0a9a5674acb74edaebb82a86fc4b1f77a79a65499f91f28624b9068a15533a7cdcb239d5c459607618b2d7"
+        }
+      ],
+      "coordinate": "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend",
+      "now": 1800000020,
+      "hiddenIds": [],
+      "expected": {
+        "state": "unavailable",
+        "entryIds": [],
+        "resultId": null,
+        "pending": [],
+        "unavailableWinnerIds": []
+      }
+    },
+    {
+      "name": "relay-rtl-hebrew-latest-definition",
+      "events": [
+        {
+          "kind": 31923,
+          "created_at": 1799999900,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://relay.example"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e",
+          "sig": "85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269"
+        },
+        {
+          "kind": 1111,
+          "created_at": 1800000010,
+          "content": "nostr:note1zcnds7xjd873g5ee72mmx8rdhcxw8fcrru3ngydes9c8d0funasq83d0rt",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "entry"
+            ],
+            [
+              "A",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "K",
+              "31923"
+            ],
+            [
+              "P",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "a",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "k",
+              "31923"
+            ],
+            [
+              "p",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "e",
+              "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e"
+            ],
+            [
+              "q",
+              "1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60"
+            ],
+            [
+              "challenge_snapshot",
+              "{\"kind\":31923,\"created_at\":1799999900,\"content\":\"A synthetic creative prompt.\",\"tags\":[[\"t\",\"divine-challenge\"],[\"challenge\",\"1\",\"definition\"],[\"d\",\"synthetic-weekend\"],[\"title\",\"Synthetic weekend\"],[\"start\",\"1800000000\"],[\"end\",\"1800086400\"],[\"start_tzid\",\"Pacific/Auckland\"],[\"D\",\"20833\"],[\"D\",\"20834\"],[\"challenge_status\",\"active\"],[\"challenge_relay\",\"wss://relay.example\"]],\"pubkey\":\"1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f\",\"id\":\"3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e\",\"sig\":\"85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269\"}"
+            ],
+            [
+              "video_snapshot",
+              "{\"kind\":34236,\"created_at\":1800000000,\"content\":\"Synthetic video.\",\"tags\":[[\"d\",\"synthetic-video\"],[\"imeta\",\"url https://media.example/synthetic.mp4\",\"m video/mp4\"]],\"pubkey\":\"4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766\",\"id\":\"1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60\",\"sig\":\"cea6456c5a0bbb7a1bf2670e593f347b95981d9d870adbe6fb98f2360d844fe2ac2f0db45fe2db3c503d64690a7d5f450814b7a425ee9c862aad75ca2aad2f3c\"}"
+            ]
+          ],
+          "pubkey": "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+          "id": "575c77428781c40ef824746ab0ca16748153f3506c7e4e02d76c64099da8ef26",
+          "sig": "d7cfb5e6efc5bc247e4e5104323bb4d14e7f0454a8a86c811909926f964c8d2b7cdb53643860e8ae33a0b66ba2f2da013d6eefd479e4487ae7047b43e90f70c1"
+        },
+        {
+          "kind": 31923,
+          "created_at": 1800000000,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://שלום.example"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "56e18ba2ade2242b48a7903f8c75e05918d83283a72c4717425641b073246878",
+          "sig": "6656c8bdc08df3e7e9f8e7d6a08623a9e589adb4e64be9cd424a52a67356b4181aadc5128de4018dca38965ee25d6f76f9b8aac7cacc73cded0e51a9233db801"
+        }
+      ],
+      "coordinate": "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend",
+      "now": 1800000020,
+      "hiddenIds": [],
+      "expected": {
+        "state": "open",
+        "entryIds": [
+          "575c77428781c40ef824746ab0ca16748153f3506c7e4e02d76c64099da8ef26"
+        ],
+        "resultId": null,
+        "pending": [],
+        "unavailableWinnerIds": []
+      }
+    },
+    {
+      "name": "relay-rtl-arabic-latest-definition",
+      "events": [
+        {
+          "kind": 31923,
+          "created_at": 1799999900,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://relay.example"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e",
+          "sig": "85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269"
+        },
+        {
+          "kind": 1111,
+          "created_at": 1800000010,
+          "content": "nostr:note1zcnds7xjd873g5ee72mmx8rdhcxw8fcrru3ngydes9c8d0funasq83d0rt",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "entry"
+            ],
+            [
+              "A",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "K",
+              "31923"
+            ],
+            [
+              "P",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "a",
+              "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend"
+            ],
+            [
+              "k",
+              "31923"
+            ],
+            [
+              "p",
+              "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+            ],
+            [
+              "e",
+              "3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e"
+            ],
+            [
+              "q",
+              "1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60"
+            ],
+            [
+              "challenge_snapshot",
+              "{\"kind\":31923,\"created_at\":1799999900,\"content\":\"A synthetic creative prompt.\",\"tags\":[[\"t\",\"divine-challenge\"],[\"challenge\",\"1\",\"definition\"],[\"d\",\"synthetic-weekend\"],[\"title\",\"Synthetic weekend\"],[\"start\",\"1800000000\"],[\"end\",\"1800086400\"],[\"start_tzid\",\"Pacific/Auckland\"],[\"D\",\"20833\"],[\"D\",\"20834\"],[\"challenge_status\",\"active\"],[\"challenge_relay\",\"wss://relay.example\"]],\"pubkey\":\"1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f\",\"id\":\"3832e29f3f75784cf745b24dec7a83bbea4ea9ce09c78d09d966d83ffcd0bc2e\",\"sig\":\"85338da3073464a9fb2bc85a925d054bbf2e34c16309b14ba99105d8929b306221ef54c47ac1aebc34197421171a4d18b89a94a5c1b6c23545f4de2469116269\"}"
+            ],
+            [
+              "video_snapshot",
+              "{\"kind\":34236,\"created_at\":1800000000,\"content\":\"Synthetic video.\",\"tags\":[[\"d\",\"synthetic-video\"],[\"imeta\",\"url https://media.example/synthetic.mp4\",\"m video/mp4\"]],\"pubkey\":\"4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766\",\"id\":\"1626d878d269fd145339f2b7b31c6dbe0ce3a7031f233411b9817076bd3c9f60\",\"sig\":\"cea6456c5a0bbb7a1bf2670e593f347b95981d9d870adbe6fb98f2360d844fe2ac2f0db45fe2db3c503d64690a7d5f450814b7a425ee9c862aad75ca2aad2f3c\"}"
+            ]
+          ],
+          "pubkey": "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+          "id": "575c77428781c40ef824746ab0ca16748153f3506c7e4e02d76c64099da8ef26",
+          "sig": "d7cfb5e6efc5bc247e4e5104323bb4d14e7f0454a8a86c811909926f964c8d2b7cdb53643860e8ae33a0b66ba2f2da013d6eefd479e4487ae7047b43e90f70c1"
+        },
+        {
+          "kind": 31923,
+          "created_at": 1800000000,
+          "content": "A synthetic creative prompt.",
+          "tags": [
+            [
+              "t",
+              "divine-challenge"
+            ],
+            [
+              "challenge",
+              "1",
+              "definition"
+            ],
+            [
+              "d",
+              "synthetic-weekend"
+            ],
+            [
+              "title",
+              "Synthetic weekend"
+            ],
+            [
+              "start",
+              "1800000000"
+            ],
+            [
+              "end",
+              "1800086400"
+            ],
+            [
+              "start_tzid",
+              "Pacific/Auckland"
+            ],
+            [
+              "D",
+              "20833"
+            ],
+            [
+              "D",
+              "20834"
+            ],
+            [
+              "challenge_status",
+              "active"
+            ],
+            [
+              "challenge_relay",
+              "wss://مثال.example"
+            ]
+          ],
+          "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+          "id": "213b49cfa16cec7abf2b3a47692c2dead0b8d85ddf8c1e196920149b063ce85e",
+          "sig": "9ebbb24462f0570384765b0b1bd9cc426e689fc95c6bbc07eff36bbdd4aec4e4a1c9441fb3f5092a38691c8bb88bf9b1121e4f40a95086ee3d46c2aada8bf194"
+        }
+      ],
+      "coordinate": "31923:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:synthetic-weekend",
+      "now": 1800000020,
+      "hiddenIds": [],
+      "expected": {
+        "state": "open",
+        "entryIds": [
+          "575c77428781c40ef824746ab0ca16748153f3506c7e4e02d76c64099da8ef26"
+        ],
+        "resultId": null,
+        "pending": [],
+        "unavailableWinnerIds": []
+      }
     }
   ]
 }

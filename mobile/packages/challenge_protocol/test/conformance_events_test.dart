@@ -18,7 +18,7 @@ void main() {
     expect(manifest['synthetic'], true);
     expect(manifest['files'], fixtureHashes);
     expect(data['version'], 1);
-    expect(cases, hasLength(29));
+    expect(cases, hasLength(89));
   });
   test('checksum mismatch fails before JSON decoding', () {
     expect(
