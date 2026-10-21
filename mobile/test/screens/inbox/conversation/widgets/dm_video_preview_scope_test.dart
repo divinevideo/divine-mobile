@@ -58,8 +58,6 @@ void main() {
     when(
       () => store.previewFor(
         any(),
-        download: any(named: 'download'),
-        decode: any(named: 'decode'),
         stillWanted: any(named: 'stillWanted'),
       ),
     ).thenAnswer((_) async => File(_framePath));
@@ -99,8 +97,6 @@ void main() {
   void expectNoStoreRead() => verifyNever(
     () => store.previewFor(
       any(),
-      download: any(named: 'download'),
-      decode: any(named: 'decode'),
       stillWanted: any(named: 'stillWanted'),
     ),
   );
@@ -108,8 +104,6 @@ void main() {
   void expectDownloadedOnce() => verify(
     () => store.previewFor(
       any(),
-      download: true,
-      decode: any(named: 'decode'),
       stillWanted: any(named: 'stillWanted'),
     ),
   ).called(1);

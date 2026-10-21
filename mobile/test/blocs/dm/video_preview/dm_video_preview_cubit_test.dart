@@ -1,5 +1,5 @@
-// ABOUTME: Unit tests for DmVideoPreviewCubit: the frame a video DM's card
-// ABOUTME: shows, and a request's card waiting for its video to be played.
+// ABOUTME: Unit tests for DmVideoPreviewCubit: the frame a trusted sender's
+// ABOUTME: video DM card shows, now or once its video is played and kept.
 
 import 'dart:async';
 import 'dart:io';
@@ -46,19 +46,13 @@ void main() {
 
   tearDown(() => kept.close());
 
-  DmVideoPreviewCubit createCubit({required bool download}) =>
-      DmVideoPreviewCubit(
-        message: _videoMessage(),
-        store: store,
-        download: download,
-        decode: true,
-      );
+  DmVideoPreviewCubit createCubit() =>
+      DmVideoPreviewCubit(message: _videoMessage(), store: store);
 
-  void stubPreview(String? path, {required bool download}) {
+  void stubPreview(String? path) {
     when(
       () => store.previewFor(
         any(),
-        download: download,
         stillWanted: any(named: 'stillWanted'),
       ),
     ).thenAnswer((_) async => path == null ? null : File(path));
@@ -67,7 +61,7 @@ void main() {
   group(DmVideoPreviewCubit, () {
     group('initial state', () {
       test('is loading while the store knows no frame', () {
-        final cubit = createCubit(download: true);
+        final cubit = createCubit();
         addTearDown(cubit.close);
 
         expect(cubit.state, equals(const DmVideoPreviewState()));
@@ -78,7 +72,7 @@ void main() {
         'not flash its blurhash first',
         () {
           when(() => store.knownPreviewPathFor(any())).thenReturn(_framePath);
-          final cubit = createCubit(download: false);
+          final cubit = createCubit();
           addTearDown(cubit.close);
 
           expect(
@@ -100,8 +94,6 @@ void main() {
         when(
           () => store.previewFor(
             any(),
-            download: true,
-            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).thenAnswer((invocation) async {
@@ -109,7 +101,7 @@ void main() {
               invocation.namedArguments[#stillWanted] as bool Function()?;
           return null;
         });
-        final cubit = createCubit(download: true);
+        final cubit = createCubit();
         await cubit.load();
         expect(stillWanted!(), isTrue);
 
@@ -122,8 +114,8 @@ void main() {
     group('load', () {
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows the frame the store keeps, downloading the video if needed',
-        setUp: () => stubPreview(_framePath, download: true),
-        build: () => createCubit(download: true),
+        setUp: () => stubPreview(_framePath),
+        build: createCubit,
         act: (cubit) => cubit.load(),
         expect: () => const [
           DmVideoPreviewState(
@@ -135,8 +127,8 @@ void main() {
 
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows no frame when none can be read',
-        setUp: () => stubPreview(null, download: true),
-        build: () => createCubit(download: true),
+        setUp: () => stubPreview(null),
+        build: createCubit,
         act: (cubit) => cubit.load(),
         expect: () => const [
           DmVideoPreviewState(status: DmVideoPreviewStatus.none),
@@ -148,12 +140,10 @@ void main() {
         setUp: () => when(
           () => store.previewFor(
             any(),
-            download: true,
-            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).thenThrow(const SocketException('offline')),
-        build: () => createCubit(download: true),
+        build: createCubit,
         act: (cubit) => cubit.load(),
         expect: () => const [
           DmVideoPreviewState(status: DmVideoPreviewStatus.none),
@@ -163,12 +153,7 @@ void main() {
 
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows no frame when no account is signed in',
-        build: () => DmVideoPreviewCubit(
-          message: _videoMessage(),
-          store: null,
-          download: true,
-          decode: true,
-        ),
+        build: () => DmVideoPreviewCubit(message: _videoMessage(), store: null),
         act: (cubit) => cubit.load(),
         expect: () => const [
           DmVideoPreviewState(status: DmVideoPreviewStatus.none),
@@ -176,53 +161,17 @@ void main() {
       );
     });
 
-    group('waiting for a request to be played', () {
+    group('waiting for its video to be kept', () {
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
-        'asks only for a frame of a video already kept',
-        setUp: () => stubPreview(null, download: false),
-        build: () => createCubit(download: false),
-        act: (cubit) => cubit.load(),
-        expect: () => const [
-          DmVideoPreviewState(status: DmVideoPreviewStatus.none),
-        ],
-        verify: (_) => verifyNever(
-          () => store.previewFor(
-            any(),
-            download: true,
-            decode: any(named: 'decode'),
-            stillWanted: any(named: 'stillWanted'),
-          ),
-        ),
-      );
-
-      blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
-        'shows the frame once the video is played and kept',
-        setUp: () => stubPreview(null, download: false),
-        build: () => createCubit(download: false),
+        'shows the frame of a video too big to fetch by itself once played, '
+        'not when another video is kept',
+        setUp: () => stubPreview(null),
+        build: createCubit,
         act: (cubit) async {
           await cubit.load();
-          stubPreview(_framePath, download: false);
+          stubPreview(_framePath);
           kept.add('f' * 64);
           await pumpEventQueue();
-          kept.add('a' * 64);
-          await pumpEventQueue();
-        },
-        expect: () => const [
-          DmVideoPreviewState(status: DmVideoPreviewStatus.none),
-          DmVideoPreviewState(
-            status: DmVideoPreviewStatus.ready,
-            framePath: _framePath,
-          ),
-        ],
-      );
-
-      blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
-        'shows the frame of a video too big to fetch by itself once played',
-        setUp: () => stubPreview(null, download: true),
-        build: () => createCubit(download: true),
-        act: (cubit) async {
-          await cubit.load();
-          stubPreview(_framePath, download: true);
           kept.add('a' * 64);
           await pumpEventQueue();
         },
@@ -240,15 +189,13 @@ void main() {
         setUp: () => when(
           () => store.previewFor(
             any(),
-            download: true,
-            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).thenThrow(const SocketException('offline')),
-        build: () => createCubit(download: true),
+        build: createCubit,
         act: (cubit) async {
           await cubit.load();
-          stubPreview(_framePath, download: true);
+          stubPreview(_framePath);
           kept.add('a' * 64);
           await pumpEventQueue();
         },
@@ -263,8 +210,8 @@ void main() {
       );
 
       test('stops waiting when closed', () async {
-        stubPreview(null, download: false);
-        final cubit = createCubit(download: false);
+        stubPreview(null);
+        final cubit = createCubit();
         await cubit.load();
         expect(kept.hasListener, isTrue);
 

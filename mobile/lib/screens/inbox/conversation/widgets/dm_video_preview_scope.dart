@@ -86,12 +86,7 @@ class DmVideoPreviewScope extends ConsumerWidget {
       // A new account starts a fresh read.
       key: ValueKey((store, message.id)),
       create: (_) {
-        final cubit = DmVideoPreviewCubit(
-          message: message,
-          store: store,
-          download: true,
-          decode: true,
-        );
+        final cubit = DmVideoPreviewCubit(message: message, store: store);
         unawaited(cubit.load());
         return cubit;
       },

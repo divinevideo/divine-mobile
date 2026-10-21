@@ -393,8 +393,8 @@ void main() {
         final store = createStore();
         final message = _videoMessage();
 
-        final first = await store.previewFor(message, download: true);
-        final second = await store.previewFor(message, download: true);
+        final first = await store.previewFor(message);
+        final second = await store.previewFor(message);
 
         expect(first, isNotNull);
         expect(first!.readAsBytesSync(), equals(_frame));
@@ -410,13 +410,13 @@ void main() {
         final message = _videoMessage();
         await store.videoFor(message);
 
-        final allowed = store.previewFor(message, download: true);
-        final notAllowed = store.previewFor(message, download: false);
+        final first = store.previewFor(message);
+        final second = store.previewFor(message);
         await pumpEventQueue();
         frameRead.complete(_frame);
 
-        expect((await allowed)!.readAsBytesSync(), equals(_frame));
-        expect((await notAllowed)!.readAsBytesSync(), equals(_frame));
+        expect((await first)!.readAsBytesSync(), equals(_frame));
+        expect((await second)!.readAsBytesSync(), equals(_frame));
         expect(frameReads, equals(1));
       });
 
@@ -430,7 +430,7 @@ void main() {
             return Completer<Uint8List?>().future;
           };
           final message = _videoMessage();
-          unawaited(createStore().previewFor(message, download: true));
+          unawaited(createStore().previewFor(message));
           await readStarted.future;
           expect(frameReads, equals(1));
 
@@ -438,34 +438,21 @@ void main() {
           final afterRestart = createStore();
 
           expect(
-            await afterRestart.previewFor(message, download: true),
+            await afterRestart.previewFor(message),
             isNull,
           );
           expect(frameReads, equals(1));
         },
       );
 
-      test('downloads nothing when it may not download', () async {
-        final store = createStore();
-
-        final preview = await store.previewFor(
-          _videoMessage(),
-          download: false,
-        );
-
-        expect(preview, isNull);
-        expect(fetches, isZero);
-        expect(frameReads, isZero);
-      });
-
       test(
-        'uses a video already kept even when it may not download',
+        'reads the frame from a video already kept, without fetching it again',
         () async {
           final store = createStore();
           final message = _videoMessage();
           await store.videoFor(message);
 
-          final preview = await store.previewFor(message, download: false);
+          final preview = await store.previewFor(message);
 
           expect(preview!.readAsBytesSync(), equals(_frame));
           expect(fetches, equals(1));
@@ -479,7 +466,7 @@ void main() {
           final message = _videoMessage();
           expect(store.knownPreviewPathFor(message), isNull);
 
-          final preview = await store.previewFor(message, download: true);
+          final preview = await store.previewFor(message);
 
           expect(store.knownPreviewPathFor(message), equals(preview!.path));
         },
@@ -490,7 +477,7 @@ void main() {
         () async {
           final store = createStore();
           final message = _videoMessage();
-          final preview = await store.previewFor(message, download: true);
+          final preview = await store.previewFor(message);
           expect(store.knownPreviewPathFor(message), equals(preview!.path));
 
           preview.deleteSync();
@@ -503,11 +490,11 @@ void main() {
         'remembers a frame an earlier session kept once it finds it',
         () async {
           final message = _videoMessage();
-          final kept = await createStore().previewFor(message, download: true);
+          final kept = await createStore().previewFor(message);
           final store = createStore();
           expect(store.knownPreviewPathFor(message), isNull);
 
-          await store.previewFor(message, download: false);
+          await store.previewFor(message);
 
           expect(store.knownPreviewPathFor(message), equals(kept!.path));
         },
@@ -521,12 +508,12 @@ void main() {
           final message = _videoMessage();
           final store = createStore();
 
-          await store.previewFor(message, download: true);
-          await store.previewFor(message, download: true);
+          await store.previewFor(message);
+          await store.previewFor(message);
           expect(frameReads, equals(1));
 
           expect(
-            await createStore().previewFor(message, download: true),
+            await createStore().previewFor(message),
             isNull,
           );
           expect(frameReads, equals(1));
@@ -548,8 +535,8 @@ void main() {
           await store.videoFor(first);
           await store.videoFor(second);
 
-          final firstFrame = store.previewFor(first, download: false);
-          final secondFrame = store.previewFor(second, download: false);
+          final firstFrame = store.previewFor(first);
+          final secondFrame = store.previewFor(second);
           await pumpEventQueue();
           expect(reads, hasLength(1));
 
@@ -593,9 +580,9 @@ void main() {
             opened: now,
           );
 
-          expect(await store.previewFor(first, download: false), isNull);
+          expect(await store.previewFor(first), isNull);
           final secondKept = store.kept.firstWhere((id) => id == second.id);
-          final secondFrame = store.previewFor(second, download: false);
+          final secondFrame = store.previewFor(second);
           await secondReadStarted.future.timeout(const Duration(seconds: 5));
           // The card's 1 ms wait can end before the frame is written; the
           // store announces the frame once it is.
@@ -635,7 +622,7 @@ void main() {
           final subscription = store.kept.listen(announced.add);
           addTearDown(subscription.cancel);
 
-          expect(await store.previewFor(message, download: false), isNull);
+          expect(await store.previewFor(message), isNull);
           expect(announced, isEmpty);
 
           final lateFrame = store.kept.firstWhere((id) => id == message.id);
@@ -646,7 +633,7 @@ void main() {
           );
 
           expect(announced, equals([message.id]));
-          expect(await store.previewFor(message, download: false), isNotNull);
+          expect(await store.previewFor(message), isNotNull);
           expect(frameReads, equals(1));
         },
       );
@@ -667,10 +654,9 @@ void main() {
           await store.videoFor(second);
           var secondWanted = true;
 
-          final firstFrame = store.previewFor(first, download: false);
+          final firstFrame = store.previewFor(first);
           final secondFrame = store.previewFor(
             second,
-            download: false,
             stillWanted: () => secondWanted,
           );
           await pumpEventQueue();
@@ -712,13 +698,12 @@ void main() {
           await store.videoFor(shared);
           var closedCardWanted = true;
 
-          final firstFrame = store.previewFor(first, download: false);
+          final firstFrame = store.previewFor(first);
           final closedCard = store.previewFor(
             shared,
-            download: true,
             stillWanted: () => closedCardWanted,
           );
-          final openCard = store.previewFor(shared, download: false);
+          final openCard = store.previewFor(shared);
           await pumpEventQueue();
           closedCardWanted = false;
           firstRead.complete(_frame);
@@ -737,7 +722,7 @@ void main() {
           readFrame = (_) async => null;
           final message = _videoMessage();
           final store = createStore();
-          expect(await store.previewFor(message, download: true), isNull);
+          expect(await store.previewFor(message), isNull);
           now = now.add(const Duration(days: 31));
           await store.videoFor(message);
 
@@ -745,7 +730,7 @@ void main() {
 
           readFrame = (_) async => _frame;
           expect(
-            await createStore().previewFor(message, download: true),
+            await createStore().previewFor(message),
             isNull,
           );
           expect(frameReads, equals(1));
@@ -756,7 +741,7 @@ void main() {
         readFrame = (_) async => null;
         final message = _videoMessage();
         final store = createStore();
-        expect(await store.previewFor(message, download: true), isNull);
+        expect(await store.previewFor(message), isNull);
         File(
           '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
         ).deleteSync();
@@ -765,43 +750,17 @@ void main() {
 
         readFrame = (_) async => _frame;
         expect(
-          await createStore().previewFor(message, download: true),
+          await createStore().previewFor(message),
           isNotNull,
         );
       });
-
-      test(
-        'decodes nothing when told not to, showing only a frame read before',
-        () async {
-          final store = createStore();
-          final message = _videoMessage();
-          await store.videoFor(message);
-
-          expect(
-            await store.previewFor(message, download: false, decode: false),
-            isNull,
-          );
-          expect(frameReads, isZero);
-
-          final read = await store.previewFor(message, download: false);
-          expect(
-            (await store.previewFor(
-              message,
-              download: false,
-              decode: false,
-            ))?.path,
-            equals(read!.path),
-          );
-          expect(frameReads, equals(1));
-        },
-      );
 
       test('keeps no frame when none can be read', () async {
         readFrame = (_) async => null;
         final store = createStore();
         final message = _videoMessage();
 
-        final preview = await store.previewFor(message, download: true);
+        final preview = await store.previewFor(message);
 
         expect(preview, isNull);
         expect(
@@ -823,10 +782,9 @@ void main() {
             message.id == 'a' * 64 ? first.future : second.future;
         final store = createStore();
 
-        final firstPreview = store.previewFor(_videoMessage(), download: true);
+        final firstPreview = store.previewFor(_videoMessage());
         final secondPreview = store.previewFor(
           _videoMessage(id: '9' * 64),
-          download: true,
         );
         await pumpEventQueue();
         expect(fetches, equals(1));
@@ -848,7 +806,7 @@ void main() {
           final store = createStore();
           final message = _videoMessage();
 
-          final preview = store.previewFor(message, download: true);
+          final preview = store.previewFor(message);
           await pumpEventQueue();
           expect(fetches, equals(1));
           final tapped = store.videoFor(message);
@@ -871,7 +829,7 @@ void main() {
           final message = _videoMessage();
 
           final previewFailure = expectLater(
-            store.previewFor(message, download: true),
+            store.previewFor(message),
             throwsA(isA<DmVideoUnavailableException>()),
           );
           await pumpEventQueue();
@@ -899,7 +857,7 @@ void main() {
           final message = _videoMessage();
 
           final previewFailure = expectLater(
-            store.previewFor(message, download: true),
+            store.previewFor(message),
             throwsA(isA<DmVideoUnavailableException>()),
           );
           await pumpEventQueue();
@@ -938,7 +896,7 @@ void main() {
           ).createSync(recursive: true);
 
           final previewFailure = expectLater(
-            store.previewFor(message, download: true),
+            store.previewFor(message),
             throwsA(isA<DmVideoStorageException>()),
           );
           await pumpEventQueue();
@@ -962,7 +920,7 @@ void main() {
           final tapped = store.videoFor(message);
           await pumpEventQueue();
           expect(fetches, equals(1));
-          final preview = store.previewFor(message, download: true);
+          final preview = store.previewFor(message);
           await pumpEventQueue();
           release.complete(_plaintext);
 
@@ -989,8 +947,8 @@ void main() {
           final tapped = store.videoFor(tappedMessage);
           await pumpEventQueue();
 
-          final waiting = store.previewFor(tappedMessage, download: true);
-          final otherPreview = store.previewFor(other, download: true);
+          final waiting = store.previewFor(tappedMessage);
+          final otherPreview = store.previewFor(other);
           await pumpEventQueue();
           expect(fetchedIds, contains(other.id));
           expect(await otherPreview, isNotNull);
@@ -1007,7 +965,7 @@ void main() {
         final store = createStore();
         final message = _videoMessage();
 
-        final preview = store.previewFor(message, download: true);
+        final preview = store.previewFor(message);
         await pumpEventQueue();
         final limitsApply = fetchLimitsApply.single!;
         expect(limitsApply(), isTrue);
@@ -1035,8 +993,8 @@ void main() {
                 : Future.value(_plaintext);
           };
           final store = createStore();
-          final joinedPreview = store.previewFor(joined, download: true);
-          final otherPreview = store.previewFor(other, download: true);
+          final joinedPreview = store.previewFor(joined);
+          final otherPreview = store.previewFor(other);
           await pumpEventQueue();
           expect(fetchedIds, equals([joined.id]));
 
@@ -1065,9 +1023,8 @@ void main() {
 
         final blockingPreview = store.previewFor(
           _videoMessage(),
-          download: true,
         );
-        final queuedPreview = store.previewFor(queued, download: true);
+        final queuedPreview = store.previewFor(queued);
         await pumpEventQueue();
 
         final tapped = await store.videoFor(queued);
@@ -1087,12 +1044,12 @@ void main() {
         final message = _videoMessage();
 
         await expectLater(
-          store.previewFor(message, download: true),
+          store.previewFor(message),
           throwsA(isA<DmVideoUnavailableException>()),
         );
         now = now.add(const Duration(days: 1));
 
-        expect(await store.previewFor(message, download: true), isNull);
+        expect(await store.previewFor(message), isNull);
         expect(fetches, equals(1));
       });
 
@@ -1106,7 +1063,6 @@ void main() {
           var wanted = true;
           final preview = store.previewFor(
             message,
-            download: true,
             stillWanted: () => wanted,
           );
           await pumpEventQueue();
@@ -1118,7 +1074,7 @@ void main() {
           );
           expect(await preview, isNull);
 
-          expect(await store.previewFor(message, download: true), isNull);
+          expect(await store.previewFor(message), isNull);
           expect(fetches, equals(1));
         },
       );
@@ -1129,11 +1085,11 @@ void main() {
           fetch = (_) async => throw const DmVideoWithdrawnException();
           final store = createStore();
           final message = _videoMessage();
-          expect(await store.previewFor(message, download: true), isNull);
+          expect(await store.previewFor(message), isNull);
 
           fetch = (_) async => _plaintext;
 
-          expect(await store.previewFor(message, download: true), isNotNull);
+          expect(await store.previewFor(message), isNotNull);
           expect(fetches, equals(2));
         },
       );
@@ -1151,15 +1107,15 @@ void main() {
           final store = createStore();
           final message = _videoMessage();
           await expectLater(
-            store.previewFor(message, download: true),
+            store.previewFor(message),
             throwsA(isA<DmVideoUnavailableException>()),
           );
 
-          expect(await store.previewFor(message, download: true), isNull);
+          expect(await store.previewFor(message), isNull);
           expect(fetches, equals(1));
 
           now = now.add(DmVideoStore.autoDownloadRetryAfter);
-          expect(await store.previewFor(message, download: true), isNotNull);
+          expect(await store.previewFor(message), isNotNull);
           expect(fetches, equals(2));
         },
       );
@@ -1175,7 +1131,7 @@ void main() {
           final store = createStore();
           final message = _videoMessage();
           await expectLater(
-            store.previewFor(message, download: true),
+            store.previewFor(message),
             throwsA(isA<DmVideoUnavailableException>()),
           );
 
@@ -1183,7 +1139,7 @@ void main() {
             (await store.videoFor(message)).readAsBytesSync(),
             equals(_plaintext),
           );
-          expect(await store.previewFor(message, download: true), isNotNull);
+          expect(await store.previewFor(message), isNotNull);
         },
       );
 
@@ -1200,10 +1156,9 @@ void main() {
         final store = createStore();
         var wanted = true;
 
-        final first = store.previewFor(_videoMessage(), download: true);
+        final first = store.previewFor(_videoMessage());
         final dropped = store.previewFor(
           unwanted,
-          download: true,
           stillWanted: () => wanted,
         );
         await pumpEventQueue();
@@ -1223,15 +1178,13 @@ void main() {
             : blocking.future;
         final store = createStore();
 
-        final first = store.previewFor(_videoMessage(), download: true);
+        final first = store.previewFor(_videoMessage());
         final closed = store.previewFor(
           shared,
-          download: true,
           stillWanted: () => false,
         );
         final open = store.previewFor(
           shared,
-          download: true,
           stillWanted: () => true,
         );
         await pumpEventQueue();
@@ -1253,7 +1206,6 @@ void main() {
 
           final preview = store.previewFor(
             message,
-            download: true,
             stillWanted: () => wanted,
           );
           await pumpEventQueue();
@@ -1282,7 +1234,6 @@ void main() {
 
           final preview = store.previewFor(
             message,
-            download: true,
             stillWanted: () => wanted,
           );
           await pumpEventQueue();
@@ -1302,7 +1253,7 @@ void main() {
       test('are limited in size and time, unlike a tap on play', () async {
         final store = createStore();
 
-        await store.previewFor(_videoMessage(), download: true);
+        await store.previewFor(_videoMessage());
         await store.videoFor(_videoMessage(id: '9' * 64));
 
         expect(fetchLimits, [
@@ -1319,7 +1270,6 @@ void main() {
 
         final preview = await store.previewFor(
           _videoMessage(fileSize: DmVideoStore.autoDownloadMaxBytes + 1),
-          download: true,
         );
 
         expect(preview, isNull);
@@ -1426,7 +1376,7 @@ void main() {
       test('forgets a frame it deleted, so no card starts from it', () async {
         final store = createStore();
         final message = _videoMessage();
-        final preview = await store.previewFor(message, download: true);
+        final preview = await store.previewFor(message);
         preview!.setLastModifiedSync(now.subtract(const Duration(days: 31)));
 
         await store.prune();
@@ -1460,14 +1410,14 @@ void main() {
           };
           final message = _videoMessage();
           final store = createStore(maxBytes: 0);
-          unawaited(store.previewFor(message, download: true));
+          unawaited(store.previewFor(message));
           await readStarted.future;
 
           await store.prune();
 
           readFrame = (_) async => _frame;
           expect(
-            await createStore().previewFor(message, download: true),
+            await createStore().previewFor(message),
             isNull,
           );
           expect(frameReads, equals(1));
@@ -1481,8 +1431,8 @@ void main() {
           final gone = _videoMessage(id: '9' * 64);
           final shown = _videoMessage();
           final earlier = createStore();
-          final goneFrame = await earlier.previewFor(gone, download: true);
-          final shownFrame = await earlier.previewFor(shown, download: true);
+          final goneFrame = await earlier.previewFor(gone);
+          final shownFrame = await earlier.previewFor(shown);
           final goneVideo = File(
             '${ownerDir().path}/${DmVideoStore.videoFileNameFor(gone)}',
           );
@@ -1490,7 +1440,7 @@ void main() {
           final store = createStore(
             isMessageGone: (messageId) async => messageId == gone.id,
           );
-          expect(await store.previewFor(gone, download: false), isNotNull);
+          expect(await store.previewFor(gone), isNotNull);
 
           await store.prune();
 
@@ -1529,7 +1479,7 @@ void main() {
             opened: now,
           );
           final store = createStore(isMessageGone: (_) async => true);
-          unawaited(store.previewFor(message, download: false));
+          unawaited(store.previewFor(message));
           await readStarted.future;
 
           await store.prune();
@@ -1565,7 +1515,7 @@ void main() {
               return gone;
             },
           );
-          final preview = store.previewFor(message, download: false);
+          final preview = store.previewFor(message);
           await reading.future;
           gone = true;
           await store.prune();
@@ -1610,7 +1560,7 @@ void main() {
               return lookup.future;
             },
           );
-          final preview = store.previewFor(message, download: false);
+          final preview = store.previewFor(message);
           await reading.future;
 
           final pruning = store.prune();
@@ -1639,7 +1589,7 @@ void main() {
           final store = createStore(isMessageGone: (_) async => true);
           final tapped = store.videoFor(message);
           await pumpEventQueue();
-          unawaited(store.previewFor(message, download: true));
+          unawaited(store.previewFor(message));
           await pumpEventQueue();
           release.complete(_plaintext);
           final video = await tapped;
@@ -1669,9 +1619,9 @@ void main() {
         final store = createStore(
           isMessageGone: (id) async => id == message.id,
         );
-        final firstPreview = store.previewFor(other, download: true);
+        final firstPreview = store.previewFor(other);
         await reading.future;
-        final queuedPreview = store.previewFor(message, download: true);
+        final queuedPreview = store.previewFor(message);
         await pumpEventQueue();
         final tapped = store.videoFor(message);
         download.complete(_plaintext);
@@ -1794,7 +1744,7 @@ void main() {
             isConversationRemoved: (_, _) async => removed,
           );
           final message = _videoMessage();
-          final frame = await store.previewFor(message, download: true);
+          final frame = await store.previewFor(message);
           final video = File(
             '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
           );
@@ -1846,7 +1796,7 @@ void main() {
               return removed;
             },
           );
-          final preview = store.previewFor(message, download: false);
+          final preview = store.previewFor(message);
           await reading.future;
           removed = true;
           await store.prune();
@@ -1876,7 +1826,6 @@ void main() {
 
           await store.previewFor(
             _videoMessage(conversationId: 'moved'),
-            download: false,
           );
           await store.prune();
 
@@ -1894,12 +1843,10 @@ void main() {
           );
           await store.previewFor(
             _videoMessage(conversationId: 'misfiled'),
-            download: true,
           );
 
           await store.previewFor(
             _videoMessage(conversationId: 'moved'),
-            download: false,
           );
           await store.prune();
 
@@ -1989,7 +1936,7 @@ void main() {
           final store = createStore(
             isMessageGone: (_) async => throw StateError('database closed'),
           );
-          final frame = await store.previewFor(message, download: true);
+          final frame = await store.previewFor(message);
           await LogCaptureService().clearAllLogs();
 
           await store.prune();
@@ -2133,7 +2080,7 @@ void main() {
         () async {
           final store = createStore(maxBytes: _frame.length);
           final message = _videoMessage();
-          final preview = await store.previewFor(message, download: true);
+          final preview = await store.previewFor(message);
           final video = File(
             '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
           )..setLastModifiedSync(now.subtract(const Duration(minutes: 1)));
@@ -2156,7 +2103,7 @@ void main() {
           await store.videoFor(_videoMessage(id: '1' * 64));
           await store.videoFor(_videoMessage(id: '2' * 64));
           final message = _videoMessage();
-          final frame = await store.previewFor(message, download: true);
+          final frame = await store.previewFor(message);
           final video = File(
             '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
           );
@@ -2174,7 +2121,7 @@ void main() {
         () async {
           final store = createStore(maxBytes: _plaintext.length - 1);
           final message = _videoMessage();
-          final frame = await store.previewFor(message, download: true);
+          final frame = await store.previewFor(message);
           frame!.setLastModifiedSync(now.subtract(const Duration(hours: 1)));
           final video = File(
             '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
@@ -2197,7 +2144,7 @@ void main() {
           _plaintext,
           opened: now.subtract(const Duration(days: 31)),
         );
-        final preview = store.previewFor(message, download: false);
+        final preview = store.previewFor(message);
         await pumpEventQueue();
 
         await store.prune();
@@ -2266,7 +2213,7 @@ void main() {
             return release.future;
           };
           final store = createStore();
-          final preview = store.previewFor(message, download: false);
+          final preview = store.previewFor(message);
           await started.future;
           await store.dispose();
           try {
@@ -2305,7 +2252,7 @@ void main() {
             return release.future;
           };
           final store = createStore();
-          final preview = store.previewFor(message, download: false);
+          final preview = store.previewFor(message);
           await started.future;
           try {
             await DmVideoStore.sweepOwners(

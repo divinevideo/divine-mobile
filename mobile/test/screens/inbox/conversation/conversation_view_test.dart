@@ -5257,8 +5257,6 @@ void main() {
         when(
           () => store.previewFor(
             any(),
-            download: any(named: 'download'),
-            decode: any(named: 'decode'),
             stillWanted: any(named: 'stillWanted'),
           ),
         ).thenAnswer((_) async => null);
@@ -5294,8 +5292,6 @@ void main() {
       void expectLoaded(DmMessage video) => verify(
         () => store.previewFor(
           video,
-          download: true,
-          decode: any(named: 'decode'),
           stillWanted: any(named: 'stillWanted'),
         ),
       ).called(1);
@@ -5303,8 +5299,6 @@ void main() {
       void expectHeldBack(DmMessage video) => verifyNever(
         () => store.previewFor(
           video,
-          download: any(named: 'download'),
-          decode: any(named: 'decode'),
           stillWanted: any(named: 'stillWanted'),
         ),
       );

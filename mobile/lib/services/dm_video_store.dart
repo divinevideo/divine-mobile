@@ -231,7 +231,7 @@ class DmVideoStore {
   final Map<String, ({Future<void> started, Future<File?> settled})>
   _frameReadsInFlight = {};
 
-  /// Whether each caller waiting on a frame still wants it, by preview key.
+  /// Whether each caller waiting on a frame still wants it, by message id.
   final Map<String, List<bool Function()>> _previewWanters = {};
 
   /// Paths of the frames this store read or found, by message id.
@@ -325,21 +325,17 @@ class DmVideoStore {
 
   /// [message]'s kept preview frame, read once from its video.
   ///
-  /// When [download] is false only a video that is already kept is used, so
-  /// a message from someone the user has not accepted never fetches anything.
-  /// When it is true the video is fetched in turn with other such downloads,
-  /// within [autoDownloadMaxBytes] and [autoDownloadTimeLimit]; one declared
-  /// bigger is not fetched. Null when there is no video to read or no frame
-  /// can be read from it; a frame that could not be read, or whose read never
-  /// finished, is not tried again. Null too when the decode outlasts
-  /// [frameDeadline]; its frame is still kept, and announced on [kept]. A
-  /// download that failed is not tried again by itself this session when the
-  /// failure will repeat, nor for [autoDownloadRetryAfter] when it may pass; a
-  /// tap on play still fetches it.
-  ///
-  /// When [decode] is false nothing is decoded, only a frame read before is
-  /// returned: for a sender the user blocked, whose file should not reach the
-  /// native decoder without a tap.
+  /// Downloads and decodes without a tap on play, so it is asked only for a
+  /// sender the user trusts. A video not kept yet is fetched in turn with
+  /// other such downloads, within [autoDownloadMaxBytes] and
+  /// [autoDownloadTimeLimit]; one declared bigger is not fetched. Null when
+  /// there is no video to read or no frame can be read from it; a frame that
+  /// could not be read, or whose read never finished, is not tried again.
+  /// Null too when the decode outlasts [frameDeadline]; its frame is still
+  /// kept, and announced on [kept]. A download that failed is not tried again
+  /// by itself this session when the failure will repeat, nor for
+  /// [autoDownloadRetryAfter] when it may pass; a tap on play still fetches
+  /// it.
   ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
@@ -350,34 +346,21 @@ class DmVideoStore {
   /// [DmVideoUnavailableException] when the frame cannot be stored.
   Future<File?> previewFor(
     DmMessage message, {
-    required bool download,
-    bool decode = true,
     bool Function()? stillWanted,
   }) {
-    assert(decode || !download, 'a card downloads a video only to decode it');
-    final key = '${message.id}|$download|$decode';
-    (_previewWanters[key] ??= []).add(stillWanted ?? _alwaysWanted);
-    return _previewsInFlight[key] ??=
+    final id = message.id;
+    (_previewWanters[id] ??= []).add(stillWanted ?? _alwaysWanted);
+    return _previewsInFlight[id] ??=
         _obtainPreview(
           message,
-          download: download,
-          decode: decode,
-          wanted: () =>
-              _previewWanters[key]?.any((wanted) => wanted()) ?? false,
+          wanted: () => _previewWanters[id]?.any((wanted) => wanted()) ?? false,
         ).whenComplete(() {
-          _previewsInFlight.removeWhere((pending, _) => pending == key);
-          _previewWanters.removeWhere((pending, _) => pending == key);
+          _previewsInFlight.removeWhere((pending, _) => pending == id);
+          _previewWanters.removeWhere((pending, _) => pending == id);
         });
   }
 
   static bool _alwaysWanted() => true;
-
-  /// Whether a caller allowed to decode [messageId]'s video still waits for
-  /// its frame. Callers share one read, whether they may download or not.
-  bool _frameWanted(String messageId) => [
-    for (final download in const [true, false])
-      ...?_previewWanters['$messageId|$download|true'],
-  ].any((wanted) => wanted());
 
   /// The path of [message]'s frame when this store already read or found it,
   /// so a card built again shows it at once. Null once the file is gone: the
@@ -806,8 +789,6 @@ class DmVideoStore {
 
   Future<File?> _obtainPreview(
     DmMessage message, {
-    required bool download,
-    required bool decode,
     required bool Function() wanted,
   }) async {
     final dir = await _ownerDirectory();
@@ -818,7 +799,7 @@ class DmVideoStore {
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
-    if (_unreadableFrames.contains(message.id) || !decode) return null;
+    if (_unreadableFrames.contains(message.id)) return null;
 
     final keptVideo = File('${dir.path}/${videoFileNameFor(message)}');
     final declaredBytes = message.fileMetadata?.fileSize;
@@ -827,8 +808,7 @@ class DmVideoStore {
       _lease(keptVideo);
       video = keptVideo;
       await _recordConversationQuietly(message, dir);
-    } else if (download &&
-        _mayAutoDownload(message.id) &&
+    } else if (_mayAutoDownload(message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
       try {
         video = await _autoVideoFor(message, wanted: wanted);
@@ -861,7 +841,7 @@ class DmVideoStore {
       final id = message.id;
       final read = _frameReadsInFlight.putIfAbsent(
         id,
-        () => _queueFrameRead(message, video, preview),
+        () => _queueFrameRead(message, video, preview, wanted),
       );
       // Interest holds while queued: the card's deadline bounds its wait for
       // its own decode, not its place behind other native reads.
@@ -879,6 +859,7 @@ class DmVideoStore {
     DmMessage message,
     File video,
     File preview,
+    bool Function() wanted,
   ) {
     final started = Completer<void>();
     final read = Completer<File?>();
@@ -886,8 +867,8 @@ class DmVideoStore {
     unawaited(
       _frameReads.run(() async {
         started.complete();
-        // A closed card or newly blocked sender must not cost a decode.
-        if (!_frameWanted(id)) {
+        // A card closed, or held back since, must not cost a decode.
+        if (!wanted()) {
           read.complete();
           return;
         }

@@ -135,7 +135,7 @@ void main() {
             });
 
         final firstMessage = _message('a');
-        final first = store.previewFor(firstMessage, download: true);
+        final first = store.previewFor(firstMessage);
         await nativeStarted.future;
         // The store's ten-second card deadline, not a test delay. The default
         // reader sets none of its own: it waits for the native reply.
@@ -145,7 +145,7 @@ void main() {
           '${DmVideoStore.videoFileNameFor(firstMessage)}',
         );
         var secondCompleted = false;
-        final second = store.previewFor(_message('f'), download: true).then((
+        final second = store.previewFor(_message('f')).then((
           frame,
         ) {
           secondCompleted = true;
