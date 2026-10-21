@@ -382,6 +382,28 @@ void main() {
         }
       });
 
+      test(
+        'logs where an unexpected failure happened, but not its text',
+        () async {
+          // A file where the copies go makes creating their folder fail.
+          File(copies.path).writeAsStringSync('');
+
+          final result = await copyingService.saveVideoToGallery(
+            EditorVideo.file(source.path),
+            copyUnderNeutralName: true,
+          );
+
+          expect(result, isA<GallerySaveFailure>());
+          final entry = LogCaptureService().getRecentLogs().singleWhere(
+            (entry) => entry.message.startsWith(
+              'Unexpected error saving video to gallery',
+            ),
+          );
+          expect(entry.stackTrace, isNotNull);
+          expect(entry.message, isNot(contains(copies.path)));
+        },
+      );
+
       test('removes copies a save that never ended left behind, before its '
           'first copy', () async {
         // As an earlier run of the app leaves them when it is killed mid-save.

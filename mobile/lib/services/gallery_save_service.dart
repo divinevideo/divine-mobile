@@ -212,11 +212,13 @@ class GallerySaveService {
       }
 
       return GallerySaveFailure('Gallery error: ${e.type.name}');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // The error's text can quote the video's path; its stack cannot.
       Log.warning(
         'Unexpected error saving video to gallery: ${_failureKind(e)}',
         name: 'GallerySaveService',
         category: LogCategory.video,
+        stackTrace: stackTrace,
       );
 
       // On desktop, fall back to saving to Downloads folder
@@ -298,11 +300,12 @@ class GallerySaveService {
       );
 
       return const GallerySaveSuccess();
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.warning(
         'Failed to save to Downloads: ${_failureKind(e)}',
         name: 'GallerySaveService',
         category: LogCategory.video,
+        stackTrace: stackTrace,
       );
       return GallerySaveFailure(
         'Could not save to Downloads: ${_failureKind(e)}',
