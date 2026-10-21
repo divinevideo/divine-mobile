@@ -81,6 +81,13 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   String? _currentPath;
   bool _isTransitioning = false;
 
+  // Set as close() begins. isClosed only flips at super.close(), after
+  // close() has awaited the recorder's dispose, and `record` runs dispose
+  // behind the same lock as start: a start in flight returns first. Every
+  // step that resumes after an await checks this instead, so nothing it
+  // creates outlives the cleanup close() has already done.
+  bool _closing = false;
+
   /// Asks for microphone access if needed, then starts recording.
   ///
   /// Emits [SoundRecorderStatus.permissionDenied] when access is refused. An
@@ -95,10 +102,10 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     }
     try {
       var permission = await _permissionsService.checkMicrophoneStatus();
-      if (isClosed) return;
+      if (_closing) return;
       if (permission == PermissionStatus.canRequest) {
         permission = await _permissionsService.requestMicrophonePermission();
-        if (isClosed) return;
+        if (_closing) return;
       }
       if (permission != PermissionStatus.granted) {
         emitIfOpen(
@@ -134,13 +141,16 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       final recorded =
           state.elapsed > Duration.zero ||
           _now().difference(_startedAt) >= amplitudeInterval;
-      if (isClosed || !recorded) _deleteFile(path);
+      // close() may already have deleted state.recordingPath, so a take that
+      // finishes while closing is deleted here rather than published.
+      final keep = recorded && !_closing;
+      if (!keep) _deleteFile(path);
       emitIfOpen(
         state.copyWith(
           status: SoundRecorderStatus.idle,
           elapsed: Duration.zero,
           waveformBars: const [],
-          recordingPath: recorded ? path : null,
+          recordingPath: keep ? path : null,
         ),
       );
     } catch (error, stackTrace) {
@@ -191,7 +201,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     // the screen never claimed.
     _deleteFile(state.recordingPath);
     final directory = await _scratchDirectoryProvider();
-    if (isClosed) return;
+    if (_closing) return;
     directory.createSync(recursive: true);
 
     final path = p.join(
@@ -208,9 +218,13 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       rethrow;
     }
 
-    // close() ran while the recorder started, before this file existed.
-    if (isClosed) {
+    // close() ran while the recorder started, before this file existed and
+    // while the take was not yet active, so it neither stopped the recorder
+    // nor reset the session. Undo the start here, and never arm the length
+    // timer or announce a recording.
+    if (_closing) {
       await _safeStopRecorder();
+      await _safeResetSession();
       _deleteFile(path);
       _currentPath = null;
       return;
@@ -298,6 +312,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
 
   @override
   Future<void> close() async {
+    _closing = true;
     await _stopMetering();
     if (state.isActive) {
       await _safeStopRecorder();

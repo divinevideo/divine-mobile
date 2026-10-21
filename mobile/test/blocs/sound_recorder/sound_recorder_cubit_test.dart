@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/sound_recorder/sound_recorder_cubit.dart';
@@ -30,6 +31,9 @@ class _FakeAudioSessionService extends AudioSessionService {
   }
 }
 
+/// Like `record`'s `AudioRecorder`, runs start, stop and dispose one at a
+/// time (`record.dart` `_safeCall` behind one semaphore), so a dispose waits
+/// for a start or stop that is still in flight.
 class _FakeRecorder implements VoiceOverRecorderService {
   final _levels = StreamController<double>.broadcast();
   bool throwOnStart = false;
@@ -38,33 +42,59 @@ class _FakeRecorder implements VoiceOverRecorderService {
   int stopCount = 0;
   String? path;
   DateTime now = DateTime(2026);
+  Future<void>? _inFlight;
 
   /// When set, [start] waits for it before the native file appears, as the
   /// real recorder does while it opens the microphone.
   Completer<void>? startGate;
 
+  /// When set, [stop] waits for it before the native recorder finishes.
+  Completer<void>? stopGate;
+
+  /// When set, [dispose] waits for it, standing in for the platform round
+  /// trip that keeps close() from finishing straight away.
+  Completer<void>? disposeGate;
+
   @override
   Stream<double> get amplitudeStream => _levels.stream;
 
+  Future<T> _oneAtATime<T>(Future<T> Function() call) async {
+    for (var pending = _inFlight; pending != null; pending = _inFlight) {
+      await pending;
+    }
+    final done = Completer<void>();
+    _inFlight = done.future;
+    try {
+      return await call();
+    } finally {
+      _inFlight = null;
+      done.complete();
+    }
+  }
+
   @override
-  Future<void> start(String path) async {
+  Future<void> start(String path) => _oneAtATime(() async {
     startCount++;
     this.path = path;
     await startGate?.future;
     // The native recorder creates its output file as it starts.
     File(path).writeAsBytesSync([1, 2, 3]);
     if (throwOnStart) throw VoiceOverRecorderException('mic unavailable');
-  }
+  });
 
   @override
-  Future<String?> stop() async {
+  Future<String?> stop() => _oneAtATime(() async {
     stopCount++;
+    await stopGate?.future;
     if (throwOnStop) throw VoiceOverRecorderException('stop failed');
     return path;
-  }
+  });
 
   @override
-  Future<void> dispose() => _levels.close();
+  Future<void> dispose() => _oneAtATime(() async {
+    await disposeGate?.future;
+    await _levels.close();
+  });
 
   Future<void> emitLevel(double level) async {
     now = now.add(SoundRecorderCubit.amplitudeInterval);
@@ -94,16 +124,21 @@ void main() {
       if (scratch.existsSync()) scratch.deleteSync(recursive: true);
     });
 
-    SoundRecorderCubit build({Duration? maxDuration}) {
+    SoundRecorderCubit build({
+      Duration? maxDuration,
+      Future<Directory> Function()? scratchDirectoryProvider,
+      bool closeOnTearDown = true,
+    }) {
       final cubit = SoundRecorderCubit(
         permissionsService: permissions,
         audioSessionService: audioSession,
         recorder: recorder,
-        scratchDirectoryProvider: () async => scratch,
+        scratchDirectoryProvider:
+            scratchDirectoryProvider ?? () async => scratch,
         now: () => recorder.now,
         maxDuration: maxDuration ?? SoundRecorderCubit.defaultMaxDuration,
       );
-      addTearDown(cubit.close);
+      if (closeOnTearDown) addTearDown(cubit.close);
       return cubit;
     }
 
@@ -343,19 +378,189 @@ void main() {
         },
       );
 
-      test('while the recorder starts deletes the file it creates', () async {
+      test('while a stop is in flight publishes and keeps no take', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        recorder.stopGate = Completer<void>();
+        final stopping = cubit.stop();
+        await pumpEventQueue();
+        expect(cubit.state.status, SoundRecorderStatus.stopping);
+        final published = <String>[];
+        final subscription = cubit.stream.listen((state) {
+          if (state.recordingPath case final path?) published.add(path);
+        });
+
+        final closing = cubit.close();
+        recorder.stopGate!.complete();
+        await Future.wait([stopping, closing]);
+        await subscription.cancel();
+
+        expect(published, isEmpty);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+    });
+
+    // `record` runs dispose() behind the same semaphore as start(), so
+    // close() cannot finish, and isClosed cannot flip, until a native start
+    // in flight has returned.
+    group('close while starting', () {
+      test(
+        'leaves no take behind when the native start is in flight',
+        () async {
+          recorder.startGate = Completer<void>();
+          final cubit = build();
+          final statuses = <SoundRecorderStatus>[];
+          final subscription = cubit.stream.listen(
+            (s) => statuses.add(s.status),
+          );
+          final starting = cubit.start();
+          await pumpEventQueue();
+          expect(recorder.startCount, 1);
+
+          final closing = cubit.close();
+          recorder.startGate!.complete();
+          await Future.wait([starting, closing]);
+          await subscription.cancel();
+
+          expect(statuses, isNot(contains(SoundRecorderStatus.recording)));
+          expect(recorder.stopCount, 1);
+          expect(audioSession.resetCount, 1);
+          expect(File(recorder.path!).existsSync(), isFalse);
+        },
+      );
+
+      testWidgets('arms no length timer that would stop, vibrate or reset '
+          'later', (tester) async {
+        var vibrations = 0;
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (call) async {
+            if (call.method == 'HapticFeedback.vibrate') vibrations++;
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            null,
+          ),
+        );
         recorder.startGate = Completer<void>();
+        // Closed in the body: a second close() in tearDown would await done
+        // futures completed inside this test's fake-async zone, which never
+        // fire again.
+        final cubit = build(
+          maxDuration: const Duration(seconds: 1),
+          closeOnTearDown: false,
+        );
+        final starting = cubit.start();
+        await tester.runAsync(pumpEventQueue);
+        final closing = cubit.close();
+        recorder.startGate!.complete();
+        await tester.runAsync(pumpEventQueue);
+        await starting;
+        await closing;
+        final stops = recorder.stopCount;
+        final resets = audioSession.resetCount;
+        final vibrationsAtClose = vibrations;
+
+        await tester.pump(const Duration(seconds: 2));
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        expect(recorder.stopCount, stops);
+        expect(audioSession.resetCount, resets);
+        expect(vibrations, vibrationsAtClose);
+        // The take itself was stopped once, by the start that close() raced.
+        expect(stops, 1);
+      });
+
+      test('never starts the recorder when it lands during the permission '
+          'check', () async {
+        final check = Completer<PermissionStatus>();
+        when(permissions.checkMicrophoneStatus).thenAnswer((_) => check.future);
+        recorder.disposeGate = Completer<void>();
         final cubit = build();
         final starting = cubit.start();
         await pumpEventQueue();
-        expect(recorder.startCount, 1);
 
-        await cubit.close();
-        recorder.startGate!.complete();
-        await starting;
+        final closing = cubit.close();
+        check.complete(PermissionStatus.granted);
+        await pumpEventQueue();
+        recorder.disposeGate!.complete();
+        await Future.wait([starting, closing]);
 
+        expect(recorder.startCount, 0);
+      });
+
+      test('never starts the recorder when it lands during the permission '
+          'prompt', () async {
+        final prompt = Completer<PermissionStatus>();
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) async => PermissionStatus.canRequest);
+        when(
+          permissions.requestMicrophonePermission,
+        ).thenAnswer((_) => prompt.future);
+        recorder.disposeGate = Completer<void>();
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+
+        final closing = cubit.close();
+        prompt.complete(PermissionStatus.granted);
+        await pumpEventQueue();
+        recorder.disposeGate!.complete();
+        await Future.wait([starting, closing]);
+
+        expect(recorder.startCount, 0);
+      });
+
+      test('never starts the recorder when it lands while the scratch folder '
+          'resolves', () async {
+        final folder = Completer<Directory>();
+        recorder.disposeGate = Completer<void>();
+        final cubit = build(scratchDirectoryProvider: () => folder.future);
+        final starting = cubit.start();
+        await pumpEventQueue();
+
+        final closing = cubit.close();
+        folder.complete(scratch);
+        await pumpEventQueue();
+        recorder.disposeGate!.complete();
+        await Future.wait([starting, closing]);
+
+        expect(recorder.startCount, 0);
+      });
+    });
+
+    group('length timer', () {
+      // Started in the fake-async zone, so the limit timer is a fake one
+      // that tester.pump can fire.
+      testWidgets("a stopped take's limit cannot stop the next take", (
+        tester,
+      ) async {
+        final cubit = build(maxDuration: const Duration(seconds: 1));
+        await cubit.start();
+        await tester.runAsync(() => recorder.emitLevel(0.5));
+        final stopping = cubit.stop();
+        await tester.runAsync(pumpEventQueue);
+        await stopping;
+        await tester.pump(const Duration(milliseconds: 500));
+
+        await cubit.start();
+        // The first take's deadline passes while the second is recording.
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        expect(cubit.state.isRecording, isTrue);
         expect(recorder.stopCount, 1);
-        expect(File(recorder.path!).existsSync(), isFalse);
+        // Stop the second take so no limit timer is left pending.
+        final second = cubit.stop();
+        await tester.runAsync(pumpEventQueue);
+        await second;
       });
     });
 
