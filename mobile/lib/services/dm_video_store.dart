@@ -576,20 +576,22 @@ class DmVideoStore {
               .cast<File>()
               .toList()
         : const <File>[];
+    final listedIds = {for (final file in listed) _messageIdOf(file)};
+    // Still being fetched, so not kept yet: the rows that would refuse it may
+    // be cleared by the time it lands.
+    final inFlight = {
+      for (final path in _leases.keys)
+        if (File(path).parent.path == dir.path) _messageIdOf(File(path)),
+    }.difference(listedIds);
     final (:gone, :decided) = await _gone.goneAmong(
-      {
-        for (final file in listed) _messageIdOf(file),
-        // Still being fetched, so not kept yet: the rows that would refuse it
-        // may be cleared by the time it lands.
-        for (final path in _leases.keys)
-          if (File(path).parent.path == dir.path) _messageIdOf(File(path)),
-      },
+      {...listedIds, ...inFlight},
       dir,
       {
         for (final file in listed)
           if (DmVideoConversationRecords.isRecord(file))
             _messageIdOf(file): file,
       },
+      inFlight: inFlight,
     );
     // Listed again where nothing awaits: a frame written during the lookups
     // is seen too, and no file can be handed out between the check that it

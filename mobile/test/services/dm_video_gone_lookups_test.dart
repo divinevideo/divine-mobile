@@ -263,6 +263,34 @@ void main() {
         },
       );
 
+      test(
+        'writes no record for a message still being fetched, and still says '
+        'whether it is gone',
+        () async {
+          final fetching = '1' * 64;
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'removed',
+            findMessageLocation: (id) async => (
+              conversationId: id == fetching ? 'room' : 'removed',
+              sentAt: _sentAt,
+            ),
+          );
+
+          final (:gone, :decided) = await lookups.goneAmong(
+            {fetching, '2' * 64},
+            dir,
+            {},
+            inFlight: {fetching, '2' * 64},
+          );
+
+          expect(gone, equals({'2' * 64}));
+          expect(decided, isTrue);
+          expect(dir.listSync(), isEmpty);
+        },
+      );
+
       test('rewrites the record of a message a repair moved', () async {
         final id = '1' * 64;
         final record = recordOf(id, 'old-room');

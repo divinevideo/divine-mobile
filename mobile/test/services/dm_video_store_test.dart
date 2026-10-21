@@ -2912,6 +2912,71 @@ void main() {
       );
 
       test(
+        'writes no record for a video still downloading, which writes its '
+        'own once it lands',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final message = _videoMessage();
+          final store = createStore(
+            isConversationRemoved: (_, _) async => false,
+            findMessageLocation: (_) async => (
+              conversationId: message.conversationId,
+              sentAt: message.createdAt,
+            ),
+          );
+          final tapped = store.videoFor(message);
+          await pumpEventQueue();
+
+          await store.prune();
+
+          expect(keptFiles(), isEmpty);
+          release.complete(_plaintext);
+          store.releaseVideo(await tapped);
+        },
+      );
+
+      test(
+        'moves the record of a video whose frame is being read to the '
+        'conversation its row is in',
+        () async {
+          final frameReadStarted = Completer<void>();
+          final frameRead = Completer<Uint8List?>();
+          readFrame = (_) {
+            frameReadStarted.complete();
+            return frameRead.future;
+          };
+          final message = _videoMessage(conversationId: 'misfiled');
+          final store = createStore(
+            isConversationRemoved: (_, _) async => false,
+            findMessageLocation: (_) async =>
+                (conversationId: 'moved', sentAt: message.createdAt),
+          );
+          keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            keptAt: now,
+          );
+          final record = keptFile(
+            '${message.id}.conversation',
+            'misfiled\n${message.createdAt}'.codeUnits,
+            keptAt: now,
+          );
+          final preview = store.previewFor(message);
+          await frameReadStarted.future;
+
+          await store.prune();
+
+          expect(
+            record.readAsStringSync(),
+            equals('moved\n${message.createdAt}'),
+          );
+          frameRead.complete(_frame);
+          await preview;
+        },
+      );
+
+      test(
         'keeps a conversation record while its video is downloading',
         () async {
           final release = Completer<Uint8List>();

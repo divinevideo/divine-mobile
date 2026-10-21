@@ -79,15 +79,18 @@ class DmVideoGoneLookups {
     }
   }
 
-  /// The ids among [ids] of messages kept in [dir] that are gone, with
-  /// [records] their conversation records by message id, and whether every
-  /// message was decided: a lookup that fails keeps its message's files. On
-  /// the way, the record of a message a repair moved is rewritten.
+  /// The ids among [ids], of messages kept in [dir] or, as [inFlight] are,
+  /// still being fetched into it, that are gone, with [records] their
+  /// conversation records by message id, and whether every message was
+  /// decided: a lookup that fails keeps its message's files. On the way, the
+  /// record of a kept message a repair moved is rewritten; one being fetched
+  /// writes its own when it lands.
   Future<({Set<String> gone, bool decided})> goneAmong(
     Set<String> ids,
     Directory dir,
-    Map<String, File> records,
-  ) async {
+    Map<String, File> records, {
+    Set<String> inFlight = const {},
+  }) async {
     final isGone = _isMessageGone;
     final isRemoved = _isConversationRemoved;
     if (isGone == null && isRemoved == null) {
@@ -106,7 +109,7 @@ class DmVideoGoneLookups {
         if (current != null) {
           if (await isRemoved(current.conversationId, current.sentAt)) {
             gone.add(id);
-          } else {
+          } else if (!inFlight.contains(id)) {
             // A group repair may have moved this message since it was kept.
             await _records.refresh(
               records[id] ?? DmVideoConversationRecords.recordOf(dir, id),
