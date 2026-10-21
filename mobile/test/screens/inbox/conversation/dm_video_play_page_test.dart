@@ -15,6 +15,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
@@ -365,6 +366,73 @@ void main() {
             await tester.pump();
 
             expectNoFileIn(recorder.errors);
+          });
+
+          testWidgets(
+            'when the player cannot start for a reason of its own, which it '
+            'names',
+            (tester) async {
+              stubKeptVideo(() async {
+                File(expectedClipPath())
+                  ..createSync(recursive: true)
+                  ..writeAsBytesSync(const [1, 2, 3]);
+                return expectedClipPath();
+              });
+              installMockDivineVideoPlayer(
+                onMethodCall: (call) async {
+                  if (call.method == 'setClips') {
+                    throw MissingPluginException();
+                  }
+                  return null;
+                },
+                streamHandler: _PlayerEvents(),
+              );
+
+              await tester.pumpWidget(host());
+              await tester.pump();
+              await tester.runAsync(pumpEventQueue);
+              await tester.pump();
+
+              final error = recorder.errors.single;
+              // Through the same scrub as a platform error.
+              expect(
+                '$error',
+                startsWith('Video player failed: MissingPluginException'),
+              );
+              // An expected failure stays out of the crash reporter.
+              expect(asReportableError(error, context: 'test'), isNull);
+            },
+          );
+
+          testWidgets('and still reports a programming error at start', (
+            tester,
+          ) async {
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                .setMockMethodCallHandler(
+                  const MethodChannel('divine_video_player'),
+                  // A reply of the wrong shape, which the player casts.
+                  (call) async => call.method == 'create'
+                      ? <String, Object?>{'textureId': 'one'}
+                      : null,
+                );
+            stubKeptVideo(() async {
+              File(expectedClipPath())
+                ..createSync(recursive: true)
+                ..writeAsBytesSync(const [1, 2, 3]);
+              return expectedClipPath();
+            });
+            installMockDivineVideoPlayer(streamHandler: _PlayerEvents());
+
+            await tester.pumpWidget(host());
+            await tester.pump();
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+
+            final error = recorder.errors.single;
+            // What the app's bloc observer forwards to the crash reporter.
+            expect(asReportableError(error, context: 'test'), isNotNull);
+            expect('$error', contains('Video player failed'));
+            expect('$error', contains('TypeError'));
           });
         },
       );
