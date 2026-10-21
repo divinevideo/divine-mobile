@@ -3177,7 +3177,7 @@ void main() {
         );
 
         test(
-          "keeps the record of a video that store is still storing",
+          'keeps the record of a video that store is still storing',
           () async {
             final release = Completer<Uint8List>();
             fetch = (_) => release.future;
