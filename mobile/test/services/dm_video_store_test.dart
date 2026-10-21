@@ -274,6 +274,39 @@ void main() {
 
     group('videoFor', () {
       test(
+        'fetches again a kept video past its age that nothing uses, rather '
+        'than hand it out',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          final first = await store.videoFor(message);
+          store.releaseVideo(first);
+          expect(fetches, equals(1));
+          first.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          final again = await store.videoFor(message);
+
+          expect(fetches, equals(2));
+          expect(again.readAsBytesSync(), equals(_plaintext));
+        },
+      );
+
+      test(
+        'hands out a video past its age that a caller still holds',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          final held = await store.videoFor(message);
+          held.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          final again = await store.videoFor(message);
+
+          expect(fetches, equals(1));
+          expect(again.path, equals(held.path));
+        },
+      );
+
+      test(
         'downloads and decrypts a video once and keeps it for the account',
         () async {
           final store = createStore();
@@ -403,6 +436,44 @@ void main() {
     });
 
     group('previewFor', () {
+      test(
+        'reads no frame from a video past its age that a caller holds, and '
+        'leaves it',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          final held = await store.videoFor(message);
+          held.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          final preview = await store.previewFor(message);
+
+          expect(preview, isNull);
+          expect(held.existsSync(), isTrue);
+          expect(frameReads, equals(0));
+        },
+      );
+
+      test(
+        'shows no frame past its age, and reads one again from the video '
+        'fetched again',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          await store.previewFor(message);
+          for (final kept in keptFiles()) {
+            kept.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+          }
+          expect(fetches, equals(1));
+
+          expect(store.knownPreviewPathFor(message), isNull);
+          final preview = await store.previewFor(message);
+
+          expect(preview!.readAsBytesSync(), equals(_frame));
+          expect(fetches, equals(2));
+          expect(frameReads, equals(2));
+        },
+      );
+
       test('grabs one frame from the video and keeps it', () async {
         final store = createStore();
         final message = _videoMessage();
@@ -992,17 +1063,22 @@ void main() {
           final message = _videoMessage();
           final store = createStore();
           expect(await store.previewFor(message), isNull);
-          now = now.add(const Duration(days: 31));
+          // Held, as on a play page, past its age.
           await store.videoFor(message);
+          now = now.add(const Duration(days: 31));
 
           await store.prune();
 
-          readFrame = (_) async => _frame;
           expect(
-            await createStore().previewFor(message),
-            isNull,
+            File(
+              '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+            ).existsSync(),
+            isTrue,
           );
-          expect(frameReads, equals(1));
+          expect(
+            File('${ownerDir().path}/${message.id}.frame-attempt').existsSync(),
+            isTrue,
+          );
         },
       );
 
@@ -2840,7 +2916,7 @@ void main() {
           final video = keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            keptAt: now.subtract(const Duration(days: 31)),
+            keptAt: now,
           );
           final started = Completer<void>();
           final release = Completer<Uint8List?>();
@@ -2851,6 +2927,8 @@ void main() {
           final store = createStore();
           final preview = store.previewFor(message);
           await started.future;
+          // Past its age only once the decoder has it.
+          video.setLastModifiedSync(now.subtract(const Duration(days: 31)));
           await store.dispose();
           try {
             await DmVideoStore.sweepOwners(
@@ -2879,7 +2957,7 @@ void main() {
           final video = keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            keptAt: now.subtract(const Duration(days: 31)),
+            keptAt: now,
           );
           final started = Completer<void>();
           final release = Completer<Uint8List?>();
@@ -2890,6 +2968,8 @@ void main() {
           final store = createStore();
           final preview = store.previewFor(message);
           await started.future;
+          // Past its age only once the decoder has it.
+          video.setLastModifiedSync(now.subtract(const Duration(days: 31)));
           try {
             await DmVideoStore.sweepOwners(
               {_owner},

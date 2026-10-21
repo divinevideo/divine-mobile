@@ -318,7 +318,8 @@ class DmVideoStore {
   ///
   /// Each caller holds the video until it lets go with [releaseVideo]:
   /// meanwhile it is not deleted for its age or the cap, though it still
-  /// goes when its message does.
+  /// goes when its message does. One kept past [maxAge] that nothing uses is
+  /// fetched again rather than handed out.
   ///
   /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`) or
   /// a [DmVideoUnavailableException] when the video cannot be stored, naming
@@ -447,7 +448,9 @@ class DmVideoStore {
   /// system can clear the cache directory while the app runs.
   String? knownPreviewPathFor(DmMessage message) {
     final path = _knownPreviews[message.id];
-    if (path == null || File(path).existsSync()) return path;
+    if (path == null) return null;
+    final frame = File(path);
+    if (frame.existsSync() && !_isPastMaxAge(frame)) return path;
     _knownPreviews.remove(message.id);
     return null;
   }
@@ -859,11 +862,21 @@ class DmVideoStore {
     // Leased as soon as it exists, or before it does, so it is never pruned
     // on its way to the caller, who releases it.
     _lease(file);
-    if (file.existsSync()) {
-      await _recordConversationQuietly(message, file.parent);
-      return file;
-    }
     try {
+      if (file.existsSync()) {
+        // A copy past its age that only this lease holds was kept because no
+        // prune ran since: fetched again, so a takedown on the media server
+        // reaches it. One in use elsewhere is handed out as it is.
+        if (!_isPastMaxAge(file) ||
+            _leases[file.path]! > 1 ||
+            _holds.containsKey(file.path)) {
+          await _recordConversationQuietly(message, file.parent);
+          return file;
+        }
+        _leases.remove(file.path);
+        _deleteKeptFor(file);
+        _lease(file);
+      }
       final plaintext = await _fetchVideo(
         message,
         maxBytes: maxBytes,
@@ -900,6 +913,16 @@ class DmVideoStore {
     final dir = await _ownerDirectory();
     _frameReadMarks.lookForUnfinishedReads(dir);
     final preview = File('${dir.path}/${_previewFileNameFor(message)}');
+    final keptVideo = File('${dir.path}/${videoFileNameFor(message)}');
+    // Kept past its age only because no prune ran since: forgotten, and
+    // fetched again, so a takedown on the media server reaches it. A video in
+    // use, as on a play page, is not read for a frame.
+    if (_isPastMaxAge(keptVideo)) {
+      if (_isInUse(keptVideo)) return null;
+      _deleteKeptFor(keptVideo);
+    } else if (_isPastMaxAge(preview)) {
+      _deleteNow(preview);
+    }
     if (preview.existsSync()) {
       await _recordConversationQuietly(message, dir);
       _knownPreviews[message.id] = preview.path;
@@ -910,7 +933,6 @@ class DmVideoStore {
       return null;
     }
 
-    final keptVideo = File('${dir.path}/${videoFileNameFor(message)}');
     final declaredBytes = message.fileMetadata?.fileSize;
     final File video;
     if (keptVideo.existsSync()) {
