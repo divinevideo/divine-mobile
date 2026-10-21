@@ -82,6 +82,14 @@ class MinorAccountReviewScreen extends ConsumerWidget {
                 status: status,
                 openSupportMessages: openSupportMessages,
                 composeEmail: composeEmail,
+                // Started from this screen's context: a failed refresh swaps
+                // the loaded view for the error view, and a deletion confirmed
+                // after that would otherwise stop on the unmounted view.
+                onDeleteAccount: () => startAccountDeletionFlow(
+                  context: context,
+                  ref: ref,
+                  screenName: 'MinorAccountReviewScreen',
+                ),
               ),
               loading: () =>
                   const Center(child: PartialCircleSpinner(progress: 0.33)),
@@ -240,11 +248,13 @@ class MinorAccountReviewLoadingScreen extends StatelessWidget {
 class _LoadedView extends ConsumerWidget {
   const _LoadedView({
     required this.status,
+    required this.onDeleteAccount,
     this.openSupportMessages,
     this.composeEmail,
   });
 
   final MinorAccountReviewStatus status;
+  final VoidCallback onDeleteAccount;
   final OpenSupportMessages? openSupportMessages;
   final ComposeSupportEmail? composeEmail;
 
@@ -423,11 +433,7 @@ class _LoadedView extends ConsumerWidget {
             icon: DivineIconName.caretRight,
             color: context.vineColors.onErrorContainer,
           ),
-          onTap: () => startAccountDeletionFlow(
-            context: context,
-            ref: ref,
-            screenName: 'MinorAccountReviewScreen',
-          ),
+          onTap: onDeleteAccount,
         ),
         const SizedBox(height: 24),
         TextButton(

@@ -20,6 +20,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/scroll.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -54,15 +55,24 @@ void main() {
     ).thenAnswer((_) async => const LogExportResult.noLogs());
   });
 
-  // Every fetch after the first returns [refreshedCase] when it is given.
+  // Every fetch after the first returns [refreshedCase] when it is given, or
+  // throws [refreshError] when that is.
   Future<void> pumpReview(
     WidgetTester tester,
     MinorReviewCase? reviewCase, {
     List<String> locations = const ['/home/0', '/account-review'],
     MinorReviewCase? refreshedCase,
+    Object? refreshError,
+    MockGoRouter? goRouter,
     ThemeData? theme,
   }) async {
     var fetches = 0;
+    final app = MaterialApp(
+      theme: theme,
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const MinorAccountReviewScreen(),
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -87,20 +97,18 @@ void main() {
             Stream.fromIterable(locations),
           ),
           currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+            final isRefresh = fetches++ > 0;
+            final error = refreshError;
+            if (isRefresh && error != null) throw error;
             return MinorAccountReviewStatus(
               restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
-              currentCase: fetches++ == 0
-                  ? reviewCase
-                  : refreshedCase ?? reviewCase,
+              currentCase: isRefresh ? refreshedCase ?? reviewCase : reviewCase,
             );
           }),
         ],
-        child: MaterialApp(
-          theme: theme,
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const MinorAccountReviewScreen(),
-        ),
+        child: goRouter == null
+            ? app
+            : MockGoRouterProvider(goRouter: goRouter, child: app),
       ),
     );
     await tester.pumpAndSettle();
@@ -299,6 +307,51 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.supportNoLogsToExport), findsOneWidget);
+    });
+
+    // A refresh that fails while the delete sheet is open, as a resume
+    // refresh can, swaps the loaded view for the error view. The deletion
+    // confirmed after that must still run, not stop on the unmounted view.
+    testWidgets('runs a deletion confirmed after a refresh fails', (
+      tester,
+    ) async {
+      when(authService.checkAccountDeletionReadiness).thenAnswer(
+        (_) async => AccountDeletionReadiness.requiresReauthentication,
+      );
+      await pumpReview(
+        tester,
+        null,
+        refreshError: Exception('status unavailable'),
+        // The sheet closes itself through GoRouter.
+        goRouter: MockGoRouter(),
+      );
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.nostrSettingsDeleteAccount),
+        200,
+        scrollable: find.byType(Scrollable),
+      );
+      await tester.tap(find.text(l10n.nostrSettingsDeleteAccount));
+      await tester.pumpAndSettle();
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(MinorAccountReviewScreen)),
+      ).invalidate(currentMinorAccountReviewStatusProvider);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.minorAccountReviewErrorTitle), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(
+          DivineButton,
+          l10n.deleteAccountDeleteAllContentButton,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      verify(authService.checkAccountDeletionReadiness).called(1);
+      expect(find.text(l10n.deleteAccountReauthRequired), findsOneWidget);
     });
   });
 
