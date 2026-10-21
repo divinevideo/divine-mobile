@@ -5380,6 +5380,23 @@ void main() {
         });
       });
 
+      testWidgets(
+        'holds back a video in a thread whose members did not load, though '
+        'the user posted there',
+        (tester) async {
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [],
+            follows: {otherPubkey: FollowRelationship.none},
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
+        },
+      );
+
       group('group', () {
         const memberPubkey =
             '5566778855667788556677885566778855667788556677885566778855667788';

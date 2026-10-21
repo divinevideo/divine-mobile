@@ -17,6 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
     show LibraryClipTypeFilter;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
@@ -1845,9 +1846,13 @@ class _MessageList extends StatelessWidget {
     // Once the user has posted in a 1:1 chat it is not a request, so its
     // videos download as soon as they show. Posting in a group does not vouch
     // for members the user does not know: only the ones they follow load.
+    // Nor does posting in a thread whose members did not load.
     final hasOwnMessage = messages.any(
       (message) => message.senderPubkey == currentPubkey,
     );
+    bool isOneToOneWith(String sender) =>
+        participantPubkeys.length == 1 &&
+        pubkeysEqual(participantPubkeys.single, sender);
 
     return ListView.builder(
       reverse: true,
@@ -2034,7 +2039,9 @@ class _MessageList extends StatelessWidget {
           final bubble = message.fileMetadata?.isVideo == true
               ? DmVideoPreviewScope(
                   message: message,
-                  accepted: isSent || (!isGroup && hasOwnMessage),
+                  accepted:
+                      isSent ||
+                      (hasOwnMessage && isOneToOneWith(message.senderPubkey)),
                   blocked:
                       blockedPubkeys.contains(message.senderPubkey) &&
                       !mutedPubkeys.contains(message.senderPubkey),
