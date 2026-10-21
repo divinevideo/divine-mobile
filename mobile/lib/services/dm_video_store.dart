@@ -966,8 +966,9 @@ class DmVideoStore {
         throw const DmVideoWithdrawnException();
       }
       await _refuseIfGone(message, file);
-      // Written first, so a video is never kept without it.
-      await _records.write(message, file.parent, force: true);
+      // Written first, so a video is never kept without it. One already kept
+      // beside its frame stays: the prune keeps it where the row says.
+      await _records.write(message, file.parent);
       await _writeAtomically(file, plaintext);
     } on Object {
       _release(file);

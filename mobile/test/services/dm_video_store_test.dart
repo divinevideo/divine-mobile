@@ -445,6 +445,42 @@ void main() {
       );
 
       test(
+        'writes no record over the one it has when it downloads a video again '
+        'for a copy of its message from before a repair',
+        () async {
+          final stale = _videoMessage(conversationId: 'old-room');
+          final recordWrites = <String>[];
+
+          await IOOverrides.runWithIOOverrides(
+            () async {
+              final store = createStore(
+                isConversationRemoved: (_, _) async => false,
+                findMessageLocation: (_) async =>
+                    (conversationId: 'repaired', sentAt: stale.createdAt),
+              );
+              // Its frame and record kept, its video trimmed for the cap.
+              keptFile(
+                '${stale.id}.conversation',
+                'repaired\n${stale.createdAt}'.codeUnits,
+                keptAt: now,
+              );
+
+              store.releaseVideo(await store.videoFor(stale));
+              await store.prune();
+            },
+            _WriteHooks((part) {
+              if (part.path.contains('.conversation.')) {
+                recordWrites.add(part.path);
+              }
+            }),
+          );
+
+          expect(fetches, equals(1));
+          expect(recordWrites, isEmpty);
+        },
+      );
+
+      test(
         'hands out the video of a message a repair moved by the conversation '
         'its record names, while its row is missing',
         () async {
