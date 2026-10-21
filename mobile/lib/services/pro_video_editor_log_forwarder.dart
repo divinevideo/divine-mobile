@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:openvine/config/bug_report_config.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -92,9 +93,12 @@ class ProVideoEditorLogForwarder {
   // A kept video DM's files are named after its message, and an iOS file
   // error quotes that name without the path around it. A render cache file
   // named after its hash looks the same and is hidden too; a task id that
-  // carries the hash is not, since only a name followed by a dot is.
+  // carries the hash is not, since only a name followed by a dot is. A clip
+  // added from a DM carries the message id in its own id, which a render can
+  // use as its task id.
   static final _messageNamedFile = RegExp(
-    r'(?<![A-Za-z0-9])[A-Za-z0-9]{64}(?=\.)',
+    r'(?<![A-Za-z0-9])[A-Za-z0-9]{64}(?=\.)|'
+    '${DivineVideoClip.receivedDmClipIdPrefix}[A-Za-z0-9]{64}',
   );
 
   static String _redact(String text) => redactFilesystemPaths(

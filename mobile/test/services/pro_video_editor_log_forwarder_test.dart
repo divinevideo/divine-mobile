@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -153,6 +154,26 @@ void main() {
         }
       },
     );
+
+    test('keeps a DM clip id, which names its message, out of native logs', () {
+      final reporter = _RecordingCrashReporter();
+      final clipId = '${DivineVideoClip.receivedDmClipIdPrefix}${'d4' * 32}';
+      ProVideoEditorLogForwarder.forwardEntry(
+        entry(
+          NativeLogLevel.error,
+          'render failed for task $clipId',
+          tag: 'pve-dm-clip-task',
+        ),
+        crashReporter: reporter,
+      );
+
+      final logged = LogCaptureService().getRecentLogs().lastWhere(
+        (entry) => entry.name == 'pve-dm-clip-task',
+      );
+      expect(logged.message, contains('render failed for task'));
+      expect(logged.message, isNot(contains('d4' * 32)));
+      expect(reporter.breadcrumbs.single, isNot(contains('d4' * 32)));
+    });
 
     test("keeps a kept video's file name out of a native log's tag", () {
       final reporter = _RecordingCrashReporter();
