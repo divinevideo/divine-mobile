@@ -112,6 +112,40 @@ void main() {
         expect(decrypted, equals(plaintext));
       });
 
+      test('roundtrip works with empty data (tag only)', () async {
+        final encrypted = await fileEncryption.encrypt(Uint8List(0));
+        expect(encrypted.ciphertext, hasLength(16));
+
+        final decrypted = await fileEncryption.decrypt(
+          ciphertext: encrypted.ciphertext,
+          hexKey: encrypted.key,
+          hexNonce: encrypted.nonce,
+        );
+
+        expect(decrypted, isEmpty);
+      });
+
+      test(
+        'decrypts a ciphertext handed in as a view into a larger buffer',
+        () async {
+          final plaintext = Uint8List.fromList(
+            List.generate(33, (i) => i * 7 % 256),
+          );
+          final encrypted = await fileEncryption.encrypt(plaintext);
+          final length = encrypted.ciphertext.length;
+          final larger = Uint8List(length + 13)
+            ..setRange(5, 5 + length, encrypted.ciphertext);
+
+          final decrypted = await fileEncryption.decrypt(
+            ciphertext: Uint8List.sublistView(larger, 5, 5 + length),
+            hexKey: encrypted.key,
+            hexNonce: encrypted.nonce,
+          );
+
+          expect(decrypted, equals(plaintext));
+        },
+      );
+
       test('throws on tampered ciphertext', () async {
         final plaintext = Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8]);
 
