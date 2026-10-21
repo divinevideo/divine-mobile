@@ -59,6 +59,14 @@ const _kLastUsedCameraLensKey = 'camera_last_used_lens';
 /// SharedPreferences key for the last-used video stabilization mode.
 const _kLastUsedStabilizationModeKey = 'camera_last_used_stabilization';
 
+/// Stabilization for a recorder that has no saved choice yet.
+///
+/// Not [DivineVideoStabilizationMode.auto]: on iOS it usually resolves to a
+/// look-ahead mode that holds every stop ~1.6s before the next take can
+/// start, and Android does not offer it at all.
+const DivineVideoStabilizationMode _kDefaultStabilizationMode =
+    DivineVideoStabilizationMode.standard;
+
 /// SharedPreferences key for the last grid-lines on/off choice.
 const _kGridLinesEnabledKey = 'camera_grid_lines_enabled';
 
@@ -2564,7 +2572,7 @@ class VideoRecorderBloc
   }
 
   /// The persisted stabilization mode, as last picked in a mode that shows
-  /// the control.
+  /// the control, or [_kDefaultStabilizationMode] before any pick.
   ///
   /// The native controller is recreated (mode reset to off) on every init, so
   /// the preference travels with each one (see [_stabilizationModeFor]). The
@@ -2573,7 +2581,7 @@ class VideoRecorderBloc
     SharedPreferences prefs,
   ) {
     final saved = prefs.getString(_kLastUsedStabilizationModeKey);
-    if (saved == null) return DivineVideoStabilizationMode.off;
+    if (saved == null) return _kDefaultStabilizationMode;
     return DivineVideoStabilizationMode.fromNativeString(saved);
   }
 

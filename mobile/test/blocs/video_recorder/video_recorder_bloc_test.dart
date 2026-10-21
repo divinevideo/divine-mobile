@@ -4244,12 +4244,13 @@ void main() {
         );
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-          'opens the camera with stabilization off when none is persisted',
+          'opens the camera with standard stabilization when none is '
+          'persisted',
           // prefs.getString returns null by default (see outer setUp).
           build: buildBloc,
           act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
           verify: (_) {
-            expect(initializedWith(), DivineVideoStabilizationMode.off);
+            expect(initializedWith(), DivineVideoStabilizationMode.standard);
           },
         );
 

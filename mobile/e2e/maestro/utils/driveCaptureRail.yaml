@@ -41,7 +41,7 @@ appId: co.openvine.app.staging
 # 2. Timer: Off -> 3 seconds -> 10 seconds -> Off
 # 3. Camera: Back -> Front -> Back
 # 4. Flash (if present): Off -> On -> Auto -> Off
-# 5. Stabilization (if supported): Off -> some other mode -> Off
+# 5. Stabilization (if supported): Standard -> Off -> Standard
 # 6. Ghost frame: off -> on -> off
 
 # 1. Aspect ratio flips between two states.
@@ -81,44 +81,53 @@ appId: co.openvine.app.staging
 # 4. Flash, if the active lens has a unit.
 - runFlow: driveFlashControl.yaml
 
-# 5. Stabilization. Same guard as flash, and when it passes the sheet is
-# guaranteed to offer a non-off mode: the native side only reports
-# `isVideoStabilizationSupported` when its mode list has more than one entry.
-# Which non-off modes exist is per-device (Android derives them from the
-# camera's CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES), hence the alternation
-# rather than a fixed label.
+# 5. Stabilization. Same guard as flash: the button is enabled only when the
+# lens offers a mode besides off. A fresh install opens on Standard, the
+# recorder's default, which the open sheet shows as its selected row; a lens
+# without Standard would open on Off and fail that assert.
+#
+# The sheet is a modal route whose barrier blocks the semantics of the rail
+# underneath (ModalBarrier wraps itself in BlockSemantics). So the button
+# vanishing means the sheet is up, and the bare row labels are unambiguous
+# while it is: "Off" is also the value of the flash and timer controls, and
+# picking the timer would arm the countdown that step 2 exists to clear.
 - runFlow:
     when:
       visible:
         id: camera_stabilization_button
         enabled: true
     commands:
-      - assertVisible:
-          id: camera_stabilization_button
-          text: ".*Off.*"
       - tapOn:
           id: camera_stabilization_button
-      # The sheet is a modal route, so its barrier blocks the semantics of the
-      # rail underneath and these labels are unambiguous while it is open.
-      - extendedWaitUntil:
-          visible: ".*(Standard|Cinematic|Preview Optimized|Low Latency|Auto).*"
-          timeout: 10000
-      - tapOn: ".*(Standard|Cinematic|Preview Optimized|Low Latency|Auto).*"
       - extendedWaitUntil:
           notVisible:
             id: camera_stabilization_button
-            text: ".*Off.*"
           timeout: 10000
-      # Restore. The bare ".*Off.*" leans on the barrier blocking the rail
-      # underneath (ModalBarrier wraps itself in BlockSemantics) — it is not
-      # independently safe. The stabilization button no longer reads "Off"
-      # here, but the flash and timer controls both do, and picking the timer
-      # would arm the countdown that step 2 exists to clear.
-      - tapOn:
-          id: camera_stabilization_button
+      - assertVisible:
+          text: "Standard"
+          selected: true
       - tapOn: ".*Off.*"
       - extendedWaitUntil:
           visible:
+            id: camera_stabilization_button
+            text: ".*Off.*"
+          timeout: 10000
+      # Restore the default, so the takes recorded later in the flow use it.
+      # The button is back once the sheet closes, but reads Off until the
+      # camera has taken the new mode.
+      - tapOn:
+          id: camera_stabilization_button
+      - extendedWaitUntil:
+          notVisible:
+            id: camera_stabilization_button
+          timeout: 10000
+      - tapOn: "Standard"
+      - extendedWaitUntil:
+          visible:
+            id: camera_stabilization_button
+          timeout: 10000
+      - extendedWaitUntil:
+          notVisible:
             id: camera_stabilization_button
             text: ".*Off.*"
           timeout: 10000
