@@ -118,8 +118,8 @@ void main() {
 
     group('readHung', () {
       test(
-        'names the sender for good, so a kill in the background still blames '
-        'them',
+        'names the sender until the read ends, so a kill in the background '
+        'still blames them',
         () {
           final marks = createMarks(launchId: 'earlier');
           final mark = markOf('1');
