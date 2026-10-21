@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
+import 'package:openvine/services/dm_video_files.dart';
 import 'package:openvine/services/dm_video_preview.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:path_provider/path_provider.dart';
@@ -93,7 +94,7 @@ class DmVideoStore {
     String? launchId,
   }) : _ownerPubkey = ownerPubkey,
        _launchId = launchId ?? _thisLaunch,
-       _removalsAtCreation = _removals[_safeName(ownerPubkey)] ?? 0,
+       _removalsAtCreation = _removals[dmVideoSafeName(ownerPubkey)] ?? 0,
        _fetchVideo = fetchVideo,
        _readFrame = readFrame ?? _readCardFrameUntilSettled,
        _isMessageGone = isMessageGone,
@@ -318,16 +319,13 @@ class DmVideoStore {
     final extension = dmVideoFileExtensionFor(
       message.fileMetadata?.fileType ?? '',
     );
-    return '${_safeName(message.id)}.$extension';
+    return '${dmVideoSafeName(message.id)}.$extension';
   }
 
   static String _previewFileNameFor(DmMessage message) =>
-      '${_safeName(message.id)}$_previewSuffix';
+      '${dmVideoSafeName(message.id)}$_previewSuffix';
 
   static const String _previewSuffix = '.preview.jpg';
-
-  static String _safeName(String value) =>
-      value.replaceAll(RegExp('[^A-Za-z0-9]'), '');
 
   /// [message]'s decrypted video, downloaded and decrypted the first time
   /// and kept after that. Callers asking at once share one download. A card's
@@ -466,7 +464,7 @@ class DmVideoStore {
           await _prune();
         } on FileSystemException catch (error) {
           Log.warning(
-            'Could not prune kept video DMs: ${_causeOf(error)}',
+            'Could not prune kept video DMs: ${dmVideoFileErrorCause(error)}',
             name: _logName,
             category: LogCategory.video,
           );
@@ -594,7 +592,7 @@ class DmVideoStore {
     Future<Directory> Function()? rootDirectory,
   }) async {
     if (kIsWeb) return;
-    final owner = _safeName(ownerPubkey);
+    final owner = dmVideoSafeName(ownerPubkey);
     _removals.update(owner, (count) => count + 1, ifAbsent: () => 1);
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
     final dir = Directory('${root.path}/$dirName/$owner');
@@ -602,7 +600,7 @@ class DmVideoStore {
       if (dir.existsSync()) await dir.delete(recursive: true);
     } on FileSystemException catch (error) {
       throw DmVideoUnavailableException(
-        'could not delete the kept videos: ${_causeOf(error)}',
+        'could not delete the kept videos: ${dmVideoFileErrorCause(error)}',
       );
     }
   }
@@ -628,7 +626,7 @@ class DmVideoStore {
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
     final dir = Directory('${root.path}/$dirName');
     if (!dir.existsSync()) return 0;
-    final keep = keepOwnerPubkeys.map(_safeName).toSet();
+    final keep = keepOwnerPubkeys.map(dmVideoSafeName).toSet();
     final currentTime = (now ?? DateTime.now)();
     var deleted = 0;
     try {
@@ -645,7 +643,7 @@ class DmVideoStore {
         } on FileSystemException catch (error) {
           Log.warning(
             "Could not sweep one account's kept video DMs: "
-            '${_causeOf(error)}',
+            '${dmVideoFileErrorCause(error)}',
             name: _logName,
             category: LogCategory.video,
           );
@@ -653,7 +651,7 @@ class DmVideoStore {
       }
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not sweep kept video DMs: ${_causeOf(error)}',
+        'Could not sweep kept video DMs: ${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -675,7 +673,8 @@ class DmVideoStore {
       if (legacy.existsSync()) await legacy.delete(recursive: true);
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not remove obsolete decrypted playback clips: ${_causeOf(error)}',
+        'Could not remove obsolete decrypted playback clips: '
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -997,7 +996,7 @@ class DmVideoStore {
       message.createdAt,
     );
     final record = File(
-      '${dir.path}/${_safeName(message.id)}$_conversationSuffix',
+      '${dir.path}/${dmVideoSafeName(message.id)}$_conversationSuffix',
     );
     // What this store wrote can still be deleted from outside it: the launch
     // sweep, or the system clearing the cache folder.
@@ -1042,7 +1041,8 @@ class DmVideoStore {
     File preview,
   ) async {
     final attempt = File(
-      '${preview.parent.path}/${_safeName(message.id)}$_frameAttemptSuffix',
+      '${preview.parent.path}/${dmVideoSafeName(message.id)}'
+      '$_frameAttemptSuffix',
     );
     // Left by a read that never finished: it could crash the app again each
     // time the chat opens.
@@ -1055,7 +1055,7 @@ class DmVideoStore {
       attempt.writeAsStringSync('$_launchId\n${message.senderPubkey}');
     } on FileSystemException catch (error) {
       throw DmVideoStorageException(
-        'could not start reading the frame: ${_causeOf(error)}',
+        'could not start reading the frame: ${dmVideoFileErrorCause(error)}',
       );
     }
     final videoStat = video.statSync();
@@ -1177,7 +1177,7 @@ class DmVideoStore {
   }
 
   static File _failureMarkOf(Directory dir, String messageId) =>
-      File('${dir.path}/${_safeName(messageId)}$_failedSuffix');
+      File('${dir.path}/${dmVideoSafeName(messageId)}$_failedSuffix');
 
   /// Leaves the mark that keeps later sessions from fetching [message]'s
   /// video by themselves: its download failed in a way that would repeat.
@@ -1191,7 +1191,8 @@ class DmVideoStore {
       if (_ownerRemoved) await _deleteQuietly(mark);
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not remember a failed video DM download: ${_causeOf(error)}',
+        'Could not remember a failed video DM download: '
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1211,7 +1212,7 @@ class DmVideoStore {
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not look for video DM frame reads an earlier launch left: '
-        '${_causeOf(error)}',
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1228,7 +1229,8 @@ class DmVideoStore {
         // Deleted since the listing, with its video: nothing to remember.
       } on FileSystemException catch (error) {
         Log.warning(
-          'Could not read a video DM frame-read mark: ${_causeOf(error)}',
+          'Could not read a video DM frame-read mark: '
+          '${dmVideoFileErrorCause(error)}',
           name: _logName,
           category: LogCategory.video,
         );
@@ -1245,7 +1247,7 @@ class DmVideoStore {
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not remember a sender whose video DM frame read never '
-        'finished: ${_causeOf(error)}',
+        'finished: ${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1260,7 +1262,7 @@ class DmVideoStore {
   }
 
   static File _hungSenderMarkOf(Directory dir, String senderPubkey) => File(
-    '${dir.path}/$_hungSenderPrefix${_safeName(senderPubkey)}'
+    '${dir.path}/$_hungSenderPrefix${dmVideoSafeName(senderPubkey)}'
     '$_hungSenderSuffix',
   );
 
@@ -1271,7 +1273,7 @@ class DmVideoStore {
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not record that a video DM frame read ended: '
-        '${_causeOf(error)}',
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1280,7 +1282,7 @@ class DmVideoStore {
 
   Future<Directory> _ownerDirectory() async {
     final root = await _rootDirectory();
-    return Directory('${root.path}/$dirName/${_safeName(_ownerPubkey)}');
+    return Directory('${root.path}/$dirName/${dmVideoSafeName(_ownerPubkey)}');
   }
 
   /// Writes [bytes] beside [file] and renames it into place, so a reader
@@ -1298,7 +1300,7 @@ class DmVideoStore {
     } on FileSystemException catch (error) {
       await _deleteQuietly(part);
       throw DmVideoStorageException(
-        'could not store the file: ${_causeOf(error)}',
+        'could not store the file: ${dmVideoFileErrorCause(error)}',
       );
     } catch (_) {
       await _deleteQuietly(part);
@@ -1307,7 +1309,7 @@ class DmVideoStore {
   }
 
   bool get _ownerRemoved =>
-      (_removals[_safeName(_ownerPubkey)] ?? 0) != _removalsAtCreation;
+      (_removals[dmVideoSafeName(_ownerPubkey)] ?? 0) != _removalsAtCreation;
 
   void _throwIfOwnerRemoved() {
     if (_ownerRemoved) {
@@ -1325,7 +1327,7 @@ class DmVideoStore {
     } on FileSystemException catch (error) {
       Log.warning(
         'Could not date a kept video DM frame like its video: '
-        '${_causeOf(error)}',
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1364,7 +1366,8 @@ class DmVideoStore {
       files = file.parent.listSync().whereType<File>().toList();
     } on FileSystemException catch (error) {
       Log.warning(
-        "Could not delete a gone video DM message's files: ${_causeOf(error)}",
+        "Could not delete a gone video DM message's files: "
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1413,7 +1416,8 @@ class DmVideoStore {
       // Another cleanup already removed it.
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not expire a kept video DM file: ${_causeOf(error)}',
+        'Could not expire a kept video DM file: '
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1429,7 +1433,8 @@ class DmVideoStore {
       // Already gone, which is all prune wanted.
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not delete a kept video DM file: ${_causeOf(error)}',
+        'Could not delete a kept video DM file: '
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -1437,17 +1442,13 @@ class DmVideoStore {
     _knownPreviews.removeWhere((_, path) => path == file.path);
   }
 
-  /// What went wrong, without the path: file names carry the account's
-  /// pubkey and the message id.
-  static String _causeOf(FileSystemException error) =>
-      error.osError?.toString() ?? 'no OS error';
-
   static Future<void> _deleteQuietly(File file) async {
     try {
       if (file.existsSync()) await file.delete();
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not delete a kept video DM file: ${_causeOf(error)}',
+        'Could not delete a kept video DM file: '
+        '${dmVideoFileErrorCause(error)}',
         name: _logName,
         category: LogCategory.video,
       );
