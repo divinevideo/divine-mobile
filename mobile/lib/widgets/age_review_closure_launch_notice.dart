@@ -21,10 +21,13 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Mounted with the bottom-nav shell, so it runs for a signed-in session or one
 /// still being restored. It is the only launch-time reader of the status, so it
-/// costs one signed request to Funnelcake per launch; Settings, the account's
+/// costs a signed request to Funnelcake each time the shell mounts: at launch,
+/// and again when navigation replaces the shell and brings it back, as
+/// scheduling a post does on its way to the drafts. A closure costs one more,
+/// because Account Status reads again when it opens. Settings, the account's
 /// own profile and Account Status otherwise fetch it when opened. A failed
-/// fetch keeps listening, so the next resume refetch tries again; that stops at
-/// the first answer.
+/// fetch keeps listening, so every resume refetch tries again until one
+/// answers.
 class AgeReviewClosureLaunchNotice extends ConsumerStatefulWidget {
   const AgeReviewClosureLaunchNotice({required this.child, super.key});
 
