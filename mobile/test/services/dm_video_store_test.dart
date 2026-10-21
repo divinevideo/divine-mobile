@@ -754,6 +754,24 @@ void main() {
           readFrame = (_) async => _frame;
         }
 
+        /// Leaves [message]'s video with the mark of a frame read that never
+        /// finished, as a launch that crashed reading it does: no store of
+        /// that launch is left to lease anything.
+        void leaveCrashedRead(DmMessage message) {
+          keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            keptAt: now,
+          );
+          DmVideoFrameReadMarks(
+            ownerRemoved: () => false,
+            launchId: 'earlier',
+          ).readStarted(
+            DmVideoFrameReadMarks.readMarkOf(ownerDir(), message.id),
+            message.senderPubkey,
+          );
+        }
+
         test(
           "neither fetches nor reads that sender's other videos by itself, "
           'while a tap still plays them',
@@ -778,15 +796,19 @@ void main() {
           'remembers that sender even when the message is pruned as gone '
           'before any card asks for a frame',
           () async {
-            await leaveHungRead(_videoMessage(id: '1' * 64));
+            leaveCrashedRead(_videoMessage(id: '1' * 64));
             final later = createStore(
               isMessageGone: (id) async => id == '1' * 64,
             );
             await later.prune();
+            expect(
+              keptFiles().where(DmVideoFrameReadMarks.isReadMark),
+              isEmpty,
+            );
 
             expect(await later.previewFor(_videoMessage(id: '2' * 64)), isNull);
-            expect(fetches, equals(1));
-            expect(frameReads, equals(1));
+            expect(fetches, equals(0));
+            expect(frameReads, equals(0));
           },
         );
 
@@ -804,21 +826,7 @@ void main() {
         test(
           "reads that sender's videos again once it is 30 days old",
           () async {
-            // Left on disk as by a launch that crashed reading it, with no
-            // store of that launch left to read it on.
-            final crashed = _videoMessage(id: '1' * 64);
-            keptFile(
-              DmVideoStore.videoFileNameFor(crashed),
-              _plaintext,
-              keptAt: now,
-            );
-            DmVideoFrameReadMarks(
-              ownerRemoved: () => false,
-              launchId: 'earlier',
-            ).readStarted(
-              DmVideoFrameReadMarks.readMarkOf(ownerDir(), crashed.id),
-              crashed.senderPubkey,
-            );
+            leaveCrashedRead(_videoMessage(id: '1' * 64));
             await createStore().previewFor(_videoMessage(id: '2' * 64));
             for (final file in keptFiles()) {
               file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
@@ -837,7 +845,7 @@ void main() {
         test(
           'keeps what it remembers of that sender while trimming for the cap',
           () async {
-            await leaveHungRead(_videoMessage(id: '1' * 64));
+            leaveCrashedRead(_videoMessage(id: '1' * 64));
             await createStore().previewFor(_videoMessage(id: '2' * 64));
             for (final file in keptFiles()) {
               file.setLastModifiedSync(now.subtract(const Duration(hours: 2)));
@@ -853,7 +861,7 @@ void main() {
               await createStore().previewFor(_videoMessage(id: '4' * 64)),
               isNull,
             );
-            expect(frameReads, equals(1));
+            expect(frameReads, equals(0));
           },
         );
 
