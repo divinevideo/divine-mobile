@@ -92,7 +92,8 @@ class FileEncryption {
       throw ArgumentError('hexNonce must be 12 bytes (24 hex digits)');
     }
 
-    // Split ciphertext into body + 16-byte GCM authentication tag.
+    // Split ciphertext into body + 16-byte GCM authentication tag, as views:
+    // a received video can be 100 MB, and a copy of each part doubles that.
     const macLength = 16;
     if (ciphertext.length < macLength) {
       throw ArgumentError.value(
@@ -102,15 +103,21 @@ class FileEncryption {
       );
     }
 
-    final body = ciphertext.sublist(0, ciphertext.length - macLength);
-    final mac = Mac(ciphertext.sublist(ciphertext.length - macLength));
+    final body = Uint8List.sublistView(
+      ciphertext,
+      0,
+      ciphertext.length - macLength,
+    );
+    final mac = Mac(
+      Uint8List.sublistView(ciphertext, ciphertext.length - macLength),
+    );
 
     final secretKey = SecretKey(keyBytes);
     final secretBox = SecretBox(body, nonce: nonceBytes, mac: mac);
 
     final decrypted = await _algorithm.decrypt(secretBox, secretKey: secretKey);
 
-    return Uint8List.fromList(decrypted);
+    return decrypted is Uint8List ? decrypted : Uint8List.fromList(decrypted);
   }
 
   static String _bytesToHex(Uint8List bytes) {
