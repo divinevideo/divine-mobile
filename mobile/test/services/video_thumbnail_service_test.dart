@@ -14,6 +14,7 @@ import 'package:openvine/services/video_thumbnail_service.dart';
 // May need updating on pro_video_editor upgrades.
 import 'package:pro_video_editor/core/platform/native_method_channel.dart';
 import 'package:pro_video_editor/core/platform/platform_interface.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Fresh ProVideoEditor-compatible instance for tests.
 ///
@@ -29,6 +30,7 @@ class _NoopInitProVideoEditor extends MethodChannelProVideoEditor {
 }
 
 class _RecordingCrashReporter implements CrashReporter {
+  final errors = <Object>[];
   final reasons = <String?>[];
 
   @override
@@ -42,7 +44,10 @@ class _RecordingCrashReporter implements CrashReporter {
     Object error,
     StackTrace? stack, {
     String? reason,
-  }) async => reasons.add(reason);
+  }) async {
+    errors.add(error);
+    reasons.add(reason);
+  }
 }
 
 void main() {
@@ -201,6 +206,75 @@ void main() {
           expect(reason, isNot(contains(tempDir.path)));
         }
       });
+
+      // pro_video_editor's iOS thumbnail generator quotes the path of a file
+      // that went missing; a native error can also name the file alone.
+      for (final (quoted, nativeMessage) in [
+        ('the path', (String path) => 'Video file not found at path: $path'),
+        (
+          'the file name',
+          (String path) => 'Cannot open ${path.split('/').last}',
+        ),
+      ]) {
+        test(
+          'record and log a native error without $quoted it quotes',
+          () async {
+            // Named the way a clip added from a DM is: after its message.
+            final video = File('${tempDir.path}/dm_clip_${'b' * 64}.mp4')
+              ..writeAsBytesSync([1, 2, 3, 4]);
+            addTearDown(video.deleteSync);
+            final failing = PlatformException(
+              code: 'THUMBNAIL_ERROR',
+              message: nativeMessage(video.path),
+            );
+            var metadataFails = false;
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                .setMockMethodCallHandler(channel, (call) async {
+                  if (call.method == 'getMetadata' && !metadataFails) {
+                    return <String, Object?>{
+                      'duration': 6000,
+                      'width': 1080,
+                      'height': 1920,
+                    };
+                  }
+                  throw failing;
+                });
+            await LogCaptureService().clearAllLogs();
+            addTearDown(LogCaptureService().clearAllLogs);
+
+            // A frame read that fails, and a last frame that fails.
+            await VideoThumbnailService.extractThumbnail(videoPath: video.path);
+            metadataFails = true;
+            await VideoThumbnailService.extractLastFrame(videoPath: video.path);
+
+            expect(reporter.errors, hasLength(2));
+            for (final error in reporter.errors) {
+              expect('$error', contains('THUMBNAIL_ERROR'));
+              expect('$error', isNot(contains('b' * 64)));
+              expect('$error', isNot(contains(tempDir.path)));
+            }
+            final failures = LogCaptureService()
+                .getRecentLogs()
+                .map((entry) => '${entry.message} ${entry.error}')
+                .where(
+                  (line) =>
+                      line.startsWith('Thumbnail bytes extraction error') ||
+                      line.startsWith('Last-frame fallback failed'),
+                )
+                .toList();
+            // The frame read logs once per try; the last frame once.
+            expect(failures.map((line) => line.split(':').first).toSet(), {
+              'Thumbnail bytes extraction error',
+              'Last-frame fallback failed',
+            });
+            for (final line in failures) {
+              expect(line, contains('THUMBNAIL_ERROR'));
+              expect(line, isNot(contains('b' * 64)));
+              expect(line, isNot(contains(tempDir.path)));
+            }
+          },
+        );
+      }
     });
 
     group('extractLastFrame', () {

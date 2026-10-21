@@ -7,8 +7,11 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -339,14 +342,15 @@ class VideoThumbnailService {
       );
       return thumbnail;
     } catch (e, stackTrace) {
+      final failure = _ThumbnailFailure(e, videoPath);
       Log.error(
-        'Thumbnail bytes extraction error: $e',
+        'Thumbnail bytes extraction error: $failure',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
       if (logToCrashlytics) {
         await crashReporter.recordError(
-          e,
+          failure,
           stackTrace,
           reason:
               'VideoThumbnailService: Failed to extract thumbnail at '
@@ -502,13 +506,14 @@ class VideoThumbnailService {
         category: LogCategory.video,
       );
     } catch (e, stackTrace) {
+      final failure = _ThumbnailFailure(e, videoPath);
       Log.error(
-        'Last-frame fallback failed: $e',
+        'Last-frame fallback failed: $failure',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
       await crashReporter.recordError(
-        e,
+        failure,
         stackTrace,
         reason:
             'VideoThumbnailService: Failed to extract last frame (both '
@@ -947,4 +952,33 @@ class StripThumbnail {
 
   /// The video position this thumbnail represents.
   final Duration timestamp;
+}
+
+/// A thumbnail read that failed, as crash reports and the log see it.
+///
+/// The native error can quote the video's path: pro_video_editor's iOS
+/// generator throws `Video file not found at path: <path>`. A clip added from
+/// a DM is named after its message, so the path and the file's name are
+/// taken out, and any other path the text holds is redacted.
+class _ThumbnailFailure implements Exception {
+  _ThumbnailFailure(Object error, String videoPath)
+    : message = _withoutFile(
+        error is PlatformException
+            ? '${error.code}: ${error.message}'
+            : '${error.runtimeType}: $error',
+        videoPath,
+      );
+
+  /// The error's type or code and its scrubbed text.
+  final String message;
+
+  static String _withoutFile(String text, String path) {
+    var scrubbed = text.replaceAll(path, '[REDACTED]');
+    final stem = p.basenameWithoutExtension(path);
+    if (stem.isNotEmpty) scrubbed = scrubbed.replaceAll(stem, '[REDACTED]');
+    return redactFilesystemPaths(scrubbed);
+  }
+
+  @override
+  String toString() => 'Thumbnail extraction failed: $message';
 }
