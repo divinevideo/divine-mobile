@@ -141,17 +141,35 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
 
   /// Saves the decrypted video to the device gallery.
   ///
-  /// A no-op unless a clip is ready and no save is already running.
+  /// A no-op unless a clip is ready and no save is already running. Fails
+  /// when the message was retracted or removed since the page opened.
   Future<void> saveToGallery() async {
-    final path = state.clipPath;
-    if (path == null || state.saveStatus == DmVideoSaveStatus.saving) return;
+    final store = _store;
+    if (store == null ||
+        state.clipPath == null ||
+        state.saveStatus == DmVideoSaveStatus.saving) {
+      return;
+    }
 
     emit(_withSaveStatus(DmVideoSaveStatus.saving));
-    final result = await _gallerySaveService.saveVideoToGallery(
-      EditorVideo.file(path),
-      // The kept file is named after its message.
-      copyUnderNeutralName: true,
-    );
+    final GallerySaveResult result;
+    try {
+      // Asked of the store again, which refuses a message gone since.
+      final video = await store.videoFor(_message);
+      try {
+        result = await _gallerySaveService.saveVideoToGallery(
+          EditorVideo.file(video.path),
+          // The kept file is named after its message.
+          copyUnderNeutralName: true,
+        );
+      } finally {
+        store.releaseVideo(video);
+      }
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emitIfOpen(_withSaveStatus(DmVideoSaveStatus.failed));
+      return;
+    }
     emitIfOpen(
       _withSaveStatus(switch (result) {
         GallerySaveSuccess() => DmVideoSaveStatus.saved,

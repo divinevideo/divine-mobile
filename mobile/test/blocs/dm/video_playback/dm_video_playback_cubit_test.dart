@@ -155,6 +155,48 @@ void main() {
 
         expect(cubit.state.saveStatus, DmVideoSaveStatus.permissionDenied);
       });
+
+      test('holds the video for the save and lets go once saved', () async {
+        when(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).thenAnswer((_) async => const GallerySaveSuccess());
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        await cubit.saveToGallery();
+
+        verify(() => store.videoFor(any())).called(2);
+        verify(() => store.releaseVideo(any())).called(1);
+      });
+
+      test(
+        'saves nothing once the message is retracted or removed since the '
+        'page opened',
+        () async {
+          final cubit = createCubit();
+          addTearDown(cubit.close);
+          await cubit.load();
+          when(() => store.videoFor(any())).thenThrow(
+            const DmVideoUnavailableException(
+              'the message was retracted or removed',
+            ),
+          );
+
+          await cubit.saveToGallery();
+
+          expect(cubit.state.saveStatus, DmVideoSaveStatus.failed);
+          verifyNever(
+            () => gallerySaveService.saveVideoToGallery(
+              any(),
+              copyUnderNeutralName: true,
+            ),
+          );
+        },
+      );
     });
 
     group('holding its video', () {
