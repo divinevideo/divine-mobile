@@ -48,6 +48,26 @@ void main() {
       expect(snapshot.recentScreens, ['home', 'profile', 'settings']);
     });
 
+    test(
+      'records account review after a restricted redirect from home',
+      () async {
+        final snapshot = await visit(['/home/0', '/account-review']);
+
+        expect(snapshot.currentScreen, 'minorAccountReview');
+        expect(snapshot.recentScreens, ['home', 'minorAccountReview']);
+      },
+    );
+
+    test(
+      'records a cold account-review entry without prior navigation',
+      () async {
+        final snapshot = await visit(['/account-review']);
+
+        expect(snapshot.currentScreen, 'minorAccountReview');
+        expect(snapshot.recentScreens, ['minorAccountReview']);
+      },
+    );
+
     test('excludes the complete support subtree', () async {
       final snapshot = await visit([
         '/explore',

@@ -106,6 +106,16 @@ void main() {
   });
 
   group('parseMatchedRoute', () {
+    test('models the account-review diagnostic route and rebuilds its URI', () {
+      final route = parseMatchedRoute(
+        '/account-review',
+        matchedTemplate: '/account-review',
+      );
+
+      expect(route?.type.name, 'minorAccountReview');
+      expect(buildRoute(route!), '/account-review');
+    });
+
     test('reads a location matched to the route it builds back to', () {
       final route = parseMatchedRoute(
         '/profile/$_otherHex/2',
