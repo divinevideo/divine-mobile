@@ -117,6 +117,7 @@ void main() {
   }
 
   setUp(() async {
+    restoreSharedChannelDefaults();
     container = SecureKeyContainer.fromNsec(nsec);
     secureStorage = null;
     originalStore = SharedPreferencesStorePlatform.instance;
@@ -205,6 +206,7 @@ void main() {
 
   tearDown(() async {
     await auth.dispose();
+    restoreSharedChannelDefaults();
     SharedPreferences.resetStatic();
     SharedPreferencesStorePlatform.instance = originalStore;
   });
