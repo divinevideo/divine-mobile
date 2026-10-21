@@ -314,6 +314,32 @@ void main() {
       await changes.close();
     });
 
+    test(
+      'closes cleanly after a running cleanup failed, which reported its own '
+      'failure',
+      () async {
+        final release = Completer<void>();
+        final started = Completer<void>();
+        final changes = StreamController<void>();
+        final cleanup = DmVideoGoneCleanup(
+          changes: changes.stream,
+          cleanupDelay: Duration.zero,
+          prune: () {
+            started.complete();
+            return release.future;
+          },
+        );
+        changes.add(null);
+        await started.future;
+
+        final closing = cleanup.close();
+        release.completeError(Exception('prune failed'));
+
+        await expectLater(closing, completes);
+        await changes.close();
+      },
+    );
+
     test('prunes once, the cleanup delay after a retraction', () {
       fakeAsync((async) {
         var prunes = 0;

@@ -606,13 +606,11 @@ final class DmVideoGoneCleanup {
 
   Future<void> _close() async {
     await _subscription.cancel();
-    try {
-      await _running;
-    } finally {
-      if (_pending) {
-        _pending = false;
-        await _prune();
-      }
+    // A cleanup that failed was reported where it ran.
+    await _running?.then<void>((_) {}, onError: (Object _) {});
+    if (_pending) {
+      _pending = false;
+      await _prune();
     }
   }
 }
