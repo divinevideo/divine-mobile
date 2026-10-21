@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 // Not exported from pro_video_editor's barrel — imported via path so we can
 // subclass MethodChannelProVideoEditor and skip its EventChannel subscription.
@@ -25,6 +26,23 @@ import 'package:pro_video_editor/core/platform/platform_interface.dart';
 class _NoopInitProVideoEditor extends MethodChannelProVideoEditor {
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final reasons = <String?>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async => reasons.add(reason);
 }
 
 void main() {
@@ -133,6 +151,55 @@ void main() {
         expect(result, isNull); // Expected because it's not a real video
 
         await videoFile.delete();
+      });
+    });
+
+    group('crash reports', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = VideoThumbnailService.crashReporter;
+        reporter = _RecordingCrashReporter();
+        VideoThumbnailService.crashReporter = reporter;
+      });
+
+      tearDown(() => VideoThumbnailService.crashReporter = originalReporter);
+
+      test('name no file the frames were taken from', () async {
+        // Named the way a clip added from a DM is: after its message.
+        final video = File('${tempDir.path}/dm_clip_${'a' * 64}.mp4')
+          ..writeAsBytesSync([1, 2, 3, 4]);
+        addTearDown(video.deleteSync);
+        var framesFail = false;
+        var metadataFails = false;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              switch (call.method) {
+                case 'getMetadata' when !metadataFails:
+                  return <String, Object?>{
+                    'duration': 6000,
+                    'width': 1080,
+                    'height': 1920,
+                  };
+                case 'getThumbnails' when !framesFail:
+                  return <Uint8List>[];
+              }
+              throw PlatformException(code: 'decode');
+            });
+
+        // No frame, a frame read that fails, and a last frame that fails.
+        await VideoThumbnailService.extractThumbnail(videoPath: video.path);
+        framesFail = true;
+        await VideoThumbnailService.extractThumbnail(videoPath: video.path);
+        metadataFails = true;
+        await VideoThumbnailService.extractLastFrame(videoPath: video.path);
+
+        expect(reporter.reasons, hasLength(3));
+        for (final reason in reporter.reasons) {
+          expect(reason, isNot(contains('a' * 64)));
+          expect(reason, isNot(contains(tempDir.path)));
+        }
       });
     });
 

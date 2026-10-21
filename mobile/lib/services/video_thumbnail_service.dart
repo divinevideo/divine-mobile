@@ -315,9 +315,10 @@ class VideoThumbnailService {
           await crashReporter.recordError(
             Exception('Thumbnail extraction failed - thumbnails list is empty'),
             StackTrace.current,
+            // No path: a clip added from a DM is named after its message.
             reason:
-                'VideoThumbnailService: Failed to extract thumbnail from '
-                '$videoPath at timestamp: ${timestamp.inMilliseconds}ms',
+                'VideoThumbnailService: Failed to extract thumbnail at '
+                'timestamp: ${timestamp.inMilliseconds}ms',
           );
         }
         return null;
@@ -343,8 +344,8 @@ class VideoThumbnailService {
           e,
           stackTrace,
           reason:
-              'VideoThumbnailService: Failed to extract thumbnail from '
-              '$videoPath at timestamp: ${timestamp.inMilliseconds}ms',
+              'VideoThumbnailService: Failed to extract thumbnail at '
+              'timestamp: ${timestamp.inMilliseconds}ms',
         );
       }
       return null;
@@ -505,8 +506,8 @@ class VideoThumbnailService {
         e,
         stackTrace,
         reason:
-            'VideoThumbnailService: Failed to extract last frame from '
-            '$videoPath (both strategies failed)',
+            'VideoThumbnailService: Failed to extract last frame (both '
+            'strategies failed)',
       );
     }
 
