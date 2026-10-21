@@ -933,18 +933,13 @@ class DmVideoStore {
 
   /// Throws a [DmVideoGoneException] once [message] is gone. What is kept
   /// for it goes when [video], which the caller leased, is released by every
-  /// caller.
+  /// caller. A lookup that fails refuses too, as a video handed out cannot be
+  /// taken back, but deletes nothing.
   Future<void> _refuseIfGone(DmMessage message, File video) async {
-    if (!await _isGone(message)) return;
-    _goneWhileLeased.add(video.path);
-    throw const DmVideoGoneException();
-  }
-
-  /// Whether [message] was retracted or removed with its conversation. A
-  /// lookup that fails says no, as it keeps a message's files in a prune.
-  Future<bool> _isGone(DmMessage message) async {
+    final bool gone;
     try {
-      return await _isMessageGone?.call(message.id) == true ||
+      gone =
+          await _isMessageGone?.call(message.id) == true ||
           await _isConversationRemoved?.call(
                 message.conversationId,
                 message.createdAt,
@@ -952,13 +947,19 @@ class DmVideoStore {
               true;
     } on Object catch (error) {
       Log.warning(
-        'Could not tell whether a video DM message is gone: '
-        '${error.runtimeType}',
+        'Could not tell whether a video DM message is gone, so its video is '
+        'not handed out: ${error.runtimeType}',
         name: _logName,
         category: LogCategory.video,
       );
-      return false;
+      throw const DmVideoUnavailableException(
+        'could not tell whether the message is gone',
+        mayPass: true,
+      );
     }
+    if (!gone) return;
+    _goneWhileLeased.add(video.path);
+    throw const DmVideoGoneException();
   }
 
   Future<File?> _obtainPreview(

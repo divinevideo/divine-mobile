@@ -338,6 +338,39 @@ void main() {
       );
 
       test(
+        'refuses, and keeps, a video when it cannot tell whether its message '
+        'is gone',
+        () async {
+          var lookupFails = false;
+          final store = createStore(
+            isMessageGone: (_) async =>
+                lookupFails ? throw StateError('database closed') : false,
+          );
+          final message = _videoMessage();
+          store.releaseVideo(await store.videoFor(message));
+          lookupFails = true;
+          await LogCaptureService().clearAllLogs();
+
+          await expectLater(
+            store.videoFor(message),
+            throwsA(
+              isA<DmVideoUnavailableException>().having(
+                (error) => error.mayPass,
+                'mayPass',
+                isTrue,
+              ),
+            ),
+          );
+
+          expect(keptFiles(), isNotEmpty);
+          expect(
+            _loggedLines(),
+            contains(contains('so its video is not handed out: StateError')),
+          );
+        },
+      );
+
+      test(
         'deletes what is kept for a message it refuses as gone',
         () async {
           var gone = false;
@@ -2694,10 +2727,10 @@ void main() {
         'keeps everything when it cannot tell whether a message is gone',
         () async {
           final message = _videoMessage();
+          final frame = await createStore().previewFor(message);
           final store = createStore(
             isMessageGone: (_) async => throw StateError('database closed'),
           );
-          final frame = await store.previewFor(message);
           await LogCaptureService().clearAllLogs();
 
           await store.prune();
