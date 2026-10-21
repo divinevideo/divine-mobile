@@ -272,6 +272,19 @@ void main() {
               expect(line, isNot(contains('b' * 64)));
               expect(line, isNot(contains(tempDir.path)));
             }
+            final nativeFailures = LogCaptureService()
+                .getRecentLogs()
+                .map((entry) => '${entry.message} ${entry.error}')
+                .where((line) => line.contains('THUMBNAIL_ERROR'))
+                .toList();
+            expect(
+              nativeFailures,
+              contains(contains('getSingleThumbnail(position: .last) failed')),
+            );
+            for (final line in nativeFailures) {
+              expect(line, isNot(contains('b' * 64)));
+              expect(line, isNot(contains(tempDir.path)));
+            }
           },
         );
       }

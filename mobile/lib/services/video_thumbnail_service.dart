@@ -156,7 +156,7 @@ class VideoThumbnailService {
         );
       } catch (e) {
         Log.error(
-          'Failed to generate thumbnail: $e',
+          'Failed to generate thumbnail: ${_ThumbnailFailure(e, videoPath)}',
           name: 'VideoThumbnailService',
           category: LogCategory.video,
         );
@@ -164,7 +164,7 @@ class VideoThumbnailService {
       }
     } catch (e, stackTrace) {
       Log.error(
-        'Thumbnail extraction error: $e',
+        'Thumbnail extraction error: ${_ThumbnailFailure(e, videoPath)}',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
@@ -248,7 +248,8 @@ class VideoThumbnailService {
         );
       } catch (e) {
         Log.error(
-          'Failed to get video metadata for middle timestamp: $e',
+          'Failed to get video metadata for middle timestamp: '
+          '${_ThumbnailFailure(e, videoPath)}',
           name: 'VideoThumbnailService',
           category: LogCategory.video,
         );
@@ -463,7 +464,8 @@ class VideoThumbnailService {
       );
     } catch (e) {
       Log.warning(
-        '⚠️ getSingleThumbnail(position: .last) failed: $e',
+        '⚠️ getSingleThumbnail(position: .last) failed: '
+        '${_ThumbnailFailure(e, videoPath)}',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
