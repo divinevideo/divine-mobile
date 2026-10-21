@@ -13630,99 +13630,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Ikuti tagar dari halamannya untuk menemukannya di sini.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Memuat daftar';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Daftar orang sedang tidak tersedia.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Daftar video sedang tidak tersedia.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Data akun sebelumnya tidak dapat dihapus. Coba lagi.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Cari orang';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Hapus $name dari daftar';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Tidak bisa memperbarui daftar. Coba lagi.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Tambahkan $name ke daftar';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Tambah kolaborator';
-
-  @override
-  String get listMakePublicLabel => 'Jadikan publik';
-
-  @override
-  String get listCollaboratorSearchHint => 'Cari di Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Tidak ada';
-
-  @override
-  String get listMakePublicSubtitle => 'Biar orang lain bisa lihat daftar ini';
-
-  @override
-  String get listVideoNotAdded =>
-      'Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.';
-
-  @override
-  String get listRetrySync => 'Sinkronkan sekarang';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Perubahan ini belum bisa dikonfirmasi. Coba lagi.';
-
-  @override
-  String get listRecoveryPending =>
-      'Daftar ini memiliki perubahan yang menunggu sinkronisasi.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.';
-
-  @override
-  String get listAddToLists => 'Tambahkan ke daftar';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.';
-
-  @override
   String get soundRequestAction => 'Minta suara ini';
 
   @override
@@ -13876,4 +13783,97 @@ class AppLocalizationsId extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Diposting $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Memuat daftar';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Daftar orang sedang tidak tersedia.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Daftar video sedang tidak tersedia.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Data akun sebelumnya tidak dapat dihapus. Coba lagi.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Cari orang';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Hapus $name dari daftar';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Tidak bisa memperbarui daftar. Coba lagi.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Tambahkan $name ke daftar';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Tambah kolaborator';
+
+  @override
+  String get listMakePublicLabel => 'Jadikan publik';
+
+  @override
+  String get listCollaboratorSearchHint => 'Cari di Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Tidak ada';
+
+  @override
+  String get listMakePublicSubtitle => 'Biar orang lain bisa lihat daftar ini';
+
+  @override
+  String get listVideoNotAdded =>
+      'Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.';
+
+  @override
+  String get listRetrySync => 'Sinkronkan sekarang';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Perubahan ini belum bisa dikonfirmasi. Coba lagi.';
+
+  @override
+  String get listRecoveryPending =>
+      'Daftar ini memiliki perubahan yang menunggu sinkronisasi.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.';
+
+  @override
+  String get listAddToLists => 'Tambahkan ke daftar';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.';
 }

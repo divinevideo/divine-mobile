@@ -109,7 +109,8 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
     final revision = snapshot.loadRevision + 1;
     emitIfOpen(
       state.copyWith(
-        status: snapshot.status == AddPeopleToListStatus.ready ||
+        status:
+            snapshot.status == AddPeopleToListStatus.ready ||
                 snapshot.candidatePositions.isNotEmpty
             ? AddPeopleToListStatus.ready
             : AddPeopleToListStatus.loading,

@@ -5702,8 +5702,8 @@
 "listsDiscoveryLoadingLabel": "Läser in listor",
 "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
 "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu.",
-"authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen.",
 "listPrivateConversionTooLarge": "Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.",
+"authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen.",
 "@peopleListsAddPersonSemanticLabel": {
   "placeholders": {
     "name": {
@@ -5736,4 +5736,5 @@
 "listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.",
 "listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.",
 "listAddToLists": "Lägg till i listor",
-"accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen."}
+"accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen."
+}

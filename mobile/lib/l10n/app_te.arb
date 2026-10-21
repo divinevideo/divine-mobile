@@ -8570,45 +8570,6 @@
   "followedHashtagsTitle": "అనుసరిస్తున్న హ్యాష్‌ట్యాగ్‌లు",
   "manageHashtags": "హ్యాష్‌ట్యాగ్‌లను నిర్వహించండి",
   "followedHashtagsEmpty": "హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.",
-  "listsDiscoveryLoadingLabel": "జాబితాలను లోడ్ చేస్తోంది",
-  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
-  "listSearchPeopleUnavailable": "ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.",
-  "listSearchVideosUnavailable": "ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.",
-  "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.",
-  "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
-  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
-  "@peopleListsAddPersonSemanticLabel": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
-  "@peopleListsRemovePersonSemanticLabel": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
-  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
-  "listMakePublicSubtitle": "ఇతరులు ఈ జాబితాను చూడనివ్వండి",
-  "listMakePublicLabel": "పబ్లిక్‌గా చేయండి",
-  "listAddCollaboratorTitle": "సహకారిని జోడించండి",
-  "listCollaboratorSearchHint": "శోధన Divine...",
-  "listCollaboratorsNone": "ఏదీ లేదు",
-  "listPrivateCollaboratorsWarning": "ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.",
-  "listVideoNotAdded": "మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.",
-  "listVideoPendingSync": "మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.",
-  "listRetrySync": "ఇప్పుడే సింక్ చేయండి",
-  "listPermissionsUnconfirmed": "ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
-  "listRecoveryPending": "ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.",
-  "listPermissionsRecoveryPending": "మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.",
-  "listRecoveryReadOnly": "వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.",
-  "listAddToLists": "జాబితాలకు జోడించండి",
-  "accountDeletionProcessingSignOutFailed": "మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "soundRequestAction": "ఈ సౌండ్‌ను అడగండి",
   "soundRequestTitle": "ఎవరో మీ సౌండ్‌ను ఉపయోగించాలనుకుంటున్నారు",
   "soundRequestDescription": "ఎవరైనా రీమిక్స్ చేయగలిగేలా ఈ వీడియో సౌండ్‌ను మళ్లీ ఉపయోగించడానికి అనుమతించండి.",
@@ -8662,5 +8623,44 @@
       }
     }
   },
-  "userRowPosted": "{time} పోస్ట్ చేయబడింది"
+  "userRowPosted": "{time} పోస్ట్ చేయబడింది",
+  "listsDiscoveryLoadingLabel": "జాబితాలను లోడ్ చేస్తోంది",
+  "listsDiscoveryEmpty": "ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
+  "listSearchPeopleUnavailable": "ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.",
+  "listSearchVideosUnavailable": "ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.",
+  "listPrivateConversionTooLarge": "ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.",
+  "authAccountCleanupFailed": "మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPersonSemanticLabel": "{name}ని జాబితాకు జోడించండి",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name}ని జాబితా నుండి తీసివేయండి",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "peopleListsAddPeopleSearchHint": "వ్యక్తులను శోధించండి",
+  "listMakePublicSubtitle": "ఇతరులు ఈ జాబితాను చూడనివ్వండి",
+  "listMakePublicLabel": "పబ్లిక్‌గా చేయండి",
+  "listAddCollaboratorTitle": "సహకారిని జోడించండి",
+  "listCollaboratorSearchHint": "శోధన Divine...",
+  "listCollaboratorsNone": "ఏదీ లేదు",
+  "listPrivateCollaboratorsWarning": "ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.",
+  "listVideoNotAdded": "మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.",
+  "listVideoPendingSync": "మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.",
+  "listRetrySync": "ఇప్పుడే సింక్ చేయండి",
+  "listPermissionsUnconfirmed": "ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+  "listRecoveryPending": "ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.",
+  "listPermissionsRecoveryPending": "మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.",
+  "listRecoveryReadOnly": "వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.",
+  "listAddToLists": "జాబితాలకు జోడించండి",
+  "accountDeletionProcessingSignOutFailed": "మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి."
 }

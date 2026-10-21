@@ -14013,98 +14013,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Obserwuj hashtag na jego stronie, aby znaleźć go tutaj.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Wczytywanie list';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.';
-
-  @override
-  String get listSearchPeopleUnavailable => 'Listy osób są teraz niedostępne.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Listy filmów są teraz niedostępne.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Szukaj osób';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Usuń $name z listy';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Nie udało się zaktualizować listy. Spróbuj ponownie.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Dodaj $name do listy';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Dodaj współpracownika';
-
-  @override
-  String get listMakePublicLabel => 'Ustaw jako publiczną';
-
-  @override
-  String get listCollaboratorSearchHint => 'Szukaj w Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Brak';
-
-  @override
-  String get listMakePublicSubtitle => 'Pozwól innym zobaczyć tę listę';
-
-  @override
-  String get listVideoNotAdded =>
-      'Twoja lista została utworzona, ale ten film nie został dodany.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Ustawienie tej listy jako prywatnej usunie też jej współtwórców. Tylko Ty będziesz mieć możliwość dodawania filmów.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Twoja lista i film są zapisane tutaj. Film czeka na synchronizację.';
-
-  @override
-  String get listRetrySync => 'Synchronizuj teraz';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.';
-
-  @override
-  String get listRecoveryPending =>
-      'Ta lista ma zmiany oczekujące na synchronizację.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.';
-
-  @override
-  String get listAddToLists => 'Dodaj do list';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie.';
-
-  @override
   String get soundRequestAction => 'Poproś o ten dźwięk';
 
   @override
@@ -14259,4 +14167,96 @@ class AppLocalizationsPl extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Opublikowano $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Wczytywanie list';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.';
+
+  @override
+  String get listSearchPeopleUnavailable => 'Listy osób są teraz niedostępne.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Listy filmów są teraz niedostępne.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Szukaj osób';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Usuń $name z listy';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Nie udało się zaktualizować listy. Spróbuj ponownie.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Dodaj $name do listy';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Dodaj współpracownika';
+
+  @override
+  String get listMakePublicLabel => 'Ustaw jako publiczną';
+
+  @override
+  String get listCollaboratorSearchHint => 'Szukaj w Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Brak';
+
+  @override
+  String get listMakePublicSubtitle => 'Pozwól innym zobaczyć tę listę';
+
+  @override
+  String get listVideoNotAdded =>
+      'Twoja lista została utworzona, ale ten film nie został dodany.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Ustawienie tej listy jako prywatnej usunie też jej współtwórców. Tylko Ty będziesz mieć możliwość dodawania filmów.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Twoja lista i film są zapisane tutaj. Film czeka na synchronizację.';
+
+  @override
+  String get listRetrySync => 'Synchronizuj teraz';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.';
+
+  @override
+  String get listRecoveryPending =>
+      'Ta lista ma zmiany oczekujące na synchronizację.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.';
+
+  @override
+  String get listAddToLists => 'Dodaj do list';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie.';
 }

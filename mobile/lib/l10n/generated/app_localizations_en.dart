@@ -13821,98 +13821,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Follow a hashtag from its page to find it here.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Loading lists';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'No lists turned up this time. Pull to refresh.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'People lists are unavailable right now.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Video lists are unavailable right now.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Couldn\'t clear the previous account\'s data. Try again.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Search people';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Remove $name from list';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Couldn\'t update the list. Please try again.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Add $name to list';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Add a collaborator';
-
-  @override
-  String get listMakePublicLabel => 'Make public';
-
-  @override
-  String get listCollaboratorSearchHint => 'Search Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'None';
-
-  @override
-  String get listMakePublicSubtitle => 'Let others see this list';
-
-  @override
-  String get listVideoNotAdded =>
-      'Your list was created, but this video wasn\'t added.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Making this list private also removes its collaborators. Only you will be able to add videos.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Your list and video are saved here. The video is waiting to sync.';
-
-  @override
-  String get listRetrySync => 'Sync now';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Couldn\'t confirm this change. Try again.';
-
-  @override
-  String get listRecoveryPending => 'This list has changes waiting to sync.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.';
-
-  @override
-  String get listAddToLists => 'Add to lists';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Your account deletion is processing, but we couldn’t finish signing you out. Try again.';
-
-  @override
   String get soundRequestAction => 'Request this sound';
 
   @override
@@ -14066,4 +13974,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Posted $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'People lists are unavailable right now.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Video lists are unavailable right now.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Couldn\'t clear the previous account\'s data. Try again.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Search people';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Remove $name from list';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Couldn\'t update the list. Please try again.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Add $name to list';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Add a collaborator';
+
+  @override
+  String get listMakePublicLabel => 'Make public';
+
+  @override
+  String get listCollaboratorSearchHint => 'Search Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'None';
+
+  @override
+  String get listMakePublicSubtitle => 'Let others see this list';
+
+  @override
+  String get listVideoNotAdded =>
+      'Your list was created, but this video wasn\'t added.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Making this list private also removes its collaborators. Only you will be able to add videos.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Your list and video are saved here. The video is waiting to sync.';
+
+  @override
+  String get listRetrySync => 'Sync now';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Couldn\'t confirm this change. Try again.';
+
+  @override
+  String get listRecoveryPending => 'This list has changes waiting to sync.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.';
+
+  @override
+  String get listAddToLists => 'Add to lists';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Your account deletion is processing, but we couldn’t finish signing you out. Try again.';
 }

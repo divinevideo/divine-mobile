@@ -561,7 +561,8 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
           ),
         ),
 
-        if (widget.configuration.maxCount != null || widget.showSelectedProfiles)
+        if (widget.configuration.maxCount != null ||
+            widget.configuration.showSelectedProfiles)
           AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
@@ -570,13 +571,14 @@ class _UserPickerSheetState extends ConsumerState<_UserPickerSheetView> {
                 ? _SelectedChipsRow(
                     profiles: _selectedProfiles,
                     onRemove: (profile) {
+                      if (!mounted || !widget.canSelect()) return;
                       setState(() {
                         _selectedProfiles.removeWhere(
                           (p) => p.pubkey == profile.pubkey,
                         );
                         _selectedPubkeys.remove(profile.pubkey);
                       });
-                      widget.onUserToggled?.call(profile);
+                      widget.configuration.onUserToggled?.call(profile);
                     },
                   )
                 : const SizedBox.shrink(),

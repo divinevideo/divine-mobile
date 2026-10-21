@@ -236,6 +236,102 @@ void main() {
         },
       );
 
+      for (final scenario in [
+        (
+          name: 'the owner changes',
+          readiness: NostrSessionReadiness.identityKnown(pubkey: 'e' * 64),
+        ),
+        (
+          name: 'sign-out starts',
+          readiness: NostrSessionReadiness.tearingDown(pubkey: 'f' * 64),
+        ),
+      ]) {
+        testWidgets(
+          'a captured chip removal is inert after ${scenario.name}',
+          (tester) async {
+            final session = _TestNostrSession();
+            final removable = UserProfile(
+              pubkey: 'a' * 64,
+              displayName: 'First collaborator',
+              rawData: const {},
+              createdAt: DateTime.utc(2026),
+              eventId: 'c' * 64,
+            );
+            final retained = UserProfile(
+              pubkey: 'b' * 64,
+              displayName: 'Second collaborator',
+              rawData: const {},
+              createdAt: DateTime.utc(2026),
+              eventId: 'd' * 64,
+            );
+            final toggled = <String>[];
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  nostrSessionProvider.overrideWith(() => session),
+                  userRankingSignalsLoaderProvider.overrideWithValue(
+                    rankingLoader,
+                  ),
+                  _noVanishedProfiles,
+                  profileRepositoryProvider.overrideWithValue(
+                    _createMockProfileRepository(),
+                  ),
+                  followRepositoryProvider.overrideWithValue(
+                    _createMockFollowRepository(),
+                  ),
+                ],
+                child: MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(
+                    body: UserPickerSheet(
+                      title: 'Collaborators',
+                      filterMode: UserPickerFilterMode.allUsers,
+                      initialSelectedProfiles: [removable, retained],
+                      showSelectedProfiles: true,
+                      onUserToggled: (profile) => toggled.add(profile.pubkey),
+                    ),
+                  ),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.bySemanticsLabel('Remove First collaborator'),
+            );
+            await tester.pumpAndSettle();
+            expect(toggled, [removable.pubkey]);
+            expect(find.text('First collaborator'), findsNothing);
+            expect(find.text('Second collaborator'), findsOneWidget);
+
+            // Chip removal completes after its reverse animation. Retain the
+            // parent callback to exercise a completion after session retirement.
+            final selectedRow = tester.widget(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget.runtimeType.toString() == '_SelectedChipsRow',
+              ),
+            );
+            final onRemove =
+                (selectedRow as dynamic).onRemove as ValueChanged<UserProfile>;
+            session.update(scenario.readiness);
+            // No frame has unmounted the old view yet: the account gate must
+            // reject this callback even while its State is still mounted.
+            expect(() => onRemove(retained), returnsNormally);
+            expect(toggled, [removable.pubkey]);
+            await tester.pumpAndSettle();
+            expect(find.byType(TextField), findsNothing);
+            // A callback retained beyond disposal must also be harmless.
+            expect(() => onRemove(retained), returnsNormally);
+            session.selectOwner('f' * 64);
+            await tester.pumpAndSettle();
+            expect(find.byType(TextField), findsNothing);
+            expect(toggled, [removable.pubkey]);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
       testWidgets(
         'preserves search text when same-owner ranking dependencies change',
         (tester) async {
@@ -305,6 +401,10 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                nostrSessionProvider.overrideWith(_TestNostrSession.new),
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
                 _noVanishedProfiles,
                 profileRepositoryProvider.overrideWithValue(
                   _createMockProfileRepository(cachedProfiles: [former]),

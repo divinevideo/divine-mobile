@@ -12900,87 +12900,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get followedHashtagsEmpty => '在话题标签页面关注后，即可在这里找到。';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
-
-  @override
-  String get listsDiscoveryLoadingLabel => '正在加载列表';
-
-  @override
-  String get listsDiscoveryEmpty => '这次没找到列表。下拉刷新试试。';
-
-  @override
-  String get listSearchPeopleUnavailable => '人员列表暂时不可用。';
-
-  @override
-  String get listSearchVideosUnavailable => '视频列表暂时不可用。';
-
-  @override
-  String get authAccountCleanupFailed => '无法清除上一个账号的数据。请重试。';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => '搜索用户';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return '把 $name 从列表移除';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed => '无法更新列表，请重试。';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return '把 $name 加入列表';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => '添加协作者';
-
-  @override
-  String get listMakePublicLabel => '设为公开';
-
-  @override
-  String get listCollaboratorSearchHint => '搜索 Divine...';
-
-  @override
-  String get listCollaboratorsNone => '无';
-
-  @override
-  String get listMakePublicSubtitle => '让其他人看到此列表';
-
-  @override
-  String get listVideoNotAdded => '你的列表已创建，但未添加此视频。';
-
-  @override
-  String get listPrivateCollaboratorsWarning => '将此列表设为私密也会移除其协作者。只有你可以添加视频。';
-
-  @override
-  String get listVideoPendingSync => '你的列表和视频已保存在此设备上。视频正在等待同步。';
-
-  @override
-  String get listRetrySync => '立即同步';
-
-  @override
-  String get listPermissionsUnconfirmed => '无法确认此更改。请重试。';
-
-  @override
-  String get listRecoveryPending => '此列表有等待同步的更改。';
-
-  @override
-  String get listPermissionsRecoveryPending => '更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。';
-
-  @override
-  String get listRecoveryReadOnly => '视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。';
-
-  @override
-  String get listAddToLists => '加入列表';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      '你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。';
-
-  @override
   String get soundRequestAction => '请求使用此声音';
 
   @override
@@ -13125,4 +13044,85 @@ class AppLocalizationsZh extends AppLocalizations {
   String userRowPosted(String time) {
     return '发布于$time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      '此列表太大，无法设为私密。请先移除一些视频。你的修改仍保留在这里，尚未保存。';
+
+  @override
+  String get listsDiscoveryLoadingLabel => '正在加载列表';
+
+  @override
+  String get listsDiscoveryEmpty => '这次没找到列表。下拉刷新试试。';
+
+  @override
+  String get listSearchPeopleUnavailable => '人员列表暂时不可用。';
+
+  @override
+  String get listSearchVideosUnavailable => '视频列表暂时不可用。';
+
+  @override
+  String get authAccountCleanupFailed => '无法清除上一个账号的数据。请重试。';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => '搜索用户';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '把 $name 从列表移除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => '无法更新列表，请重试。';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '把 $name 加入列表';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => '添加协作者';
+
+  @override
+  String get listMakePublicLabel => '设为公开';
+
+  @override
+  String get listCollaboratorSearchHint => '搜索 Divine...';
+
+  @override
+  String get listCollaboratorsNone => '无';
+
+  @override
+  String get listMakePublicSubtitle => '让其他人看到此列表';
+
+  @override
+  String get listVideoNotAdded => '你的列表已创建，但未添加此视频。';
+
+  @override
+  String get listPrivateCollaboratorsWarning => '将此列表设为私密也会移除其协作者。只有你可以添加视频。';
+
+  @override
+  String get listVideoPendingSync => '你的列表和视频已保存在此设备上。视频正在等待同步。';
+
+  @override
+  String get listRetrySync => '立即同步';
+
+  @override
+  String get listPermissionsUnconfirmed => '无法确认此更改。请重试。';
+
+  @override
+  String get listRecoveryPending => '此列表有等待同步的更改。';
+
+  @override
+  String get listPermissionsRecoveryPending => '更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。';
+
+  @override
+  String get listRecoveryReadOnly => '视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。';
+
+  @override
+  String get listAddToLists => '加入列表';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      '你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。';
 }

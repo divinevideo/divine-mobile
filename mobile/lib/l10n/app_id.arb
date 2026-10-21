@@ -5702,8 +5702,8 @@
 "listsDiscoveryLoadingLabel": "Memuat daftar",
 "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
 "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia.",
-"authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi.",
 "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.",
+"authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi.",
 "@peopleListsAddPersonSemanticLabel": {
   "placeholders": {
     "name": {
@@ -5736,4 +5736,5 @@
 "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
 "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
 "listAddToLists": "Tambahkan ke daftar",
-"accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi."}
+"accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi."
+}

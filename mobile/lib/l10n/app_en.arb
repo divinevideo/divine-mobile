@@ -10367,99 +10367,6 @@
   "@followedHashtagsEmpty": {
     "description": "Empty state explaining how to follow a hashtag."
   },
-  "listPrivateConversionTooLarge": "This list is too large to make private. Remove some videos first. Your edits are kept here and haven't been saved.",
-  "@listPrivateConversionTooLarge": {
-    "description": "An oversized public list cannot become private; the open editor retains unsaved drafts."
-  },
-  "listsDiscoveryLoadingLabel": "Loading lists",
-  "@listsDiscoveryEmpty": {
-    "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."
-  },
-  "@listsDiscoveryLoadingLabel": {
-    "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
-  },
-  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
-  "listSearchPeopleUnavailable": "People lists are unavailable right now.",
-  "@listSearchVideosUnavailable": {
-    "description": "Video-list search source could not answer; shown beside healthy people results with retry."
-  },
-  "@listSearchPeopleUnavailable": {
-    "description": "People-list search source could not answer; shown beside healthy video results with retry."
-  },
-  "listSearchVideosUnavailable": "Video lists are unavailable right now.",
-  "@authAccountCleanupFailed": {
-    "description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."
-  },
-  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again.",
-  "@peopleListsRemovePersonSemanticLabel": {
-    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsAddPeopleSearchHint": "Search people",
-  "@peopleListsMembershipUpdateFailed": {
-    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
-  },
-  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
-  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
-  "@peopleListsAddPersonSemanticLabel": {
-    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
-  "listAddCollaboratorTitle": "Add a collaborator",
-  "@listMakePublicLabel": {
-    "description": "Title of the switch on the list info sheet that makes a curated list visible to others."
-  },
-  "listMakePublicLabel": "Make public",
-  "listCollaboratorSearchHint": "Search Divine...",
-  "@listMakePublicSubtitle": {
-    "description": "Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on."
-  },
-  "listCollaboratorsNone": "None",
-  "listMakePublicSubtitle": "Let others see this list",
-  "@listVideoPendingSync": {
-    "description": "Video added locally to a newly created list but publication has not succeeded."
-  },
-  "@listPrivateCollaboratorsWarning": {
-    "description": "Confirmation explains that making a list private revokes its collaborators."
-  },
-  "@listVideoNotAdded": {
-    "description": "A newly created list exists but could not accept the requested video."
-  },
-  "listVideoNotAdded": "Your list was created, but this video wasn't added.",
-  "listPrivateCollaboratorsWarning": "Making this list private also removes its collaborators. Only you will be able to add videos.",
-  "@listRetrySync": {
-    "description": "Retry publishing the saved list without adding or removing videos."
-  },
-  "listVideoPendingSync": "Your list and video are saved here. The video is waiting to sync.",
-  "listRetrySync": "Sync now",
-  "@listPermissionsUnconfirmed": {
-    "description": "Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed."
-  },
-  "listPermissionsUnconfirmed": "Couldn't confirm this change. Try again.",
-  "@listRecoveryPending": {
-    "description": "Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure."
-  },
-  "listRecoveryPending": "This list has changes waiting to sync.",
-  "@listPermissionsRecoveryPending": {
-    "description": "A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission."
-  },
-  "listPermissionsRecoveryPending": "Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.",
-  "listRecoveryReadOnly": "Some saved changes to video lists need recovery. You can view video lists, but editing is paused.",
-  "@listAddToLists": {
-    "description": "Title of the sheet where the viewer picks which of their lists a video or a person belongs to."
-  },
-  "listAddToLists": "Add to lists",
-  "accountDeletionProcessingSignOutFailed": "Your account deletion is processing, but we couldn’t finish signing you out. Try again.",
-  "@accountDeletionProcessingSignOutFailed": {"description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."},
   "soundRequestAction": "Request this sound",
   "soundRequestTitle": "Someone wants to use your sound",
   "soundRequestDescription": "Enable sound reuse on this video so anyone can remix with it.",
@@ -10666,5 +10573,98 @@
       }
     }
   },
-  "userRowPosted": "Posted {time}"
+  "userRowPosted": "Posted {time}",
+  "listPrivateConversionTooLarge": "This list is too large to make private. Remove some videos first. Your edits are kept here and haven't been saved.",
+  "@listPrivateConversionTooLarge": {
+    "description": "An oversized public list cannot become private; the open editor retains unsaved drafts."
+  },
+  "listsDiscoveryLoadingLabel": "Loading lists",
+  "@listsDiscoveryEmpty": {
+    "description": "Full-screen message on the Explore Lists tab when neither discovery column returned any lists."
+  },
+  "@listsDiscoveryLoadingLabel": {
+    "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
+  },
+  "listsDiscoveryEmpty": "No lists turned up this time. Pull to refresh.",
+  "listSearchPeopleUnavailable": "People lists are unavailable right now.",
+  "@listSearchVideosUnavailable": {
+    "description": "Video-list search source could not answer; shown beside healthy people results with retry."
+  },
+  "@listSearchPeopleUnavailable": {
+    "description": "People-list search source could not answer; shown beside healthy video results with retry."
+  },
+  "listSearchVideosUnavailable": "Video lists are unavailable right now.",
+  "@authAccountCleanupFailed": {
+    "description": "Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry."
+  },
+  "authAccountCleanupFailed": "Couldn't clear the previous account's data. Try again.",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that removes a person from the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPeopleSearchHint": "Search people",
+  "@peopleListsMembershipUpdateFailed": {
+    "description": "Snackbar shown when adding or removing a person from a people list fails and the change is rolled back."
+  },
+  "peopleListsRemovePersonSemanticLabel": "Remove {name} from list",
+  "peopleListsMembershipUpdateFailed": "Couldn't update the list. Please try again.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "description": "Screen-reader label of the row button that adds a person to the people list being edited.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsAddPersonSemanticLabel": "Add {name} to list",
+  "listAddCollaboratorTitle": "Add a collaborator",
+  "@listMakePublicLabel": {
+    "description": "Title of the switch on the list info sheet that makes a curated list visible to others."
+  },
+  "listMakePublicLabel": "Make public",
+  "listCollaboratorSearchHint": "Search Divine...",
+  "@listMakePublicSubtitle": {
+    "description": "Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on."
+  },
+  "listCollaboratorsNone": "None",
+  "listMakePublicSubtitle": "Let others see this list",
+  "@listVideoPendingSync": {
+    "description": "Video added locally to a newly created list but publication has not succeeded."
+  },
+  "@listPrivateCollaboratorsWarning": {
+    "description": "Confirmation explains that making a list private revokes its collaborators."
+  },
+  "@listVideoNotAdded": {
+    "description": "A newly created list exists but could not accept the requested video."
+  },
+  "listVideoNotAdded": "Your list was created, but this video wasn't added.",
+  "listPrivateCollaboratorsWarning": "Making this list private also removes its collaborators. Only you will be able to add videos.",
+  "@listRetrySync": {
+    "description": "Retry publishing the saved list without adding or removing videos."
+  },
+  "listVideoPendingSync": "Your list and video are saved here. The video is waiting to sync.",
+  "listRetrySync": "Sync now",
+  "@listPermissionsUnconfirmed": {
+    "description": "Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed."
+  },
+  "listPermissionsUnconfirmed": "Couldn't confirm this change. Try again.",
+  "@listRecoveryPending": {
+    "description": "Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure."
+  },
+  "listRecoveryPending": "This list has changes waiting to sync.",
+  "@listPermissionsRecoveryPending": {
+    "description": "A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission."
+  },
+  "listPermissionsRecoveryPending": "Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.",
+  "listRecoveryReadOnly": "Some saved changes to video lists need recovery. You can view video lists, but editing is paused.",
+  "@listAddToLists": {
+    "description": "Title of the sheet where the viewer picks which of their lists a video or a person belongs to."
+  },
+  "listAddToLists": "Add to lists",
+  "accountDeletionProcessingSignOutFailed": "Your account deletion is processing, but we couldn’t finish signing you out. Try again.",
+  "@accountDeletionProcessingSignOutFailed": {"description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."}
 }

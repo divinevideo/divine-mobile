@@ -22917,156 +22917,6 @@ abstract class AppLocalizations {
   /// **'Follow a hashtag from its page to find it here.'**
   String get followedHashtagsEmpty;
 
-  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
-  ///
-  /// In en, this message translates to:
-  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
-  String get listPrivateConversionTooLarge;
-
-  /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading lists'**
-  String get listsDiscoveryLoadingLabel;
-
-  /// Full-screen message on the Explore Lists tab when neither discovery column returned any lists.
-  ///
-  /// In en, this message translates to:
-  /// **'No lists turned up this time. Pull to refresh.'**
-  String get listsDiscoveryEmpty;
-
-  /// People-list search source could not answer; shown beside healthy video results with retry.
-  ///
-  /// In en, this message translates to:
-  /// **'People lists are unavailable right now.'**
-  String get listSearchPeopleUnavailable;
-
-  /// Video-list search source could not answer; shown beside healthy people results with retry.
-  ///
-  /// In en, this message translates to:
-  /// **'Video lists are unavailable right now.'**
-  String get listSearchVideosUnavailable;
-
-  /// Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t clear the previous account\'s data. Try again.'**
-  String get authAccountCleanupFailed;
-
-  /// No description provided for @peopleListsAddPeopleSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search people'**
-  String get peopleListsAddPeopleSearchHint;
-
-  /// Screen-reader label of the row button that removes a person from the people list being edited.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove {name} from list'**
-  String peopleListsRemovePersonSemanticLabel(String name);
-
-  /// Snackbar shown when adding or removing a person from a people list fails and the change is rolled back.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t update the list. Please try again.'**
-  String get peopleListsMembershipUpdateFailed;
-
-  /// Screen-reader label of the row button that adds a person to the people list being edited.
-  ///
-  /// In en, this message translates to:
-  /// **'Add {name} to list'**
-  String peopleListsAddPersonSemanticLabel(String name);
-
-  /// No description provided for @listAddCollaboratorTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a collaborator'**
-  String get listAddCollaboratorTitle;
-
-  /// Title of the switch on the list info sheet that makes a curated list visible to others.
-  ///
-  /// In en, this message translates to:
-  /// **'Make public'**
-  String get listMakePublicLabel;
-
-  /// No description provided for @listCollaboratorSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search Divine...'**
-  String get listCollaboratorSearchHint;
-
-  /// No description provided for @listCollaboratorsNone.
-  ///
-  /// In en, this message translates to:
-  /// **'None'**
-  String get listCollaboratorsNone;
-
-  /// Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on.
-  ///
-  /// In en, this message translates to:
-  /// **'Let others see this list'**
-  String get listMakePublicSubtitle;
-
-  /// A newly created list exists but could not accept the requested video.
-  ///
-  /// In en, this message translates to:
-  /// **'Your list was created, but this video wasn\'t added.'**
-  String get listVideoNotAdded;
-
-  /// Confirmation explains that making a list private revokes its collaborators.
-  ///
-  /// In en, this message translates to:
-  /// **'Making this list private also removes its collaborators. Only you will be able to add videos.'**
-  String get listPrivateCollaboratorsWarning;
-
-  /// Video added locally to a newly created list but publication has not succeeded.
-  ///
-  /// In en, this message translates to:
-  /// **'Your list and video are saved here. The video is waiting to sync.'**
-  String get listVideoPendingSync;
-
-  /// Retry publishing the saved list without adding or removing videos.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync now'**
-  String get listRetrySync;
-
-  /// Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t confirm this change. Try again.'**
-  String get listPermissionsUnconfirmed;
-
-  /// Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure.
-  ///
-  /// In en, this message translates to:
-  /// **'This list has changes waiting to sync.'**
-  String get listRecoveryPending;
-
-  /// A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission.
-  ///
-  /// In en, this message translates to:
-  /// **'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.'**
-  String get listPermissionsRecoveryPending;
-
-  /// No description provided for @listRecoveryReadOnly.
-  ///
-  /// In en, this message translates to:
-  /// **'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.'**
-  String get listRecoveryReadOnly;
-
-  /// Title of the sheet where the viewer picks which of their lists a video or a person belongs to.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to lists'**
-  String get listAddToLists;
-
-  /// An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt.
-  ///
-  /// In en, this message translates to:
-  /// **'Your account deletion is processing, but we couldn’t finish signing you out. Try again.'**
-  String get accountDeletionProcessingSignOutFailed;
-
   /// Sound request DM flow: Request this sound
   ///
   /// In en, this message translates to:
@@ -23342,6 +23192,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Posted {time}'**
   String userRowPosted(String time);
+
+  /// An oversized public list cannot become private; the open editor retains unsaved drafts.
+  ///
+  /// In en, this message translates to:
+  /// **'This list is too large to make private. Remove some videos first. Your edits are kept here and haven\'t been saved.'**
+  String get listPrivateConversionTooLarge;
+
+  /// Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lists'**
+  String get listsDiscoveryLoadingLabel;
+
+  /// Full-screen message on the Explore Lists tab when neither discovery column returned any lists.
+  ///
+  /// In en, this message translates to:
+  /// **'No lists turned up this time. Pull to refresh.'**
+  String get listsDiscoveryEmpty;
+
+  /// People-list search source could not answer; shown beside healthy video results with retry.
+  ///
+  /// In en, this message translates to:
+  /// **'People lists are unavailable right now.'**
+  String get listSearchPeopleUnavailable;
+
+  /// Video-list search source could not answer; shown beside healthy people results with retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Video lists are unavailable right now.'**
+  String get listSearchVideosUnavailable;
+
+  /// Error shown when local account cleanup fails during sign-in or switching accounts. The user can retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t clear the previous account\'s data. Try again.'**
+  String get authAccountCleanupFailed;
+
+  /// No description provided for @peopleListsAddPeopleSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search people'**
+  String get peopleListsAddPeopleSearchHint;
+
+  /// Screen-reader label of the row button that removes a person from the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} from list'**
+  String peopleListsRemovePersonSemanticLabel(String name);
+
+  /// Snackbar shown when adding or removing a person from a people list fails and the change is rolled back.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the list. Please try again.'**
+  String get peopleListsMembershipUpdateFailed;
+
+  /// Screen-reader label of the row button that adds a person to the people list being edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {name} to list'**
+  String peopleListsAddPersonSemanticLabel(String name);
+
+  /// No description provided for @listAddCollaboratorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a collaborator'**
+  String get listAddCollaboratorTitle;
+
+  /// Title of the switch on the list info sheet that makes a curated list visible to others.
+  ///
+  /// In en, this message translates to:
+  /// **'Make public'**
+  String get listMakePublicLabel;
+
+  /// No description provided for @listCollaboratorSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Divine...'**
+  String get listCollaboratorSearchHint;
+
+  /// No description provided for @listCollaboratorsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get listCollaboratorsNone;
+
+  /// Supporting line under the 'Make public' switch on the list info sheet, shown while the switch is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Let others see this list'**
+  String get listMakePublicSubtitle;
+
+  /// A newly created list exists but could not accept the requested video.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list was created, but this video wasn\'t added.'**
+  String get listVideoNotAdded;
+
+  /// Confirmation explains that making a list private revokes its collaborators.
+  ///
+  /// In en, this message translates to:
+  /// **'Making this list private also removes its collaborators. Only you will be able to add videos.'**
+  String get listPrivateCollaboratorsWarning;
+
+  /// Video added locally to a newly created list but publication has not succeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your list and video are saved here. The video is waiting to sync.'**
+  String get listVideoPendingSync;
+
+  /// Retry publishing the saved list without adding or removing videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get listRetrySync;
+
+  /// Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t confirm this change. Try again.'**
+  String get listPermissionsUnconfirmed;
+
+  /// Neutral notice for an acknowledged permission transition, pending publication or event-specific deletion request. Does not claim remote erasure.
+  ///
+  /// In en, this message translates to:
+  /// **'This list has changes waiting to sync.'**
+  String get listRecoveryPending;
+
+  /// A relay-accepted permissions change still needs durable local recovery. Explain the Sync now action and why editing is temporarily disabled; do not invite another permissions submission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your change was accepted. Tap Sync now to finish saving it. Editing is paused until then.'**
+  String get listPermissionsRecoveryPending;
+
+  /// No description provided for @listRecoveryReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Some saved changes to video lists need recovery. You can view video lists, but editing is paused.'**
+  String get listRecoveryReadOnly;
+
+  /// Title of the sheet where the viewer picks which of their lists a video or a person belongs to.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to lists'**
+  String get listAddToLists;
+
+  /// An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account deletion is processing, but we couldn’t finish signing you out. Try again.'**
+  String get accountDeletionProcessingSignOutFailed;
 }
 
 class _AppLocalizationsDelegate

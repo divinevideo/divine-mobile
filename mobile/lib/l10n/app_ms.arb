@@ -6938,45 +6938,6 @@
   "followedHashtagsTitle": "Hashtag yang diikuti",
   "manageHashtags": "Urus hashtag",
   "followedHashtagsEmpty": "Ikuti hashtag dari halamannya untuk menemuinya di sini.",
-  "listsDiscoveryLoadingLabel": "Memuatkan senarai",
-  "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
-  "listSearchPeopleUnavailable": "Senarai orang tidak tersedia buat masa ini.",
-  "listSearchVideosUnavailable": "Senarai video tidak tersedia buat masa ini.",
-  "listPrivateConversionTooLarge": "Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.",
-  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.",
-  "peopleListsAddPersonSemanticLabel": "Tambah {name} ke senarai",
-  "@peopleListsAddPersonSemanticLabel": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsRemovePersonSemanticLabel": "Alih keluar {name} daripada senarai",
-  "@peopleListsRemovePersonSemanticLabel": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
-  "peopleListsAddPeopleSearchHint": "Cari orang",
-  "listMakePublicSubtitle": "Benarkan orang lain melihat senarai ini",
-  "listMakePublicLabel": "Jadikan awam",
-  "listAddCollaboratorTitle": "Tambah kolaborator",
-  "listCollaboratorSearchHint": "Cari Divine...",
-  "listCollaboratorsNone": "Tiada",
-  "listPrivateCollaboratorsWarning": "Menjadikan senarai ini peribadi turut mengalih keluar kolaboratornya. Hanya anda yang boleh menambah video.",
-  "listVideoNotAdded": "Senarai anda telah dibuat, tetapi video ini tidak ditambahkan.",
-  "listVideoPendingSync": "Senarai dan video anda disimpan di sini. Video sedang menunggu untuk disegerakkan.",
-  "listRetrySync": "Segerakkan sekarang",
-  "listPermissionsUnconfirmed": "Perubahan ini tidak dapat disahkan. Cuba lagi.",
-  "listRecoveryPending": "Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.",
-  "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.",
-  "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
-  "listAddToLists": "Tambah ke senarai",
-  "accountDeletionProcessingSignOutFailed": "Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.",
   "soundRequestAction": "Minta bunyi ini",
   "soundRequestTitle": "Seseorang mahu menggunakan bunyi anda",
   "soundRequestDescription": "Benarkan penggunaan semula bunyi video ini supaya sesiapa sahaja boleh menghasilkan remix dengannya.",
@@ -7030,5 +6991,44 @@
       }
     }
   },
-  "userRowPosted": "Disiarkan {time}"
+  "userRowPosted": "Disiarkan {time}",
+  "listsDiscoveryLoadingLabel": "Memuatkan senarai",
+  "listsDiscoveryEmpty": "Tiada senarai yang muncul kali ini. Tarik untuk muat semula.",
+  "listSearchPeopleUnavailable": "Senarai orang tidak tersedia buat masa ini.",
+  "listSearchVideosUnavailable": "Senarai video tidak tersedia buat masa ini.",
+  "listPrivateConversionTooLarge": "Senarai ini terlalu besar untuk dijadikan peribadi. Alih keluar beberapa video dahulu. Suntingan anda kekal di sini dan belum disimpan.",
+  "authAccountCleanupFailed": "Data akaun sebelumnya tidak dapat dipadamkan. Cuba lagi.",
+  "peopleListsAddPersonSemanticLabel": "Tambah {name} ke senarai",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "Alih keluar {name} daripada senarai",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "Tidak dapat mengemas kini senarai. Sila cuba lagi.",
+  "peopleListsAddPeopleSearchHint": "Cari orang",
+  "listMakePublicSubtitle": "Benarkan orang lain melihat senarai ini",
+  "listMakePublicLabel": "Jadikan awam",
+  "listAddCollaboratorTitle": "Tambah kolaborator",
+  "listCollaboratorSearchHint": "Cari Divine...",
+  "listCollaboratorsNone": "Tiada",
+  "listPrivateCollaboratorsWarning": "Menjadikan senarai ini peribadi turut mengalih keluar kolaboratornya. Hanya anda yang boleh menambah video.",
+  "listVideoNotAdded": "Senarai anda telah dibuat, tetapi video ini tidak ditambahkan.",
+  "listVideoPendingSync": "Senarai dan video anda disimpan di sini. Video sedang menunggu untuk disegerakkan.",
+  "listRetrySync": "Segerakkan sekarang",
+  "listPermissionsUnconfirmed": "Perubahan ini tidak dapat disahkan. Cuba lagi.",
+  "listRecoveryPending": "Senarai ini mempunyai perubahan yang menunggu untuk disegerakkan.",
+  "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.",
+  "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
+  "listAddToLists": "Tambah ke senarai",
+  "accountDeletionProcessingSignOutFailed": "Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi."
 }

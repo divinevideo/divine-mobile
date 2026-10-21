@@ -13387,93 +13387,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get followedHashtagsEmpty => 'እዚህ ለማግኘት ሃሽታጉን ከገጹ ይከተሉ።';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';
-
-  @override
-  String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
-
-  @override
-  String get listSearchPeopleUnavailable => 'የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
-
-  @override
-  String get listSearchVideosUnavailable => 'የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ይሞክሩ።';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return '$nameን ከዝርዝር ያስወግዱ';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return '$nameን ወደ ዝርዝር ያክሉ';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'ተባባሪ ጨምር';
-
-  @override
-  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine ፈልግ...';
-
-  @override
-  String get listCollaboratorsNone => 'ምንም';
-
-  @override
-  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
-
-  @override
-  String get listVideoNotAdded => 'ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።';
-
-  @override
-  String get listVideoPendingSync =>
-      'ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።';
-
-  @override
-  String get listRetrySync => 'አሁን አመሳስል';
-
-  @override
-  String get listPermissionsUnconfirmed => 'ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
-
-  @override
-  String get listRecoveryPending => 'ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።';
-
-  @override
-  String get listAddToLists => 'ወደ ዝርዝሮች ያክሉ';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።';
-
-  @override
   String get soundRequestAction => 'ይህን ድምፅ ጠይቅ';
 
   @override
@@ -13625,4 +13538,91 @@ class AppLocalizationsAm extends AppLocalizations {
   String userRowPosted(String time) {
     return 'የተለጠፈው $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'ዝርዝሮችን በመጫን ላይ';
+
+  @override
+  String get listsDiscoveryEmpty => 'በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።';
+
+  @override
+  String get listSearchPeopleUnavailable => 'የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
+
+  @override
+  String get listSearchVideosUnavailable => 'የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'ሰዎችን ፈልግ';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameን ከዝርዝር ያስወግዱ';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameን ወደ ዝርዝር ያክሉ';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'ተባባሪ ጨምር';
+
+  @override
+  String get listMakePublicLabel => 'ይፋዊ ያድርጉ';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine ፈልግ...';
+
+  @override
+  String get listCollaboratorsNone => 'ምንም';
+
+  @override
+  String get listMakePublicSubtitle => 'ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ';
+
+  @override
+  String get listVideoNotAdded => 'ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።';
+
+  @override
+  String get listVideoPendingSync =>
+      'ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።';
+
+  @override
+  String get listRetrySync => 'አሁን አመሳስል';
+
+  @override
+  String get listPermissionsUnconfirmed => 'ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get listRecoveryPending => 'ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።';
+
+  @override
+  String get listAddToLists => 'ወደ ዝርዝሮች ያክሉ';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።';
 }

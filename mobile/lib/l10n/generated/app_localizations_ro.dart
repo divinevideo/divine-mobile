@@ -14014,99 +14014,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Urmărește un hashtag de pe pagina sa pentru a-l găsi aici.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Se încarcă listele';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Listele de persoane nu sunt disponibile acum.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Listele de videoclipuri nu sunt disponibile acum.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Nu am putut șterge datele contului anterior. Încearcă din nou.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Caută persoane';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Elimină pe $name din listă';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'N-am putut actualiza lista. Mai încearcă.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Adaugă pe $name la listă';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Adaugă un colaborator';
-
-  @override
-  String get listMakePublicLabel => 'Fă lista publică';
-
-  @override
-  String get listCollaboratorSearchHint => 'Caută în Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Niciunul';
-
-  @override
-  String get listMakePublicSubtitle => 'Lasă-i pe alții să vadă această listă';
-
-  @override
-  String get listVideoNotAdded =>
-      'Lista ta a fost creată, dar acest videoclip nu a fost adăugat.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.';
-
-  @override
-  String get listRetrySync => 'Sincronizează acum';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Nu am putut confirma această schimbare. Încearcă din nou.';
-
-  @override
-  String get listRecoveryPending =>
-      'Această listă are modificări care așteaptă sincronizarea.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.';
-
-  @override
-  String get listAddToLists => 'Adaugă la liste';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.';
-
-  @override
   String get soundRequestAction => 'Solicită acest sunet';
 
   @override
@@ -14260,4 +14167,97 @@ class AppLocalizationsRo extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicat $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Se încarcă listele';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Listele de persoane nu sunt disponibile acum.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Listele de videoclipuri nu sunt disponibile acum.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Nu am putut șterge datele contului anterior. Încearcă din nou.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Caută persoane';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Elimină pe $name din listă';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'N-am putut actualiza lista. Mai încearcă.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Adaugă pe $name la listă';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Adaugă un colaborator';
+
+  @override
+  String get listMakePublicLabel => 'Fă lista publică';
+
+  @override
+  String get listCollaboratorSearchHint => 'Caută în Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Niciunul';
+
+  @override
+  String get listMakePublicSubtitle => 'Lasă-i pe alții să vadă această listă';
+
+  @override
+  String get listVideoNotAdded =>
+      'Lista ta a fost creată, dar acest videoclip nu a fost adăugat.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.';
+
+  @override
+  String get listRetrySync => 'Sincronizează acum';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Nu am putut confirma această schimbare. Încearcă din nou.';
+
+  @override
+  String get listRecoveryPending =>
+      'Această listă are modificări care așteaptă sincronizarea.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.';
+
+  @override
+  String get listAddToLists => 'Adaugă la liste';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.';
 }

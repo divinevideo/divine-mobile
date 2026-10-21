@@ -13903,99 +13903,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Segui un hashtag dalla sua pagina per trovarlo qui.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Questa lista è troppo grande per renderla privata. Prima rimuovi alcuni video. Le tue modifiche restano qui e non sono state salvate.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Caricamento liste';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Le liste di persone non sono disponibili al momento.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Le liste di video non sono disponibili al momento.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Non è stato possibile cancellare i dati dell’account precedente. Riprova.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Cerca persone';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Rimuovi $name dalla lista';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Impossibile aggiornare la lista. Riprova.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Aggiungi $name alla lista';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Aggiungi un collaboratore';
-
-  @override
-  String get listMakePublicLabel => 'Rendi pubblica';
-
-  @override
-  String get listCollaboratorSearchHint => 'Cerca su Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Nessuno';
-
-  @override
-  String get listMakePublicSubtitle => 'Lascia che altri vedano questa lista';
-
-  @override
-  String get listVideoNotAdded =>
-      'La tua lista è stata creata, ma questo video non è stato aggiunto.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Rendere questa lista privata rimuove anche i suoi collaboratori. Solo tu potrai aggiungere video.';
-
-  @override
-  String get listVideoPendingSync =>
-      'La tua lista e il tuo video sono salvati qui. Il video è in attesa di sincronizzazione.';
-
-  @override
-  String get listRetrySync => 'Sincronizza ora';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Non è stato possibile confermare questa modifica. Riprova.';
-
-  @override
-  String get listRecoveryPending =>
-      'Questa lista ha modifiche in attesa di sincronizzazione.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.';
-
-  @override
-  String get listAddToLists => 'Aggiungi alle liste';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova.';
-
-  @override
   String get soundRequestAction => 'Richiedi questo suono';
 
   @override
@@ -14149,4 +14056,97 @@ class AppLocalizationsIt extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Pubblicato $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Questa lista è troppo grande per renderla privata. Prima rimuovi alcuni video. Le tue modifiche restano qui e non sono state salvate.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Caricamento liste';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Le liste di persone non sono disponibili al momento.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Le liste di video non sono disponibili al momento.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Non è stato possibile cancellare i dati dell’account precedente. Riprova.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Cerca persone';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Rimuovi $name dalla lista';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Impossibile aggiornare la lista. Riprova.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Aggiungi $name alla lista';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Aggiungi un collaboratore';
+
+  @override
+  String get listMakePublicLabel => 'Rendi pubblica';
+
+  @override
+  String get listCollaboratorSearchHint => 'Cerca su Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Nessuno';
+
+  @override
+  String get listMakePublicSubtitle => 'Lascia che altri vedano questa lista';
+
+  @override
+  String get listVideoNotAdded =>
+      'La tua lista è stata creata, ma questo video non è stato aggiunto.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Rendere questa lista privata rimuove anche i suoi collaboratori. Solo tu potrai aggiungere video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'La tua lista e il tuo video sono salvati qui. Il video è in attesa di sincronizzazione.';
+
+  @override
+  String get listRetrySync => 'Sincronizza ora';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Non è stato possibile confermare questa modifica. Riprova.';
+
+  @override
+  String get listRecoveryPending =>
+      'Questa lista ha modifiche in attesa di sincronizzazione.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.';
+
+  @override
+  String get listAddToLists => 'Aggiungi alle liste';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova.';
 }

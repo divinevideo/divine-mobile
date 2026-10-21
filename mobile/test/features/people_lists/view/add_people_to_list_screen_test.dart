@@ -26,19 +26,19 @@ import 'package:openvine/features/people_lists/models/people_list_candidate.dart
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
-import 'package:profile_repository/profile_repository.dart';
-import 'package:user_ranking/user_ranking.dart';
-import 'package:openvine/providers/follow_relationship_provider.dart';
-import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:profile_repository/profile_repository.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../../helpers/finders.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -1185,7 +1185,7 @@ void main() {
         await tester.tap(_addButtons().first);
         verify(
           () => bloc.add(
-            const PeopleListsPubkeyToggleRequested(
+            const PeopleListsPubkeyAddRequested(
               listId: 'refresh',
               pubkey: _candidateA,
             ),

@@ -78,6 +78,10 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
       return;
     }
     if (event is ListSearchQueryChanged) {
+      if (NostrKeyUtils.containsPrivateKey(event.query.trim())) {
+        emit(const ListSearchState());
+        return;
+      }
       emit(state.copyWith(requestedQuery: event.query.trim()));
       // The emitter cancels this debounce together with the old source reads.
       await emit.onEach(

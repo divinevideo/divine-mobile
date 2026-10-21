@@ -13671,99 +13671,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Theo dõi hashtag từ trang của nó để tìm thấy ở đây.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Danh sách người hiện không khả dụng.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Danh sách video hiện không khả dụng.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Tìm người';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Xóa $name khỏi danh sách';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Không cập nhật được danh sách. Vui lòng thử lại.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Thêm $name vào danh sách';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Thêm cộng tác viên';
-
-  @override
-  String get listMakePublicLabel => 'Đặt công khai';
-
-  @override
-  String get listCollaboratorSearchHint => 'Tìm trên Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Không có';
-
-  @override
-  String get listMakePublicSubtitle => 'Cho người khác xem danh sách này';
-
-  @override
-  String get listVideoNotAdded =>
-      'Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.';
-
-  @override
-  String get listRetrySync => 'Đồng bộ ngay';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Không thể xác nhận thay đổi này. Hãy thử lại.';
-
-  @override
-  String get listRecoveryPending =>
-      'Danh sách này có các thay đổi đang chờ đồng bộ.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.';
-
-  @override
-  String get listAddToLists => 'Thêm vào danh sách';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.';
-
-  @override
   String get soundRequestAction => 'Yêu cầu âm thanh này';
 
   @override
@@ -13919,4 +13826,97 @@ class AppLocalizationsVi extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Đã đăng $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Danh sách người hiện không khả dụng.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Danh sách video hiện không khả dụng.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Tìm người';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Xóa $name khỏi danh sách';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Không cập nhật được danh sách. Vui lòng thử lại.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Thêm $name vào danh sách';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Thêm cộng tác viên';
+
+  @override
+  String get listMakePublicLabel => 'Đặt công khai';
+
+  @override
+  String get listCollaboratorSearchHint => 'Tìm trên Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Không có';
+
+  @override
+  String get listMakePublicSubtitle => 'Cho người khác xem danh sách này';
+
+  @override
+  String get listVideoNotAdded =>
+      'Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.';
+
+  @override
+  String get listRetrySync => 'Đồng bộ ngay';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Không thể xác nhận thay đổi này. Hãy thử lại.';
+
+  @override
+  String get listRecoveryPending =>
+      'Danh sách này có các thay đổi đang chờ đồng bộ.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.';
+
+  @override
+  String get listAddToLists => 'Thêm vào danh sách';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.';
 }

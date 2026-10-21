@@ -13055,90 +13055,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get followedHashtagsEmpty => 'ハッシュタグのページでフォローすると、ここに表示されます。';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'リストを読み込み中';
-
-  @override
-  String get listsDiscoveryEmpty => '今回はリストが見つかりませんでした。引っ張って更新してください。';
-
-  @override
-  String get listSearchPeopleUnavailable => '現在、ユーザーリストを利用できません。';
-
-  @override
-  String get listSearchVideosUnavailable => '現在、動画リストを利用できません。';
-
-  @override
-  String get authAccountCleanupFailed => '前のアカウントのデータを削除できませんでした。もう一度お試しください。';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return '$nameをリストから削除';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed => 'リストを更新できませんでした。もう一度お試しください。';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return '$nameをリストに追加';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'コラボレーターを追加';
-
-  @override
-  String get listMakePublicLabel => '公開する';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divineを検索...';
-
-  @override
-  String get listCollaboratorsNone => 'なし';
-
-  @override
-  String get listMakePublicSubtitle => '他の人もこのリストを見られます';
-
-  @override
-  String get listVideoNotAdded => 'リストは作成されましたが、この動画は追加されませんでした。';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。';
-
-  @override
-  String get listVideoPendingSync => 'リストと動画はこの端末に保存されています。動画は同期を待っています。';
-
-  @override
-  String get listRetrySync => '今すぐ同期';
-
-  @override
-  String get listPermissionsUnconfirmed => 'この変更を確認できませんでした。もう一度お試しください。';
-
-  @override
-  String get listRecoveryPending => 'このリストには同期を待っている変更があります。';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      '変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。';
-
-  @override
-  String get listRecoveryReadOnly =>
-      '動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。';
-
-  @override
-  String get listAddToLists => 'リストに追加';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。';
-
-  @override
   String get soundRequestAction => 'このサウンドをリクエスト';
 
   @override
@@ -13288,4 +13204,88 @@ class AppLocalizationsJa extends AppLocalizations {
   String userRowPosted(String time) {
     return '$timeに投稿';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'リストを読み込み中';
+
+  @override
+  String get listsDiscoveryEmpty => '今回はリストが見つかりませんでした。引っ張って更新してください。';
+
+  @override
+  String get listSearchPeopleUnavailable => '現在、ユーザーリストを利用できません。';
+
+  @override
+  String get listSearchVideosUnavailable => '現在、動画リストを利用できません。';
+
+  @override
+  String get authAccountCleanupFailed => '前のアカウントのデータを削除できませんでした。もう一度お試しください。';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'ユーザーを検索';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameをリストから削除';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed => 'リストを更新できませんでした。もう一度お試しください。';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameをリストに追加';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'コラボレーターを追加';
+
+  @override
+  String get listMakePublicLabel => '公開する';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divineを検索...';
+
+  @override
+  String get listCollaboratorsNone => 'なし';
+
+  @override
+  String get listMakePublicSubtitle => '他の人もこのリストを見られます';
+
+  @override
+  String get listVideoNotAdded => 'リストは作成されましたが、この動画は追加されませんでした。';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。';
+
+  @override
+  String get listVideoPendingSync => 'リストと動画はこの端末に保存されています。動画は同期を待っています。';
+
+  @override
+  String get listRetrySync => '今すぐ同期';
+
+  @override
+  String get listPermissionsUnconfirmed => 'この変更を確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get listRecoveryPending => 'このリストには同期を待っている変更があります。';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      '変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。';
+
+  @override
+  String get listRecoveryReadOnly =>
+      '動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。';
+
+  @override
+  String get listAddToLists => 'リストに追加';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。';
 }

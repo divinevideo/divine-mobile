@@ -5702,8 +5702,8 @@
 "listsDiscoveryLoadingLabel": "Caricamento liste",
 "listSearchPeopleUnavailable": "Le liste di persone non sono disponibili al momento.",
 "listSearchVideosUnavailable": "Le liste di video non sono disponibili al momento.",
-"authAccountCleanupFailed": "Non è stato possibile cancellare i dati dell’account precedente. Riprova.",
 "listPrivateConversionTooLarge": "Questa lista è troppo grande per renderla privata. Prima rimuovi alcuni video. Le tue modifiche restano qui e non sono state salvate.",
+"authAccountCleanupFailed": "Non è stato possibile cancellare i dati dell’account precedente. Riprova.",
 "@peopleListsAddPersonSemanticLabel": {
   "placeholders": {
     "name": {
@@ -5736,4 +5736,5 @@
 "listPermissionsRecoveryPending": "La modifica è stata accettata. Tocca Sincronizza ora per completare il salvataggio. Le modifiche sono sospese fino ad allora.",
 "listRecoveryReadOnly": "Alcune modifiche salvate alle liste di video devono essere recuperate. Puoi vedere le liste di video, ma la modifica è sospesa.",
 "listAddToLists": "Aggiungi alle liste",
-"accountDeletionProcessingSignOutFailed": "L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova."}
+"accountDeletionProcessingSignOutFailed": "L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova."
+}

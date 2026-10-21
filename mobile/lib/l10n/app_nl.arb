@@ -5702,8 +5702,8 @@
 "listsDiscoveryLoadingLabel": "Lijsten laden",
 "listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",
 "listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar.",
-"authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.",
 "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.",
+"authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.",
 "@peopleListsAddPersonSemanticLabel": {
   "placeholders": {
     "name": {
@@ -5736,4 +5736,5 @@
 "listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
 "listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
 "listAddToLists": "Toevoegen aan lijsten",
-"accountDeletionProcessingSignOutFailed": "Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw."}
+"accountDeletionProcessingSignOutFailed": "Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw."
+}

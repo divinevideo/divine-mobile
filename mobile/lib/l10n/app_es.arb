@@ -5702,8 +5702,8 @@
 "listsDiscoveryLoadingLabel": "Cargando listas",
 "listSearchPeopleUnavailable": "Las listas de personas no están disponibles ahora.",
 "listSearchVideosUnavailable": "Las listas de videos no están disponibles ahora.",
-"authAccountCleanupFailed": "No se pudieron borrar los datos de la cuenta anterior. Probá de nuevo.",
 "listPrivateConversionTooLarge": "Esta lista es demasiado grande para hacerla privada. Quitá algunos videos primero. Tus cambios siguen acá y no se guardaron.",
+"authAccountCleanupFailed": "No se pudieron borrar los datos de la cuenta anterior. Probá de nuevo.",
 "@peopleListsAddPersonSemanticLabel": {
   "placeholders": {
     "name": {
@@ -5736,4 +5736,5 @@
 "listPermissionsRecoveryPending": "Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.",
 "listRecoveryReadOnly": "Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.",
 "listAddToLists": "Añadir a listas",
-"accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo."}
+"accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo."
+}

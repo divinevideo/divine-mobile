@@ -14081,99 +14081,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'హ్యాష్‌ట్యాగ్‌ను ఇక్కడ చూడటానికి దాని పేజీలో అనుసరించండి.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'జాబితాలను లోడ్ చేస్తోంది';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return '$nameని జాబితా నుండి తీసివేయండి';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return '$nameని జాబితాకు జోడించండి';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'సహకారిని జోడించండి';
-
-  @override
-  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
-
-  @override
-  String get listCollaboratorSearchHint => 'శోధన Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'ఏదీ లేదు';
-
-  @override
-  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
-
-  @override
-  String get listVideoNotAdded =>
-      'మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.';
-
-  @override
-  String get listVideoPendingSync =>
-      'మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.';
-
-  @override
-  String get listRetrySync => 'ఇప్పుడే సింక్ చేయండి';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get listRecoveryPending =>
-      'ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.';
-
-  @override
-  String get listAddToLists => 'జాబితాలకు జోడించండి';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
-
-  @override
   String get soundRequestAction => 'ఈ సౌండ్‌ను అడగండి';
 
   @override
@@ -14329,4 +14236,97 @@ class AppLocalizationsTe extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time పోస్ట్ చేయబడింది';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'ఈ జాబితాను ప్రైవేట్‌గా చేయడానికి ఇది చాలా పెద్దది. ముందుగా కొన్ని వీడియోలను తీసివేయండి. మీ మార్పులు ఇక్కడే ఉంటాయి, ఇంకా సేవ్ కాలేదు.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'జాబితాలను లోడ్ చేస్తోంది';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'ఈసారి జాబితాలు ఏవీ దొరకలేదు. రిఫ్రెష్ చేయడానికి లాగండి.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'ప్రస్తుతం వ్యక్తుల జాబితాలు అందుబాటులో లేవు.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'ప్రస్తుతం వీడియో జాబితాలు అందుబాటులో లేవు.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'మునుపటి ఖాతా డేటాను తొలగించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'వ్యక్తులను శోధించండి';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$nameని జాబితా నుండి తీసివేయండి';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'జాబితాను నవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$nameని జాబితాకు జోడించండి';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'సహకారిని జోడించండి';
+
+  @override
+  String get listMakePublicLabel => 'పబ్లిక్‌గా చేయండి';
+
+  @override
+  String get listCollaboratorSearchHint => 'శోధన Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'ఏదీ లేదు';
+
+  @override
+  String get listMakePublicSubtitle => 'ఇతరులు ఈ జాబితాను చూడనివ్వండి';
+
+  @override
+  String get listVideoNotAdded =>
+      'మీ జాబితా సృష్టించబడింది, కానీ ఈ వీడియో జోడించబడలేదు.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'ఈ జాబితాను ప్రైవేట్‌గా మార్చితే దాని సహకారులను కూడా తొలగిస్తుంది. మీరు మాత్రమే వీడియోలను జోడించగలరు.';
+
+  @override
+  String get listVideoPendingSync =>
+      'మీ జాబితా, వీడియో ఇక్కడ సేవ్ అయ్యాయి. వీడియో సింక్ కావడానికి వేచి ఉంది.';
+
+  @override
+  String get listRetrySync => 'ఇప్పుడే సింక్ చేయండి';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get listRecoveryPending =>
+      'ఈ జాబితాలో సమకాలీకరణ కోసం వేచి ఉన్న మార్పులు ఉన్నాయి.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.';
+
+  @override
+  String get listAddToLists => 'జాబితాలకు జోడించండి';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
 }

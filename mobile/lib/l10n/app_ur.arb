@@ -6938,45 +6938,6 @@
   "followedHashtagsTitle": "فالو کیے گئے ہیش ٹیگز",
   "manageHashtags": "ہیش ٹیگز کا نظم کریں",
   "followedHashtagsEmpty": "کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔",
-  "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
-  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
-  "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
-  "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
-  "listPrivateConversionTooLarge": "یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔",
-  "authAccountCleanupFailed": "پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔",
-  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
-  "@peopleListsAddPersonSemanticLabel": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
-  "@peopleListsRemovePersonSemanticLabel": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
-  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
-  "listMakePublicSubtitle": "دوسروں کو یہ فہرست دیکھنے دیں",
-  "listMakePublicLabel": "عوامی بنائیں",
-  "listAddCollaboratorTitle": "شریک کار شامل کریں",
-  "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
-  "listCollaboratorsNone": "کوئی نہیں",
-  "listPrivateCollaboratorsWarning": "اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔",
-  "listVideoNotAdded": "آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔",
-  "listVideoPendingSync": "آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔",
-  "listRetrySync": "اب ہم آہنگ کریں",
-  "listPermissionsUnconfirmed": "اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
-  "listRecoveryPending": "اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔",
-  "listPermissionsRecoveryPending": "آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔",
-  "listRecoveryReadOnly": "ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔",
-  "listAddToLists": "فہرستوں میں شامل کریں",
-  "accountDeletionProcessingSignOutFailed": "آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔",
   "soundRequestAction": "یہ آواز مانگیں",
   "soundRequestTitle": "کوئی آپ کی آواز استعمال کرنا چاہتا ہے",
   "soundRequestDescription": "اس ویڈیو کی آواز دوبارہ استعمال کرنے کی اجازت دیں تاکہ کوئی بھی اس سے ریمکس بنا سکے۔",
@@ -7030,5 +6991,44 @@
       }
     }
   },
-  "userRowPosted": "{time} پوسٹ کی گئی"
+  "userRowPosted": "{time} پوسٹ کی گئی",
+  "listsDiscoveryLoadingLabel": "فہرستیں لوڈ ہو رہی ہیں",
+  "listsDiscoveryEmpty": "اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔",
+  "listSearchPeopleUnavailable": "لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
+  "listSearchVideosUnavailable": "ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔",
+  "listPrivateConversionTooLarge": "یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔",
+  "authAccountCleanupFailed": "پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔",
+  "peopleListsAddPersonSemanticLabel": "{name} کو فہرست میں شامل کریں",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsRemovePersonSemanticLabel": "{name} کو فہرست سے ہٹائیں",
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "peopleListsMembershipUpdateFailed": "فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "peopleListsAddPeopleSearchHint": "لوگ تلاش کریں",
+  "listMakePublicSubtitle": "دوسروں کو یہ فہرست دیکھنے دیں",
+  "listMakePublicLabel": "عوامی بنائیں",
+  "listAddCollaboratorTitle": "شریک کار شامل کریں",
+  "listCollaboratorSearchHint": "Divine میں تلاش کریں...",
+  "listCollaboratorsNone": "کوئی نہیں",
+  "listPrivateCollaboratorsWarning": "اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔",
+  "listVideoNotAdded": "آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔",
+  "listVideoPendingSync": "آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔",
+  "listRetrySync": "اب ہم آہنگ کریں",
+  "listPermissionsUnconfirmed": "اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+  "listRecoveryPending": "اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔",
+  "listPermissionsRecoveryPending": "آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔",
+  "listRecoveryReadOnly": "ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔",
+  "listAddToLists": "فہرستوں میں شامل کریں",
+  "accountDeletionProcessingSignOutFailed": "آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔"
 }

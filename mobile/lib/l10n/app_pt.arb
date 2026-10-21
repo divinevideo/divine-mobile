@@ -5702,8 +5702,8 @@
 "listsDiscoveryLoadingLabel": "Carregando listas",
 "listSearchPeopleUnavailable": "As listas de pessoas estão indisponíveis no momento.",
 "listSearchVideosUnavailable": "As listas de vídeos estão indisponíveis no momento.",
-"authAccountCleanupFailed": "Não foi possível limpar os dados da conta anterior. Tente novamente.",
 "listPrivateConversionTooLarge": "Esta lista é grande demais para se tornar privada. Remova alguns vídeos primeiro. Suas alterações continuam aqui e ainda não foram salvas.",
+"authAccountCleanupFailed": "Não foi possível limpar os dados da conta anterior. Tente novamente.",
 "@peopleListsAddPersonSemanticLabel": {
   "placeholders": {
     "name": {
@@ -5736,4 +5736,5 @@
 "listPermissionsRecoveryPending": "Sua alteração foi aceita. Toque em Sincronizar agora para terminar de salvá-la. A edição está pausada até lá.",
 "listRecoveryReadOnly": "Algumas alterações salvas nas listas de vídeos precisam ser recuperadas. Você pode ver as listas de vídeos, mas a edição está pausada.",
 "listAddToLists": "Adicionar às listas",
-"accountDeletionProcessingSignOutFailed": "A exclusão da sua conta está em andamento, mas não conseguimos concluir a saída. Tente de novo."}
+"accountDeletionProcessingSignOutFailed": "A exclusão da sua conta está em andamento, mas não conseguimos concluir a saída. Tente de novo."
+}

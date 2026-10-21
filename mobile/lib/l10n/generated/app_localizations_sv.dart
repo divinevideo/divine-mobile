@@ -13739,99 +13739,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Följ en hashtagg på dess sida för att hitta den här.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Läser in listor';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Inga listor dök upp den här gången. Dra för att uppdatera.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Personlistor är inte tillgängliga just nu.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Videolistor är inte tillgängliga just nu.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Det gick inte att rensa det förra kontots data. Försök igen.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Sök personer';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Ta bort $name från listan';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Kunde inte uppdatera listan. Försök igen.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Lägg till $name i listan';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Lägg till medarbetare';
-
-  @override
-  String get listMakePublicLabel => 'Gör offentlig';
-
-  @override
-  String get listCollaboratorSearchHint => 'Sök i Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Inga';
-
-  @override
-  String get listMakePublicSubtitle => 'Låt andra se den här listan';
-
-  @override
-  String get listVideoNotAdded =>
-      'Din lista skapades, men den här videon lades inte till.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Din lista och video är sparade här. Videon väntar på synkronisering.';
-
-  @override
-  String get listRetrySync => 'Synkronisera nu';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Det gick inte att bekräfta ändringen. Försök igen.';
-
-  @override
-  String get listRecoveryPending =>
-      'Den här listan har ändringar som väntar på synkronisering.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.';
-
-  @override
-  String get listAddToLists => 'Lägg till i listor';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.';
-
-  @override
   String get soundRequestAction => 'Be om det här ljudet';
 
   @override
@@ -13984,4 +13891,97 @@ class AppLocalizationsSv extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicerat $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Läser in listor';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Inga listor dök upp den här gången. Dra för att uppdatera.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Personlistor är inte tillgängliga just nu.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Videolistor är inte tillgängliga just nu.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Det gick inte att rensa det förra kontots data. Försök igen.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Sök personer';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Ta bort $name från listan';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kunde inte uppdatera listan. Försök igen.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Lägg till $name i listan';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Lägg till medarbetare';
+
+  @override
+  String get listMakePublicLabel => 'Gör offentlig';
+
+  @override
+  String get listCollaboratorSearchHint => 'Sök i Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Inga';
+
+  @override
+  String get listMakePublicSubtitle => 'Låt andra se den här listan';
+
+  @override
+  String get listVideoNotAdded =>
+      'Din lista skapades, men den här videon lades inte till.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Din lista och video är sparade här. Videon väntar på synkronisering.';
+
+  @override
+  String get listRetrySync => 'Synkronisera nu';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Det gick inte att bekräfta ändringen. Försök igen.';
+
+  @override
+  String get listRecoveryPending =>
+      'Den här listan har ändringar som väntar på synkronisering.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.';
+
+  @override
+  String get listAddToLists => 'Lägg till i listor';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.';
 }

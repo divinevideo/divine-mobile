@@ -13865,100 +13865,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Последвайте хаштаг от страницата му, за да го намерите тук.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Зареждане на списъци';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Този път не изскочи нито един списък. Дръпни надолу за обновяване.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Списъците с хора не са достъпни в момента.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Списъците с видеа не са достъпни в момента.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Търси хора';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'Премахни $name от списъка';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Не успяхме да обновим списъка. Опитай пак.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'Добави $name към списъка';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Добави сътрудник';
-
-  @override
-  String get listMakePublicLabel => 'Направи публичен';
-
-  @override
-  String get listCollaboratorSearchHint => 'Търсене Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Няма';
-
-  @override
-  String get listMakePublicSubtitle =>
-      'Позволи на другите да виждат този списък';
-
-  @override
-  String get listVideoNotAdded =>
-      'Списъкът ти е създаден, но това видео не е добавено.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Ако направиш този списък частен, сътрудниците му също ще бъдат премахнати. Само ти ще можеш да добавяш видеа.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Списъкът и видеото ти са запазени тук. Видеото чака синхронизиране.';
-
-  @override
-  String get listRetrySync => 'Синхронизирай сега';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Не можахме да потвърдим тази промяна. Опитай отново.';
-
-  @override
-  String get listRecoveryPending =>
-      'Този списък има промени, които чакат синхронизиране.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.';
-
-  @override
-  String get listAddToLists => 'Добави към списъци';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново.';
-
-  @override
   String get soundRequestAction => 'Поискай този звук';
 
   @override
@@ -14112,4 +14018,98 @@ class AppLocalizationsBg extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Публикувано $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Зареждане на списъци';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Този път не изскочи нито един списък. Дръпни надолу за обновяване.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Списъците с хора не са достъпни в момента.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Списъците с видеа не са достъпни в момента.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Търси хора';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Премахни $name от списъка';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Не успяхме да обновим списъка. Опитай пак.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Добави $name към списъка';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Добави сътрудник';
+
+  @override
+  String get listMakePublicLabel => 'Направи публичен';
+
+  @override
+  String get listCollaboratorSearchHint => 'Търсене Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Няма';
+
+  @override
+  String get listMakePublicSubtitle =>
+      'Позволи на другите да виждат този списък';
+
+  @override
+  String get listVideoNotAdded =>
+      'Списъкът ти е създаден, но това видео не е добавено.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Ако направиш този списък частен, сътрудниците му също ще бъдат премахнати. Само ти ще можеш да добавяш видеа.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Списъкът и видеото ти са запазени тук. Видеото чака синхронизиране.';
+
+  @override
+  String get listRetrySync => 'Синхронизирай сега';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Не можахме да потвърдим тази промяна. Опитай отново.';
+
+  @override
+  String get listRecoveryPending =>
+      'Този списък има промени, които чакат синхронизиране.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.';
+
+  @override
+  String get listAddToLists => 'Добави към списъци';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново.';
 }

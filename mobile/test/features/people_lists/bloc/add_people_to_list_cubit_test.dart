@@ -516,17 +516,22 @@ void main() {
         return snapshot;
       }
 
-      test('revalidates retained rows synchronously before a refresh', () async {
-        final snapshot = await retainedSnapshot();
-        when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
-        final replacement = createCubit(
-          initialState: snapshot,
-        );
-        expect(replacement.state.candidates.map((c) => c.pubkey), [_bobPubkey]);
-        expect(replacement.state.query, 'a');
-        expect(replacement.state.candidatePositions[_bobPubkey], 1);
-        await replacement.close();
-      });
+      test(
+        'revalidates retained rows synchronously before a refresh',
+        () async {
+          final snapshot = await retainedSnapshot();
+          when(() => rankingLoader.isEligible(_alicePubkey)).thenReturn(false);
+          final replacement = createCubit(
+            initialState: snapshot,
+          );
+          expect(replacement.state.candidates.map((c) => c.pubkey), [
+            _bobPubkey,
+          ]);
+          expect(replacement.state.query, 'a');
+          expect(replacement.state.candidatePositions[_bobPubkey], 1);
+          await replacement.close();
+        },
+      );
 
       test(
         'refresh keeps retained rows and query visible',
@@ -861,7 +866,7 @@ void main() {
         },
       );
 
-      test('refresh applies changed cached names to search and sort', () async {
+      test('refresh updates cached names and search while preserving ranked positions', () async {
         var profile = _profile(pubkey: _alicePubkey, displayName: 'Zoe');
         when(() => followRepository.followingPubkeys)
             .thenReturn([_alicePubkey, _bobPubkey]);
@@ -869,6 +874,12 @@ void main() {
             .thenAnswer((_) => const Stream.empty());
         when(() => profileRepository.getCachedProfile(pubkey: _alicePubkey))
             .thenAnswer((_) async => profile);
+        when(() => rankingLoader.loadCachedDisplayNames(any())).thenAnswer(
+          (_) async => {
+            _alicePubkey: profile.displayName!,
+            _bobPubkey: 'Bob',
+          },
+        );
         when(() => profileRepository.getCachedProfile(pubkey: _bobPubkey))
             .thenAnswer(
               (_) async => _profile(pubkey: _bobPubkey, displayName: 'Bob'),
@@ -876,7 +887,11 @@ void main() {
         final cubit = createCubit();
         await cubit.started();
         await _flush();
-        expect(cubit.state.candidates.first.pubkey, _bobPubkey);
+        expect(cubit.state.candidates.map((candidate) => candidate.pubkey), [
+          _bobPubkey,
+          _alicePubkey,
+        ]);
+        final positions = Map<String, int>.of(cubit.state.candidatePositions);
         cubit.queryChanged('Alice');
         expect(cubit.state.visibleCandidates, isEmpty);
 
@@ -884,7 +899,13 @@ void main() {
         await cubit.started();
         await _flush();
 
-        expect(cubit.state.candidates.first.pubkey, _alicePubkey);
+        expect(cubit.state.candidates.map((candidate) => candidate.pubkey), [
+          _bobPubkey,
+          _alicePubkey,
+        ]);
+        expect(cubit.state.candidatePositions, positions);
+        expect(cubit.state.candidates.last.displayName, 'Alice');
+        expect(cubit.state.query, 'Alice');
         expect(cubit.state.visibleCandidates.single.pubkey, _alicePubkey);
         verifyNever(
           () =>

@@ -13711,97 +13711,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get followedHashtagsEmpty => 'تابع وسمًا من صفحته لتجده هنا.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'جارٍ تحميل القوائم';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.';
-
-  @override
-  String get listSearchPeopleUnavailable => 'قوائم الأشخاص غير متاحة الآن.';
-
-  @override
-  String get listSearchVideosUnavailable => 'قوائم الفيديو غير متاحة الآن.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return 'إزالة $name من القائمة';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'تعذّر تحديث القائمة. يرجى المحاولة مجددًا.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return 'إضافة $name إلى القائمة';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'إضافة متعاون';
-
-  @override
-  String get listMakePublicLabel => 'جعل القائمة عامة';
-
-  @override
-  String get listCollaboratorSearchHint => 'ابحث في Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'لا أحد';
-
-  @override
-  String get listMakePublicSubtitle => 'السماح للآخرين برؤية هذه القائمة';
-
-  @override
-  String get listVideoNotAdded =>
-      'تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.';
-
-  @override
-  String get listVideoPendingSync =>
-      'تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.';
-
-  @override
-  String get listRetrySync => 'زامن الآن';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'تعذّر تأكيد هذا التغيير. حاول مرة أخرى.';
-
-  @override
-  String get listRecoveryPending =>
-      'تحتوي هذه القائمة على تغييرات بانتظار المزامنة.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.';
-
-  @override
-  String get listAddToLists => 'إضافة إلى القوائم';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.';
-
-  @override
   String get soundRequestAction => 'اطلب هذا الصوت';
 
   @override
@@ -13955,4 +13864,95 @@ class AppLocalizationsAr extends AppLocalizations {
   String userRowPosted(String time) {
     return 'نُشر $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'جارٍ تحميل القوائم';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.';
+
+  @override
+  String get listSearchPeopleUnavailable => 'قوائم الأشخاص غير متاحة الآن.';
+
+  @override
+  String get listSearchVideosUnavailable => 'قوائم الفيديو غير متاحة الآن.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'البحث عن أشخاص';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'إزالة $name من القائمة';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'تعذّر تحديث القائمة. يرجى المحاولة مجددًا.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'إضافة $name إلى القائمة';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'إضافة متعاون';
+
+  @override
+  String get listMakePublicLabel => 'جعل القائمة عامة';
+
+  @override
+  String get listCollaboratorSearchHint => 'ابحث في Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'لا أحد';
+
+  @override
+  String get listMakePublicSubtitle => 'السماح للآخرين برؤية هذه القائمة';
+
+  @override
+  String get listVideoNotAdded =>
+      'تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.';
+
+  @override
+  String get listVideoPendingSync =>
+      'تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.';
+
+  @override
+  String get listRetrySync => 'زامن الآن';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'تعذّر تأكيد هذا التغيير. حاول مرة أخرى.';
+
+  @override
+  String get listRecoveryPending =>
+      'تحتوي هذه القائمة على تغييرات بانتظار المزامنة.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.';
+
+  @override
+  String get listAddToLists => 'إضافة إلى القوائم';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.';
 }

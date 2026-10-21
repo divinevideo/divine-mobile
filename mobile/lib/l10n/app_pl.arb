@@ -5702,8 +5702,8 @@
 "listsDiscoveryLoadingLabel": "Wczytywanie list",
 "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",
 "listSearchVideosUnavailable": "Listy filmów są teraz niedostępne.",
-"authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.",
 "listPrivateConversionTooLarge": "Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.",
+"authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.",
 "@peopleListsAddPersonSemanticLabel": {
   "placeholders": {
     "name": {
@@ -5736,4 +5736,5 @@
 "listPermissionsRecoveryPending": "Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.",
 "listRecoveryReadOnly": "Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.",
 "listAddToLists": "Dodaj do list",
-"accountDeletionProcessingSignOutFailed": "Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie."}
+"accountDeletionProcessingSignOutFailed": "Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie."
+}

@@ -13726,99 +13726,6 @@ class AppLocalizationsUr extends AppLocalizations {
       'کسی ہیش ٹیگ کو یہاں دیکھنے کے لیے اس کے صفحے سے فالو کریں۔';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return '$name کو فہرست سے ہٹائیں';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return '$name کو فہرست میں شامل کریں';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
-
-  @override
-  String get listMakePublicLabel => 'عوامی بنائیں';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
-
-  @override
-  String get listCollaboratorsNone => 'کوئی نہیں';
-
-  @override
-  String get listMakePublicSubtitle => 'دوسروں کو یہ فہرست دیکھنے دیں';
-
-  @override
-  String get listVideoNotAdded =>
-      'آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔';
-
-  @override
-  String get listVideoPendingSync =>
-      'آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔';
-
-  @override
-  String get listRetrySync => 'اب ہم آہنگ کریں';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get listRecoveryPending =>
-      'اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔';
-
-  @override
-  String get listAddToLists => 'فہرستوں میں شامل کریں';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔';
-
-  @override
   String get soundRequestAction => 'یہ آواز مانگیں';
 
   @override
@@ -13971,4 +13878,97 @@ class AppLocalizationsUr extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time پوسٹ کی گئی';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'یہ فہرست نجی بنانے کے لیے بہت بڑی ہے۔ پہلے کچھ ویڈیوز ہٹائیں۔ آپ کی تبدیلیاں یہیں موجود ہیں اور ابھی محفوظ نہیں ہوئی ہیں۔';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'فہرستیں لوڈ ہو رہی ہیں';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'اس بار کوئی فہرست ہاتھ نہیں آئی۔ ریفریش کے لیے کھینچیں۔';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'لوگوں کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'ویڈیو کی فہرستیں فی الحال دستیاب نہیں ہیں۔';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'پچھلے اکاؤنٹ کا ڈیٹا صاف نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'لوگ تلاش کریں';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name کو فہرست سے ہٹائیں';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'فہرست اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name کو فہرست میں شامل کریں';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'شریک کار شامل کریں';
+
+  @override
+  String get listMakePublicLabel => 'عوامی بنائیں';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine میں تلاش کریں...';
+
+  @override
+  String get listCollaboratorsNone => 'کوئی نہیں';
+
+  @override
+  String get listMakePublicSubtitle => 'دوسروں کو یہ فہرست دیکھنے دیں';
+
+  @override
+  String get listVideoNotAdded =>
+      'آپ کی فہرست بن گئی، لیکن یہ ویڈیو شامل نہیں ہوئی۔';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'اس فہرست کو نجی بنانے سے اس کے معاونین بھی ہٹ جائیں گے۔ صرف آپ ویڈیوز شامل کر سکیں گے۔';
+
+  @override
+  String get listVideoPendingSync =>
+      'آپ کی فہرست اور ویڈیو یہاں محفوظ ہیں۔ ویڈیو ہم آہنگ ہونے کا انتظار کر رہی ہے۔';
+
+  @override
+  String get listRetrySync => 'اب ہم آہنگ کریں';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get listRecoveryPending =>
+      'اس فہرست میں ایسی تبدیلیاں ہیں جو ہم آہنگی کی منتظر ہیں۔';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔';
+
+  @override
+  String get listAddToLists => 'فہرستوں میں شامل کریں';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔';
 }

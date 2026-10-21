@@ -13803,99 +13803,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Volg een hashtag op de bijbehorende pagina om die hier te vinden.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Lijsten laden';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Personenlijsten zijn momenteel niet beschikbaar.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Videolijsten zijn momenteel niet beschikbaar.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Mensen zoeken';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return '$name uit lijst verwijderen';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Kon de lijst niet bijwerken. Probeer het opnieuw.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return '$name aan lijst toevoegen';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Medewerker toevoegen';
-
-  @override
-  String get listMakePublicLabel => 'Openbaar maken';
-
-  @override
-  String get listCollaboratorSearchHint => 'Zoek in Divine...';
-
-  @override
-  String get listCollaboratorsNone => 'Geen';
-
-  @override
-  String get listMakePublicSubtitle => 'Laat anderen deze lijst zien';
-
-  @override
-  String get listVideoNotAdded =>
-      'Je lijst is gemaakt, maar deze video is niet toegevoegd.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.';
-
-  @override
-  String get listRetrySync => 'Nu synchroniseren';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.';
-
-  @override
-  String get listRecoveryPending =>
-      'Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.';
-
-  @override
-  String get listAddToLists => 'Toevoegen aan lijsten';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw.';
-
-  @override
   String get soundRequestAction => 'Dit geluid aanvragen';
 
   @override
@@ -14049,4 +13956,97 @@ class AppLocalizationsNl extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Geplaatst $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Lijsten laden';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Personenlijsten zijn momenteel niet beschikbaar.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Videolijsten zijn momenteel niet beschikbaar.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Mensen zoeken';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name uit lijst verwijderen';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Kon de lijst niet bijwerken. Probeer het opnieuw.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name aan lijst toevoegen';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Medewerker toevoegen';
+
+  @override
+  String get listMakePublicLabel => 'Openbaar maken';
+
+  @override
+  String get listCollaboratorSearchHint => 'Zoek in Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Geen';
+
+  @override
+  String get listMakePublicSubtitle => 'Laat anderen deze lijst zien';
+
+  @override
+  String get listVideoNotAdded =>
+      'Je lijst is gemaakt, maar deze video is niet toegevoegd.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.';
+
+  @override
+  String get listRetrySync => 'Nu synchroniseren';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.';
+
+  @override
+  String get listRecoveryPending =>
+      'Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.';
+
+  @override
+  String get listAddToLists => 'Toevoegen aan lijsten';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw.';
 }

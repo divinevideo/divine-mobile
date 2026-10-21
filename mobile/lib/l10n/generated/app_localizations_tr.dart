@@ -13653,99 +13653,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bir etiketi burada bulmak için kendi sayfasından takip et.';
 
   @override
-  String get listPrivateConversionTooLarge =>
-      'Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.';
-
-  @override
-  String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';
-
-  @override
-  String get listsDiscoveryEmpty =>
-      'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
-
-  @override
-  String get listSearchPeopleUnavailable =>
-      'Kişi listeleri şu anda kullanılamıyor.';
-
-  @override
-  String get listSearchVideosUnavailable =>
-      'Video listeleri şu anda kullanılamıyor.';
-
-  @override
-  String get authAccountCleanupFailed =>
-      'Önceki hesabın verileri temizlenemedi. Tekrar dene.';
-
-  @override
-  String get peopleListsAddPeopleSearchHint => 'Kişi ara';
-
-  @override
-  String peopleListsRemovePersonSemanticLabel(String name) {
-    return '$name kişisini listeden kaldır';
-  }
-
-  @override
-  String get peopleListsMembershipUpdateFailed =>
-      'Liste güncellenemedi. Lütfen tekrar dene.';
-
-  @override
-  String peopleListsAddPersonSemanticLabel(String name) {
-    return '$name kişisini listeye ekle';
-  }
-
-  @override
-  String get listAddCollaboratorTitle => 'Ortak ekle';
-
-  @override
-  String get listMakePublicLabel => 'Herkese açık yap';
-
-  @override
-  String get listCollaboratorSearchHint => 'Divine\'da ara...';
-
-  @override
-  String get listCollaboratorsNone => 'Yok';
-
-  @override
-  String get listMakePublicSubtitle => 'Başkaları bu listeyi görebilsin';
-
-  @override
-  String get listVideoNotAdded =>
-      'Listen oluşturuldu, ancak bu video eklenmedi.';
-
-  @override
-  String get listPrivateCollaboratorsWarning =>
-      'Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.';
-
-  @override
-  String get listVideoPendingSync =>
-      'Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.';
-
-  @override
-  String get listRetrySync => 'Şimdi eşitle';
-
-  @override
-  String get listPermissionsUnconfirmed =>
-      'Bu değişiklik doğrulanamadı. Tekrar dene.';
-
-  @override
-  String get listRecoveryPending =>
-      'Bu listede eşitlenmeyi bekleyen değişiklikler var.';
-
-  @override
-  String get listPermissionsRecoveryPending =>
-      'Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.';
-
-  @override
-  String get listRecoveryReadOnly =>
-      'Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.';
-
-  @override
-  String get listAddToLists => 'Listelere ekle';
-
-  @override
-  String get accountDeletionProcessingSignOutFailed =>
-      'Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.';
-
-  @override
   String get soundRequestAction => 'Bu sesi iste';
 
   @override
@@ -13899,4 +13806,97 @@ class AppLocalizationsTr extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time paylaşıldı';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Listeler yükleniyor';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Kişi listeleri şu anda kullanılamıyor.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Video listeleri şu anda kullanılamıyor.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Önceki hesabın verileri temizlenemedi. Tekrar dene.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Kişi ara';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return '$name kişisini listeden kaldır';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Liste güncellenemedi. Lütfen tekrar dene.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return '$name kişisini listeye ekle';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Ortak ekle';
+
+  @override
+  String get listMakePublicLabel => 'Herkese açık yap';
+
+  @override
+  String get listCollaboratorSearchHint => 'Divine\'da ara...';
+
+  @override
+  String get listCollaboratorsNone => 'Yok';
+
+  @override
+  String get listMakePublicSubtitle => 'Başkaları bu listeyi görebilsin';
+
+  @override
+  String get listVideoNotAdded =>
+      'Listen oluşturuldu, ancak bu video eklenmedi.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.';
+
+  @override
+  String get listRetrySync => 'Şimdi eşitle';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Bu değişiklik doğrulanamadı. Tekrar dene.';
+
+  @override
+  String get listRecoveryPending =>
+      'Bu listede eşitlenmeyi bekleyen değişiklikler var.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.';
+
+  @override
+  String get listAddToLists => 'Listelere ekle';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.';
 }
