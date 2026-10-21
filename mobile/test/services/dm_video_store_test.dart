@@ -235,29 +235,34 @@ void main() {
       Duration frameTurnLimit = const Duration(days: 1),
       Duration frameDeadline = DmVideoStore.defaultFrameDeadline,
       String? launchId,
-    }) => DmVideoStore(
-      ownerPubkey: _owner,
-      fetchVideo: (message, {maxBytes, timeLimit, limitsApply, stillWanted}) {
-        fetches++;
-        fetchLimits.add((maxBytes: maxBytes, timeLimit: timeLimit));
-        fetchLimitsApply.add(limitsApply);
-        fetchWanted.add(stillWanted);
-        return fetch(message);
-      },
-      readFrame: (video) {
-        frameReads++;
-        return readFrame(video);
-      },
-      rootDirectory: rootDirectory ?? () async => root,
-      now: () => now,
-      maxBytes: maxBytes,
-      isMessageGone: isMessageGone,
-      isConversationRemoved: isConversationRemoved,
-      findMessageLocation: findMessageLocation,
-      frameTurnLimit: frameTurnLimit,
-      frameDeadline: frameDeadline,
-      launchId: launchId,
-    );
+    }) {
+      // Bound to this test's folder: a store an earlier test left behind can
+      // still prune, and must not reach this test's files.
+      final storeRoot = root;
+      return DmVideoStore(
+        ownerPubkey: _owner,
+        fetchVideo: (message, {maxBytes, timeLimit, limitsApply, stillWanted}) {
+          fetches++;
+          fetchLimits.add((maxBytes: maxBytes, timeLimit: timeLimit));
+          fetchLimitsApply.add(limitsApply);
+          fetchWanted.add(stillWanted);
+          return fetch(message);
+        },
+        readFrame: (video) {
+          frameReads++;
+          return readFrame(video);
+        },
+        rootDirectory: rootDirectory ?? () async => storeRoot,
+        now: () => now,
+        maxBytes: maxBytes,
+        isMessageGone: isMessageGone,
+        isConversationRemoved: isConversationRemoved,
+        findMessageLocation: findMessageLocation,
+        frameTurnLimit: frameTurnLimit,
+        frameDeadline: frameDeadline,
+        launchId: launchId,
+      );
+    }
 
     Directory ownerDir([String? owner]) =>
         Directory('${root.path}/${DmVideoStore.dirName}/${owner ?? _owner}');
@@ -637,7 +642,7 @@ void main() {
           final announcements = store.kept.listen(announced.add);
           addTearDown(announcements.cancel);
           final preview = store.previewFor(message);
-          await frameReadStarted.future;
+          await frameReadStarted.future.timeout(const Duration(seconds: 5));
           gone = true;
           await expectLater(
             store.videoFor(message),
@@ -3116,7 +3121,7 @@ void main() {
             keptAt: now,
           );
           final preview = store.previewFor(message);
-          await frameReadStarted.future;
+          await frameReadStarted.future.timeout(const Duration(seconds: 5));
 
           await store.prune();
 
@@ -3779,7 +3784,7 @@ void main() {
           keptAt: now,
         );
         final preview = store.previewFor(message);
-        await frameReadStarted.future;
+        await frameReadStarted.future.timeout(const Duration(seconds: 5));
         // And past its age before the prune runs: one past its age when the
         // card asks is fetched again instead.
         now = now.add(const Duration(days: 31));
