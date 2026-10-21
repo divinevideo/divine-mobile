@@ -46,6 +46,7 @@ class _FakeAudioSessionService extends AudioSessionService {
 
 class _FakeRecorder implements VoiceOverRecorderService {
   final _levels = StreamController<double>.broadcast();
+  bool throwOnStart = false;
   String? path;
 
   @override
@@ -55,6 +56,7 @@ class _FakeRecorder implements VoiceOverRecorderService {
   Future<void> start(String path) async {
     this.path = path;
     File(path).writeAsBytesSync([7, 8, 9]);
+    if (throwOnStart) throw VoiceOverRecorderException('mic unavailable');
   }
 
   @override
@@ -719,6 +721,78 @@ void main() {
         expect(router.state.uri.path, '/add');
         expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
         expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('system back while recording cancels it and stays', (
+        tester,
+      ) async {
+        final router = await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+
+        // Android back and predictive back reach the PopScope, not the app
+        // bar's button.
+        await tester.binding.handlePopRoute();
+        await settleRecorder(tester);
+
+        expect(router.state.uri.path, '/add');
+        expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('shows the elapsed time against the length limit', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+
+        // The cubit reads the test's fake clock, which pump advances.
+        await tester.pump(const Duration(seconds: 7));
+        recorder.emitLevel(0.4);
+        await tester.pumpAndSettle();
+
+        expect(find.text('0:07 / 5:00'), findsOneWidget);
+      });
+
+      testWidgets('records again from the button beside a recorded sound', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        await tester.tap(find.text(l10n.soundsRecordAgainAction));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('add_sound_stop_recording')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('says so every time the recorder fails to start', (
+        tester,
+      ) async {
+        recorder.throwOnStart = true;
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.soundsRecordFailed), findsOneWidget);
+
+        // Let the first snackbar time out so the second has to be a new one.
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.soundsRecordFailed), findsNothing);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.soundsRecordFailed), findsOneWidget);
       });
 
       testWidgets('points to settings when the microphone is refused', (
