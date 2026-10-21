@@ -147,7 +147,7 @@ class GallerySaveService {
       // Without album, it only needs photosAddOnly permission
       Log.info(
         'saveVideoToGallery calling Gal.putVideo: '
-        'size=${_roundedSize(file.lengthSync())} '
+        'size=${roundedSize(file.lengthSync())} '
         'platform=$defaultTargetPlatform',
         name: 'GallerySaveService',
         category: LogCategory.video,
@@ -348,10 +348,13 @@ class GallerySaveService {
     }
   }
 
-  // A kept video DM's exact length would identify it in support logs (#6522),
-  // and so would a fine-grained one for a rare large video; one significant
-  // figure still shows how big a slow save was.
-  static String _roundedSize(int bytes) {
+  /// [bytes] as megabytes to one significant figure, for logs.
+  ///
+  /// A kept video DM's exact length would identify it in support logs
+  /// (#6522), and so would a fine-grained one for a rare large video; one
+  /// significant figure still shows how big a slow save was.
+  @visibleForTesting
+  static String roundedSize(int bytes) {
     final megabytes = bytes / (1024 * 1024);
     if (megabytes < 1) return '<1 MB';
     final scale = math.pow(10, (math.log(megabytes) / math.ln10).floor());

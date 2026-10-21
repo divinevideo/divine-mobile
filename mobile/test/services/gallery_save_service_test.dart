@@ -61,6 +61,24 @@ void main() {
     });
   });
 
+  group('GallerySaveService.roundedSize', () {
+    const mib = 1024 * 1024;
+    for (final (bytes, expected) in [
+      (0, '<1 MB'),
+      (mib - 1, '<1 MB'),
+      (mib, '1 MB'),
+      ((1.4 * mib).round(), '1 MB'),
+      ((9.6 * mib).round(), '10 MB'),
+      ((23.4 * mib).round(), '20 MB'),
+      ((54.9 * mib).round(), '50 MB'),
+      (100 * mib, '100 MB'),
+    ]) {
+      test('gives $bytes bytes as $expected', () {
+        expect(GallerySaveService.roundedSize(bytes), equals(expected));
+      });
+    }
+  });
+
   group('GallerySaveService', () {
     late GallerySaveService service;
     late MockPermissionsService mockPermissionsService;
