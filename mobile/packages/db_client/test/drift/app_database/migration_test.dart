@@ -795,19 +795,17 @@ void main() {
       },
     );
 
-    test('v28 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(28);
-      final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 28);
-      await db.close();
-    });
-
-    test('v28 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(28);
-      final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 28);
-      await db.close();
-    });
+    for (final version in [26, 27, 28]) {
+      test(
+        'canonical v$version schema validates after upgrading to v28',
+        () async {
+          final schema = await verifier.schemaAt(version);
+          final db = AppDatabase(schema.newConnection());
+          addTearDown(db.close);
+          await verifier.migrateAndValidate(db, 28);
+        },
+      );
+    }
 
     test('v14 creates personal_events on a v12 database', () async {
       final schema = await verifier.schemaAt(12);
