@@ -297,7 +297,7 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
     final nextIndex = _currentIndex + 1;
     if (nextIndex < videos.length) {
       _pendingTuningAutoAdvanceIndex = nextIndex;
-      _animateToPage(nextIndex);
+      unawaited(_feedVideosKey.currentState?.advanceFromUserAction(nextIndex));
     }
   }
 

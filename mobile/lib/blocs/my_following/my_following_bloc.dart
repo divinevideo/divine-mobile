@@ -12,8 +12,8 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/follow_list_ranking.dart';
 import 'package:openvine/blocs/follow_list_sort.dart';
-import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:user_ranking/user_ranking.dart';
 
@@ -303,10 +303,14 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     try {
       switch (event) {
         case MyFollowingFollowRequested(:final pubkey, :final targetVideoId):
-          final wasFollowing = _followRepository.followingPubkeys.contains(pubkey);
+          final wasFollowing = _followRepository.followingPubkeys.contains(
+            pubkey,
+          );
           await _followRepository.follow(pubkey);
           if (!wasFollowing) {
-            unawaited(_consumptionAnalytics.followAdded(targetVideoId: targetVideoId));
+            unawaited(
+              _consumptionAnalytics.followAdded(targetVideoId: targetVideoId),
+            );
           }
         case MyFollowingUnfollowRequested(:final pubkey):
           await _followRepository.unfollow(pubkey);

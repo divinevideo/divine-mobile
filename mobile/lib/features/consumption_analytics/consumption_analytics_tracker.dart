@@ -1,4 +1,4 @@
-// ABOUTME: Governed feed-depth and engagement analytics without relationship identity.
+// ABOUTME: Governed feed-depth and engagement analytics without raw relationship pubkeys.
 // ABOUTME: Keeps delivery best-effort and separate from product actions.
 
 import 'package:openvine/generated/product_analytics.dart';
@@ -28,9 +28,10 @@ class ConsumptionAnalyticsTracker {
 
   /// Records distinct items deliberately reached in one feed session.
   ///
-  /// The initial item contributes to [depth]. Swipes and explicit Skip taps
-  /// emit events; automatic navigation does not increase depth.
-  Future<void> feedScrolled({
+  /// The initial item contributes to [depth]. Swipes, feed-tuning advances, and explicit Skip taps
+  /// emit events; automatic navigation does not increase depth. Sessions with no deliberate
+  /// navigation emit no depth event; this is not a complete session denominator.
+  Future<void> feedDepthReached({
     required ViewTrafficSource trafficSource,
     required String feedSessionId,
     required int depth,
@@ -61,9 +62,10 @@ class ConsumptionAnalyticsTracker {
     targetVideoId,
   );
 
-  /// Records a confirmed follow without the followed account's identity.
+  /// Records a confirmed follow without a raw followed-account pubkey.
   ///
   /// Video-originated follows include [targetVideoId]; other surfaces omit it.
+  /// A video id resolves to its author and can link a public action to an account.
   Future<void> followAdded({String? targetVideoId}) => _engagement(
     ProductAnalyticsV2EngagementAction.followAdded,
     targetVideoId,

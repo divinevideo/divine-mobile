@@ -1,4 +1,4 @@
-// ABOUTME: Verifies governed consumption calls omit relationship identity.
+// ABOUTME: Verifies governed consumption calls omit raw relationship pubkeys.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
@@ -17,7 +17,7 @@ void main() {
       addTearDown(analytics.dispose);
     });
 
-    test('records engagement without creator or target identity', () async {
+    test('records engagement with video context and no raw creator or target pubkeys', () async {
       await tracker.reactionSent(targetVideoId: 'a' * 64);
       await tracker.commentSent(targetVideoId: 'a' * 64);
       await tracker.shareTapped(targetVideoId: 'a' * 64);
@@ -60,7 +60,7 @@ void main() {
         (ViewTrafficSource.unknown, null, 'unknown'),
       ];
       for (final (source, detail, _) in cases) {
-        await tracker.feedScrolled(
+        await tracker.feedDepthReached(
           trafficSource: source,
           sourceDetail: detail,
           feedSessionId: session,
@@ -82,7 +82,7 @@ void main() {
       final failing = ConsumptionAnalyticsTracker(analytics: () => service);
       await expectLater(failing.followAdded(), completes);
       await expectLater(
-        failing.feedScrolled(
+        failing.feedDepthReached(
           trafficSource: ViewTrafficSource.home,
           feedSessionId: '55555555-5555-4555-8555-555555555555',
           depth: 2,

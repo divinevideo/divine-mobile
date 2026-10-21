@@ -334,7 +334,7 @@ void main() {
             ),
           );
           expect(
-            (captured.first as MyFollowingToggleRequested).targetVideoId,
+            (captured.first as MyFollowingFollowRequested).targetVideoId,
             'video-id',
           );
         },

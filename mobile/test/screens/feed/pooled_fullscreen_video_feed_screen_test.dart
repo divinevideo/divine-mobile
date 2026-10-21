@@ -29,6 +29,9 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/view_traffic_source.dart';
@@ -46,6 +49,7 @@ import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
@@ -55,6 +59,7 @@ import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart'
 import 'package:riverpod/misc.dart' show Override;
 import 'package:unified_logger/unified_logger.dart';
 
+import '../../helpers/recording_consumption_analytics.dart';
 import '../../helpers/test_provider_overrides.dart';
 import '../../test_data/video_test_data.dart';
 
@@ -1958,6 +1963,49 @@ void main() {
     });
 
     group('feed-tuning undo', () {
+      testWidgets('a fullscreen tuning swipe records deliberate depth', (
+        tester,
+      ) async {
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: videos,
+            ),
+            additionalOverrides: [
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+              isFeatureEnabledProvider(FeatureFlag.feedTuning)
+                  .overrideWith((_) => true),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.drag(
+          find.byType(FeedTuningSwipeOverlay),
+          const Offset(200, 0),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(analytics.events, hasLength(1));
+        expect(analytics.events.single.name, 'feed_depth_recorded');
+        expect(analytics.events.single.parameters['depth'], 2);
+        verify(
+          () => mockBloc.add(
+            FullscreenFeedTuningSwipeCommitted(
+              videoId: videos.first.id,
+              direction: FeedTuningDirection.more,
+            ),
+          ),
+        ).called(1);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+      });
+
       testWidgets(
         'does not crash when Undo is tapped after the screen unmounts',
         (tester) async {

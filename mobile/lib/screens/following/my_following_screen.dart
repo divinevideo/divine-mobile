@@ -51,7 +51,7 @@ class MyFollowingScreen extends ConsumerWidget {
         rankingSignalsLoader,
       ),
       create: (snapshot) => MyFollowingBloc(
-          consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
+        consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
         rankForList: true,
         followRepository: followRepository,
         contentBlocklistRepository: blocklistRepository,

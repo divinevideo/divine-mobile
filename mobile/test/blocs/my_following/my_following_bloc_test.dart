@@ -12,8 +12,8 @@ import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 
-import '../../helpers/test_user_ranking_loader.dart';
 import '../../helpers/recording_consumption_analytics.dart';
+import '../../helpers/test_user_ranking_loader.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -387,7 +387,7 @@ void main() {
 
     group(MyFollowingFollowRequested, () {
       blocTest<MyFollowingBloc, MyFollowingState>(
-        'follows even when the repository already lists the account',
+        'records a confirmed follow with its originating video',
         setUp: () {
           when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
           when(
@@ -398,8 +398,12 @@ void main() {
           ).thenAnswer((_) async {});
         },
         build: createBloc,
-        act: (bloc) =>
-            bloc.add(MyFollowingFollowRequested(validPubkey('user'), targetVideoId: 'video-id')),
+        act: (bloc) => bloc.add(
+          MyFollowingFollowRequested(
+            validPubkey('user'),
+            targetVideoId: 'video-id',
+          ),
+        ),
         verify: (_) {
           verify(
             () => mockFollowRepository.follow(validPubkey('user')),
@@ -440,13 +444,31 @@ void main() {
       );
 
       blocTest<MyFollowingBloc, MyFollowingState>(
-        'does not record follow_added when the toggle is an unfollow',
+        'does not record follow_added for an already-followed account',
+        setUp: () {
+          when(() => mockFollowRepository.followingPubkeys)
+              .thenReturn([validPubkey('user')]);
+          when(() => mockFollowRepository.follow(any()))
+              .thenAnswer((_) async {});
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
+        verify: (_) {
+          verify(() => mockFollowRepository.follow(validPubkey('user')))
+              .called(1);
+          expect(analytics.eventNames, isEmpty);
+        },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record follow_added on unfollow',
         setUp: () {
           when(
             () => mockFollowRepository.followingPubkeys,
           ).thenReturn([validPubkey('user')]);
           when(
-            () => mockFollowRepository.toggleFollow(any()),
+            () => mockFollowRepository.unfollow(any()),
           ).thenAnswer((_) async {});
           when(
             () => mockFollowRepository.watchMyFollowingCached(),
@@ -454,10 +476,10 @@ void main() {
         },
         build: createBloc,
         act: (bloc) =>
-            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+            bloc.add(MyFollowingUnfollowRequested(validPubkey('user'))),
         verify: (_) {
           verify(
-            () => mockFollowRepository.toggleFollow(validPubkey('user')),
+            () => mockFollowRepository.unfollow(validPubkey('user')),
           ).called(1);
           expect(analytics.eventNames, isEmpty);
         },
@@ -467,12 +489,12 @@ void main() {
         'does not record follow_added when the follow fails',
         setUp: () {
           when(
-            () => mockFollowRepository.toggleFollow(any()),
+            () => mockFollowRepository.follow(any()),
           ).thenThrow(Exception('Network error'));
         },
         build: createBloc,
         act: (bloc) =>
-            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+            bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
         verify: (bloc) {
           expect(bloc.state.status, MyFollowingStatus.toggleFailure);
           expect(analytics.eventNames, isEmpty);

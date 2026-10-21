@@ -2618,7 +2618,7 @@ void main() {
         );
         feed.onActiveVideoChanged?.call(third, 2);
         await tester.pump();
-        expect(analytics.events.last.parameters['depth'], 3);
+        expect(analytics.events.last.parameters['depth'], 2);
         final disabledSession =
             analytics.events.last.parameters['feed_session_id'];
         await analytics.setAnalyticsEnabled(true);
@@ -2633,6 +2633,220 @@ void main() {
         await tester.pump(const Duration(seconds: 4));
       },
     );
+
+    testWidgets(
+      'session rotation after silent replacement seeds the visible item',
+      (tester) async {
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final feedKey = GlobalKey<FeedVideosState>();
+        final first = _makeVideo();
+        final second = _makeVideo(id: 'b' * 64);
+        final replacementFirst = _makeVideo(id: 'c' * 64);
+        final replacementSecond = _makeVideo(id: 'd' * 64);
+        final container = await _pumpFeedVideos(
+          tester,
+          videos: [first, second],
+          feedKey: feedKey,
+          additionalOverrides: [
+            consumptionAnalyticsTrackerProvider.overrideWithValue(
+              ConsumptionAnalyticsTracker(analytics: () => analytics),
+            ),
+          ],
+        );
+        await _pumpFeedVideos(
+          tester,
+          videos: [replacementFirst, replacementSecond],
+          feedKey: feedKey,
+          providerContainer: container,
+        );
+        await tester.pump();
+        expect(analytics.events, isEmpty);
+        analytics.onAppBackgrounded();
+        analytics.onAppResumed();
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugActivatePage(1);
+        await tester.pump();
+        expect(analytics.events.single.parameters['depth'], 2);
+        final count = analytics.events.length;
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugActivatePage(0);
+        await tester.pump();
+        expect(
+          analytics.events,
+          hasLength(count),
+          reason: 'replacementFirst was visible at rotation and must already be the session seed',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+
+    testWidgets('shorter silent replacement does not emit deliberate depth', (
+      tester,
+    ) async {
+      final analytics = RecordingConsumptionAnalytics();
+      addTearDown(analytics.dispose);
+      final feedKey = GlobalKey<FeedVideosState>();
+      final first = _makeVideo();
+      final second = _makeVideo(id: 'b' * 64);
+      final replacement = _makeVideo(id: 'c' * 64);
+      final container = await _pumpFeedVideos(
+        tester,
+        videos: [first, second],
+        feedKey: feedKey,
+        additionalOverrides: [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
+          ),
+        ],
+      );
+      unawaited(feedKey.currentState!.advanceFromUserAction(1));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(analytics.events, hasLength(1));
+      final count = analytics.events.length;
+      await _pumpFeedVideos(
+        tester,
+        videos: [replacement],
+        feedKey: feedKey,
+        providerContainer: container,
+      );
+      await tester.pump();
+      expect(
+        analytics.events,
+        hasLength(count),
+        reason: 'automatic jump due to a shorter refreshed collection is not deliberate navigation',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets(
+      'mid-feed replacement reconciles the index before session rotation',
+      (tester) async {
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final feedKey = GlobalKey<FeedVideosState>();
+        final first = _makeVideo();
+        final second = _makeVideo(id: 'b' * 64);
+        final replacementFirst = _makeVideo(id: 'c' * 64);
+        final replacementSecond = _makeVideo(id: 'd' * 64);
+        final container = await _pumpFeedVideos(
+          tester,
+          videos: [first, second],
+          feedKey: feedKey,
+          additionalOverrides: [
+            consumptionAnalyticsTrackerProvider.overrideWithValue(
+              ConsumptionAnalyticsTracker(analytics: () => analytics),
+            ),
+          ],
+        );
+        unawaited(feedKey.currentState!.advanceFromUserAction(1));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(
+          tester
+              .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+              .currentIndex,
+          1,
+        );
+        expect(analytics.events, hasLength(1));
+        await _pumpFeedVideos(
+          tester,
+          videos: [replacementFirst, replacementSecond],
+          feedKey: feedKey,
+          providerContainer: container,
+        );
+        await tester.pump();
+        expect(
+          tester
+              .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+              .currentIndex,
+          0,
+        );
+        expect(
+          analytics.events,
+          hasLength(1),
+          reason: 'silent collection reset must not emit deliberate feed depth',
+        );
+        final count = analytics.events.length;
+        analytics.onAppBackgrounded();
+        analytics.onAppResumed();
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugActivatePage(1);
+        await tester.pump();
+        expect(
+          analytics.events,
+          hasLength(count + 1),
+          reason: 'first deliberate swipe after actual index reset must emit depth2',
+        );
+        expect(analytics.events.last.parameters['depth'], 2);
+        final after = analytics.events.length;
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugActivatePage(0);
+        await tester.pump();
+        expect(
+          analytics.events,
+          hasLength(after),
+          reason: 'visible replacementFirst must be seeded',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+
+    testWidgets('session rotation seeds the video actually in view', (
+      tester,
+    ) async {
+      final analytics = RecordingConsumptionAnalytics();
+      addTearDown(analytics.dispose);
+      final first = _makeVideo();
+      final second = _makeVideo(id: 'b' * 64);
+      final third = _makeVideo(id: 'c' * 64);
+      await _pumpFeedVideos(
+        tester,
+        videos: [first, second, third],
+        additionalOverrides: [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: () => analytics),
+          ),
+        ],
+      );
+      final feed = tester.widget<InfiniteVideoFeed>(
+        find.byType(InfiniteVideoFeed),
+      );
+      feed.onActiveVideoChanged?.call(second, 1);
+      await tester.pump();
+      final previousSession =
+          analytics.events.last.parameters['feed_session_id'];
+      analytics.onAppBackgrounded();
+      analytics.onAppResumed();
+      feed.onActiveVideoChanged?.call(third, 2);
+      await tester.pump();
+      expect(analytics.events.last.parameters['depth'], 2);
+      expect(
+        analytics.events.last.parameters['feed_session_id'],
+        isNot(previousSession),
+      );
+      final count = analytics.events.length;
+      feed.onActiveVideoChanged?.call(second, 1);
+      await tester.pump();
+      expect(
+        analytics.events,
+        hasLength(count),
+        reason: 'returning to the session seed is not a new distinct video',
+      );
+      feed.onActiveVideoChanged?.call(first, 0);
+      await tester.pump();
+      expect(analytics.events.last.parameters['depth'], 3);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 4));
+    });
 
     testWidgets('records the first real swipe at depth two', (tester) async {
       final analytics = RecordingConsumptionAnalytics();
@@ -2801,7 +3015,7 @@ void main() {
     );
 
     testWidgets(
-      'keeps depth when videos change without a new session revision',
+      'same-page replacement preserves depth until deliberate navigation',
       (tester) async {
         final analytics = RecordingConsumptionAnalytics();
         final feedKey = GlobalKey<FeedVideosState>();
@@ -2851,12 +3065,14 @@ void main() {
           feedSessionRevision: 1,
           providerContainer: container,
         );
-        tester
-            .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
-            .onActiveVideoChanged
-            ?.call(replacementSecond, 1);
+        final feed = tester.state<InfiniteVideoFeedState>(
+          find.byType(InfiniteVideoFeed),
+        );
+        feed.debugActivatePage(0);
         await tester.pump();
-
+        expect(analytics.events, hasLength(1));
+        feed.debugActivatePage(1);
+        await tester.pump();
         expect(analytics.events, hasLength(2));
         expect(analytics.events.last.parameters['depth'], 3);
         expect(

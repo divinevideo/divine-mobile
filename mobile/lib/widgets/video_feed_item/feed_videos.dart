@@ -156,21 +156,25 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   late String _feedSessionId;
   late String _analyticsSessionBoundary;
   int? _programmaticActivationIndex;
+  late int _activeIndex;
+
+  void _resetActiveItem() {
+    _activeIndex = widget.currentIndex;
+  }
 
   void _resetSeenVideos() {
     _seenVideoIds.clear();
     _feedSessionId = const Uuid().v4();
     _analyticsSessionBoundary = _consumptionAnalytics.sessionBoundary;
-    if (widget.currentIndex >= 0 &&
-        widget.currentIndex < widget.videos.length) {
-      _seenVideoIds.add(widget.videos[widget.currentIndex].id);
-    }
+    final videoId = widget.videos.elementAtOrNull(_activeIndex)?.id;
+    if (videoId != null) _seenVideoIds.add(videoId);
   }
 
   @override
   void initState() {
     super.initState();
     _consumptionAnalytics = ref.read(consumptionAnalyticsTrackerProvider);
+    _resetActiveItem();
     _resetSeenVideos();
   }
 
@@ -218,6 +222,11 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   /// programmatically skip to a specific video (e.g. after a 404 removal).
   Future<void> animateToPage(int index) => _animateToPage(index);
 
+  /// Advances after an explicit user action, including a tuning swipe or Skip.
+  Future<void> advanceFromUserAction(int index) async {
+    await _feedKey.currentState?.animateToPage(index);
+  }
+
   Future<void> _animateToPage(int index) async {
     final feedState = _feedKey.currentState;
     if (feedState == null) return;
@@ -237,7 +246,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   ) => _retryFeedItem(_feedKey.currentState, index, httpHeaders);
 
   void _skipPooledVideoAt(int index) {
-    unawaited(_feedKey.currentState?.animateToPage(index + 1));
+    unawaited(advanceFromUserAction(index + 1));
   }
 
   @override
@@ -246,7 +255,18 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     if (widget.feedSessionRevision != oldWidget.feedSessionRevision ||
         widget.trafficSource != oldWidget.trafficSource ||
         widget.sourceDetail != oldWidget.sourceDetail) {
+      _resetActiveItem();
       _resetSeenVideos();
+    }
+    if (widget.videos != oldWidget.videos) {
+      // A silent replacement can reset InfiniteVideoFeed to initialIndex without
+      // an activation callback. Read its reconciled index after child updates,
+      // before its post-frame PageController jump reports that automatic move.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _activeIndex =
+            _feedKey.currentState?.currentIndex ?? widget.currentIndex;
+      });
     }
     // When pagination settles (hasMore / isLoadingMore changed), flush any
     // pending auto-advance that was waiting on more content.
@@ -397,14 +417,14 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             _resetSeenVideos();
           }
           final isProgrammaticActivation =
-              index == widget.currentIndex ||
-              index == _programmaticActivationIndex;
+              index == _activeIndex || index == _programmaticActivationIndex;
           if (index == _programmaticActivationIndex) {
             _programmaticActivationIndex = null;
           }
+          _activeIndex = index;
           if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
             unawaited(
-              _consumptionAnalytics.feedScrolled(
+              _consumptionAnalytics.feedDepthReached(
                 trafficSource: widget.trafficSource,
                 feedSessionId: _feedSessionId,
                 depth: _seenVideoIds.length,

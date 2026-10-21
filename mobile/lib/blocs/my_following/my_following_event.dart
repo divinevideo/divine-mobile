@@ -31,7 +31,6 @@ final class MyFollowingFollowRequested extends MyFollowingEditRequested {
 
   /// Video that supplied the follow affordance, when applicable.
   final String? targetVideoId;
-
 }
 
 /// The user confirmed Unfollow on [pubkey]. Always unfollows; a no-op if the
