@@ -7899,6 +7899,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get followSortTitle => 'Sắp xếp theo';
 
   @override
+  String get followSortSmart => 'Thông minh';
+
+  @override
   String get followSortNewest => 'Mới nhất trước';
 
   @override
@@ -13917,4 +13920,9 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Một số clip không vừa: tất cả các ô đã đầy.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Đã đăng $time';
+  }
 }

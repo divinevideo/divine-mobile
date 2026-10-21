@@ -106,6 +106,55 @@ void main() {
       );
     }
 
+    test(
+      'fresh dependencies resume unresolved names in an inherited query',
+      () {
+        fakeAsync((clock) {
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            profileRepository: profileRepository,
+            subjectPubkey: _subjectPubkey,
+            listKind: FollowListKind.followers,
+            initialState: const FollowListSearchState(
+              query: 'alice',
+              candidatePubkeys: _allPubkeys,
+            ),
+          );
+          expect(bloc.state.query, 'alice');
+          clock.elapse(_pastDebounce);
+          clock.flushMicrotasks();
+          expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+          verify(
+            () => profileRepository.fetchBatchProfiles(pubkeys: _allPubkeys),
+          ).called(1);
+          unawaited(bloc.close());
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
+    test('resolves names in key order, not the list order on screen', () {
+      fakeAsync((clock) {
+        final bloc = createBloc();
+        bloc.add(
+          const FollowListSearchQueryChanged('alice', [
+            _carolPubkey,
+            _alicePubkey,
+            _bobPubkey,
+          ]),
+        );
+        clock.flushMicrotasks();
+        clock.elapse(_pastDebounce);
+        clock.flushMicrotasks();
+        expect(bloc.state.visibleFrom(_allPubkeys), [_alicePubkey]);
+        verify(
+          () => profileRepository.fetchBatchProfiles(pubkeys: _allPubkeys),
+        ).called(1);
+        unawaited(bloc.close());
+        clock.flushMicrotasks();
+      });
+    });
+
     test('starts with no query and shows every pubkey', () {
       final bloc = createBloc();
       addTearDown(bloc.close);
@@ -664,7 +713,7 @@ void main() {
     );
 
     test(
-      'runs the API search once the subject pubkey arrives',
+      'a replacement built for the arrived subject pubkey runs the API search',
       () {
         fakeAsync((clock) {
           // Nothing resolves on device, so only the API can produce this match.
@@ -681,19 +730,27 @@ void main() {
             ),
           ).thenAnswer((_) async => const {_alicePubkey});
 
-          final bloc = FollowListSearchBloc(
+          final coldStart = FollowListSearchBloc(
             followRepository: followRepository,
             subjectPubkey: '',
             listKind: FollowListKind.followers,
             profileRepository: profileRepository,
           );
 
-          bloc.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
+          coldStart.add(const FollowListSearchQueryChanged('ali', _allPubkeys));
           clock.elapse(_pastDebounce);
           clock.flushMicrotasks();
-          expect(bloc.state.visibleFrom(_allPubkeys), isEmpty);
+          expect(coldStart.state.visibleFrom(_allPubkeys), isEmpty);
 
-          bloc.add(const FollowListSearchSubjectPubkeyChanged(_subjectPubkey));
+          // What RetainedBlocProvider does once the signed-in key resolves.
+          final bloc = FollowListSearchBloc(
+            followRepository: followRepository,
+            subjectPubkey: _subjectPubkey,
+            listKind: FollowListKind.followers,
+            profileRepository: profileRepository,
+            initialState: coldStart.state,
+          );
+          unawaited(coldStart.close());
 
           clock.flushMicrotasks();
           clock.elapse(_pastDebounce);

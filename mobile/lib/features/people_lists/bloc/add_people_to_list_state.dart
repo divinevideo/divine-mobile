@@ -4,6 +4,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 /// Lifecycle status for the add-people picker screen.
 enum AddPeopleToListStatus {
@@ -27,6 +28,10 @@ class AddPeopleToListState extends Equatable {
   /// Creates an immutable state snapshot.
   const AddPeopleToListState({
     this.status = AddPeopleToListStatus.initial,
+    this.rankingSignals = const {},
+    this.candidatePositions = const {},
+    this.rankingCandidatePubkeys = const {},
+    this.loadRevision = 0,
     this.query = '',
     this.candidates = const [],
     this.selectedPubkeys = const {},
@@ -35,13 +40,24 @@ class AddPeopleToListState extends Equatable {
   /// Lifecycle status driving UI reactions.
   final AddPeopleToListStatus status;
 
+  /// Eligible local ranking snapshot for candidate presentation.
+  final Map<String, UserRankingSignals> rankingSignals;
+
+  /// First-visible positions, retained when relationship or metadata changes.
+  final Map<String, int> candidatePositions;
+
+  /// Keys submitted for ranking, later arrivals included; successful omissions
+  /// stay excluded.
+  final Set<String> rankingCandidatePubkeys;
+
+  /// Identifies the active load so obsolete asynchronous work is discarded.
+  final int loadRevision;
+
   /// Current search-input text. Normalised trimming / casing happens in
   /// [visibleCandidates] at read time.
   final String query;
 
-  /// Full deterministic list of candidates, already sorted by relationship
-  /// (mutual first, following-only, follower-only) and then by display name
-  /// / pubkey.
+  /// Candidates in first-visible ranked order. Later arrivals append.
   final List<PeopleListCandidate> candidates;
 
   /// Pubkeys the user has toggled on in this session.
@@ -72,12 +88,21 @@ class AddPeopleToListState extends Equatable {
   /// Returns a copy with the provided fields replaced.
   AddPeopleToListState copyWith({
     AddPeopleToListStatus? status,
+    Map<String, UserRankingSignals>? rankingSignals,
+    Map<String, int>? candidatePositions,
+    Set<String>? rankingCandidatePubkeys,
+    int? loadRevision,
     String? query,
     List<PeopleListCandidate>? candidates,
     Set<String>? selectedPubkeys,
   }) {
     return AddPeopleToListState(
       status: status ?? this.status,
+      rankingSignals: rankingSignals ?? this.rankingSignals,
+      candidatePositions: candidatePositions ?? this.candidatePositions,
+      rankingCandidatePubkeys:
+          rankingCandidatePubkeys ?? this.rankingCandidatePubkeys,
+      loadRevision: loadRevision ?? this.loadRevision,
       query: query ?? this.query,
       candidates: candidates ?? this.candidates,
       selectedPubkeys: selectedPubkeys ?? this.selectedPubkeys,
@@ -85,5 +110,14 @@ class AddPeopleToListState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, query, candidates, selectedPubkeys];
+  List<Object?> get props => [
+    status,
+    query,
+    candidates,
+    selectedPubkeys,
+    rankingSignals,
+    candidatePositions,
+    rankingCandidatePubkeys,
+    loadRevision,
+  ];
 }

@@ -7545,6 +7545,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get followSortTitle => '정렬 기준';
 
   @override
+  String get followSortSmart => '스마트';
+
+  @override
   String get followSortNewest => '최신순';
 
   @override
@@ -13305,4 +13308,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorLayoutClipsDidNotFit => '일부 클립이 들어가지 않았어요. 모든 칸이 찼어요.';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time 게시';
+  }
 }

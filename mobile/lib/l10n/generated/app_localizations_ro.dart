@@ -8117,6 +8117,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get followSortTitle => 'Sortează după';
 
   @override
+  String get followSortSmart => 'Inteligent';
+
+  @override
   String get followSortNewest => 'Cei mai noi primii';
 
   @override
@@ -14257,4 +14260,9 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Unele clipuri nu au încăput: toate celulele sunt pline.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publicat $time';
+  }
 }

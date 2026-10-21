@@ -12,6 +12,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_collaborators_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
@@ -20,6 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../builders/user_profile_builder.dart';
 import '../../helpers/test_provider_overrides.dart';
+import '../../helpers/test_user_ranking_loader.dart';
 
 final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -466,6 +468,9 @@ void main() {
               ),
             ),
             profileRepositoryProvider.overrideWithValue(profileRepository),
+            userRankingSignalsLoaderProvider.overrideWithValue(
+              testUserRankingLoader(),
+            ),
             videoEditorProvider.overrideWith(() => editorNotifier),
             contentBlocklistRepositoryProvider.overrideWithValue(
               contentBlocklistRepository,

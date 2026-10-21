@@ -1,6 +1,7 @@
 // ABOUTME: Reusable tile widget for displaying user profile information in lists
 // ABOUTME: Shows avatar, name, and follow button with tap handling for navigation
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
 import 'package:openvine/widgets/unfollow_confirmation_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/user_indicator_line.dart';
 import 'package:openvine/widgets/vanished_account_identity.dart';
 
 /// A tile widget for displaying user profile information in lists.
@@ -31,6 +33,8 @@ class UserProfileTile extends ConsumerWidget {
     required this.pubkey,
     super.key,
     this.onTap,
+    this.videoCount,
+    this.lastPostedAt,
     this.showFollowButton = true,
     this.isFollowing,
     this.onFollow,
@@ -42,6 +46,10 @@ class UserProfileTile extends ConsumerWidget {
 
   /// The public key of the user to display.
   final String pubkey;
+
+  /// Cached activity supplied by the owning list, when available.
+  final int? videoCount;
+  final DateTime? lastPostedAt;
 
   /// Callback when the tile (avatar or name) is tapped.
   final VoidCallback? onTap;
@@ -138,6 +146,13 @@ class UserProfileTile extends ConsumerWidget {
             followerCount: profile?.restFollowerCount,
           );
 
+    final indicators = UserIndicatorLine(
+      identifier: uniqueIdentifier,
+      videoCount: isVanished ? null : videoCount,
+      lastPostedAt: isVanished ? null : lastPostedAt,
+      now: clock.now(),
+    );
+
     return Semantics(
       identifier: 'user_profile_tile_$pubkey',
       label: displayName,
@@ -174,15 +189,7 @@ class UserProfileTile extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (uniqueIdentifier != null)
-                      Text(
-                        uniqueIdentifier,
-                        style: VineTheme.bodySmallFont(
-                          color: context.vineColors.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    if (indicators.hasContent) indicators,
                   ],
                 ),
               ),

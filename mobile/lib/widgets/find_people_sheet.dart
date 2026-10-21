@@ -6,12 +6,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -51,7 +54,7 @@ class FindPeopleSheet extends ConsumerStatefulWidget {
   static const double _sheetHeightFraction = 0.92;
 
   @override
-  ConsumerState<FindPeopleSheet> createState() => _FindPeopleSheetState();
+  ConsumerState<FindPeopleSheet> createState() => _FindPeopleScopeState();
 
   /// Show the find people sheet and return the selected user.
   ///
@@ -78,7 +81,61 @@ class FindPeopleSheet extends ConsumerStatefulWidget {
   }
 }
 
-class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
+class _FindPeopleScopeState extends ConsumerState<FindPeopleSheet> {
+  bool _retired = false;
+
+  bool _owns(NostrSessionReadiness session) =>
+      session.phase != NostrSessionPhase.signedOut &&
+      session.phase != NostrSessionPhase.tearingDown &&
+      session.pubkey != null &&
+      pubkeysEqual(session.pubkey!, widget.currentUserPubkey);
+
+  bool _canSelect() =>
+      mounted && !_retired && _owns(ref.read(nostrSessionProvider));
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(nostrSessionProvider, (_, next) {
+      if (!_owns(next)) _retired = true;
+    });
+    if (!_owns(ref.watch(nostrSessionProvider))) _retired = true;
+    if (_retired) return const SizedBox.shrink();
+    final profiles = ref.watch(profileRepositoryProvider);
+    final follows = ref.watch(followRepositoryProvider);
+    final loader = ref.watch(userRankingSignalsLoaderProvider);
+    return _FindPeopleSheetView(
+      configuration: widget,
+      dependencies: (profiles, follows, loader),
+      canSelect: _canSelect,
+      createSearch: (snapshot) => UserSearchBloc(
+        profileRepository: profiles,
+        rankingSignalsLoader: loader,
+        searchTimeout: widget.searchTimeout,
+        excludedPubkey: widget.currentUserPubkey,
+        initialState: snapshot,
+      ),
+    );
+  }
+}
+
+class _FindPeopleSheetView extends ConsumerStatefulWidget {
+  const _FindPeopleSheetView({
+    required this.configuration,
+    required this.dependencies,
+    required this.createSearch,
+    required this.canSelect,
+  });
+
+  final FindPeopleSheet configuration;
+  final Object dependencies;
+  final UserSearchBloc Function(UserSearchState?) createSearch;
+  final bool Function() canSelect;
+
+  @override
+  ConsumerState<_FindPeopleSheetView> createState() => _FindPeopleSheetState();
+}
+
+class _FindPeopleSheetState extends ConsumerState<_FindPeopleSheetView> {
   final TextEditingController _searchController = TextEditingController();
   UserSearchBloc? _searchBloc;
   String _searchQuery = '';
@@ -86,13 +143,20 @@ class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
   @override
   void initState() {
     super.initState();
-    final profileRepo = ref.read(profileRepositoryProvider);
-    if (profileRepo != null) {
-      _searchBloc = UserSearchBloc(
-        profileRepository: profileRepo,
-        searchTimeout: widget.searchTimeout,
-        excludedPubkey: widget.currentUserPubkey,
-      );
+    _searchBloc = widget.createSearch(null);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FindPeopleSheetView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.dependencies == widget.dependencies) return;
+    final previous = _searchBloc;
+    _searchBloc = widget.createSearch(previous?.state);
+    if (previous != null) _closeSearch(previous);
+    if (_searchQuery.isNotEmpty &&
+        (_searchBloc!.state.query != _searchQuery ||
+            _searchBloc!.state.status == UserSearchStatus.loading)) {
+      _searchBloc!.add(UserSearchQueryChanged(_searchQuery));
     }
   }
 
@@ -148,8 +212,8 @@ class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
             child: _ResultsList(
               searchQuery: _searchQuery,
               searchBloc: _searchBloc,
-              contacts: widget.contacts,
-              scrollController: widget.scrollController,
+              contacts: widget.configuration.contacts,
+              scrollController: widget.configuration.scrollController,
               onSelectUser: _selectUser,
             ),
           ),
@@ -170,20 +234,21 @@ class _FindPeopleSheetState extends ConsumerState<FindPeopleSheet> {
   }
 
   void _selectUser(ShareableUser user) {
+    if (!mounted || !widget.canSelect()) return;
     Navigator.of(context).pop(user);
   }
 
+  void _closeSearch(UserSearchBloc bloc) => runDetached(
+    bloc.close(),
+    'close people-search bloc',
+    logName: 'FindPeopleSheet',
+    category: LogCategory.ui,
+  );
+
   @override
   void dispose() {
-    final searchBloc = _searchBloc;
-    if (searchBloc != null) {
-      runDetached(
-        searchBloc.close(),
-        'close people-search bloc',
-        logName: 'FindPeopleSheet',
-        category: LogCategory.ui,
-      );
-    }
+    final bloc = _searchBloc;
+    if (bloc != null) _closeSearch(bloc);
     _searchController.dispose();
     super.dispose();
   }

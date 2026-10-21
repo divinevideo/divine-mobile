@@ -8037,6 +8037,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get followSortTitle => 'Sortieren nach';
 
   @override
+  String get followSortSmart => 'Intelligent';
+
+  @override
   String get followSortNewest => 'Neueste zuerst';
 
   @override
@@ -14140,4 +14143,9 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Nicht alle Clips haben gepasst – alle Zellen sind voll.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Gepostet $time';
+  }
 }

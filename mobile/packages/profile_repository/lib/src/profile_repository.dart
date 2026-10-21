@@ -2604,6 +2604,21 @@ class ProfileRepository implements ProfileReader {
     return _boostBehindExactMatches(query, filtered, boostPubkeys);
   }
 
+  /// Whether [profile] exactly matches the people-search [query]: its full
+  /// pubkey or npub, name, display name, NIP-05, or NIP-05 name.
+  ///
+  /// Search keeps exact matches ahead of every boost, so a caller that
+  /// reorders results applies the same rule.
+  static bool isExactSearchMatch(UserProfile profile, String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    return _searchRelevance(
+          profile,
+          normalizedQuery,
+          _npubQueryToHex(normalizedQuery),
+        ) ==
+        _exactMatchRelevance;
+  }
+
   /// Applies the follow-graph boost without letting it bury an exact account
   /// match. Exact matches stay first, followed ones ahead of unfollowed, and
   /// the boost then orders everything else; otherwise three followed partial
@@ -2824,6 +2839,32 @@ class ProfileRepository implements ProfileReader {
     return _funnelcakeApiClient.getBulkProfiles(pubkeys);
   }
 
+  /// Refreshes cached stats from REST in batches of at most 100 pubkeys.
+  ///
+  /// Does nothing when the API is unavailable. API and cache errors propagate
+  /// so callers can decide when to retry this background refresh.
+  Future<void> refreshStatsForPubkeys(List<String> pubkeys) async {
+    const batchSize = 100;
+    for (var start = 0; start < pubkeys.length; start += batchSize) {
+      final end = start + batchSize < pubkeys.length
+          ? start + batchSize
+          : pubkeys.length;
+      final response = await getBulkProfilesFromApi(
+        pubkeys.sublist(start, end),
+      );
+      if (response == null) return;
+      for (final pubkey in pubkeys.sublist(start, end)) {
+        final result = response.profiles[pubkey];
+        if (result is UserProfileVanished) continue;
+        if (result != null) await _cacheProfileStatsFromResult(pubkey, result);
+        // A successful sparse response also records freshness for missing
+        // stats. Unknown counters stay null; existing values are preserved.
+        // Without a row, every list open would request this account again.
+        await _profileStatsDao?.upsertStats(pubkey: pubkey);
+      }
+    }
+  }
+
   /// Fetches profiles for multiple pubkeys using a layered
   /// strategy.
   ///
@@ -2903,6 +2944,7 @@ class ProfileRepository implements ProfileReader {
               remaining.remove(pubkey);
             case UserProfileFound():
               await _clearVanish(pubkey);
+              await _cacheProfileStatsFromResult(pubkey, result);
               final profile = UserProfile.fromUserProfileFound(
                 result,
                 eventIdPrefix: 'rest-bulk',

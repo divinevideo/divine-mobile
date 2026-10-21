@@ -7935,6 +7935,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get followSortTitle => 'ترتیب بلحاظ';
 
   @override
+  String get followSortSmart => 'ذہین';
+
+  @override
   String get followSortNewest => 'پہلے نئے';
 
   @override
@@ -13967,4 +13970,9 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'کچھ کلپس نہیں سما سکے — تمام خانے بھر چکے ہیں۔';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time پوسٹ کی گئی';
+  }
 }

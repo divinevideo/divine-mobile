@@ -7849,6 +7849,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get followSortTitle => 'Urutkan menurut';
 
   @override
+  String get followSortSmart => 'Cerdas';
+
+  @override
   String get followSortNewest => 'Terbaru dulu';
 
   @override
@@ -13872,4 +13875,9 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Beberapa klip tidak muat — semua sel sudah terisi.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Diposting $time';
+  }
 }

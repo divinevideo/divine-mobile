@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for account details shown in search-result user tiles.
 // ABOUTME: Ensures handles, counts, and bios help distinguish shared names.
 
+import 'package:clock/clock.dart';
 import 'package:count_formatter/count_formatter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -38,6 +39,8 @@ void main() {
       UserProfile profile, {
       Nip05VerificationStatus verificationStatus = Nip05VerificationStatus.none,
       FollowRelationship relationship = FollowRelationship.none,
+      DateTime? lastPostedAt,
+      int? videoCount,
     }) {
       return testProviderScope(
         additionalOverrides: [
@@ -51,10 +54,70 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(body: SearchUserTile(profile: profile)),
+          home: Scaffold(
+            body: SearchUserTile(
+              profile: profile,
+              lastPostedAt: lastPostedAt,
+              videoCount: videoCount,
+            ),
+          ),
         ),
       );
     }
+
+    testWidgets('positive current count wins over the ranking cache', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(rawData: const {'video_count': 18}),
+          videoCount: 2,
+        ),
+      );
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(18, '18')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(2, '2')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('ambiguous current zero retains a positive cached count', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(rawData: const {'video_count': 0}),
+          videoCount: 2,
+        ),
+      );
+      expect(
+        find.textContaining(l10n.searchUserVideoCount(2, '2')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('adds cached recent post to the pinned existing details', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildSubject(
+          profileWith(rawData: const {'video_count': 18}),
+          relationship: FollowRelationship.youFollow,
+          lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+        ),
+      );
+      await tester.pump();
+      expect(
+        find.text(
+          '${l10n.socialProofYouFollow} · @lauren · '
+          '${l10n.searchUserVideoCount(18, '18')} · ${l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2)))}',
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('shows the handle and video count together', (tester) async {
       await tester.pumpWidget(

@@ -4,7 +4,9 @@
 
 import 'dart:ui' show SemanticsFlags, Tristate;
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -14,16 +16,22 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/screens/inbox/bloc/bloc.dart';
 import 'package:openvine/screens/inbox/new_message_sheet.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:user_ranking/user_ranking.dart';
 
 import '../../helpers/retired_key_custody.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -31,6 +39,17 @@ import '../../helpers/test_provider_overrides.dart';
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockRankingSignalsLoader extends Mock
+    implements UserRankingSignalsLoader {}
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this.pubkey);
+  final String pubkey;
+  @override
+  NostrSessionReadiness build() =>
+      NostrSessionReadiness.identityKnown(pubkey: pubkey);
+}
 
 /// What `NewMessageSheet.show` handed back to the code that opened it.
 class _SheetOutcome {
@@ -54,9 +73,24 @@ void main() {
     late _MockProfileRepository profileRepository;
     late _MockFollowRepository followRepository;
     late AppLocalizations l10n;
+    late _MockRankingSignalsLoader rankingSignalsLoader;
+    late _TestNostrSession session;
 
     setUp(() {
       profileRepository = _MockProfileRepository();
+      session = _TestNostrSession(currentUserPubkey);
+      rankingSignalsLoader = _MockRankingSignalsLoader();
+      when(() => rankingSignalsLoader.isEligible(any())).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.first != currentUserPubkey,
+      );
+      when(() => rankingSignalsLoader.load(any())).thenAnswer(
+        (invocation) async => {
+          for (final pubkey
+              in invocation.positionalArguments.first as Iterable<String>)
+            pubkey: UserRankingSignals(pubkey: pubkey, youFollow: true),
+        },
+      );
       followRepository = _MockFollowRepository();
       l10n = lookupAppLocalizations(const Locale('en'));
       when(
@@ -105,21 +139,29 @@ void main() {
       WidgetTester tester, {
       required UserProfile contact,
       bool isVanished = false,
+      Override? rankingOverride,
+      ProfileRepository? activeProfileRepository,
+      FollowRepository? activeFollowRepository,
       List<Override> extraOverrides = const [],
     }) async {
       stubContacts([contact]);
 
       await tester.pumpWidget(
         testMaterialApp(
+          mockProfileRepository: activeProfileRepository ?? profileRepository,
+          mockFollowRepository: activeFollowRepository ?? followRepository,
           additionalOverrides: [
+            nostrSessionProvider.overrideWith(() => session),
+            rankingOverride ??
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingSignalsLoader,
+                ),
             profileVanishedProvider(
               contact.pubkey,
             ).overrideWith((ref) => isVanished),
             ...extraOverrides,
           ],
-          home: NewMessageSheet(
-            profileRepository: profileRepository,
-            followRepository: followRepository,
+          home: const NewMessageSheet(
             currentUserPubkey: currentUserPubkey,
             allowGroups: false,
           ),
@@ -136,13 +178,27 @@ void main() {
       required List<UserProfile> contacts,
       Set<String> vanishedPubkeys = const {},
       List<Override> extraOverrides = const [],
+      Override? profileOverride,
     }) async {
       stubContacts(contacts);
       final outcome = _SheetOutcome();
 
       await tester.pumpWidget(
         testMaterialApp(
+          mockProfileRepository: profileOverride == null
+              ? profileRepository
+              : null,
+          mockFollowRepository: followRepository,
           additionalOverrides: [
+            ?profileOverride,
+            if (profileOverride != null)
+              profileReadRepositoryProvider.overrideWithValue(
+                profileRepository,
+              ),
+            nostrSessionProvider.overrideWith(() => session),
+            userRankingSignalsLoaderProvider.overrideWithValue(
+              rankingSignalsLoader,
+            ),
             for (final pubkey in vanishedPubkeys)
               profileVanishedProvider(pubkey).overrideWith((ref) => true),
             ...extraOverrides,
@@ -154,8 +210,6 @@ void main() {
                   onPressed: () async {
                     outcome.selected = await NewMessageSheet.show(
                       context,
-                      profileRepository: profileRepository,
-                      followRepository: followRepository,
                       currentUserPubkey: currentUserPubkey,
                       allowGroups: allowGroups,
                     );
@@ -172,6 +226,161 @@ void main() {
       await tester.pumpAndSettle();
       return outcome;
     }
+
+    testWidgets(
+      'an account switch withdraws the old picker and closes its bloc',
+      (tester) async {
+        await pumpPickerWith(tester, contact: candidate(alicePubkey, 'Alice'));
+        final bloc = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(bloc.state.contacts.map((p) => p.pubkey), [alicePubkey]);
+        session.update(
+          const NostrSessionReadiness.identityKnown(pubkey: bobPubkey),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(TextField), findsNothing);
+        expect(find.text('Alice'), findsNothing);
+        expect(bloc.isClosed, isTrue);
+        verify(() => rankingSignalsLoader.load(any())).called(1);
+      },
+    );
+
+    for (final replaceProfile in [true, false]) {
+      testWidgets(
+        'switching away and back cannot resurrect stale ${replaceProfile ? "profile" : "follow"} repositories',
+        (tester) async {
+          final alice = candidate(alicePubkey, 'Alice');
+          await pumpPickerWith(tester, contact: alice);
+          final oldBloc = tester
+              .element(find.byType(TextField))
+              .read<NewMessageSearchBloc>();
+          expect(oldBloc.state.contacts.map((profile) => profile.pubkey), [
+            alicePubkey,
+          ]);
+          session.update(
+            const NostrSessionReadiness.identityKnown(pubkey: bobPubkey),
+          );
+          await tester.pumpAndSettle();
+          expect(oldBloc.isClosed, isTrue);
+          await pumpPickerWith(
+            tester,
+            contact: alice,
+            activeProfileRepository: replaceProfile
+                ? _MockProfileRepository()
+                : null,
+            activeFollowRepository: replaceProfile
+                ? null
+                : _MockFollowRepository(),
+          );
+          session.update(
+            const NostrSessionReadiness.identityKnown(
+              pubkey: currentUserPubkey,
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.byType(TextField), findsNothing);
+          expect(find.text('Alice'), findsNothing);
+        },
+      );
+    }
+
+    testWidgets(
+      'a replacement loader recreates the picker bloc for the same account',
+      (tester) async {
+        final replacement = _MockRankingSignalsLoader();
+        when(() => replacement.load(any())).thenAnswer((_) async => {});
+        when(() => replacement.isEligible(any())).thenReturn(true);
+        var activeLoader = rankingSignalsLoader;
+        await pumpPickerWith(
+          tester,
+          contact: candidate(alicePubkey, 'Alice'),
+          rankingOverride: userRankingSignalsLoaderProvider.overrideWith(
+            (ref) => activeLoader,
+          ),
+        );
+        final oldBloc = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(oldBloc.state.contacts.map((p) => p.pubkey), [alicePubkey]);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(NewMessageSheet)),
+        );
+        activeLoader = replacement;
+        container.invalidate(userRankingSignalsLoaderProvider);
+        await tester.pumpAndSettle();
+        final newBloc = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(oldBloc.isClosed, isTrue);
+        expect(newBloc, isNot(same(oldBloc)));
+        expect(newBloc.state.contacts, isEmpty);
+        verify(() => replacement.load(any())).called(1);
+      },
+    );
+
+    testWidgets(
+      'same-owner original null fresh profile retains group query and selection',
+      (tester) async {
+        final alice = candidate(alicePubkey, 'Alice');
+        final phase = StateProvider<int>((ref) => 0);
+        final replacement = _MockProfileRepository();
+        when(replacement.watchVanishedPubkeys)
+            .thenAnswer((_) => const Stream<Set<String>>.empty());
+        when(() => replacement.getCachedProfile(pubkey: alicePubkey))
+            .thenAnswer((_) async => alice);
+        when(
+          () => replacement.searchUsers(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) async => [alice]);
+        await openSheet(
+          tester,
+          allowGroups: true,
+          contacts: [alice],
+          profileOverride: profileRepositoryProvider.overrideWith(
+            (ref) => switch (ref.watch(phase)) {
+              0 => profileRepository,
+              1 => null,
+              _ => replacement,
+            },
+          ),
+        );
+        final old = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        old.add(const NewMessageSearchGroupModeChanged(enabled: true));
+        old.add(NewMessageSearchRecipientToggled(alice));
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'Ali');
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(NewMessageSheet)),
+        );
+        container.read(phase.notifier).state = 1;
+        await tester.pump();
+        container.read(phase.notifier).state = 2;
+        await tester.pumpAndSettle();
+        expect(find.byType(TextField), findsOneWidget);
+        final next = tester
+            .element(find.byType(TextField))
+            .read<NewMessageSearchBloc>();
+        expect(old.isClosed, isTrue);
+        expect(next.state.isGroupMode, isTrue);
+        expect(next.state.selectedRecipients, [alice]);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'Ali',
+        );
+        await tester.pump(searchDebounceDuration);
+        await tester.pumpAndSettle();
+        expect(next.state.query, 'Ali');
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(searchDebounceDuration);
+      },
+    );
 
     /// Makes room for a list long enough to fill a group without scrolling.
     void useTallSurface(WidgetTester tester) {
@@ -240,6 +449,55 @@ void main() {
         tester.getSemantics(finder).getSemanticsData().flagsCollection;
 
     group('renders', () {
+      testWidgets('shows cached activity on the recipient row', (tester) async {
+        when(() => rankingSignalsLoader.load(any())).thenAnswer(
+          (_) async => {
+            vanishedPubkey: UserRankingSignals(
+              pubkey: vanishedPubkey,
+              videoCount: 18,
+              lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+            ),
+          },
+        );
+        await pumpPickerWith(
+          tester,
+          contact: profileFor(vanishedPubkey, 'Ada'),
+        );
+        expect(
+          find.textContaining(l10n.searchUserVideoCount(18, '18')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(
+            l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2))),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('suppresses cached activity on a vanished recipient', (
+        tester,
+      ) async {
+        when(() => rankingSignalsLoader.load(any())).thenAnswer(
+          (_) async => {
+            vanishedPubkey: UserRankingSignals(
+              pubkey: vanishedPubkey,
+              videoCount: 18,
+              lastPostedAt: clock.now(),
+            ),
+          },
+        );
+        await pumpPickerWith(
+          tester,
+          contact: profileFor(vanishedPubkey, 'Ada'),
+          isVanished: true,
+        );
+        expect(
+          find.textContaining(l10n.searchUserVideoCount(18, '18')),
+          findsNothing,
+        );
+      });
+
       testWidgets('names a vanished peer "Deleted account", not their kind-0 '
           'name', (tester) async {
         await pumpPickerWith(
@@ -353,7 +611,10 @@ void main() {
             extraOverrides: [retiredKeyCustody(custody)],
           );
 
-          expect(find.text('@looks_official'), findsOneWidget);
+          expect(
+            find.text('${l10n.socialProofYouFollow} · @looks_official'),
+            findsOneWidget,
+          );
         });
       }
 
@@ -394,7 +655,11 @@ void main() {
 
         expect(
           tester.getSemantics(personRow('Alice')),
-          isSemantics(label: 'Alice', isButton: true, hasTapAction: true),
+          isSemantics(
+            label: 'Alice\n${l10n.socialProofYouFollow}',
+            isButton: true,
+            hasTapAction: true,
+          ),
         );
         // Outside group mode a row has no selection to report.
         expect(flagsOf(tester, personRow('Alice')).isSelected, Tristate.none);

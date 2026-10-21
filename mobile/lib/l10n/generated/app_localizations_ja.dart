@@ -7525,6 +7525,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get followSortTitle => '並べ替え';
 
   @override
+  String get followSortSmart => 'スマート';
+
+  @override
   String get followSortNewest => '新しい順';
 
   @override
@@ -13290,4 +13293,9 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       '一部のクリップが入りませんでした。すべてのセルが埋まっています。';
+
+  @override
+  String userRowPosted(String time) {
+    return '$timeに投稿';
+  }
 }

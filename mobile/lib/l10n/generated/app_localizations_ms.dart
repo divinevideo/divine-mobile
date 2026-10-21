@@ -7938,6 +7938,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get followSortTitle => 'Isih mengikut';
 
   @override
+  String get followSortSmart => 'Pintar';
+
+  @override
   String get followSortNewest => 'Terbaharu dahulu';
 
   @override
@@ -13973,4 +13976,9 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Sesetengah klip tidak muat — semua sel sudah penuh.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Disiarkan $time';
+  }
 }

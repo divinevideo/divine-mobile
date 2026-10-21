@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/relay_info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -24,6 +25,17 @@ class _MockNostrClient extends Mock implements NostrClient {
     // Self-registered so the stub below works in every file that builds this
     // mock, whether or not that file has its own `setUpAll`. Idempotent.
     registerFallbackValue(Duration.zero);
+    // List fixtures describe complete follower reads; dedicated sync tests
+    // override this adapter for incomplete and capped QueryResult outcomes.
+    when(() => readEvents(any(), requireAllRelaysSettled: true)).thenAnswer(
+      (invocation) async => QueryResult(
+        events: await queryEvents(
+          invocation.positionalArguments.single as List<Filter>,
+        ),
+        endedBy: QueryEnd.complete,
+        confirmedExhaustive: true,
+      ),
+    );
     // The pre-broadcast read of our own kind 3 goes through
     // `queryEventsDetailed` so it can tell a relay's "I hold nothing" apart
     // from an answer nobody gave (#8265). Default to a *settled* empty answer
@@ -73,7 +85,9 @@ class _FakeRelay extends RelayBase {
     this.neverDisconnects = false,
     this.throwOnSend = false,
     this.throwOnDisconnect = false,
-  });
+  }) {
+    info = RelayInfo('', '', '', '', const [], '', '');
+  }
 
   /// Messages to deliver via [onMessage] when connecting.
   List<List<dynamic>> fakeResponses = [];
@@ -130,6 +144,29 @@ class _FakeRelay extends RelayBase {
   Future<void> disconnect() async {
     if (neverDisconnects) return Completer<void>().future;
     if (throwOnDisconnect) throw Exception('Disconnect failed');
+  }
+}
+
+/// Scripts an indexer that honors the limit in the repository's actual REQ.
+class _LimitRespectingFollowerIndexer extends _FakeRelay {
+  _LimitRespectingFollowerIndexer(super.url, super.relayStatus);
+
+  static const followerCount = 10000;
+
+  @override
+  Future<bool> doConnect() async {
+    final request = pendingMessages.first;
+    final filter = request[2] as Map<String, dynamic>;
+    final limit = filter['limit'] as int? ?? followerCount;
+    for (var i = 1; i <= followerCount && i <= limit; i++) {
+      await onMessage?.call(this, [
+        'EVENT',
+        request[1],
+        {'pubkey': i.toRadixString(16).padLeft(64, '0')},
+      ]);
+    }
+    await onMessage?.call(this, ['EOSE', request[1]]);
+    return true;
   }
 }
 
@@ -6462,6 +6499,51 @@ void main() {
         },
       );
     });
+
+    test(
+      'indexer count read does not cap and overwrite a known large audience',
+      () async {
+        var persistedFollowers = _LimitRespectingFollowerIndexer.followerCount;
+        final statsDao = _MockProfileStatsDao();
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(false);
+        when(() => statsDao.getStatsRaw(testTargetPubkey)).thenAnswer(
+          (_) async => ProfileStatRow(
+            pubkey: testTargetPubkey,
+            followerCount: persistedFollowers,
+            followingCount: 0,
+            cachedAt: DateTime.now(),
+          ),
+        );
+        when(
+          () => statsDao.upsertStats(
+            pubkey: any(named: 'pubkey'),
+            followerCount: any(named: 'followerCount'),
+            followingCount: any(named: 'followingCount'),
+          ),
+        ).thenAnswer((call) async {
+          persistedFollowers = call.namedArguments[#followerCount] as int;
+        });
+        repository = FollowRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: api,
+          profileStatsDao: statsDao,
+          indexerRelayUrls: const ['wss://followers.example'],
+          relayFactory: _LimitRespectingFollowerIndexer.new,
+          queryContactList:
+              ({
+                required eventStream,
+                required pubkey,
+                fallbackTimeoutSeconds = 10,
+              }) async => null,
+        );
+        final stats = await repository.getFollowerStats(testTargetPubkey);
+        expect(
+          (visible: stats.followers, persisted: persistedFollowers),
+          (visible: 10000, persisted: 10000),
+        );
+      },
+    );
 
     group('indexer relay queries', () {
       const indexerUrl = 'wss://fake-indexer.test';

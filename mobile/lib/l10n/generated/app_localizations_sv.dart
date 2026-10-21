@@ -7922,6 +7922,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get followSortTitle => 'Sortera efter';
 
   @override
+  String get followSortSmart => 'Smart';
+
+  @override
   String get followSortNewest => 'Nyaste först';
 
   @override
@@ -13979,4 +13982,9 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Alla klipp fick inte plats – alla rutor är fulla.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Publicerat $time';
+  }
 }

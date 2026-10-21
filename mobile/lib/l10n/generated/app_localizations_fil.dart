@@ -7987,6 +7987,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get followSortTitle => 'Ayusin ayon sa';
 
   @override
+  String get followSortSmart => 'Matalino';
+
+  @override
   String get followSortNewest => 'Pinakabago muna';
 
   @override
@@ -14094,4 +14097,9 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'May mga clip na hindi nagkasya — puno na lahat ng cell.';
+
+  @override
+  String userRowPosted(String time) {
+    return 'Na-post $time';
+  }
 }

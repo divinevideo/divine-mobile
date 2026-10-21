@@ -7853,6 +7853,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get followSortTitle => 'Sıralama ölçütü';
 
   @override
+  String get followSortSmart => 'Akıllı';
+
+  @override
   String get followSortNewest => 'Önce en yeniler';
 
   @override
@@ -13896,4 +13899,9 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'Bazı klipler sığmadı: tüm hücreler dolu.';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time paylaşıldı';
+  }
 }

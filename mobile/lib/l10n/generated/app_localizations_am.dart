@@ -7749,6 +7749,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get followSortTitle => 'ደርድር በ';
 
   @override
+  String get followSortSmart => 'ብልህ';
+
+  @override
   String get followSortNewest => 'አዲሶቹ መጀመሪያ';
 
   @override
@@ -13624,4 +13627,9 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'አንዳንድ ቅንጥቦች አልገቡም — ሁሉም ሕዋሶች ሞልተዋል።';
+
+  @override
+  String userRowPosted(String time) {
+    return 'የተለጠፈው $time';
+  }
 }

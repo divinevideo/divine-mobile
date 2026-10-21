@@ -7453,6 +7453,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get followSortTitle => '排序方式';
 
   @override
+  String get followSortSmart => '智能';
+
+  @override
   String get followSortNewest => '最新优先';
 
   @override
@@ -13128,4 +13131,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayoutClipsDidNotFit => '有些片段放不下了：所有格子都满了。';
+
+  @override
+  String userRowPosted(String time) {
+    return '发布于$time';
+  }
 }

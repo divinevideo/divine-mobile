@@ -8174,6 +8174,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get followSortTitle => 'క్రమబద్ధీకరించండి';
 
   @override
+  String get followSortSmart => 'తెలివైన క్రమం';
+
+  @override
   String get followSortNewest => 'కొత్తది మొదటిది';
 
   @override
@@ -14326,4 +14329,9 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorLayoutClipsDidNotFit =>
       'కొన్ని క్లిప్‌లు సరిపోలేదు — అన్ని గడులు నిండిపోయాయి.';
+
+  @override
+  String userRowPosted(String time) {
+    return '$time పోస్ట్ చేయబడింది';
+  }
 }

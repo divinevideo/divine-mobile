@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for the user tile's secondary identifier line.
 // ABOUTME: Pins NIP-05 precedence and the social-proof fallback over npubs.
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -37,6 +38,8 @@ void main() {
       UserProfile? profile,
       Nip05VerificationStatus verificationStatus = Nip05VerificationStatus.none,
       FollowRelationship relationship = FollowRelationship.none,
+      int? videoCount,
+      DateTime? lastPostedAt,
     }) {
       return testProviderScope(
         additionalOverrides: [
@@ -50,15 +53,41 @@ void main() {
             (ref, key) => Stream.value(relationship),
           ),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: UserProfileTile(pubkey: pubkey),
+            body: UserProfileTile(
+              pubkey: pubkey,
+              videoCount: videoCount,
+              lastPostedAt: lastPostedAt,
+            ),
           ),
         ),
       );
     }
+
+    testWidgets(
+      'adds cached count and recent post without duplicating social proof',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            profile: profileWith(),
+            relationship: FollowRelationship.followsYou,
+            videoCount: 18,
+            lastPostedAt: clock.now().subtract(const Duration(hours: 2)),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            '${l10n.socialProofFollowsYou} · ${l10n.searchUserVideoCount(18, '18')} · '
+            '${l10n.userRowPosted(l10n.timeAgo(l10n.timeShortHours(2)))}',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('shows the handle rather than a key', (tester) async {
       await tester.pumpWidget(

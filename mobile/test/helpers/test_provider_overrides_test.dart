@@ -4,12 +4,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
+import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 
 import 'test_provider_overrides.dart';
+
+class _FakeRankingLoader extends Fake implements UserRankingSignalsLoader {}
 
 class _FakeAuthService extends Fake implements AuthService {}
 
@@ -47,6 +52,58 @@ void main() {
   });
 
   group('getStandardTestOverrides', () {
+    testWidgets('explicit ranking override replaces the standard fixture', (
+      tester,
+    ) async {
+      final loader = _FakeRankingLoader();
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            userRankingSignalsLoaderProvider.overrideWithValue(loader),
+          ],
+          child: Builder(
+            builder: (context) {
+              expect(
+                ProviderScope.containerOf(context)
+                    .read(userRankingSignalsLoaderProvider),
+                same(loader),
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'explicit own follow-list ranking override replaces the standard fixture',
+      (tester) async {
+        final loader = _FakeRankingLoader();
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              ownFollowListRankingSignalsLoaderProvider.overrideWithValue(
+                loader,
+              ),
+            ],
+            child: Builder(
+              builder: (context) {
+                expect(
+                  ProviderScope.containerOf(
+                    context,
+                  ).read(ownFollowListRankingSignalsLoaderProvider),
+                  same(loader),
+                );
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     test('standard overrides isolate supporter network and store clients', () {
       final container = ProviderContainer(
         overrides: getStandardTestOverrides(),
