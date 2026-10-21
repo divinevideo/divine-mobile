@@ -515,6 +515,63 @@ void main() {
     );
 
     test(
+      'engagement accepts only omitted video context or a full lowercase event hash',
+      () async {
+        final queue = _MockProductEventQueue();
+        when(() => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')))
+            .thenAnswer((_) async {});
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          productEventQueue: queue,
+          productAnalyticsEnabled: true,
+          consumptionAnalyticsEnabled: true,
+          currentUserPubkey: () => 'a' * 64,
+        );
+        await analyticsService.initialize();
+
+        for (final contentId in [
+          '34236:${'c' * 64}:video',
+          '',
+          'b' * 63,
+          'b' * 65,
+          'B' * 64,
+          'g' * 64,
+          '${'b' * 64}\n',
+          ' ${'b' * 64}',
+        ]) {
+          expect(
+            await analyticsService.recordEngagement(
+              action: ProductAnalyticsV2EngagementAction.followAdded,
+              contentId: contentId,
+            ),
+            isNull,
+          );
+        }
+        verifyNever(
+          () => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')),
+        );
+
+        for (final contentId in [null, 'b' * 64]) {
+          expect(
+            await analyticsService.recordEngagement(
+              action: ProductAnalyticsV2EngagementAction.followAdded,
+              contentId: contentId,
+            ),
+            isNotNull,
+          );
+        }
+        final events = verify(
+          () => queue.enqueue(captureAny(), ownerPubkey: 'a' * 64),
+        ).captured.cast<ProductAnalyticsV2Event>();
+        expect(events.map((event) => event.propertiesJson), [
+          {'action': 'follow_added'},
+          {'action': 'follow_added', 'content_id': 'b' * 64},
+        ]);
+      },
+    );
+
+    test(
       'feed depth queues only deliberate navigation within schema bounds',
       () async {
         final queue = _MockProductEventQueue();

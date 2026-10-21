@@ -478,6 +478,11 @@ class AnalyticsService implements BackgroundAwareService {
     String? contentId,
   }) async {
     if (!_consumptionAnalyticsEnabled) return null;
+    if (contentId != null &&
+        (contentId.length != 64 ||
+            !RegExp(r'^[0-9a-f]{64}$').hasMatch(contentId))) {
+      return null;
+    }
     return _trackProductEvent(
       (envelope) => ProductAnalyticsV2EngagementRecordedEvent(
         envelope: envelope,
