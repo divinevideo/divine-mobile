@@ -1095,8 +1095,8 @@ void main() {
           final store = createStore();
           expect(await store.previewFor(message), isNull);
           // Held, as on a play page, past its age.
-          await store.videoFor(message);
-          now = now.add(const Duration(days: 31));
+          final held = await store.videoFor(message);
+          held.setLastModifiedSync(now.subtract(const Duration(days: 31)));
 
           await store.prune();
 
