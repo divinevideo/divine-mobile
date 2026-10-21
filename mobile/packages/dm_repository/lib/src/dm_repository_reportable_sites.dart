@@ -49,6 +49,11 @@ abstract class DmRepositoryReportableSites {
   static const String finalizeAfterRecipientUnconfirmed =
       'finalizeAfterRecipientUnconfirmed';
 
+  /// `_chargeFailedReplay`: bumping the retry count for a failed
+  /// `recoverFullSend` / `recoverSelfWrap` attempt threw. The caller already
+  /// has the failure result; a missed bump only means one extra retry.
+  static const String chargeFailedReplay = 'chargeFailedReplay';
+
   /// `retryPendingCollaboratorInvites*`: `recoverFullSend` threw an
   /// unexpected error while replaying a queued collaborator invite row.
   /// The expected `ArgumentError` race (row deleted by a concurrent drain

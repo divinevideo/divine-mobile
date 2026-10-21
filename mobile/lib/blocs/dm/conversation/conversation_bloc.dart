@@ -516,7 +516,13 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
 
     for (final rumorId in event.rumorIds) {
       try {
-        final result = await _dmRepository.recoverSelfWrap(rumorId: rumorId);
+        // An explicit Retry hands the row back to the sweep with a fresh
+        // budget, as Resend does: this snackbar is the only manual way back
+        // to it, and it is gone once the user leaves the thread (#8628).
+        final result = await _dmRepository.recoverSelfWrap(
+          rumorId: rumorId,
+          resetRetryBudget: true,
+        );
         if (!result.success) {
           stillFailing.add(rumorId);
         }

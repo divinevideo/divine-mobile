@@ -749,7 +749,7 @@ void main() {
       );
 
       test(
-        'recoverFullSend publish-failure path bumps incrementRetry once',
+        'recoverFullSend publish failure: leaves the charge to the repository',
         () async {
           final row = _row(
             id: 'rumor2b',
@@ -773,7 +773,9 @@ void main() {
           verify(
             () => dmRepository.recoverFullSend(rumorId: 'rumor2b'),
           ).called(1);
-          verify(() => dao.incrementRetry('rumor2b')).called(1);
+          // recoverFullSend charged its own failed attempt (#8628); charging
+          // the result here would spend two retries on one.
+          verifyNever(() => dao.incrementRetry(any()));
         },
       );
 
@@ -810,7 +812,7 @@ void main() {
         },
       );
 
-      test('publish-failure path bumps incrementRetry once', () async {
+      test('recoverSelfWrap publish failure: leaves the charge to the repository', () async {
         final row = _row(
           id: 'rumor3',
           recipient: OutgoingWrapStatus.sent,
@@ -833,7 +835,8 @@ void main() {
         await service.sweep();
 
         verify(() => dmRepository.recoverSelfWrap(rumorId: 'rumor3')).called(1);
-        verify(() => dao.incrementRetry('rumor3')).called(1);
+        // recoverSelfWrap charged its own failed attempt (#8628).
+        verifyNever(() => dao.incrementRetry(any()));
       });
 
       // recoverSelfWrap reports a row addressed to its own sender as blocked
@@ -1946,44 +1949,6 @@ void main() {
         );
       }
 
-      test('does not use up a full send retry', () async {
-        stubFailedRow('rumor-unreached');
-        when(
-          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
-        ).thenAnswer((_) async => unreached);
-
-        await buildService().sweep();
-
-        verify(
-          () => dmRepository.recoverFullSend(rumorId: 'rumor-unreached'),
-        ).called(1);
-        verifyNever(() => dao.incrementRetry(any()));
-      });
-
-      test('does not use up an interrupted send retry', () async {
-        final now = DateTime.utc(2026, 5, 10, 12);
-        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
-          (_) async => [
-            _row(
-              id: 'interrupted-unreached',
-              recipient: OutgoingWrapStatus.pending,
-              self: OutgoingWrapStatus.pending,
-              queuedAt: now.subtract(const Duration(minutes: 5)),
-            ),
-          ],
-        );
-        when(
-          () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
-        ).thenAnswer((_) async => unreached);
-
-        await buildService(now: () => now).sweep();
-
-        verify(
-          () => dmRepository.recoverFullSend(rumorId: 'interrupted-unreached'),
-        ).called(1);
-        verifyNever(() => dao.incrementRetry(any()));
-      });
-
       test('arms no follow-up pass for it', () {
         fakeAsync((async) {
           stubFailedRow('rumor-unreached');
@@ -1998,6 +1963,54 @@ void main() {
           unawaited(service.sweep());
           async.flushMicrotasks();
 
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'a relay connecting wakes it, not the 30-second follow-up',
+          );
+          unawaited(service.dispose());
+          async.flushMicrotasks();
+        });
+      });
+
+      test('arms no follow-up pass for a self-copy (#8628)', () {
+        fakeAsync((async) {
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              _row(
+                id: 'self-copy-unreached',
+                recipient: OutgoingWrapStatus.sent,
+                self: OutgoingWrapStatus.failed,
+                retryCount: 1,
+                lastAttemptAt: DateTime.utc(2025),
+              ),
+            ],
+          );
+          when(
+            () => dmRepository.recoverSelfWrap(rumorId: any(named: 'rumorId')),
+          ).thenAnswer(
+            (_) async => const NIP17SendResult.failure(
+              'Self-wrap not sent: no relay connected',
+              reachedNoRelay: true,
+            ),
+          );
+          final service = buildService(
+            now: async.getClock(DateTime.utc(2026, 5, 10, 12)).now,
+          );
+          unawaited(service.initialize());
+
+          unawaited(service.sweep());
+          async.flushMicrotasks();
+
+          verify(
+            () => dmRepository.recoverSelfWrap(rumorId: 'self-copy-unreached'),
+          ).called(1);
+          verifyNever(() => dao.incrementRetry(any()));
           expect(
             async.pendingTimers,
             isEmpty,
@@ -2415,7 +2428,7 @@ void main() {
       );
 
       test(
-        'publish-failure path bumps incrementRetry once',
+        'publish failure: leaves the charge to the repository',
         () async {
           final now = DateTime.utc(2026, 5, 10, 12);
           final stalePending = _row(
@@ -2433,7 +2446,32 @@ void main() {
 
           await buildService(now: () => now).sweep();
 
-          verify(() => dao.incrementRetry('interrupted-fail')).called(1);
+          // recoverFullSend charged its own failed attempt (#8628).
+          verifyNever(() => dao.incrementRetry(any()));
+        },
+      );
+
+      test(
+        'a dispatch that throws is charged by the sweep, since it never '
+        'reached the repository charge',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          final stalePending = _row(
+            id: 'interrupted-throw',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: now.subtract(const Duration(minutes: 5)),
+          );
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [stalePending]);
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenThrow(Exception('relay disconnected'));
+
+          await buildService(now: () => now).sweep();
+
+          verify(() => dao.incrementRetry('interrupted-throw')).called(1);
         },
       );
     });
