@@ -1610,6 +1610,61 @@ void main() {
       );
 
       test(
+        'logs a frame that could not be kept after its card stopped waiting',
+        () async {
+          final message = _videoMessage();
+          final next = _videoMessage(id: '2' * 64, senderPubkey: '9' * 64);
+          final decode = Completer<Uint8List?>();
+          final nextStarted = Completer<void>();
+          readFrame = (video) {
+            if (video.path.contains(message.id)) return decode.future;
+            nextStarted.complete();
+            return Future.value(_frame);
+          };
+          for (final kept in [message, next]) {
+            keptFile(
+              DmVideoStore.videoFileNameFor(kept),
+              _plaintext,
+              keptAt: now,
+            );
+          }
+          await LogCaptureService().clearAllLogs();
+
+          await IOOverrides.runWithIOOverrides(
+            () async {
+              final store = createStore(
+                frameDeadline: const Duration(milliseconds: 1),
+              );
+              expect(await store.previewFor(message), isNull);
+              final nextPreview = store.previewFor(next);
+
+              decode.complete(_frame);
+              // Its turn ends only once the failed read is dealt with.
+              await nextStarted.future.timeout(const Duration(seconds: 5));
+              await nextPreview;
+            },
+            _WriteHooks((part) {
+              if (part.path.contains(DmVideoStore.videoFileNameFor(message))) {
+                return;
+              }
+              if (part.path.contains(message.id)) {
+                throw const FileSystemException('No space left on device');
+              }
+            }),
+          );
+
+          expect(
+            _loggedLines(),
+            contains(
+              contains(
+                'A video DM frame read failed: DmVideoStorageException',
+              ),
+            ),
+          );
+        },
+      );
+
+      test(
         'keeps a frame that arrives after its card stopped waiting, and says '
         'so, so the card shows it without another decode',
         () async {

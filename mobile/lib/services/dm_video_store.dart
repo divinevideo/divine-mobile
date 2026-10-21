@@ -1145,7 +1145,16 @@ class DmVideoStore {
         ).whenComplete(() => _release(video));
         read.complete(decoding);
         await decoding
-            .then<void>((_) {}, onError: (Object _) {})
+            .then<void>(
+              (_) {},
+              // Its card may have stopped waiting: said here either way.
+              onError: (Object error, StackTrace stackTrace) => Log.warning(
+                'A video DM frame read failed: ${error.runtimeType}',
+                name: _logName,
+                category: LogCategory.video,
+                stackTrace: stackTrace,
+              ),
+            )
             .timeout(
               frameTurnLimit,
               onTimeout: () {
