@@ -1945,6 +1945,35 @@ void main() {
       );
 
       test(
+        'leave a tap to fetch again when the download it took over failed in '
+        'a way that may pass',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) =>
+              fetches == 1 ? release.future : Future.value(_plaintext);
+          final store = createStore();
+          final message = _videoMessage();
+
+          final previewFailure = expectLater(
+            store.previewFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          await pumpEventQueue();
+          final tapped = store.videoFor(message);
+          release.completeError(
+            const DmVideoUnavailableException(
+              'the download failed: connectionError',
+              mayPass: true,
+            ),
+          );
+
+          expect((await tapped).readAsBytesSync(), equals(_plaintext));
+          expect(fetches, equals(2));
+          await previewFailure;
+        },
+      );
+
+      test(
         'leave a tap with a failure the download it took over would hit '
         'again',
         () async {
