@@ -24,6 +24,10 @@ class VideoThumbnailService {
   /// through its constructor instead.
   static CrashReporter crashReporter = const SilentCrashReporter();
 
+  /// Numbers the frames this process writes, as two can be written in the
+  /// same millisecond, and one must not replace or delete the other's.
+  static int _framesWritten = 0;
+
   static const int _thumbnailQuality = 75;
   static const Size _thumbnailSize = Size.square(640);
 
@@ -102,7 +106,8 @@ class VideoThumbnailService {
 
       final destPath =
           '${(await getApplicationDocumentsDirectory()).path}/'
-          'thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          'thumbnail_${DateTime.now().millisecondsSinceEpoch}_'
+          '${_framesWritten++}.jpg';
 
       try {
         Log.debug(
@@ -519,7 +524,8 @@ class VideoThumbnailService {
     final targetDir = await _resolveGhostFrameDirectory();
     await targetDir.create(recursive: true);
     final destPath =
-        '${targetDir.path}/ghost_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        '${targetDir.path}/ghost_${DateTime.now().millisecondsSinceEpoch}_'
+        '${_framesWritten++}.jpg';
     await File(destPath).writeAsBytes(bytes);
 
     Log.debug(

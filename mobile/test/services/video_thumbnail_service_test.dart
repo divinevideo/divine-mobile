@@ -203,6 +203,35 @@ void main() {
       });
     });
 
+    group('extractLastFrame', () {
+      test('names every frame it keeps apart, even at once', () async {
+        final video = File('${tempDir.path}/clip.mp4')
+          ..writeAsBytesSync([1, 2, 3, 4]);
+        addTearDown(video.deleteSync);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              channel,
+              (call) async => call.method == 'getThumbnails'
+                  ? [
+                      Uint8List.fromList([9, 9, 9]),
+                    ]
+                  : null,
+            );
+
+        final frames = await Future.wait([
+          for (var i = 0; i < 20; i++)
+            VideoThumbnailService.extractLastFrame(videoPath: video.path),
+        ]);
+        addTearDown(() {
+          for (final frame in frames.nonNulls) {
+            if (File(frame).existsSync()) File(frame).deleteSync();
+          }
+        });
+
+        expect(frames.nonNulls.toSet(), hasLength(20));
+      });
+    });
+
     group('extractThumbnailBytes', () {
       test('returns null when video file does not exist', () async {
         final result = await VideoThumbnailService.extractThumbnailBytes(
