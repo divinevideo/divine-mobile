@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "L'enregistrement démarre en maintenant appuyé et s'arrête en relâchant",
   "settingsBackUpRecordings": "Sauvegarder les enregistrements dans ta galerie",
   "settingsBackUpRecordingsSubtitle": "Garde une copie de chaque nouvel enregistrement dans ta galerie. Les autres apps et les sauvegardes photo dans le cloud peuvent la voir.",
+  "settingsMirrorFrontCamera": "Effet miroir caméra avant",
+  "settingsMirrorFrontCameraSubtitle": "Enregistre les clips de la caméra avant tels que l'aperçu les montre. Le texte dans le plan se lit à l'envers.",
   "contentFiltersAdultContent": "CONTENU POUR ADULTES",
   "contentFiltersViolenceGore": "VIOLENCE ET HORREUR",
   "contentFiltersSubstances": "SUBSTANCES",

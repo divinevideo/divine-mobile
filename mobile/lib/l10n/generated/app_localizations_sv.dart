@@ -11955,6 +11955,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Sparar en kopia av varje ny inspelning i ditt galleri. Andra appar och fotosäkerhetskopior i molnet kan se den där.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Spegelvänd främre kamera';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Sparar klipp från den främre kameran så som förhandsvisningen visar dem. Text i bilden blir spegelvänd.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

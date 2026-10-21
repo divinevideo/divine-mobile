@@ -243,6 +243,7 @@ void main() {
             enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
             preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
             videoStabilizationMode: any(named: 'videoStabilizationMode'),
+            mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
           ),
         ).thenThrow(StateError('camera stays down in this test'));
       });

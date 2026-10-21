@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "Die Aufnahme beginnt, wenn du gedrückt hältst, und stoppt, wenn du loslässt",
   "settingsBackUpRecordings": "Aufnahmen in der Galerie sichern",
   "settingsBackUpRecordingsSubtitle": "Legt eine Kopie jeder neuen Aufnahme in deiner Galerie ab. Andere Apps und Cloud-Fotobackups können sie dort sehen.",
+  "settingsMirrorFrontCamera": "Frontkamera spiegeln",
+  "settingsMirrorFrontCameraSubtitle": "Speichert Clips der Frontkamera so, wie die Vorschau sie zeigt. Text im Bild erscheint dann spiegelverkehrt.",
   "contentFiltersAdultContent": "INHALTE FÜR ERWACHSENE",
   "contentFiltersViolenceGore": "GEWALT & BLUT",
   "contentFiltersSubstances": "SUBSTANZEN",

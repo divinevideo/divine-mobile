@@ -11653,6 +11653,13 @@ class AppLocalizationsAm extends AppLocalizations {
       'የእያንዳንዱን አዲስ ቀረጻ ቅጂ በጋለሪዎ ያስቀምጣል። ሌሎች መተግበሪያዎች እና የደመና የፎቶ ምትኬዎች እዚያ ሊያዩት ይችላሉ።';
 
   @override
+  String get settingsMirrorFrontCamera => 'የፊት ካሜራ ማንጸባረቅ';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'የፊት ካሜራ ቅንጥቦችን ቅድመ ዕይታው በሚያሳያቸው መልኩ ያስቀምጣል። በቀረጻው ውስጥ ያለ ጽሑፍ ተገልብጦ ይነበባል።';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

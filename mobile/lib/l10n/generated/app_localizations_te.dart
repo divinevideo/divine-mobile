@@ -12266,6 +12266,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రతి కొత్త రికార్డింగ్ కాపీని మీ గ్యాలరీలో సేవ్ చేస్తుంది. ఇతర యాప్‌లు మరియు క్లౌడ్ ఫోటో బ్యాకప్‌లు దాన్ని అక్కడ చూడగలవు.';
 
   @override
+  String get settingsMirrorFrontCamera => 'ఫ్రంట్ కెమెరాను మిర్రర్ చేయండి';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'ఫ్రంట్ కెమెరా క్లిప్‌లను ప్రివ్యూలో కనిపించినట్లే సేవ్ చేస్తుంది. షాట్‌లోని అక్షరాలు తిరగబడి కనిపిస్తాయి.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

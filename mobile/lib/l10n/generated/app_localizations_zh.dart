@@ -11222,6 +11222,13 @@ class AppLocalizationsZh extends AppLocalizations {
       '为每段新录制的视频在相册中保存一份副本。其他应用和云端照片备份都能看到它。';
 
   @override
+  String get settingsMirrorFrontCamera => '前置摄像头镜像';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      '按预览中的样子保存前置摄像头片段。画面中的文字会左右颠倒。';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

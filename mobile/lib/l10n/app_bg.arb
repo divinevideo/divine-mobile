@@ -3398,6 +3398,8 @@
   "generalSettingsHoldToRecordSubtitle": "Записът започва при задържане и спира при отпускане",
   "settingsBackUpRecordings": "Резервно копие на записите в галерията",
   "settingsBackUpRecordingsSubtitle": "Запазва копие на всеки нов запис в галерията ти. Други приложения и облачните архиви на снимки могат да го виждат там.",
+  "settingsMirrorFrontCamera": "Огледална предна камера",
+  "settingsMirrorFrontCameraSubtitle": "Записва клиповете от предната камера така, както ги показва прегледът. Текстът в кадъра се чете наобратно.",
   "contentFiltersAdultContent": "СЪДЪРЖАНИЕ ЗА ВЪЗРАСТНИ",
   "contentFiltersViolenceGore": "НАСИЛИЕ И КРЪВ",
   "contentFiltersSubstances": "ВЕЩЕСТВА",

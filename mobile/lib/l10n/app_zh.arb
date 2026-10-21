@@ -6015,6 +6015,8 @@
   "generalSettingsHoldToRecordSubtitle": "按住开始录制，松开停止",
   "settingsBackUpRecordings": "将录制内容备份到相册",
   "settingsBackUpRecordingsSubtitle": "为每段新录制的视频在相册中保存一份副本。其他应用和云端照片备份都能看到它。",
+  "settingsMirrorFrontCamera": "前置摄像头镜像",
+  "settingsMirrorFrontCameraSubtitle": "按预览中的样子保存前置摄像头片段。画面中的文字会左右颠倒。",
   "uploadPublishedCountMessage": "{count, plural, =1{1 个视频已发布到你的主页} other{{count} 个视频已发布到你的主页}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

@@ -2308,7 +2308,16 @@ class CameraController(
         }
         if (!outputDir.exists()) outputDir.mkdirs()
         val photoFile = File(outputDir, "IMG_${System.currentTimeMillis()}.jpg")
-        val options = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        // Mirror a front still the way VideoCapture mirrors front clips, so a
+        // stop-motion frame matches the preview like a recording does. CameraX
+        // applies this as an EXIF flip rather than rewriting the pixels.
+        val metadata = ImageCapture.Metadata().apply {
+            isReversedHorizontal = mirrorFrontCameraOutput &&
+                currentLens == CameraSelector.LENS_FACING_FRONT
+        }
+        val options = ImageCapture.OutputFileOptions.Builder(photoFile)
+            .setMetadata(metadata)
+            .build()
 
         capture.takePicture(
             options,

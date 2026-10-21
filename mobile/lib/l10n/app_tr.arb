@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "Basılı tuttuğunuzda kayıt başlar, bıraktığınızda durur",
   "settingsBackUpRecordings": "Kayıtları galeriye yedekle",
   "settingsBackUpRecordingsSubtitle": "Her yeni kaydın bir kopyasını galerine kaydeder. Diğer uygulamalar ve buluttaki fotoğraf yedekleri onu orada görebilir.",
+  "settingsMirrorFrontCamera": "Ön kamerayı aynala",
+  "settingsMirrorFrontCameraSubtitle": "Ön kamera kliplerini önizlemede göründüğü gibi kaydeder. Çekimdeki yazılar ters görünür.",
   "contentFiltersAdultContent": "YETİŞKİN İÇERİĞİ",
   "contentFiltersViolenceGore": "ŞİDDET VE KAN",
   "contentFiltersSubstances": "MADDELER",

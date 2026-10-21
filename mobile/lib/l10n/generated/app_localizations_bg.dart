@@ -12066,6 +12066,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Запазва копие на всеки нов запис в галерията ти. Други приложения и облачните архиви на снимки могат да го виждат там.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Огледална предна камера';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Записва клиповете от предната камера така, както ги показва прегледът. Текстът в кадъра се чете наобратно.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -11866,6 +11866,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Her yeni kaydın bir kopyasını galerine kaydeder. Diğer uygulamalar ve buluttaki fotoğraf yedekleri onu orada görebilir.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Ön kamerayı aynala';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Ön kamera kliplerini önizlemede göründüğü gibi kaydeder. Çekimdeki yazılar ters görünür.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

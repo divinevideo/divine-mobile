@@ -35,6 +35,7 @@ import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dar
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/services/front_camera_mirror_preference_service.dart';
 import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
@@ -505,6 +506,10 @@ class VideoRecorderBloc
           state.recorderMode,
           prefs,
         ),
+        // Read at init because the outputs' mirroring is fixed when the
+        // camera binds them; flipping the setting applies to the next open.
+        mirrorFrontCameraOutput:
+            prefs.getBool(FrontCameraMirrorPreferenceService.prefsKey) ?? false,
       );
     } catch (e, stackTrace) {
       initError = e;

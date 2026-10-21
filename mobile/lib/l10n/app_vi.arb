@@ -6015,6 +6015,8 @@
   "generalSettingsHoldToRecordSubtitle": "Bắt đầu quay khi bạn nhấn giữ, dừng khi bạn thả ra",
   "settingsBackUpRecordings": "Sao lưu bản quay vào thư viện ảnh",
   "settingsBackUpRecordingsSubtitle": "Lưu một bản sao của mỗi bản quay mới vào thư viện ảnh của bạn. Ứng dụng khác và bản sao lưu ảnh trên đám mây có thể thấy nó ở đó.",
+  "settingsMirrorFrontCamera": "Lật gương camera trước",
+  "settingsMirrorFrontCameraSubtitle": "Lưu clip từ camera trước đúng như bản xem trước hiển thị. Chữ trong khung hình sẽ bị ngược.",
   "uploadPublishedCountMessage": "{count, plural, =1{Đã đăng video lên hồ sơ của bạn} other{Đã đăng {count} video lên hồ sơ của bạn}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

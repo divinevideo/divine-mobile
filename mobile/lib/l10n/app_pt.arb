@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "A gravação começa ao manter pressionado e para ao soltar",
   "settingsBackUpRecordings": "Fazer backup das gravações na galeria",
   "settingsBackUpRecordingsSubtitle": "Salva uma cópia de cada nova gravação na sua galeria. Outros apps e backups de fotos na nuvem podem vê-la lá.",
+  "settingsMirrorFrontCamera": "Espelhar câmera frontal",
+  "settingsMirrorFrontCameraSubtitle": "Salva os clipes da câmera frontal do jeito que aparecem na prévia. Textos na cena ficam invertidos.",
   "contentFiltersAdultContent": "CONTEÚDO ADULTO",
   "contentFiltersViolenceGore": "VIOLÊNCIA E SANGUE",
   "contentFiltersSubstances": "SUBSTÂNCIAS",

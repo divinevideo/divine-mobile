@@ -12038,6 +12038,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Mirror front camera';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Saves front camera clips the way the preview shows them. Text in the shot reads backwards.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "La registrazione inizia tenendo premuto e si ferma al rilascio",
   "settingsBackUpRecordings": "Salva le registrazioni nella galleria",
   "settingsBackUpRecordingsSubtitle": "Salva una copia di ogni nuova registrazione nella tua galleria. Altre app e i backup foto nel cloud possono vederla.",
+  "settingsMirrorFrontCamera": "Specchia fotocamera anteriore",
+  "settingsMirrorFrontCameraSubtitle": "Salva le clip della fotocamera anteriore come le mostra l'anteprima. Il testo nell'inquadratura si legge al contrario.",
   "contentFiltersAdultContent": "CONTENUTI PER ADULTI",
   "contentFiltersViolenceGore": "VIOLENZA E SCENE CRUENTE",
   "contentFiltersSubstances": "SOSTANZE",

@@ -12093,6 +12093,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Legt eine Kopie jeder neuen Aufnahme in deiner Galerie ab. Andere Apps und Cloud-Fotobackups können sie dort sehen.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Frontkamera spiegeln';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Speichert Clips der Frontkamera so, wie die Vorschau sie zeigt. Text im Bild erscheint dann spiegelverkehrt.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -11371,6 +11371,13 @@ class AppLocalizationsKo extends AppLocalizations {
       '새 녹화본마다 갤러리에 사본을 저장해요. 다른 앱과 클라우드 사진 백업에서도 볼 수 있어요.';
 
   @override
+  String get settingsMirrorFrontCamera => '전면 카메라 좌우 반전';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      '전면 카메라 클립을 미리보기에서 보이는 그대로 저장해요. 화면 속 글자는 좌우가 뒤집혀 보여요.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -12106,6 +12106,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'Salva una copia di ogni nuova registrazione nella tua galleria. Altre app e i backup foto nel cloud possono vederla.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Specchia fotocamera anteriore';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Salva le clip della fotocamera anteriore come le mostra l\'anteprima. Il testo nell\'inquadratura si legge al contrario.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

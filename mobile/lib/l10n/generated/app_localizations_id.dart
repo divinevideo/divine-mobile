@@ -11859,6 +11859,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Menyimpan salinan setiap rekaman baru ke galerimu. Aplikasi lain dan cadangan foto di cloud bisa melihatnya di sana.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Cerminkan kamera depan';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Menyimpan klip kamera depan persis seperti di pratinjau. Teks di dalam bidikan akan terbaca terbalik.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
