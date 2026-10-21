@@ -729,6 +729,24 @@ const _giftWrapEventId2 =
 const _secondTargetRumorId =
     '16789012345678901234567890abcdef1234567890123456789012ab12c3d4e5';
 
+/// Runs [future] to completion under [async], firing zero-delay timers, and
+/// returns its value.
+T _resolve<T>(FakeAsync async, Future<T> future) {
+  late T value;
+  var done = false;
+  unawaited(
+    future.then((v) {
+      value = v;
+      done = true;
+    }),
+  );
+  async
+    ..flushMicrotasks()
+    ..elapse(Duration.zero);
+  expect(done, isTrue, reason: 'the future did not complete with a value');
+  return value;
+}
+
 void main() {
   group(DmRepository, () {
     late _MockNostrClient mockNostrClient;
@@ -765,7 +783,10 @@ void main() {
     //
     //   * relay counters      -- interpolated into a log line
     //   * runInTransaction    -- runs the callback inline; on 11 persist paths
-    //   * markAsRead          -- both production call sites are a bare `await`
+    //   * markAsRead          -- the live-send call is a bare `await`;
+    //                            markConversationAsRead reads it, so the
+    //                            read-marker group declares
+    //                            `stubMarkAsReadRowFound`
     //   * queryEventsDetailed -- send/listener inbox resolution catches its
     //                            throw; RC3 re-declares the answered-empty
     //                            decision explicitly in its own group
@@ -1048,6 +1069,15 @@ void main() {
     void stubReadCursorRowMatched() => when(
       () => mockConversationsDao.applyReadCursor(
         any(),
+        any(),
+        ownerPubkey: any(named: 'ownerPubkey'),
+      ),
+    ).thenAnswer((_) async => true);
+
+    // markConversationAsRead schedules a read-marker publish only for a row it
+    // wrote, so a test asserting no marker went out must have found its row.
+    void stubMarkAsReadRowFound() => when(
+      () => mockConversationsDao.markAsRead(
         any(),
         ownerPubkey: any(named: 'ownerPubkey'),
       ),
@@ -14145,10 +14175,54 @@ void main() {
           ),
         ).called(1);
       });
+
+      test('logs a warning when uninitialized', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        final repository = createRepository(userPubkey: '');
+
+        expect(await repository.markConversationAsRead('any-conv'), isFalse);
+
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.warning &&
+                  e.message.contains('Mark as read skipped'),
+            )
+            .toList();
+        expect(warnings, hasLength(1));
+      });
+
+      test('logs the conversation id when no row exists', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        const convId = 'missing-conversation-id';
+        when(
+          () => mockConversationsDao.markAsRead(
+            convId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => false);
+        final repository = createRepository();
+
+        expect(await repository.markConversationAsRead(convId), isFalse);
+
+        final infos = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.info &&
+                  e.message.contains('no conversation row for $convId'),
+            )
+            .toList();
+        expect(infos, hasLength(1));
+      });
     });
 
     group('read-state marker (#4977)', () {
       setUp(stubReadCursorRowMatched);
+      setUp(stubMarkAsReadRowFound);
 
       final tupleKey = (<String>[
         _validPubkeyA,
@@ -14174,6 +14248,106 @@ void main() {
         dmProtocol: 'nip17',
         lastReadTimestamp: cursor,
       );
+
+      test('a missing row does not schedule a read marker', () {
+        fakeAsync((async) {
+          when(
+            () => mockConversationsDao.markAsRead(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => false);
+          // A stored cursor means any scheduled publish would send a marker.
+          when(
+            () => mockConversationsDao.getAllConversations(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [readConversation(cursor: 1700000200)]);
+          final repository = createRepository(
+            readMarkerDebounceDelay: Duration.zero,
+          );
+
+          expect(
+            _resolve(async, repository.markConversationAsRead(conversationId)),
+            isFalse,
+          );
+          verifyNever(
+            () => mockMessageService.publishSelfApplicationMarker(
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              eventKind: any(named: 'eventKind'),
+            ),
+          );
+        });
+      });
+
+      test('a batch that finds no requested row publishes no read marker', () {
+        fakeAsync((async) {
+          when(
+            () => mockConversationsDao.markMultipleAsRead(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => 0);
+          when(
+            () => mockConversationsDao.getAllConversations(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [readConversation(cursor: 1700000200)]);
+          final repository = createRepository(
+            readMarkerDebounceDelay: Duration.zero,
+          );
+
+          expect(
+            _resolve(
+              async,
+              repository.markConversationsAsRead([conversationId, 'missing']),
+            ),
+            isFalse,
+          );
+          verifyNever(
+            () => mockMessageService.publishSelfApplicationMarker(
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              eventKind: any(named: 'eventKind'),
+            ),
+          );
+        });
+      });
+
+      test('a partial batch reports failure and still publishes a marker', () {
+        fakeAsync((async) {
+          when(
+            () => mockConversationsDao.markMultipleAsRead(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => 1);
+          when(
+            () => mockConversationsDao.getAllConversations(
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [readConversation(cursor: 1700000200)]);
+          final repository = createRepository(
+            readMarkerDebounceDelay: Duration.zero,
+          );
+
+          expect(
+            _resolve(
+              async,
+              repository.markConversationsAsRead([conversationId, 'missing']),
+            ),
+            isFalse,
+          );
+          verify(
+            () => mockMessageService.publishSelfApplicationMarker(
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              eventKind: any(named: 'eventKind'),
+            ),
+          ).called(1);
+        });
+      });
 
       test(
         'reading a conversation publishes a debounced self-only read marker '
@@ -14366,7 +14540,7 @@ void main() {
               any(),
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => 2);
           when(
             () => mockConversationsDao.getAllConversations(
               ownerPubkey: any(named: 'ownerPubkey'),
@@ -15102,7 +15276,7 @@ void main() {
             ids,
             ownerPubkey: any(named: 'ownerPubkey'),
           ),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) async => 2);
 
         final repository = createRepository();
         await repository.markConversationsAsRead(ids);
@@ -15113,6 +15287,52 @@ void main() {
             ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).called(1);
+      });
+
+      test('logs a warning when uninitialized', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        final repository = createRepository(userPubkey: '');
+
+        expect(await repository.markConversationsAsRead(['a', 'b']), isFalse);
+
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.warning &&
+                  e.message.contains('Batch mark as read skipped'),
+            )
+            .toList();
+        expect(warnings, hasLength(1));
+      });
+
+      test('logs how many conversations a partial batch found', () async {
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+        when(
+          () => mockConversationsDao.markMultipleAsRead(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => 1);
+        final repository = createRepository();
+        addTearDown(repository.stopListening);
+
+        expect(
+          await repository.markConversationsAsRead(['a', 'b', 'b']),
+          isFalse,
+        );
+
+        final warnings = LogCaptureService()
+            .getRecentLogs()
+            .where(
+              (e) =>
+                  e.level == LogLevel.warning &&
+                  e.message.contains('Batch mark as read found 1 of 2'),
+            )
+            .toList();
+        expect(warnings, hasLength(1));
       });
     });
 

@@ -126,9 +126,17 @@ class MessageRequestActionsCubit extends Cubit<MessageRequestActionsState> {
     if (conversationIds.isEmpty) return;
     emit(state.copyWith(status: MessageRequestActionsStatus.processing));
     try {
-      await _dmRepository.markConversationsAsRead(conversationIds);
+      final success = await _dmRepository.markConversationsAsRead(
+        conversationIds,
+      );
       if (!isClosed) {
-        emit(state.copyWith(status: MessageRequestActionsStatus.success));
+        emit(
+          state.copyWith(
+            status: success
+                ? MessageRequestActionsStatus.success
+                : MessageRequestActionsStatus.error,
+          ),
+        );
       }
     } catch (e, stackTrace) {
       // Drift IO failures are expected. Per

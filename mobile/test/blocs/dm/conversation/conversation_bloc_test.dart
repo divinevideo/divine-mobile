@@ -126,7 +126,7 @@ void main() {
     test('initial state is correct', () {
       when(
         () => mockDmRepository.markConversationAsRead(any()),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
       when(
         () => mockDmRepository.watchMessages(any()),
       ).thenAnswer((_) => const Stream.empty());
@@ -140,6 +140,32 @@ void main() {
     });
 
     group('ConversationStarted', () {
+      blocTest<ConversationBloc, ConversationState>(
+        'loads an empty thread whose conversation row does not exist yet',
+        setUp: () {
+          when(
+            () => mockDmRepository.markConversationAsRead(conversationId),
+          ).thenAnswer((_) async => false);
+          when(
+            () => mockDmRepository.watchMessages(conversationId),
+          ).thenAnswer((_) => Stream.value(const <DmMessage>[]));
+          when(
+            () => mockDmRepository.watchOutgoing(any()),
+          ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ConversationStarted()),
+        expect: () => const [
+          ConversationState(status: ConversationStatus.loading),
+          ConversationState(status: ConversationStatus.loaded),
+        ],
+        verify: (_) {
+          verify(
+            () => mockDmRepository.markConversationAsRead(conversationId),
+          ).called(1);
+        },
+      );
+
       blocTest<ConversationBloc, ConversationState>(
         'stays loading while the repository owner is unknown, rather than '
         'reporting the thread as empty',
@@ -160,38 +186,41 @@ void main() {
         },
       );
 
-      blocTest<ConversationBloc, ConversationState>(
-        'emits [loading, loaded] when messages stream emits successfully',
-        setUp: () {
-          when(
-            () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async {});
-          when(
-            () => mockDmRepository.watchMessages(conversationId),
-          ).thenAnswer((_) => Stream.value([testMessage]));
-          when(
-            () => mockDmRepository.watchOutgoing(any()),
-          ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
-        },
-        build: buildBloc,
-        act: (bloc) => bloc.add(const ConversationStarted()),
-        expect: () => [
-          const ConversationState(status: ConversationStatus.loading),
-          const ConversationState(
-            status: ConversationStatus.loaded,
-            messages: [testMessage],
-          ),
-        ],
-        verify: (_) {
-          // Called once on initial open + once per stream emission
-          verify(
-            () => mockDmRepository.markConversationAsRead(conversationId),
-          ).called(2);
-          verify(
-            () => mockDmRepository.watchMessages(conversationId),
-          ).called(1);
-        },
-      );
+      for (final rowFound in [true, false]) {
+        blocTest<ConversationBloc, ConversationState>(
+          'emits [loading, loaded] when messages stream emits successfully '
+          '(conversation row found: $rowFound)',
+          setUp: () {
+            when(
+              () => mockDmRepository.markConversationAsRead(conversationId),
+            ).thenAnswer((_) async => rowFound);
+            when(
+              () => mockDmRepository.watchMessages(conversationId),
+            ).thenAnswer((_) => Stream.value([testMessage]));
+            when(
+              () => mockDmRepository.watchOutgoing(any()),
+            ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(const ConversationStarted()),
+          expect: () => [
+            const ConversationState(status: ConversationStatus.loading),
+            const ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [testMessage],
+            ),
+          ],
+          verify: (_) {
+            // Called once on initial open + once per stream emission
+            verify(
+              () => mockDmRepository.markConversationAsRead(conversationId),
+            ).called(2);
+            verify(
+              () => mockDmRepository.watchMessages(conversationId),
+            ).called(1);
+          },
+        );
+      }
 
       blocTest<ConversationBloc, ConversationState>(
         'arms the one-time history drain, so profile -> Message on a '
@@ -199,7 +228,7 @@ void main() {
         setUp: () {
           when(
             () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
           when(
             () => mockDmRepository.watchMessages(conversationId),
           ).thenAnswer((_) => const Stream.empty());
@@ -222,7 +251,7 @@ void main() {
         setUp: () {
           when(
             () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
           when(
             () => mockDmRepository.watchMessages(conversationId),
           ).thenAnswer((_) => const Stream.empty());
@@ -244,7 +273,7 @@ void main() {
         setUp: () {
           when(
             () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
           when(
             () => mockDmRepository.watchMessages(conversationId),
           ).thenAnswer((_) => Stream.error(Exception('stream failed')));
@@ -277,7 +306,7 @@ void main() {
           });
           when(
             () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
           when(
             () => mockDmRepository.watchMessages(conversationId),
           ).thenAnswer((_) => thread.stream);
@@ -501,7 +530,7 @@ void main() {
           addTearDown(multipleMessages.close);
           when(
             () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
           when(
             () => mockDmRepository.watchMessages(conversationId),
           ).thenAnswer((_) => multipleMessages.stream);
@@ -561,7 +590,7 @@ void main() {
           outgoingController = StreamController<List<OutgoingDm>>();
           when(
             () => mockDmRepository.markConversationAsRead(conversationId),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
           when(
             () => mockDmRepository.watchMessages(conversationId),
           ).thenAnswer((_) => messagesController.stream);
@@ -918,7 +947,7 @@ void main() {
             failOutCtrl = StreamController<List<OutgoingDm>>();
             when(
               () => mockDmRepository.markConversationAsRead(any()),
-            ).thenAnswer((_) async {});
+            ).thenAnswer((_) async => true);
             when(
               () => mockDmRepository.watchMessages(conversationId),
             ).thenAnswer((_) => failMsgCtrl.stream);
@@ -1707,7 +1736,7 @@ void main() {
 
             when(
               () => mockDmRepository.markConversationAsRead(conversationId),
-            ).thenAnswer((_) async {});
+            ).thenAnswer((_) async => true);
 
             when(
               () => mockDmRepository.watchMessages(conversationId),

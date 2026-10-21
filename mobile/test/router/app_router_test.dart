@@ -765,7 +765,7 @@ void main() {
       when(mockDmRepository.backfillHistoryIfNeeded).thenAnswer((_) async {});
       when(
         () => mockDmRepository.markConversationAsRead(any()),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
       when(
         () => mockDmRepository.watchMessages(any()),
       ).thenAnswer((_) => Stream.value(const <DmMessage>[]));

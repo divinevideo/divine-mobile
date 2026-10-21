@@ -990,7 +990,7 @@ void main() {
         setUp: () {
           when(
             () => mockDmRepository.markConversationAsRead(_testConversationId1),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
         },
         build: createBloc,
         act: (bloc) =>
@@ -1007,7 +1007,7 @@ void main() {
         setUp: () {
           when(
             () => mockDmRepository.markConversationAsRead(_testConversationId1),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((_) async => true);
         },
         build: createBloc,
         act: (bloc) =>
@@ -1088,11 +1088,11 @@ void main() {
 
     group('event transformers', () {
       group('droppable() on $ConversationListMarkRead', () {
-        late Completer<void> markRead;
+        late Completer<bool> markRead;
         blocTest<ConversationListBloc, ConversationListState>(
           'drops additional mark-read events while one is processing',
           setUp: () {
-            markRead = Completer<void>();
+            markRead = Completer<bool>();
             var callCount = 0;
             when(
               () => mockDmRepository.markConversationAsRead(any()),
@@ -1104,7 +1104,7 @@ void main() {
               }
               // Subsequent calls would complete instantly, but should be
               // dropped by the droppable() transformer.
-              return Future.value();
+              return Future.value(true);
             });
           },
           build: createBloc,
@@ -1116,7 +1116,7 @@ void main() {
               ..add(const ConversationListMarkRead(_testConversationId1))
               ..add(const ConversationListMarkRead(_testConversationId1));
             await pumpEventQueue();
-            markRead.complete();
+            markRead.complete(true);
             await pumpEventQueue();
           },
           expect: () => const <ConversationListState>[],
@@ -1135,7 +1135,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.markConversationAsRead(any()),
-            ).thenAnswer((_) async {});
+            ).thenAnswer((_) async => true);
           },
           build: createBloc,
           act: (bloc) async {
