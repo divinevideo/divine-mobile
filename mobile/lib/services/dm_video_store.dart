@@ -47,10 +47,11 @@ typedef DmVideoStoreResolver = DmVideoStore? Function();
 ///
 /// Files live in the app's cache directory, which is not backed up and which
 /// the system may clear when storage runs low, under one folder per account.
-/// A file nobody opened for [maxIdle] is deleted, and past [maxBytes] the
-/// least recently opened go first, videos before frames. Everything kept for
-/// a message that is gone (see `isMessageGone`) goes at the next [prune]. An
-/// account's folder goes when the account leaves this device ([deleteOwner],
+/// A file is deleted [maxAge] after it was kept, however often it is opened
+/// since, and past [maxBytes] the oldest go first, videos before frames; a
+/// frame counts as kept when its video was. Everything kept for a message
+/// that is gone (see `isMessageGone`) goes at the next [prune]. An account's
+/// folder goes when the account leaves this device ([deleteOwner],
 /// [sweepOwners]).
 ///
 /// The decryption key and nonce are never written anywhere; only the
@@ -82,7 +83,7 @@ class DmVideoStore {
     findMessageLocation,
     Future<Directory> Function()? rootDirectory,
     DateTime Function()? now,
-    this.maxIdle = defaultMaxIdle,
+    this.maxAge = defaultMaxAge,
     this.maxBytes = defaultMaxBytes,
     this.frameTurnLimit = defaultFrameTurnLimit,
     this.frameDeadline = defaultFrameDeadline,
@@ -102,8 +103,10 @@ class DmVideoStore {
   /// Folder under the cache directory that holds every account's videos.
   static const String dirName = 'dm_videos';
 
-  /// How long a kept file may go unopened before [prune] deletes it.
-  static const Duration defaultMaxIdle = Duration(days: 30);
+  /// How long after it was kept [prune] deletes a file, however often it was
+  /// opened: a copy kept here no longer asks the media server, so a takedown
+  /// there does not reach it before then.
+  static const Duration defaultMaxAge = Duration(days: 30);
 
   /// How much one account's kept files may take before [prune] trims them.
   static const int defaultMaxBytes = 300 * 1024 * 1024;
@@ -163,8 +166,8 @@ class DmVideoStore {
   static Future<Uint8List?> _readCardFrameUntilSettled(File video) =>
       readDmVideoCardFrame(video, timeout: null);
 
-  /// How long a file may go unopened before [prune] deletes it.
-  final Duration maxIdle;
+  /// How long after it was kept [prune] deletes a file.
+  final Duration maxAge;
 
   /// Upper bound, in bytes, on this account's kept files.
   final int maxBytes;
@@ -372,17 +375,16 @@ class DmVideoStore {
     return null;
   }
 
-  /// Deletes files nobody opened for [maxIdle], then, until this account's
-  /// files fit in [maxBytes], the least recently opened videos and, only
-  /// after every video, frames: a frame is what a card shows, and costs
-  /// little.
+  /// Deletes files kept more than [maxAge] ago, then, until this account's
+  /// files fit in [maxBytes], the oldest videos and, only after every video,
+  /// frames: a frame is what a card shows, and costs little.
   ///
   /// Everything kept for a message that is gone is deleted too, even a video
   /// played this session: a video retracted by its sender or removed with its
   /// conversation goes at the next prune or, while a read or a hand-out of it
   /// is under way, once that ends. An account the user switched away from
-  /// keeps such videos until it is signed in again or they sit unopened for
-  /// [maxIdle], since its rows are cleared on the switch.
+  /// keeps such videos until it is signed in again or they reach [maxAge],
+  /// since its rows are cleared on the switch.
   ///
   /// A video handed to playback or a save this session, or being read for its
   /// frame, is not deleted for its age or the cap and does not count against
@@ -442,7 +444,7 @@ class DmVideoStore {
     final files = dir.listSync().whereType<File>().toList();
     final leased = {for (final path in _leases.keys) _messageIdOf(File(path))};
     final now = _now();
-    final kept = <({File file, DateTime opened, int size})>[];
+    final kept = <({File file, DateTime keptAt, int size})>[];
     for (final file in files) {
       final stat = file.statSync();
       if (stat.type == FileSystemEntityType.notFound) continue;
@@ -469,19 +471,19 @@ class DmVideoStore {
       }
       // Decided below, once age and the cap have deleted what they will.
       if (_isSatellite(file)) continue;
-      if (age > maxIdle && !_isInUse(file)) {
+      if (age > maxAge && !_isInUse(file)) {
         _deleteNow(file);
         continue;
       }
-      kept.add((file: file, opened: stat.modified, size: stat.size));
+      kept.add((file: file, keptAt: stat.modified, size: stat.size));
     }
     _trimToCap(kept);
     _deleteOrphanedSatellites(dir, leased);
   }
 
-  /// Deletes the least recently opened of [kept] until what is not in use
-  /// fits in [maxBytes], videos before frames.
-  void _trimToCap(List<({File file, DateTime opened, int size})> kept) {
+  /// Deletes the oldest of [kept] until what is not in use fits in
+  /// [maxBytes], videos before frames.
+  void _trimToCap(List<({File file, DateTime keptAt, int size})> kept) {
     // Files in use neither count against the cap nor go to meet it: counted,
     // a few played videos would leave nothing else room, frames included.
     final trimmable = [
@@ -495,7 +497,7 @@ class DmVideoStore {
       if (aIsFrame != b.file.path.endsWith(_previewSuffix)) {
         return aIsFrame ? 1 : -1;
       }
-      return a.opened.compareTo(b.opened);
+      return a.keptAt.compareTo(b.keptAt);
     });
     for (final entry in trimmable) {
       if (total <= maxBytes) break;
@@ -548,13 +550,13 @@ class DmVideoStore {
   }
 
   /// Deletes the videos kept for every account not in [keepOwnerPubkeys],
-  /// and in the kept accounts' folders whatever nobody opened for [maxIdle]
+  /// and in the kept accounts' folders whatever was kept more than [maxAge] ago
   /// and part files a crash left. Returns how many accounts' videos it
   /// deleted. A folder that cannot be read or deleted is logged, without its
   /// path, and left for the next sweep; the others are still swept.
   ///
   /// Runs at launch for every account, so an account the user switched away
-  /// from does not keep its videos past [maxIdle]: its store prunes only
+  /// from does not keep its videos past [maxAge]: its store prunes only
   /// while it is the signed-in one.
   /// Actual file leases and live-store handouts are respected across stores;
   /// a stale persisted identity cannot suppress expiry of unused files.
@@ -562,7 +564,7 @@ class DmVideoStore {
     Set<String> keepOwnerPubkeys, {
     Future<Directory> Function()? rootDirectory,
     DateTime Function()? now,
-    Duration maxIdle = defaultMaxIdle,
+    Duration maxAge = defaultMaxAge,
   }) async {
     if (kIsWeb) return 0;
     final root = await (rootDirectory ?? getApplicationCacheDirectory)();
@@ -577,7 +579,7 @@ class DmVideoStore {
         try {
           final owner = entity.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
           if (keep.contains(owner)) {
-            await _deleteIdleFiles(entity, currentTime, maxIdle);
+            await _deleteExpiredFiles(entity, currentTime, maxAge);
             continue;
           }
           await entity.delete(recursive: true);
@@ -628,13 +630,13 @@ class DmVideoStore {
     }
   }
 
-  /// Deletes files in [dir] unopened for [maxIdle], and part files older than
-  /// [_crashedPartAge]: a younger one may be a download the signed-in
+  /// Deletes files in [dir] kept more than [maxAge] ago, and part files older
+  /// than [_crashedPartAge]: a younger one may be a download the signed-in
   /// account's store is still writing.
-  static Future<void> _deleteIdleFiles(
+  static Future<void> _deleteExpiredFiles(
     Directory dir,
     DateTime now,
-    Duration maxIdle,
+    Duration maxAge,
   ) async {
     Future<List<File>> listFiles() =>
         dir.list().where((entity) => entity is File).cast<File>().toList();
@@ -642,7 +644,7 @@ class DmVideoStore {
       if (_isSatellite(file)) continue;
       final age = now.difference(file.statSync().modified);
       final isPart = file.path.endsWith(_partSuffix);
-      if (age > maxIdle || (isPart && age > _crashedPartAge)) {
+      if (age > maxAge || (isPart && age > _crashedPartAge)) {
         _deleteUnusedByStores(file);
       }
     }
@@ -753,7 +755,6 @@ class DmVideoStore {
     // on its way to the caller, who releases it.
     _lease(file);
     if (file.existsSync()) {
-      await _markOpened(file);
       await _recordConversationQuietly(message, file.parent);
       return file;
     }
@@ -794,7 +795,6 @@ class DmVideoStore {
     final dir = await _ownerDirectory();
     final preview = File('${dir.path}/${_previewFileNameFor(message)}');
     if (preview.existsSync()) {
-      await _markOpened(preview);
       await _recordConversationQuietly(message, dir);
       _knownPreviews[message.id] = preview.path;
       return preview;
@@ -978,6 +978,7 @@ class DmVideoStore {
         'could not start reading the frame: ${_causeOf(error)}',
       );
     }
+    final videoStat = video.statSync();
     final frame = await _readFrame(video);
     if (frame == null || frame.isEmpty) {
       // The mark stays when the decoder cannot produce a frame. A decode
@@ -989,6 +990,9 @@ class DmVideoStore {
       await _writeAtomically(preview, frame);
     } finally {
       _deleteNow(attempt);
+    }
+    if (videoStat.type != FileSystemEntityType.notFound) {
+      await _dateLikeItsVideo(preview, videoStat.modified);
     }
     _knownPreviews[message.id] = preview.path;
     // A card may have reached its UI deadline and now waits on this stream.
@@ -1105,13 +1109,15 @@ class DmVideoStore {
     }
   }
 
-  /// Records that [file] was opened now, which keeps [prune] off it.
-  Future<void> _markOpened(File file) async {
+  /// Dates [frame] [keptAt], when its video was kept, so [prune] deletes it
+  /// with that video however much later it was read.
+  Future<void> _dateLikeItsVideo(File frame, DateTime keptAt) async {
     try {
-      await file.setLastModified(_now());
+      await frame.setLastModified(keptAt);
     } on FileSystemException catch (error) {
       Log.warning(
-        'Could not mark a kept video DM file as opened: ${_causeOf(error)}',
+        'Could not date a kept video DM frame like its video: '
+        '${_causeOf(error)}',
         name: _logName,
         category: LogCategory.video,
       );

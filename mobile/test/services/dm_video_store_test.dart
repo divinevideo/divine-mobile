@@ -241,11 +241,11 @@ void main() {
     Directory ownerDir([String? owner]) =>
         Directory('${root.path}/${DmVideoStore.dirName}/${owner ?? _owner}');
 
-    File keptFile(String name, List<int> bytes, {required DateTime opened}) =>
+    File keptFile(String name, List<int> bytes, {required DateTime keptAt}) =>
         File('${ownerDir().path}/$name')
           ..createSync(recursive: true)
           ..writeAsBytesSync(bytes)
-          ..setLastModifiedSync(opened);
+          ..setLastModifiedSync(keptAt);
 
     group('videoFor', () {
       test(
@@ -350,16 +350,21 @@ void main() {
         expect(kept, equals([message.id]));
       });
 
-      test('marks a kept video as opened now', () async {
-        final store = createStore();
-        final message = _videoMessage();
-        final file = await store.videoFor(message);
-        file.setLastModifiedSync(now.subtract(const Duration(days: 20)));
+      test(
+        'leaves a kept video as old as when it was kept when it is opened '
+        'again',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          final file = await store.videoFor(message);
+          final keptAt = now.subtract(const Duration(days: 20));
+          file.setLastModifiedSync(keptAt);
 
-        await store.videoFor(message);
+          await store.videoFor(message);
 
-        expect(file.lastModifiedSync(), equals(now));
-      });
+          expect(file.lastModifiedSync(), equals(keptAt));
+        },
+      );
     });
 
     group('videoFileNameFor', () {
@@ -487,6 +492,22 @@ void main() {
       );
 
       test(
+        'leaves a kept frame as old as when it was kept when a card shows it '
+        'again',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          final frame = await store.previewFor(message);
+          final keptAt = now.subtract(const Duration(days: 20));
+          frame!.setLastModifiedSync(keptAt);
+
+          await store.previewFor(message);
+
+          expect(frame.lastModifiedSync(), equals(keptAt));
+        },
+      );
+
+      test(
         'remembers a frame an earlier session kept once it finds it',
         () async {
           final message = _videoMessage();
@@ -572,12 +593,12 @@ void main() {
           final firstVideo = keptFile(
             DmVideoStore.videoFileNameFor(first),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           keptFile(
             DmVideoStore.videoFileNameFor(second),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
 
           expect(await store.previewFor(first), isNull);
@@ -613,7 +634,7 @@ void main() {
           keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           final store = createStore(
             frameDeadline: const Duration(milliseconds: 1),
@@ -1278,16 +1299,16 @@ void main() {
     });
 
     group('prune', () {
-      test('deletes what nobody opened for 30 days', () async {
+      test('deletes what was kept more than 30 days ago', () async {
         final stale = keptFile(
           'stale.mp4',
           const [1],
-          opened: now.subtract(const Duration(days: 31)),
+          keptAt: now.subtract(const Duration(days: 31)),
         );
         final recent = keptFile(
           'recent.mp4',
           const [1],
-          opened: now.subtract(const Duration(days: 29)),
+          keptAt: now.subtract(const Duration(days: 29)),
         );
 
         await createStore().prune();
@@ -1297,18 +1318,91 @@ void main() {
       });
 
       test(
+        'deletes a video 30 days after it was kept, however recently it was '
+        'opened',
+        () async {
+          final message = _videoMessage();
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            keptAt: now.subtract(const Duration(days: 29)),
+          );
+          await createStore().videoFor(message);
+          now = now.add(const Duration(days: 2));
+
+          await createStore().prune();
+
+          expect(video.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'deletes a frame with the video it was read from, however much later '
+        'it was read',
+        () async {
+          final message = _videoMessage();
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            keptAt: now.subtract(const Duration(days: 10)),
+          );
+          final frame = await createStore().previewFor(message);
+          expect(frame, isNotNull);
+          now = now.add(const Duration(days: 21));
+
+          await createStore().prune();
+
+          expect(video.existsSync(), isFalse);
+          expect(frame!.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'trims the oldest kept frame first while over the cap, however '
+        'recently a card showed it',
+        () async {
+          final store = createStore(maxBytes: 8);
+          final oldest = keptFile(
+            '${'1' * 64}.preview.jpg',
+            const [1, 2, 3, 4],
+            keptAt: now.subtract(const Duration(hours: 3)),
+          );
+          final middle = keptFile(
+            '${'2' * 64}.preview.jpg',
+            const [1, 2, 3, 4],
+            keptAt: now.subtract(const Duration(hours: 2)),
+          );
+          final newest = keptFile(
+            '${'3' * 64}.preview.jpg',
+            const [1, 2, 3, 4],
+            keptAt: now.subtract(const Duration(hours: 1)),
+          );
+          expect(
+            await store.previewFor(_videoMessage(id: '1' * 64)),
+            isNotNull,
+          );
+
+          await store.prune();
+
+          expect(oldest.existsSync(), isFalse);
+          expect(middle.existsSync(), isTrue);
+          expect(newest.existsSync(), isTrue);
+        },
+      );
+
+      test(
         "deletes an expired video's record and frame-read mark in the same "
         'prune',
         () async {
           final old = now.subtract(const Duration(days: 31));
-          final video = keptFile('stale.mp4', const [1], opened: old);
-          final frame = keptFile('stale.preview.jpg', const [1], opened: old);
+          final video = keptFile('stale.mp4', const [1], keptAt: old);
+          final frame = keptFile('stale.preview.jpg', const [1], keptAt: old);
           final record = keptFile(
             'stale.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
-          final mark = keptFile('stale.frame-attempt', const [], opened: now);
+          final mark = keptFile('stale.frame-attempt', const [], keptAt: now);
 
           await createStore().prune();
 
@@ -1325,17 +1419,17 @@ void main() {
           final trimmed = keptFile(
             'oldest.mp4',
             const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(hours: 2)),
+            keptAt: now.subtract(const Duration(hours: 2)),
           );
           final record = keptFile(
             'oldest.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
           final kept = keptFile(
             'newest.mp4',
             const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(hours: 1)),
+            keptAt: now.subtract(const Duration(hours: 1)),
           );
 
           await createStore(maxBytes: 4).prune();
@@ -1347,22 +1441,22 @@ void main() {
       );
 
       test(
-        'deletes the least recently opened first while over the cap',
+        'deletes the oldest kept first while over the cap',
         () async {
           final oldest = keptFile(
             'oldest.mp4',
             const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(hours: 3)),
+            keptAt: now.subtract(const Duration(hours: 3)),
           );
           final middle = keptFile(
             'middle.mp4',
             const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(hours: 2)),
+            keptAt: now.subtract(const Duration(hours: 2)),
           );
           final newest = keptFile(
             'newest.mp4',
             const [1, 2, 3, 4],
-            opened: now.subtract(const Duration(hours: 1)),
+            keptAt: now.subtract(const Duration(hours: 1)),
           );
 
           await createStore(maxBytes: 8).prune();
@@ -1476,7 +1570,7 @@ void main() {
           final video = keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           final store = createStore(isMessageGone: (_) async => true);
           unawaited(store.previewFor(message));
@@ -1502,7 +1596,7 @@ void main() {
           final video = keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           var gone = false;
           var readEnded = false;
@@ -1552,7 +1646,7 @@ void main() {
           keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           final store = createStore(
             isMessageGone: (_) {
@@ -1676,11 +1770,11 @@ void main() {
         'logs nothing when a record is deleted while its message is looked '
         'up, as the launch sweep deletes an expired video',
         () async {
-          keptFile('stale.mp4', const [1], opened: now);
+          keptFile('stale.mp4', const [1], keptAt: now);
           keptFile(
             'stale.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
           final store = createStore(
             isMessageGone: (_) async {
@@ -1726,9 +1820,9 @@ void main() {
           final record = keptFile(
             '${'a' * 64}.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
-          keptFile('${'a' * 64}.mp4.0.part', const [1], opened: now);
+          keptFile('${'a' * 64}.mp4.0.part', const [1], keptAt: now);
 
           await createStore().prune();
 
@@ -1777,12 +1871,12 @@ void main() {
           keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           keptFile(
             '${'a' * 64}.conversation',
             '${message.conversationId}\n${message.createdAt}'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
           var removed = false;
           var readEnded = false;
@@ -1865,7 +1959,7 @@ void main() {
           final record = keptFile(
             '${'a' * 64}.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
 
           await store.prune();
@@ -1919,9 +2013,9 @@ void main() {
           keptFile(
             '${'a' * 64}.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
-          keptFile('${'a' * 64}.frame-attempt', const [], opened: now);
+          keptFile('${'a' * 64}.frame-attempt', const [], keptAt: now);
 
           await createStore().prune();
 
@@ -1965,7 +2059,7 @@ void main() {
         final crashed = keptFile(
           '${'a' * 64}.mp4.0.part',
           const [1],
-          opened: now.subtract(const Duration(hours: 2)),
+          keptAt: now.subtract(const Duration(hours: 2)),
         );
 
         await createStore().prune();
@@ -1979,7 +2073,7 @@ void main() {
           final writing = keptFile(
             '${'a' * 64}.mp4.0.part',
             const [1],
-            opened: now,
+            keptAt: now,
           );
 
           await createStore().prune();
@@ -1994,7 +2088,7 @@ void main() {
           keptFile(
             DmVideoStore.videoFileNameFor(_videoMessage()),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           var lookups = 0;
           final store = createStore(
@@ -2016,7 +2110,7 @@ void main() {
           final video = keptFile(
             DmVideoStore.videoFileNameFor(_videoMessage()),
             _plaintext,
-            opened: now,
+            keptAt: now,
           );
           var rootAsks = 0;
           final store = createStore(
@@ -2045,7 +2139,7 @@ void main() {
           final writing = keptFile(
             '${'a' * 64}.mp4.0.part',
             const [1],
-            opened: now,
+            keptAt: now,
           );
 
           await createStore(isMessageGone: (_) async => true).prune();
@@ -2055,8 +2149,8 @@ void main() {
       );
 
       test(
-        'never trims a video handed to playback or a save, even the least '
-        'recently opened',
+        'never trims a video handed to playback or a save, even the oldest '
+        'kept',
         () async {
           final store = createStore(maxBytes: 4);
           final played = await store.videoFor(_videoMessage());
@@ -2064,7 +2158,7 @@ void main() {
           final newer = keptFile(
             'newer.mp4',
             const [1, 2, 3, 4, 5, 6, 7, 8],
-            opened: now,
+            keptAt: now,
           );
 
           await store.prune();
@@ -2117,7 +2211,7 @@ void main() {
       );
 
       test(
-        'trims videos before frames, even frames opened longer ago',
+        'trims videos before frames, even frames kept longer ago',
         () async {
           final store = createStore(maxBytes: _plaintext.length - 1);
           final message = _videoMessage();
@@ -2142,7 +2236,7 @@ void main() {
         final video = keptFile(
           DmVideoStore.videoFileNameFor(message),
           _plaintext,
-          opened: now.subtract(const Duration(days: 31)),
+          keptAt: now.subtract(const Duration(days: 31)),
         );
         final preview = store.previewFor(message);
         await pumpEventQueue();
@@ -2163,7 +2257,7 @@ void main() {
           final idle = keptFile(
             'unused.mp4',
             _plaintext,
-            opened: now.subtract(const Duration(days: 31)),
+            keptAt: now.subtract(const Duration(days: 31)),
           );
 
           await DmVideoStore.sweepOwners(
@@ -2204,7 +2298,7 @@ void main() {
           final video = keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            opened: now.subtract(const Duration(days: 31)),
+            keptAt: now.subtract(const Duration(days: 31)),
           );
           final started = Completer<void>();
           final release = Completer<Uint8List?>();
@@ -2243,7 +2337,7 @@ void main() {
           final video = keptFile(
             DmVideoStore.videoFileNameFor(message),
             _plaintext,
-            opened: now.subtract(const Duration(days: 31)),
+            keptAt: now.subtract(const Duration(days: 31)),
           );
           final started = Completer<void>();
           final release = Completer<Uint8List?>();
@@ -2318,7 +2412,7 @@ void main() {
 
       test("deleteOwner removes only that account's videos", () async {
         final other = 'f' * 64;
-        keptFile('mine.mp4', const [1], opened: now);
+        keptFile('mine.mp4', const [1], keptAt: now);
         final theirs = File('${ownerDir(other).path}/theirs.mp4')
           ..createSync(recursive: true);
 
@@ -2439,25 +2533,25 @@ void main() {
       });
 
       test(
-        'sweepOwners deletes what a known account left unopened for 30 days, '
+        'sweepOwners deletes what a known account kept more than 30 days ago, '
         'and part files a crash left',
         () async {
-          final unopened = keptFile(
-            'unopened.mp4',
+          final expired = keptFile(
+            'expired.mp4',
             const [1],
-            opened: now.subtract(const Duration(days: 31)),
+            keptAt: now.subtract(const Duration(days: 31)),
           );
           final recent = keptFile(
             'recent.mp4',
             const [1],
-            opened: now.subtract(const Duration(days: 1)),
+            keptAt: now.subtract(const Duration(days: 1)),
           );
           final crashed = keptFile(
             'crashed.mp4.part',
             const [1],
-            opened: now.subtract(const Duration(hours: 2)),
+            keptAt: now.subtract(const Duration(hours: 2)),
           );
-          final writing = keptFile('writing.mp4.part', const [1], opened: now);
+          final writing = keptFile('writing.mp4.part', const [1], keptAt: now);
 
           await DmVideoStore.sweepOwners(
             {_owner},
@@ -2465,7 +2559,7 @@ void main() {
             now: () => now,
           );
 
-          expect(unopened.existsSync(), isFalse);
+          expect(expired.existsSync(), isFalse);
           expect(crashed.existsSync(), isFalse);
           expect(recent.existsSync(), isTrue);
           expect(writing.existsSync(), isTrue);
@@ -2476,11 +2570,11 @@ void main() {
         "sweepOwners keeps a known account's conversation record while its "
         'video stays',
         () async {
-          keptFile('recent.mp4', const [1], opened: now);
+          keptFile('recent.mp4', const [1], keptAt: now);
           final record = keptFile(
             'recent.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now.subtract(const Duration(days: 31)),
+            keptAt: now.subtract(const Duration(days: 31)),
           );
 
           await DmVideoStore.sweepOwners(
@@ -2497,11 +2591,11 @@ void main() {
         "sweepOwners keeps a known account's conversation record while its "
         'frame stays',
         () async {
-          keptFile('recent.preview.jpg', const [1], opened: now);
+          keptFile('recent.preview.jpg', const [1], keptAt: now);
           final record = keptFile(
             'recent.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now.subtract(const Duration(days: 31)),
+            keptAt: now.subtract(const Duration(days: 31)),
           );
 
           await DmVideoStore.sweepOwners(
@@ -2521,14 +2615,14 @@ void main() {
           final video = keptFile(
             'stale.mp4',
             const [1],
-            opened: now.subtract(const Duration(days: 31)),
+            keptAt: now.subtract(const Duration(days: 31)),
           );
           final record = keptFile(
             'stale.conversation',
             'conversation\n1757385263'.codeUnits,
-            opened: now,
+            keptAt: now,
           );
-          final mark = keptFile('stale.frame-attempt', const [], opened: now);
+          final mark = keptFile('stale.frame-attempt', const [], keptAt: now);
 
           await DmVideoStore.sweepOwners(
             {_owner},
