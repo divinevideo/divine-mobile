@@ -967,9 +967,7 @@ class DmVideoStore {
         _deleteKeptFor(file);
         _lease(file);
       }
-      // Count at the network boundary, not on failure: a withdrawn fetch has
-      // already contacted the sender's server. A queued card dropped before
-      // its turn and a cached copy cost no request and consume no attempt.
+      // Count starts, including withdrawals, but not queued drops or cache hits.
       if (maxBytes != null) {
         _autoDownloadAttempts.update(
           message.id,
@@ -1094,10 +1092,6 @@ class DmVideoStore {
           // session or a later one.
           _autoDownloadFailures[message.id] = null;
           await _rememberLastingFailure(dir, message);
-        } else if ((_autoDownloadAttempts[message.id] ?? 0) >=
-            autoDownloadMaxTries) {
-          // Each try tells the sender's server that the thread is open.
-          _autoDownloadFailures[message.id] = null;
         } else if (wanted()) {
           _autoDownloadFailures[message.id] = _now().add(
             autoDownloadRetryAfter,
