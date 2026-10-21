@@ -60,7 +60,6 @@ class _AgeReviewClosureLaunchNoticeState
         // what the provider reports while a session is still being restored,
         // and a value carried over while the provider reloads belongs to the
         // state before; stopping on either would miss the closure.
-        if (_answered) return;
         if (next case AsyncData(:final value, isLoading: false)
             when value.kind != AccountEnforcementKind.signedOut) {
           _answered = true;
@@ -73,12 +72,6 @@ class _AgeReviewClosureLaunchNoticeState
     // A status already cached answers synchronously inside listenManual,
     // before _status is assigned, so close it here in that case.
     if (_answered) _status?.close();
-  }
-
-  @override
-  void dispose() {
-    _status?.close();
-    super.dispose();
   }
 
   void _showOnce() {
