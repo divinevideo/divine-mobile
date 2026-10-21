@@ -146,12 +146,14 @@ void main() {
     Widget buildLayer({
       bool disableAnimations = false,
       bool accessibleNavigation = false,
+      double bannerWidth = 402,
+      String badgeName = 'Glitter',
     }) {
       return ProviderScope(
         overrides: [
           profileAcceptedBadgesProvider(
             _ownerHex,
-          ).overrideWith((ref) async => [_badge('Glitter')]),
+          ).overrideWith((ref) async => [_badge(badgeName)]),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -162,11 +164,11 @@ void main() {
                 disableAnimations: disableAnimations,
                 accessibleNavigation: accessibleNavigation,
               ),
-              child: const Scaffold(
+              child: Scaffold(
                 body: SizedBox(
-                  width: 402,
+                  width: bannerWidth,
                   height: 334,
-                  child: ProfileFloatingBadgesLayer(userIdHex: _ownerHex),
+                  child: const ProfileFloatingBadgesLayer(userIdHex: _ownerHex),
                 ),
               ),
             ),
@@ -193,6 +195,18 @@ void main() {
       await drift(tester, 2);
 
       expect(find.text('Glitter').hitTestable(), findsWidgets);
+    });
+
+    testWidgets('fits a long badge name inside its chip on a narrow banner', (
+      tester,
+    ) async {
+      const name = 'Keeper of the Extremely Long and Winding Badge Name';
+      await tester.pumpWidget(buildLayer(bannerWidth: 320, badgeName: name));
+      await tester.pump();
+      await drift(tester, 2);
+
+      expect(find.text(name).hitTestable(), findsWidgets);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('renders nothing under reduce motion', (tester) async {

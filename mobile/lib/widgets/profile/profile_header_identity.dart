@@ -582,15 +582,19 @@ class _ProfileBadgeChip extends StatelessWidget {
                     semanticLabel: badge.displayName,
                   ),
                   const SizedBox(width: 6),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 180),
-                    child: Text(
-                      badge.displayName,
-                      style: VineTheme.labelMediumFont(
-                        color: context.vineColors.primaryText,
+                  // Flexible, so a long name ellipsizes within a floating
+                  // chip's width cap instead of overflowing it.
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 180),
+                      child: Text(
+                        badge.displayName,
+                        style: VineTheme.labelMediumFont(
+                          color: context.vineColors.primaryText,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
