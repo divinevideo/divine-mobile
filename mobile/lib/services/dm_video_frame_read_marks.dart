@@ -57,9 +57,11 @@ class DmVideoFrameReadMarks {
   /// The marks of reads under way, by path, with the sender each names.
   final Map<String, String> _running = {};
 
-  /// Senders one of whose frame reads an earlier launch never finished, and
-  /// whether these marks looked for such reads yet.
+  /// Senders one of whose frame reads an earlier launch never finished.
   final Set<String> _hungSenders = {};
+
+  /// Whether these marks looked for such reads yet.
+  bool _lookedForUnfinishedReads = false;
 
   /// Senders whose frame read hung in a launch, by launch and folder, so a
   /// store rebuilt in the same launch skips them too.
@@ -72,7 +74,6 @@ class DmVideoFrameReadMarks {
   /// Senders a hung read of which kept a frame, by launch and folder: each
   /// is read again once a launch, not each time.
   static final Map<String, Set<String>> _forgivenInLaunch = {};
-  bool _lookedForUnfinishedReads = false;
 
   /// The mark of [messageId]'s frame read in [dir].
   static File readMarkOf(Directory dir, String messageId) =>

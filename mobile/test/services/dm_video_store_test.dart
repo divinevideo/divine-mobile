@@ -1331,7 +1331,7 @@ void main() {
       );
 
       test(
-        'neither fetches nor reads by itself, for the rest of the session, '
+        'neither fetches nor reads by itself, for the rest of the launch, '
         'the videos of a sender one of whose decodes ran past the turn limit',
         () async {
           final hung = _videoMessage(id: '1' * 64);

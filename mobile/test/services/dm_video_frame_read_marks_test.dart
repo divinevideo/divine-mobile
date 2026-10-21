@@ -150,7 +150,7 @@ void main() {
       );
 
       test(
-        'skips the sender for the rest of the session, even once the read '
+        'skips the sender for the rest of the launch, even once the read '
         'ends',
         () {
           final marks = createMarks(launchId: 'earlier');
