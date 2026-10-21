@@ -127,7 +127,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     try {
       final path = await _recorder.stop() ?? _currentPath;
       _currentPath = null;
-      await _audioSessionService.resetAudioSession();
+      await _safeResetSession();
       // Native capture can continue while level updates stall. Keep such a
       // take, but still discard an immediate tap before the first interval.
       final recorded =
@@ -143,7 +143,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
         ),
       );
     } catch (error, stackTrace) {
-      await _audioSessionService.resetAudioSession();
+      await _safeResetSession();
       _deleteFile(_currentPath);
       _currentPath = null;
       addError(error, stackTrace);
@@ -166,7 +166,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     try {
       await _stopMetering();
       await _safeStopRecorder();
-      await _audioSessionService.resetAudioSession();
+      await _safeResetSession();
       _deleteFile(_currentPath);
       _currentPath = null;
       emitIfOpen(
@@ -201,7 +201,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     try {
       await _recorder.start(path);
     } catch (_) {
-      await _audioSessionService.resetAudioSession();
+      await _safeResetSession();
       _deleteFile(path);
       _currentPath = null;
       rethrow;
@@ -272,6 +272,17 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     }
   }
 
+  /// Hands the audio session back to playback. A session that will not reset
+  /// is reported and skipped: it must not drop a finished take, leave a file
+  /// behind, or wedge the recorder in `stopping`.
+  Future<void> _safeResetSession() async {
+    try {
+      await _audioSessionService.resetAudioSession();
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
+  }
+
   /// Deletes a scratch recording. Synchronous on purpose: it is one unlink,
   /// and it keeps cleanup ordered before whatever the caller emits next.
   void _deleteFile(String? path) {
@@ -289,7 +300,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     await _stopMetering();
     if (state.isActive) {
       await _safeStopRecorder();
-      await _audioSessionService.resetAudioSession();
+      await _safeResetSession();
     }
     _deleteFile(_currentPath);
     _currentPath = null;

@@ -16,13 +16,21 @@ class _MockPermissionsService extends Mock implements PermissionsService {}
 class _FakeAudioSessionService extends AudioSessionService {
   int resetCount = 0;
 
+  /// Thrown by every reset when set. The real service swallows exceptions,
+  /// so only an `Error` from the `audio_session` plugin can reach the cubit.
+  Error? resetError;
+
   @override
-  Future<void> resetAudioSession() async => resetCount++;
+  Future<void> resetAudioSession() async {
+    resetCount++;
+    if (resetError case final error?) throw error;
+  }
 }
 
 class _FakeRecorder implements VoiceOverRecorderService {
   final _levels = StreamController<double>.broadcast();
   bool throwOnStart = false;
+  bool throwOnStop = false;
   String? path;
   DateTime now = DateTime(2026);
 
@@ -38,7 +46,10 @@ class _FakeRecorder implements VoiceOverRecorderService {
   }
 
   @override
-  Future<String?> stop() async => path;
+  Future<String?> stop() async {
+    if (throwOnStop) throw VoiceOverRecorderException('stop failed');
+    return path;
+  }
 
   @override
   Future<void> dispose() => _levels.close();
@@ -269,6 +280,71 @@ void main() {
         await cubit.close();
 
         expect(unclaimed.existsSync(), isFalse);
+      });
+    });
+
+    group('when the audio session will not reset', () {
+      setUp(() => audioSession.resetError = StateError('session'));
+
+      test('stop still hands the finished file over', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+
+        await cubit.stop();
+
+        expect(audioSession.resetCount, 1);
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+        expect(cubit.state.recordingPath, recorder.path);
+        expect(File(recorder.path!).existsSync(), isTrue);
+      });
+
+      test('a failed stop still deletes the in-progress file', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        recorder.throwOnStop = true;
+
+        await cubit.stop();
+
+        expect(audioSession.resetCount, 1);
+        expect(cubit.state.status, SoundRecorderStatus.failed);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      test('cancel still deletes the recording in progress', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+
+        await cubit.cancel();
+
+        expect(audioSession.resetCount, 1);
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      test('a failed start still leaves no file behind', () async {
+        recorder.throwOnStart = true;
+        final cubit = build();
+
+        await cubit.start();
+
+        expect(audioSession.resetCount, 1);
+        expect(cubit.state.status, SoundRecorderStatus.failed);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      test('close while recording still deletes the file and closes', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+
+        await cubit.close();
+
+        expect(audioSession.resetCount, 1);
+        expect(cubit.isClosed, isTrue);
+        expect(File(recorder.path!).existsSync(), isFalse);
       });
     });
   });
