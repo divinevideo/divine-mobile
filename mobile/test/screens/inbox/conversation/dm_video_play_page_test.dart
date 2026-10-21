@@ -314,7 +314,11 @@ void main() {
           void expectNoFileIn(Iterable<Object> errors) {
             final recorded = errors.map((error) => '$error').join('\n');
             expect(recorded, isNotEmpty);
-            expect(recorded, isNot(contains(expectedClipPath())));
+            // The folder is named after the account in production.
+            expect(
+              recorded,
+              isNot(contains('${DmVideoStore.dirName}/owner')),
+            );
             expect(recorded, isNot(contains(_videoMessage().id)));
           }
 
