@@ -12,9 +12,10 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 
-/// Thrown when a received encrypted video cannot be turned into a clip for a
-/// reason other than transport: it is too large, its hash does not match the
-/// sender's `x` tag, or the message carries no video metadata.
+/// Thrown when a received encrypted video cannot be kept or played: it is too
+/// large, its hash does not match the sender's `x` tag, or the message
+/// carries no video metadata; or, with [mayPass], the network or the storage
+/// failed.
 class DmVideoUnavailableException implements Exception {
   /// Creates a [DmVideoUnavailableException] with a diagnostic [message].
   const DmVideoUnavailableException(this.message, {this.mayPass = false});

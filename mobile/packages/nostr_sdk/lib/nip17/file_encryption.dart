@@ -76,7 +76,8 @@ class FileEncryption {
   ///
   /// Throws [SecretBoxAuthenticationError] if the ciphertext has been tampered
   /// with or the key/nonce are incorrect, and an [ArgumentError] if the key or
-  /// nonce is not hex of the right size. No error quotes the key or nonce.
+  /// nonce is not hex of the right size or the ciphertext is shorter than its
+  /// tag. No error quotes the key or nonce.
   Future<Uint8List> decrypt({
     required Uint8List ciphertext,
     required String hexKey,

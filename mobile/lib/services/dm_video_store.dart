@@ -59,8 +59,10 @@ typedef DmVideoStoreResolver = DmVideoStore? Function();
 /// `isMessageGone`) goes at the next [prune]. An account's folder goes when
 /// the account leaves this device ([deleteOwner], [sweepOwners]).
 ///
-/// The decryption key and nonce are never written anywhere; only the
-/// plaintext video and its frame are, and neither path is logged.
+/// The decryption key and nonce are never written anywhere. The plaintext
+/// video and its frame are, with small files beside them: its conversation
+/// record, a frame read's mark, a failed download's mark, and an empty file
+/// named after a sender whose frame read never finished. No path is logged.
 class DmVideoStore {
   /// Creates a [DmVideoStore] for the account [ownerPubkey].
   ///
@@ -440,17 +442,19 @@ class DmVideoStore {
   /// [autoDownloadRetryAfter], and at most [autoDownloadMaxTries] times a
   /// session. A tap on play still fetches it. Nothing is fetched or read by
   /// itself for a sender one of whose frame reads hung: for the rest of the
-  /// launch once it outlived [frameTurnLimit], unless it keeps a frame after
-  /// all, and for [maxAge] after a launch left it unfinished, in the
-  /// foreground or past that limit. A tap still plays their videos.
+  /// launch once it outlived [frameTurnLimit], unless it returns a frame after
+  /// all, which forgives them once a launch, and for [maxAge] after a launch
+  /// left it unfinished, in the foreground or past that limit. A tap still
+  /// plays their videos.
   ///
   /// [stillWanted], when given, is asked before a queued download starts,
   /// while it runs and before the frame is read. Once no caller waiting on
   /// this frame wants it, as when their cards closed, that work is dropped
   /// and null returned, unless a tap on play waits for the same video.
   ///
-  /// Throws what [videoFor] throws when it downloads the video, or a
-  /// [DmVideoUnavailableException] when the frame cannot be stored.
+  /// Throws, while a caller still waits, what its download throws unless the
+  /// message is gone, or a [DmVideoUnavailableException] when the frame
+  /// cannot be stored.
   Future<File?> previewFor(
     DmMessage message, {
     bool Function()? stillWanted,

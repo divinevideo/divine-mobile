@@ -86,8 +86,9 @@ class UserDataCleanupService {
   Future<int> Function(Set<String> keepOwnerPubkeys)? onQueuedViewSweep;
 
   /// Optional callback that deletes the received video DMs kept on this
-  /// device for every account except the given pubkeys, and returns how many
-  /// accounts' videos it deleted. Set by the provider layer.
+  /// device for every account except the given pubkeys, expires those past
+  /// their 30 days in the folders of the accounts it keeps, and returns how
+  /// many accounts' videos it deleted. Set by the provider layer.
   Future<int> Function(Set<String> keepOwnerPubkeys)? onKeptDmVideoSweep;
 
   /// Deletes what is kept for accounts this device no longer knows: DM
