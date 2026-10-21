@@ -53,11 +53,14 @@ void main() {
     ).thenAnswer((_) async => const LogExportResult.noLogs());
   });
 
+  // Every fetch after the first returns [refreshedCase] when it is given.
   Future<void> pumpReview(
     WidgetTester tester,
     MinorReviewCase? reviewCase, {
     List<String> locations = const ['/home/0', '/account-review'],
+    MinorReviewCase? refreshedCase,
   }) async {
+    var fetches = 0;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -84,7 +87,9 @@ void main() {
           currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
             return MinorAccountReviewStatus(
               restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
-              currentCase: reviewCase,
+              currentCase: fetches++ == 0
+                  ? reviewCase
+                  : refreshedCase ?? reviewCase,
             );
           }),
         ],
@@ -245,6 +250,52 @@ void main() {
           sharePositionOrigin: any(named: 'sharePositionOrigin'),
         ),
       ).called(1);
+    });
+
+    // Check Again can return a case that now needs action, and its Continue
+    // lands above the tile. An export still in flight must keep its outcome
+    // across that shift, as the appeal keeps an open in flight.
+    testWidgets('keeps an in-flight export when a refresh adds Continue above '
+        'it', (tester) async {
+      // Tall surface so every control is laid out without scrolling.
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final result = Completer<LogExportResult>();
+      when(
+        () => bugReportService.exportLogsToFile(
+          currentScreen: any(named: 'currentScreen'),
+          recentScreens: any(named: 'recentScreens'),
+          userPubkey: any(named: 'userPubkey'),
+          sharePositionOrigin: any(named: 'sharePositionOrigin'),
+        ),
+      ).thenAnswer((_) => result.future);
+      await pumpReview(
+        tester,
+        _case(
+          SuspectedAgeBand.age13To15,
+          MinorReviewResolutionType.parentVideoOrEmail,
+          MinorReviewCaseState.submittedForReview,
+        ),
+        refreshedCase: _case(
+          SuspectedAgeBand.age13To15,
+          MinorReviewResolutionType.parentVideoOrEmail,
+          MinorReviewCaseState.restrictedPendingUserResponse,
+        ),
+      );
+      await tester.tap(find.text(l10n.supportSaveLogs));
+      await tester.pump();
+      expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
+
+      await tester.tap(find.text(l10n.minorAccountReviewCheckAgain));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(l10n.minorAccountReviewContinue), findsOneWidget);
+
+      result.complete(const LogExportResult.noLogs());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.supportNoLogsToExport), findsOneWidget);
     });
   });
 }

@@ -399,7 +399,9 @@ class _LoadedView extends ConsumerWidget {
           onPressed: () => refreshMinorAccountState(ref),
         ),
         const SizedBox(height: 24),
-        const ExportLogsTile(),
+        // Keyed like the appeal, so a refresh that adds a primary action
+        // above it moves the tile rather than dropping an export in flight.
+        const ExportLogsTile(key: ValueKey('exportLogs')),
         ListTile(
           leading: const DivineIcon(
             icon: DivineIconName.trash,
