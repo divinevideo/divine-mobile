@@ -1,8 +1,8 @@
 // @generated from analytics/event-contract.yaml.
-// Source contract commit: aa01966dd9ed6596ad61a974c9b3ba715589e0e5
+// Source contract commit: 10160a9148ca48ba3d8d8a4eba972d0d0a6a614e
 // DO NOT EDIT. Update the contract and run analytics/codegen/generate.py.
 const String productAnalyticsV2ContractCommit =
-    'aa01966dd9ed6596ad61a974c9b3ba715589e0e5';
+    '10160a9148ca48ba3d8d8a4eba972d0d0a6a614e';
 const int productAnalyticsV2SchemaVersion = 2;
 const String productAnalyticsV2EventIdAlgorithm = 'sha256-rfc8785-v1';
 const bool? productAnalyticsV2ConsentDefaultEnabled = null;
@@ -17,7 +17,7 @@ const int productAnalyticsV2PlaybackSessionRecordedWatchedMsMinimum = 0;
 const int productAnalyticsV2PlaybackSessionRecordedWatchedMsMaximum = 86400000;
 const int productAnalyticsV2PlaybackSessionRecordedLoopCountMinimum = 0;
 const int productAnalyticsV2PlaybackSessionRecordedLoopCountMaximum = 1000;
-const int productAnalyticsV2FeedDepthRecordedDepthMinimum = 1;
+const int productAnalyticsV2FeedDepthRecordedDepthMinimum = 2;
 const int productAnalyticsV2FeedDepthRecordedDepthMaximum = 1000000;
 
 enum ProductAnalyticsV2Source {
@@ -432,16 +432,19 @@ class ProductAnalyticsV2FeedDepthRecordedProperties {
   const ProductAnalyticsV2FeedDepthRecordedProperties({
     required this.feedSessionId,
     required this.feedType,
+    required this.surface,
     required this.depth,
   });
 
   final String feedSessionId;
   final ProductAnalyticsV2FeedType feedType;
+  final ProductAnalyticsV2Surface surface;
   final int depth;
 
   Map<String, Object?> toJson() => {
     'feed_session_id': feedSessionId,
     'feed_type': feedType.wireName,
+    'surface': surface.wireName,
     'depth': depth,
   };
 }

@@ -493,15 +493,21 @@ class AnalyticsService implements BackgroundAwareService {
   Future<String?> recordFeedDepth({
     required String feedSessionId,
     required ProductAnalyticsV2FeedType feedType,
+    required ProductAnalyticsV2Surface surface,
     required int depth,
   }) async {
     if (!_consumptionAnalyticsEnabled) return null;
+    if (depth < productAnalyticsV2FeedDepthRecordedDepthMinimum ||
+        depth > productAnalyticsV2FeedDepthRecordedDepthMaximum) {
+      return null;
+    }
     return _trackProductEvent(
       (envelope) => ProductAnalyticsV2FeedDepthRecordedEvent(
         envelope: envelope,
         properties: ProductAnalyticsV2FeedDepthRecordedProperties(
           feedSessionId: feedSessionId,
           feedType: feedType,
+          surface: surface,
           depth: depth,
         ),
       ),

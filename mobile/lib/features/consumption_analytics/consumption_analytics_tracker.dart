@@ -40,6 +40,7 @@ class ConsumptionAnalyticsTracker {
     () => _analytics().recordFeedDepth(
       feedSessionId: feedSessionId,
       feedType: _feedType(trafficSource, sourceDetail),
+      surface: _surface(trafficSource),
       depth: depth,
     ),
   );
@@ -77,6 +78,21 @@ class ConsumptionAnalyticsTracker {
   ) => _record(
     () => _analytics().recordEngagement(action: action, contentId: contentId),
   );
+
+  ProductAnalyticsV2Surface _surface(ViewTrafficSource source) =>
+      switch (source) {
+        ViewTrafficSource.home => ProductAnalyticsV2Surface.feed,
+        ViewTrafficSource.profile => ProductAnalyticsV2Surface.profile,
+        ViewTrafficSource.search => ProductAnalyticsV2Surface.searchResults,
+        ViewTrafficSource.discoveryNew ||
+        ViewTrafficSource.discoveryClassic ||
+        ViewTrafficSource.discoveryForYou ||
+        ViewTrafficSource.discoveryPopular ||
+        ViewTrafficSource.discoveryFeatured =>
+          ProductAnalyticsV2Surface.discovery,
+        ViewTrafficSource.share ||
+        ViewTrafficSource.unknown => ProductAnalyticsV2Surface.unknown,
+      };
 
   ProductAnalyticsV2FeedType _feedType(
     ViewTrafficSource source,

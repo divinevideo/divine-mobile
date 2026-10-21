@@ -2876,6 +2876,7 @@ void main() {
       expect(analytics.events.single.parameters, {
         'feed_session_id': isA<String>(),
         'feed_type': 'unknown',
+        'surface': 'unknown',
         'depth': 2,
       });
     });
@@ -2937,6 +2938,7 @@ void main() {
       expect(analytics.events.last.parameters, {
         'feed_session_id': isA<String>(),
         'feed_type': 'list',
+        'surface': 'feed',
         'depth': 2,
       });
       await tester.pumpWidget(const SizedBox.shrink());
@@ -3007,6 +3009,7 @@ void main() {
         expect(analytics.events.last.parameters, {
           'feed_session_id': isA<String>(),
           'feed_type': 'list',
+          'surface': 'feed',
           'depth': 2,
         });
         await tester.pumpWidget(const SizedBox.shrink());

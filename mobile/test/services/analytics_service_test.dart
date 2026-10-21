@@ -483,6 +483,7 @@ void main() {
           await analyticsService.recordFeedDepth(
             feedSessionId: '55555555-5555-4555-8555-555555555555',
             feedType: ProductAnalyticsV2FeedType.list,
+            surface: ProductAnalyticsV2Surface.feed,
             depth: 2,
           ),
           isNull,
@@ -514,6 +515,57 @@ void main() {
     );
 
     test(
+      'feed depth queues only deliberate navigation within schema bounds',
+      () async {
+        final queue = _MockProductEventQueue();
+        when(() => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')))
+            .thenAnswer((_) async {});
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          productEventQueue: queue,
+          productAnalyticsEnabled: true,
+          consumptionAnalyticsEnabled: true,
+          currentUserPubkey: () => 'a' * 64,
+        );
+        await analyticsService.initialize();
+
+        for (final depth in [-1, 0, 1, 1000001]) {
+          expect(
+            await analyticsService.recordFeedDepth(
+              feedSessionId: '55555555-5555-4555-8555-555555555555',
+              feedType: ProductAnalyticsV2FeedType.forYou,
+              surface: ProductAnalyticsV2Surface.feed,
+              depth: depth,
+            ),
+            isNull,
+          );
+        }
+        verifyNever(
+          () => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')),
+        );
+        for (final depth in [2, 1000000]) {
+          expect(
+            await analyticsService.recordFeedDepth(
+              feedSessionId: '55555555-5555-4555-8555-555555555555',
+              feedType: ProductAnalyticsV2FeedType.forYou,
+              surface: ProductAnalyticsV2Surface.feed,
+              depth: depth,
+            ),
+            isNotNull,
+          );
+        }
+        final events = verify(
+          () => queue.enqueue(captureAny(), ownerPubkey: 'a' * 64),
+        ).captured.cast<ProductAnalyticsV2Event>();
+        expect(events.map((event) => event.propertiesJson['depth']), [
+          2,
+          1000000,
+        ]);
+      },
+    );
+
+    test(
       'consumption uses shared consent, signed identity, and typed fields',
       () async {
         final queue = _MockProductEventQueue();
@@ -536,6 +588,7 @@ void main() {
           await analyticsService.recordFeedDepth(
             feedSessionId: '55555555-5555-4555-8555-555555555555',
             feedType: ProductAnalyticsV2FeedType.list,
+            surface: ProductAnalyticsV2Surface.feed,
             depth: 2,
           );
         }
@@ -560,6 +613,7 @@ void main() {
         expect(events.last.propertiesJson, {
           'feed_session_id': '55555555-5555-4555-8555-555555555555',
           'feed_type': 'list',
+          'surface': 'feed',
           'depth': 2,
         });
         for (final event in events) {

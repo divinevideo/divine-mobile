@@ -27,10 +27,12 @@ class RecordingConsumptionAnalytics extends AnalyticsService {
   Future<String?> recordFeedDepth({
     required String feedSessionId,
     required ProductAnalyticsV2FeedType feedType,
+    required ProductAnalyticsV2Surface surface,
     required int depth,
   }) => _record('feed_depth_recorded', {
     'feed_session_id': feedSessionId,
     'feed_type': feedType.wireName,
+    'surface': surface.wireName,
     'depth': depth,
   });
 

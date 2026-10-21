@@ -40,39 +40,52 @@ void main() {
       expect(analytics.parameters.single, {'action': 'follow_added'});
     });
 
-    test('preserves session identity and normalized feed types', () async {
-      const session = '55555555-5555-4555-8555-555555555555';
-      const cases = [
-        (ViewTrafficSource.home, null, 'home'),
-        (ViewTrafficSource.home, 'foryou', 'for_you'),
-        (ViewTrafficSource.home, 'following', 'following'),
-        (ViewTrafficSource.home, 'list', 'list'),
-        (ViewTrafficSource.home, 'new', 'new_vines'),
-        (ViewTrafficSource.home, 'classic', 'classics'),
-        (ViewTrafficSource.discoveryForYou, null, 'for_you'),
-        (ViewTrafficSource.discoveryNew, null, 'new_vines'),
-        (ViewTrafficSource.discoveryClassic, null, 'classics'),
-        (ViewTrafficSource.discoveryPopular, null, 'popular'),
-        (ViewTrafficSource.discoveryFeatured, 'private-theme', 'featured'),
-        (ViewTrafficSource.profile, null, 'profile'),
-        (ViewTrafficSource.share, null, 'share'),
-        (ViewTrafficSource.search, null, 'search'),
-        (ViewTrafficSource.unknown, null, 'unknown'),
-      ];
-      for (final (source, detail, _) in cases) {
-        await tracker.feedDepthReached(
-          trafficSource: source,
-          sourceDetail: detail,
-          feedSessionId: session,
-          depth: 2,
-        );
-      }
-      expect(analytics.eventNames, everyElement('feed_depth_recorded'));
-      expect(analytics.parameters, [
-        for (final (_, _, feedType) in cases)
-          {'feed_session_id': session, 'feed_type': feedType, 'depth': 2},
-      ]);
-    });
+    test(
+      'preserves surface when Home and Explore feed types collide',
+      () async {
+        const session = '55555555-5555-4555-8555-555555555555';
+        const cases = [
+          (ViewTrafficSource.home, null, 'home', 'feed'),
+          (ViewTrafficSource.home, 'foryou', 'for_you', 'feed'),
+          (ViewTrafficSource.home, 'following', 'following', 'feed'),
+          (ViewTrafficSource.home, 'list', 'list', 'feed'),
+          (ViewTrafficSource.home, 'new', 'new_vines', 'feed'),
+          (ViewTrafficSource.home, 'classic', 'classics', 'feed'),
+          (ViewTrafficSource.discoveryForYou, null, 'for_you', 'discovery'),
+          (ViewTrafficSource.discoveryNew, null, 'new_vines', 'discovery'),
+          (ViewTrafficSource.discoveryClassic, null, 'classics', 'discovery'),
+          (ViewTrafficSource.discoveryPopular, null, 'popular', 'discovery'),
+          (
+            ViewTrafficSource.discoveryFeatured,
+            'private-theme',
+            'featured',
+            'discovery',
+          ),
+          (ViewTrafficSource.profile, null, 'profile', 'profile'),
+          (ViewTrafficSource.share, null, 'share', 'unknown'),
+          (ViewTrafficSource.search, null, 'search', 'search_results'),
+          (ViewTrafficSource.unknown, null, 'unknown', 'unknown'),
+        ];
+        for (final (source, detail, _, _) in cases) {
+          await tracker.feedDepthReached(
+            trafficSource: source,
+            sourceDetail: detail,
+            feedSessionId: session,
+            depth: 2,
+          );
+        }
+        expect(analytics.eventNames, everyElement('feed_depth_recorded'));
+        expect(analytics.parameters, [
+          for (final (_, _, feedType, surface) in cases)
+            {
+              'feed_session_id': session,
+              'feed_type': feedType,
+              'surface': surface,
+              'depth': 2,
+            },
+        ]);
+      },
+    );
 
     test('delivery failures never escape into product actions', () async {
       final service = RecordingConsumptionAnalytics(
