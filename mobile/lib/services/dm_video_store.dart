@@ -322,7 +322,8 @@ class DmVideoStore {
   /// fetched again rather than handed out.
   ///
   /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`) or
-  /// a [DmVideoUnavailableException] when the video cannot be stored, naming
+  /// a [DmVideoUnavailableException] when the message was retracted or
+  /// removed with its conversation, or the video cannot be stored, naming
   /// the cause but not the file. Nothing is kept on a failure.
   Future<File> videoFor(DmMessage message) {
     final id = message.id;
@@ -875,6 +876,13 @@ class DmVideoStore {
     // on its way to the caller, who releases it.
     _lease(file);
     try {
+      // Retracted or removed since its card showed: neither handed out nor
+      // fetched again.
+      if (await _isGone(message)) {
+        throw const DmVideoUnavailableException(
+          'the message was retracted or removed',
+        );
+      }
       if (file.existsSync()) {
         // A copy past its age that only this lease holds was kept because no
         // prune ran since: fetched again, so a takedown on the media server
@@ -916,6 +924,27 @@ class DmVideoStore {
       category: LogCategory.video,
     );
     return file;
+  }
+
+  /// Whether [message] was retracted or removed with its conversation. A
+  /// lookup that fails says no, as it keeps a message's files in a prune.
+  Future<bool> _isGone(DmMessage message) async {
+    try {
+      return await _isMessageGone?.call(message.id) == true ||
+          await _isConversationRemoved?.call(
+                message.conversationId,
+                message.createdAt,
+              ) ==
+              true;
+    } on Object catch (error) {
+      Log.warning(
+        'Could not tell whether a video DM message is gone: '
+        '${error.runtimeType}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return false;
+    }
   }
 
   Future<File?> _obtainPreview(

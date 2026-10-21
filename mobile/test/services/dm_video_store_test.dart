@@ -306,6 +306,37 @@ void main() {
         },
       );
 
+      test('refuses a retracted video without fetching it', () async {
+        final store = createStore(isMessageGone: (_) async => true);
+
+        await expectLater(
+          store.videoFor(_videoMessage()),
+          throwsA(isA<DmVideoUnavailableException>()),
+        );
+        expect(fetches, equals(0));
+        expect(keptFiles(), isEmpty);
+      });
+
+      test(
+        'refuses a kept video once its conversation was removed',
+        () async {
+          var removed = false;
+          final store = createStore(
+            isConversationRemoved: (_, _) async => removed,
+          );
+          final message = _videoMessage();
+          store.releaseVideo(await store.videoFor(message));
+          expect(fetches, equals(1));
+          removed = true;
+
+          await expectLater(
+            store.videoFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+          expect(fetches, equals(1));
+        },
+      );
+
       test(
         'downloads and decrypts a video once and keeps it for the account',
         () async {
@@ -2027,8 +2058,10 @@ void main() {
         "deletes a gone message's video even after it was played: its sender "
         'took it back',
         () async {
-          final store = createStore(isMessageGone: (_) async => true);
+          var gone = false;
+          final store = createStore(isMessageGone: (_) async => gone);
           final played = await store.videoFor(_videoMessage());
+          gone = true;
 
           await store.prune();
 
@@ -2144,7 +2177,8 @@ void main() {
             return Completer<Uint8List?>().future;
           };
           final message = _videoMessage();
-          final store = createStore(isMessageGone: (_) async => true);
+          var gone = false;
+          final store = createStore(isMessageGone: (_) async => gone);
           final tapped = store.videoFor(message);
           await pumpEventQueue();
           unawaited(store.previewFor(message));
@@ -2152,6 +2186,7 @@ void main() {
           release.complete(_plaintext);
           final video = await tapped;
           await readStarted.future;
+          gone = true;
 
           await store.prune();
 
@@ -2174,8 +2209,9 @@ void main() {
           }
           return Future.value(_frame);
         };
+        var gone = false;
         final store = createStore(
-          isMessageGone: (id) async => id == message.id,
+          isMessageGone: (id) async => gone && id == message.id,
         );
         final firstPreview = store.previewFor(other);
         await reading.future;
@@ -2185,6 +2221,7 @@ void main() {
         download.complete(_plaintext);
         final video = await tapped;
         await pumpEventQueue();
+        gone = true;
 
         try {
           await store.prune();
@@ -2202,15 +2239,17 @@ void main() {
           final removed = _videoMessage(id: '1' * 64, conversationId: 'gone');
           final shown = _videoMessage(id: '2' * 64, conversationId: 'shown');
           final asked = <(String, int)>[];
+          var removedYet = false;
           final store = createStore(
             isMessageGone: (_) async => false,
             isConversationRemoved: (conversationId, sentAt) async {
               asked.add((conversationId, sentAt));
-              return conversationId == 'gone';
+              return removedYet && conversationId == 'gone';
             },
           );
           await store.videoFor(removed);
           await store.videoFor(shown);
+          removedYet = true;
 
           await store.prune();
 
@@ -2458,13 +2497,15 @@ void main() {
         "moves a kept video's record when a tap plays its message from "
         'another conversation',
         () async {
+          var removed = false;
           final store = createStore(
             isConversationRemoved: (conversationId, _) async =>
-                conversationId == 'moved',
+                removed && conversationId == 'moved',
           );
           await store.videoFor(_videoMessage(conversationId: 'misfiled'));
 
           await store.videoFor(_videoMessage(conversationId: 'moved'));
+          removed = true;
           await store.prune();
 
           expect(ownerDir().listSync(), isEmpty);
