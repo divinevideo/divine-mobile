@@ -83,6 +83,24 @@ void main() {
         },
       );
 
+      test(
+        'judges a message a repair moved by the conversation it is in now',
+        () async {
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'old-room',
+            findMessageLocation: (_) async =>
+                (conversationId: 'repaired', sentAt: _sentAt),
+          );
+
+          expect(
+            await lookups.isGone(_videoMessage(conversationId: 'old-room')),
+            isFalse,
+          );
+        },
+      );
+
       test('says nothing is gone without lookups', () async {
         expect(
           await DmVideoGoneLookups(records: records).isGone(_videoMessage()),

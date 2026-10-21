@@ -36,15 +36,19 @@ class DmVideoGoneLookups {
   final Future<DmVideoMessageLocation?> Function(String messageId)?
   _findMessageLocation;
 
-  /// Whether [message] was retracted or removed with its conversation.
-  /// Throws what a lookup throws.
-  Future<bool> isGone(DmMessage message) async =>
-      await _isMessageGone?.call(message.id) == true ||
-      await _isConversationRemoved?.call(
-            message.conversationId,
-            message.createdAt,
-          ) ==
-          true;
+  /// Whether [message] was retracted or removed with its conversation, the
+  /// one its row is in now: a caller can hold a message from before a repair
+  /// moved it. Throws what a lookup throws.
+  Future<bool> isGone(DmMessage message) async {
+    if (await _isMessageGone?.call(message.id) == true) return true;
+    final isRemoved = _isConversationRemoved;
+    if (isRemoved == null) return false;
+    final current = await _findMessageLocation?.call(message.id);
+    return isRemoved(
+      current?.conversationId ?? message.conversationId,
+      current?.sentAt ?? message.createdAt,
+    );
+  }
 
   /// The ids among [ids] of messages kept in [dir] that are gone, with
   /// [records] their conversation records by message id. A lookup that

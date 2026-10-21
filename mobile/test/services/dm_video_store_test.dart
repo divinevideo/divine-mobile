@@ -418,6 +418,28 @@ void main() {
       );
 
       test(
+        'hands out, and keeps, the video of a message a repair moved out of a '
+        'conversation removed since',
+        () async {
+          final message = _videoMessage(conversationId: 'old-room');
+          final store = createStore(
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'old-room',
+            findMessageLocation: (_) async =>
+                (conversationId: 'repaired', sentAt: message.createdAt),
+          );
+          store.releaseVideo(await store.videoFor(message));
+
+          // A play page still holds the message as it was before the repair.
+          final video = await store.videoFor(message);
+
+          expect(video.existsSync(), isTrue);
+          store.releaseVideo(video);
+          expect(keptFiles(), isNotEmpty);
+        },
+      );
+
+      test(
         'keeps no video whose message went while it downloaded',
         () async {
           final release = Completer<Uint8List>();
