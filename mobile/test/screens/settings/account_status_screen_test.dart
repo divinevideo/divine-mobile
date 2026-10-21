@@ -146,8 +146,13 @@ void main() {
           find.text(l10n.accountStatusAgeClosureMistakeHeading),
           findsOneWidget,
         );
+        expect(
+          find.text(l10n.accountStatusAgeClosureMistakeBody),
+          findsOneWidget,
+        );
         expect(find.text(l10n.supportContactSupport), findsOneWidget);
         expect(find.text(l10n.accountStatusAppealHeading), findsNothing);
+        expect(find.text(l10n.accountStatusAppealBody), findsNothing);
       });
 
       testWidgets('Greenlight opens the 13-15 section of the kids page', (
@@ -162,6 +167,10 @@ void main() {
           tester,
           AccountEnforcementKind.banned,
           category: AccountEnforcementCategory.ageReview,
+        );
+        expect(
+          find.text(l10n.accountStatusAgeClosureRejoinBody),
+          findsOneWidget,
         );
         await tester.tap(find.text(l10n.accountStatusAgeClosureGreenlightCta));
         await tester.pumpAndSettle();
