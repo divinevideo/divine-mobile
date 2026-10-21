@@ -1111,8 +1111,8 @@ class DmVideoStore {
     unawaited(
       _frameReads.run(() async {
         started.complete();
-        // A card closed, or held back since, must not cost a decode.
-        if (!wanted()) {
+        // A card closed, held back or found gone since costs no decode.
+        if (!wanted() || _goneWhileLeased.contains(video.path)) {
           read.complete();
           return;
         }

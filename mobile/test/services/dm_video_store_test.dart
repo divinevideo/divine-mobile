@@ -535,6 +535,39 @@ void main() {
       );
 
       test(
+        'reads no frame for a card whose download a tap took over and refused '
+        'as gone',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          var gone = false;
+          final message = _videoMessage();
+
+          await IOOverrides.runWithIOOverrides(
+            () async {
+              final store = createStore(isMessageGone: (_) async => gone);
+              // The card stays on screen throughout.
+              final preview = store.previewFor(message);
+              await pumpEventQueue();
+              final tapped = store.videoFor(message);
+              release.complete(_plaintext);
+
+              await expectLater(tapped, throwsA(isA<DmVideoGoneException>()));
+              expect(await preview, isNull);
+              expect(frameReads, equals(0));
+              expect(keptFiles(), isEmpty);
+            },
+            _WriteHooks((part) {
+              // Retracted once the card's download had asked, as it stores.
+              if (part.path.contains(DmVideoStore.videoFileNameFor(message))) {
+                gone = true;
+              }
+            }),
+          );
+        },
+      );
+
+      test(
         'downloads and decrypts a video once and keeps it for the account',
         () async {
           final store = createStore();
