@@ -166,6 +166,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     tempDir = Directory.systemTemp.createTempSync('canvas_short_loop');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
     reports = _PlayerReports();
     playerCalls.clear();
     DivineVideoPlayerController.resetIdCounterForTesting();
@@ -193,7 +194,7 @@ void main() {
     );
   });
 
-  tearDown(() async {
+  tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('divine_video_player'),
@@ -203,9 +204,6 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockStreamHandler(stream, null);
     }
-    await mainBloc.close();
-    await effectsCubit.close();
-    tempDir.deleteSync(recursive: true);
   });
 
   DivineVideoClip clipOf(Duration duration) => DivineVideoClip(
@@ -240,8 +238,12 @@ void main() {
         return null;
       },
     );
+    // Closed by this test's own tear-down, so a test that fails before it
+    // gets here has nothing to close.
     mainBloc = VideoEditorMainBloc();
+    addTearDown(mainBloc.close);
     effectsCubit = VideoEditorEffectsCubit();
+    addTearDown(effectsCubit.close);
     final clip = clipOf(duration).copyWith(playbackSpeed: playbackSpeed);
     whenListen(
       clipBloc,
