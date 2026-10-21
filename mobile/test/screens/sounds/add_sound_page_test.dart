@@ -3,8 +3,10 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -457,6 +459,49 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets(
+        'keeps the waveform moving for equal samples after the buffer fills',
+        (
+          tester,
+        ) async {
+          await pumpView(tester);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          await tester.pump(SoundRecorderCubit.amplitudeInterval);
+          for (var i = 0; i < 256; i++) {
+            recorder.emitLevel(0.5);
+          }
+          await tester.pump();
+          await tester.pump();
+          await tester.pump(SoundRecorderCubit.amplitudeInterval);
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is RepaintBoundary &&
+                  widget.child is SizedBox &&
+                  (widget.child! as SizedBox).height == 120,
+            ),
+          );
+          Future<List<int>?> pixels() => tester.runAsync(() async {
+            final image = await boundary.toImage();
+            try {
+              return (await image.toByteData(
+                format: ui.ImageByteFormat.rawRgba,
+              ))!.buffer.asUint8List();
+            } finally {
+              image.dispose();
+            }
+          });
+          final before = (await pixels())!;
+          expect(before.any((byte) => byte != 0), isTrue);
+
+          recorder.emitLevel(0.5);
+          await tester.pump();
+
+          expect((await pixels())!, isNot(orderedEquals(before)));
+        },
+      );
+
       testWidgets('previews the picked file through the player', (
         tester,
       ) async {

@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 /// edge.
 ///
 /// Shared by the voice-over recorder and the library's sound recorder. Each
-/// new list of [bars] is one new sample: while [isRecording], the strip
+/// change in [samplePosition] is one new sample: while [isRecording], the strip
 /// glides one bar to the left over [sampleInterval] and parks if the next
 /// sample is late, so it never runs off-screen. Under the reduced-motion
 /// preference new bars appear in place instead.
@@ -18,6 +18,7 @@ class LiveAmplitudeWaveform extends StatefulWidget {
     required this.isRecording,
     required this.color,
     required this.sampleInterval,
+    required this.samplePosition,
     super.key,
   });
 
@@ -32,6 +33,10 @@ class LiveAmplitudeWaveform extends StatefulWidget {
 
   /// Time between two samples; one glide spans exactly this long.
   final Duration sampleInterval;
+
+  /// Position of the latest sample. This advances even when the capped bar
+  /// list has the same values, so collection equality cannot freeze scrolling.
+  final Duration samplePosition;
 
   @override
   State<LiveAmplitudeWaveform> createState() => _LiveAmplitudeWaveformState();
@@ -54,7 +59,7 @@ class _LiveAmplitudeWaveformState extends State<LiveAmplitudeWaveform>
   void didUpdateWidget(LiveAmplitudeWaveform oldWidget) {
     super.didUpdateWidget(oldWidget);
     _scroll.duration = widget.sampleInterval;
-    final newSample = !identical(oldWidget.bars, widget.bars);
+    final newSample = oldWidget.samplePosition != widget.samplePosition;
     if (!newSample && oldWidget.isRecording == widget.isRecording) return;
     if (widget.isRecording && !MediaQuery.disableAnimationsOf(context)) {
       _scroll.forward(from: 0);

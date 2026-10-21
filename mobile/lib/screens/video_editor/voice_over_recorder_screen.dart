@@ -496,6 +496,9 @@ class _Wave extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bars = context.select((VoiceOverCubit c) => c.state.waveformBars);
+    final samplePosition = context.select(
+      (VoiceOverCubit c) => c.state.currentDuration,
+    );
     final isRecording = context.select(
       (VoiceOverCubit c) => c.state.isRecording,
     );
@@ -504,6 +507,7 @@ class _Wave extends StatelessWidget {
       isRecording: isRecording,
       color: context.vineColors.accentPositive,
       sampleInterval: VoiceOverCubit.amplitudeInterval,
+      samplePosition: samplePosition,
     );
   }
 }
