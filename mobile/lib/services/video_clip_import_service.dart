@@ -246,6 +246,10 @@ class VideoClipImportService {
   /// duplicate or overwriting edits made to it since, and restores it when it
   /// is in the trash.
   ///
+  /// [beforeCopy], when given, is awaited just before [source] is copied
+  /// in, once the slower lookups are done, so the caller can still refuse:
+  /// an error it throws fails the import with nothing copied.
+  ///
   /// [source] is copied, never moved; the caller still owns it.
   Future<VideoClipImportResult> importReceivedClip({
     required File source,
@@ -254,6 +258,7 @@ class VideoClipImportService {
     required String c2paManifestId,
     models.AspectRatio? targetAspectRatio,
     List<String> contributorPubkeys = const [],
+    Future<void> Function()? beforeCopy,
   }) {
     return _importVerifiedClip(
       source: source,
@@ -264,6 +269,7 @@ class VideoClipImportService {
       senderPubkey: senderPubkey,
       targetAspectRatio: targetAspectRatio,
       contributorPubkeys: contributorPubkeys,
+      beforeCopy: beforeCopy,
     );
   }
 
@@ -370,6 +376,7 @@ class VideoClipImportService {
     String? senderPubkey,
     String? videoHash,
     models.AspectRatio? targetAspectRatio,
+    Future<void> Function()? beforeCopy,
   }) async {
     final documentsPath = await _getDocumentsPath();
     if (documentsPath.isEmpty) {
@@ -419,6 +426,7 @@ class VideoClipImportService {
         );
       }
 
+      await beforeCopy?.call();
       await Directory(documentsPath).create(recursive: true);
       copiedVideo = await _copyVideoIntoDocuments(
         source,

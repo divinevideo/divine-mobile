@@ -99,6 +99,7 @@ void main() {
         c2paManifestId: any(named: 'c2paManifestId'),
         targetAspectRatio: any(named: 'targetAspectRatio'),
         contributorPubkeys: any(named: 'contributorPubkeys'),
+        beforeCopy: any(named: 'beforeCopy'),
       ),
     ).thenAnswer(
       (_) async => VideoClipImportSuccess(
@@ -142,6 +143,7 @@ void main() {
                       targetAspectRatio: AspectRatio.square,
                       // Everyone the clip's signed history credits.
                       contributorPubkeys: [_recorderPubkey],
+                      beforeCopy: any(named: 'beforeCopy'),
                     ),
                   ).captured.single
                   as File;
@@ -166,6 +168,7 @@ void main() {
               senderPubkey: any(named: 'senderPubkey'),
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
+              beforeCopy: any(named: 'beforeCopy'),
             ),
           );
         },
@@ -187,6 +190,7 @@ void main() {
             senderPubkey: any(named: 'senderPubkey'),
             c2paManifestId: any(named: 'c2paManifestId'),
             targetAspectRatio: any(named: 'targetAspectRatio'),
+            beforeCopy: any(named: 'beforeCopy'),
           ),
         ),
       );
@@ -258,6 +262,7 @@ void main() {
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,
+            beforeCopy: any(named: 'beforeCopy'),
           ),
         ).called(1);
         verifyZeroInteractions(otherAccountImport);
@@ -274,6 +279,7 @@ void main() {
               senderPubkey: any(named: 'senderPubkey'),
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
+              beforeCopy: any(named: 'beforeCopy'),
             ),
           ).thenAnswer(
             (_) async => const VideoClipImportFailure(
@@ -311,6 +317,7 @@ void main() {
             c2paManifestId: any(named: 'c2paManifestId'),
             targetAspectRatio: any(named: 'targetAspectRatio'),
             contributorPubkeys: any(named: 'contributorPubkeys'),
+            beforeCopy: any(named: 'beforeCopy'),
           ),
         ).thenAnswer((_) => importing.future);
         final cubit = buildCubit();
@@ -328,6 +335,82 @@ void main() {
           () => store.releaseVideo(captureAny()),
         ).captured;
         expect((released.single as File).path, equals(_decryptedPath));
+      });
+
+      group('just before the library copies the clip', () {
+        DivineVideoClip savedClip() => DivineVideoClip(
+          id: 'dm_clip_1',
+          video: EditorVideo.file('/documents/dm_clip_1.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 9, 28),
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        );
+
+        /// Stubs the import to run its pre-copy check the way the library
+        /// does, failing the import when the check refuses.
+        void stubImportRunningItsCheck({void Function()? beforeTheCheck}) {
+          when(
+            () => importService.importReceivedClip(
+              source: any(named: 'source'),
+              messageId: any(named: 'messageId'),
+              senderPubkey: any(named: 'senderPubkey'),
+              c2paManifestId: any(named: 'c2paManifestId'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              contributorPubkeys: any(named: 'contributorPubkeys'),
+              beforeCopy: any(named: 'beforeCopy'),
+            ),
+          ).thenAnswer((invocation) async {
+            beforeTheCheck?.call();
+            final check =
+                invocation.namedArguments[#beforeCopy]
+                    as Future<void> Function()?;
+            if (check != null) {
+              try {
+                await check();
+              } on DmVideoUnavailableException {
+                return const VideoClipImportFailure(
+                  VideoClipImportFailureReason.saveFailed,
+                );
+              }
+            }
+            return VideoClipImportSuccess(savedClip());
+          });
+        }
+
+        test(
+          'asks the store again, and lets go of what it hands out',
+          () async {
+            stubVerification(ClipProvenanceStatus.verified);
+            stubImportRunningItsCheck();
+            final cubit = buildCubit();
+            addTearDown(cubit.close);
+
+            expect(
+              await cubit.save(_clipMessage()),
+              equals(DmClipSaveStatus.saved),
+            );
+            verify(() => store.videoFor(any())).called(2);
+            verify(() => store.releaseVideo(any())).called(2);
+          },
+        );
+
+        test('adds nothing once the message went during the check', () async {
+          stubVerification(ClipProvenanceStatus.verified);
+          stubImportRunningItsCheck(
+            // Retracted while the import looked the clip up.
+            beforeTheCheck: () => when(
+              () => store.videoFor(any()),
+            ).thenThrow(const DmVideoGoneException()),
+          );
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+
+          expect(
+            await cubit.save(_clipMessage()),
+            equals(DmClipSaveStatus.failed),
+          );
+        });
       });
 
       test('lets go of a video the check keeps out', () async {
@@ -402,6 +485,7 @@ void main() {
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,
+            beforeCopy: any(named: 'beforeCopy'),
           ),
         ).called(1);
       });

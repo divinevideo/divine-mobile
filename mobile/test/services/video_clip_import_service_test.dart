@@ -1040,6 +1040,39 @@ void main() {
       expect(clip.sourceAddressableId, equals(post.addressableId));
     });
 
+    test(
+      'asks whether it may still keep the clip just before copying it, after '
+      'the slower lookup, and copies nothing when it may not',
+      () async {
+        final order = <String>[];
+        final resolver = _MockPublishedClipSourceResolver();
+        when(() => resolver.resolve(_receivedClipHash)).thenAnswer((_) async {
+          order.add('lookup');
+          return null;
+        });
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+          publishedSourceResolver: resolver,
+        );
+
+        final result = await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+          beforeCopy: () async {
+            order.add('check');
+            throw StateError('the message was retracted');
+          },
+        );
+
+        expect(order, equals(['lookup', 'check']));
+        expect(result, isA<VideoClipImportFailure>());
+        expect(docsDir.listSync(), isEmpty);
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      },
+    );
+
     test('imports nothing when it cannot tell whether the clip was '
         'published', () async {
       final resolver = _MockPublishedClipSourceResolver();
