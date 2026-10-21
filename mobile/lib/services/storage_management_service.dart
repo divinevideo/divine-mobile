@@ -13,6 +13,7 @@ import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/storage_footprint.dart';
+import 'package:openvine/services/c2pa_debris_janitor.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/temp_render_janitor.dart';
 import 'package:path/path.dart' as p;
@@ -280,7 +281,8 @@ class StorageManagementService {
     _transitionFramesDir,
   };
 
-  /// Extensions of the media the app writes to the documents root — the only
+  /// Extensions of the media the app writes to the documents root — with the
+  /// `.old` twins of [C2paDebrisJanitor.isUnsignedOriginalName], the only
   /// files the orphan sweep will ever remove. Anything else there (legacy Hive
   /// boxes, lock files, a database left by an old build) is counted as content
   /// and left alone, because a wrong guess deletes something irreplaceable
@@ -681,7 +683,9 @@ class StorageManagementService {
   ///
   /// Everything that fails here is the user's content by definition: a
   /// pending upload's input, a file still being written, or something the
-  /// app did not write and cannot vouch for.
+  /// app did not write and cannot vouch for. The unsigned `.old` originals
+  /// older builds left beside signed videos qualify too, so this sweep covers
+  /// them on a device where the startup janitor has not removed them yet.
   bool _isSweepCandidate(
     _DocumentsFile file,
     FileStat stat,
@@ -689,8 +693,9 @@ class StorageManagementService {
     DateTime cutoff,
   ) {
     if (!_sweepableMediaExtensions.contains(
-      p.extension(file.name).toLowerCase(),
-    )) {
+          p.extension(file.name).toLowerCase(),
+        ) &&
+        !C2paDebrisJanitor.isUnsignedOriginalName(file.name)) {
       return false;
     }
     if (protectedNames.contains(file.name)) return false;

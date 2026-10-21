@@ -227,6 +227,35 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     return (delete(clips)..where((t) => t.draftId.equals(draftId))).go();
   }
 
+  /// Deletes every clip row whose `draft_id` names a draft that no longer
+  /// exists, across all owners, and returns the deleted rows so the caller
+  /// can reclaim the files only they referenced.
+  ///
+  /// Builds before 1.0.17 deleted a draft's row without its clips, and the
+  /// declared FK cascade never fires (see [DraftsDao.deleteDraft]). Those rows
+  /// are invisible — no draft lists them — yet still count as references, so
+  /// the recordings they name could never be freed.
+  ///
+  /// Rows of a draft id in [keepDraftIds] survive without their draft row: the
+  /// app passes its autosave id, whose rows the library lists as clips whether
+  /// or not that draft row exists. Trashed rows are left to the trash purge,
+  /// and library rows (`draft_id` NULL) are never candidates.
+  Future<List<ClipRow>> deleteOrphanedDraftClips({
+    Set<String> keepDraftIds = const {},
+  }) {
+    Expression<bool> isOrphan($ClipsTable t) =>
+        t.draftId.isNotNull() &
+        t.deletedAt.isNull() &
+        t.draftId.isNotIn(keepDraftIds) &
+        t.draftId.isNotInQuery(selectOnly(drafts)..addColumns([drafts.id]));
+
+    return transaction(() async {
+      final orphans = await (select(clips)..where(isOrphan)).get();
+      if (orphans.isNotEmpty) await (delete(clips)..where(isOrphan)).go();
+      return orphans;
+    });
+  }
+
   /// Watch all clips for a draft (reactive stream). Excludes trashed clips.
   Stream<List<ClipRow>> watchClipsByDraftId(String draftId) {
     final query = select(clips)

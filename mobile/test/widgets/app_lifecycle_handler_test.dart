@@ -92,6 +92,9 @@ Future<ProviderContainer> _pumpHandler(WidgetTester tester) async {
   final clipLibraryService = _MockClipLibraryService();
   when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
   when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+  when(
+    clipLibraryService.purgeOrphanedDraftClips,
+  ).thenAnswer((_) async => 0);
   final draftStorageService = _MockDraftStorageService();
   when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
   final nostrClient = _MockNostrClient();
@@ -178,6 +181,9 @@ void main() {
       final clipLibraryService = _MockClipLibraryService();
       when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
       when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      when(
+        clipLibraryService.purgeOrphanedDraftClips,
+      ).thenAnswer((_) async => 0);
       final draftStorageService = _MockDraftStorageService();
       when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
 
@@ -208,6 +214,50 @@ void main() {
 
       verify(clipLibraryService.migrateOldClips).called(1);
       verify(draftStorageService.migrateOldDrafts).called(1);
+      verify(clipLibraryService.purgeExpiredTrash).called(1);
+      verify(clipLibraryService.purgeOrphanedDraftClips).called(1);
+    });
+
+    testWidgets('sweeps orphaned draft clips even when the trash purge '
+        'fails', (tester) async {
+      final authService = _MockAuthService();
+      when(() => authService.isAuthenticated).thenReturn(true);
+      final publishNotifier = _PendingVideoPublishNotifier();
+      final clipLibraryService = _MockClipLibraryService();
+      when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
+      when(
+        clipLibraryService.purgeExpiredTrash,
+      ).thenThrow(StateError('database is locked'));
+      when(
+        clipLibraryService.purgeOrphanedDraftClips,
+      ).thenAnswer((_) async => 0);
+      final draftStorageService = _MockDraftStorageService();
+      when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(authService),
+            appBadgeServiceProvider.overrideWithValue(
+              _CountingAppBadgeClearer(),
+            ),
+            videoPublishProvider.overrideWith(() => publishNotifier),
+            clipLibraryServiceProvider.overrideWithValue(clipLibraryService),
+            draftStorageServiceProvider.overrideWithValue(draftStorageService),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AppLifecycleHandler(child: SizedBox.shrink()),
+          ),
+        ),
+      );
+      await tester.pump();
+      publishNotifier.completed.complete();
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      verify(clipLibraryService.purgeOrphanedDraftClips).called(1);
     });
 
     testWidgets('handles auth stream closing before authentication', (
@@ -263,6 +313,9 @@ void main() {
       final clipLibraryService = _MockClipLibraryService();
       when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
       when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      when(
+        clipLibraryService.purgeOrphanedDraftClips,
+      ).thenAnswer((_) async => 0);
       final draftStorageService = _MockDraftStorageService();
       when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
 
@@ -311,6 +364,9 @@ void main() {
       final clipLibraryService = _MockClipLibraryService();
       when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
       when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      when(
+        clipLibraryService.purgeOrphanedDraftClips,
+      ).thenAnswer((_) async => 0);
       final draftStorageService = _MockDraftStorageService();
       when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
 
@@ -362,6 +418,9 @@ void main() {
         final clipLibraryService = _MockClipLibraryService();
         when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
         when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+        when(
+          clipLibraryService.purgeOrphanedDraftClips,
+        ).thenAnswer((_) async => 0);
         final draftStorageService = _MockDraftStorageService();
         when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
 
@@ -506,6 +565,9 @@ void main() {
       final clipLibraryService = _MockClipLibraryService();
       when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
       when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      when(
+        clipLibraryService.purgeOrphanedDraftClips,
+      ).thenAnswer((_) async => 0);
       final draftStorageService = _MockDraftStorageService();
       when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
 
@@ -555,6 +617,9 @@ void main() {
       final clipLibraryService = _MockClipLibraryService();
       when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
       when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      when(
+        clipLibraryService.purgeOrphanedDraftClips,
+      ).thenAnswer((_) async => 0);
       final draftStorageService = _MockDraftStorageService();
       when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
 
@@ -611,6 +676,9 @@ void main() {
       final clipLibraryService = _MockClipLibraryService();
       when(clipLibraryService.migrateOldClips).thenAnswer((_) async {});
       when(clipLibraryService.purgeExpiredTrash).thenAnswer((_) async => 0);
+      when(
+        clipLibraryService.purgeOrphanedDraftClips,
+      ).thenAnswer((_) async => 0);
       final draftStorageService = _MockDraftStorageService();
       when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
       final nostrClient = _MockNostrClient();

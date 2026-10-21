@@ -94,6 +94,51 @@ void main() {
       expect(matchingDirectory.existsSync(), isTrue);
     });
 
+    test('deletes stale unsigned originals of signed videos', () {
+      final stale =
+          C2paDebrisJanitor.staleDebrisAge + const Duration(minutes: 1);
+      final twins = [
+        writeFile('VID_20260614_113531.mp4.old', age: stale, bytes: [1, 2]),
+        writeFile('divine_1786700133469.mp4.old', age: stale, bytes: [1]),
+        writeFile('VID_1786700133470.MOV.OLD', age: stale, bytes: [1]),
+      ];
+      final signed = writeFile(
+        'VID_20260614_113531.mp4',
+        age: stale,
+        bytes: [1, 2],
+      );
+
+      C2paDebrisJanitor.deleteStaleDebris(tempDir, now: now);
+
+      for (final twin in twins) {
+        expect(twin.existsSync(), isFalse, reason: p.basename(twin.path));
+      }
+      expect(signed.existsSync(), isTrue);
+    });
+
+    test('keeps fresh unsigned originals and other .old files', () {
+      final stale =
+          C2paDebrisJanitor.staleDebrisAge + const Duration(minutes: 1);
+      final kept = [
+        writeFile(
+          'VID_1786964993571.mp4.old',
+          age: C2paDebrisJanitor.staleDebrisAge,
+          bytes: [1],
+        ),
+        writeFile('flutter.db.old', age: stale, bytes: [1]),
+        writeFile('settings.json.old', age: stale, bytes: [1]),
+        writeFile('VID_1.mp4.old.tmp', age: stale, bytes: [1]),
+        writeFile('VID_1.old', age: stale, bytes: [1]),
+        writeFile('.mp4.old', age: stale, bytes: [1]),
+      ];
+
+      C2paDebrisJanitor.deleteStaleDebris(tempDir, now: now);
+
+      for (final file in kept) {
+        expect(file.existsSync(), isTrue, reason: p.basename(file.path));
+      }
+    });
+
     test('does not recurse into subdirectories', () {
       final nestedDirectory = Directory(p.join(tempDir.path, 'nested'))
         ..createSync();

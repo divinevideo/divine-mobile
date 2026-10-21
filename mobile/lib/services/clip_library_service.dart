@@ -884,6 +884,46 @@ class ClipLibraryService {
     return purged;
   }
 
+  /// Removes the clip rows of drafts that no longer exist, then the media only
+  /// those rows still referenced. Idempotent and safe to run on every startup.
+  ///
+  /// Builds before 1.0.17 deleted a draft without its clip rows (see
+  /// [ClipsDao.deleteOrphanedDraftClips]), so their recordings could never be
+  /// freed. Every account's rows are swept, not only [ownerPubkey]'s: no
+  /// account can open a draft that is gone. Rows of the autosave draft are
+  /// kept, because [getAllClips] lists them whether or not that draft exists.
+  ///
+  /// Files go through [FileCleanupService], which checks every remaining row
+  /// and draft first, so a recording a library clip still uses survives. A row
+  /// too corrupt to parse leaves its files to the Storage screen's leftover
+  /// sweep, which reports them once no row points at them.
+  ///
+  /// Returns the number of rows removed.
+  Future<int> purgeOrphanedDraftClips() async {
+    final orphans = await _clipsDao.deleteOrphanedDraftClips(
+      keepDraftIds: const {VideoEditorConstants.autoSaveId},
+    );
+    if (orphans.isEmpty) return 0;
+
+    final documentsPath = await getDocumentsPath();
+    final clips = [
+      for (final row in orphans)
+        ?_tryParseClipRow(row, documentsPath, label: 'orphaned draft clip'),
+    ];
+    await FileCleanupService.deleteRecordingClipsFiles(
+      clips,
+      draftsDao: _draftsDao,
+      clipsDao: _clipsDao,
+    );
+
+    Log.info(
+      '🧹 Removed ${orphans.length} clip row(s) of deleted drafts',
+      name: 'ClipLibraryService',
+      category: LogCategory.video,
+    );
+    return orphans.length;
+  }
+
   /// Clear all clips from the library and delete associated files
   Future<void> clearAllClips() async {
     Log.info(

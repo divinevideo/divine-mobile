@@ -576,6 +576,14 @@ class Drafts extends Table {
 /// Key fields are indexed columns for efficient queries; the full clip
 /// payload (lens metadata, thumbnail info, etc.) lives in the [data]
 /// JSON blob.
+///
+/// Retention: a draft's rows go with it (`DraftsDao.deleteDraft`), because
+/// `PRAGMA foreign_keys` is never enabled and the cascade below does not fire.
+/// Rows stranded by builds before 1.0.17, which deleted only the draft row,
+/// are swept by `ClipsDao.deleteOrphanedDraftClips`, called at startup from
+/// `ClipLibraryService.purgeOrphanedDraftClips`. Library rows (`draft_id`
+/// NULL) are kept until the user deletes them; trashed rows are purged after
+/// the trash retention window.
 @DataClassName('ClipRow')
 class Clips extends Table {
   @override

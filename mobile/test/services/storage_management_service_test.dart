@@ -540,6 +540,40 @@ void main() {
         expect((await service.documentsUsage()).orphanedFileCount, 0);
       });
 
+      test(
+        'deletes unsigned .old originals the startup janitor left',
+        () async {
+          final signed = writeFile('${docs.path}/VID_1.mp4', 100, age: old);
+          await db.clipsDao.upsertClip(
+            id: 'clip',
+            orderIndex: 0,
+            durationMs: 1000,
+            recordedAt: DateTime(2026),
+            data: '{}',
+            filePath: 'VID_1.mp4',
+            thumbnailPath: null,
+          );
+          final twin = writeFile('${docs.path}/VID_1.mp4.old', 100, age: old);
+          final freshTwin = writeFile(
+            '${docs.path}/VID_2.mp4.old',
+            40,
+            age: fresh,
+          );
+          final otherOld = writeFile(
+            '${docs.path}/state.json.old',
+            7,
+            age: old,
+          );
+
+          expect(await service.removeOrphanedFiles(), 100);
+
+          expect(twin.existsSync(), isFalse);
+          expect(signed.existsSync(), isTrue);
+          expect(freshTwin.existsSync(), isTrue);
+          expect(otherOld.existsSync(), isTrue);
+        },
+      );
+
       test('keeps a file that gained a row since it was measured', () async {
         final file = writeFile('${docs.path}/divine_late.mp4', 10, age: old);
         expect((await service.documentsUsage()).orphanedFileCount, 1);
