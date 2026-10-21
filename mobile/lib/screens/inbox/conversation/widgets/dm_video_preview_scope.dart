@@ -24,7 +24,7 @@ import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card
 /// preview back: a request downloads nothing until the user plays it, and a
 /// blocked or muted sender's card shows nothing of the video, not even a
 /// frame read before. Either way a tap still plays it. A held card never
-/// reads the kept file, so viewing it keeps nothing longer.
+/// reads the kept file or its frame.
 class DmVideoPreviewScope extends ConsumerWidget {
   /// Creates a [DmVideoPreviewScope] for [message].
   const DmVideoPreviewScope({

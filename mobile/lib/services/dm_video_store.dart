@@ -507,9 +507,10 @@ class DmVideoStore {
       final id = _messageIdOf(file);
       // Even a video played this session goes: its sender took it back, or
       // the user removed it. Only a read or a hand-out under way holds it,
-      // and its release prunes again; the record and mark stay with it, as
-      // that prune may need the record to tell. A part file goes however
-      // young, as its write is no longer wanted.
+      // and its release deletes what is kept for the message; the record and
+      // mark stay with it meanwhile, so a later launch can still tell if the
+      // read never ends. A part file goes however young, as its write is no
+      // longer wanted.
       if (gone.contains(id)) {
         if (_leases.containsKey(file.path)) {
           _goneWhileLeased.add(file.path);
