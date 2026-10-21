@@ -52,6 +52,7 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
 
@@ -1463,6 +1464,41 @@ void main() {
       expect(events, ['sign in target']);
       await swap;
     });
+
+    testWidgets(
+      'logs an outgoing prune that fails after the swap stopped waiting',
+      (tester) async {
+        final store = _MockDmVideoStore();
+        final pruning = Completer<void>();
+        when(store.prune).thenAnswer((_) => pruning.future);
+        final initial = await pumpHost(
+          tester,
+          accountOverrides: [dmVideoStoreProvider.overrideWithValue(store)],
+        );
+        initial.read(dmVideoStoreProvider);
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+
+        final swap = swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async {},
+        );
+        await tester.pump(const Duration(seconds: 5));
+        await swap;
+        pruning.completeError(StateError('the prune failed late'));
+        await tester.pump();
+
+        expect(
+          LogCaptureService().getRecentLogs().map(
+            (entry) => '${entry.message} ${entry.error}',
+          ),
+          contains(contains('the prune failed late')),
+        );
+      },
+    );
 
     testWidgets('resumes outgoing DMs when target sign-in fails', (
       tester,

@@ -1,6 +1,8 @@
 // ABOUTME: Orchestrates an in-place account switch — build a container, sign it
 // ABOUTME: in as the target account, then swap; roll back on failure.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -70,11 +73,25 @@ Future<bool> _quiesceOutgoingDmIngest(ProviderContainer? outgoing) async {
 /// Otherwise a retracted video stays until that account signs in again.
 Future<void> _pruneOutgoingDmVideos(ProviderContainer? outgoing) async {
   if (outgoing == null || !outgoing.exists(dmVideoStoreProvider)) return;
+  Future<void>? prune;
   try {
-    await outgoing
-        .read(dmVideoStoreProvider)
-        ?.prune()
-        .timeout(_accountSwitchDmVideoPruneTimeout);
+    prune = outgoing.read(dmVideoStoreProvider)?.prune();
+    await prune?.timeout(_accountSwitchDmVideoPruneTimeout);
+  } on TimeoutException {
+    Log.warning(
+      'Pruning the outgoing account kept video DMs outlasted the wait before '
+      'the swap; it goes on',
+      name: 'swapAccount',
+    );
+    // No longer waited for, but a failure of it still shows in the log.
+    if (prune != null) {
+      runDetached(
+        prune,
+        'prune the outgoing account kept video DMs',
+        logName: 'swapAccount',
+        category: LogCategory.video,
+      );
+    }
   } catch (error) {
     Log.warning(
       'Pruning the outgoing account kept video DMs before the swap failed: '
