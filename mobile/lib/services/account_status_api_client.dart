@@ -14,6 +14,9 @@ enum FunnelcakeAccountStatus { active, suspended, banned }
 /// carry moderator notes or labels the account holder must not see.
 enum FunnelcakeEnforcementCategory { ageReview }
 
+/// An account's status as Funnelcake reported it, with the closed category it
+/// may name. [category] is null when Funnelcake names none, or one this client
+/// does not know.
 class FunnelcakeAccountStatusResponse {
   const FunnelcakeAccountStatusResponse(this.status, {this.category});
 
@@ -60,6 +63,14 @@ class AccountStatusApiClient {
   final http.Client _httpClient;
   final Duration _timeout;
 
+  /// Reads [expectedPubkey]'s status from Funnelcake with a NIP-98 signed
+  /// request.
+  ///
+  /// Throws [AccountStatusApiException] when the request cannot be signed,
+  /// times out, fails to connect, is refused, or returns a response this
+  /// client cannot use: malformed, for another account, or with an unknown
+  /// status. Other transport errors, such as a failed TLS handshake, are not
+  /// wrapped and propagate as thrown.
   Future<FunnelcakeAccountStatusResponse> fetchStatus({
     required String expectedPubkey,
   }) async {
