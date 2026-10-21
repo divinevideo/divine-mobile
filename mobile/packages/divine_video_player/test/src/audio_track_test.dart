@@ -18,6 +18,7 @@ void main() {
         expect(track.videoEndTime, isNull);
         expect(track.trackStart, equals(Duration.zero));
         expect(track.trackEnd, isNull);
+        expect(track.playbackSpeed, equals(1.0));
       });
 
       test('accepts all parameters', () {
@@ -28,7 +29,10 @@ void main() {
           videoEndTime: Duration(seconds: 30),
           trackStart: Duration(seconds: 10),
           trackEnd: Duration(seconds: 40),
+          playbackSpeed: 2,
         );
+
+        expect(track.playbackSpeed, equals(2.0));
 
         expect(track.volume, equals(0.5));
         expect(track.videoStartTime, equals(const Duration(seconds: 5)));
@@ -40,7 +44,9 @@ void main() {
 
     group('file constructor', () {
       test('sets uri from path', () {
-        const track = AudioTrack.file('/local/song.mp3');
+        const track = AudioTrack.file('/local/song.mp3', playbackSpeed: 0.5);
+
+        expect(track.playbackSpeed, equals(0.5));
 
         expect(track.uri, equals('/local/song.mp3'));
         expect(track.volume, equals(1.0));
@@ -68,7 +74,12 @@ void main() {
 
     group('network constructor', () {
       test('sets uri from url', () {
-        const track = AudioTrack.network('https://example.com/audio.mp3');
+        const track = AudioTrack.network(
+          'https://example.com/audio.mp3',
+          playbackSpeed: 1.5,
+        );
+
+        expect(track.playbackSpeed, equals(1.5));
 
         expect(track.uri, equals('https://example.com/audio.mp3'));
         expect(track.volume, equals(1.0));
@@ -101,8 +112,11 @@ void main() {
           trackEnd: Duration(seconds: 30),
           fadeInDuration: Duration(milliseconds: 500),
           fadeOutDuration: Duration(seconds: 2),
+          playbackSpeed: 1.5,
         );
         final map = track.toMap();
+
+        expect(map['playbackSpeed'], equals(1.5));
 
         expect(map['uri'], equals('/audio.mp3'));
         expect(map['volume'], equals(0.7));
@@ -131,7 +145,31 @@ void main() {
         expect(map['trackStartMs'], isZero);
         expect(map['fadeInMs'], isZero);
         expect(map['fadeOutMs'], isZero);
+        expect(map['playbackSpeed'], equals(1.0));
         expect(map.containsKey('equalizer'), isFalse);
+      });
+    });
+
+    group('playbackSpeed', () {
+      test('rejects a speed that is not greater than zero', () {
+        expect(
+          () => AudioTrack(uri: '/a.mp3', playbackSpeed: 0),
+          throwsAssertionError,
+        );
+        expect(
+          () => AudioTrack.file('/a.mp3', playbackSpeed: -1),
+          throwsAssertionError,
+        );
+      });
+
+      test('rejects an infinite speed', () {
+        expect(
+          () => AudioTrack.network(
+            'https://example.com/a.mp3',
+            playbackSpeed: double.infinity,
+          ),
+          throwsAssertionError,
+        );
       });
 
       test('serializes an equalizer and leaves out a flat one', () {
@@ -192,8 +230,11 @@ void main() {
           trackEnd: const Duration(seconds: 15),
           fadeInDuration: const Duration(seconds: 1),
           fadeOutDuration: const Duration(seconds: 2),
+          playbackSpeed: 2,
           bundle: bundle,
         );
+
+        expect(track.playbackSpeed, equals(2.0));
 
         expect(track.uri, contains('test_audio.mp3'));
         expect(track.volume, equals(0.6));
@@ -244,7 +285,10 @@ void main() {
           trackEnd: const Duration(seconds: 8),
           fadeInDuration: const Duration(milliseconds: 300),
           fadeOutDuration: const Duration(milliseconds: 700),
+          playbackSpeed: 0.75,
         );
+
+        expect(track.playbackSpeed, equals(0.75));
 
         expect(track.uri, contains('test_audio.mp3'));
         expect(track.volume, equals(0.4));

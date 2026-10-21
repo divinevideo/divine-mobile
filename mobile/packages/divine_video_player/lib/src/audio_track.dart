@@ -13,6 +13,11 @@ import 'package:path_provider/path_provider.dart';
 /// timeline the track is audible. [trackStart] and [trackEnd] define
 /// **which portion** of the audio file is used.
 ///
+/// A [playbackSpeed] other than 1 plays that portion faster or slower at
+/// unchanged pitch, as `pro_video_editor` exports a track with the same
+/// speed: [trackStart] and [trackEnd] stay positions in the file, while
+/// [videoStartTime], [videoEndTime] and the fades stay video time.
+///
 /// Example — play seconds 10-40 of a song starting at video second 5:
 /// ```dart
 /// AudioTrack(
@@ -35,7 +40,11 @@ class AudioTrack {
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
     this.equalizer,
-  });
+    this.playbackSpeed = 1.0,
+  }) : assert(
+         playbackSpeed > 0 && playbackSpeed < double.infinity,
+         'playbackSpeed must be finite and greater than 0',
+       );
 
   /// Creates an [AudioTrack] from a local file path.
   const AudioTrack.file(
@@ -48,7 +57,12 @@ class AudioTrack {
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
     this.equalizer,
-  }) : uri = path;
+    this.playbackSpeed = 1.0,
+  }) : assert(
+         playbackSpeed > 0 && playbackSpeed < double.infinity,
+         'playbackSpeed must be finite and greater than 0',
+       ),
+       uri = path;
 
   /// Creates an [AudioTrack] from a network URL.
   const AudioTrack.network(
@@ -61,7 +75,12 @@ class AudioTrack {
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
     this.equalizer,
-  }) : uri = url;
+    this.playbackSpeed = 1.0,
+  }) : assert(
+         playbackSpeed > 0 && playbackSpeed < double.infinity,
+         'playbackSpeed must be finite and greater than 0',
+       ),
+       uri = url;
 
   /// Creates an [AudioTrack] from a Flutter asset.
   ///
@@ -77,6 +96,7 @@ class AudioTrack {
     Duration fadeInDuration = Duration.zero,
     Duration fadeOutDuration = Duration.zero,
     AudioEqualizer? equalizer,
+    double playbackSpeed = 1.0,
     AssetBundle? bundle,
   }) async {
     final (data, dir) = await (
@@ -97,6 +117,7 @@ class AudioTrack {
       fadeInDuration: fadeInDuration,
       fadeOutDuration: fadeOutDuration,
       equalizer: equalizer,
+      playbackSpeed: playbackSpeed,
     );
   }
 
@@ -115,6 +136,7 @@ class AudioTrack {
     Duration fadeInDuration = Duration.zero,
     Duration fadeOutDuration = Duration.zero,
     AudioEqualizer? equalizer,
+    double playbackSpeed = 1.0,
   }) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/divine_player_audio_memory/$fileName');
@@ -130,6 +152,7 @@ class AudioTrack {
       fadeInDuration: fadeInDuration,
       fadeOutDuration: fadeOutDuration,
       equalizer: equalizer,
+      playbackSpeed: playbackSpeed,
     );
   }
 
@@ -146,7 +169,8 @@ class AudioTrack {
   /// When in the video timeline this audio stops.
   ///
   /// When `null`, the audio plays until the track portion ends
-  /// (i.e. for `trackEnd - trackStart` duration from [videoStartTime]).
+  /// (i.e. for `(trackEnd - trackStart) / playbackSpeed` from
+  /// [videoStartTime]).
   final Duration? videoEndTime;
 
   /// Start position within the audio file.
@@ -176,6 +200,11 @@ class AudioTrack {
   /// `null` plays it unchanged. Android, iOS and macOS only.
   final AudioEqualizer? equalizer;
 
+  /// How fast the track plays its portion of the file, at unchanged pitch:
+  /// `2` plays it in half the time, `0.5` in twice the time. Finite and
+  /// greater than zero. Android, iOS and macOS only.
+  final double playbackSpeed;
+
   /// Serializes this track for platform channel transport.
   Map<String, dynamic> toMap() {
     return {
@@ -187,6 +216,7 @@ class AudioTrack {
       'trackEndMs': trackEnd?.inMilliseconds,
       'fadeInMs': fadeInDuration.inMilliseconds,
       'fadeOutMs': fadeOutDuration.inMilliseconds,
+      'playbackSpeed': playbackSpeed,
       if (equalizer case final equalizer? when !equalizer.isFlat)
         'equalizer': equalizer.toMap(),
     };
