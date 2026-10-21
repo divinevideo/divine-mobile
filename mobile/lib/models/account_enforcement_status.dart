@@ -79,8 +79,8 @@ class AccountEnforcementStatus {
 
   final AccountEnforcementKind kind;
 
-  /// Null when Funnelcake names no category, including every response from a
-  /// Funnelcake that predates the field.
+  /// Null when Funnelcake names no category or one this version does not
+  /// know, including every response from a Funnelcake that predates the field.
   final AccountEnforcementCategory? category;
 
   bool get isEnforced => kind.isEnforced;
