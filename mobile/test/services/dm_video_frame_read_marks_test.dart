@@ -255,6 +255,25 @@ void main() {
       );
 
       test(
+        'forgives a sender once a launch, also across the stores of the launch',
+        () {
+          final first = markOf('1');
+          final second = markOf('2');
+          createMarks(launchId: 'this')
+            ..readStarted(first, _sender)
+            ..readHung(first)
+            ..frameKept(first);
+
+          final rebuilt = createMarks(launchId: 'this')
+            ..readStarted(second, _sender)
+            ..readHung(second)
+            ..frameKept(second);
+
+          expect(rebuilt.senderHungTheDecoder(dir, _sender), isTrue);
+        },
+      );
+
+      test(
         'forgives the sender when their last hung read keeps a frame, though '
         'an earlier one kept its own while that read still hung',
         () {

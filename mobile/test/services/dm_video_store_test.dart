@@ -3267,6 +3267,12 @@ void main() {
           expect(keptFiles(), isEmpty);
           release.complete(_plaintext);
           store.releaseVideo(await tapped);
+          expect(
+            File(
+              '${ownerDir().path}/${message.id}.conversation',
+            ).readAsStringSync(),
+            equals('${message.conversationId}\n${message.createdAt}'),
+          );
         },
       );
 
