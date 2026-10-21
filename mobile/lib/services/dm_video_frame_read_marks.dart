@@ -100,12 +100,15 @@ class DmVideoFrameReadMarks {
   }
 
   /// Writes [mark] as its frame read starts, naming this launch and
-  /// [senderPubkey] while the app is in the foreground.
+  /// [senderPubkey] while the app is in the foreground. A sender is named in
+  /// lowercase, as a seal can spell its signer's key in uppercase and still
+  /// verify.
   ///
   /// Throws a [FileSystemException] when the mark cannot be written.
   void readStarted(File mark, String senderPubkey) {
-    mark.writeAsStringSync(_contentFor(senderPubkey));
-    _running[mark.path] = senderPubkey;
+    final sender = senderPubkey.toLowerCase();
+    mark.writeAsStringSync(_contentFor(sender));
+    _running[mark.path] = sender;
   }
 
   /// Empties [mark], saying its read ended without a frame. It stays, so the
@@ -182,7 +185,7 @@ class DmVideoFrameReadMarks {
       try {
         final lines = file.readAsLinesSync();
         if (lines.length == 2 && lines.first != _launchId) {
-          _rememberHungSender(dir, lines.last);
+          _rememberHungSender(dir, lines.last.toLowerCase());
         }
       } on PathNotFoundException {
         // Deleted since the listing, with its video: nothing to remember.
@@ -201,12 +204,13 @@ class DmVideoFrameReadMarks {
   /// an earlier launch, while the mark that remembers it is kept, or hung in
   /// this one without keeping a frame since.
   bool senderHungTheDecoder(Directory dir, String senderPubkey) {
-    if (_hungSenders.contains(senderPubkey) ||
-        (_hungInLaunch[_launchKeyOf(dir)]?.contains(senderPubkey) ?? false)) {
+    final sender = senderPubkey.toLowerCase();
+    if (_hungSenders.contains(sender) ||
+        (_hungInLaunch[_launchKeyOf(dir)]?.contains(sender) ?? false)) {
       return true;
     }
-    if (!_senderMarkOf(dir, senderPubkey).existsSync()) return false;
-    _hungSenders.add(senderPubkey);
+    if (!_senderMarkOf(dir, sender).existsSync()) return false;
+    _hungSenders.add(sender);
     return true;
   }
 

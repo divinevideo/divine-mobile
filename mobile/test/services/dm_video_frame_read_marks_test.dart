@@ -314,6 +314,21 @@ void main() {
         },
       );
 
+      test('skips the sender however a seal spells their key', () {
+        final marks = createMarks(launchId: 'this');
+        final mark = markOf('1');
+        marks
+          ..readStarted(mark, _sender.toUpperCase())
+          ..readHung(mark);
+
+        expect(marks.senderHungTheDecoder(dir, _sender), isTrue);
+        expect(marks.senderHungTheDecoder(dir, _sender.toUpperCase()), isTrue);
+        expect(
+          createMarks(launchId: 'this').senderHungTheDecoder(dir, _sender),
+          isTrue,
+        );
+      });
+
       test('does nothing once the read ended', () {
         final marks = createMarks(launchId: 'earlier');
         final mark = markOf('1');
@@ -324,6 +339,21 @@ void main() {
 
         expect(mark.existsSync(), isTrue);
         expect(laterLaunchBlamesTheSender(), isFalse);
+      });
+    });
+
+    group('lookForUnfinishedReads, for a key spelled in uppercase', () {
+      test('remembers the sender however the read spelled their key', () {
+        createMarks(
+          launchId: 'earlier',
+        ).readStarted(markOf('1'), _sender.toUpperCase());
+
+        expect(laterLaunchBlamesTheSender(), isTrue);
+        // Named in lowercase, as file names can be case-sensitive.
+        expect(
+          senderMarks().map((mark) => mark.uri.pathSegments.last),
+          equals(['sender-$_sender.decoder-hung']),
+        );
       });
     });
 
