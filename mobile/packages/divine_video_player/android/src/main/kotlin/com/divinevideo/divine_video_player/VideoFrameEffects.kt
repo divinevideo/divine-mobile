@@ -44,6 +44,22 @@ interface VideoFrameEffect {
      */
     fun render(frameTextureId: Int, width: Int, height: Int, history: List<Int?>)
 
+    /**
+     * Draws like the other [render], for an effect that changes over time:
+     * [timeUs] is where the frame lies on the player's timeline, and
+     * [effectTimeUs] how far past the start of the effect's window, as on iOS
+     * and in pro_video_editor's export. The player calls this one; an effect
+     * that looks the same at every moment need not override it.
+     */
+    fun render(
+        frameTextureId: Int,
+        width: Int,
+        height: Int,
+        history: List<Int?>,
+        timeUs: Long,
+        effectTimeUs: Long,
+    ) = render(frameTextureId, width, height, history)
+
     /** Releases the effect's GL objects. */
     fun release() {}
 }
@@ -232,6 +248,8 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
 
         private val copy = GlProgram(VERTEX_SHADER, COPY_SHADER)
         private var effects: List<VideoFrameEffect?> = emptyList()
+        /** The configs [effects] were built from, one per effect. */
+        private var configs: List<FrameEffectsState.Config> = emptyList()
         private var version = -1
         private var maxOffsetUs = 0L
 
@@ -282,7 +300,9 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
 
                 val speed = state.speed.coerceAtLeast(0.01f)
                 val sourceUs = frameSourceUs(presentationTimeUs)
-                val enabled = frameWindows(presentationTimeUs) ?: state.enabled
+                val frameUs = frameTimelinePosition(presentationTimeUs)
+                val enabled = frameUs?.let { effectWindowsAt(state.configs, it) } ?: state.enabled
+                val timeUs = frameUs ?: state.playheadUs
                 val active = effects.indices.filter { i ->
                     effects[i] != null && enabled.getOrElse(i) { true }
                 }
@@ -304,7 +324,8 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
                             history.lastOrNull { it.timeUs <= limit }?.let { slotTextures[it.slot] }
                                 ?: sourceUs?.let { decodedTexture(it - backUs) }
                         }
-                        effect.render(source, width, height, earlier)
+                        val startUs = configs.getOrNull(i)?.startUs ?: 0L
+                        effect.render(source, width, height, earlier, timeUs, timeUs - startUs)
                         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
                         if (!last) source = tempTextures[n % 2]
                     }
@@ -374,20 +395,19 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
         }
 
         /**
-         * Which effects are in their window at the frame itself, or null
-         * when its place on the timeline is not known; the playhead the main
-         * thread last saw stands in then. The pipeline runs a few frames
-         * ahead of the playhead, so only the frame's own time puts a window
-         * on the frames it covers.
+         * Where the frame itself lies on the timeline, or null when that is
+         * not known; the playhead the main thread last saw stands in then.
+         * The pipeline runs a few frames ahead of the playhead, so only the
+         * frame's own time puts a window on the frames it covers.
          */
-        private fun frameWindows(presentationTimeUs: Long): BooleanArray? {
+        private fun frameTimelinePosition(presentationTimeUs: Long): Long? {
             val (anchorPresentationUs, anchorTimelineUs) = timelineAnchor ?: return null
             val timeline = state.timeline ?: return null
             val timelineUs = frameTimelineUs(
                 presentationTimeUs, anchorPresentationUs, anchorTimelineUs, timeline,
             )
             if (!isNearPlayhead(timelineUs, state.playheadUs, timeline)) return null
-            return effectWindowsAt(state.configs, timelineUs)
+            return timelineUs
         }
 
         /**
@@ -405,7 +425,8 @@ internal class FrameEffectsGlEffect(private val state: FrameEffectsState) : GlEf
             if (current == version) return
             version = current
             effects.forEach { it?.release() }
-            effects = state.configs.map { config ->
+            configs = state.configs
+            effects = configs.map { config ->
                 val effect = VideoFrameEffects.factory(config.id)?.invoke(config.params)
                 if (effect == null) {
                     DivineVideoPlayerLog.warning(
