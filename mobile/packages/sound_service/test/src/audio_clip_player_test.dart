@@ -663,6 +663,16 @@ void main() {
       });
     });
 
+    group('setSpeed', () {
+      test('delegates to audio player', () async {
+        when(() => mockAudioPlayer.setSpeed(any())).thenAnswer((_) async {});
+
+        await player.setSpeed(1.5);
+
+        verify(() => mockAudioPlayer.setSpeed(1.5)).called(1);
+      });
+    });
+
     group('dispose', () {
       test('disposes the audio player', () async {
         await player.dispose();

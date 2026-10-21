@@ -9982,6 +9982,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Définir la vitesse de lecture du clip sélectionné';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Définir la vitesse de lecture du son sélectionné';
+
+  @override
   String get videoEditorReverseLabel => 'Inverser';
 
   @override
@@ -10091,6 +10095,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Vitesse du clip';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'Vitesse du son';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

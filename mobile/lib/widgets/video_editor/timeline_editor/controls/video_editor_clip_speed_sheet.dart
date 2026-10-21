@@ -1,5 +1,5 @@
-// ABOUTME: Bottom sheet for adjusting the playback speed of the selected clip,
-// ABOUTME: via one-tap presets or a slider; pops the chosen speed as a double.
+// ABOUTME: Bottom sheet for adjusting the playback speed of the selected clip
+// ABOUTME: or sound, via presets or a slider; pops the chosen speed as a double.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:go_router/go_router.dart';
@@ -16,9 +16,16 @@ const double _minTapTarget = 48;
 const double _chipGap = 8;
 
 class VideoEditorClipSpeedSheet extends StatefulWidget {
-  const VideoEditorClipSpeedSheet({super.key, this.initialSpeed = 1.0});
+  const VideoEditorClipSpeedSheet({
+    super.key,
+    this.initialSpeed = 1.0,
+    this.title,
+  });
 
   final double initialSpeed;
+
+  /// The sheet's title; the clip speed title when `null`.
+  final String? title;
 
   @override
   State<VideoEditorClipSpeedSheet> createState() =>
@@ -64,7 +71,7 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
               ),
               Flexible(
                 child: Text(
-                  context.l10n.videoEditorSpeedSheetTitle,
+                  widget.title ?? context.l10n.videoEditorSpeedSheetTitle,
                   style: VineTheme.titleMediumFont(
                     color: context.vineColors.primaryText,
                   ),

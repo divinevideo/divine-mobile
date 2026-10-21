@@ -24,6 +24,7 @@ void main() {
       final player = _MockAudioClipPlayer();
       when(() => player.setClip(any())).thenAnswer((_) async {});
       when(() => player.setVolume(any())).thenAnswer((_) async {});
+      when(() => player.setSpeed(any())).thenAnswer((_) async {});
       when(() => player.seek(any())).thenAnswer((_) async {});
       when(player.play).thenAnswer((_) async {});
       when(player.pause).thenAnswer((_) async {});
@@ -39,6 +40,7 @@ void main() {
       double volume = 1,
       Duration fadeIn = Duration.zero,
       Duration fadeOut = Duration.zero,
+      double speed = 1,
     }) {
       return StopMotionAudioPreviewTrack(
         id: id,
@@ -48,6 +50,7 @@ void main() {
         volume: volume,
         fadeIn: fadeIn,
         fadeOut: fadeOut,
+        speed: speed,
       );
     }
 
@@ -69,6 +72,30 @@ void main() {
             players.single.setClip(const AudioSourceConfig.file('/music.mp3')),
       ).called(1);
       verify(() => players.single.setVolume(0.4)).called(1);
+    });
+
+    group('speed', () {
+      test('plays a sound at normal speed without touching the player '
+          'speed', () async {
+        await preview.setTracks([track()]);
+
+        verifyNever(() => players.single.setSpeed(any()));
+      });
+
+      test('plays a sped-up sound faster and seeks into it by the time of '
+          'the sound that has played', () async {
+        await preview.setTracks([
+          track(windowStart: const Duration(seconds: 1), speed: 2),
+        ]);
+
+        verify(() => players.single.setSpeed(2)).called(1);
+
+        await preview.syncTo(
+          const Duration(milliseconds: 1500),
+          isPlaying: true,
+        );
+        verify(() => players.single.seek(const Duration(seconds: 1))).called(1);
+      });
     });
 
     group('fade', () {

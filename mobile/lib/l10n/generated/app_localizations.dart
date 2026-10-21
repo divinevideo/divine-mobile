@@ -16691,6 +16691,12 @@ abstract class AppLocalizations {
   /// **'Set playback speed for selected clip'**
   String get videoEditorSetClipSpeedSemanticLabel;
 
+  /// Accessibility label for the Speed button in the timeline controls of a selected sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Set playback speed for selected sound'**
+  String get videoEditorSetSoundSpeedSemanticLabel;
+
   /// Label for the Reverse button in the timeline clip controls.
   ///
   /// In en, this message translates to:
@@ -16870,6 +16876,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clip Speed'**
   String get videoEditorSpeedSheetTitle;
+
+  /// Title of the bottom sheet for adjusting the playback speed of a sound added to the video in the editor timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound Speed'**
+  String get videoEditorSoundSpeedSheetTitle;
 
   /// Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.
   ///

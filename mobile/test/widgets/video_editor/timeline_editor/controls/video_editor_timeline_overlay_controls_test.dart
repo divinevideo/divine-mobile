@@ -39,6 +39,7 @@ import 'package:openvine/repositories/saved_title_style_repository.dart';
 import 'package:openvine/services/video_editor/voice_effect_service.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
@@ -788,6 +789,36 @@ void main() {
       );
       await tester.pumpWidget(build(item.copyWith(label: 'rebuilt')));
       expect(equalizerButton().type, TimelineActionButtonType.primary);
+    });
+
+    testWidgets('offers speed for a sound and highlights it once the sound '
+        'plays faster or slower', (tester) async {
+      const item = TimelineOverlayItem(
+        id: 'sound-1',
+        type: TimelineOverlayType.sound,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 4),
+      );
+      TimelineActionButton speedButton() => tester.widget<TimelineActionButton>(
+        find.byWidgetPredicate(
+          (w) =>
+              w is TimelineActionButton &&
+              w.semanticLabel == l10n.videoEditorSetSoundSpeedSemanticLabel,
+        ),
+      );
+      final sound = AudioEvent(id: item.id, pubkey: 'pub', createdAt: 0);
+      when(
+        () => overlayBloc.state,
+      ).thenReturn(TimelineOverlayState(audioTracks: [sound]));
+
+      await tester.pumpWidget(build(item));
+      expect(speedButton().type, TimelineActionButtonType.secondary);
+
+      when(() => overlayBloc.state).thenReturn(
+        TimelineOverlayState(audioTracks: [sound.copyWith(playbackSpeed: 2)]),
+      );
+      await tester.pumpWidget(build(item.copyWith(label: 'rebuilt')));
+      expect(speedButton().type, TimelineActionButtonType.primary);
     });
 
     testWidgets('renders delete/edit/duplicate/split/done for tune', (
@@ -1913,6 +1944,161 @@ void main() {
           expect(tracks[0].fadeOutDuration, equals(Duration.zero));
           expect(tracks[1].fadeInDuration, equals(Duration.zero));
           expect(tracks[1].fadeOutDuration, equals(const Duration(seconds: 1)));
+        },
+      );
+
+      testWidgets(
+        'sound split starts the tail of a sped-up sound as much further into '
+        'it as the head plays of it',
+        (tester) async {
+          final track = AudioEvent(
+            id: 'sound-1',
+            pubkey: 'pub',
+            createdAt: 0,
+            startOffset: const Duration(seconds: 2),
+            startTime: const Duration(seconds: 3),
+            endTime: const Duration(seconds: 8),
+            playbackSpeed: 2,
+          );
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [track.toJson()],
+          });
+          when(() => mainBloc.state).thenReturn(
+            const VideoEditorMainState(
+              currentPosition: Duration(seconds: 5),
+            ),
+          );
+
+          const item = TimelineOverlayItem(
+            id: 'sound-1',
+            type: TimelineOverlayType.sound,
+            startTime: Duration(seconds: 3),
+            endTime: Duration(seconds: 8),
+            playbackSpeed: 2,
+          );
+          await tester.pumpWidget(
+            buildWithEditor(item, mockEditor, mainBloc),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorSplitSelectedClipSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final tracks =
+              (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                  .cast<Map<String, dynamic>>()
+                  .map(AudioEvent.fromJson)
+                  .toList();
+
+          // 2s + (5s - 3s) * 2 = 6s
+          expect(tracks[1].startOffset, equals(const Duration(seconds: 6)));
+          expect(tracks[1].playbackSpeed, equals(2));
+        },
+      );
+
+      testWidgets(
+        'a speed picked in the speed sheet is written to the sound, whose '
+        'window then plays the same stretch of it',
+        (tester) async {
+          final track = AudioEvent(
+            id: 'sound-1',
+            pubkey: 'pub',
+            createdAt: 0,
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 3),
+          );
+          final other = AudioEvent(id: 'sound-2', pubkey: 'pub', createdAt: 0);
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [
+              track.toJson(),
+              other.toJson(),
+            ],
+          });
+          when(
+            () => mainBloc.state,
+          ).thenReturn(const VideoEditorMainState());
+          final clipBloc = _MockClipEditorBloc();
+          when(
+            () => clipBloc.stream,
+          ).thenAnswer((_) => const Stream<ClipEditorState>.empty());
+          when(() => clipBloc.state).thenReturn(
+            ClipEditorState(
+              clips: [
+                DivineVideoClip(
+                  id: 'clip-1',
+                  video: EditorVideo.file('/tmp/clip-1.mp4'),
+                  duration: const Duration(seconds: 6),
+                  recordedAt: DateTime(2026),
+                  targetAspectRatio: model.AspectRatio.vertical,
+                  originalAspectRatio: 9 / 16,
+                ),
+              ],
+            ),
+          );
+
+          const item = TimelineOverlayItem(
+            id: 'sound-1',
+            type: TimelineOverlayType.sound,
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 3),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(
+              item,
+              mockEditor,
+              mainBloc,
+              clipBloc: clipBloc,
+              routed: true,
+            ),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(l10n.videoEditorSetSoundSpeedSemanticLabel),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text(l10n.videoEditorSoundSpeedSheetTitle),
+            findsOneWidget,
+          );
+          tester.widget<DivineSlider>(find.byType(DivineSlider)).onChanged!(
+            0.5,
+          );
+          await tester.pump();
+          await tester.tap(
+            find.descendant(
+              of: find.byType(VideoEditorClipSpeedSheet),
+              matching: find.byWidgetPredicate(
+                (w) => w is DivineIconButton && w.icon == DivineIconName.check,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final tracks =
+              (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                  .cast<Map<String, dynamic>>()
+                  .map(AudioEvent.fromJson)
+                  .toList();
+
+          expect(tracks[0].playbackSpeed, equals(0.5));
+          expect(tracks[0].startTime, equals(const Duration(seconds: 1)));
+          expect(tracks[0].endTime, equals(const Duration(seconds: 5)));
+          expect(tracks[1].playbackSpeed, equals(1));
         },
       );
 

@@ -73,12 +73,15 @@ Duration? timelinePositionToClipSourcePosition(
 /// Left-trimming a sound should consume or reveal audio source content rather
 /// than sliding the same source frame to a new timeline position. Keeping this
 /// offset in step with the timeline start also preserves the anchored-audio
-/// alignment invariant used by [rebaseAnchoredAudioForClipState].
+/// alignment invariant used by [rebaseAnchoredAudioForClipState]. A sound at
+/// a speed other than 1 consumes that much more or less of its source per
+/// moment of the timeline.
 AudioLeftTrimResult audioLeftTrimResult(
   AudioEvent track, {
   required Duration newStartTime,
 }) {
-  final nextOffset = track.startOffset + (newStartTime - track.startTime);
+  final nextOffset =
+      track.startOffset + track.sourceSpanOf(newStartTime - track.startTime);
   if (nextOffset < Duration.zero) {
     return const AudioLeftTrimResult(
       startOffset: Duration.zero,
@@ -199,7 +202,9 @@ List<Duration> shiftTimelineMarkersForInsertion({
 /// converted through the anchor clip's [DivineVideoClip.playbackSpeed].
 ///
 /// Tracks with no anchor, or whose anchor clip was removed or split into new
-/// clip IDs, are returned unchanged. The original list instance is returned
+/// clip IDs, are returned unchanged, and so is a track played at a speed of its
+/// own: it no longer plays the clip's sound in step with the picture, so there
+/// is no alignment to keep (changing a sound's speed releases its anchor). The original list instance is returned
 /// when nothing moved, so callers can cheaply detect a no-op via `identical`.
 List<AudioEvent> rebaseAnchoredAudioForClipState(
   List<DivineVideoClip> clips,
@@ -222,7 +227,7 @@ List<AudioEvent> rebaseAnchoredAudioForClipState(
     final anchorId = track.anchorClipId;
     final clipStart = anchorId == null ? null : clipStarts[anchorId];
     final clip = anchorId == null ? null : clipsById[anchorId];
-    if (clipStart == null || clip == null) {
+    if (clipStart == null || clip == null || track.playbackSpeed != 1) {
       result.add(track);
       continue;
     }
@@ -266,6 +271,31 @@ List<AudioEvent> rebaseAnchoredAudioForClipState(
   }
 
   return changed ? result : audioTracks;
+}
+
+/// [track] played at [speed], its window rescaled so it plays the same
+/// stretch of its sound: twice as fast takes half as long on the timeline.
+///
+/// The window keeps its start and never runs past [compositionEnd]: a sound
+/// slowed down that far is cut there, as the export would cut it. A track
+/// without a window keeps none. Fades stay timeline time, and the anchor to
+/// the clip the sound came from is released, since the sound no longer plays
+/// in step with that clip's picture.
+AudioEvent audioAtSpeed(
+  AudioEvent track,
+  double speed, {
+  required Duration compositionEnd,
+}) {
+  final atSpeed = track.copyWith(playbackSpeed: speed, clearAnchorClipId: true);
+  final endTime = track.endTime;
+  if (endTime == null || endTime <= track.startTime) return atSpeed;
+
+  final stretch = track.sourceSpanOf(endTime - track.startTime);
+  var newEnd = track.startTime + atSpeed.timelineSpanOf(stretch);
+  if (newEnd > compositionEnd && compositionEnd > track.startTime) {
+    newEnd = compositionEnd;
+  }
+  return atSpeed.copyWith(endTime: newEnd);
 }
 
 /// Granularity an audio window survives a history/draft round-trip at.
@@ -350,7 +380,7 @@ Duration? _audioSourceEnd(AudioEvent track) {
   final remaining =
       Duration(milliseconds: (duration * 1000).toInt()) - track.startOffset;
   if (remaining <= Duration.zero) return null;
-  return track.startTime + remaining;
+  return track.startTime + track.timelineSpanOf(remaining);
 }
 
 /// The clip under the playhead at the timeline [position], or `null` when

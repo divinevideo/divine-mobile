@@ -9372,6 +9372,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorSetClipSpeedSemanticLabel => '선택한 클립의 재생 속도 설정';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel => '선택한 사운드의 재생 속도 설정';
+
+  @override
   String get videoEditorReverseLabel => '역재생';
 
   @override
@@ -9466,6 +9469,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => '클립 속도';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => '사운드 속도';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

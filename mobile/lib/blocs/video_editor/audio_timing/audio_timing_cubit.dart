@@ -62,6 +62,10 @@ class AudioTimingCubit extends Cubit<AudioTimingState>
   static double get _maxDurationSecs =>
       VideoEditorConstants.maxDuration.inMilliseconds / 1000.0;
 
+  /// Seconds of the sound the video plays at its longest: the sound's speed
+  /// times the maximum video duration. The selection spans this much audio.
+  double get selectionSecs => _maxDurationSecs * _sound.playbackSpeed;
+
   /// The scrollable audio range in seconds.
   ///
   /// Allows the start offset to span from `0` to
@@ -221,8 +225,8 @@ class AudioTimingCubit extends Cubit<AudioTimingState>
     final clipStart = Duration(
       milliseconds: (startPositionSecs * 1000).toInt(),
     );
-    // End is either maxDuration after start, or end of audio
-    final clipEndSecs = (startPositionSecs + _maxDurationSecs).clamp(
+    // End is either the selection after start, or end of audio
+    final clipEndSecs = (startPositionSecs + selectionSecs).clamp(
       0.0,
       audioDurationSecs,
     );
@@ -259,6 +263,10 @@ class AudioTimingCubit extends Cubit<AudioTimingState>
     }
 
     await _clipPlayer.setClip(config);
+    // Heard as the video will play it.
+    if (_sound.playbackSpeed != 1) {
+      await _clipPlayer.setSpeed(_sound.playbackSpeed);
+    }
   }
 
   /// Classifies a raw URL string from [AudioEvent.url] into the appropriate

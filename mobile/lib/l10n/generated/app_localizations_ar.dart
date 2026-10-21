@@ -9808,6 +9808,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعيين سرعة التشغيل للمقطع المحدد';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'تعيين سرعة التشغيل للصوت المحدد';
+
+  @override
   String get videoEditorReverseLabel => 'عكس';
 
   @override
@@ -9912,6 +9916,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'سرعة المقطع';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'سرعة الصوت';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

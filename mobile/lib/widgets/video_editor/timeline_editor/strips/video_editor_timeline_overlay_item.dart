@@ -176,6 +176,7 @@ class TimelineOverlayItemTile extends StatelessWidget {
                     leftChannel: item.waveformLeftChannel,
                     rightChannel: item.waveformRightChannel,
                     fadeIn: item.fadeIn,
+                    playbackSpeed: item.playbackSpeed,
                   )
                 : _isDetachedClip(item.layer)
                 ? _DetachedClipContent(item: item)
@@ -511,6 +512,7 @@ class _FadingOutSoundContent extends StatelessWidget {
       fadeIn: item.fadeIn,
       fadeOut: item.fadeOut,
       audibleDuration: end < item.endTime ? end - item.startTime : null,
+      playbackSpeed: item.playbackSpeed,
     );
   }
 }
@@ -518,7 +520,8 @@ class _FadingOutSoundContent extends StatelessWidget {
 /// Sound-item content: label text at top, waveform bars at bottom.
 ///
 /// The waveform shows the source samples windowed to
-/// `[startOffset, startOffset + currentDuration]`. Left-trimming advances
+/// `[startOffset, startOffset + currentDuration * playbackSpeed]`, the stretch
+/// of the sound the item plays. Left-trimming advances
 /// [startOffset], scrolling the trimmed-away head out of view instead of
 /// clipping the tail — so the visible waveform matches what actually plays.
 class _SoundContent extends StatelessWidget {
@@ -533,6 +536,7 @@ class _SoundContent extends StatelessWidget {
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     this.audibleDuration,
+    this.playbackSpeed = 1,
   });
 
   final String label;
@@ -557,15 +561,19 @@ class _SoundContent extends StatelessWidget {
   /// How long the sound sounds when the rendered video cuts it short.
   final Duration? audibleDuration;
 
+  /// How many seconds of the source play per second of [currentDuration].
+  final double playbackSpeed;
+
   @override
   Widget build(BuildContext context) {
     // The painter maps samples against the full-source duration, then windows
-    // them to [startOffset, startOffset + currentDuration]. When the source
+    // them to the stretch of the source the item plays. When the source
     // duration is unknown there's no basis to resolve the offset against, so
-    // fall back to treating the visible span as the whole source.
+    // fall back to treating that stretch as the whole source.
+    final playedSource = currentDuration * playbackSpeed;
     final hasSourceDuration =
         sourceDuration != null && sourceDuration! > Duration.zero;
-    final audioDuration = hasSourceDuration ? sourceDuration! : currentDuration;
+    final audioDuration = hasSourceDuration ? sourceDuration! : playedSource;
     final effectiveOffset = hasSourceDuration ? startOffset : Duration.zero;
 
     return Padding(
@@ -595,12 +603,13 @@ class _SoundContent extends StatelessWidget {
                   activeColor: VineTheme.accentPurple,
                   inactiveColor: VineTheme.accentPurple,
                   audioDuration: audioDuration,
-                  maxDuration: currentDuration,
+                  maxDuration: playedSource,
                   startOffset: effectiveOffset,
                   barWidth: TimelineConstants.soundWaveformBarWidth,
                   fadeIn: fadeIn,
                   fadeOut: fadeOut,
                   audibleDuration: audibleDuration,
+                  playbackSpeed: playbackSpeed,
                 ),
               ),
             ),

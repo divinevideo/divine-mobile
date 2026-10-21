@@ -5028,6 +5028,7 @@
   "@videoEditorSetClipSpeedSemanticLabel": {
     "description": "Accessibility label for the Set Speed button in the timeline clip controls."
   },
+  "videoEditorSetSoundSpeedSemanticLabel": "Đặt tốc độ phát cho âm thanh đã chọn",
   "videoEditorReverseLabel": "Đảo ngược",
   "@videoEditorReverseLabel": {
     "description": "Label for the Reverse button in the timeline clip controls."
@@ -5121,6 +5122,7 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSoundSpeedSheetTitle": "Tốc độ âm thanh",
   "videoEditorSpeedPresetSemanticLabel": "Tốc độ {speed}×",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",

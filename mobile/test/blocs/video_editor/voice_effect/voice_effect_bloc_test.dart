@@ -147,6 +147,44 @@ void main() {
       );
 
       blocTest<VoiceEffectBloc, VoiceEffectState>(
+        'loops the stretch a sped-up take plays, at its speed',
+        setUp: () =>
+            when(() => player.setSpeed(any())).thenAnswer((_) async {}),
+        build: () => build(_recording().copyWith(playbackSpeed: 2)),
+        act: (bloc) => bloc.add(const VoiceEffectSettingsChanged()),
+        verify: (_) {
+          final config =
+              verify(() => player.setClip(captureAny())).captured.single
+                  as AudioSourceConfig;
+          expect(config.start, const Duration(milliseconds: 500));
+          expect(config.end, const Duration(milliseconds: 4500));
+          verify(() => player.setSpeed(2)).called(1);
+        },
+      );
+
+      blocTest<VoiceEffectBloc, VoiceEffectState>(
+        'renders the stretch a sped-up take plays',
+        setUp: () {
+          when(() => player.setSpeed(any())).thenAnswer((_) async {});
+          stubAudition('/tmp/audition.wav');
+        },
+        build: () => build(_recording().copyWith(playbackSpeed: 2)),
+        act: (bloc) =>
+            bloc.add(const VoiceEffectSettingsChanged(effect: _robot)),
+        verify: (_) {
+          verify(
+            () => service.renderAudition(
+              source: any(named: 'source'),
+              effect: _robot,
+              noiseReduction: false,
+              start: const Duration(milliseconds: 500),
+              length: const Duration(seconds: 4),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VoiceEffectBloc, VoiceEffectState>(
         'loops the file a processed track already plays without rendering it',
         build: () => build(_robotRecording()),
         act: (bloc) => bloc.add(const VoiceEffectSettingsChanged()),

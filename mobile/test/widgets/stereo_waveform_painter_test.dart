@@ -62,6 +62,7 @@ void main() {
       Duration fadeIn = Duration.zero,
       Duration fadeOut = Duration.zero,
       Duration? audibleDuration,
+      double playbackSpeed = 1,
     }) {
       return StereoWaveformPainter(
         leftChannel: leftChannel ?? Float32List(0),
@@ -77,10 +78,19 @@ void main() {
         fadeIn: fadeIn,
         fadeOut: fadeOut,
         audibleDuration: audibleDuration,
+        playbackSpeed: playbackSpeed,
       );
     }
 
     group('shouldRepaint', () {
+      test('returns true when playbackSpeed changes', () {
+        final left = Float32List.fromList([0.5]);
+        final painter = createPainter(leftChannel: left);
+        final other = createPainter(leftChannel: left, playbackSpeed: 2);
+
+        expect(painter.shouldRepaint(other), isTrue);
+      });
+
       test('returns false when all properties are identical', () {
         final left = Float32List.fromList([0.5, 0.3]);
         final painter = createPainter(leftChannel: left);
@@ -470,6 +480,38 @@ void main() {
           bars.last,
           barAt(bars.length - 1, WaveformConstants.minBarHeight),
         );
+      });
+
+      testWidgets('stretches a fade over the audio a sped-up sound plays in '
+          'that time', (tester) async {
+        Future<List<RRect>> barsAt(double speed) async {
+          final render = await pumpPainter(
+            tester,
+            createPainter(
+              leftChannel: Float32List.fromList(List.filled(64, 0.5)),
+              fadeOut: const Duration(seconds: 2),
+              playbackSpeed: speed,
+            ),
+          );
+          final bars = <RRect>[];
+          expect(
+            render,
+            paints..everything((method, arguments) {
+              if (method == #drawRRect) bars.add(arguments.first as RRect);
+              return true;
+            }),
+          );
+          return bars;
+        }
+
+        // 10 s of audio drawn. At 1x the 2 s fade out covers its last 2 s;
+        // at 2x the audio plays in 5 s, so the fade covers its last 4 s.
+        final normal = await barsAt(1);
+        final fast = await barsAt(2);
+        final at7s = (normal.length * 0.7).floor();
+
+        expect(normal[at7s], ceilingBar(at7s));
+        expect(fast[at7s].height, lessThan(ceilingBar(at7s).height));
       });
 
       testWidgets('keeps a near-silent source below the band', (tester) async {

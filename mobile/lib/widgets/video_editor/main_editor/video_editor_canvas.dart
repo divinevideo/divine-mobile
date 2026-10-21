@@ -1902,7 +1902,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       if (sound == null) continue;
 
       final trackStart = sound.startOffset;
-      final trackEnd = trackStart + (item.endTime - item.startTime);
+      final trackEnd =
+          trackStart + sound.sourceSpanOf(item.endTime - item.startTime);
       // Imported, extracted and voice-effect tracks all play a local path,
       // which only the file loader takes — the network loader rejects it. A
       // clip sampled into stills brings its own sound as an extracted track.
@@ -1938,6 +1939,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           windowEnd: item.endTime,
           fadeIn: sound.fadeInDuration,
           fadeOut: sound.fadeOutDuration,
+          speed: sound.playbackSpeed,
         ),
       );
     }
@@ -2057,6 +2059,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
+            playbackSpeed: sound.playbackSpeed,
           );
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
@@ -2071,6 +2074,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
+            playbackSpeed: sound.playbackSpeed,
           );
         } else {
           track = AudioTrack.network(
@@ -2085,6 +2089,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
+            playbackSpeed: sound.playbackSpeed,
           );
         }
         tracks.add(track);
