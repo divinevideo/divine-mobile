@@ -1901,7 +1901,7 @@ void main() {
 
       test(
         "deletes a gone message's video and frame once the read that held "
-        'them ends',
+        'them ends, even when the message can no longer be looked up',
         () async {
           final read = Completer<Uint8List?>();
           final reading = Completer<void>();
@@ -1916,31 +1916,17 @@ void main() {
             keptAt: now,
           );
           var gone = false;
-          var readEnded = false;
-          final askedAfterRead = Completer<void>();
-          final store = createStore(
-            isMessageGone: (_) async {
-              if (readEnded && !askedAfterRead.isCompleted) {
-                askedAfterRead.complete();
-              }
-              return gone;
-            },
-          );
+          final store = createStore(isMessageGone: (_) async => gone);
           final preview = store.previewFor(message);
           await reading.future;
           gone = true;
           await store.prune();
           expect(video.existsSync(), isTrue);
+          // Its row is cleared meanwhile, as an account switch does.
+          gone = false;
 
-          readEnded = true;
           read.complete(_frame);
           await preview;
-          // The prune the release starts asks once it has listed the folder;
-          // what follows it does not wait on anything.
-          await askedAfterRead.future.timeout(
-            const Duration(seconds: 5),
-            onTimeout: () => fail('no prune followed the release'),
-          );
           await pumpEventQueue();
 
           expect(ownerDir().listSync(), isEmpty);
@@ -2176,7 +2162,8 @@ void main() {
 
       test(
         "keeps a gone message's conversation record while a read holds its "
-        'video, so the prune after the read can still tell',
+        'video, so a later launch can still tell, and deletes it with the '
+        'video once the read ends',
         () async {
           final read = Completer<Uint8List?>();
           final reading = Completer<void>();
@@ -2190,35 +2177,24 @@ void main() {
             _plaintext,
             keptAt: now,
           );
-          keptFile(
+          final record = keptFile(
             '${'a' * 64}.conversation',
             '${message.conversationId}\n${message.createdAt}'.codeUnits,
             keptAt: now,
           );
           var removed = false;
-          var readEnded = false;
-          final askedAfterRead = Completer<void>();
           final store = createStore(
             isMessageGone: (_) async => false,
-            isConversationRemoved: (_, _) async {
-              if (readEnded && !askedAfterRead.isCompleted) {
-                askedAfterRead.complete();
-              }
-              return removed;
-            },
+            isConversationRemoved: (_, _) async => removed,
           );
           final preview = store.previewFor(message);
           await reading.future;
           removed = true;
           await store.prune();
+          expect(record.existsSync(), isTrue);
 
-          readEnded = true;
           read.complete(_frame);
           await preview;
-          await askedAfterRead.future.timeout(
-            const Duration(seconds: 5),
-            onTimeout: () => fail('no prune followed the release'),
-          );
           await pumpEventQueue();
 
           expect(ownerDir().listSync(), isEmpty);

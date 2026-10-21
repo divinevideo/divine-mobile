@@ -248,8 +248,9 @@ class DmVideoStore {
   /// Never pruned until released.
   final Map<String, int> _leases = {};
 
-  /// Files of gone messages a prune left because they were leased, pruned
-  /// again once their last lease is released.
+  /// Files of gone messages a prune left because they were leased, deleted
+  /// with the rest of their message's files once their last lease is
+  /// released.
   final Set<String> _goneWhileLeased = {};
 
   /// The prune under way, if any, and whether one was asked for meanwhile.
@@ -1322,12 +1323,34 @@ class DmVideoStore {
     }
     _leases.remove(file.path);
     if (_goneWhileLeased.remove(file.path)) {
+      _deleteKeptForGoneMessage(file);
       runDetached(
         prune(),
         'prune a released kept video DM whose message is gone',
         logName: _logName,
         category: LogCategory.video,
       );
+    }
+  }
+
+  /// Deletes everything kept for [file]'s message, which a prune found gone
+  /// while it was held. Not asked again: the rows that said so may be cleared
+  /// by now, as an account switch does.
+  void _deleteKeptForGoneMessage(File file) {
+    final id = _messageIdOf(file);
+    final List<File> files;
+    try {
+      files = file.parent.listSync().whereType<File>().toList();
+    } on FileSystemException catch (error) {
+      Log.warning(
+        "Could not delete a gone video DM message's files: ${_causeOf(error)}",
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return;
+    }
+    for (final kept in files) {
+      if (_messageIdOf(kept) == id && !_isInUse(kept)) _deleteNow(kept);
     }
   }
 
