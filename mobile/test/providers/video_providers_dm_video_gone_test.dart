@@ -278,7 +278,7 @@ void main() {
 
       await cleanup.close();
 
-      expect(prunes, 1);
+      expect(prunes, equals(1));
       await changes.close();
     });
 
@@ -298,7 +298,7 @@ void main() {
       );
       changes.add(null);
       await started.future;
-      expect(prunes, 1);
+      expect(prunes, equals(1));
 
       var closed = false;
       final closing = cleanup.close();
@@ -310,7 +310,7 @@ void main() {
       release.complete();
       await closing;
       expect(closed, isTrue);
-      expect(prunes, 1);
+      expect(prunes, equals(1));
       await changes.close();
     });
 
