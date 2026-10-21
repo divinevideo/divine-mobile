@@ -102,6 +102,9 @@ class _FakeRecorder implements VoiceOverRecorderService {
     await _pauses.close();
   });
 
+  /// Whether the cubit is still subscribed to [systemPauses].
+  bool get isWatchingPauses => _pauses.hasListener;
+
   /// A call, Siri or another app taking audio focus.
   Future<void> pauseBySystem() async {
     _pauses.add(null);
@@ -244,6 +247,23 @@ void main() {
         expect(unclaimed.existsSync(), isFalse);
         expect(cubit.state.recordingPath, isNull);
       });
+
+      test('records after a start that visibility stopped', () async {
+        recorder.startGate = Completer<void>();
+        final cubit = build();
+        final interrupted = cubit.start();
+        await pumpEventQueue();
+        await cubit.stop();
+        recorder.startGate!.complete();
+        await interrupted;
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+        recorder.startGate = null;
+
+        await cubit.start();
+
+        expect(cubit.state.status, SoundRecorderStatus.recording);
+        expect(recorder.startCount, 2);
+      });
     });
 
     group('stop', () {
@@ -280,6 +300,75 @@ void main() {
           expect(File(recorder.path!).existsSync(), isFalse);
         },
       );
+
+      test('shows no permission prompt when visibility requests stop during '
+          'the permission check', () async {
+        final check = Completer<PermissionStatus>();
+        when(permissions.checkMicrophoneStatus).thenAnswer((_) => check.future);
+        when(
+          permissions.requestMicrophonePermission,
+        ).thenAnswer((_) async => PermissionStatus.granted);
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+
+        await cubit.stop();
+        check.complete(PermissionStatus.canRequest);
+        await starting;
+
+        verifyNever(permissions.requestMicrophonePermission);
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+      });
+
+      test('never starts the recorder when visibility requests stop while '
+          'the scratch folder resolves', () async {
+        final folder = Completer<Directory>();
+        final cubit = build(scratchDirectoryProvider: () => folder.future);
+        final starting = cubit.start();
+        await pumpEventQueue();
+
+        await cubit.stop();
+        folder.complete(scratch);
+        await starting;
+
+        expect(recorder.startCount, 0);
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+      });
+
+      testWidgets('never announces or vibrates for a native start that '
+          'visibility stopped', (tester) async {
+        var vibrations = 0;
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (call) async {
+            if (call.method == 'HapticFeedback.vibrate') vibrations++;
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            null,
+          ),
+        );
+        recorder.startGate = Completer<void>();
+        final cubit = build();
+        final statuses = <SoundRecorderStatus>[];
+        final subscription = cubit.stream.listen((s) => statuses.add(s.status));
+        addTearDown(subscription.cancel);
+        final starting = cubit.start();
+        await tester.runAsync(pumpEventQueue);
+
+        await cubit.stop();
+        recorder.startGate!.complete();
+        await tester.runAsync(pumpEventQueue);
+        await starting;
+        await tester.runAsync(pumpEventQueue);
+
+        expect(statuses, isNot(contains(SoundRecorderStatus.recording)));
+        expect(statuses.last, SoundRecorderStatus.idle);
+        expect(vibrations, 0);
+      });
 
       test(
         'uses elapsed clock time instead of counting meter samples',
@@ -590,6 +679,85 @@ void main() {
         await Future.wait([starting, closing]);
 
         expect(recorder.startCount, 0);
+      });
+    });
+
+    // The pause stream is the recorder's shared state stream, so a take that
+    // leaves its listener behind leaks one per recording.
+    group('system pause listener', () {
+      test('is released when a take stops', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        expect(recorder.isWatchingPauses, isTrue);
+
+        await cubit.stop();
+
+        expect(recorder.isWatchingPauses, isFalse);
+      });
+
+      test('is released when a take is cancelled', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        expect(recorder.isWatchingPauses, isTrue);
+
+        await cubit.cancel();
+
+        expect(recorder.isWatchingPauses, isFalse);
+      });
+
+      test('is released when the native start fails', () async {
+        recorder
+          ..startGate = Completer<void>()
+          ..throwOnStart = true;
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+        expect(recorder.isWatchingPauses, isTrue);
+
+        recorder.startGate!.complete();
+        await starting;
+
+        expect(cubit.state.status, SoundRecorderStatus.failed);
+        expect(recorder.isWatchingPauses, isFalse);
+      });
+
+      test('is released when visibility stops an in-flight native '
+          'start', () async {
+        recorder.startGate = Completer<void>();
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+        expect(recorder.isWatchingPauses, isTrue);
+
+        await cubit.stop();
+        recorder.startGate!.complete();
+        await starting;
+
+        expect(recorder.isWatchingPauses, isFalse);
+      });
+
+      // dispose() closes the fake's pause stream, which would drop the
+      // listener anyway, so this checks while dispose is still pending.
+      test('is released before close disposes the recorder', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        expect(recorder.isWatchingPauses, isTrue);
+        final dispose = recorder.disposeGate = Completer<void>();
+        // Opened before a failing expect, or the tearDown close would wait
+        // on the gate forever.
+        addTearDown(() {
+          if (!dispose.isCompleted) dispose.complete();
+        });
+
+        final closing = cubit.close();
+        await pumpEventQueue();
+
+        expect(recorder.isWatchingPauses, isFalse);
+        dispose.complete();
+        await closing;
       });
     });
 
