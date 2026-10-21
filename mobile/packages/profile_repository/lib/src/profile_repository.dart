@@ -55,6 +55,16 @@ typedef _ProfileRead = ({UserProfile? profile, bool conclusive});
 const _nip50SearchTimeout = Duration(seconds: 5);
 const _nip50RelayQueryTimeout = Duration(milliseconds: 4500);
 
+// Caps the people-search lookup of who owns a typed Divine username. It runs
+// beside the local and REST phases, so it only holds back the REST yield when
+// the name server or the owner's profile is slower than the REST search.
+const _usernameOwnerSearchTimeout = Duration(seconds: 3);
+
+// Divine usernames resolve as `<username>@divine.video` and are published as
+// `_@<username>.divine.video`.
+const _divineDomain = 'divine.video';
+const _divineNip05Suffix = '.$_divineDomain';
+
 /// Sort key for profile searches ordered by follower count.
 const String profileSearchSortFollowers =
     FunnelcakeApiClient.profileSortFollowers;
@@ -2315,6 +2325,14 @@ class ProfileRepository implements ProfileReader {
   /// the initial search page. Callers should omit [boostPubkeys] on
   /// load-more requests so already-visible positions stay stable as the
   /// user scrolls.
+  ///
+  /// When the first-page [query] names a Divine username (`alice`,
+  /// `@alice`, `alice.divine.video`), the name server is asked who owns it
+  /// while the other sources run. That account leads every yield from the
+  /// REST phase on and is reported as
+  /// [ProgressiveSearchResult.usernameOwnerPubkey]: the search index can miss
+  /// an owner whose visible name differs from the handle, and other profiles
+  /// can claim the same NIP-05.
   Stream<ProgressiveSearchResult> searchUsersProgressive({
     required String query,
     int limit = 200,
@@ -2337,26 +2355,32 @@ class ProfileRepository implements ProfileReader {
     final useServerSort = sortBy != null;
     int? nextRestOffset;
     var restHasMore = false;
+    String? ownerPubkey;
+    // The owner is not known to have videos, so a video-only search skips it.
+    final ownerLookup = offset == 0 && !hasVideos
+        ? _lookUpSearchUsernameOwner(trimmed)
+        : null;
+
+    List<UserProfile> rank(List<UserProfile> profiles) => _applyFilter(
+      trimmed,
+      profiles,
+      useServerSort,
+      boostPubkeys,
+      sortBy: sortBy,
+      pinnedPubkey: ownerPubkey,
+    );
 
     ProgressiveSearchResult snapshot({
       required bool isComplete,
       List<UserProfile>? enriched,
     }) {
-      final profiles =
-          enriched ??
-          _applyFilter(
-            trimmed,
-            resultMap.values.toList(),
-            useServerSort,
-            boostPubkeys,
-            sortBy: sortBy,
-          );
       return ProgressiveSearchResult(
-        profiles: profiles,
+        profiles: enriched ?? rank(resultMap.values.toList()),
         sources: Map.unmodifiable(sources),
         isComplete: isComplete,
         nextRestOffset: nextRestOffset,
         restHasMore: restHasMore,
+        usernameOwnerPubkey: ownerPubkey,
       );
     }
 
@@ -2456,10 +2480,19 @@ class ProfileRepository implements ProfileReader {
       sources[SearchSource.funnelcakeApi] = const SearchSourceSkipped();
     }
 
-    // Yield after Phase 2 if new results were added.
+    // The owner joins the REST yield, so it never lands above profiles that
+    // claim its handle after they were shown.
+    final owner = await ownerLookup;
+    if (_isSearchCancelled(cancellationToken)) return;
+    if (owner != null) {
+      resultMap.putIfAbsent(owner.pubkey, () => owner);
+      ownerPubkey = owner.pubkey;
+    }
+
+    // Yield after Phase 2 if new results were added or the owner was pinned.
     // Skips enrichment for faster progressive display; the final Phase 3
     // yield enriches all results from cache.
-    if (resultMap.length > prevCount) {
+    if (resultMap.length > prevCount || owner != null) {
       yield snapshot(isComplete: false);
     }
 
@@ -2512,16 +2545,7 @@ class ProfileRepository implements ProfileReader {
           preserveRevisions: serverSelectedPubkeys,
         );
         if (_isSearchCancelled(cancellationToken)) return;
-        final result = snapshot(
-          isComplete: true,
-          enriched: _applyFilter(
-            trimmed,
-            enriched,
-            useServerSort,
-            boostPubkeys,
-            sortBy: sortBy,
-          ),
-        );
+        final result = snapshot(isComplete: true, enriched: rank(enriched));
         _logSearchSummary(result);
         yield result;
         return;
@@ -2539,16 +2563,7 @@ class ProfileRepository implements ProfileReader {
       preserveRevisions: serverSelectedPubkeys,
     );
     if (_isSearchCancelled(cancellationToken)) return;
-    final result = snapshot(
-      isComplete: true,
-      enriched: _applyFilter(
-        trimmed,
-        enriched,
-        useServerSort,
-        boostPubkeys,
-        sortBy: sortBy,
-      ),
-    );
+    final result = snapshot(isComplete: true, enriched: rank(enriched));
     _logSearchSummary(result);
     yield result;
   }
@@ -2576,32 +2591,43 @@ class ProfileRepository implements ProfileReader {
   /// Applies the configured search filter or falls back to name matching,
   /// removes blocked/muted users, and optionally promotes [boostPubkeys]
   /// to the front while preserving relative order.
+  ///
+  /// [pinnedPubkey] leads the result without having to match the query: the
+  /// name server says it owns the username searched for.
   List<UserProfile> _applyFilter(
     String query,
     List<UserProfile> profiles,
     bool useServerSort,
     Set<String>? boostPubkeys, {
     String? sortBy,
+    String? pinnedPubkey,
   }) {
+    final pinned = profiles.where((p) => p.pubkey == pinnedPubkey).toList();
+    final candidates = pinned.isEmpty
+        ? profiles
+        : profiles.where((p) => p.pubkey != pinnedPubkey).toList();
+
     List<UserProfile> filtered;
     if (useServerSort) {
-      filtered = _rankSearchResults(query, profiles, sortBy);
+      filtered = _rankSearchResults(query, candidates, sortBy);
     } else if (_profileSearchFilter != null) {
-      filtered = _profileSearchFilter(query, profiles);
+      filtered = _profileSearchFilter(query, candidates);
     } else {
       final queryLower = query.toLowerCase();
-      filtered = profiles.where((profile) {
+      filtered = candidates.where((profile) {
         return profile.bestDisplayName.toLowerCase().contains(queryLower);
       }).toList();
     }
 
+    final ordered = useServerSort
+        ? _boostBehindExactMatches(query, filtered, boostPubkeys)
+        : _boostProfiles(filtered, boostPubkeys);
     final blockFilter = _blockFilter;
-    if (blockFilter != null) {
-      filtered = filtered.where((p) => !blockFilter(p.pubkey)).toList();
-    }
-
-    if (!useServerSort) return _boostProfiles(filtered, boostPubkeys);
-    return _boostBehindExactMatches(query, filtered, boostPubkeys);
+    if (blockFilter == null) return [...pinned, ...ordered];
+    return [
+      ...pinned,
+      ...ordered,
+    ].where((p) => !blockFilter(p.pubkey)).toList();
   }
 
   /// Whether [profile] exactly matches the people-search [query]: its full
@@ -2690,7 +2716,7 @@ class ProfileRepository implements ProfileReader {
     final name = profile.name?.trim().toLowerCase() ?? '';
     final displayName = profile.displayName?.trim().toLowerCase() ?? '';
     final nip05 = profile.nip05?.trim().toLowerCase() ?? '';
-    final nip05Name = nip05.split('@').first;
+    final nip05Name = _nip05Handle(nip05);
 
     if (pubkey == queryHex ||
         {pubkey, name, displayName, nip05, nip05Name}.contains(
@@ -2721,6 +2747,83 @@ class ProfileRepository implements ProfileReader {
 
   static bool _hasWordPrefix(String value, String query) =>
       value.split(RegExp(r'\s+')).any((word) => word.startsWith(query));
+
+  /// The handle a lowercased [nip05] identifier names: its local part, or
+  /// for a root identifier `_@domain` the domain, which for a Divine-hosted
+  /// `_@alice.divine.video` is the username `alice`.
+  static String _nip05Handle(String nip05) {
+    final at = nip05.indexOf('@');
+    if (at < 0) return nip05;
+    final local = nip05.substring(0, at);
+    if (local != '_') return local;
+    final domain = nip05.substring(at + 1);
+    return domain.endsWith(_divineNip05Suffix)
+        ? domain.substring(0, domain.length - _divineNip05Suffix.length)
+        : domain;
+  }
+
+  /// The Divine username a people-search [query] names, or `null`.
+  ///
+  /// Accepts the forms people type or paste for a handle: `alice`, `@alice`,
+  /// `alice@divine.video`, `_@alice.divine.video` and `alice.divine.video`.
+  /// A complete npub has the shape of a username but names a key, so it is
+  /// left to the pubkey match.
+  static String? _divineUsernameInQuery(String query) {
+    var candidate = query.trim().toLowerCase();
+    if (_npubQueryToHex(candidate) != null) return null;
+    if (candidate.startsWith('@')) candidate = candidate.substring(1);
+    if (candidate.startsWith('_@')) candidate = candidate.substring(2);
+    for (final suffix in const ['@$_divineDomain', _divineNip05Suffix]) {
+      if (candidate.endsWith(suffix)) {
+        candidate = candidate.substring(0, candidate.length - suffix.length);
+        break;
+      }
+    }
+    // Any other domain is left in place, and its `.` or `@` fails validation.
+    return switch (validateDivineUsername(candidate)) {
+      DivineUsernameValid(:final normalized) => normalized,
+      DivineUsernameInvalid() => null,
+    };
+  }
+
+  /// The profile of the account that owns the Divine username [query]
+  /// names, or `null` when it names none, nobody owns it, or the lookup
+  /// fails or outlasts [_usernameOwnerSearchTimeout].
+  ///
+  /// Never throws: search goes on without the owner.
+  Future<UserProfile?> _lookUpSearchUsernameOwner(String query) async {
+    final username = _divineUsernameInQuery(query);
+    if (username == null) return null;
+    try {
+      return await _usernameOwnerProfile(
+        username,
+      ).timeout(_usernameOwnerSearchTimeout);
+    } on Object catch (e) {
+      Log.warning(
+        'Username owner lookup failed (${e.runtimeType})',
+        name: 'ProfileRepository.searchUsersProgressive',
+        category: LogCategory.api,
+      );
+      return null;
+    }
+  }
+
+  Future<UserProfile?> _usernameOwnerProfile(String username) async {
+    final response = await _httpClient.get(
+      Uri.parse('$_usernameCheckUrl/$username'),
+    );
+    if (response.statusCode != 200) return null;
+    final body = jsonDecode(response.body) as Object?;
+    // Only an active claim is an owner; pending and reserved names are not.
+    if (body is! Map<String, dynamic> || body['status'] != 'active') {
+      return null;
+    }
+    final pubkey = body['pubkey'];
+    if (pubkey is! String || !NostrHexUtils.isValidPubkey(pubkey)) return null;
+    final ownerPubkey = pubkey.toLowerCase();
+    return await getCachedProfile(pubkey: ownerPubkey) ??
+        await fetchFreshProfile(pubkey: ownerPubkey);
+  }
 
   /// Hex pubkey for a complete `npub1…` [query], `null` for anything else.
   ///

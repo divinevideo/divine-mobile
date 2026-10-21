@@ -31,6 +31,8 @@ UserSearchBloc                              mobile/lib/blocs/user_search/
     or blocking or muting you); the viewer stays listed on the Search page
         ↓
 ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
+  Owner (offset==0, username-shaped query): name server
+                       /api/username/check, run beside phases 1-2, 3s cap
   Phase 1 (offset==0): UserProfilesDao.searchProfilesByIdentity
                        bounded SQLite identity query (name, display name,
                        nip05, whole pubkey; bio excluded), npub decoded to hex
@@ -56,6 +58,31 @@ keeps broader server search from filling people results with accounts whose
 visible identity does not match. Other callers of `SearchUtils.matchProfile`
 can still use that helper's broader bio matching. Callers without `sortBy`
 retain their configured filter, or the display-name fallback when none is set.
+
+A Divine-hosted root identifier `_@alice.divine.video` matches as the username
+`alice`, and any other root identifier `_@example.com` as its domain. Without
+that, the local part `_` was the only name such a profile had, so searching
+for a creator's own username ranked them behind every profile named `alice`.
+
+### Username owner
+
+When the first-page query names a Divine username (`alice`, `@alice`,
+`alice@divine.video`, `_@alice.divine.video` or `alice.divine.video`; not a
+phrase, another domain or a complete npub), the repository asks the name server
+who owns it while the local and REST phases run. The owner's profile comes from
+the cache, else `fetchFreshProfile`. It joins the REST yield and leads every
+yield from there, even when its visible name does not match the query, and the
+envelope reports it as `usernameOwnerPubkey`. The bloc keeps it ahead of exact
+matches that an earlier yield already showed. Blocked owners stay dropped, and a
+free, pending or reserved name, a failed lookup or one slower than 3 seconds
+leaves search as it was. Video-only searches skip the lookup.
+
+The search index cannot be relied on for this. Funnelcake ranks a token match
+on a profile's name above a prefix match on its NIP-05, so for `alice` a
+hundred profiles named `alice` fill the result window before the account whose
+display name is something else but who owns `alice.divine.video`. Other
+profiles can also publish someone else's `_@<name>.divine.video` identifier,
+so a matching NIP-05 does not identify the owner.
 
 Reconcile each REST profile before matching. A cached profile wins only with a
 canonical event ID and an event timestamp strictly newer than the server's

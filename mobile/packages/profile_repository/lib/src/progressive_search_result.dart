@@ -111,6 +111,7 @@ class ProgressiveSearchResult {
     required this.isComplete,
     this.nextRestOffset,
     this.restHasMore = false,
+    this.usernameOwnerPubkey,
   });
 
   /// Accumulated, deduplicated, filter+boost-applied profile list.
@@ -130,4 +131,9 @@ class ProgressiveSearchResult {
 
   /// Whether Funnelcake may have another page.
   final bool restHasMore;
+
+  /// The account the name server says owns the Divine username searched
+  /// for, which leads [profiles] when it is listed. Callers that reorder the
+  /// results keep it first.
+  final String? usernameOwnerPubkey;
 }

@@ -202,21 +202,29 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
   /// Keeps exact matches ahead of known and earlier-shown rows, as the
   /// repository keeps them ahead of followed ones (#8578). A promoted
   /// partial match, or one shown by an earlier source, must not bury them.
+  ///
+  /// The owner of the username searched for leads them all, including
+  /// earlier-shown profiles that claim its handle.
   static List<UserProfile> _exactMatchesFirst(
     List<UserProfile> profiles,
-    String query,
-  ) {
+    String query, {
+    String? ownerPubkey,
+  }) {
     final exact = {
       for (final profile in profiles)
         if (ProfileRepository.isExactSearchMatch(profile, query))
           profile.pubkey,
     };
-    if (exact.isEmpty) return profiles;
+    if (exact.isEmpty && ownerPubkey == null) return profiles;
+    int tier(UserProfile profile) => profile.pubkey == ownerPubkey
+        ? 0
+        : exact.contains(profile.pubkey)
+        ? 1
+        : 2;
     return [
-      for (final profile in profiles)
-        if (exact.contains(profile.pubkey)) profile,
-      for (final profile in profiles)
-        if (!exact.contains(profile.pubkey)) profile,
+      for (final rank in const [0, 1, 2])
+        for (final profile in profiles)
+          if (tier(profile) == rank) profile,
     ];
   }
 
@@ -365,7 +373,11 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
                   updates[profile.pubkey] ?? profile,
               ...page.profiles.where((profile) => _isListed(profile.pubkey)),
             ];
-            publishedProfiles = _exactMatchesFirst(publishedProfiles, query);
+            publishedProfiles = _exactMatchesFirst(
+              publishedProfiles,
+              query,
+              ownerPubkey: result.usernameOwnerPubkey,
+            );
             final signals = {...publishedSignals, ...page.signals};
             publishedSignals = {
               for (final profile in publishedProfiles)
