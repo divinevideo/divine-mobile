@@ -1824,7 +1824,7 @@ class VideoRecorderBloc
     // Leaving Upload resumes a paused camera: a rebind while paused would
     // restart it on Android, so the resume applies the mode instead.
     if (previousMode != VideoRecorderMode.upload) {
-      await _applyStabilizationForRecorderMode();
+      await _applyStabilizationForRecorderMode(clearRetainedRequest: true);
     }
   }
 
@@ -2600,15 +2600,25 @@ class VideoRecorderBloc
   ///
   /// A saved mode the current lens cannot take is left alone: the camera
   /// already opened with off for it, and requesting it again would rebind the
-  /// camera for nothing on Android.
-  Future<void> _applyStabilizationForRecorderMode() async {
+  /// camera for nothing on Android. Explicit mode switches clear any retained
+  /// native request when the target is off, even if this lens reports off.
+  Future<void> _applyStabilizationForRecorderMode({
+    bool clearRetainedRequest = false,
+  }) async {
     final mode = state.recorderMode;
     // Upload pauses the camera and records nothing.
     if (mode == VideoRecorderMode.upload || !_cameraService.isInitialized) {
       return;
     }
     final target = _stabilizationModeFor(mode, _readSharedPreferences());
-    if (target == _cameraService.videoStabilizationMode ||
+    // Off must clear the native request even when this lens already reports
+    // off: an unsupported lens can retain a non-off request for the next lens.
+    // Otherwise switching to Classic here would enable stabilization again
+    // as soon as the user switches to a supported lens.
+    final mustClearRequest =
+        clearRetainedRequest && target == DivineVideoStabilizationMode.off;
+    if ((!mustClearRequest &&
+            target == _cameraService.videoStabilizationMode) ||
         !_cameraService.availableVideoStabilizationModes.contains(target)) {
       return;
     }

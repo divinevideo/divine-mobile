@@ -983,11 +983,13 @@ void main() {
           applying.complete();
           await pumpEventQueue();
 
+          // Clear the retained request on the mode switch, then clear the
+          // cinematic request again when its in-flight application completes.
           verify(
             () => cameraService.setVideoStabilizationMode(
               DivineVideoStabilizationMode.off,
             ),
-          ).called(1);
+          ).called(2);
           verify(
             () =>
                 prefs.setString('camera_last_used_stabilization', 'cinematic'),
@@ -1152,6 +1154,9 @@ void main() {
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'a persisted off choice keeps the grid hidden on mode switch',
         setUp: () {
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
           when(
             () => prefs.getBool('camera_grid_lines_enabled'),
           ).thenReturn(false);
@@ -3557,6 +3562,11 @@ void main() {
       setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'capture → classic flips defaults and clears clips + editor',
+        setUp: () {
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
+        },
         build: () => buildBloc()
           ..emit(
             const VideoRecorderBlocState(
@@ -3719,6 +3729,33 @@ void main() {
             },
           );
         }
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'clears the retained stabilization request when classic starts on '
+          'an unsupported lens',
+          setUp: () {
+            // Native reports off on this lens but retains the saved request
+            // for a later lens switch. Classic must clear that request too.
+            cameraRuns(DivineVideoStabilizationMode.off);
+            when(
+              () => cameraService.availableVideoStabilizationModes,
+            ).thenReturn(const [DivineVideoStabilizationMode.off]);
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          ),
+          verify: (_) {
+            verify(
+              () => cameraService.setVideoStabilizationMode(
+                DivineVideoStabilizationMode.off,
+              ),
+            ).called(1);
+            verifyNever(
+              () => prefs.setString('camera_last_used_stabilization', any()),
+            );
+          },
+        );
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
           'restores the saved choice when switching back to capture',
@@ -5085,6 +5122,9 @@ void main() {
       );
 
       test('undo removal waits for the in-flight eager save', () async {
+        when(
+          () => cameraService.setVideoStabilizationMode(any()),
+        ).thenAnswer((_) async => true);
         final calls = <String>[];
         final saving = Completer<void>();
         final releaseSave = Completer<void>();
@@ -5147,6 +5187,11 @@ void main() {
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'switching modes discards the session and drops its library row',
+        setUp: () {
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
+        },
         build: buildBloc,
         seed: () => VideoRecorderBlocState(
           recorderMode: VideoRecorderMode.stopMotion,
