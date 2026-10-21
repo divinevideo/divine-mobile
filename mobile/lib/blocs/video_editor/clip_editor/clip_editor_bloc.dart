@@ -382,6 +382,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       transformer: sequential(),
     );
 
+    // Put the clip a split-screen layout was rendered into on the timeline.
+    // Synchronous: every render already ran on the layout screen.
+    on<ClipEditorSplitScreenLayoutInserted>(_onSplitScreenLayoutInserted);
+
     // Hold the frame under the playhead still. sequential for the same reason
     // as the detach above: a second freeze is queued, not silently dropped.
     on<ClipEditorFreezeFrameRequested>(
@@ -2435,6 +2439,54 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           previousClips: currentClips,
           detachedClip: clip,
           placeholder: placeholder,
+        ),
+      ),
+    );
+  }
+
+  /// Puts the clip a split-screen layout was rendered into on the timeline,
+  /// after the clip under the playhead, or at the seam the playhead is on.
+  ///
+  /// The layout screen did the rendering; this is only the clip-list half.
+  /// Writing it to editor history is the widget layer's, driven by
+  /// [ClipEditorState.lastSplitScreenLayoutResult], the same division of work
+  /// as a freeze frame.
+  ///
+  /// The clip joins between clips rather than cutting one in two, the way a
+  /// clip put back from the canvas does. Placed first, it takes on the
+  /// canvas's coordinate system from the clip that was first, so every layer
+  /// already on the canvas stays where it is.
+  void _onSplitScreenLayoutInserted(
+    ClipEditorSplitScreenLayoutInserted event,
+    Emitter<ClipEditorState> emit,
+  ) {
+    final previousClips = state.clips;
+    final index = reattachInsertIndex(previousClips, event.playhead);
+    var clip = event.clip;
+    if (index == 0 && previousClips.isNotEmpty) {
+      clip = clip.copyWith(
+        videoAspectRatio: clip.videoAspectRatio,
+        originalAspectRatio: previousClips.first.originalAspectRatio,
+      );
+    }
+
+    final newClips = List<DivineVideoClip>.of(previousClips)
+      ..insert(index, clip);
+
+    Log.info(
+      '🔲 Placed split-screen layout clip ${clip.id} at index $index',
+      name: 'ClipEditorBloc',
+      category: LogCategory.video,
+    );
+
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        currentClipIndex: index,
+        isEditing: false,
+        lastSplitScreenLayoutResult: ClipSplitScreenLayoutResult(
+          previousClips: previousClips,
+          clipId: clip.id,
         ),
       ),
     );

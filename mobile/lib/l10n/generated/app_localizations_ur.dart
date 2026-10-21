@@ -13871,4 +13871,100 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'پڑھا ہوا نشان زد کر دیا گیا';
+
+  @override
+  String get videoEditorLayoutLabel => 'لے آؤٹ';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'کلپس کو اسپلٹ اسکرین میں ترتیب دیں';
+
+  @override
+  String get videoEditorLayoutTitle => 'لے آؤٹ';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'لے آؤٹ بند کریں';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'لے آؤٹ لگائیں';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'ساتھ ساتھ';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'اوپر نیچے';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'تین قطاریں';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'اوپر ایک، نیچے دو';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'چار خانوں کا گرڈ';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'تین ساتھ ساتھ';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'اوپر دو، نیچے ایک';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'بائیں ایک، دائیں دو';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'بائیں دو، دائیں ایک';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'اوپر ایک، نیچے تین';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'تصویر میں تصویر، اوپر بائیں';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'تصویر میں تصویر، اوپر دائیں';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'تصویر میں تصویر، نیچے بائیں';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'تصویر میں تصویر، نیچے دائیں';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'خانہ $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'خانہ $number، خالی';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'خانے سے کلپ ہٹائیں';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'فاصلہ';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'بارڈر کا رنگ';
+
+  @override
+  String get videoEditorLayoutApplying => 'آپ کا لے آؤٹ ترتیب دیا جا رہا ہے…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'مرحلہ $step از $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed => 'لے آؤٹ نہیں لگ سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'کچھ کلپس نہیں سما سکے — تمام خانے بھر چکے ہیں۔';
 }

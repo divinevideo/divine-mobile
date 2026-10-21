@@ -1315,8 +1315,11 @@ class VideoRecorderBloc
     // would leave the user unable to stop their next recording until it
     // finished. The work mutates the clip in place on the clip manager (which
     // the UI observes) and re-saves it, so it is safe to run detached. The
-    // bare clip was already persisted by the unawaited save above.
-    unawaited(
+    // bare clip was already persisted by the unawaited save above. The clip
+    // manager tracks completion so a layout can await it before taking the
+    // clip off the timeline, without holding this sequential stop handler.
+    clipManager.trackClipEnrichment(
+      clip.id,
       _enrichAndSaveClip(
             videoResult: videoResult,
             clip: clip,

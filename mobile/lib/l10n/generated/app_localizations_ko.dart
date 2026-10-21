@@ -13212,4 +13212,97 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => '읽음으로 표시했어요';
+
+  @override
+  String get videoEditorLayoutLabel => '레이아웃';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel => '클립을 분할 화면으로 배치';
+
+  @override
+  String get videoEditorLayoutTitle => '레이아웃';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => '레이아웃 닫기';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => '레이아웃 넣기';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => '좌우 배치';
+
+  @override
+  String get videoEditorLayoutPresetStacked => '상하 배치';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => '3단';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => '위 1개, 아래 2개';
+
+  @override
+  String get videoEditorLayoutPresetGrid => '4분할';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => '좌우 3개';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => '위 2개, 아래 1개';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => '왼쪽 1개, 오른쪽 2개';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => '왼쪽 2개, 오른쪽 1개';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => '위 1개, 아래 3개';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft => '화면 속 화면, 왼쪽 위';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      '화면 속 화면, 오른쪽 위';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      '화면 속 화면, 왼쪽 아래';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      '화면 속 화면, 오른쪽 아래';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return '칸 $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return '칸 $number, 비어 있음';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => '칸에서 클립 빼기';
+
+  @override
+  String get videoEditorLayoutGapLabel => '간격';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => '테두리 색';
+
+  @override
+  String get videoEditorLayoutApplying => '레이아웃을 배치하는 중…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return '$count단계 중 $step단계';
+  }
+
+  @override
+  String get videoEditorLayoutFailed => '레이아웃을 넣지 못했어요. 다시 해 보세요.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit => '일부 클립이 들어가지 않았어요. 모든 칸이 찼어요.';
 }

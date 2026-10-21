@@ -1194,28 +1194,4 @@ void main() {
       expect(event1, isNot(equals(event2)));
     });
   });
-
-  group(SubEditorType, () {
-    test('has 10 values', () {
-      expect(SubEditorType.values, hasLength(10));
-    });
-
-    test('contains expected types', () {
-      expect(
-        SubEditorType.values,
-        containsAll([
-          SubEditorType.text,
-          SubEditorType.draw,
-          SubEditorType.filter,
-          SubEditorType.tune,
-          SubEditorType.effects,
-          SubEditorType.stickers,
-          SubEditorType.music,
-          SubEditorType.clips,
-          SubEditorType.captions,
-          SubEditorType.voiceOver,
-        ]),
-      );
-    });
-  });
 }

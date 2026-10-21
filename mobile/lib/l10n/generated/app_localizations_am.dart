@@ -13529,4 +13529,99 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'እንደተነበበ ምልክት ተደርጓል';
+
+  @override
+  String get videoEditorLayoutLabel => 'አቀማመጥ';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel => 'ቅንጥቦችን በተከፈለ ማያ ማደራጀት';
+
+  @override
+  String get videoEditorLayoutTitle => 'አቀማመጥ';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'አቀማመጡን መዝጋት';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'አቀማመጡን ማስገባት';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'ጎን ለጎን';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'አንዱ በሌላው ላይ';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'ሶስት ረድፎች';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'አንድ ከሁለት በላይ';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'የአራት ፍርግርግ';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'ሶስት ጎን ለጎን';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'ሁለት ከአንድ በላይ';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'አንድ ከሁለት ጎን';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'ሁለት ከአንድ ጎን';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'አንድ ከሶስት በላይ';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'ምስል በምስል ውስጥ፣ ከላይ በግራ';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'ምስል በምስል ውስጥ፣ ከላይ በቀኝ';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'ምስል በምስል ውስጥ፣ ከታች በግራ';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'ምስል በምስል ውስጥ፣ ከታች በቀኝ';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'ሕዋስ $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'ሕዋስ $number፣ ባዶ';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'ቅንጥቡን ከሕዋሱ ማስወገድ';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'ክፍተት';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'የድንበር ቀለም';
+
+  @override
+  String get videoEditorLayoutApplying => 'አቀማመጥዎ እየተደራጀ ነው…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'ደረጃ $step ከ$count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed => 'አቀማመጡን ማስገባት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'አንዳንድ ቅንጥቦች አልገቡም — ሁሉም ሕዋሶች ሞልተዋል።';
 }

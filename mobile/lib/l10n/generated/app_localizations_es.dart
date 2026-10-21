@@ -14032,4 +14032,101 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Marcado como leído';
+
+  @override
+  String get videoEditorLayoutLabel => 'Diseño';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Acomodar clips en pantalla dividida';
+
+  @override
+  String get videoEditorLayoutTitle => 'Diseño';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Cerrar diseño';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Colocar diseño';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Lado a lado';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Apilados';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Tres filas';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Uno sobre dos';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Cuadrícula de cuatro';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Tres lado a lado';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Dos sobre uno';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Uno al lado de dos';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Dos al lado de uno';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Uno sobre tres';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Imagen en imagen, arriba a la izquierda';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Imagen en imagen, arriba a la derecha';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Imagen en imagen, abajo a la izquierda';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Imagen en imagen, abajo a la derecha';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Celda $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Celda $number, vacía';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Quitar el clip de la celda';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Espacio';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Color del borde';
+
+  @override
+  String get videoEditorLayoutApplying => 'Acomodando tu diseño…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Paso $step de $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'No se pudo colocar el diseño. Probá de nuevo.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Algunos clips no entraron: todas las celdas están llenas.';
 }

@@ -24,7 +24,8 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// Reacts to the result of each [ClipEditorBloc] operation.
 ///
 /// Every operation the user can wait on — split, reverse, transform, merge,
-/// detach, backdrop change, freeze frame, detached-clip transform and reattach,
+/// detach, backdrop change, freeze frame, split-screen layout, detached-clip
+/// transform and reattach,
 /// remove, audio extraction, library save, library import, recorded chroma
 /// key — reports its
 /// outcome through a `last*Result` field on [ClipEditorState].
@@ -48,14 +49,16 @@ class ClipEditorResultListeners extends StatelessWidget {
               child: _ClipDetachResultListener(
                 child: _ClipPlaceholderFillResultListener(
                   child: _ClipFreezeFrameResultListener(
-                    child: _DetachedClipTransformResultListener(
-                      child: _DetachedClipReattachResultListener(
-                        child: _ClipsRemovedResultListener(
-                          child: _AudioExtractionResultListener(
-                            child: _ClipLibrarySaveResultListener(
-                              child: _ClipLibraryImportResultListener(
-                                child: _CapturedChromaKeyBakeResultListener(
-                                  child: child,
+                    child: _SplitScreenLayoutResultListener(
+                      child: _DetachedClipTransformResultListener(
+                        child: _DetachedClipReattachResultListener(
+                          child: _ClipsRemovedResultListener(
+                            child: _AudioExtractionResultListener(
+                              child: _ClipLibrarySaveResultListener(
+                                child: _ClipLibraryImportResultListener(
+                                  child: _CapturedChromaKeyBakeResultListener(
+                                    child: child,
+                                  ),
                                 ),
                               ),
                             ),
@@ -431,7 +434,12 @@ class _ClipDetachResultListener extends StatelessWidget {
       // The shape mask moves onto the layer: on the canvas it shows the track
       // through what it hides rather than covering it with black, which is
       // what a picture-in-picture shape is for.
-      clip: detachedClip.copyWith(clearMask: true),
+      // A first-position clip may carry the canvas ratio for layer
+      // coordinates. A detached layer is shaped by its rendered media.
+      clip: detachedClip.copyWith(
+        originalAspectRatio: detachedClip.videoAspectRatio,
+        clearMask: true,
+      ),
       layerId: layerId,
       // So putting the clip back can find the slot it left.
       placeholderClipId: placeholderClipId,
@@ -446,7 +454,7 @@ class _ClipDetachResultListener extends StatelessWidget {
       exportConfigs: WidgetLayerExportConfigs(id: layerId, meta: meta),
       mask: maskForDetachedClip(
         detachedClip.mask,
-        boxSize: Size(detachedClip.originalAspectRatio, 1),
+        boxSize: Size(detachedClip.videoAspectRatio, 1),
         targetAspectRatio: detachedClip.targetAspectRatio.value,
       ),
     );
@@ -537,7 +545,7 @@ class _ClipFreezeFrameResultListener extends StatelessWidget {
   void _onFreezeFrameResult(BuildContext context, ClipEditorState state) {
     switch (state.lastFreezeFrameResult) {
       case ClipFreezeFrameSuccess(:final previousClips, :final freezeClipId):
-        _commitFreeze(context, state, previousClips, freezeClipId);
+        _commitLengtheningInsert(context, state, previousClips, freezeClipId);
       case ClipFreezeFrameFailure():
         ScaffoldMessenger.of(context).showSnackBar(
           DivineSnackbarContainer.snackBar(
@@ -551,33 +559,71 @@ class _ClipFreezeFrameResultListener extends StatelessWidget {
         break;
     }
   }
+}
 
-  void _commitFreeze(
-    BuildContext context,
-    ClipEditorState state,
-    List<DivineVideoClip> previousClips,
-    String freezeClipId,
-  ) {
-    final editor = VideoEditorScope.of(context).editor;
-    if (editor == null) return;
-    final overlayBloc = context.read<TimelineOverlayBloc>();
+/// Writes a clip the bloc just put on the timeline to editor history.
+///
+/// The entry is written with [VideoEditorExtensions.setLengthenedClipState]
+/// because the clip only makes the composition longer: music and voice-over
+/// that ran to the old end keep playing through to the new one (#6401).
+/// Markers after the clip move with the footage they sit on.
+void _commitLengtheningInsert(
+  BuildContext context,
+  ClipEditorState state,
+  List<DivineVideoClip> previousClips,
+  String clipId,
+) {
+  final editor = VideoEditorScope.of(context).editor;
+  if (editor == null) return;
+  final overlayBloc = context.read<TimelineOverlayBloc>();
 
-    final freezeIndex = state.clips.indexWhere((c) => c.id == freezeClipId);
-    if (freezeIndex == -1) return;
-    final insertedAt = state.clips
-        .take(freezeIndex)
-        .fold(Duration.zero, (total, c) => total + c.playbackDuration);
-    final markers = shiftTimelineMarkersForInsertion(
-      markers: overlayBloc.state.timelineMarkers,
-      at: insertedAt,
-      by: state.clips[freezeIndex].playbackDuration,
-    );
+  final index = state.clips.indexWhere((c) => c.id == clipId);
+  if (index == -1) return;
+  final insertedAt = state.clips
+      .take(index)
+      .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+  final markers = shiftTimelineMarkersForInsertion(
+    markers: overlayBloc.state.timelineMarkers,
+    at: insertedAt,
+    by: state.clips[index].playbackDuration,
+  );
 
-    overlayBloc.add(TimelineMarkersRebased(markers));
-    editor.setLengthenedClipState(
-      previousClips: previousClips,
-      clips: state.clips,
-      timelineMarkers: markers,
+  overlayBloc.add(TimelineMarkersRebased(markers));
+  editor.setLengthenedClipState(
+    previousClips: previousClips,
+    clips: state.clips,
+    timelineMarkers: markers,
+  );
+}
+
+/// Listens to [ClipEditorState.lastSplitScreenLayoutResult] and commits the
+/// clip a split-screen layout was rendered into to editor history, the way a
+/// freeze frame is — see [_commitLengtheningInsert].
+class _SplitScreenLayoutResultListener extends StatelessWidget {
+  const _SplitScreenLayoutResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastSplitScreenLayoutResult,
+            curr.lastSplitScreenLayoutResult,
+          ) &&
+          curr.lastSplitScreenLayoutResult != null,
+      listener: (context, state) {
+        final result = state.lastSplitScreenLayoutResult;
+        if (result == null) return;
+        _commitLengtheningInsert(
+          context,
+          state,
+          result.previousClips,
+          result.clipId,
+        );
+      },
+      child: child,
     );
   }
 }

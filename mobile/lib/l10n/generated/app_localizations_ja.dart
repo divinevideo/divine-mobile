@@ -13195,4 +13195,99 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => '既読にしました';
+
+  @override
+  String get videoEditorLayoutLabel => 'レイアウト';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel => 'クリップを分割画面に並べる';
+
+  @override
+  String get videoEditorLayoutTitle => 'レイアウト';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'レイアウトを閉じる';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'レイアウトを配置';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => '左右に並べる';
+
+  @override
+  String get videoEditorLayoutPresetStacked => '上下に並べる';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => '3段';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => '上に1つ、下に2つ';
+
+  @override
+  String get videoEditorLayoutPresetGrid => '4分割';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => '3列';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => '上に2つ、下に1つ';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => '左に1つ、右に2つ';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => '左に2つ、右に1つ';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => '上に1つ、下に3つ';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'ピクチャー・イン・ピクチャー（左上）';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'ピクチャー・イン・ピクチャー（右上）';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'ピクチャー・イン・ピクチャー（左下）';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'ピクチャー・イン・ピクチャー（右下）';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'セル$number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'セル$number、空';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'セルからクリップを外す';
+
+  @override
+  String get videoEditorLayoutGapLabel => '間隔';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => '枠の色';
+
+  @override
+  String get videoEditorLayoutApplying => 'レイアウトを配置しています…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'ステップ $step/$count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed => 'レイアウトを配置できませんでした。もう一度お試しください。';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      '一部のクリップが入りませんでした。すべてのセルが埋まっています。';
 }

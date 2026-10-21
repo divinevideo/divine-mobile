@@ -13799,4 +13799,101 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Okundu olarak işaretlendi';
+
+  @override
+  String get videoEditorLayoutLabel => 'Düzen';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Klipleri bölünmüş ekranda düzenle';
+
+  @override
+  String get videoEditorLayoutTitle => 'Düzen';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Düzeni kapat';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Düzeni yerleştir';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Yan yana';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Üst üste';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Üç satır';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Üstte bir, altta iki';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Dörtlü ızgara';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Yan yana üç';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Üstte iki, altta bir';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Solda bir, sağda iki';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Solda iki, sağda bir';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Üstte bir, altta üç';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Resim içinde resim, sol üst';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Resim içinde resim, sağ üst';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Resim içinde resim, sol alt';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Resim içinde resim, sağ alt';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Hücre $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Hücre $number, boş';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Klibi hücreden çıkar';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Boşluk';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Kenarlık rengi';
+
+  @override
+  String get videoEditorLayoutApplying => 'Düzenin hazırlanıyor…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Adım $step/$count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Düzen yerleştirilemedi. Bir daha dene.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Bazı klipler sığmadı: tüm hücreler dolu.';
 }

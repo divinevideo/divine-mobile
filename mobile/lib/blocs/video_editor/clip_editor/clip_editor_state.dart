@@ -68,6 +68,7 @@ class ClipEditorState extends Equatable {
     this.freezingFrameClipId,
     this.freezingFrameRenderId,
     this.lastFreezeFrameResult,
+    this.lastSplitScreenLayoutResult,
     this.isImportingLibraryClips = false,
     this.libraryImportRenderId,
     this.libraryImportProgress,
@@ -350,6 +351,11 @@ class ClipEditorState extends Equatable {
   /// and surfaces a failure snackbar.
   final ClipFreezeFrameResult? lastFreezeFrameResult;
 
+  /// Last split-screen layout clip placed on the timeline.
+  ///
+  /// Consumed by the widget layer, which commits it to editor history.
+  final ClipSplitScreenLayoutResult? lastSplitScreenLayoutResult;
+
   /// Whether library clips are being converted so they can join the timeline.
   ///
   /// Only true while a stop-motion set picked into a video composition is
@@ -497,6 +503,7 @@ class ClipEditorState extends Equatable {
     String? freezingFrameRenderId,
     bool clearFreezingFrameClipId = false,
     ClipFreezeFrameResult? lastFreezeFrameResult,
+    ClipSplitScreenLayoutResult? lastSplitScreenLayoutResult,
     int? selectedFrameIndex,
     bool clearSelectedFrameIndex = false,
     Set<int>? selectedFrameIndexes,
@@ -621,6 +628,8 @@ class ClipEditorState extends Equatable {
           : (freezingFrameRenderId ?? this.freezingFrameRenderId),
       lastFreezeFrameResult:
           lastFreezeFrameResult ?? this.lastFreezeFrameResult,
+      lastSplitScreenLayoutResult:
+          lastSplitScreenLayoutResult ?? this.lastSplitScreenLayoutResult,
       isImportingLibraryClips:
           isImportingLibraryClips ?? this.isImportingLibraryClips,
       libraryImportRenderId: clearLibraryImportRenderId
@@ -707,6 +716,8 @@ class ClipEditorState extends Equatable {
     freezingFrameRenderId,
     // Identity-only: each ClipFreezeFrameResult is a fresh instance.
     identityHashCode(lastFreezeFrameResult),
+    // Identity-only: each ClipSplitScreenLayoutResult is a fresh instance.
+    identityHashCode(lastSplitScreenLayoutResult),
     isImportingLibraryClips,
     libraryImportRenderId,
     libraryImportProgress,
@@ -1082,6 +1093,30 @@ final class ClipFreezeFrameFailure extends ClipFreezeFrameResult {}
 /// Silent by design: the frame the user asked for is no longer on the
 /// timeline.
 final class ClipFreezeFrameDiscarded extends ClipFreezeFrameResult {}
+
+// === SPLIT-SCREEN LAYOUT RESULT ===
+
+/// One-shot signal that the clip a split-screen layout was rendered into is
+/// on the timeline.
+///
+/// Emitted into [ClipEditorState.lastSplitScreenLayoutResult], and
+/// identity-compared like every other one-shot result here. There is no
+/// failure case: the render ran on the layout screen, and placing its clip
+/// cannot fail.
+///
+/// [previousClips] is the list as it was immediately before, so the widget
+/// layer can carry sounds that ran to the old end onto the new one.
+final class ClipSplitScreenLayoutResult {
+  ClipSplitScreenLayoutResult({
+    required this.previousClips,
+    required this.clipId,
+  });
+
+  final List<DivineVideoClip> previousClips;
+
+  /// The id of the layout's clip in the new list.
+  final String clipId;
+}
 
 // === DETACHED-CLIP TRANSFORM RESULT ===
 

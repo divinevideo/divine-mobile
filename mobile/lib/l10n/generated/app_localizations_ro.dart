@@ -14160,4 +14160,101 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get inboxThreadMarkedRead => 'Marcat ca citit';
+
+  @override
+  String get videoEditorLayoutLabel => 'Aranjament';
+
+  @override
+  String get videoEditorOpenLayoutSemanticLabel =>
+      'Aranjează clipuri pe ecran împărțit';
+
+  @override
+  String get videoEditorLayoutTitle => 'Aranjament';
+
+  @override
+  String get videoEditorLayoutCloseSemanticLabel => 'Închide aranjamentul';
+
+  @override
+  String get videoEditorLayoutDoneSemanticLabel => 'Plasează aranjamentul';
+
+  @override
+  String get videoEditorLayoutPresetSideBySide => 'Unul lângă altul';
+
+  @override
+  String get videoEditorLayoutPresetStacked => 'Unul peste altul';
+
+  @override
+  String get videoEditorLayoutPresetThreeStacked => 'Trei rânduri';
+
+  @override
+  String get videoEditorLayoutPresetOneOverTwo => 'Unul peste două';
+
+  @override
+  String get videoEditorLayoutPresetGrid => 'Grilă de patru';
+
+  @override
+  String get videoEditorLayoutPresetThreeColumns => 'Trei unul lângă altul';
+
+  @override
+  String get videoEditorLayoutPresetTwoOverOne => 'Două peste unul';
+
+  @override
+  String get videoEditorLayoutPresetOneBesideTwo => 'Unul lângă două';
+
+  @override
+  String get videoEditorLayoutPresetTwoBesideOne => 'Două lângă unul';
+
+  @override
+  String get videoEditorLayoutPresetOneOverThree => 'Unul peste trei';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopLeft =>
+      'Imagine în imagine, stânga sus';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureTopRight =>
+      'Imagine în imagine, dreapta sus';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomLeft =>
+      'Imagine în imagine, stânga jos';
+
+  @override
+  String get videoEditorLayoutPresetPictureInPictureBottomRight =>
+      'Imagine în imagine, dreapta jos';
+
+  @override
+  String videoEditorLayoutCellSemanticLabel(String number) {
+    return 'Celula $number';
+  }
+
+  @override
+  String videoEditorLayoutCellEmptySemanticLabel(String number) {
+    return 'Celula $number, goală';
+  }
+
+  @override
+  String get videoEditorLayoutRemoveClipLabel => 'Scoate clipul din celulă';
+
+  @override
+  String get videoEditorLayoutGapLabel => 'Spațiu';
+
+  @override
+  String get videoEditorLayoutBorderColorLabel => 'Culoarea marginii';
+
+  @override
+  String get videoEditorLayoutApplying => 'Se aranjează clipurile…';
+
+  @override
+  String videoEditorLayoutApplyStep(String step, String count) {
+    return 'Pasul $step din $count';
+  }
+
+  @override
+  String get videoEditorLayoutFailed =>
+      'Aranjamentul nu a putut fi plasat. Mai încearcă o dată.';
+
+  @override
+  String get videoEditorLayoutClipsDidNotFit =>
+      'Unele clipuri nu au încăput: toate celulele sunt pline.';
 }
