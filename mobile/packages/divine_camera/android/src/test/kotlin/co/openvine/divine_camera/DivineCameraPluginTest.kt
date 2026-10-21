@@ -420,6 +420,67 @@ internal class VideoStabilizationTest {
             ),
         )
     }
+
+    @Test
+    fun camera2Mode_standardWithoutBasicEis_isOff() {
+        // A front lens with no EIS: the saved Standard records with off.
+        assertEquals(
+            off,
+            CameraController.camera2StabilizationMode(
+                "standard",
+                onSupported = false,
+                previewSupported = true,
+            ),
+        )
+    }
+
+    @Test
+    fun camera2Mode_standardWithBasicEis_isOn() {
+        assertEquals(
+            on,
+            CameraController.camera2StabilizationMode(
+                "standard",
+                onSupported = true,
+                previewSupported = true,
+            ),
+        )
+    }
+
+    @Test
+    fun camera2Mode_autoFallsBackToBasicEis() {
+        assertEquals(
+            on,
+            CameraController.camera2StabilizationMode(
+                "auto",
+                onSupported = true,
+                previewSupported = false,
+            ),
+        )
+    }
+
+    @Test
+    fun reportedMode_unsupportedRequest_reportsOff() {
+        assertEquals(
+            "off",
+            CameraController.reportedStabilizationMode(
+                "standard",
+                onSupported = false,
+                previewSupported = false,
+            ),
+        )
+    }
+
+    @Test
+    fun reportedMode_supportedRequest_reportsTheRequest() {
+        assertEquals(
+            "standard",
+            CameraController.reportedStabilizationMode(
+                "standard",
+                onSupported = true,
+                previewSupported = false,
+            ),
+        )
+    }
 }
 
 // Pure decision logic with no Android framework dependency, so it runs on
