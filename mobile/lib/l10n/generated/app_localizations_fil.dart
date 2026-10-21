@@ -8947,6 +8947,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectFisheye => 'Fisheye';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.';
 

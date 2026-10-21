@@ -6163,6 +6163,10 @@
   "@videoEditorEffectEcho": {
     "description": "Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail."
   },
+  "videoEditorEffectFisheye": "Fisheye",
+  "@videoEditorEffectFisheye": {
+    "description": "Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens."
+  },
   "videoEditorEffectsFlashingReplaced": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.",
   "@videoEditorEffectsFlashingReplaced": {
     "description": "Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity."

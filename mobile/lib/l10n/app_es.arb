@@ -2619,6 +2619,7 @@
   "videoEditorEffectWave": "Onda",
   "videoEditorEffectGlow": "Resplandor",
   "videoEditorEffectEcho": "Eco",
+  "videoEditorEffectFisheye": "Ojo de pez",
   "videoEditorEffectsFlashingReplaced": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.",
   "videoEditorEffectsFlashingNotDuplicated": "Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles.",
   "videoEditorEffectsOnBeat": "Al ritmo",

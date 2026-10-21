@@ -1456,3 +1456,61 @@ private final class FakePluginRegistry: NSObject, FlutterPluginRegistry {
 
   func valuePublished(byPlugin pluginKey: String) -> NSObject? { nil }
 }
+
+/// The fisheye draws Core Image's `CIBumpDistortion` on iOS and macOS, and a
+/// shader that reproduces its mapping on Android (`FisheyeVideoEffect`).
+/// Apple does not document that mapping, so this pins it: a change to the
+/// filter would otherwise let the platforms drift apart unnoticed.
+final class FisheyeVideoEffectTests: XCTestCase {
+  func testSamplesWhereTheAndroidShaderDoes() {
+    let width = 90, height = 160, intensity = 0.7
+    // Every pixel holds its own centre coordinates, so the output shows where
+    // each pixel sampled the frame.
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for y in 0..<height {
+      for x in 0..<width {
+        pixels[(y * width + x) * 4] = Float(x) + 0.5
+        pixels[(y * width + x) * 4 + 1] = Float(y) + 0.5
+      }
+    }
+    let frame = CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+
+    let output = FisheyeVideoEffect(params: ["intensity": intensity])
+      .render(frame, history: [], timeUs: 0, effectTimeUs: 0)
+
+    var sampled = [Float](repeating: 0, count: pixels.count)
+    let context = CIContext(options: [
+      .workingColorSpace: NSNull(), .workingFormat: CIFormat.RGBAf,
+    ])
+    sampled.withUnsafeMutableBytes {
+      context.render(
+        output, toBitmap: $0.baseAddress!, rowBytes: width * 16,
+        bounds: frame.extent, format: .RGBAf, colorSpace: nil)
+    }
+    XCTAssertEqual(output.extent, frame.extent)
+
+    // The Android shader: source = centre + offset * pull.
+    let scale = 0.8 * intensity
+    let cx = Double(width) / 2, cy = Double(height) / 2
+    let radius = (cx * cx + cy * cy).squareRoot()
+    var worst = 0.0
+    for y in 0..<height {
+      for x in 0..<width {
+        let ox = Double(x) + 0.5 - cx, oy = Double(y) + 0.5 - cy
+        let t = min(1, (ox * ox + oy * oy).squareRoot() / radius)
+        let pull = 1 - scale * (1 - t * t * (3 - 2 * t))
+        let i = (y * width + x) * 4
+        worst = max(
+          worst,
+          abs(Double(sampled[i]) - (cx + ox * pull)),
+          abs(Double(sampled[i + 1]) - (cy + oy * pull)))
+      }
+    }
+    XCTAssertLessThan(worst, 0.05, "pixels off the shader's mapping, in px")
+  }
+}

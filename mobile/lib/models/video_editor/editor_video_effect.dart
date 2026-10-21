@@ -12,6 +12,10 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 /// the native `EchoVideoEffect` on Android, iOS and macOS (#9708).
 const echoVideoEffectId = 'divine.echo';
 
+/// The id Divine's fisheye is registered under with pro_video_editor, by the
+/// native `FisheyeVideoEffect` on Android, iOS and macOS.
+const fisheyeVideoEffectId = 'divine.fisheye';
+
 /// What an editor effect looks like: one of pro_video_editor's built-in
 /// effects, or one Divine implements natively and registers with it.
 @immutable
@@ -35,10 +39,15 @@ class EditorEffectType {
   /// The echo trail: moving subjects leave fading copies (#9708).
   static const echo = EditorEffectType.custom(echoVideoEffectId);
 
+  /// The fisheye: the middle of the picture bulges out, as through a
+  /// wide-angle lens.
+  static const fisheye = EditorEffectType.custom(fisheyeVideoEffectId);
+
   /// Every type the effects editor offers, in picker order.
   static final List<EditorEffectType> values = List.unmodifiable([
     for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
     echo,
+    fisheye,
   ]);
 
   /// The built-in effect, or `null` for a custom one.

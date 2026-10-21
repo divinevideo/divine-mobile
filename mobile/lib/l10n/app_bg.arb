@@ -2863,6 +2863,7 @@
   "videoEditorEffectWave": "Вълна",
   "videoEditorEffectGlow": "Сияние",
   "videoEditorEffectEcho": "Ехо",
+  "videoEditorEffectFisheye": "Рибешко око",
   "videoEditorEffectsFlashingReplaced": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.",
   "videoEditorEffectsFlashingNotDuplicated": "Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.",
   "videoEditorEffectsOnBeat": "В ритъм",

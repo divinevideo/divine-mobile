@@ -58,6 +58,7 @@ void main() {
         l10n.videoEditorEffectWave,
         l10n.videoEditorEffectGlow,
         l10n.videoEditorEffectEcho,
+        l10n.videoEditorEffectFisheye,
       ]) {
         await tester.scrollUntilVisible(
           find.text(label),

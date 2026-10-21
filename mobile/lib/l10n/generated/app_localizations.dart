@@ -15011,6 +15011,12 @@ abstract class AppLocalizations {
   /// **'Echo'**
   String get videoEditorEffectEcho;
 
+  /// Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens.
+  ///
+  /// In en, this message translates to:
+  /// **'Fisheye'**
+  String get videoEditorEffectFisheye;
+
   /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
   ///
   /// In en, this message translates to:

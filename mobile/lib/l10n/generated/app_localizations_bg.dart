@@ -8964,6 +8964,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ехо';
 
   @override
+  String get videoEditorEffectFisheye => 'Рибешко око';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора, затова тук заменихме другия.';
 

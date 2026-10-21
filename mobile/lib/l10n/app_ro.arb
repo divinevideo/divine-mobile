@@ -2611,6 +2611,7 @@
   "videoEditorEffectWave": "Val",
   "videoEditorEffectGlow": "Strălucire",
   "videoEditorEffectEcho": "Ecou",
+  "videoEditorEffectFisheye": "Ochi de pește",
   "videoEditorEffectsFlashingReplaced": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.",
   "videoEditorEffectsFlashingNotDuplicated": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.",
   "videoEditorEffectsOnBeat": "Pe ritm",

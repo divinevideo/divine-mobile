@@ -2611,6 +2611,7 @@
   "videoEditorEffectWave": "Fala",
   "videoEditorEffectGlow": "Poświata",
   "videoEditorEffectEcho": "Echo",
+  "videoEditorEffectFisheye": "Rybie oko",
   "videoEditorEffectsFlashingReplaced": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym, więc zastąpiliśmy tutaj ten drugi.",
   "videoEditorEffectsFlashingNotDuplicated": "Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.",
   "videoEditorEffectsOnBeat": "W rytm",
