@@ -2186,6 +2186,36 @@ void main() {
       );
 
       test(
+        "deletes a gone message's video once the read that held it ends, even "
+        'after it was handed to playback',
+        () async {
+          final read = Completer<Uint8List?>();
+          final reading = Completer<void>();
+          readFrame = (_) {
+            reading.complete();
+            return read.future;
+          };
+          final message = _videoMessage();
+          var gone = false;
+          final store = createStore(isMessageGone: (_) async => gone);
+          final video = await store.videoFor(message);
+          final preview = store.previewFor(message);
+          await reading.future;
+          gone = true;
+          await store.prune();
+          expect(video.existsSync(), isTrue);
+          // Its row is cleared meanwhile, as an account switch does.
+          gone = false;
+
+          read.complete(_frame);
+          await preview;
+          await pumpEventQueue();
+
+          expect(video.existsSync(), isFalse);
+        },
+      );
+
+      test(
         "keeps a gone message's conversation record while a read holds its "
         'video, so a later launch can still tell, and deletes it with the '
         'video once the read ends',

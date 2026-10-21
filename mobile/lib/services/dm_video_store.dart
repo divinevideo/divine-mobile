@@ -1367,7 +1367,9 @@ class DmVideoStore {
       return;
     }
     for (final kept in files) {
-      if (_messageIdOf(kept) == id && !_isInUse(kept)) _deleteNow(kept);
+      if (_messageIdOf(kept) == id && !_leases.containsKey(kept.path)) {
+        _deleteNow(kept);
+      }
     }
   }
 
