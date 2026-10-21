@@ -466,21 +466,6 @@ class _DeveloperOptionsScreenState
                   ),
                   onTap: _simulateUnder13MinorReview,
                 ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsAgeReviewClosureTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context.l10n.devOptionsAgeReviewClosureSubtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: _simulateAgeReviewClosure,
-                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Text(
@@ -553,6 +538,21 @@ class _DeveloperOptionsScreenState
                       toast: option.$3,
                     ),
                   ),
+                ),
+                ListTile(
+                  title: Text(
+                    context.l10n.devOptionsAgeReviewClosureTitle,
+                    style: VineTheme.titleMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  subtitle: Text(
+                    context.l10n.devOptionsAgeReviewClosureSubtitle,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.secondaryText,
+                    ),
+                  ),
+                  onTap: _simulateAgeReviewClosure,
                 ),
                 // Protected-minor (13-15) simulation (#5721): flips the
                 // debug-only ProtectedMinorOverrideService so QA can exercise

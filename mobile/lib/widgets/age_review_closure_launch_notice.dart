@@ -95,6 +95,10 @@ class _AgeReviewClosureLaunchNoticeState
         category: LogCategory.ui,
       );
     });
+    // A post-frame callback does not ask for a frame, and an answer arriving
+    // from the network rebuilds nothing, so on a still screen the push would
+    // wait for whatever draws next.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   @override

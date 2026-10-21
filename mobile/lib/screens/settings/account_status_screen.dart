@@ -135,9 +135,9 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
               }
               return _StatusBody(
                 kind: retainedKind,
-                isAgeReviewClosure:
-                    retainedKind == cachedKind &&
-                    (cached?.isAgeReviewClosure ?? false),
+                // A closure is a ban, which is enforced, so when the cache
+                // holds one it is also the kind retained above.
+                isAgeReviewClosure: cached?.isAgeReviewClosure ?? false,
                 isLastKnown: true,
                 onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
                 openSupportMessages: widget.openSupportMessages,
@@ -324,8 +324,8 @@ class _StatusBody extends StatelessWidget {
 ///
 /// Leaves out the keys and move-account sections on purpose: most readers are
 /// kids, and the honest way back for them is Divine Greenlight, not taking the
-/// account to another app. The dispute path speaks to a parent, or to an adult
-/// closed by mistake.
+/// account to another app. The dispute path speaks to a parent, or to an account
+/// holder of 16 or older closed by mistake.
 class _AgeReviewClosurePaths extends StatelessWidget {
   const _AgeReviewClosurePaths({this.openSupportMessages, this.composeEmail});
 

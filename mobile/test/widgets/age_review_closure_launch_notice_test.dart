@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
+import 'package:openvine/repositories/account_enforcement_repository.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/widgets/age_review_closure_launch_notice.dart';
 
@@ -38,7 +40,11 @@ Future<ProviderContainer> _pumpShell(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -121,6 +127,8 @@ void main() {
           container: container,
           child: MaterialApp.router(
             key: const ValueKey('rebuilt'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: rebuilt,
           ),
         ),
@@ -155,7 +163,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -196,7 +208,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -235,7 +251,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -279,11 +299,51 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();
       refetch.complete(_closure);
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
+    });
+
+    // A failed launch fetch is not an answer. Listening on means the refetch
+    // on the next resume can still bring the notice.
+    testWidgets('keeps listening through a failed fetch', (tester) async {
+      var fetches = 0;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            fetches++;
+            if (fetches == 1) throw const AccountStatusUnavailable();
+            return _closure;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('home'), findsOneWidget);
+
+      container.invalidate(accountEnforcementStatusProvider);
       await tester.pumpAndSettle();
 
       expect(find.text('account-status'), findsOneWidget);
@@ -313,7 +373,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();

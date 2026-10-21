@@ -724,8 +724,8 @@ const _knownUntranslatedDebt = <String>{
   'accountStatusAppealBody',
   'accountStatusMoveAccount',
   'accountStatusRetry',
-  // Age-review closure copy (support-trust-safety#260). Kid-facing policy copy
-  // still in review with support, so it waits for the same translation pass.
+  // Age-review closure copy (support-trust-safety#260). Kid-facing policy copy,
+  // approved by support in English; it waits for the same translation pass.
   'accountStatusAgeClosureHeading',
   'accountStatusAgeClosureBody',
   'accountStatusAgeClosureRejoinBody',

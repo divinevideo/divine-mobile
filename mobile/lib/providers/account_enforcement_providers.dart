@@ -72,7 +72,9 @@ final accountEnforcementDevOverrideProvider =
 ///
 /// In memory on purpose: the notice comes back on the next cold launch, but a
 /// resume refetch in the same session must not push it again
-/// (support-trust-safety#260).
+/// (support-trust-safety#260). It lives in the account's container, which an
+/// account switch rebuilds, so switching back to a closed account shows the
+/// notice again; switching in is opening that account.
 class AgeReviewClosureLaunchShown extends Notifier<Set<String>> {
   @override
   Set<String> build() => const {};

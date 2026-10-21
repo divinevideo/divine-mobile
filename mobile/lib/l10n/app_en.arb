@@ -10065,7 +10065,7 @@
   },
   "accountStatusAgeClosureMistakeBody": "Ask a parent or guardian to contact us. If you're 16 or older, you can contact us yourself.",
   "@accountStatusAgeClosureMistakeBody": {
-    "description": "Routes an age-review closure dispute to a parent, or to the account holder if they are an adult who was closed by mistake."
+    "description": "Routes an age-review closure dispute to a parent, or to the account holder if they are 16 or older and were closed by mistake."
   },
   "accountStatusRestrictedHeading": "Your account is restricted",
   "@accountStatusRestrictedHeading": {
