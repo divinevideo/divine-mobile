@@ -1038,6 +1038,11 @@ class DmVideoStore {
         _frameReadMarks.senderHungTheDecoder(dir, message.senderPubkey)) {
       return null;
     }
+    // Asked again when its turn comes: a decode of the sender's may hang
+    // while this one waits.
+    bool stillWanted() =>
+        wanted() &&
+        !_frameReadMarks.senderHungTheDecoder(dir, message.senderPubkey);
 
     final declaredBytes = message.fileMetadata?.fileSize;
     final File video;
@@ -1048,7 +1053,7 @@ class DmVideoStore {
     } else if (_mayAutoDownload(dir, message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
       try {
-        video = await _autoVideoFor(message, wanted: wanted);
+        video = await _autoVideoFor(message, wanted: stillWanted);
       } on _DownloadDropped {
         return null;
       } on DmVideoWithdrawnException {
@@ -1087,11 +1092,11 @@ class DmVideoStore {
 
     try {
       // No card shows it: decode nothing.
-      if (!wanted()) return null;
+      if (!stillWanted()) return null;
       final id = message.id;
       final read = _frameReadsInFlight.putIfAbsent(
         id,
-        () => _queueFrameRead(message, video, preview, wanted),
+        () => _queueFrameRead(message, video, preview, stillWanted),
       );
       // Interest holds while queued: the card's deadline bounds its wait for
       // its own decode, not its place behind other native reads.

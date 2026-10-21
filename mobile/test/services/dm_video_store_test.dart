@@ -1364,6 +1364,112 @@ void main() {
       );
 
       test(
+        'reads no frame for a card of a sender whose decode ran past the turn '
+        'limit while that card waited for its turn',
+        () async {
+          final hung = _videoMessage(id: '1' * 64);
+          final queued = _videoMessage(id: '2' * 64);
+          final other = _videoMessage(id: '3' * 64, senderPubkey: '9' * 64);
+          final hungStarted = Completer<void>();
+          final otherStarted = Completer<void>();
+          final read = <String>[];
+          readFrame = (video) {
+            read.add(video.uri.pathSegments.last.split('.').first);
+            if (video.path.contains(hung.id)) {
+              hungStarted.complete();
+              return Completer<Uint8List?>().future;
+            }
+            if (video.path.contains(other.id)) otherStarted.complete();
+            return Future.value(_frame);
+          };
+          for (final message in [hung, queued, other]) {
+            keptFile(
+              DmVideoStore.videoFileNameFor(message),
+              _plaintext,
+              keptAt: now,
+            );
+          }
+          final store = createStore(
+            // Long enough for the next cards to queue behind the hung read.
+            frameTurnLimit: const Duration(milliseconds: 200),
+            frameDeadline: const Duration(milliseconds: 1),
+          );
+          final hungPreview = store.previewFor(hung);
+          await hungStarted.future.timeout(const Duration(seconds: 5));
+
+          final previews = [
+            hungPreview,
+            store.previewFor(queued),
+            store.previewFor(other),
+          ];
+          await otherStarted.future.timeout(const Duration(seconds: 5));
+          await Future.wait(previews);
+
+          expect(read, equals([hung.id, other.id]));
+        },
+      );
+
+      test(
+        'fetches nothing for a card of a sender whose decode ran past the '
+        'turn limit while that card waited for its download',
+        () async {
+          final hung = _videoMessage(id: '1' * 64);
+          final queued = _videoMessage(id: '2' * 64);
+          final blocking = _videoMessage(id: '3' * 64, senderPubkey: '9' * 64);
+          final probe = _videoMessage(id: '4' * 64, senderPubkey: '8' * 64);
+          final releaseBlocking = Completer<Uint8List>();
+          final blockingFetched = Completer<void>();
+          final fetched = <String>[];
+          fetch = (message) {
+            fetched.add(message.id);
+            if (message.id != blocking.id) return Future.value(_plaintext);
+            blockingFetched.complete();
+            return releaseBlocking.future;
+          };
+          final hungStarted = Completer<void>();
+          final probeStarted = Completer<void>();
+          readFrame = (video) {
+            if (video.path.contains(hung.id)) {
+              hungStarted.complete();
+              return Completer<Uint8List?>().future;
+            }
+            if (video.path.contains(probe.id)) probeStarted.complete();
+            return Future.value(_frame);
+          };
+          for (final message in [hung, probe]) {
+            keptFile(
+              DmVideoStore.videoFileNameFor(message),
+              _plaintext,
+              keptAt: now,
+            );
+          }
+          final store = createStore(
+            frameTurnLimit: const Duration(milliseconds: 1),
+            frameDeadline: const Duration(milliseconds: 1),
+          );
+          final blockingPreview = store.previewFor(blocking);
+          await blockingFetched.future.timeout(const Duration(seconds: 5));
+          // Waits for its download behind the one blocking the queue.
+          final queuedPreview = store.previewFor(queued);
+          final hungPreview = store.previewFor(hung);
+          await hungStarted.future.timeout(const Duration(seconds: 5));
+          final probePreview = store.previewFor(probe);
+          // The probe's read starts once the hung read used up its turn.
+          await probeStarted.future.timeout(const Duration(seconds: 5));
+
+          releaseBlocking.complete(_plaintext);
+          await Future.wait([
+            blockingPreview,
+            queuedPreview,
+            hungPreview,
+            probePreview,
+          ]);
+
+          expect(fetched, equals([blocking.id]));
+        },
+      );
+
+      test(
         "reads that sender's videos again once the decode that ran past the "
         'turn limit keeps its frame after all',
         () async {
