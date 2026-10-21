@@ -609,8 +609,12 @@ class DmVideoStore {
     }
   }
 
-  /// Closes [kept].
-  Future<void> dispose() => _kept.close();
+  /// Closes [kept]. A disposed store no longer hears when the app goes to
+  /// the background, so its frame reads under way are treated as if it had.
+  Future<void> dispose() {
+    _frameReadMarks.appInForeground = false;
+    return _kept.close();
+  }
 
   /// Deletes every video kept for [ownerPubkey].
   ///

@@ -602,6 +602,23 @@ void main() {
         );
 
         test(
+          'blames no sender for a read under way in a store replaced since, '
+          'which no longer hears when the app goes to the background',
+          () async {
+            final earlier = createStore(launchId: 'earlier');
+            await leaveHungRead(_videoMessage(id: '1' * 64), store: earlier);
+
+            await earlier.dispose();
+            final preview = await createStore().previewFor(
+              _videoMessage(id: '2' * 64),
+            );
+
+            expect(preview, isNotNull);
+            expect(frameReads, equals(2));
+          },
+        );
+
+        test(
           'blames no sender for a read under way while the app was in the '
           'background, where the system kills apps',
           () async {
