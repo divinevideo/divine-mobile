@@ -338,6 +338,99 @@ void main() {
       );
 
       test(
+        'deletes what is kept for a message it refuses as gone',
+        () async {
+          var gone = false;
+          final store = createStore(isMessageGone: (_) async => gone);
+          final message = _videoMessage();
+          store.releaseVideo(await store.videoFor(message));
+          expect(keptFiles(), isNotEmpty);
+          gone = true;
+
+          await expectLater(
+            store.videoFor(message),
+            throwsA(isA<DmVideoUnavailableException>()),
+          );
+
+          expect(keptFiles(), isEmpty);
+        },
+      );
+
+      test(
+        'keeps no video whose message went while it downloaded',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          var gone = false;
+          var videoWrites = 0;
+          final message = _videoMessage();
+
+          await IOOverrides.runWithIOOverrides(
+            () async {
+              final store = createStore(isMessageGone: (_) async => gone);
+              final tapped = store.videoFor(message);
+              await pumpEventQueue();
+              gone = true;
+              release.complete(_plaintext);
+
+              await expectLater(
+                tapped,
+                throwsA(isA<DmVideoUnavailableException>()),
+              );
+            },
+            _WriteHooks((part) {
+              if (part.path.contains(DmVideoStore.videoFileNameFor(message))) {
+                videoWrites++;
+              }
+            }),
+          );
+
+          expect(videoWrites, equals(0));
+        },
+      );
+
+      test(
+        "refuses a card's download it took over once its message is gone",
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          var gone = false;
+          final message = _videoMessage();
+
+          await IOOverrides.runWithIOOverrides(
+            () async {
+              final store = createStore(isMessageGone: (_) async => gone);
+              var cardShown = true;
+              final preview = store.previewFor(
+                message,
+                stillWanted: () => cardShown,
+              );
+              await pumpEventQueue();
+              final tapped = store.videoFor(message);
+              // The tap keeps the download going; the card decodes nothing.
+              cardShown = false;
+              release.complete(_plaintext);
+
+              await expectLater(
+                tapped,
+                throwsA(isA<DmVideoUnavailableException>()),
+              );
+              expect(fetches, equals(1));
+              expect(await preview, isNull);
+              // Deleted once the card let go too, without waiting on a prune.
+              expect(keptFiles(), isEmpty);
+            },
+            _WriteHooks((part) {
+              // Retracted once the card's download had asked, as it stores.
+              if (part.path.contains(DmVideoStore.videoFileNameFor(message))) {
+                gone = true;
+              }
+            }),
+          );
+        },
+      );
+
+      test(
         'downloads and decrypts a video once and keeps it for the account',
         () async {
           final store = createStore();

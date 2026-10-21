@@ -225,9 +225,9 @@ class DmVideoStore {
   /// Never pruned until released.
   final Map<String, int> _leases = {};
 
-  /// Files of gone messages a prune left because they were leased, deleted
-  /// with the rest of their message's files once their last lease is
-  /// released.
+  /// Files of gone messages left because they were leased, by a prune or a
+  /// refused hand-out, deleted with the rest of their message's files once
+  /// their last lease is released.
   final Set<String> _goneWhileLeased = {};
 
   /// The prune under way, if any, and whether one was asked for meanwhile.
@@ -372,6 +372,18 @@ class DmVideoStore {
   }
 
   Future<File> _tapVideoFor(DmMessage message) async {
+    final file = await _takeOverOrObtain(message);
+    try {
+      // Gone since the download last asked, as a card's taken over can be.
+      await _refuseIfGone(message, file);
+    } on Object {
+      _release(file);
+      rethrow;
+    }
+    return file;
+  }
+
+  Future<File> _takeOverOrObtain(DmMessage message) async {
     final running = _autoFetchesRunning[message.id];
     if (running != null) {
       // From here on it runs without the automatic limits, out of the queue.
@@ -873,11 +885,7 @@ class DmVideoStore {
     try {
       // Retracted or removed since its card showed: neither handed out nor
       // fetched again.
-      if (await _isGone(message)) {
-        throw const DmVideoUnavailableException(
-          'the message was retracted or removed',
-        );
-      }
+      await _refuseIfGone(message, file);
       if (file.existsSync()) {
         // A copy past its age that only this lease holds was kept because no
         // prune ran since: fetched again, so a takedown on the media server
@@ -903,6 +911,7 @@ class DmVideoStore {
       if (stillWanted != null && !stillWanted()) {
         throw const DmVideoWithdrawnException();
       }
+      await _refuseIfGone(message, file);
       // Written first, so a video is never kept without it.
       await _records.write(message, file.parent, force: true);
       await _writeAtomically(file, plaintext);
@@ -919,6 +928,17 @@ class DmVideoStore {
       category: LogCategory.video,
     );
     return file;
+  }
+
+  /// Throws a [DmVideoUnavailableException] once [message] is gone. What is
+  /// kept for it goes when [video], which the caller leased, is released by
+  /// every caller.
+  Future<void> _refuseIfGone(DmMessage message, File video) async {
+    if (!await _isGone(message)) return;
+    _goneWhileLeased.add(video.path);
+    throw const DmVideoUnavailableException(
+      'the message was retracted or removed',
+    );
   }
 
   /// Whether [message] was retracted or removed with its conversation. A
