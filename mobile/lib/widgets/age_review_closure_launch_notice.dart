@@ -19,11 +19,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// suspended or generically banned account can still browse, and an open age
 /// case already routes to the review screens.
 ///
-/// Mounted with the bottom-nav shell, so it only runs for a signed-in session.
-/// Watching the status here costs one signed request to Funnelcake per launch,
-/// which main only made once the account opened Settings, its own profile, or
-/// Account Status. A failed fetch keeps listening, so the next resume refetch
-/// tries again; that stops at the first answer.
+/// Mounted with the bottom-nav shell, so it runs for a signed-in session or one
+/// still being restored. It is the only launch-time reader of the status, so it
+/// costs one signed request to Funnelcake per launch; Settings, the account's
+/// own profile and Account Status otherwise fetch it when opened. A failed
+/// fetch keeps listening, so the next resume refetch tries again; that stops at
+/// the first answer.
 class AgeReviewClosureLaunchNotice extends ConsumerStatefulWidget {
   const AgeReviewClosureLaunchNotice({required this.child, super.key});
 
@@ -78,7 +79,7 @@ class _AgeReviewClosureLaunchNoticeState
     // A listener can fire during a build, including inside initState for a
     // status already cached, and a build may neither navigate nor modify a
     // provider. So marking it shown waits for the frame too, which also means
-    // it is only marked once it is actually on screen.
+    // a notice whose shell is gone by then is not marked.
     addPostFrameCallbackIfMounted(() {
       final pubkey = ref.read(activeEnforcementPubkeyProvider);
       if (pubkey == null) return;

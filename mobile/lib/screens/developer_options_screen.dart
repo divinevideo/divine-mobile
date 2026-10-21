@@ -539,6 +539,9 @@ class _DeveloperOptionsScreenState
                     ),
                   ),
                 ),
+                // Kept apart from the response-clock rows above, which belong
+                // to the teen review simulation.
+                Divider(color: context.vineColors.outline, height: 32),
                 ListTile(
                   title: Text(
                     context.l10n.devOptionsAgeReviewClosureTitle,
