@@ -3093,6 +3093,37 @@ void main() {
         expect(expired.existsSync(), isFalse);
       });
 
+      test(
+        'prunes on coming back to the foreground only once an hour has '
+        'passed since the last prune',
+        () async {
+          var prunes = 0;
+          final store = createStore(
+            rootDirectory: () async {
+              prunes++;
+              return root;
+            },
+          );
+          await store.prune();
+          expect(prunes, equals(1));
+
+          store
+            ..appInForeground = false
+            ..appInForeground = true;
+          await store.prune();
+          // Only the prune asked for here ran.
+          expect(prunes, equals(2));
+
+          now = now.add(DmVideoStore.foregroundPruneInterval);
+          store
+            ..appInForeground = false
+            ..appInForeground = true;
+          await store.prune();
+          // Coming back pruned, and the prune asked for meanwhile ran after.
+          expect(prunes, equals(4));
+        },
+      );
+
       test('clears a part file a crash left', () async {
         final crashed = keptFile(
           '${'a' * 64}.mp4.0.part',

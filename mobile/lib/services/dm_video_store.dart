@@ -147,6 +147,11 @@ class DmVideoStore {
   /// as hung, so its sender is blamed as [previewFor] says.
   static const Duration defaultFrameTurnLimit = Duration(seconds: 60);
 
+  /// How long after the last prune coming back to the foreground prunes
+  /// again: [maxAge] is days long, and the app also comes back from a system
+  /// prompt or the notification shade.
+  static const Duration foregroundPruneInterval = Duration(hours: 1);
+
   /// How long a card waits for its frame by default; see [frameDeadline].
   static const Duration defaultFrameDeadline = dmVideoPreviewTimeout;
 
@@ -234,6 +239,9 @@ class DmVideoStore {
   /// The prune under way, if any, and whether one was asked for meanwhile.
   Future<void>? _pruning;
   bool _pruneAgain = false;
+
+  /// When the last prune finished, if one has.
+  DateTime? _lastPruned;
 
   /// Downloads without a tap on play run one at a time: each holds a whole
   /// video in memory, and a long thread shows many at once.
@@ -471,7 +479,8 @@ class DmVideoStore {
   /// is not, frame reads under way leave their marks empty: the system kills
   /// apps in the background, and that must not count as a decode crashing
   /// the app, nor blame the video's sender, unless the read outlived
-  /// [frameTurnLimit]. Coming back to the foreground prunes.
+  /// [frameTurnLimit]. Coming back to the foreground prunes, unless a prune
+  /// finished less than [foregroundPruneInterval] ago.
   bool get appInForeground => _frameReadMarks.appInForeground;
 
   set appInForeground(bool inForeground) {
@@ -479,7 +488,10 @@ class DmVideoStore {
     _frameReadMarks.appInForeground = inForeground;
     // A long-lived app can go days without a prune: what is past its age
     // goes when the app comes back.
-    if (returned) {
+    final lastPruned = _lastPruned;
+    if (returned &&
+        (lastPruned == null ||
+            _now().difference(lastPruned) >= foregroundPruneInterval)) {
       runDetached(
         prune(),
         'prune kept video DMs on return to the foreground',
@@ -541,6 +553,7 @@ class DmVideoStore {
     } finally {
       // Cleared before this run completes, so a later ask starts a new run.
       _pruning = null;
+      _lastPruned = _now();
     }
     if (unexpected case (final error, final stackTrace)) {
       Error.throwWithStackTrace(error, stackTrace);
