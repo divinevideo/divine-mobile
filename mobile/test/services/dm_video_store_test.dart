@@ -366,22 +366,6 @@ void main() {
 
         expect(kept, equals([message.id]));
       });
-
-      test(
-        'leaves a kept video as old as when it was kept when it is opened '
-        'again',
-        () async {
-          final store = createStore();
-          final message = _videoMessage();
-          final file = await store.videoFor(message);
-          final keptAt = now.subtract(const Duration(days: 20));
-          file.setLastModifiedSync(keptAt);
-
-          await store.videoFor(message);
-
-          expect(file.lastModifiedSync(), equals(keptAt));
-        },
-      );
     });
 
     group('videoFileNameFor', () {
@@ -680,18 +664,21 @@ void main() {
       );
 
       test(
-        'leaves a kept frame as old as when it was kept when a card shows it '
-        'again',
+        'deletes a frame 30 days after it was kept, however recently a card '
+        'showed it',
         () async {
-          final store = createStore();
           final message = _videoMessage();
-          final frame = await store.previewFor(message);
-          final keptAt = now.subtract(const Duration(days: 20));
-          frame!.setLastModifiedSync(keptAt);
+          final frame = keptFile(
+            '${message.id}.preview.jpg',
+            _frame,
+            keptAt: now.subtract(const Duration(days: 29)),
+          );
+          expect(await createStore().previewFor(message), isNotNull);
+          now = now.add(const Duration(days: 2));
 
-          await store.previewFor(message);
+          await createStore().prune();
 
-          expect(frame.lastModifiedSync(), equals(keptAt));
+          expect(frame.existsSync(), isFalse);
         },
       );
 
