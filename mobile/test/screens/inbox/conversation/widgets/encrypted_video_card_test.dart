@@ -203,23 +203,25 @@ void main() {
       'keeps showing the blurhash when the kept frame is gone',
       (tester) async {
         final missing = '${Directory.systemTemp.path}/no_such_frame.jpg';
-        await tester.pumpWidget(
-          _host(
-            EncryptedVideoCard(
-              fileMetadata: _videoMetadata(),
-              isSent: false,
-              framePath: missing,
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: missing,
+              ),
             ),
-          ),
-        );
-
-        await tester.runAsync(
-          () => precacheImage(
-            FileImage(File(missing)),
-            tester.element(find.byType(EncryptedVideoCard)),
+          );
+          // The card's own provider, resized, so its own load is the one
+          // waited for, and fails.
+          final frame = tester.element(find.byType(Image));
+          await precacheImage(
+            (frame.widget as Image).image,
+            frame,
             onError: (_, _) {},
-          ),
-        );
+          );
+        });
         await tester.pump();
 
         expect(find.byType(BlurhashDisplay), findsOneWidget);
