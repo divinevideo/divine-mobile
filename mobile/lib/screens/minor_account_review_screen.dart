@@ -578,11 +578,10 @@ class _AppealSupportButton extends StatelessWidget {
     final path = this.path;
     if (path != null) {
       return _ContactSupportButton(
-        onPressed: () => runDetached(
-          context.push<void>(path),
+        onPressed: () => _pushReviewStep(
+          context,
+          path,
           'open under-13 support instructions from the appeal',
-          logName: 'MinorAccountReviewScreen',
-          category: LogCategory.ui,
         ),
       );
     }
@@ -636,13 +635,19 @@ class _MinorReviewPrimaryAction {
   /// Where [open] navigates.
   final String path;
 
-  void open(BuildContext context) => runDetached(
-    context.push<void>(path),
-    'open next account review step',
-    logName: 'MinorAccountReviewScreen',
-    category: LogCategory.ui,
-  );
+  void open(BuildContext context) =>
+      _pushReviewStep(context, path, 'open next account review step');
 }
+
+/// Pushes a screen of the review flow, logging a failed push as
+/// [description].
+void _pushReviewStep(BuildContext context, String path, String description) =>
+    runDetached(
+      context.push<void>(path),
+      description,
+      logName: 'MinorAccountReviewScreen',
+      category: LogCategory.ui,
+    );
 
 class _HeroCard extends StatelessWidget {
   const _HeroCard({required this.title, required this.body});
