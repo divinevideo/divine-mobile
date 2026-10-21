@@ -2190,6 +2190,28 @@ void main() {
       );
 
       test(
+        'still tell the cards of a failure nobody expected, even once none '
+        'waits',
+        () async {
+          final release = Completer<Uint8List>();
+          fetch = (_) => release.future;
+          final store = createStore();
+          final message = _videoMessage();
+          var wanted = true;
+          final preview = store.previewFor(
+            message,
+            stillWanted: () => wanted,
+          );
+          await pumpEventQueue();
+          wanted = false;
+          release.completeError(StateError('a bug'));
+
+          // A card that closed still reports it.
+          await expectLater(preview, throwsStateError);
+        },
+      );
+
+      test(
         'never hold a download stopped as unwanted against the next card',
         () async {
           fetch = (_) async => throw const DmVideoWithdrawnException();

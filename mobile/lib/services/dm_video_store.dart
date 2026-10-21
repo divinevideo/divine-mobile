@@ -452,9 +452,10 @@ class DmVideoStore {
   /// this frame wants it, as when their cards closed, that work is dropped
   /// and null returned, unless a tap on play waits for the same video.
   ///
-  /// Throws, while a caller still waits, what its download throws unless the
-  /// message is gone, or a [DmVideoUnavailableException] when the frame
-  /// cannot be stored.
+  /// Throws what its download throws, unless the message is gone, or the
+  /// failure was a [DmVideoUnavailableException] and no caller waits any
+  /// more; throws a [DmVideoUnavailableException] too when the frame cannot
+  /// be stored.
   Future<File?> previewFor(
     DmMessage message, {
     bool Function()? stillWanted,
@@ -1094,8 +1095,9 @@ class DmVideoStore {
             autoDownloadRetryAfter,
           );
         }
-        // No card waits: no one to tell.
-        if (!wanted()) return null;
+        // An expected failure no card waits for has no one to tell. Anything
+        // else reaches the cards, which report it even once closed.
+        if (!wanted() && error is DmVideoUnavailableException) return null;
         rethrow;
       }
     } else {

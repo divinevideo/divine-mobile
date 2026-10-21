@@ -151,6 +151,29 @@ void main() {
         errors: () => [isA<SocketException>()],
       );
 
+      late Completer<File?> lateFailure;
+      blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
+        'still reports a failure that lands once it closed',
+        setUp: () {
+          lateFailure = Completer<File?>();
+          when(
+            () => store.previewFor(
+              any(),
+              stillWanted: any(named: 'stillWanted'),
+            ),
+          ).thenAnswer((_) => lateFailure.future);
+        },
+        build: createCubit,
+        act: (cubit) async {
+          final loading = cubit.load();
+          await cubit.close();
+          lateFailure.completeError(StateError('a bug'));
+          await loading;
+        },
+        expect: () => const <DmVideoPreviewState>[],
+        errors: () => [isA<StateError>()],
+      );
+
       blocTest<DmVideoPreviewCubit, DmVideoPreviewState>(
         'shows no frame when no account is signed in',
         build: () => DmVideoPreviewCubit(message: _videoMessage(), store: null),
