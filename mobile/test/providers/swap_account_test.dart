@@ -1500,6 +1500,31 @@ void main() {
       },
     );
 
+    testWidgets('a prune that fails at once does not stop the swap', (
+      tester,
+    ) async {
+      final store = _MockDmVideoStore();
+      when(store.prune)
+          .thenAnswer((_) async => throw StateError('prune failed'));
+      final events = <String>[];
+      final initial = await pumpHost(
+        tester,
+        accountOverrides: [dmVideoStoreProvider.overrideWithValue(store)],
+      );
+      initial.read(dmVideoStoreProvider);
+
+      await swapAccount(
+        deviceScope: deviceScope,
+        controller: controller,
+        currentAuthService: currentAuthService,
+        account: account,
+        signIn: (_, _) async => events.add('sign in target'),
+      );
+      await tester.pump();
+
+      expect(events, ['sign in target']);
+    });
+
     testWidgets('resumes outgoing DMs when target sign-in fails', (
       tester,
     ) async {
