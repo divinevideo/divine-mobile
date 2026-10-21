@@ -153,7 +153,8 @@ class DmVideoStore {
 
   /// How long after the last prune coming back to the foreground prunes
   /// again: [maxAge] is days long, and the app also comes back from a system
-  /// prompt or the notification shade.
+  /// prompt or the notification shade. A prune that could not tell of every
+  /// message whether it is gone does not count.
   static const Duration foregroundPruneInterval = Duration(hours: 1);
 
   /// How long a card waits for its frame by default; see [frameDeadline].
@@ -480,7 +481,8 @@ class DmVideoStore {
   /// apps in the background, and that must not count as a decode crashing
   /// the app, nor blame the video's sender, unless the read outlived
   /// [frameTurnLimit]. Coming back to the foreground prunes, unless a prune
-  /// finished less than [foregroundPruneInterval] ago.
+  /// that could tell of every message whether it is gone finished less than
+  /// [foregroundPruneInterval] ago.
   bool get appInForeground => _frameReadMarks.appInForeground;
 
   set appInForeground(bool inForeground) {
