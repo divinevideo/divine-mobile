@@ -43,6 +43,7 @@ class AnalyticsService implements BackgroundAwareService {
     String Function()? appVersion,
     DateTime Function()? now,
     bool? productAnalyticsEnabled,
+    bool? consumptionAnalyticsEnabled,
     @visibleForTesting bool? disableNostrPublishing,
   }) : _backgroundActivityManager = backgroundActivityManager,
        _viewEventPublisher = viewEventPublisher,
@@ -63,6 +64,9 @@ class AnalyticsService implements BackgroundAwareService {
                      'DEFAULT_ENV',
                    ).toUpperCase() ==
                    'STAGING'),
+       _consumptionAnalyticsEnabled =
+           consumptionAnalyticsEnabled ??
+           const bool.fromEnvironment('CONSUMPTION_ANALYTICS_ENABLED'),
        _disableNostrPublishing = disableNostrPublishing ?? false;
 
   static const Uuid _uuid = Uuid();
@@ -100,6 +104,11 @@ class AnalyticsService implements BackgroundAwareService {
   final String Function() _appVersion;
   final DateTime Function() _now;
   final bool _productAnalyticsEnabled;
+
+  /// Separate release gate for engagement and depth, default-off in every
+  /// environment. Enable only after contract/server acceptance and the recorded
+  /// consent and identity decisions. Existing playback uses its own release gate.
+  final bool _consumptionAnalyticsEnabled;
 
   /// Testing flag to disable Nostr publishing in unit tests.
   final bool _disableNostrPublishing;
@@ -463,35 +472,41 @@ class AnalyticsService implements BackgroundAwareService {
     ),
   );
 
-  /// Records a confirmed engagement or share intent without target identity.
+  /// Records a confirmed engagement or share intent without raw target pubkeys.
   Future<String?> recordEngagement({
     required ProductAnalyticsV2EngagementAction action,
     String? contentId,
-  }) => _trackProductEvent(
-    (envelope) => ProductAnalyticsV2EngagementRecordedEvent(
-      envelope: envelope,
-      properties: ProductAnalyticsV2EngagementRecordedProperties(
-        action: action,
-        contentId: contentId,
+  }) async {
+    if (!_consumptionAnalyticsEnabled) return null;
+    return _trackProductEvent(
+      (envelope) => ProductAnalyticsV2EngagementRecordedEvent(
+        envelope: envelope,
+        properties: ProductAnalyticsV2EngagementRecordedProperties(
+          action: action,
+          contentId: contentId,
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   /// Records deliberate navigation depth within one visible feed session.
   Future<String?> recordFeedDepth({
     required String feedSessionId,
     required ProductAnalyticsV2FeedType feedType,
     required int depth,
-  }) => _trackProductEvent(
-    (envelope) => ProductAnalyticsV2FeedDepthRecordedEvent(
-      envelope: envelope,
-      properties: ProductAnalyticsV2FeedDepthRecordedProperties(
-        feedSessionId: feedSessionId,
-        feedType: feedType,
-        depth: depth,
+  }) async {
+    if (!_consumptionAnalyticsEnabled) return null;
+    return _trackProductEvent(
+      (envelope) => ProductAnalyticsV2FeedDepthRecordedEvent(
+        envelope: envelope,
+        properties: ProductAnalyticsV2FeedDepthRecordedProperties(
+          feedSessionId: feedSessionId,
+          feedType: feedType,
+          depth: depth,
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   /// Records a move between two surfaces.
   ///

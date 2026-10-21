@@ -460,6 +460,60 @@ void main() {
     });
 
     test(
+      'disabled consumption leaves existing product events deliverable',
+      () async {
+        final queue = _MockProductEventQueue();
+        when(() => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')))
+            .thenAnswer((_) async {});
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          productEventQueue: queue,
+          productAnalyticsEnabled: true,
+          currentUserPubkey: () => 'a' * 64,
+        );
+        await analyticsService.initialize();
+        expect(
+          await analyticsService.recordEngagement(
+            action: ProductAnalyticsV2EngagementAction.followAdded,
+          ),
+          isNull,
+        );
+        expect(
+          await analyticsService.recordFeedDepth(
+            feedSessionId: '55555555-5555-4555-8555-555555555555',
+            feedType: ProductAnalyticsV2FeedType.list,
+            depth: 2,
+          ),
+          isNull,
+        );
+        await analyticsService.recordPlaybackSession(
+          playbackSessionId: '66666666-6666-4666-8666-666666666666',
+          contentId: 'b' * 64,
+          surface: ProductAnalyticsV2Surface.feed,
+          durationMs: 6000,
+          watchedMs: 6000,
+          loopCount: 1,
+          completed: true,
+          endReason: ProductAnalyticsV2PlaybackEndReason.navigation,
+        );
+        await analyticsService.recordContentImpression(
+          contentId: 'b' * 64,
+          surface: ProductAnalyticsV2Surface.feed,
+          position: 0,
+          visibleMs: 1000,
+        );
+        final events = verify(
+          () => queue.enqueue(captureAny(), ownerPubkey: 'a' * 64),
+        ).captured.cast<ProductAnalyticsV2Event>();
+        expect(events.map((event) => event.eventName), [
+          'playback_session_recorded',
+          'content_impression_recorded',
+        ]);
+      },
+    );
+
+    test(
       'consumption uses shared consent, signed identity, and typed fields',
       () async {
         final queue = _MockProductEventQueue();
@@ -472,6 +526,7 @@ void main() {
           backgroundActivityManager: BackgroundActivityManager(),
           productEventQueue: queue,
           productAnalyticsEnabled: true,
+          consumptionAnalyticsEnabled: true,
           currentUserPubkey: () => owner,
         );
         Future<void> record() async {
