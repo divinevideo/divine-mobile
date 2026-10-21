@@ -10048,6 +10048,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Setați viteza de redare pentru clipul selectat';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Setați viteza de redare pentru sunetul selectat';
+
+  @override
   String get videoEditorReverseLabel => 'Invers';
 
   @override
@@ -10155,6 +10159,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Viteza clipului';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'Viteza sunetului';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

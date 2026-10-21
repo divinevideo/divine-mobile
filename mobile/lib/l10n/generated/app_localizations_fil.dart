@@ -9909,6 +9909,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Itakda ang bilis ng playback para sa napiling clip';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Itakda ang bilis ng playback para sa napiling sound';
+
+  @override
   String get videoEditorReverseLabel => 'Baligtad';
 
   @override
@@ -10017,6 +10021,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Bilis ng Clip';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'Bilis ng Sound';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

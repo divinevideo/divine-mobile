@@ -9748,6 +9748,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili klip için oynatma hızını ayarla';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Seçili ses için oynatma hızını ayarla';
+
+  @override
   String get videoEditorReverseLabel => 'Tersine Çevir';
 
   @override
@@ -9854,6 +9858,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Klip Hızı';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'Ses Hızı';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

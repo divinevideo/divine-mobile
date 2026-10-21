@@ -5826,6 +5826,7 @@
   "@videoEditorSetClipSpeedSemanticLabel": {
     "description": "Accessibility label for the Set Speed button in the timeline clip controls."
   },
+  "videoEditorSetSoundSpeedSemanticLabel": "ఎంచుకున్న ధ్వని కోసం ప్లేబ్యాక్ వేగాన్ని సెట్ చేయండి",
   "videoEditorReverseLabel": "రివర్స్",
   "@videoEditorReverseLabel": {
     "description": "Label for the Reverse button in the timeline clip controls."
@@ -5919,6 +5920,7 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSoundSpeedSheetTitle": "ధ్వని స్పీడ్",
   "videoEditorSpeedPresetSemanticLabel": "వేగం {speed}×",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",

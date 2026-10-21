@@ -113,6 +113,12 @@ class AudioClipPlayer {
     await _audioPlayer.setVolume(volume.clamp(0.0, 1.0));
   }
 
+  /// Plays the clip [speed] times as fast at unchanged pitch: `2` plays it
+  /// in half the time. Positions passed to [seek] stay positions in the clip.
+  Future<void> setSpeed(double speed) async {
+    await _audioPlayer.setSpeed(speed);
+  }
+
   /// Releases all resources held by the underlying player.
   Future<void> dispose() async {
     try {

@@ -9,7 +9,7 @@ Seamless multi-clip video player using native platform APIs.
 - Native implementations: Media3/ExoPlayer (Android), AVFoundation (iOS/macOS), media_kit/mpv (Linux)
 - Preloading and buffering handled natively
 - Looping, clip jumping, and playback speed control
-- Multi-track audio overlays synced to the video timeline
+- Multi-track audio overlays synced to the video timeline, each at its own playback speed with unchanged pitch (`AudioTrack.playbackSpeed`; Android, iOS and macOS)
 - An equalizer per clip and per overlay track (`AudioEqualizer`): shelf and peak bands, the same filters `pro_video_editor` exports with
 - Optional texture rendering for Flutter widget compositing (e.g. `ColorFiltered`)
 - Placeholder widget support to hide black frames before first frame renders

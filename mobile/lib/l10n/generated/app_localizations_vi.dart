@@ -9791,6 +9791,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt tốc độ phát cho clip đã chọn';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Đặt tốc độ phát cho âm thanh đã chọn';
+
+  @override
   String get videoEditorReverseLabel => 'Đảo ngược';
 
   @override
@@ -9898,6 +9902,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Tốc độ clip';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'Tốc độ âm thanh';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

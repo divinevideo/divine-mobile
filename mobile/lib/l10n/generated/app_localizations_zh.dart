@@ -9261,6 +9261,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorSetClipSpeedSemanticLabel => '设置选中片段的播放速度';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel => '设置选中声音的播放速度';
+
+  @override
   String get videoEditorReverseLabel => '倒放';
 
   @override
@@ -9349,6 +9352,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => '片段速度';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => '声音速度';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

@@ -20,6 +20,7 @@ AudioEvent _sound(
   Duration? endTime,
   double? duration = 30,
   double volume = 1,
+  double playbackSpeed = 1,
 }) => AudioEvent(
   id: id,
   pubkey: 'a' * 64,
@@ -30,6 +31,7 @@ AudioEvent _sound(
   startOffset: startOffset,
   endTime: endTime,
   volume: volume,
+  playbackSpeed: playbackSpeed,
 );
 
 DivineVideoClip _clip(
@@ -93,6 +95,27 @@ void main() {
       expect(parts.single.from, _ms(4000));
       expect(parts.single.to, _ms(6000));
       expect(parts.single.at, _ms(1000));
+    });
+
+    test('takes as much more of a sped-up sound as it plays faster', () {
+      final part = beatSourceFor(
+        sounds: [
+          _sound(
+            'music',
+            startTime: _ms(1000),
+            startOffset: _ms(4000),
+            endTime: _ms(3000),
+            playbackSpeed: 2,
+          ),
+        ],
+        clips: const [],
+        videoEnd: _ms(6000),
+      ).single;
+
+      expect(part.from, _ms(4000));
+      expect(part.to, _ms(8000));
+      expect(part.at, _ms(1000));
+      expect(part.speed, 2);
     });
 
     test('plays a sound without an end to the end of the video, but not past '

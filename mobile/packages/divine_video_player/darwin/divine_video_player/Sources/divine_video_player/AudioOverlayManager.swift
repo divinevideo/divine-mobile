@@ -11,6 +11,10 @@ import AVFoundation
 /// untouched by seeks, rate changes and the 0.2 s position sync. Its
 /// ``AudioEqualizer`` is rendered into a copy of its sound that the player
 /// plays instead; see ``EqualizedAudioFile``.
+///
+/// A track's own speed multiplies the player's rate: its file advances that
+/// much faster than the video at unchanged pitch, while its slot on the video
+/// and its fades stay video time, as the export plays them.
 final class AudioOverlayManager {
 
     private let log = DivineVideoPlayerLog.shared
@@ -92,6 +96,9 @@ final class AudioOverlayManager {
             let videoEndMs = (map["videoEndMs"] as? NSNumber)?.doubleValue
             let trackStartMs = (map["trackStartMs"] as? NSNumber)?.doubleValue ?? 0
             let trackEndMs = (map["trackEndMs"] as? NSNumber)?.doubleValue
+            let trackSpeed = (map["playbackSpeed"] as? NSNumber)
+                .map(\.doubleValue)
+                .flatMap { $0 > 0 && $0.isFinite ? $0 : nil } ?? 1
 
             let url: URL
             if uri.hasPrefix("/") {
@@ -114,13 +121,14 @@ final class AudioOverlayManager {
                 videoEndSec: videoEndMs.map { $0 / 1000.0 },
                 trackStartSec: trackStartMs / 1000.0,
                 trackEndSec: trackEndMs.map { $0 / 1000.0 },
+                speed: trackSpeed,
                 trackIndex: index,
                 baseVolume: vol,
                 fade: AudioOverlayFade(map: map),
                 equalizer: equalizer
             )
             let equalizedFile = equalizer.flatMap { equalizedFiles[copyKey(for: entry, $0)] }
-            entry.player.replaceCurrentItem(with: AVPlayerItem(url: equalizedFile?.url ?? url))
+            entry.player.replaceCurrentItem(with: makeItem(url: equalizedFile?.url ?? url, for: entry))
             entry.playingStartSec = equalizedFile?.startSec ?? 0
             overlays.append(entry)
             if equalizedFile != nil {
@@ -302,7 +310,9 @@ final class AudioOverlayManager {
     /// ends, whichever is first, with [copyMarginSeconds] on either side.
     private func copyKey(for entry: AudioOverlayEntry, _ equalizer: AudioEqualizer) -> EqualizedFileKey {
         var lengths: [Double] = []
-        if let videoEnd = entry.videoEndSec { lengths.append(videoEnd - entry.videoStartSec) }
+        if let videoEnd = entry.videoEndSec {
+            lengths.append(entry.fileSec(ofVideoSec: videoEnd - entry.videoStartSec))
+        }
         if let trackEnd = entry.trackEndSec { lengths.append(trackEnd - entry.trackStartSec) }
         let length = min(max(lengths.min() ?? maxCopySeconds, 0), maxCopySeconds)
         return EqualizedFileKey(
@@ -324,7 +334,7 @@ final class AudioOverlayManager {
         let wasActive = entry.isActive
         entry.player.pause()
         entry.isActive = false
-        entry.player.replaceCurrentItem(with: AVPlayerItem(url: file.url))
+        entry.player.replaceCurrentItem(with: makeItem(url: file.url, for: entry))
         entry.playingStartSec = file.startSec
         entry.playingEqualizer = equalizer
         entry.mixInputs = nil
@@ -363,11 +373,11 @@ final class AudioOverlayManager {
     func resumeActive(speed: Double) {
         for entry in overlays where entry.isActive {
             log.info(
-                "Audio overlay track \(entry.trackIndex): resuming at speed \(speed)",
+                "Audio overlay track \(entry.trackIndex): resuming at speed \(speed * entry.speed)",
                 name: logName
             )
             entry.player.play()
-            entry.player.rate = Float(speed)
+            entry.player.rate = Float(speed * entry.speed)
             reportStatusIfChanged(for: entry, context: "resume")
         }
     }
@@ -391,7 +401,7 @@ final class AudioOverlayManager {
     /// Updates playback speed on currently active overlay players.
     func setSpeed(_ speed: Double) {
         for entry in overlays where entry.isActive {
-            entry.player.rate = Float(speed)
+            entry.player.rate = Float(speed * entry.speed)
         }
     }
 
@@ -414,8 +424,7 @@ final class AudioOverlayManager {
                 (entry.videoEndSec == nil || videoPositionSec < entry.videoEndSec!)
 
             if inRange && isPlaying {
-                let expectedAudioSec = entry.trackStartSec +
-                    (videoPositionSec - entry.videoStartSec)
+                let expectedAudioSec = entry.audioSec(atVideoSec: videoPositionSec)
 
                 // Clamp to trackEnd if set.
                 if let trackEnd = entry.trackEndSec, expectedAudioSec >= trackEnd {
@@ -435,19 +444,20 @@ final class AudioOverlayManager {
                         seconds: expectedAudioSec - entry.playingStartSec, preferredTimescale: 600)
                     log.info(
                         "Audio overlay track \(entry.trackIndex): starting playback " +
-                            "at \(expectedAudioSec)s, speed \(speed)",
+                            "at \(expectedAudioSec)s, speed \(speed * entry.speed)",
                         name: logName
                     )
                     seek(entry, to: audioTime, reason: "playback start")
                     entry.player.play()
-                    entry.player.rate = Float(speed)
+                    entry.player.rate = Float(speed * entry.speed)
                     entry.isActive = true
                     reportStatusIfChanged(for: entry, context: "playback start")
                 } else {
-                    // Correct drift.
+                    // Correct drift, measured in video time: that is how far
+                    // the sound is off the picture, whatever the track's speed.
                     let actualSec =
                         CMTimeGetSeconds(entry.player.currentTime()) + entry.playingStartSec
-                    let drift = abs(expectedAudioSec - actualSec)
+                    let drift = entry.videoSec(ofFileSec: abs(expectedAudioSec - actualSec))
                     if drift > driftThreshold {
                         #if DEBUG
                         print(
@@ -559,9 +569,12 @@ final class AudioOverlayManager {
         // The level the track holds between ramps. Only set where no ramp
         // starts: AVFoundation rejects overlapping volume changes with an
         // Objective-C exception, which aborts the process.
-        // The ramps are in the source's time, and a copy starts later in it.
+        // The ramps are in video time and play in the source's, which a
+        // track's speed stretches and a copy starts later in.
         let start = entry.trackStartSec - entry.playingStartSec
-        if boost > 1, ramps.first.map({ start + $0.startSec > 0 }) ?? true {
+        if boost > 1,
+            ramps.first.map({ start + entry.fileSec(ofVideoSec: $0.startSec) > 0 }) ?? true
+        {
             parameters.setVolume(boost, at: .zero)
         }
         for ramp in ramps {
@@ -569,8 +582,8 @@ final class AudioOverlayManager {
                 fromStartVolume: Float(ramp.fromGain),
                 toEndVolume: Float(ramp.toGain),
                 timeRange: CMTimeRange(
-                    start: itemTime(start + ramp.startSec),
-                    end: itemTime(start + ramp.endSec)
+                    start: itemTime(start + entry.fileSec(ofVideoSec: ramp.startSec)),
+                    end: itemTime(start + entry.fileSec(ofVideoSec: ramp.endSec))
                 )
             )
         }
@@ -584,7 +597,7 @@ final class AudioOverlayManager {
         )
     }
 
-    /// The fade ramps of `entry`, in seconds from its trim start.
+    /// The fade ramps of `entry`, in seconds of video from its start.
     ///
     /// The fade out ends where the track stops sounding: the end of its slot
     /// on the video timeline, the end of its trimmed audio, or the end of the
@@ -596,9 +609,13 @@ final class AudioOverlayManager {
     ) -> [AudioOverlayFade.Ramp] {
         var ends: [Double] = []
         if let videoEnd = entry.videoEndSec { ends.append(videoEnd - entry.videoStartSec) }
-        if let trackEnd = entry.trackEndSec { ends.append(trackEnd - entry.trackStartSec) }
+        if let trackEnd = entry.trackEndSec {
+            ends.append(entry.videoSec(ofFileSec: trackEnd - entry.trackStartSec))
+        }
         if let fileDuration, fileDuration.isNumeric, fileDuration.seconds.isFinite {
-            ends.append(entry.playingStartSec + fileDuration.seconds - entry.trackStartSec)
+            ends.append(
+                entry.videoSec(
+                    ofFileSec: entry.playingStartSec + fileDuration.seconds - entry.trackStartSec))
         }
         let level = Double(entry.boost)
         guard let audibleSec = ends.min() else {
@@ -606,6 +623,14 @@ final class AudioOverlayManager {
             return fadeInOnly.ramps(audibleSec: entry.fade.fadeInSec, level: level)
         }
         return entry.fade.ramps(audibleSec: audibleSec, level: level)
+    }
+
+    /// A player item for [url] that keeps the pitch of a track played at its
+    /// own speed. The spectral algorithm is the one meant for music.
+    private func makeItem(url: URL, for entry: AudioOverlayEntry) -> AVPlayerItem {
+        let item = AVPlayerItem(url: url)
+        if entry.speed != 1 { item.audioTimePitchAlgorithm = .spectral }
+        return item
     }
 
     private func itemTime(_ seconds: Double) -> CMTime {
@@ -693,6 +718,8 @@ final class AudioOverlayEntry {
     let videoEndSec: Double?
     let trackStartSec: Double
     let trackEndSec: Double?
+    /// How many seconds of the file play per second of video.
+    let speed: Double
     var isActive: Bool = false
     let trackIndex: Int
     /// The track's volume before its fade is applied, above 1 when boosted.
@@ -730,6 +757,7 @@ final class AudioOverlayEntry {
         videoEndSec: Double?,
         trackStartSec: Double,
         trackEndSec: Double?,
+        speed: Double = 1,
         trackIndex: Int,
         baseVolume: Float = 1.0,
         fade: AudioOverlayFade = AudioOverlayFade(fadeInSec: 0, fadeOutSec: 0),
@@ -741,9 +769,21 @@ final class AudioOverlayEntry {
         self.videoEndSec = videoEndSec
         self.trackStartSec = trackStartSec
         self.trackEndSec = trackEndSec
+        self.speed = speed
         self.trackIndex = trackIndex
         self.baseVolume = baseVolume
         self.fade = fade
         self.equalizer = equalizer
     }
+
+    /// The position in the file that plays at `videoSec`.
+    func audioSec(atVideoSec videoSec: Double) -> Double {
+        trackStartSec + fileSec(ofVideoSec: videoSec - videoStartSec)
+    }
+
+    /// How much of the file plays in `videoSec` of video.
+    func fileSec(ofVideoSec videoSec: Double) -> Double { videoSec * speed }
+
+    /// How long `fileSec` of the file takes to play, in video time.
+    func videoSec(ofFileSec fileSec: Double) -> Double { fileSec / speed }
 }

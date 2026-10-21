@@ -91,7 +91,7 @@ BeatSourcePart? soundSourcePartFor(
   final end = soundEnd != null && soundEnd > sound.startTime
       ? (soundEnd < videoEnd ? soundEnd : videoEnd)
       : videoEnd;
-  var to = sound.startOffset + (end - sound.startTime);
+  var to = sound.startOffset + sound.sourceSpanOf(end - sound.startTime);
   final seconds = sound.duration;
   final fileLength = seconds == null
       ? null
@@ -107,6 +107,7 @@ BeatSourcePart? soundSourcePartFor(
     from: sound.startOffset,
     to: to,
     at: sound.startTime,
+    speed: sound.playbackSpeed,
   );
 }
 

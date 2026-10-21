@@ -314,6 +314,7 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       fadeInDuration: event?.fadeInDuration ?? Duration.zero,
       fadeOutDuration: event?.fadeOutDuration ?? Duration.zero,
       equalizer: event?.equalizer.toRenderEqualizer(),
+      playbackSpeed: event?.playbackSpeed ?? 1.0,
     );
     audioTracks.add(resolvedTrack);
     Log.warning(
@@ -324,6 +325,7 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       '${_durationMs(resolvedTrack.audioEndTime)}], '
       'fade=[${_durationMs(resolvedTrack.fadeInDuration)}, '
       '${_durationMs(resolvedTrack.fadeOutDuration)}], '
+      'speed=${resolvedTrack.playbackSpeed}, '
       'videoDuration=${_durationMs(videoDuration)}',
       name: logName,
       category: LogCategory.video,

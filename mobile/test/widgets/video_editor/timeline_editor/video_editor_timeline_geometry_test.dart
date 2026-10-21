@@ -18,6 +18,7 @@ AudioEvent _audio({
   Duration startOffset = Duration.zero,
   double? duration,
   String? anchorClipId,
+  double playbackSpeed = 1,
 }) => AudioEvent(
   id: id,
   pubkey: '',
@@ -28,6 +29,7 @@ AudioEvent _audio({
   endTime: endTime,
   startOffset: startOffset,
   anchorClipId: anchorClipId,
+  playbackSpeed: playbackSpeed,
 );
 
 DivineVideoClip _clip(
@@ -1165,6 +1167,24 @@ void main() {
       expect(result.anchorStillValid, isTrue);
     });
 
+    test('consumes as much more of a sped-up sound as it plays faster', () {
+      final track = _audio(
+        id: 'sound',
+        startTime: const Duration(seconds: 10),
+        endTime: const Duration(seconds: 20),
+        startOffset: const Duration(seconds: 1),
+        playbackSpeed: 2,
+      );
+
+      final result = audioLeftTrimResult(
+        track,
+        newStartTime: const Duration(seconds: 13),
+      );
+
+      expect(result.startOffset, const Duration(seconds: 7));
+      expect(result.anchorStillValid, isTrue);
+    });
+
     test('clears the anchor when revealing before the audio source head', () {
       final track = _audio(
         id: 'sound',
@@ -1204,10 +1224,103 @@ void main() {
     );
   });
 
+  group(audioAtSpeed, () {
+    test('plays the same stretch of the sound in half the time at 2x', () {
+      final track = _audio(
+        id: 'sound',
+        startTime: const Duration(seconds: 1),
+        endTime: const Duration(seconds: 5),
+        startOffset: const Duration(seconds: 3),
+      );
+
+      final fast = audioAtSpeed(
+        track,
+        2,
+        compositionEnd: const Duration(seconds: 6),
+      );
+
+      expect(fast.playbackSpeed, 2);
+      expect(fast.startTime, const Duration(seconds: 1));
+      expect(fast.endTime, const Duration(seconds: 3));
+      expect(fast.startOffset, const Duration(seconds: 3));
+    });
+
+    test('rescales from the speed the sound already plays at', () {
+      final track = _audio(
+        id: 'sound',
+        startTime: Duration.zero,
+        endTime: const Duration(seconds: 2),
+        playbackSpeed: 2,
+      );
+
+      expect(
+        audioAtSpeed(
+          track,
+          1,
+          compositionEnd: const Duration(seconds: 6),
+        ).endTime,
+        const Duration(seconds: 4),
+      );
+    });
+
+    test('cuts a slowed-down sound at the end of the composition', () {
+      final track = _audio(
+        id: 'sound',
+        startTime: const Duration(seconds: 1),
+        endTime: const Duration(seconds: 5),
+      );
+
+      expect(
+        audioAtSpeed(
+          track,
+          0.5,
+          compositionEnd: const Duration(seconds: 6),
+        ).endTime,
+        const Duration(seconds: 6),
+      );
+    });
+
+    test('releases the anchor to the clip the sound came from', () {
+      final track = _audio(
+        id: 'sound',
+        startTime: Duration.zero,
+        endTime: const Duration(seconds: 2),
+        anchorClipId: 'clip',
+      );
+
+      expect(
+        audioAtSpeed(
+          track,
+          1.5,
+          compositionEnd: const Duration(seconds: 6),
+        ).anchorClipId,
+        isNull,
+      );
+    });
+  });
+
   group(rebaseAnchoredAudioForClipState, () {
     // Two clips, both 10 s, no trim. clip-b starts at timeline 10 s.
     // An anchored track covers clip-b exactly: 10–20 s, startOffset 0.
     List<DivineVideoClip> baseClips() => [_clip('a', 10), _clip('b', 10)];
+
+    test('leaves a track playing at a speed of its own where it is', () {
+      final clips = [
+        _clip('a', 10),
+        _clip('b', 10, trimStart: const Duration(seconds: 3)),
+      ];
+      final tracks = [
+        _audio(
+          id: 'b-audio',
+          startTime: const Duration(seconds: 10),
+          endTime: const Duration(seconds: 15),
+          anchorClipId: 'b',
+          playbackSpeed: 2,
+        ),
+      ];
+
+      expect(rebaseAnchoredAudioForClipState(clips, tracks), same(tracks));
+    });
 
     test('shifts the anchored track left when its clip is trimmed left', () {
       // Trim clip-b's left edge by 3 s. The audio keeps its full content and
@@ -1534,6 +1647,19 @@ void main() {
         startTime: Duration.zero,
         endTime: shortComposition,
         duration: 2,
+      );
+
+      expect(grow([track]).single.endTime, const Duration(seconds: 2));
+    });
+
+    test('stops where a sped-up sound runs out sooner', () {
+      // A 4s sound at 2x plays for 2s.
+      final track = _audio(
+        id: 'sound',
+        startTime: Duration.zero,
+        endTime: shortComposition,
+        duration: 4,
+        playbackSpeed: 2,
       );
 
       expect(grow([track]).single.endTime, const Duration(seconds: 2));

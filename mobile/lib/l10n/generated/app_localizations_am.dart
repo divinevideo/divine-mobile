@@ -9605,6 +9605,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ለተመረጠው ክሊፕ የማጫወቻ ፍጥነት ያዘጋጁ';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'ለተመረጠው ድምጽ የማጫወቻ ፍጥነት ያዘጋጁ';
+
+  @override
   String get videoEditorReverseLabel => 'ወደ ኋላ';
 
   @override
@@ -9707,6 +9711,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'የክሊፕ ፍጥነት';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'የድምጽ ፍጥነት';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

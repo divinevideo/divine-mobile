@@ -349,7 +349,7 @@ void main() {
           log.message,
           contains(
             'composition=[0ms, 1400ms], source=[12000ms, 20000ms], '
-            'fade=[0ms, 0ms], videoDuration=1400ms',
+            'fade=[0ms, 0ms], speed=1.0, videoDuration=1400ms',
           ),
         );
         expect(log.message, isNot(contains('/private/user-name')));
@@ -462,6 +462,56 @@ void main() {
 
         expect(result.single.fadeInDuration, equals(Duration.zero));
         expect(result.single.fadeOutDuration, equals(Duration.zero));
+      });
+    });
+
+    group('playbackSpeed', () {
+      test(
+        "takes each track's speed from the timeline event with its id and "
+        'keeps its source offset in the source',
+        () async {
+          final result = await resolveRenderAudioTracks(
+            [
+              _fileTrack(id: 'fast', path: '/tmp/fast.mp3'),
+              _fileTrack(id: 'plain', path: '/tmp/plain.mp3'),
+            ],
+            logName: 'test',
+            audioEvents: [
+              AudioEvent(id: 'plain', pubkey: 'pubkey', createdAt: 0),
+              AudioEvent(
+                id: 'fast',
+                pubkey: 'pubkey',
+                createdAt: 0,
+                playbackSpeed: 2,
+              ),
+            ],
+          );
+
+          expect(result[0].playbackSpeed, equals(2.0));
+          expect(
+            result[0].audioStartTime,
+            equals(const Duration(milliseconds: 250)),
+          );
+          expect(result[0].startTime, equals(const Duration(seconds: 1)));
+          expect(result[1].playbackSpeed, equals(1.0));
+        },
+      );
+
+      test('a track with no timeline event plays at normal speed', () async {
+        final result = await resolveRenderAudioTracks(
+          [_fileTrack(id: 'selected-sound', path: '/tmp/sound.mp3')],
+          logName: 'test',
+          audioEvents: [
+            AudioEvent(
+              id: 'other',
+              pubkey: 'pubkey',
+              createdAt: 0,
+              playbackSpeed: 3,
+            ),
+          ],
+        );
+
+        expect(result.single.playbackSpeed, equals(1.0));
       });
     });
   });

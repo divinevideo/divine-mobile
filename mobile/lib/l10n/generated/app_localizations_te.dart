@@ -10106,6 +10106,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఎంచుకున్న క్లిప్ కోసం ప్లేబ్యాక్ వేగాన్ని సెట్ చేయండి';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'ఎంచుకున్న ధ్వని కోసం ప్లేబ్యాక్ వేగాన్ని సెట్ చేయండి';
+
+  @override
   String get videoEditorReverseLabel => 'రివర్స్';
 
   @override
@@ -10215,6 +10219,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'క్లిప్ స్పీడ్';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'ధ్వని స్పీడ్';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

@@ -9745,6 +9745,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Atur kecepatan putar untuk klip yang dipilih';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Atur kecepatan putar untuk suara yang dipilih';
+
+  @override
   String get videoEditorReverseLabel => 'Balik';
 
   @override
@@ -9852,6 +9856,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Kecepatan Klip';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'Kecepatan Suara';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {

@@ -1836,6 +1836,89 @@ void main() {
       });
     });
 
+    group('playbackSpeed', () {
+      final spedUp = AudioEvent(
+        id: 'speed-id-1234567890123456789012345678901234567890123456789012',
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        url: 'https://example.com/audio.aac',
+        playbackSpeed: 2,
+      );
+
+      test('defaults to normal speed and is left out of the json', () {
+        final plain = AudioEvent(
+          id: 'plain-id-1234567890123456789012345678901234567890123456789012',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+        );
+
+        expect(plain.playbackSpeed, 1.0);
+        expect(plain.toJson(), isNot(contains('playbackSpeed')));
+      });
+
+      test('survives a toJson/fromJson roundtrip', () {
+        final restored = AudioEvent.fromJson(spedUp.toJson());
+
+        expect(restored.playbackSpeed, 2.0);
+      });
+
+      test('reads a missing, zero or negative speed as normal speed', () {
+        final json = spedUp.toJson();
+
+        for (final stored in [null, 0, -1.5]) {
+          json['playbackSpeed'] = stored;
+          expect(AudioEvent.fromJson(json).playbackSpeed, 1.0);
+        }
+      });
+
+      test('rejects a speed that is not greater than zero', () {
+        expect(
+          () => AudioEvent(
+            id: 'zero-speed',
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            playbackSpeed: 0,
+          ),
+          throwsA(isA<AssertionError>()),
+        );
+      });
+
+      test('is part of equality, so a speed-only edit is a change', () {
+        expect(spedUp.copyWith(playbackSpeed: 1), isNot(spedUp));
+        expect(spedUp.copyWith(playbackSpeed: 2), equals(spedUp));
+      });
+
+      test('converts between timeline and sound time', () {
+        expect(
+          spedUp.sourceSpanOf(const Duration(seconds: 3)),
+          const Duration(seconds: 6),
+        );
+        expect(
+          spedUp.timelineSpanOf(const Duration(seconds: 6)),
+          const Duration(seconds: 3),
+        );
+
+        final slowed = spedUp.copyWith(playbackSpeed: 0.5);
+        expect(
+          slowed.sourceSpanOf(const Duration(seconds: 3)),
+          const Duration(milliseconds: 1500),
+        );
+        expect(
+          slowed.timelineSpanOf(const Duration(milliseconds: 1500)),
+          const Duration(seconds: 3),
+        );
+      });
+
+      test('is never published in Kind 1063 tags', () {
+        final tags = spedUp.toTags().expand((tag) => tag);
+
+        expect(
+          tags.any((value) => value.toLowerCase().contains('speed')),
+          isFalse,
+        );
+      });
+    });
+
     group('equalizer', () {
       final equalized = AudioEvent(
         id: 'eq-id-1234567890123456789012345678901234567890123456789012345',

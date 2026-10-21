@@ -16,6 +16,7 @@ class StopMotionAudioPreviewTrack {
     this.volume = 1,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
+    this.speed = 1,
   });
 
   /// Timeline item id of the sound.
@@ -39,6 +40,10 @@ class StopMotionAudioPreviewTrack {
 
   /// How long the sound falls to silence before [windowEnd].
   final Duration fadeOut;
+
+  /// How many seconds of [source] play per second of the timeline, at
+  /// unchanged pitch.
+  final double speed;
 
   bool get _hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
 }
@@ -117,6 +122,7 @@ class StopMotionAudioPreview {
       try {
         await player.setClip(track.source);
         await player.setVolume(track.volume);
+        if (track.speed != 1) await player.setSpeed(track.speed);
       } on Exception {
         await player.dispose();
         continue;
@@ -199,7 +205,9 @@ class StopMotionAudioPreview {
 
       if (shouldPlay && (!scheduled.active || jumped)) {
         scheduled.active = true;
-        await scheduled.player.seek(position - track.windowStart);
+        await scheduled.player.seek(
+          (position - track.windowStart) * track.speed,
+        );
         if (_disposed) return;
         // play() resolves when playback finishes, so awaiting it here would
         // stall the queue for the length of the sound. Left outside the queue

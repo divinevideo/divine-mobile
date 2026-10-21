@@ -252,12 +252,15 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
     );
   }
 
-  /// How long the track plays its sound on the timeline, or `null` to the
+  /// How much of its sound the track plays on the timeline, which at a speed
+  /// other than 1 is more or less than its timeline length, or `null` to the
   /// end of the sound.
   Duration? get _stretchLength {
     final track = state.track;
     final end = track.endTime;
-    return end == null || end <= track.startTime ? null : end - track.startTime;
+    return end == null || end <= track.startTime
+        ? null
+        : track.sourceSpanOf(end - track.startTime);
   }
 
   /// [source], clipped to the stretch of it the track plays.
@@ -284,12 +287,14 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
     };
   }
 
-  /// Loops [audition].
+  /// Loops [audition], at the speed the track plays its sound.
   Future<bool> _loop(
     AudioSourceConfig audition, {
     required bool Function() isCancelled,
   }) async {
     await _player.setClip(audition);
+    final speed = state.track.playbackSpeed;
+    if (speed != 1) await _player.setSpeed(speed);
     if (isCancelled() || isClosed || _isFinishing) return false;
     // play completes when playback stops, not when it starts. Keep the
     // audition in state immediately so switching settings can reclaim it.

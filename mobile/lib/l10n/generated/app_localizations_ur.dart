@@ -9831,6 +9831,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'منتخب کلپ کی پلے بیک رفتار مقرر کریں';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'منتخب آواز کی پلے بیک رفتار مقرر کریں';
+
+  @override
   String get videoEditorReverseLabel => 'الٹائیں';
 
   @override
@@ -9938,6 +9942,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'کلپ رفتار';
+
+  @override
+  String get videoEditorSoundSpeedSheetTitle => 'آواز کی رفتار';
 
   @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
