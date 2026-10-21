@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -62,26 +63,42 @@ void main() {
           timeout: const Duration(milliseconds: 500),
         );
 
-        final first = publish(firstId);
-        final second = publish(secondId);
-        handshake.complete();
-        await pumpEventQueue();
-        for (final channel in factory.createdChannels) {
-          channel
-            ..simulateMessage(jsonEncode(['OK', firstId, true, '']))
-            ..simulateMessage(jsonEncode(['OK', secondId, true, '']));
-        }
+        fakeAsync((time) {
+          // Construct the handshake and socket callbacks in this clock zone.
+          handshake = Completer<void>();
+          factory = FakeWebSocketChannelFactory(
+            readyFutureFactory: () => handshake.future,
+          );
+          pool = _buildPool(factory);
+          try {
+            PublishOutcome? firstOutcome;
+            PublishOutcome? secondOutcome;
+            unawaited(publish(firstId).then((value) => firstOutcome = value));
+            unawaited(publish(secondId).then((value) => secondOutcome = value));
+            handshake.complete();
+            time.flushMicrotasks();
+            for (final channel in factory.createdChannels) {
+              channel
+                ..simulateMessage(jsonEncode(['OK', firstId, true, '']))
+                ..simulateMessage(jsonEncode(['OK', secondId, true, '']));
+            }
+            time.flushMicrotasks();
 
-        expect(
-          _framesOfType(factory, 'EVENT').map((frame) => frame[1]['id']),
-          unorderedEquals([firstId, secondId]),
-          reason:
-              'the first publish must not be lost when the second one '
-              'asks for the same relay mid-handshake',
-        );
-        expect((await first).acceptedBy, equals([_relayUrl]));
-        expect((await second).acceptedBy, equals([_relayUrl]));
-        expect(factory.createdChannels, hasLength(1));
+            expect(
+              _framesOfType(factory, 'EVENT').map((frame) => frame[1]['id']),
+              unorderedEquals([firstId, secondId]),
+              reason:
+                  'the first publish must not be lost when the second one '
+                  'asks for the same relay mid-handshake',
+            );
+            expect(firstOutcome?.acceptedBy, equals([_relayUrl]));
+            expect(secondOutcome?.acceptedBy, equals([_relayUrl]));
+            expect(factory.createdChannels, hasLength(1));
+          } finally {
+            pool.removeAll();
+            time.flushMicrotasks();
+          }
+        });
       });
 
       test('two queries started together both send their REQ', () async {
