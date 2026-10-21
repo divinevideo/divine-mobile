@@ -138,6 +138,23 @@ final Provider<bool> isAccountEnforcedProvider = Provider.autoDispose<bool>((
       false;
 });
 
+/// The restriction this session last confirmed for the active account, or
+/// null when it knows of none.
+///
+/// The status's own value while it holds one, through a reload or a failed
+/// read; otherwise the restriction memory, which outlives the status
+/// provider, as when the launch notice lets go of it before Account Status
+/// opens.
+final Provider<AccountEnforcementStatus?> lastConfirmedRestrictionProvider =
+    Provider.autoDispose<AccountEnforcementStatus?>((ref) {
+      final pubkey = ref.watch(activeEnforcementPubkeyProvider);
+      if (pubkey == null) return null;
+      final asyncStatus = ref.watch(accountEnforcementStatusProvider);
+      final current = asyncStatus.hasValue ? asyncStatus.value : null;
+      if (current != null) return current.isEnforced ? current : null;
+      return ref.read(accountRestrictionMemoryProvider).read(pubkey);
+    });
+
 void refreshAccountEnforcementAfterRestriction(ProviderContainer container) {
   container.invalidate(accountEnforcementStatusProvider);
 }

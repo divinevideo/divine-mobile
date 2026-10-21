@@ -81,6 +81,7 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final async = ref.watch(accountEnforcementStatusProvider);
+    final lastConfirmed = ref.watch(lastConfirmedRestrictionProvider);
     final publishRestriction = widget.publishRestrictionConfirmed
         ? const AccountEnforcementStatus(
             kind: AccountEnforcementKind.unknownRestriction,
@@ -125,10 +126,7 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             // result, report that the lookup is indeterminate rather than
             // presenting an all-clear that Funnelcake never returned.
             error: (_, _) {
-              final cached = async.value;
-              final retained = cached?.isEnforced ?? false
-                  ? cached
-                  : publishRestriction;
+              final retained = lastConfirmed ?? publishRestriction;
               if (retained == null) {
                 return _UnavailableBody(
                   onRetry: () =>

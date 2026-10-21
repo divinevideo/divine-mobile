@@ -337,4 +337,49 @@ void main() {
       expect(memory.read(_pubkeyB), isNull);
     });
   });
+
+  group('lastConfirmedRestrictionProvider', () {
+    // The launch notice lets go of the status once it answers, so the next
+    // reader starts a fresh read that may fail with nothing cached.
+    test(
+      'keeps a confirmed restriction after the status is released',
+      () async {
+        final authService = _MockAuthService();
+        when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyA);
+        when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+        final client = _QueueStatusClient([
+          FunnelcakeAccountStatus.suspended,
+          const AccountStatusApiException(
+            AccountStatusApiFailureKind.unavailable,
+            'offline',
+          ),
+        ]);
+        final container = _container(authService: authService, client: client);
+        addTearDown(container.dispose);
+        final launch = container.listen(
+          lastConfirmedRestrictionProvider,
+          (_, _) {},
+        );
+        await container.read(accountEnforcementStatusProvider.future);
+        launch.close();
+        await container.pump();
+
+        final reopened = container.listen(
+          lastConfirmedRestrictionProvider,
+          (_, _) {},
+        );
+        addTearDown(reopened.close);
+        await expectLater(
+          container.read(accountEnforcementStatusProvider.future),
+          throwsA(isA<AccountStatusUnavailable>()),
+        );
+
+        expect(client.requestedPubkeys, [_pubkeyA, _pubkeyA]);
+        expect(
+          container.read(lastConfirmedRestrictionProvider)?.kind,
+          AccountEnforcementKind.suspended,
+        );
+      },
+    );
+  });
 }

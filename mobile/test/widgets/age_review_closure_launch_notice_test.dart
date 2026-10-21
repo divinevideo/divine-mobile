@@ -7,12 +7,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/repositories/account_enforcement_repository.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/services/account_status_api_client.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/age_review_closure_launch_notice.dart';
+
+class _MockAuthService extends Mock implements AuthService {}
+
+/// Answers each status request with the next queued response or error.
+class _QueuedStatusClient extends AccountStatusApiClient {
+  _QueuedStatusClient(this.results)
+    : super(
+        baseUri: Uri.parse('https://api.divine.video'),
+        authHeaderProvider: ({required url, required method}) async => null,
+      );
+
+  final List<Object> results;
+
+  @override
+  Future<FunnelcakeAccountStatusResponse> fetchStatus({
+    required String expectedPubkey,
+  }) async {
+    final result = results.removeAt(0);
+    if (result is FunnelcakeAccountStatusResponse) return result;
+    throw result;
+  }
+}
 
 const _pubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -416,6 +443,72 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(fetches, 1);
+    });
+
+    // The notice lets go of the status once it has answered, so the screen it
+    // opens reads the status again. That read failing must not turn the
+    // closure the notice just read into "we couldn't check your status".
+    testWidgets('Account status keeps the closure when its own read fails', (
+      tester,
+    ) async {
+      final authService = _MockAuthService();
+      when(() => authService.currentPublicKeyHex).thenReturn(_pubkey);
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      final client = _QueuedStatusClient([
+        const FunnelcakeAccountStatusResponse(
+          FunnelcakeAccountStatus.banned,
+          category: FunnelcakeEnforcementCategory.ageReview,
+        ),
+        const AccountStatusApiException(
+          AccountStatusApiFailureKind.unavailable,
+          'offline',
+        ),
+      ]);
+      final container = ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          currentAuthRpcCapabilityProvider.overrideWithValue(
+            AuthRpcCapability.rpcReady,
+          ),
+          authServiceProvider.overrideWithValue(authService),
+          accountEnforcementRepositoryProvider.overrideWithValue(
+            AccountEnforcementRepository(apiClient: client),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) =>
+                const AgeReviewClosureLaunchNotice(child: Text('home')),
+          ),
+          GoRoute(
+            path: AccountStatusScreen.path,
+            name: AccountStatusScreen.routeName,
+            builder: (context, state) => const AccountStatusScreen(),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(client.results, isEmpty);
+      expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+      expect(find.text(l10n.accountStatusUnavailableHeading), findsNothing);
     });
   });
 }

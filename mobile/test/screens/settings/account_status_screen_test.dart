@@ -20,6 +20,9 @@ import 'package:url_launcher_platform_interface/url_launcher_platform_interface.
 import '../../helpers/go_router.dart';
 import '../../helpers/url_launcher_test_double.dart';
 
+const _pubkey =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
 Future<void> _pumpWith(
   WidgetTester tester,
   AccountEnforcementKind kind, {
@@ -49,6 +52,7 @@ Future<void> _pumpWith(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
         accountEnforcementStatusProvider.overrideWith(
           (ref) async =>
               AccountEnforcementStatus(kind: kind, category: category),
@@ -374,6 +378,7 @@ void main() {
       var call = 0;
       final container = ProviderContainer(
         overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
           accountEnforcementStatusProvider.overrideWith((ref) async {
             call++;
             return const AccountEnforcementStatus(
@@ -425,6 +430,7 @@ void main() {
       final pending = Completer<AccountEnforcementStatus>();
       final container = ProviderContainer(
         overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
           accountEnforcementStatusProvider.overrideWith((ref) {
             call++;
             if (call == 1) {
@@ -473,6 +479,7 @@ void main() {
         var call = 0;
         final container = ProviderContainer(
           overrides: [
+            activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
             accountEnforcementStatusProvider.overrideWith((ref) async {
               call++;
               if (call == 1) {
@@ -524,6 +531,7 @@ void main() {
       var call = 0;
       final container = ProviderContainer(
         overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
           accountEnforcementStatusProvider.overrideWith((ref) async {
             call++;
             if (call == 1) {
@@ -570,6 +578,7 @@ void main() {
       var call = 0;
       final container = ProviderContainer(
         overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
           accountEnforcementStatusProvider.overrideWith((ref) async {
             call++;
             if (call == 1) {
@@ -606,6 +615,46 @@ void main() {
       expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
       expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
       expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+    });
+
+    // Once nothing keeps the status alive, as after the launch notice lets go
+    // of it, the next read starts with nothing cached. Its failure must not
+    // hide a closure this session already confirmed (support-trust-safety#260).
+    testWidgets('a failed first read keeps a closure confirmed earlier', (
+      tester,
+    ) async {
+      final memory = AccountRestrictionMemory()
+        ..record(
+          _pubkey,
+          const AccountEnforcementStatus(
+            kind: AccountEnforcementKind.banned,
+            category: AccountEnforcementCategory.ageReview,
+          ),
+        );
+      tester.view.physicalSize = const Size(1080, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+            accountRestrictionMemoryProvider.overrideWithValue(memory),
+            accountEnforcementStatusProvider.overrideWith(
+              (ref) async => throw const AccountStatusUnavailable(),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AccountStatusScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+      expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
+      expect(find.text(l10n.accountStatusUnavailableHeading), findsNothing);
     });
 
     testWidgets('an active account is offered no futile retry', (tester) async {
