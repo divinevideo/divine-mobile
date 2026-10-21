@@ -499,7 +499,7 @@ class VideoClipImportService {
       return VideoClipImportSuccess(clip);
     } on FileSystemException catch (e) {
       Log.warning(
-        'Failed to copy imported clip into documents: $e',
+        'Failed to copy imported clip into documents: ${_failureKind(e)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -513,7 +513,7 @@ class VideoClipImportService {
       );
     } catch (e) {
       Log.warning(
-        'Failed to save imported clip: $e',
+        'Failed to save imported clip: ${_failureKind(e)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -606,6 +606,13 @@ class VideoClipImportService {
     final marker = local.hour >= 12 ? 'PM' : 'AM';
     return 'Clip $month ${local.day}, $hour12:$minute $marker';
   }
+
+  // The source can be a kept video DM, named after its account and message,
+  // and the copy is named after the message, so a failure is logged by kind
+  // only: an error's text can quote either path.
+  static String _failureKind(Object error) => error is FileSystemException
+      ? '${error.runtimeType} (OS code: ${error.osError?.errorCode})'
+      : '${error.runtimeType}';
 
   Future<File> _copyVideoIntoDocuments(
     File source,

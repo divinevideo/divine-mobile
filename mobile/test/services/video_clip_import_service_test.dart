@@ -16,6 +16,7 @@ import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
@@ -1169,6 +1170,90 @@ void main() {
       );
       verifyNever(() => clipLibraryService.saveClip(any()));
       expect(docsDir.listSync().whereType<File>(), isEmpty);
+    });
+
+    group('logs a failure without the kept file it names', () {
+      // Named the way the video DM store keeps a received file.
+      late File kept;
+
+      setUp(() async {
+        kept = File('${tempDir.path}/dm_videos/$_ownerPubkey/$_messageId.mp4');
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+      });
+
+      List<String> importLog() => LogCaptureService()
+          .getRecentLogs()
+          .where((entry) => entry.name == 'VideoClipImportService')
+          .map((entry) => '${entry.message} ${entry.error}')
+          .toList();
+
+      void expectNoFileNamed(List<String> log) {
+        expect(log, isNotEmpty);
+        for (final line in log) {
+          expect(line, isNot(contains(_messageId)));
+          expect(line, isNot(contains(_ownerPubkey)));
+          expect(line, isNot(contains(tempDir.path)));
+        }
+      }
+
+      test('when the kept file cannot be copied', () async {
+        // Gone before the copy: dart:io quotes both paths.
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+
+        final result = await service.importReceivedClip(
+          source: kept,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.copyFailed,
+          ),
+        );
+        final log = importLog();
+        expectNoFileNamed(log);
+        expect(log, contains(contains('PathNotFoundException (OS code: 2)')));
+      });
+
+      test('when the library cannot save the clip', () async {
+        kept
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(List<int>.filled(16, 7));
+        when(() => clipLibraryService.saveClip(any())).thenAnswer((call) {
+          final clip = call.positionalArguments.single as DivineVideoClip;
+          throw StateError('could not save ${clip.video!.file!.path}');
+        });
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+
+        final result = await service.importReceivedClip(
+          source: kept,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.saveFailed,
+          ),
+        );
+        final log = importLog();
+        expectNoFileNamed(log);
+        expect(log, contains(contains('StateError')));
+      });
     });
 
     test('refuses a file with no readable duration and leaves no copy '
