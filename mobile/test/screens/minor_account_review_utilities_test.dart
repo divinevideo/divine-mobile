@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -59,6 +60,7 @@ void main() {
     MinorReviewCase? reviewCase, {
     List<String> locations = const ['/home/0', '/account-review'],
     MinorReviewCase? refreshedCase,
+    ThemeData? theme,
   }) async {
     var fetches = 0;
     await tester.pumpWidget(
@@ -93,10 +95,11 @@ void main() {
             );
           }),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
+          theme: theme,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: MinorAccountReviewScreen(),
+          home: const MinorAccountReviewScreen(),
         ),
       ),
     );
@@ -296,6 +299,26 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.supportNoLogsToExport), findsOneWidget);
+    });
+  });
+
+  group('renders', () {
+    // The row sits on the adaptive page, where the fixed VineTheme.error red
+    // holds only 3.45:1 in light mode. The palette token is #8C1D18 there.
+    testWidgets('Delete Account takes its red from the palette on light', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await pumpReview(tester, null, theme: VineTheme.lightTheme);
+
+      final color = tester
+          .widget<Text>(find.text(l10n.nostrSettingsDeleteAccount))
+          .style
+          ?.color;
+      expect(color, VineTheme.lightColors.onErrorContainer);
+      expect(color, isNot(VineTheme.error));
     });
   });
 }

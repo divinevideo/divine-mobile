@@ -403,13 +403,15 @@ class _LoadedView extends ConsumerWidget {
         // above it moves the tile rather than dropping an export in flight.
         const ExportLogsTile(key: ValueKey('exportLogs')),
         ListTile(
-          leading: const DivineIcon(
+          leading: DivineIcon(
             icon: DivineIconName.trash,
-            color: VineTheme.error,
+            color: context.vineColors.onErrorContainer,
           ),
           title: Text(
             l10n.nostrSettingsDeleteAccount,
-            style: VineTheme.titleMediumFont(color: VineTheme.error),
+            style: VineTheme.titleMediumFont(
+              color: context.vineColors.onErrorContainer,
+            ),
           ),
           subtitle: Text(
             l10n.nostrSettingsDeleteAccountSubtitle,
@@ -417,9 +419,9 @@ class _LoadedView extends ConsumerWidget {
               color: context.vineColors.mutedText,
             ),
           ),
-          trailing: const DivineIcon(
+          trailing: DivineIcon(
             icon: DivineIconName.caretRight,
-            color: VineTheme.error,
+            color: context.vineColors.onErrorContainer,
           ),
           onTap: () => startAccountDeletionFlow(
             context: context,
