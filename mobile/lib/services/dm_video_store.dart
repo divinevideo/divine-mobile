@@ -497,9 +497,11 @@ class DmVideoStore {
   /// account is signed in is found once this one signs in again, or its
   /// files reach [maxAge].
   ///
-  /// A video a caller of [videoFor] still holds, or one being read for its
-  /// frame, is not deleted for its age or the cap and does not count against
-  /// [maxBytes], so in-use videos can keep the folder over it. Part files are
+  /// A video a caller of [videoFor] holds, or one being read for its frame,
+  /// by this store or another of the account's, is not deleted for its age
+  /// or the cap and does not count against [maxBytes]; a gone message's goes
+  /// once no read or hand-out uses it. In-use videos can keep the folder over
+  /// [maxBytes]. Part files are
   /// deleted once old enough to be a crash's, or as soon as their message is
   /// gone. A folder that cannot be read is logged, without its path, and
   /// left.
@@ -572,7 +574,9 @@ class DmVideoStore {
       if (gone.contains(id)) {
         if (_leases.containsKey(file.path)) {
           _goneWhileLeased.add(file.path);
-        } else if (_isSatellite(file) && leased.contains(id)) {
+        } else if (_isSatellite(file) && leased.contains(id) ||
+            _usedByStores(file, except: this, holds: false)) {
+          // Another store's read lets go of it before a later prune.
           continue;
         } else {
           _deleteNow(file);
@@ -893,7 +897,8 @@ class DmVideoStore {
         // reaches it. One in use elsewhere is handed out as it is.
         if (!_isPastMaxAge(file) ||
             _leases[file.path]! > 1 ||
-            _holds.containsKey(file.path)) {
+            _holds.containsKey(file.path) ||
+            _usedByStores(file, except: this)) {
           await _records.writeQuietly(message, file.parent);
           return file;
         }
@@ -1348,22 +1353,37 @@ class DmVideoStore {
       return;
     }
     for (final kept in files) {
-      if (_messageIdOf(kept) == id && !_leases.containsKey(kept.path)) {
+      if (_messageIdOf(kept) == id &&
+          !_leases.containsKey(kept.path) &&
+          !_usedByStores(kept, except: this, holds: false)) {
         _deleteNow(kept);
       }
     }
   }
 
+  /// Whether a hand-out or a read under way uses [file], in this store or
+  /// another of the account's, or a caller of this or a live store holds it.
   bool _isInUse(File file) =>
-      _holds.containsKey(file.path) || _leases.containsKey(file.path);
+      _holds.containsKey(file.path) ||
+      _leases.containsKey(file.path) ||
+      _usedByStores(file, except: this);
 
-  static bool _usedDuringSweep(File file) {
+  /// Whether a store other than [except], live or replaced, leases [file], a
+  /// caller of a live one holds it, where [holds] count, or, for a mark, a
+  /// record or a part file, a store leases its message's video.
+  static bool _usedByStores(
+    File file, {
+    DmVideoStore? except,
+    bool holds = true,
+  }) {
     _stores.removeWhere((entry) => entry.target == null);
     for (final entry in _stores) {
       final store = entry.target;
-      if (store == null) continue;
+      if (store == null || identical(store, except)) continue;
       if (store._leases.containsKey(file.path) ||
-          (!store._kept.isClosed && store._holds.containsKey(file.path))) {
+          (holds &&
+              !store._kept.isClosed &&
+              store._holds.containsKey(file.path))) {
         return true;
       }
       if (_isSatellite(file) || file.path.endsWith(_partSuffix)) {
@@ -1383,7 +1403,7 @@ class DmVideoStore {
   static void _deleteUnusedByStores(File file) {
     // No suspension between checking the live leases and deleting: a native
     // read cannot acquire its lease in the middle of an asynchronous unlink.
-    if (_usedDuringSweep(file)) return;
+    if (_usedByStores(file)) return;
     try {
       file.deleteSync();
     } on PathNotFoundException {

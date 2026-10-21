@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_frame_read_marks.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:path_provider/path_provider.dart'
     show MissingPlatformDirectoryException;
@@ -803,7 +804,21 @@ void main() {
         test(
           "reads that sender's videos again once it is 30 days old",
           () async {
-            await leaveHungRead(_videoMessage(id: '1' * 64));
+            // Left on disk as by a launch that crashed reading it, with no
+            // store of that launch left to read it on.
+            final crashed = _videoMessage(id: '1' * 64);
+            keptFile(
+              DmVideoStore.videoFileNameFor(crashed),
+              _plaintext,
+              keptAt: now,
+            );
+            DmVideoFrameReadMarks(
+              ownerRemoved: () => false,
+              launchId: 'earlier',
+            ).readStarted(
+              DmVideoFrameReadMarks.readMarkOf(ownerDir(), crashed.id),
+              crashed.senderPubkey,
+            );
             await createStore().previewFor(_videoMessage(id: '2' * 64));
             for (final file in keptFiles()) {
               file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
@@ -815,7 +830,7 @@ void main() {
             );
 
             expect(preview, isNotNull);
-            expect(frameReads, equals(2));
+            expect(frameReads, equals(1));
           },
         );
 
@@ -2004,7 +2019,8 @@ void main() {
             _plaintext,
             keptAt: now.subtract(const Duration(days: 29)),
           );
-          await createStore().videoFor(message);
+          final player = createStore();
+          player.releaseVideo(await player.videoFor(message));
           now = now.add(const Duration(days: 2));
 
           await createStore().prune();
@@ -2930,6 +2946,130 @@ void main() {
             expect(keptFiles(), isEmpty);
           },
         );
+      });
+
+      group('a video another store of the account uses', () {
+        late Completer<void> reading;
+        late Completer<Uint8List?> read;
+
+        /// Starts [store]'s frame read of [message], which runs until [read]
+        /// completes, and returns once it runs.
+        Future<Future<File?>> startRead(
+          DmVideoStore store,
+          DmMessage message,
+        ) async {
+          reading = Completer<void>();
+          read = Completer<Uint8List?>();
+          readFrame = (_) {
+            reading.complete();
+            return read.future;
+          };
+          final preview = store.previewFor(message);
+          await reading.future;
+          return preview;
+        }
+
+        File videoOf(DmMessage message) => File(
+          '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
+        );
+
+        File markOf(DmMessage message) =>
+            File('${ownerDir().path}/${message.id}.frame-attempt');
+
+        test(
+          'is left past its age, with its read mark, while that store reads '
+          'it',
+          () async {
+            final message = _videoMessage();
+            final preview = await startRead(createStore(), message);
+            videoOf(
+              message,
+            ).setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+            expect(await createStore().previewFor(message), isNull);
+            await createStore().prune();
+
+            expect(videoOf(message).existsSync(), isTrue);
+            expect(markOf(message).existsSync(), isTrue);
+            read.complete(_frame);
+            await preview;
+          },
+        );
+
+        test(
+          'is handed out as it is, past its age, while that store reads it',
+          () async {
+            final message = _videoMessage();
+            final preview = await startRead(createStore(), message);
+            videoOf(
+              message,
+            ).setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+            final video = await createStore().videoFor(message);
+
+            expect(fetches, equals(1));
+            expect(video.path, equals(videoOf(message).path));
+            read.complete(_frame);
+            await preview;
+          },
+        );
+
+        test(
+          'is left, with its read mark, while that store reads it, though '
+          'this one refuses it as gone',
+          () async {
+            final message = _videoMessage();
+            final preview = await startRead(createStore(), message);
+
+            await expectLater(
+              createStore(isMessageGone: (_) async => true).videoFor(message),
+              throwsA(isA<DmVideoGoneException>()),
+            );
+
+            expect(videoOf(message).existsSync(), isTrue);
+            expect(markOf(message).existsSync(), isTrue);
+            read.complete(_frame);
+            await preview;
+          },
+        );
+
+        test('is kept past its age while that store holds it', () async {
+          final holder = createStore();
+          final held = await holder.videoFor(_videoMessage());
+          held.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+          await createStore().prune();
+
+          expect(held.existsSync(), isTrue);
+          holder.releaseVideo(held);
+        });
+
+        test(
+          'is left, with its read mark, while that store reads it, though its '
+          'message is gone',
+          () async {
+            final message = _videoMessage();
+            final preview = await startRead(createStore(), message);
+
+            await createStore(isMessageGone: (_) async => true).prune();
+
+            expect(videoOf(message).existsSync(), isTrue);
+            expect(markOf(message).existsSync(), isTrue);
+            read.complete(_frame);
+            await preview;
+          },
+        );
+
+        test('is deleted while that store holds it, once its message is '
+            'gone', () async {
+          final holder = createStore();
+          final held = await holder.videoFor(_videoMessage());
+
+          await createStore(isMessageGone: (_) async => true).prune();
+
+          expect(held.existsSync(), isFalse);
+          holder.releaseVideo(held);
+        });
       });
 
       test('prunes when the app comes back to the foreground', () async {
