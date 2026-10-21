@@ -134,10 +134,11 @@ class _DeletableDirectory implements Directory {
 }
 
 class _WriteHookFile implements File {
-  _WriteHookFile(this.file, this.beforeWrite);
+  _WriteHookFile(this.file, this.beforeWrite, this.waitBeforeWrite);
 
   final File file;
   final void Function(File) beforeWrite;
+  final Future<void> Function(File)? waitBeforeWrite;
 
   @override
   String get path => file.path;
@@ -152,6 +153,12 @@ class _WriteHookFile implements File {
     bool flush = false,
   }) {
     beforeWrite(this);
+    final wait = waitBeforeWrite;
+    if (wait != null) {
+      return wait(this).then(
+        (_) => file.writeAsBytes(bytes, mode: mode, flush: flush),
+      );
+    }
     return file.writeAsBytes(bytes, mode: mode, flush: flush);
   }
 
@@ -176,15 +183,16 @@ class _WriteHookFile implements File {
 }
 
 final class _WriteHooks extends IOOverrides {
-  _WriteHooks(this.beforeWrite);
+  _WriteHooks(this.beforeWrite, {this.waitBeforeWrite});
 
   final void Function(File) beforeWrite;
+  final Future<void> Function(File)? waitBeforeWrite;
 
   @override
   File createFile(String path) {
     final file = super.createFile(path);
     return path.endsWith('.part') || path.endsWith('.failed')
-        ? _WriteHookFile(file, beforeWrite)
+        ? _WriteHookFile(file, beforeWrite, waitBeforeWrite)
         : file;
   }
 }
@@ -666,6 +674,49 @@ void main() {
           expect(keptFiles(), isEmpty);
         },
       );
+
+      for (final anotherStore in [false, true]) {
+        test(
+          'does not decode a video retracted during its record write after rows '
+          'are cleared (another store: $anotherStore)',
+          () async {
+            final started = Completer<void>();
+            final resume = Completer<void>();
+            final message = _videoMessage();
+            readFrame = (_) async => null;
+            var retracted = false;
+            await IOOverrides.runWithIOOverrides(
+              () async {
+                final store = createStore(
+                  isMessageGone: (_) async => retracted,
+                );
+                final cleaner = anotherStore
+                    ? createStore(isMessageGone: (_) async => retracted)
+                    : store;
+                final preview = store.previewFor(message);
+                await started.future;
+                retracted = true;
+                await cleaner.prune();
+                retracted = false;
+                resume.complete();
+                expect(await preview, isNull);
+                expect(frameReads, equals(0));
+                await store.prune();
+                expect(keptFiles(), isEmpty);
+              },
+              _WriteHooks(
+                (_) {},
+                waitBeforeWrite: (part) async {
+                  if (part.path.contains('${message.id}.conversation.')) {
+                    started.complete();
+                    await resume.future;
+                  }
+                },
+              ),
+            );
+          },
+        );
+      }
 
       test(
         "refuses a card's download it took over once its message is gone",

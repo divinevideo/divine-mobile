@@ -595,8 +595,9 @@ class DmVideoStore {
     // Still being fetched, so not kept yet: the rows that would refuse it may
     // be cleared by the time it lands.
     final inFlight = {
-      for (final path in _leases.keys)
-        if (File(path).parent.path == dir.path) _messageIdOf(File(path)),
+      for (final entry in _stores)
+        for (final path in entry.target?._leases.keys ?? const <String>[])
+          if (File(path).parent.path == dir.path) _messageIdOf(File(path)),
     }.difference(listedIds);
     final (:gone, :decided) = await _gone.goneAmong(
       {...listedIds, ...inFlight},
@@ -611,6 +612,9 @@ class DmVideoStore {
     // Listed again where nothing awaits: a frame written during the lookups
     // is seen too, and no file can be handed out between the check that it
     // is free and its deletion.
+    for (final id in gone) {
+      _markGoneInStores(File('${dir.path}/$id'));
+    }
     if (!dir.existsSync()) return decided;
     final files = dir.listSync().whereType<File>().toList();
     final leased = {for (final path in _leases.keys) _messageIdOf(File(path))};
@@ -627,19 +631,13 @@ class DmVideoStore {
       // mark stay with it meanwhile, so a later launch can still tell if the
       // read never ends. A part file goes however young, as its write is no
       // longer wanted.
-      if (gone.contains(id)) {
-        if (_leases.containsKey(file.path)) {
-          _goneWhileLeased.add(file.path);
-        } else if (_isSatellite(file) && leased.contains(id)) {
-          continue;
-        } else if (_usedByStores(file, except: this, holds: false)) {
-          // That store deletes it once its read lets go of it.
-          _markGoneInOtherStores(file);
-          continue;
-        } else {
-          _deleteNow(file);
+      if (gone.contains(id) && !_leases.containsKey(file.path)) {
+        if (_isSatellite(file) && leased.contains(id) ||
+            _usedByStores(file, except: this, holds: false)) {
           continue;
         }
+        _deleteNow(file);
+        continue;
       }
       if (file.path.endsWith(_partSuffix)) {
         if (age > _crashedPartAge) _deleteNow(file);
@@ -1029,9 +1027,8 @@ class DmVideoStore {
     }
     if (!gone) return;
     _goneWhileLeased.add(video.path);
-    // The prune this store's release runs marks them too, but only for files
-    // it lists.
-    _markGoneInOtherStores(video);
+    // Other stores can still be downloading it, with no file on disk yet.
+    _markGoneInStores(video);
     throw const DmVideoGoneException();
   }
 
@@ -1427,13 +1424,13 @@ class DmVideoStore {
     return false;
   }
 
-  /// Marks the videos of [file]'s message that other stores lease as gone,
+  /// Marks the videos of [file]'s message that any store leases as gone,
   /// so each store deletes what is kept for the message once it lets go.
-  void _markGoneInOtherStores(File file) {
+  void _markGoneInStores(File file) {
     final id = _messageIdOf(file);
     for (final entry in _stores) {
       final store = entry.target;
-      if (store == null || identical(store, this)) continue;
+      if (store == null) continue;
       for (final path in store._leases.keys) {
         final leased = File(path);
         if (leased.parent.path == file.parent.path &&
