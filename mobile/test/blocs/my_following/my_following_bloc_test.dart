@@ -391,8 +391,8 @@ void main() {
         setUp: () {
           when(() => mockFollowRepository.isFollowing(any())).thenReturn(true);
           when(
-            () => mockFollowRepository.follow(any()),
-          ).thenAnswer((_) async {});
+            () => mockFollowRepository.followWithResult(any()),
+          ).thenAnswer((_) async => FollowOutcome.published);
           when(
             () => mockFollowRepository.unfollow(any()),
           ).thenAnswer((_) async {});
@@ -406,7 +406,7 @@ void main() {
         ),
         verify: (_) {
           verify(
-            () => mockFollowRepository.follow(validPubkey('user')),
+            () => mockFollowRepository.followWithResult(validPubkey('user')),
           ).called(1);
           verifyNever(() => mockFollowRepository.unfollow(any()));
           expect(analytics.eventNames, ['engagement_recorded']);
@@ -421,8 +421,8 @@ void main() {
         'does not re-dispatch a load after a successful follow (#5144)',
         setUp: () {
           when(
-            () => mockFollowRepository.follow(any()),
-          ).thenAnswer((_) async {});
+            () => mockFollowRepository.followWithResult(any()),
+          ).thenAnswer((_) async => FollowOutcome.published);
           when(
             () => mockFollowRepository.watchMyFollowingCached(),
           ).thenAnswer((_) => const Stream.empty());
@@ -431,7 +431,7 @@ void main() {
         act: (bloc) =>
             bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
         verify: (_) {
-          verify(() => mockFollowRepository.follow(any())).called(1);
+          verify(() => mockFollowRepository.followWithResult(any())).called(1);
           // The post-follow re-load that surfaced a stale cached snapshot and
           // reverted the button (#5144) is gone — reactivity comes from
           // followingStream/_onRepositoryUpdated, not a watchMyFollowingCached
@@ -448,17 +448,30 @@ void main() {
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys)
               .thenReturn([validPubkey('user')]);
-          when(() => mockFollowRepository.follow(any()))
-              .thenAnswer((_) async {});
+          when(() => mockFollowRepository.followWithResult(any()))
+              .thenAnswer((_) async => FollowOutcome.unchanged);
         },
         build: createBloc,
         act: (bloc) =>
             bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
         verify: (_) {
-          verify(() => mockFollowRepository.follow(validPubkey('user')))
-              .called(1);
+          verify(
+            () => mockFollowRepository.followWithResult(validPubkey('user')),
+          ).called(1);
           expect(analytics.eventNames, isEmpty);
         },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record a follow queued for later publication',
+        setUp: () {
+          when(() => mockFollowRepository.followWithResult(any()))
+              .thenAnswer((_) async => FollowOutcome.queued);
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
+        verify: (_) => expect(analytics.events, isEmpty),
       );
 
       blocTest<MyFollowingBloc, MyFollowingState>(
@@ -489,7 +502,7 @@ void main() {
         'does not record follow_added when the follow fails',
         setUp: () {
           when(
-            () => mockFollowRepository.follow(any()),
+            () => mockFollowRepository.followWithResult(any()),
           ).thenThrow(Exception('Network error'));
         },
         build: createBloc,
@@ -526,11 +539,12 @@ void main() {
               ),
             ),
           );
-          when(() => mockFollowRepository.follow(pubkey)).thenAnswer((
+          when(() => mockFollowRepository.followWithResult(pubkey)).thenAnswer((
             _,
           ) async {
             following.add(pubkey);
             followingController.add(List.of(following));
+            return FollowOutcome.published;
           });
 
           final bloc = createBloc();
@@ -589,11 +603,12 @@ void main() {
           // The repository updates its in-memory list and emits at once, then
           // waits for the contact-list publish to reach the relays.
           final publish = Completer<void>();
-          when(() => mockFollowRepository.follow(pubkey)).thenAnswer((_) {
-            following.add(pubkey);
-            followingController.add(List.of(following));
-            return publish.future;
-          });
+          when(() => mockFollowRepository.followWithResult(pubkey))
+              .thenAnswer((_) {
+                following.add(pubkey);
+                followingController.add(List.of(following));
+                return publish.future.then((_) => FollowOutcome.published);
+              });
 
           final bloc = createBloc();
           addTearDown(() async {
@@ -641,7 +656,7 @@ void main() {
         'emits toggleFailure and reports the error when follow throws',
         setUp: () {
           when(
-            () => mockFollowRepository.follow(any()),
+            () => mockFollowRepository.followWithResult(any()),
           ).thenThrow(Exception('Network error'));
         },
         build: createBloc,
@@ -661,8 +676,10 @@ void main() {
         final pubkey = validPubkey('user');
         final followCompleter = Completer<void>();
         when(
-          () => mockFollowRepository.follow(pubkey),
-        ).thenAnswer((_) => followCompleter.future);
+          () => mockFollowRepository.followWithResult(pubkey),
+        ).thenAnswer(
+          (_) => followCompleter.future.then((_) => FollowOutcome.published),
+        );
 
         final bloc = createBloc();
         addTearDown(() async {
@@ -670,7 +687,7 @@ void main() {
           await bloc.close();
         });
         bloc.add(MyFollowingFollowRequested(pubkey));
-        await untilCalled(() => mockFollowRepository.follow(pubkey));
+        await untilCalled(() => mockFollowRepository.followWithResult(pubkey));
 
         final closeFuture = bloc.close();
         followCompleter.complete();
@@ -692,8 +709,8 @@ void main() {
             () => mockFollowRepository.isFollowing(any()),
           ).thenReturn(false);
           when(
-            () => mockFollowRepository.follow(any()),
-          ).thenAnswer((_) async {});
+            () => mockFollowRepository.followWithResult(any()),
+          ).thenAnswer((_) async => FollowOutcome.published);
           when(
             () => mockFollowRepository.unfollow(any()),
           ).thenAnswer((_) async {});
@@ -705,7 +722,7 @@ void main() {
           verify(
             () => mockFollowRepository.unfollow(validPubkey('user')),
           ).called(1);
-          verifyNever(() => mockFollowRepository.follow(any()));
+          verifyNever(() => mockFollowRepository.followWithResult(any()));
         },
       );
 
@@ -757,8 +774,10 @@ void main() {
         final pubkey = validPubkey('user');
         final finishFollow = Completer<void>();
         when(
-          () => mockFollowRepository.follow(pubkey),
-        ).thenAnswer((_) => finishFollow.future);
+          () => mockFollowRepository.followWithResult(pubkey),
+        ).thenAnswer(
+          (_) => finishFollow.future.then((_) => FollowOutcome.published),
+        );
         when(
           () => mockFollowRepository.unfollow(pubkey),
         ).thenAnswer((_) async {});
@@ -769,7 +788,7 @@ void main() {
           await bloc.close();
         });
         bloc.add(MyFollowingFollowRequested(pubkey));
-        await untilCalled(() => mockFollowRepository.follow(pubkey));
+        await untilCalled(() => mockFollowRepository.followWithResult(pubkey));
         // Keep the follow pending while the Unfollow drains, so the assertion
         // checks overlap rather than elapsed time. Separate buckets per event
         // type would run it concurrently and publish two contact lists at once.
@@ -782,7 +801,7 @@ void main() {
         await pumpEventQueue();
         // A sequential transformer would run the queued Unfollow now.
         verifyNever(() => mockFollowRepository.unfollow(pubkey));
-        verify(() => mockFollowRepository.follow(pubkey)).called(1);
+        verify(() => mockFollowRepository.followWithResult(pubkey)).called(1);
       });
     });
 

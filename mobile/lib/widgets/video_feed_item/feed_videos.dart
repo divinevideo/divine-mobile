@@ -252,20 +252,18 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   @override
   void didUpdateWidget(covariant FeedVideos oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.feedSessionRevision != oldWidget.feedSessionRevision ||
+    final sessionChanged =
+        widget.feedSessionRevision != oldWidget.feedSessionRevision ||
         widget.trafficSource != oldWidget.trafficSource ||
-        widget.sourceDetail != oldWidget.sourceDetail) {
-      _resetActiveItem();
-      _resetSeenVideos();
-    }
-    if (widget.videos != oldWidget.videos) {
-      // A silent replacement can reset InfiniteVideoFeed to initialIndex without
-      // an activation callback. Read its reconciled index after child updates,
-      // before its post-frame PageController jump reports that automatic move.
+        widget.sourceDetail != oldWidget.sourceDetail;
+    if (sessionChanged || widget.videos != oldWidget.videos) {
+      // Seed from the child's reconciled visible index: unchanged items keep
+      // their page even when the parent's initial index is stale.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _activeIndex =
             _feedKey.currentState?.currentIndex ?? widget.currentIndex;
+        if (sessionChanged) _resetSeenVideos();
       });
     }
     // When pagination settles (hasMore / isLoadingMore changed), flush any

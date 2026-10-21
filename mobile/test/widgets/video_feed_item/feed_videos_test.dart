@@ -2724,6 +2724,74 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
+    for (final change in ['revision', 'source', 'detail']) {
+      testWidgets(
+        'same-item $change reset seeds the actual visible item',
+        (tester) async {
+          final analytics = RecordingConsumptionAnalytics();
+          addTearDown(analytics.dispose);
+          final feedKey = GlobalKey<FeedVideosState>();
+          final videos = [_makeVideo(), _makeVideo(id: 'b' * 64)];
+          final container = await _pumpFeedVideos(
+            tester,
+            videos: videos,
+            feedKey: feedKey,
+            trafficSource: ViewTrafficSource.home,
+            additionalOverrides: [
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+            ],
+          );
+          unawaited(feedKey.currentState!.advanceFromUserAction(1));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          expect(analytics.events, hasLength(1));
+          final previousSession =
+              analytics.events.single.parameters['feed_session_id'];
+
+          await _pumpFeedVideos(
+            tester,
+            videos: List.of(videos),
+            feedKey: feedKey,
+            trafficSource: change == 'source'
+                ? ViewTrafficSource.discoveryForYou
+                : ViewTrafficSource.home,
+            sourceDetail: change == 'detail' ? 'list' : null,
+            feedSessionRevision: change == 'revision' ? 1 : 0,
+            providerContainer: container,
+          );
+          expect(
+            tester
+                .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+                .currentIndex,
+            1,
+          );
+          expect(analytics.events, hasLength(1));
+
+          unawaited(feedKey.currentState!.advanceFromUserAction(0));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          expect(analytics.events, hasLength(2));
+          expect(analytics.events.last.parameters['depth'], 2);
+          expect(
+            analytics.events.last.parameters['feed_session_id'],
+            isNot(previousSession),
+          );
+          unawaited(feedKey.currentState!.advanceFromUserAction(1));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          expect(
+            analytics.events,
+            hasLength(2),
+            reason: 'the visible item seeded the new session',
+          );
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(seconds: 4));
+        },
+      );
+    }
+
     testWidgets(
       'mid-feed replacement reconciles the index before session rotation',
       (tester) async {

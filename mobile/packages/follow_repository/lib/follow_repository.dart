@@ -7,6 +7,7 @@ library;
 export 'package:cache_sync/cache_sync.dart' show CacheResult;
 
 export 'src/follow_list_kind.dart';
+export 'src/follow_outcome.dart';
 export 'src/follow_relationship.dart';
 export 'src/follow_repository.dart';
 export 'src/follow_sort_order.dart';

@@ -482,10 +482,10 @@ class NotificationFeedBloc
     final wasFollowing = _followRepository.isFollowing(event.pubkey);
     try {
       if (!wasFollowing) {
-        await _followRepository.follow(event.pubkey);
-        unawaited(
-          _consumptionAnalytics.followAdded(),
-        );
+        final outcome = await _followRepository.followWithResult(event.pubkey);
+        if (outcome == FollowOutcome.published) {
+          unawaited(_consumptionAnalytics.followAdded());
+        }
       }
       emit(
         state.copyWith(notifications: _applyFollowState(state.notifications)),

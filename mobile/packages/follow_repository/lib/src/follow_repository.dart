@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:follow_repository/src/follow_list_kind.dart';
+import 'package:follow_repository/src/follow_outcome.dart';
 import 'package:follow_repository/src/follow_relationship.dart';
 import 'package:follow_repository/src/follower_stats.dart';
 import 'package:follow_repository/src/followers_snapshot.dart';
@@ -2555,6 +2556,14 @@ class FollowRepository {
   /// * Anything the Kind 3 publish or the local-storage write threw, after
   ///   rolling the optimistic update back.
   Future<void> follow(String pubkey) async {
+    await followWithResult(pubkey);
+  }
+
+  /// Follows an account and reports whether its contact list was published.
+  ///
+  /// Preserves the optimistic local update and errors of [follow]. A queued
+  /// result includes offline sync and a publish withheld until a safe relay read.
+  Future<FollowOutcome> followWithResult(String pubkey) async {
     if (!_nostrClient.hasKeys) {
       Log.error(
         'Cannot follow - user not authenticated',
@@ -2582,7 +2591,7 @@ class FollowRepository {
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return;
+      return FollowOutcome.unchanged;
     }
 
     if (_followingPubkeys.contains(pubkey)) {
@@ -2591,7 +2600,7 @@ class FollowRepository {
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return;
+      return FollowOutcome.unchanged;
     }
 
     Log.debug(
@@ -2618,21 +2627,23 @@ class FollowRepository {
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return;
+      return FollowOutcome.queued;
     }
 
     try {
       // 2. Broadcast to network
-      await _broadcastContactList();
+      final published = await _broadcastContactList();
 
       // 3. Save to local storage
       await _saveToLocalStorage();
 
       Log.info(
-        'Successfully followed user: ${pubkeyForLogs(pubkey)}',
+        'Follow ${published ? 'published' : 'pending broadcast'}: '
+        '${pubkeyForLogs(pubkey)}',
         name: 'FollowRepository',
         category: LogCategory.system,
       );
+      return published ? FollowOutcome.published : FollowOutcome.queued;
     } catch (e) {
       // Roll back this follow only. Restoring a whole pre-follow snapshot
       // would also throw away a newer contact list the pre-publish read
@@ -3442,7 +3453,7 @@ class FollowRepository {
   }
 
   /// Broadcast updated contact list to network (Kind 3 event)
-  Future<void> _broadcastContactList() async {
+  Future<bool> _broadcastContactList() async {
     // Last line of defence: [executeFollowAction] appends without validating,
     // and an invalid pubkey here makes Contact's constructor throw and abort
     // the publish, blocking every follow and unfollow until the entry is gone.
@@ -3466,7 +3477,7 @@ class FollowRepository {
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return;
+      return false;
     }
 
     final contactList = ContactList();
@@ -3500,6 +3511,7 @@ class FollowRepository {
       name: 'FollowRepository',
       category: LogCategory.system,
     );
+    return true;
   }
 
   /// Process a NIP-02 contact list event (Kind 3).

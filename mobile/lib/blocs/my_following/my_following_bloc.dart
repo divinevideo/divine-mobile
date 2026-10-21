@@ -303,11 +303,8 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     try {
       switch (event) {
         case MyFollowingFollowRequested(:final pubkey, :final targetVideoId):
-          final wasFollowing = _followRepository.followingPubkeys.contains(
-            pubkey,
-          );
-          await _followRepository.follow(pubkey);
-          if (!wasFollowing) {
+          final outcome = await _followRepository.followWithResult(pubkey);
+          if (outcome == FollowOutcome.published) {
             unawaited(
               _consumptionAnalytics.followAdded(targetVideoId: targetVideoId),
             );

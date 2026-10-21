@@ -1199,8 +1199,11 @@ void main() {
         setUp: () {
           var isFollowing = false;
           when(
-            () => mockFollowRepo.follow(_bobPubkey),
-          ).thenAnswer((_) async => isFollowing = true);
+            () => mockFollowRepo.followWithResult(_bobPubkey),
+          ).thenAnswer((_) async {
+            isFollowing = true;
+            return FollowOutcome.published;
+          });
           when(
             () => mockFollowRepo.isFollowing(_bobPubkey),
           ).thenAnswer((_) => isFollowing);
@@ -1238,8 +1241,11 @@ void main() {
         setUp: () {
           var isFollowing = false;
           when(
-            () => mockFollowRepo.follow(_bobPubkey),
-          ).thenAnswer((_) async => isFollowing = true);
+            () => mockFollowRepo.followWithResult(_bobPubkey),
+          ).thenAnswer((_) async {
+            isFollowing = true;
+            return FollowOutcome.published;
+          });
           when(
             () => mockFollowRepo.isFollowing(_bobPubkey),
           ).thenAnswer((_) => isFollowing);
@@ -1264,7 +1270,7 @@ void main() {
           ),
         ],
         verify: (_) {
-          verify(() => mockFollowRepo.follow(_bobPubkey)).called(1);
+          verify(() => mockFollowRepo.followWithResult(_bobPubkey)).called(1);
           expect(
             analytics.events.where(
               (event) => event.name == 'engagement_recorded',
@@ -1301,16 +1307,45 @@ void main() {
           ),
         ],
         verify: (_) {
-          verifyNever(() => mockFollowRepo.follow(_bobPubkey));
+          verifyNever(() => mockFollowRepo.followWithResult(_bobPubkey));
           expect(analytics.events, isEmpty);
         },
       );
+
+      for (final outcome in [FollowOutcome.queued, FollowOutcome.unchanged]) {
+        blocTest<NotificationFeedBloc, NotificationFeedState>(
+          'does not record a follow when the repository returns $outcome',
+          setUp: () {
+            var isFollowing = false;
+            when(() => mockFollowRepo.isFollowing(_bobPubkey))
+                .thenAnswer((_) => isFollowing);
+            when(() => mockFollowRepo.followWithResult(_bobPubkey))
+                .thenAnswer((_) async {
+                  isFollowing = outcome == FollowOutcome.queued;
+                  return outcome;
+                });
+          },
+          build: createBloc,
+          seed: () => NotificationFeedState(
+            notifications: [_actorNotif(id: 'f1', pubkey: _bobPubkey)],
+          ),
+          act: (bloc) => bloc.add(NotificationFeedFollowBack(_bobPubkey)),
+          verify: (bloc) {
+            expect(analytics.events, isEmpty);
+            expect(
+              (bloc.state.notifications.single as ActorNotification)
+                  .isFollowingBack,
+              outcome == FollowOutcome.queued,
+            );
+          },
+        );
+      }
 
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'forwards follow errors via addError',
         setUp: () {
           when(
-            () => mockFollowRepo.follow(_bobPubkey),
+            () => mockFollowRepo.followWithResult(_bobPubkey),
           ).thenThrow(Exception('boom'));
         },
         build: createBloc,
@@ -1322,7 +1357,7 @@ void main() {
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'forwards an invalid-pubkey ArgumentError without wrapping it',
         setUp: () {
-          when(() => mockFollowRepo.follow(_bobPubkey)).thenThrow(
+          when(() => mockFollowRepo.followWithResult(_bobPubkey)).thenThrow(
             ArgumentError.value(_bobPubkey, 'pubkey', 'Invalid key'),
           );
         },
@@ -1341,7 +1376,7 @@ void main() {
         'wraps a RangeError from follow as Reportable',
         setUp: () {
           when(
-            () => mockFollowRepo.follow(_bobPubkey),
+            () => mockFollowRepo.followWithResult(_bobPubkey),
           ).thenThrow(RangeError.range(5, 0, 1));
         },
         build: createBloc,
@@ -1358,7 +1393,7 @@ void main() {
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'wraps an ArgumentError carrying our own pubkey as Reportable',
         setUp: () {
-          when(() => mockFollowRepo.follow(_bobPubkey)).thenThrow(
+          when(() => mockFollowRepo.followWithResult(_bobPubkey)).thenThrow(
             ArgumentError.value(_alicePubkey, 'pubkey', 'Invalid key'),
           );
         },
@@ -1377,7 +1412,7 @@ void main() {
         'wraps unexpected Error from follow as Reportable',
         setUp: () {
           when(
-            () => mockFollowRepo.follow(_bobPubkey),
+            () => mockFollowRepo.followWithResult(_bobPubkey),
           ).thenThrow(StateError('invariant'));
         },
         build: createBloc,
