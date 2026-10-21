@@ -80,11 +80,11 @@ class DmVideoConversationRecords {
     }
   }
 
-  /// Rewrites [record] to name [location] when it says otherwise: a group repair can move a message after its video
-  /// was kept, and its record must say where it is before an account switch
-  /// drops its row. Read from disk, as another store of the same account can
-  /// write it. One that cannot be written is logged and tried again by the
-  /// next refresh.
+  /// Rewrites [record] to name [location] when it says otherwise: a group
+  /// repair can move a message after its video was kept, and its record must
+  /// say where it is before an account switch drops its row. Read from disk,
+  /// as another store of the same account can write it. One that cannot be
+  /// written is logged and tried again by the next refresh.
   Future<void> refresh(File record, DmVideoMessageLocation location) async {
     final content = _contentOf(location.conversationId, location.sentAt);
     if (await _readQuietly(record) == content) return;

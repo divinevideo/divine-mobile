@@ -485,7 +485,7 @@ final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
 );
 
 /// The signed-in account's received video DMs, kept on this device, or null
-/// when no account is signed in.
+/// when no account is signed in, or on the web, which has no folder for them.
 ///
 /// Rebuilt when the account changes, so each account reads only its own
 /// folder. Prunes old and excess videos once when built, and again at

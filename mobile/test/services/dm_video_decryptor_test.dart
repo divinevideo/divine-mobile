@@ -1,4 +1,4 @@
-// ABOUTME: Tests for DmVideoDecryptor: fetch ciphertext, verify, decrypt to bytes.
+// ABOUTME: Tests DmVideoDecryptor: fetch the ciphertext, verify, decrypt it.
 // ABOUTME: Uses a mocked Dio returning real AES-GCM ciphertext so decrypt is real.
 
 import 'dart:async';

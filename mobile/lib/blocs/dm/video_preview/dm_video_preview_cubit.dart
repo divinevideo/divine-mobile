@@ -67,7 +67,8 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
 
   final DmMessage _message;
 
-  /// Null when no account is signed in: videos are kept per account.
+  /// Null when no account is signed in, as videos are kept per account, or
+  /// on the web, which has no folder for them.
   final DmVideoStore? _store;
   StreamSubscription<String>? _keptVideos;
 

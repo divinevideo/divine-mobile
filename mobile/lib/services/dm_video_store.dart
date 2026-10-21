@@ -1,5 +1,5 @@
 // ABOUTME: Keeps received video DMs on this device, decrypted, for one account:
-// ABOUTME: one download per video, a preview frame, and pruning by age and size.
+// ABOUTME: one download per video, a preview frame, pruning by age and size.
 
 import 'dart:async';
 import 'dart:io';
@@ -41,7 +41,8 @@ typedef DmVideoFetcher = Future<Uint8List> Function(
 /// queue until then or for at most [DmVideoStore.frameTurnLimit].
 typedef DmVideoFrameReader = Future<Uint8List?> Function(File video);
 
-/// The [DmVideoStore] of the account signed in now, or null when none is.
+/// The [DmVideoStore] of the account signed in now, or null when none is,
+/// or on the web.
 ///
 /// Resolved when a save starts, so a save keeps the account that asked even
 /// if the user switches accounts while it runs.

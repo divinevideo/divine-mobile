@@ -134,9 +134,9 @@ class DmVideoFrameReadMarks {
   }
 
   /// Deletes [mark], whose read returned a frame, kept or not. A read that
-  /// hung was slow, not stuck: unless another of theirs hangs, its sender is read again, once a
-  /// launch, as each such read holds up every other sender's frames for its
-  /// whole turn.
+  /// hung was slow, not stuck: unless another of theirs hangs, its sender is
+  /// read again, once a launch, as each such read holds up every other
+  /// sender's frames for its whole turn.
   void frameKept(File mark) {
     _running.remove(mark.path);
     final key = _launchKeyOf(mark.parent);

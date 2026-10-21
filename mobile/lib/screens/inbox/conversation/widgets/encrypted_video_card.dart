@@ -1,5 +1,5 @@
 // ABOUTME: Conversation card for an encrypted (kind 15) video DM: the frame
-// ABOUTME: this device keeps, else the sender's blurhash, never a network image.
+// ABOUTME: this device keeps, else the sender's blurhash; never a remote image.
 
 import 'dart:io';
 

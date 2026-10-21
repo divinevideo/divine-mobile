@@ -92,7 +92,8 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
   /// The kind 15 message this cubit plays.
   DmMessage get message => _message;
 
-  /// Null when no account is signed in: videos are kept per account.
+  /// Null when no account is signed in, as videos are kept per account, or
+  /// on the web, which has no folder for them.
   final DmVideoStore? _store;
   final GallerySaveService _gallerySaveService;
 
@@ -108,7 +109,9 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
     try {
       final store = _store;
       if (store == null) {
-        throw const DmVideoUnavailableException('no account is signed in');
+        throw const DmVideoUnavailableException(
+          'no account is signed in, or this is the web',
+        );
       }
       final video = await store.videoFor(_message);
       // Closed while it downloaded: nothing will play it.

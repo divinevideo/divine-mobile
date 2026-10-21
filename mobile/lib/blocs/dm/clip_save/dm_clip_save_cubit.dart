@@ -128,7 +128,9 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
 
     try {
       if (store == null) {
-        throw const DmVideoUnavailableException('no account is signed in');
+        throw const DmVideoUnavailableException(
+          'no account is signed in, or this is the web',
+        );
       }
       final video = await store.videoFor(message);
       final VideoClipImportResult result;
