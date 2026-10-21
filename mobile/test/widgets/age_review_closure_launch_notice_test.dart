@@ -1,6 +1,8 @@
 // ABOUTME: Tests that an account closed by age review is shown Account status
 // ABOUTME: on launch, once per session, and that other bans are left alone.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -30,20 +32,7 @@ Future<ProviderContainer> _pumpShell(
   );
   addTearDown(container.dispose);
 
-  final router = GoRouter(
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) =>
-            const AgeReviewClosureLaunchNotice(child: Text('home')),
-      ),
-      GoRoute(
-        path: AccountStatusScreen.path,
-        name: AccountStatusScreen.routeName,
-        builder: (context, state) => const Text('account-status'),
-      ),
-    ],
-  );
+  final router = _router();
   addTearDown(router.dispose);
 
   await tester.pumpWidget(
@@ -54,6 +43,28 @@ Future<ProviderContainer> _pumpShell(
   );
   await tester.pumpAndSettle();
   return container;
+}
+
+GoRouter _router() => GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) =>
+          const AgeReviewClosureLaunchNotice(child: Text('home')),
+    ),
+    GoRoute(
+      path: AccountStatusScreen.path,
+      name: AccountStatusScreen.routeName,
+      builder: (context, state) => const Text('account-status'),
+    ),
+  ],
+);
+
+class _Flag extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool value) => state = value;
 }
 
 void main() {
@@ -103,20 +114,7 @@ void main() {
       GoRouter.of(tester.element(find.text('account-status'))).pop();
       await tester.pumpAndSettle();
 
-      final rebuilt = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) =>
-                const AgeReviewClosureLaunchNotice(child: Text('home')),
-          ),
-          GoRoute(
-            path: AccountStatusScreen.path,
-            name: AccountStatusScreen.routeName,
-            builder: (context, state) => const Text('account-status'),
-          ),
-        ],
-      );
+      final rebuilt = _router();
       addTearDown(rebuilt.dispose);
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -131,6 +129,164 @@ void main() {
 
       expect(find.text('home'), findsOneWidget);
       expect(find.text('account-status'), findsNothing);
+    });
+
+    // Account status is reached by push, which the router's match-list uri
+    // does not reflect. Checking that uri let the notice stack a second
+    // Account status on top of one the user had already opened.
+    testWidgets('does not stack a second Account status on a pushed one', (
+      tester,
+    ) async {
+      final previous = GoRouter.optionURLReflectsImperativeAPIs;
+      GoRouter.optionURLReflectsImperativeAPIs = true;
+      addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = previous);
+      final answer = Completer<AccountEnforcementStatus>();
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith(
+            (ref) => answer.future,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      unawaited(router.pushNamed(AccountStatusScreen.routeName));
+      await tester.pumpAndSettle();
+      answer.complete(_closure);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('account-status', skipOffstage: false),
+        findsOneWidget,
+      );
+    });
+
+    // While a session is being restored the provider reports signedOut, and
+    // that is not the account's answer. Taking it as one stopped the notice
+    // before the signed-in status ever arrived.
+    testWidgets('waits past signedOut for the signed-in answer', (
+      tester,
+    ) async {
+      final signedIn = NotifierProvider<_Flag, bool>(_Flag.new);
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith(
+            (ref) async => ref.watch(signedIn)
+                ? _closure
+                : const AccountEnforcementStatus(
+                    kind: AccountEnforcementKind.signedOut,
+                  ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('home'), findsOneWidget);
+
+      container.read(signedIn.notifier).set(true);
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
+    });
+
+    // A status something else already holds answers inside initState, during
+    // the build. Recording it as shown there modified a provider mid-build,
+    // which threw in debug and left it marked shown but never shown.
+    testWidgets('shows an answer that was already cached when it mounts', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith(
+            (ref) async => _closure,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final keepAlive = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      addTearDown(keepAlive.close);
+      await container.read(accountEnforcementStatusProvider.future);
+      final router = _router();
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
+    });
+
+    // A refetch in flight still carries the previous answer. Stopping on it
+    // would miss a closure that the refetch is about to report.
+    testWidgets('waits for a refetch in flight rather than its stale value', (
+      tester,
+    ) async {
+      final refetch = Completer<AccountEnforcementStatus>();
+      var fetches = 0;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) {
+            fetches++;
+            return fetches == 1
+                ? Future.value(
+                    const AccountEnforcementStatus(
+                      kind: AccountEnforcementKind.noRestrictionReported,
+                    ),
+                  )
+                : refetch.future;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final keepAlive = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      addTearDown(keepAlive.close);
+      await container.read(accountEnforcementStatusProvider.future);
+      container.invalidate(accountEnforcementStatusProvider);
+      final router = _router();
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      refetch.complete(_closure);
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
     });
 
     // The app refetches status on every resume, and each fetch is a signed
@@ -152,15 +308,7 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) =>
-                const AgeReviewClosureLaunchNotice(child: Text('home')),
-          ),
-        ],
-      );
+      final router = _router();
       addTearDown(router.dispose);
       await tester.pumpWidget(
         UncontrolledProviderScope(

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
+import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
@@ -19,8 +20,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// case already routes to the review screens.
 ///
 /// Mounted with the bottom-nav shell, so it only runs for a signed-in session.
-/// Watching the status here fetches it on launch, the same signed request the
-/// minor-review gate already makes at startup.
+/// Watching the status here costs one signed request to Funnelcake per launch,
+/// which main only made once the account opened Settings, its own profile, or
+/// Account Status. A failed fetch keeps listening, so the next resume refetch
+/// tries again; that stops at the first answer.
 class AgeReviewClosureLaunchNotice extends ConsumerStatefulWidget {
   const AgeReviewClosureLaunchNotice({required this.child, super.key});
 
@@ -44,12 +47,19 @@ class _AgeReviewClosureLaunchNoticeState
       (_, next) {
         // Only the launch answer matters. Letting go of the provider after it
         // means a resume refetch costs nothing unless something else is
-        // showing the status. A failed fetch keeps listening, so the refetch
-        // on the next resume gets another try.
-        if (_answered || !next.hasValue) return;
-        _answered = true;
-        _status?.close();
-        if (next.value!.isAgeReviewClosure) _showOnce();
+        // showing the status.
+        //
+        // The answer is a settled value for a signed-in account. signedOut is
+        // what the provider reports while a session is still being restored,
+        // and a value carried over while the provider reloads belongs to the
+        // state before; stopping on either would miss the closure.
+        if (_answered) return;
+        if (next case AsyncData(:final value, isLoading: false)
+            when value.kind != AccountEnforcementKind.signedOut) {
+          _answered = true;
+          _status?.close();
+          if (value.isAgeReviewClosure) _showOnce();
+        }
       },
       fireImmediately: true,
     );
@@ -65,17 +75,19 @@ class _AgeReviewClosureLaunchNoticeState
   }
 
   void _showOnce() {
-    final pubkey = ref.read(activeEnforcementPubkeyProvider);
-    if (pubkey == null) return;
-    final shown = ref.read(ageReviewClosureLaunchShownProvider.notifier);
-    if (!shown.markShown(pubkey)) return;
-    // A listener can fire during a build, which must not navigate.
+    // A listener can fire during a build, including inside initState for a
+    // status already cached, and a build may neither navigate nor modify a
+    // provider. So marking it shown waits for the frame too, which also means
+    // it is only marked once it is actually on screen.
     addPostFrameCallbackIfMounted(() {
+      final pubkey = ref.read(activeEnforcementPubkeyProvider);
+      if (pubkey == null) return;
+      final shown = ref.read(ageReviewClosureLaunchShownProvider.notifier);
+      if (!shown.markShown(pubkey)) return;
+      // Account Status is reached by push, which the match list's uri does not
+      // reflect; routerLocationOf does.
       final router = GoRouter.of(context);
-      if (router.routerDelegate.currentConfiguration.uri.path ==
-          AccountStatusScreen.path) {
-        return;
-      }
+      if (routerLocationOf(router).path == AccountStatusScreen.path) return;
       runDetached(
         context.pushNamed(AccountStatusScreen.routeName),
         'open account status for age-review closure',
