@@ -397,11 +397,11 @@ class ClipSpeedRenderService {
       '${clip.trimEnd.inMicroseconds}:${clip.playbackSpeed ?? 1.0}'
       '${_rampKey(clip.speedRamp)}';
 
-  /// The ramp's points, empty without one, so every key of a clip at a
-  /// constant speed stays as it was.
-  static String _rampKey(VideoSpeedRamp? ramp) => ramp == null
-      ? ''
-      : ':${ramp.points.map((p) => '${p.position}@${p.speed}').join(',')}';
+  /// The ramp as it serializes, empty without one, so every key of a clip at
+  /// a constant speed stays as it was. Its points alone are not enough: a
+  /// cropped ramp also carries the stretch of its original ramp it plays.
+  static String _rampKey(VideoSpeedRamp? ramp) =>
+      ramp == null ? '' : ':${jsonEncode(ramp.toMap())}';
 
   /// The native task id for one render attempt of the body hashed as [hash].
   ///
