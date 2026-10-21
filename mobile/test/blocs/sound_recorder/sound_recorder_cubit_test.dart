@@ -267,6 +267,43 @@ void main() {
     });
 
     group('stop', () {
+      test(
+        'cancel during a stop discards the take instead of publishing it',
+        () async {
+          final cubit = build();
+          await cubit.start();
+          await recorder.emitLevel(0.5);
+          recorder.stopGate = Completer<void>();
+          final stopping = cubit.stop();
+          await pumpEventQueue();
+          expect(cubit.state.status, SoundRecorderStatus.stopping);
+
+          final cancelling = cubit.cancel();
+          recorder.stopGate!.complete();
+          await Future.wait([stopping, cancelling]);
+
+          expect(cubit.state.recordingPath, isNull);
+          expect(File(recorder.path!).existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'cancellation enters stopping while the native recorder flushes',
+        () async {
+          final cubit = build();
+          await cubit.start();
+          await recorder.emitLevel(0.5);
+          recorder.stopGate = Completer<void>();
+          final cancelling = cubit.cancel();
+          await pumpEventQueue();
+          try {
+            expect(cubit.state.status, SoundRecorderStatus.stopping);
+          } finally {
+            recorder.stopGate!.complete();
+            await cancelling;
+          }
+        },
+      );
       test('does not miss a system pause during native startup', () async {
         recorder.startGate = Completer<void>();
         final cubit = build();
@@ -496,6 +533,30 @@ void main() {
     });
 
     group('close', () {
+      for (final discard in [false, true]) {
+        test(
+          'shares an in-flight ${discard ? 'cancel' : 'stop'} operation',
+          () async {
+            final cubit = build();
+            await cubit.start();
+            await recorder.emitLevel(0.5);
+            recorder.stopGate = Completer<void>();
+            final ending = discard ? cubit.cancel() : cubit.stop();
+            await pumpEventQueue();
+
+            final closing = cubit.close();
+            await pumpEventQueue();
+            recorder.stopGate!.complete();
+            await Future.wait([ending, closing]);
+
+            expect(recorder.stopCount, 1);
+            expect(audioSession.resetCount, 1);
+            expect(File(recorder.path!).existsSync(), isFalse);
+            expect(cubit.isClosed, isTrue);
+          },
+        );
+      }
+
       test('deletes a finished recording nobody took over', () async {
         final cubit = build();
         await cubit.start();

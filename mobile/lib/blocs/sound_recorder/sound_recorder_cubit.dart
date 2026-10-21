@@ -89,6 +89,8 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   // creates outlives the cleanup close() has already done.
   bool _closing = false;
   bool _startCancelled = false;
+  bool _discardRequested = false;
+  Future<void>? _ending;
 
   bool get _shouldAbortStart => _closing || _startCancelled;
 
@@ -144,13 +146,30 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       _startCancelled = true;
       return;
     }
+    final ending = _ending;
+    if (ending != null) return ending;
     if (!state.isRecording || _isTransitioning) return;
+    return _endTake(discard: false);
+  }
+
+  Future<void> _endTake({required bool discard}) {
+    _discardRequested = discard;
+    final currentPath = _currentPath;
     _isTransitioning = true;
     emitIfOpen(state.copyWith(status: SoundRecorderStatus.stopping));
-    unawaited(HapticService.recordingFeedback());
-    await _stopMetering();
+    if (!discard) unawaited(HapticService.recordingFeedback());
+    final ending = _finishTake(currentPath).whenComplete(() {
+      _ending = null;
+      _isTransitioning = false;
+    });
+    _ending = ending;
+    return ending;
+  }
+
+  Future<void> _finishTake(String? currentPath) async {
     try {
-      final path = await _recorder.stop() ?? _currentPath;
+      await _stopMetering();
+      final path = await _recorder.stop() ?? currentPath;
       _currentPath = null;
       await _safeResetSession();
       // Native capture can continue while level updates stall. Keep such a
@@ -160,7 +179,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
           _now().difference(_startedAt) >= amplitudeInterval;
       // close() may already have deleted state.recordingPath, so a take that
       // finishes while closing is deleted here rather than published.
-      final keep = recorded && !_closing;
+      final keep = recorded && !_closing && !_discardRequested;
       if (!keep) _deleteFile(path);
       emitIfOpen(
         state.copyWith(
@@ -172,18 +191,19 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       );
     } catch (error, stackTrace) {
       await _safeResetSession();
-      _deleteFile(_currentPath);
+      _deleteFile(currentPath);
       _currentPath = null;
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(
-          status: SoundRecorderStatus.failed,
+          status: _discardRequested
+              ? SoundRecorderStatus.idle
+              : SoundRecorderStatus.failed,
           elapsed: Duration.zero,
           waveformBars: const [],
+          recordingPath: null,
         ),
       );
-    } finally {
-      _isTransitioning = false;
     }
   }
 
@@ -193,24 +213,13 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       _startCancelled = true;
       return;
     }
-    if (!state.isRecording || _isTransitioning) return;
-    _isTransitioning = true;
-    try {
-      await _stopMetering();
-      await _safeStopRecorder();
-      await _safeResetSession();
-      _deleteFile(_currentPath);
-      _currentPath = null;
-      emitIfOpen(
-        state.copyWith(
-          status: SoundRecorderStatus.idle,
-          elapsed: Duration.zero,
-          waveformBars: const [],
-        ),
-      );
-    } finally {
-      _isTransitioning = false;
+    final ending = _ending;
+    if (ending != null) {
+      _discardRequested = true;
+      return ending;
     }
+    if (!state.isRecording) return;
+    return _endTake(discard: true);
   }
 
   /// Opens the OS settings page, where microphone access is granted after a
@@ -349,10 +358,14 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   @override
   Future<void> close() async {
     _closing = true;
-    await _stopMetering();
-    if (state.isActive) {
-      await _safeStopRecorder();
-      await _safeResetSession();
+    final ending = _ending;
+    if (ending != null) {
+      _discardRequested = true;
+      await ending;
+    } else if (state.isRecording) {
+      await _endTake(discard: true);
+    } else {
+      await _stopMetering();
     }
     _deleteFile(_currentPath);
     _currentPath = null;

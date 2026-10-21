@@ -3,7 +3,6 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
@@ -50,6 +49,7 @@ class _FakeRecorder implements VoiceOverRecorderService {
   final _levels = StreamController<double>.broadcast();
   bool throwOnStart = false;
   String? path;
+  Completer<void>? stopGate;
 
   @override
   Stream<double> get amplitudeStream => _levels.stream;
@@ -65,7 +65,10 @@ class _FakeRecorder implements VoiceOverRecorderService {
   }
 
   @override
-  Future<String?> stop() async => path;
+  Future<String?> stop() async {
+    await stopGate?.future;
+    return path;
+  }
 
   @override
   Future<void> dispose() => _levels.close();
@@ -82,7 +85,6 @@ class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   Completer<void>? _playing;
   Completer<void>? stopGate;
   Completer<void>? loadGate;
-  Completer<void>? seekGate;
   int playCount = 0;
 
   @override
@@ -93,7 +95,7 @@ class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   }
 
   @override
-  Future<void> seek(Duration position) async => seekGate?.future;
+  Future<void> seek(Duration position) async {}
 
   @override
   Future<void> play() {
@@ -475,6 +477,29 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('system Back during native stop discards the pending take', (
+        tester,
+      ) async {
+        final router = await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        recorder.stopGate = Completer<void>();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await tester.pump();
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        recorder.stopGate!.complete();
+        await settleRecorder(tester);
+
+        expect(router.state.uri.path, '/add');
+        expect(find.byKey(const Key('add_sound_pick')), findsOneWidget);
+        expect(find.byKey(const Key('add_sound_record_again')), findsNothing);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
       testWidgets('locks the previous take while a replacement starts', (
         tester,
       ) async {
@@ -570,6 +595,14 @@ void main() {
         (
           tester,
         ) async {
+          tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+              const FakeAccessibilityFeatures();
+          addTearDown(
+            tester
+                .binding
+                .platformDispatcher
+                .clearAccessibilityFeaturesTestValue,
+          );
           await pumpView(tester);
           await tester.tap(find.byKey(const Key('add_sound_record')));
           await tester.pumpAndSettle();
@@ -591,9 +624,7 @@ void main() {
           Future<List<int>?> pixels() => tester.runAsync(() async {
             final image = await boundary.toImage();
             try {
-              return (await image.toByteData(
-                format: ui.ImageByteFormat.rawRgba,
-              ))!.buffer.asUint8List();
+              return (await image.toByteData())!.buffer.asUint8List();
             } finally {
               image.dispose();
             }
@@ -604,7 +635,9 @@ void main() {
           recorder.emitLevel(0.5);
           await tester.pump();
 
-          expect((await pixels())!, isNot(orderedEquals(before)));
+          final after = (await pixels())!;
+          expect(after.length, before.length);
+          expect(after, isNot(orderedEquals(before)));
         },
       );
 
