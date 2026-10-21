@@ -50,11 +50,11 @@ typedef DmVideoStoreResolver = DmVideoStore? Function();
 /// Files live in the app's cache directory, which is not backed up and which
 /// the system may clear when storage runs low, under one folder per account.
 /// A file is deleted [maxAge] after it was kept, however often it is opened
-/// since, and past [maxBytes] the oldest go first, videos before frames; a
-/// frame counts as kept when its video was. Everything kept for a message
-/// that is gone (see `isMessageGone`) goes at the next [prune]. An account's
-/// folder goes when the account leaves this device ([deleteOwner],
-/// [sweepOwners]).
+/// since, or once let go if a caller of [videoFor] holds it then, and past
+/// [maxBytes] the oldest go first, videos before frames; a frame counts as
+/// kept when its video was. Everything kept for a message that is gone (see
+/// `isMessageGone`) goes at the next [prune]. An account's folder goes when
+/// the account leaves this device ([deleteOwner], [sweepOwners]).
 ///
 /// The decryption key and nonce are never written anywhere; only the
 /// plaintext video and its frame are, and neither path is logged.
@@ -173,7 +173,8 @@ class DmVideoStore {
   static final Map<String, int> _removals = {};
 
   /// Every store still reachable, so [sweepOwners] leaves alone what any of
-  /// them leased or handed out. Weak, so the list keeps no store alive.
+  /// them leased or holds for a caller. Weak, so the list keeps no store
+  /// alive.
   static final List<WeakReference<DmVideoStore>> _stores = [];
   static const String _logName = 'DmVideoStore';
 
@@ -215,10 +216,14 @@ class DmVideoStore {
   final Map<String, ({Future<File> video, Completer<void> takeover})>
   _autoFetchesRunning = {};
 
-  /// Videos handed to playback or a save. Never deleted for their age or the
-  /// cap while this store lives, so playing or saving one does not find it
-  /// gone; only a gone message's video is deleted after its hand-out.
-  final Set<String> _handedOut = {};
+  /// Videos handed to playback, a save or the clip library, counted until
+  /// each lets go. Never deleted for their age or the cap meanwhile, so
+  /// playing or saving one does not find it gone; a gone message's video is
+  /// deleted even while held.
+  final Map<String, int> _holds = {};
+
+  /// How many callers asked for each video being fetched, by message id.
+  final Map<String, int> _videoCallers = {};
 
   /// Videos about to be handed out or being read for their frame, counted.
   /// Never pruned until released.
@@ -310,20 +315,55 @@ class DmVideoStore {
   /// download already fetching it is taken over, free of its limits; one
   /// still waiting in the queue is not waited for.
   ///
+  /// Each caller holds the video until it lets go with [releaseVideo]:
+  /// meanwhile it is not deleted for its age or the cap, though it still
+  /// goes when its message does.
+  ///
   /// Throws whatever the fetcher throws (see `DmVideoDecryptor.decrypt`) or
   /// a [DmVideoUnavailableException] when the video cannot be stored, naming
   /// the cause but not the file. Nothing is kept on a failure.
   Future<File> videoFor(DmMessage message) {
     final id = message.id;
+    _videoCallers.update(id, (count) => count + 1, ifAbsent: () => 1);
     // removeWhere, not remove: remove hands back this very future, and
     // whenComplete waits for a future its callback returns.
     return _videosInFlight[id] ??= _tapVideoFor(message)
         .then((file) {
-          _handedOut.add(file.path);
+          // Each caller that asked meanwhile holds it until it lets go.
+          final callers = _videoCallers.remove(id) ?? 1;
+          _holds.update(
+            file.path,
+            (count) => count + callers,
+            ifAbsent: () => callers,
+          );
           _release(file);
           return file;
         })
-        .whenComplete(() => _videosInFlight.removeWhere((key, _) => key == id));
+        .whenComplete(() {
+          _videosInFlight.removeWhere((key, _) => key == id);
+          _videoCallers.removeWhere((key, _) => key == id);
+        });
+  }
+
+  /// Lets go of [video], which a call to [videoFor] handed out; each call
+  /// that completed is let go of once. Kept past [maxAge] only because it was
+  /// held, it is deleted as soon as nothing holds it.
+  void releaseVideo(File video) {
+    final count = _holds[video.path];
+    if (count == null) return;
+    if (count > 1) {
+      _holds[video.path] = count - 1;
+      return;
+    }
+    _holds.remove(video.path);
+    // Not left for a prune that may be days away.
+    if (!_isInUse(video) && _isPastMaxAge(video)) _deleteNow(video);
+  }
+
+  bool _isPastMaxAge(File file) {
+    final stat = file.statSync();
+    return stat.type != FileSystemEntityType.notFound &&
+        _now().difference(stat.modified) > maxAge;
   }
 
   Future<File> _tapVideoFor(DmMessage message) async {
@@ -418,14 +458,14 @@ class DmVideoStore {
   /// frames: a frame is what a card shows, and costs little.
   ///
   /// Everything kept for a message that is gone is deleted too, even a video
-  /// played this session: a video retracted by its sender or removed with its
+  /// being played: a video retracted by its sender or removed with its
   /// conversation goes at the next prune or, while a read or a hand-out of it
   /// is under way, once that ends. Sign-out and an account switch prune
   /// before they clear the account's rows; a message that goes while another
   /// account is signed in is found once this one signs in again, or its
   /// files reach [maxAge].
   ///
-  /// A video handed to playback or a save this session, or being read for its
+  /// A video a caller of [videoFor] still holds, or one being read for its
   /// frame, is not deleted for its age or the cap and does not count against
   /// [maxBytes], so in-use videos can keep the folder over it. Part files are
   /// deleted once old enough to be a crash's, or as soon as their message is
@@ -491,12 +531,12 @@ class DmVideoStore {
       if (stat.type == FileSystemEntityType.notFound) continue;
       final age = now.difference(stat.modified);
       final id = _messageIdOf(file);
-      // Even a video played this session goes: its sender took it back, or
-      // the user removed it. Only a read or a hand-out under way holds it,
-      // and its release deletes what is kept for the message; the record and
-      // mark stay with it meanwhile, so a later launch can still tell if the
-      // read never ends. A part file goes however young, as its write is no
-      // longer wanted.
+      // Even a video being played goes: its sender took it back, or the user
+      // removed it. Only a read or a hand-out under way holds it, and its
+      // release deletes what is kept for the message; the record and mark
+      // stay with it meanwhile, so a later launch can still tell if the read
+      // never ends. A part file goes however young, as its write is no longer
+      // wanted.
       if (gone.contains(id)) {
         if (_leases.containsKey(file.path)) {
           _goneWhileLeased.add(file.path);
@@ -602,8 +642,8 @@ class DmVideoStore {
   /// Runs at launch for every account, so an account the user switched away
   /// from does not keep its videos past [maxAge]: its store prunes only
   /// while it is the signed-in one. In a kept account's folder it leaves
-  /// alone what a live store leased or handed out; the folder of an account
-  /// not in [keepOwnerPubkeys] goes whole.
+  /// alone what a live store leased or holds for a caller; the folder of an
+  /// account not in [keepOwnerPubkeys] goes whole.
   static Future<int> sweepOwners(
     Set<String> keepOwnerPubkeys, {
     Future<Directory> Function()? rootDirectory,
@@ -1285,7 +1325,7 @@ class DmVideoStore {
   }
 
   bool _isInUse(File file) =>
-      _handedOut.contains(file.path) || _leases.containsKey(file.path);
+      _holds.containsKey(file.path) || _leases.containsKey(file.path);
 
   static bool _usedDuringSweep(File file) {
     _stores.removeWhere((entry) => entry.target == null);
@@ -1293,7 +1333,7 @@ class DmVideoStore {
       final store = entry.target;
       if (store == null) continue;
       if (store._leases.containsKey(file.path) ||
-          (!store._kept.isClosed && store._handedOut.contains(file.path))) {
+          (!store._kept.isClosed && store._holds.containsKey(file.path))) {
         return true;
       }
       if (_isSatellite(file) || file.path.endsWith(_partSuffix)) {

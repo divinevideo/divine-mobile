@@ -2,6 +2,7 @@
 // ABOUTME: Covers saving the kept video to the gallery, the save outcomes, and
 // ABOUTME: a save with no account signed in.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -44,6 +45,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(_videoMessage());
     registerFallbackValue(EditorVideo.file(''));
+    registerFallbackValue(File(''));
   });
 
   setUp(() {
@@ -142,6 +144,61 @@ void main() {
         errors: () => [isA<DmVideoUnavailableException>()],
         verify: (_) => verifyNever(() => store.videoFor(any())),
       );
+    });
+
+    group('holding the video', () {
+      test(
+        'holds the kept video while it saves and lets go once saved',
+        () async {
+          final saving = Completer<GallerySaveResult>();
+          when(
+            () => gallerySaveService.saveVideoToGallery(
+              any(),
+              copyUnderNeutralName: true,
+            ),
+          ).thenAnswer((_) => saving.future);
+          final cubit = createCubit();
+          addTearDown(cubit.close);
+          final save = cubit.save(_videoMessage());
+          await pumpEventQueue();
+          verifyNever(() => store.releaseVideo(any()));
+
+          saving.complete(const GallerySaveSuccess());
+          await save;
+
+          final released = verify(
+            () => store.releaseVideo(captureAny()),
+          ).captured;
+          expect((released.single as File).path, equals(_keptPath));
+        },
+      );
+
+      test('lets go of the video when the save throws', () async {
+        when(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).thenThrow(const FileSystemException('Cannot copy'));
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+
+        await cubit.save(_videoMessage());
+
+        verify(() => store.releaseVideo(any())).called(1);
+      });
+
+      test('lets go of nothing when there was no video to save', () async {
+        when(
+          () => store.videoFor(any()),
+        ).thenThrow(const DmVideoUnavailableException('hash mismatch'));
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+
+        await cubit.save(_videoMessage());
+
+        verifyNever(() => store.releaseVideo(any()));
+      });
     });
   });
 }

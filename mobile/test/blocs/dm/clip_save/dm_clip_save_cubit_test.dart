@@ -300,6 +300,46 @@ void main() {
         verify: (_) => verifyNever(() => store.videoFor(any())),
       );
 
+      test('holds the video until the library has its copy', () async {
+        stubVerification(ClipProvenanceStatus.verified);
+        final importing = Completer<VideoClipImportResult>();
+        when(
+          () => importService.importReceivedClip(
+            source: any(named: 'source'),
+            messageId: any(named: 'messageId'),
+            senderPubkey: any(named: 'senderPubkey'),
+            c2paManifestId: any(named: 'c2paManifestId'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            contributorPubkeys: any(named: 'contributorPubkeys'),
+          ),
+        ).thenAnswer((_) => importing.future);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        final save = cubit.save(_clipMessage());
+        await pumpEventQueue();
+        verifyNever(() => store.releaseVideo(any()));
+
+        importing.complete(
+          const VideoClipImportFailure(VideoClipImportFailureReason.copyFailed),
+        );
+        await save;
+
+        final released = verify(
+          () => store.releaseVideo(captureAny()),
+        ).captured;
+        expect((released.single as File).path, equals(_decryptedPath));
+      });
+
+      test('lets go of a video the check keeps out', () async {
+        stubVerification(ClipProvenanceStatus.untrustedSigner);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.save(_clipMessage());
+
+        verify(() => store.releaseVideo(any())).called(1);
+      });
+
       test('checks a second video while the first is still checking', () async {
         const secondPath = '/tmp/dm_video_playback/dm_video_clip_1.mp4';
         final second = _clipMessage(id: 'e' * 64);

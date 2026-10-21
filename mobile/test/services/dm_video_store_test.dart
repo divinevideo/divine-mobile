@@ -2439,9 +2439,8 @@ void main() {
         },
       );
 
-      test(
-        'never deletes for its age a video handed to playback this session',
-        () async {
+      group('a video a caller holds', () {
+        test('is kept past its age while held', () async {
           final store = createStore();
           final file = await store.videoFor(_videoMessage());
           file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
@@ -2449,8 +2448,88 @@ void main() {
           await store.prune();
 
           expect(file.existsSync(), isTrue);
-        },
-      );
+        });
+
+        test('is deleted for its age as soon as it is let go', () async {
+          final store = createStore();
+          final file = await store.videoFor(_videoMessage());
+          file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+          await store.prune();
+          expect(file.existsSync(), isTrue);
+
+          store.releaseVideo(file);
+
+          expect(file.existsSync(), isFalse);
+        });
+
+        test(
+          'stays kept for the next play when let go before its age',
+          () async {
+            final store = createStore();
+            final file = await store.videoFor(_videoMessage());
+
+            store.releaseVideo(file);
+            await store.prune();
+
+            expect(file.existsSync(), isTrue);
+          },
+        );
+
+        test(
+          'stays until every caller that asked for it at once lets go',
+          () async {
+            final store = createStore();
+            final message = _videoMessage();
+            final asked = [store.videoFor(message), store.videoFor(message)];
+            final file = (await Future.wait(asked)).first;
+            expect(fetches, equals(1));
+            file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+            store.releaseVideo(file);
+            await store.prune();
+            expect(file.existsSync(), isTrue);
+
+            store.releaseVideo(file);
+            expect(file.existsSync(), isFalse);
+          },
+        );
+
+        test('counts against the cap again once let go', () async {
+          final store = createStore(maxBytes: _plaintext.length - 1);
+          final file = await store.videoFor(_videoMessage());
+          await store.prune();
+          expect(file.existsSync(), isTrue);
+
+          store.releaseVideo(file);
+          await store.prune();
+
+          expect(file.existsSync(), isFalse);
+        });
+
+        test(
+          'stays past its age when let go while its frame is being read',
+          () async {
+            final read = Completer<Uint8List?>();
+            final reading = Completer<void>();
+            readFrame = (_) {
+              reading.complete();
+              return read.future;
+            };
+            final store = createStore();
+            final message = _videoMessage();
+            final file = await store.videoFor(message);
+            final preview = store.previewFor(message);
+            await reading.future;
+            file.setLastModifiedSync(now.subtract(const Duration(days: 31)));
+
+            store.releaseVideo(file);
+
+            expect(file.existsSync(), isTrue);
+            read.complete(_frame);
+            await preview;
+          },
+        );
+      });
 
       test('clears a part file a crash left', () async {
         final crashed = keptFile(
@@ -2546,8 +2625,7 @@ void main() {
       );
 
       test(
-        'never trims a video handed to playback or a save, even the oldest '
-        'kept',
+        'never trims a video a caller holds, even the oldest kept',
         () async {
           final store = createStore(maxBytes: 4);
           final played = await store.videoFor(_videoMessage());
@@ -2668,7 +2746,7 @@ void main() {
         },
       );
 
-      test('handouts suppress expiry only while their store is live', () async {
+      test('holds suppress expiry only while their store is live', () async {
         final store = createStore();
         final video = await store.videoFor(_videoMessage());
         video.setLastModifiedSync(now.subtract(const Duration(days: 31)));

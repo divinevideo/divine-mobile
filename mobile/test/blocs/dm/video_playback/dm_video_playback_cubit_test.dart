@@ -2,6 +2,7 @@
 // ABOUTME: Covers the kept video reaching ready, failures, gallery save, and
 // ABOUTME: that closing leaves the kept video for the next open.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -44,6 +45,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(_videoMessage());
     registerFallbackValue(EditorVideo.file(''));
+    registerFallbackValue(File(''));
   });
 
   setUp(() {
@@ -152,6 +154,49 @@ void main() {
         await cubit.saveToGallery();
 
         expect(cubit.state.saveStatus, DmVideoSaveStatus.permissionDenied);
+      });
+    });
+
+    group('holding its video', () {
+      test('holds the kept video while open and lets go once closed', () async {
+        stubKeptVideo();
+        final cubit = createCubit();
+        await cubit.load();
+        verifyNever(() => store.releaseVideo(any()));
+
+        await cubit.close();
+
+        final released = verify(
+          () => store.releaseVideo(captureAny()),
+        ).captured;
+        expect((released.single as File).path, equals(_keptPath));
+      });
+
+      test('lets go of a video that arrives once it closed', () async {
+        final download = Completer<File>();
+        when(() => store.videoFor(any())).thenAnswer((_) => download.future);
+        final cubit = createCubit();
+        final loading = cubit.load();
+        await cubit.close();
+        verifyNever(() => store.releaseVideo(any()));
+
+        download.complete(File(_keptPath));
+        await loading;
+
+        final released = verify(
+          () => store.releaseVideo(captureAny()),
+        ).captured;
+        expect((released.single as File).path, equals(_keptPath));
+      });
+
+      test('lets go of nothing when no video came', () async {
+        when(() => store.videoFor(any())).thenThrow(Exception('boom'));
+        final cubit = createCubit();
+        await cubit.load();
+
+        await cubit.close();
+
+        verifyNever(() => store.releaseVideo(any()));
       });
     });
 

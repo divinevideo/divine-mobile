@@ -70,8 +70,8 @@ class DmClipSaveState extends Equatable {
 /// A clip is only added when [ClipProvenanceVerifier] confirms it is a
 /// Divine camera capture or a signed edit of captures, so a clip library
 /// never holds footage whose origin is unknown or generated. The video comes
-/// from the [DmVideoStore] of the account signed in when the save starts; the
-/// library keeps its own copy.
+/// from the [DmVideoStore] of the account signed in when the save starts,
+/// held until the library has its own copy.
 class DmClipSaveCubit extends Cubit<DmClipSaveState>
     with CloseGuardedEmit<DmClipSaveState> {
   /// Creates a [DmClipSaveCubit].
@@ -128,23 +128,27 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
       if (store == null) {
         throw const DmVideoUnavailableException('no account is signed in');
       }
-      final path = (await store.videoFor(message)).path;
+      final video = await store.videoFor(message);
+      final VideoClipImportResult result;
+      try {
+        final provenance = await _verifier.verify(video.path);
+        if (!provenance.isVerified) {
+          return provenance.isRejected
+              ? DmClipSaveStatus.notVerified
+              : DmClipSaveStatus.checkUnavailable;
+        }
 
-      final provenance = await _verifier.verify(path);
-      if (!provenance.isVerified) {
-        return provenance.isRejected
-            ? DmClipSaveStatus.notVerified
-            : DmClipSaveStatus.checkUnavailable;
+        result = await importClip(
+          source: video,
+          messageId: message.id,
+          senderPubkey: message.senderPubkey,
+          c2paManifestId: provenance.activeManifestId!,
+          targetAspectRatio: message.clipTargetAspectRatio,
+          contributorPubkeys: provenance.contributors,
+        );
+      } finally {
+        store.releaseVideo(video);
       }
-
-      final result = await importClip(
-        source: File(path),
-        messageId: message.id,
-        senderPubkey: message.senderPubkey,
-        c2paManifestId: provenance.activeManifestId!,
-        targetAspectRatio: message.clipTargetAspectRatio,
-        contributorPubkeys: provenance.contributors,
-      );
       switch (result) {
         case VideoClipImportSuccess():
           return DmClipSaveStatus.saved;

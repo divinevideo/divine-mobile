@@ -1,6 +1,8 @@
 // ABOUTME: Cubit for playing and saving a received encrypted video DM.
 // ABOUTME: Plays the video kept on the device, downloading it the first time.
 
+import 'dart:io';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
@@ -69,7 +71,9 @@ class DmVideoPlaybackState extends Equatable {
 ///
 /// The video comes from the account's [DmVideoStore], which downloads and
 /// decrypts it the first time and keeps it after that, so closing the page
-/// leaves it for the next open and for the conversation card's frame.
+/// leaves it for the next open and for the conversation card's frame. The
+/// cubit holds it while open and lets go when closed, so the store can then
+/// delete it for its age.
 class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
     with CloseGuardedEmit<DmVideoPlaybackState> {
   /// Creates a [DmVideoPlaybackCubit] for [message].
@@ -91,6 +95,9 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
   final DmVideoStore? _store;
   final GallerySaveService _gallerySaveService;
 
+  /// The kept video this page plays: a store hold to let go of, not UI state.
+  File? _heldVideo;
+
   /// Platform-aware name of the gallery destination, for user-facing save
   /// copy. Exposed here so the view reaches no service directly.
   String get galleryDestinationName => GallerySaveService.destinationName;
@@ -103,6 +110,13 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
         throw const DmVideoUnavailableException('no account is signed in');
       }
       final video = await store.videoFor(_message);
+      // Closed while it downloaded: nothing will play it.
+      if (isClosed) {
+        store.releaseVideo(video);
+        return;
+      }
+      _letGoOfVideo();
+      _heldVideo = video;
       emitIfOpen(
         DmVideoPlaybackState(
           status: DmVideoPlaybackStatus.ready,
@@ -145,6 +159,18 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
         GallerySaveFailure() => DmVideoSaveStatus.failed,
       }),
     );
+  }
+
+  @override
+  Future<void> close() {
+    _letGoOfVideo();
+    return super.close();
+  }
+
+  void _letGoOfVideo() {
+    final video = _heldVideo;
+    _heldVideo = null;
+    if (video != null) _store?.releaseVideo(video);
   }
 
   DmVideoPlaybackState _withSaveStatus(DmVideoSaveStatus saveStatus) =>

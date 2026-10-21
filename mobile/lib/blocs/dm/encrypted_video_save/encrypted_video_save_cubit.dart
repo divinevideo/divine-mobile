@@ -31,6 +31,7 @@ class EncryptedVideoSaveState extends Equatable {
 ///
 /// The video comes from the [DmVideoStore] of the account signed in when the
 /// save starts, which downloads and decrypts it the first time and keeps it.
+/// The save holds it until the gallery has its copy.
 class EncryptedVideoSaveCubit extends Cubit<EncryptedVideoSaveState>
     with CloseGuardedEmit<EncryptedVideoSaveState> {
   /// Creates an [EncryptedVideoSaveCubit].
@@ -56,11 +57,16 @@ class EncryptedVideoSaveCubit extends Cubit<EncryptedVideoSaveState>
         throw const DmVideoUnavailableException('no account is signed in');
       }
       final video = await store.videoFor(message);
-      final result = await _gallerySaveService.saveVideoToGallery(
-        EditorVideo.file(video.path),
-        // The kept file is named after its message.
-        copyUnderNeutralName: true,
-      );
+      final GallerySaveResult result;
+      try {
+        result = await _gallerySaveService.saveVideoToGallery(
+          EditorVideo.file(video.path),
+          // The kept file is named after its message.
+          copyUnderNeutralName: true,
+        );
+      } finally {
+        store.releaseVideo(video);
+      }
       emitIfOpen(
         EncryptedVideoSaveState(
           status: switch (result) {
