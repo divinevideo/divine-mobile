@@ -109,13 +109,24 @@ void main() {
       expect(client.requestedPubkeys, isEmpty);
     });
 
+    // Settings and the account's own profile keep the status alive, so it has
+    // to follow the override in both directions without a fresh first build.
     test('clearing the developer override asks Funnelcake again', () async {
       final authService = _MockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyA);
       when(() => authService.canPublishNostrWritesNow).thenReturn(true);
-      final client = _QueueStatusClient([FunnelcakeAccountStatus.active]);
+      final client = _QueueStatusClient([
+        FunnelcakeAccountStatus.active,
+        FunnelcakeAccountStatus.active,
+      ]);
       final container = _container(authService: authService, client: client);
       addTearDown(container.dispose);
+      final subscription = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await container.read(accountEnforcementStatusProvider.future);
       final override = container.read(
         accountEnforcementDevOverrideProvider.notifier,
       );
@@ -123,13 +134,17 @@ void main() {
       override.simulate(
         const AccountEnforcementStatus(kind: AccountEnforcementKind.banned),
       );
+      final simulated = await container.read(
+        accountEnforcementStatusProvider.future,
+      );
       override.clear();
-      final result = await container.read(
+      final cleared = await container.read(
         accountEnforcementStatusProvider.future,
       );
 
-      expect(result.kind, AccountEnforcementKind.noRestrictionReported);
-      expect(client.requestedPubkeys, [_pubkeyA]);
+      expect(simulated.kind, AccountEnforcementKind.banned);
+      expect(cleared.kind, AccountEnforcementKind.noRestrictionReported);
+      expect(client.requestedPubkeys, [_pubkeyA, _pubkeyA]);
     });
 
     test('signed out resolves without a request', () async {
