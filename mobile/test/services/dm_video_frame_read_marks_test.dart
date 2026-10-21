@@ -149,6 +149,24 @@ void main() {
         },
       );
 
+      test(
+        'skips the sender for the rest of the session, even once the read '
+        'ends',
+        () {
+          final marks = createMarks(launchId: 'earlier');
+          final mark = markOf('1');
+          marks
+            ..readStarted(mark, _sender)
+            ..readHung(mark);
+          expect(marks.senderHungTheDecoder(dir, _sender), isTrue);
+
+          marks.readEnded(mark);
+
+          expect(marks.senderHungTheDecoder(dir, _sender), isTrue);
+          expect(laterLaunchBlamesTheSender(), isFalse);
+        },
+      );
+
       test('does nothing once the read ended', () {
         final marks = createMarks(launchId: 'earlier');
         final mark = markOf('1');

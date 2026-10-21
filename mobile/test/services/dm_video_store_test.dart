@@ -1054,7 +1054,8 @@ void main() {
           final firstDecode = Completer<Uint8List?>();
           final secondReadStarted = Completer<void>();
           final first = _videoMessage(id: '1' * 64);
-          final second = _videoMessage(id: '2' * 64);
+          // Another sender's: the first one's are skipped once it hangs.
+          final second = _videoMessage(id: '2' * 64, senderPubkey: '9' * 64);
           readFrame = (video) {
             if (video.path.contains(first.id)) return firstDecode.future;
             secondReadStarted.complete();
@@ -1097,6 +1098,39 @@ void main() {
           await pumpEventQueue();
           await store.prune();
           expect(firstVideo.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'neither fetches nor reads by itself, for the rest of the session, '
+        'the videos of a sender one of whose decodes ran past the turn limit',
+        () async {
+          final hung = _videoMessage(id: '1' * 64);
+          final nextStarted = Completer<void>();
+          readFrame = (video) {
+            if (video.path.contains(hung.id)) {
+              return Completer<Uint8List?>().future;
+            }
+            nextStarted.complete();
+            return Future.value(_frame);
+          };
+          final store = createStore(
+            frameTurnLimit: const Duration(milliseconds: 1),
+            frameDeadline: const Duration(milliseconds: 1),
+          );
+          expect(await store.previewFor(hung), isNull);
+          // The next read starts only once the hung one used up its turn.
+          final next = store.previewFor(
+            _videoMessage(id: '2' * 64, senderPubkey: '9' * 64),
+          );
+          await nextStarted.future.timeout(const Duration(seconds: 5));
+          await next;
+
+          final preview = await store.previewFor(_videoMessage(id: '3' * 64));
+
+          expect(preview, isNull);
+          expect(fetches, equals(2));
+          expect(frameReads, equals(2));
         },
       );
 
