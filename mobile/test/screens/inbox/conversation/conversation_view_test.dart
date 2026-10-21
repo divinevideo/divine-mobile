@@ -5385,6 +5385,59 @@ void main() {
           expect(find.text(l10n.dmVideoCardHiddenSenderMuted), findsOneWidget);
         });
       });
+
+      group('group', () {
+        const memberPubkey =
+            '5566778855667788556677885566778855667788556677885566778855667788';
+        const members = [otherPubkey, memberPubkey];
+
+        testWidgets('holds back a member the user does not follow, though '
+            'the user posted there', (tester) async {
+          final video = videoFrom(memberPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: members,
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              memberPubkey: FollowRelationship.none,
+            },
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
+        });
+
+        testWidgets('loads a member the user follows', (tester) async {
+          final video = videoFrom(memberPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            members: members,
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              memberPubkey: FollowRelationship.youFollow,
+            },
+          );
+
+          expectLoaded(video);
+        });
+
+        testWidgets("loads the user's own video", (tester) async {
+          final video = videoFrom(currentPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            members: members,
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              memberPubkey: FollowRelationship.none,
+            },
+          );
+
+          expectLoaded(video);
+        });
+      });
     });
   });
 }

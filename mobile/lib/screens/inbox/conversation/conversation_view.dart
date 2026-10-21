@@ -1842,8 +1842,9 @@ class _MessageList extends StatelessWidget {
       );
     }
 
-    // Once the user has posted here the thread is not a request, so its
-    // videos download as soon as they show.
+    // Once the user has posted in a 1:1 chat it is not a request, so its
+    // videos download as soon as they show. Posting in a group does not vouch
+    // for members the user does not know: only the ones they follow load.
     final hasOwnMessage = messages.any(
       (message) => message.senderPubkey == currentPubkey,
     );
@@ -2033,7 +2034,7 @@ class _MessageList extends StatelessWidget {
           final bubble = message.fileMetadata?.isVideo == true
               ? DmVideoPreviewScope(
                   message: message,
-                  accepted: isSent || hasOwnMessage,
+                  accepted: isSent || (!isGroup && hasOwnMessage),
                   blocked:
                       blockedPubkeys.contains(message.senderPubkey) &&
                       !mutedPubkeys.contains(message.senderPubkey),
