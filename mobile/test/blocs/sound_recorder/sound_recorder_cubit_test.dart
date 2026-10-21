@@ -34,15 +34,23 @@ class _FakeRecorder implements VoiceOverRecorderService {
   final _levels = StreamController<double>.broadcast();
   bool throwOnStart = false;
   bool throwOnStop = false;
+  int startCount = 0;
+  int stopCount = 0;
   String? path;
   DateTime now = DateTime(2026);
+
+  /// When set, [start] waits for it before the native file appears, as the
+  /// real recorder does while it opens the microphone.
+  Completer<void>? startGate;
 
   @override
   Stream<double> get amplitudeStream => _levels.stream;
 
   @override
   Future<void> start(String path) async {
+    startCount++;
     this.path = path;
+    await startGate?.future;
     // The native recorder creates its output file as it starts.
     File(path).writeAsBytesSync([1, 2, 3]);
     if (throwOnStart) throw VoiceOverRecorderException('mic unavailable');
@@ -50,6 +58,7 @@ class _FakeRecorder implements VoiceOverRecorderService {
 
   @override
   Future<String?> stop() async {
+    stopCount++;
     if (throwOnStop) throw VoiceOverRecorderException('stop failed');
     return path;
   }
@@ -159,6 +168,23 @@ void main() {
         },
       );
 
+      test('a second tap while the first is starting is ignored', () async {
+        final permission = Completer<PermissionStatus>();
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) => permission.future);
+        final cubit = build();
+
+        final first = cubit.start();
+        final second = cubit.start();
+        permission.complete(PermissionStatus.granted);
+        await Future.wait([first, second]);
+
+        verify(permissions.checkMicrophoneStatus).called(1);
+        expect(recorder.startCount, 1);
+        expect(cubit.state.status, SoundRecorderStatus.recording);
+      });
+
       test('the next recording deletes an unclaimed one', () async {
         final cubit = build();
         await cubit.start();
@@ -237,6 +263,20 @@ void main() {
         expect(audioSession.resetCount, 1);
       });
 
+      test('a recorder that fails to stop deletes the take', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        recorder.throwOnStop = true;
+
+        await cubit.stop();
+
+        expect(cubit.state.status, SoundRecorderStatus.failed);
+        expect(cubit.state.recordingPath, isNull);
+        expect(File(recorder.path!).existsSync(), isFalse);
+        expect(audioSession.resetCount, 1);
+      });
+
       test('discards a recording stopped before its first level', () async {
         final cubit = build();
         await cubit.start();
@@ -269,6 +309,7 @@ void main() {
         expect(cubit.state.status, SoundRecorderStatus.idle);
         expect(cubit.state.recordingPath, isNull);
         expect(File(recorder.path!).existsSync(), isFalse);
+        expect(audioSession.resetCount, 1);
       });
     });
 
@@ -283,6 +324,38 @@ void main() {
         await cubit.close();
 
         expect(unclaimed.existsSync(), isFalse);
+      });
+
+      // An account switch rebuilds the screen's providers mid-recording, and
+      // a route redirect disposes it; close() is the only stop either gets.
+      test(
+        'while recording stops the microphone and deletes the take',
+        () async {
+          final cubit = build();
+          await cubit.start();
+          await recorder.emitLevel(0.5);
+
+          await cubit.close();
+
+          expect(recorder.stopCount, 1);
+          expect(audioSession.resetCount, 1);
+          expect(File(recorder.path!).existsSync(), isFalse);
+        },
+      );
+
+      test('while the recorder starts deletes the file it creates', () async {
+        recorder.startGate = Completer<void>();
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+        expect(recorder.startCount, 1);
+
+        await cubit.close();
+        recorder.startGate!.complete();
+        await starting;
+
+        expect(recorder.stopCount, 1);
+        expect(File(recorder.path!).existsSync(), isFalse);
       });
     });
 

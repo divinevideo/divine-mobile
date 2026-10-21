@@ -317,6 +317,42 @@ void main() {
         expect(cubit.state.source, AddSoundSource.file);
         expect(reclaimed, isEmpty);
       });
+
+      test('is ignored while a save is in flight', () async {
+        final saving = Completer<SavedSoundSaveResult>();
+        final cubit = build(
+          saveSound: (audio, {String? personalLabel}) => saving.future,
+        );
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final picked = cubit.state.audio!;
+        final save = cubit.save();
+        expect(cubit.state.status, AddSoundStatus.saving);
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+        saving.complete(SavedSoundSaveResult.saved);
+        await save;
+
+        // The recorder still owns the file and deletes it itself.
+        expect(recording.existsSync(), isTrue);
+        expect(cubit.state.audio, same(picked));
+        expect(cubit.state.source, AddSoundSource.file);
+      });
+
+      test('is ignored once the sound was shared', () async {
+        stubPublish(() async => LocalAudioPublished(_publishedEvent()));
+        final cubit = await sharingCubit();
+        addTearDown(cubit.close);
+        await cubit.save();
+        expect(cubit.state.isPublished, isTrue);
+        final shared = cubit.state.audio!;
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+
+        expect(recording.existsSync(), isTrue);
+        expect(cubit.state.audio, same(shared));
+        expect(cubit.state.status, AddSoundStatus.saved);
+      });
     });
 
     group('updateAttribution', () {

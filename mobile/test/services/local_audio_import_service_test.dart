@@ -4,6 +4,47 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:path/path.dart' as p;
 
+/// Real `dart:io` files, created outside any [IOOverrides] zone.
+final _realFiles = _PlainIOOverrides();
+
+final class _PlainIOOverrides extends IOOverrides {}
+
+/// A file whose rename fails the way it does across file systems (EXDEV),
+/// which is the only way to reach the import's copy-then-delete fallback.
+class _CrossDeviceFile implements File {
+  _CrossDeviceFile(this._file);
+
+  final File _file;
+  int renameCalls = 0;
+
+  @override
+  String get path => _file.path;
+
+  @override
+  bool existsSync() => _file.existsSync();
+
+  @override
+  Future<File> rename(String newPath) async {
+    renameCalls++;
+    throw FileSystemException(
+      'Cannot rename file',
+      _file.path,
+      const OSError('Cross-device link', 18),
+    );
+  }
+
+  @override
+  Future<File> copy(String newPath) => _file.copy(newPath);
+
+  @override
+  Future<FileSystemEntity> delete({bool recursive = false}) =>
+      _file.delete(recursive: recursive);
+
+  @override
+  Object? noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('$invocation');
+}
+
 void main() {
   group(LocalAudioImportService, () {
     late Directory tempDir;
@@ -190,6 +231,40 @@ void main() {
             equals([5, 6, 7]),
           );
           // The scratch recording is consumed, not copied.
+          expect(recording.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'falls back to copy and delete when the rename crosses file systems',
+        () async {
+          final recording = File('${sourceDir.path}/recording_3.m4a')
+            ..writeAsBytesSync([8, 9]);
+          final service = LocalAudioImportService(
+            storageRootProvider: () async => storageDir,
+            durationResolver: (_) async => const Duration(seconds: 1),
+          );
+          final opened = <_CrossDeviceFile>[];
+
+          final event = await IOOverrides.runZoned(
+            () => service.importRecording(
+              recordingPath: recording.path,
+              title: 'Recording',
+            ),
+            createFile: (path) {
+              final file = _CrossDeviceFile(_realFiles.createFile(path));
+              opened.add(file);
+              return file;
+            },
+          );
+
+          final source = opened.firstWhere((f) => f.path == recording.path);
+          expect(source.renameCalls, 1);
+          expect(p.dirname(event.localFilePath!), equals(storageDir.path));
+          expect(
+            await File(event.localFilePath!).readAsBytes(),
+            equals([8, 9]),
+          );
           expect(recording.existsSync(), isFalse);
         },
       );
