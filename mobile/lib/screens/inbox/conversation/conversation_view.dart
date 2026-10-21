@@ -279,9 +279,13 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     final blockedReactors = blocklistRepository.dmHiddenPubkeys;
     // Of those, the ones muted rather than blocked: a video card says which
     // of the two holds its preview back.
+    final blockedSenders = {
+      for (final pubkey in blockedReactors)
+        if (blocklistRepository.isBlocked(pubkey)) pubkey.toLowerCase(),
+    };
     final mutedSenders = {
       for (final pubkey in blockedReactors)
-        if (!blocklistRepository.isBlocked(pubkey)) pubkey,
+        if (!blockedSenders.contains(pubkey.toLowerCase())) pubkey,
     };
 
     final otherPubkey = _otherPubkey;

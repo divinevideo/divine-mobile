@@ -5417,6 +5417,34 @@ void main() {
           verify(() => store.videoFor(video)).called(1);
         });
 
+        testWidgets('a mixed-case mute entry does not override a block hint', (
+          tester,
+        ) async {
+          final sender = 'ab' * 32;
+          when(() => mockBlocklist.dmHiddenPubkeys).thenReturn({
+            sender,
+            sender.toUpperCase(),
+          });
+          when(() => mockBlocklist.isBlocked(sender)).thenReturn(true);
+          when(
+            () => mockBlocklist.isBlocked(sender.toUpperCase()),
+          ).thenReturn(false);
+          final video = videoFrom(sender);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {sender: FollowRelationship.none},
+            members: [sender],
+          );
+
+          expectHeldBack(video);
+          expect(
+            find.text(l10n.dmVideoCardHiddenSenderBlocked),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.dmVideoCardHiddenSenderMuted), findsNothing);
+        });
+
         testWidgets("holds back a muted sender's video, though the user "
             'follows them and posted there', (tester) async {
           when(
