@@ -3698,6 +3698,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get dmClipBadge => 'کلپ';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking => 'تصدیق کی جا رہی ہے کہ یہ کلپ Divine سے بنی ہے…';
 
   @override

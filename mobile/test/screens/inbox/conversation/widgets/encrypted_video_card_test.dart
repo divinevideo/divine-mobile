@@ -238,6 +238,76 @@ void main() {
 
       expect(find.text(strings.dmClipBadge), findsNothing);
     });
+
+    group('held back', () {
+      const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
+
+      testWidgets("keeps a request's blurhash, shows no frame and asks for a "
+          'tap', (tester) async {
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              framePath: framePath,
+              hold: DmVideoHold.request,
+            ),
+          ),
+        );
+
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        expect(_keptFrame(framePath), findsNothing);
+        expect(find.text(strings.dmVideoCardTapToLoad), findsOneWidget);
+      });
+
+      for (final (hold, hint) in [
+        (DmVideoHold.blocked, strings.dmVideoCardHiddenSenderBlocked),
+        (DmVideoHold.muted, strings.dmVideoCardHiddenSenderMuted),
+      ]) {
+        testWidgets("hides a ${hold.name} sender's preview and says why", (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: framePath,
+                hold: hold,
+              ),
+            ),
+          );
+
+          expect(find.byType(BlurhashDisplay), findsNothing);
+          expect(_keptFrame(framePath), findsNothing);
+          expect(find.text(hint), findsOneWidget);
+        });
+      }
+
+      testWidgets('tells screen readers why there is no preview', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              hold: DmVideoHold.blocked,
+              onTap: () {},
+            ),
+          ),
+        );
+
+        final card = tester.getSemantics(
+          find.bySemanticsLabel(
+            RegExp(RegExp.escape(strings.videoPlayerPlayVideo)),
+          ),
+        );
+        expect(card.hint, strings.dmVideoCardHiddenSenderBlocked);
+        semantics.dispose();
+      });
+    });
   });
 
   group('MessageBubble encrypted video branch', () {
@@ -352,6 +422,24 @@ void main() {
         findsOneWidget,
       );
       semantics.dispose();
+    });
+
+    testWidgets('passes why a preview is held back to its card', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(
+          MessageBubble(
+            message: _videoMessage().content,
+            timestamp: '2:30 PM',
+            isSent: false,
+            fileMetadata: _videoMetadata(),
+            encryptedVideoHold: DmVideoHold.request,
+          ),
+        ),
+      );
+
+      expect(find.text(strings.dmVideoCardTapToLoad), findsOneWidget);
     });
 
     testWidgets('forwards a card tap to onOpenEncryptedVideo', (tester) async {
