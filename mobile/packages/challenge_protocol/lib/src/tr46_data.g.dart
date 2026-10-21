@@ -1,6 +1,8 @@
 // Generated from tr46 6.0.0 / Unicode 17.0.0. See third_party/tr46/SOURCE.md.
 // Copyright tr46 contributors. MIT license in third_party/tr46/LICENSE.md.
 
+// ignore_for_file: type=lint
+
 /// Inclusive Unicode ranges, UTS46 status and mapping.
 const tr46Mapping = <(int, int, int, String)>[
   (0, 44, 2, ""),
