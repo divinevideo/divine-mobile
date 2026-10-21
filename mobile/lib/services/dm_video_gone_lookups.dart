@@ -36,8 +36,10 @@ class DmVideoGoneLookups {
   final Future<DmVideoMessageLocation?> Function(String messageId)?
   _findMessageLocation;
 
-  /// Messages found gone, which stay gone once the rows that said so are
-  /// cleared, as an account switch clears them.
+  /// Messages a retraction or their row showed gone, which stay gone once
+  /// the rows that said so are cleared, as an account switch clears them.
+  /// What a record or a caller's copy says is not kept: either can predate a
+  /// repair.
   final Set<String> _known = {};
 
   /// Whether [message], kept in [dir], was retracted or removed with its
@@ -102,6 +104,7 @@ class DmVideoGoneLookups {
       try {
         if (_known.contains(id) || isGone != null && await isGone(id)) {
           gone.add(id);
+          _known.add(id);
           continue;
         }
         if (isRemoved == null) continue;
@@ -109,6 +112,7 @@ class DmVideoGoneLookups {
         if (current != null) {
           if (await isRemoved(current.conversationId, current.sentAt)) {
             gone.add(id);
+            _known.add(id);
           } else if (!inFlight.contains(id)) {
             // A group repair may have moved this message since it was kept.
             await _records.refresh(
@@ -138,7 +142,6 @@ class DmVideoGoneLookups {
         );
       }
     }
-    _known.addAll(gone);
     return (gone: gone, decided: decided);
   }
 }

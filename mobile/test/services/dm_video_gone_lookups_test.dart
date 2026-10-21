@@ -291,6 +291,54 @@ void main() {
         },
       );
 
+      test(
+        'remembers no verdict it drew from a record, which can predate a '
+        'repair',
+        () async {
+          final id = '1' * 64;
+          DmVideoMessageLocation? row;
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                conversationId == 'removed',
+            findMessageLocation: (_) async => row,
+          );
+          final (:gone, decided: _) = await lookups.goneAmong(
+            {id},
+            dir,
+            {
+              id: recordOf(id, 'removed'),
+            },
+          );
+          expect(gone, equals({id}));
+
+          // Back, in a conversation nobody removed.
+          row = (conversationId: 'room', sentAt: _sentAt);
+
+          expect(await lookups.isGone(_videoMessage(id: id), dir), isFalse);
+        },
+      );
+
+      test(
+        'remembers a removal a row decided, once the rows are cleared',
+        () async {
+          final id = '1' * 64;
+          var cleared = false;
+          final lookups = DmVideoGoneLookups(
+            records: records,
+            isConversationRemoved: (conversationId, _) async =>
+                !cleared && conversationId == 'removed',
+            findMessageLocation: (_) async =>
+                cleared ? null : (conversationId: 'removed', sentAt: _sentAt),
+          );
+          await lookups.goneAmong({id}, dir, {});
+
+          cleared = true;
+
+          expect(await lookups.isGone(_videoMessage(id: id), dir), isTrue);
+        },
+      );
+
       test('rewrites the record of a message a repair moved', () async {
         final id = '1' * 64;
         final record = recordOf(id, 'old-room');
