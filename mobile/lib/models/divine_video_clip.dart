@@ -1086,7 +1086,7 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
-      derivedFrom: _derivedFromFromJson(
+      derivedFrom: C2paEditSource.listFromJson(
         json['derivedFrom'],
         documentsPath,
         useOriginalPath: useOriginalPath,
@@ -1198,40 +1198,6 @@ class DivineVideoClip {
       Log.error(
         'Dropping unparseable placeholder fill; the rendered still is '
         'unaffected',
-        name: 'DivineVideoClip',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return null;
-    }
-  }
-
-  /// Parses the persisted [derivedFrom] sources, degrading to `null` when any
-  /// entry can't be read. Same rationale as [_transitionFromJson]: one
-  /// unreadable field must not abort a whole draft load.
-  ///
-  /// The whole list is dropped, never just the bad entry: a partial list would
-  /// sign an edit against part of its history. `null` makes the clip's own
-  /// file the source, and an editor render has no manifest, so an edit of it
-  /// stays unsigned.
-  static List<C2paEditSource>? _derivedFromFromJson(
-    Object? raw,
-    String documentsPath, {
-    required bool useOriginalPath,
-  }) {
-    if (raw is! List) return null;
-    try {
-      return [
-        for (final source in raw.cast<Map<String, dynamic>>())
-          C2paEditSource.fromJson(
-            source,
-            documentsPath,
-            useOriginalPath: useOriginalPath,
-          ),
-      ];
-    } catch (error, stackTrace) {
-      Log.error(
-        'Dropping unparseable derivedFrom sources; the clip is its own source',
         name: 'DivineVideoClip',
         error: error,
         stackTrace: stackTrace,
