@@ -133,13 +133,19 @@ Future<void> main(List<String> args) async {
     }
     _log({'event': 'client-connected'});
 
-    // Set when the relay leg ends and the proxy closes the client. From then
-    // on client.add throws, while client.closeCode stays null until the
-    // client answers the close, so closeCode alone cannot tell.
+    // Set when the relay leg ends so client->relay frames stop. The client
+    // close is scheduled after the relay->client queue drains, so the last
+    // OK/CLOSED/NOTICE the relay sent before disconnecting is not dropped.
+    var queue = Future<void>.value();
     var relayEnded = false;
+    var clientClosed = false;
     void endRelay() {
+      if (relayEnded) return;
       relayEnded = true;
-      client.close();
+      queue = queue.then((_) {
+        clientClosed = true;
+        client.close();
+      });
     }
 
     client.listen(
@@ -182,7 +188,6 @@ Future<void> main(List<String> args) async {
     );
 
     // Relay-to-client frames go through one queue so delays keep their order.
-    var queue = Future<void>.value();
     relay.listen(
       (data) {
         queue = queue.then((_) async {
@@ -199,7 +204,7 @@ Future<void> main(List<String> args) async {
               await Future<void>.delayed(Duration(milliseconds: hold));
               action = 'delayed ${hold}ms';
             }
-            if (relayEnded || client.closeCode != null) {
+            if (clientClosed || client.closeCode != null) {
               action = 'dropped: client closed';
             } else {
               client.add(data);
