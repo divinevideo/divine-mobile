@@ -839,6 +839,40 @@ void main() {
         return repository;
       }
 
+      Future<SupporterRepository> expiredCachedMembership(
+        SupporterServerStatus status,
+      ) async {
+        final prefs = await SharedPreferences.getInstance();
+        const key = 'divine_supporter_entitlement:$testUserHex';
+        final previous = prefs.getString(key);
+        addTearDown(() async {
+          if (previous == null) {
+            await prefs.remove(key);
+          } else {
+            await prefs.setString(key, previous);
+          }
+        });
+        await prefs.setString(
+          key,
+          jsonEncode({
+            ...SupporterEntitlement(
+              productId: 'divine.supporter.monthly',
+              source: EntitlementSource.server,
+              expirationDate: DateTime.utc(2000),
+            ).toJson(),
+            'status': status.name,
+            'recognition': {'haloVisible': true},
+          }),
+        );
+        final repository = SupporterRepository(
+          pubkey: testUserHex,
+          validator: StubEntitlementValidator(),
+          prefs: prefs,
+        );
+        addTearDown(repository.dispose);
+        return repository;
+      }
+
       Future<void> pumpHeader(
         WidgetTester tester, {
         required bool isOwnProfile,
@@ -880,6 +914,38 @@ void main() {
       }
 
       group('renders', () {
+        for (final confirmedExpired in [false, true]) {
+          testWidgets(
+            '${confirmedExpired ? 'keeps server-confirmed expiry' : 'uses public recognition after local cache expiry'} '
+            'on your own profile',
+            (tester) async {
+              final status = confirmedExpired
+                  ? SupporterServerStatus.expired
+                  : SupporterServerStatus.active;
+              final repository = await expiredCachedMembership(status);
+              expect(repository.isSupporter, isFalse);
+              expect(repository.snapshot?.status, status);
+              expect(repository.snapshot?.haloVisible, isTrue);
+
+              await pumpHeader(
+                tester,
+                isOwnProfile: true,
+                isPublicSupporter: true,
+                ownMembership: repository,
+              );
+
+              expect(
+                find.byType(SupporterHaloWings),
+                confirmedExpired ? findsNothing : findsOneWidget,
+              );
+              expect(
+                find.byType(ActionChip),
+                confirmedExpired ? findsOneWidget : findsNothing,
+              );
+            },
+          );
+        }
+
         testWidgets('labels the supporter avatar with the standalone title', (
           tester,
         ) async {

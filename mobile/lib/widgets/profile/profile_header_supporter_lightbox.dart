@@ -606,11 +606,14 @@ bool _showsSupporterTreatment(
 }
 
 /// The owner's published supporter status, or null until their account has
-/// been read.
+/// been read or when only the device clock has expired a cached membership.
 bool? _ownPublicRecognition(BuildContext context) {
   return context.select<SupporterCubit?, bool?>((cubit) {
     final state = cubit?.state;
     if (state == null || state.snapshot == null) return null;
+    // A cached renewal date is not evidence that the server ended support.
+    // Use the public answer until an inactive result is server-confirmed.
+    if (!state.isSupporter && !state.isConfirmedInactive) return null;
     return state.isSupporter && state.haloVisible;
   });
 }
