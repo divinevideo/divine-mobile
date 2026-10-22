@@ -375,7 +375,9 @@ class DivineVideoClip {
 
   /// This clip with the bake of its recorded key, [keyed], swapped in: the
   /// keyed file, the key, the raw take as its source, and the keyed poster.
-  /// Everything else on this copy, such as trims or edits, stays.
+  /// Everything else on this copy, such as trims or edits, stays, except a
+  /// boomerang record: the key is baked onto the bounced footage, and turning
+  /// the boomerang off would put the unkeyed take back.
   DivineVideoClip withCapturedChromaKeyBake(DivineVideoClip keyed) => copyWith(
     video: keyed.video,
     chromaKey: keyed.chromaKey,
@@ -383,6 +385,7 @@ class DivineVideoClip {
     clearCaptureChromaKey: true,
     clearForwardVideoPath: true,
     clearReversedVideoPath: true,
+    clearBoomerang: true,
     derivedFrom: keyed.derivedFrom,
     thumbnailPath: keyed.thumbnailPath,
     thumbnailTimestamp: keyed.thumbnailTimestamp,

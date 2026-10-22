@@ -589,6 +589,30 @@ void main() {
       expect(baked.hasPendingCaptureChromaKey, isFalse);
     });
 
+    test('baking it drops a boomerang record', () {
+      // The key lands on the bounced footage; turning the boomerang off would
+      // put the raw take back, unkeyed.
+      final bounced = clip('/videos/clip_boomerang.mp4').copyWith(
+        captureChromaKey: key,
+        boomerang: const ClipBoomerang(
+          sourcePath: '/videos/clip.mp4',
+          sourceDuration: Duration(seconds: 3),
+        ),
+      );
+      final keyed = bounced.copyWith(
+        video: editor.EditorVideo.file('/videos/clip_keyed.mp4'),
+        chromaKey: key,
+        chromaKeySourcePath: '/videos/clip_boomerang.mp4',
+        clearCaptureChromaKey: true,
+      );
+
+      final baked = bounced.withCapturedChromaKeyBake(keyed);
+
+      expect(baked.video?.file?.path, '/videos/clip_keyed.mp4');
+      expect(baked.chromaKey, key);
+      expect(baked.boomerang, isNull);
+    });
+
     test('owns its backdrop image', () {
       final recorded = clip('/videos/clip.mp4').copyWith(captureChromaKey: key);
 
