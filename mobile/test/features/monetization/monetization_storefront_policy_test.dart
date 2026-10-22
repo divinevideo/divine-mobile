@@ -32,6 +32,21 @@ void main() {
   });
 
   group('monetizationLinksForCurrentStorefront', () {
+    test('uses the provider category rather than profile-supplied labels', () {
+      debugUsesAppleAppStoreTipPolicyOverride = true;
+
+      final visible = monetizationLinksForCurrentStorefront([
+        const MonetizationLink(
+          provider: MonetizationLinkProvider.patreon,
+          category: MonetizationLinkCategory.tip,
+          url: 'https://www.patreon.com/creator',
+          enabled: true,
+        ),
+      ]);
+
+      expect(visible, isEmpty);
+    });
+
     test('filters subscription links on iOS storefronts', () {
       debugUsesAppleAppStoreTipPolicyOverride = true;
 
