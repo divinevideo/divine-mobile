@@ -41,5 +41,17 @@ void main() {
       expect(layerMergeKindOf(sticker()..mask = mask), isNull);
       expect(layerMergeKindOf(drawing()..mask = mask), isNull);
     });
+
+    test('leaves out a blended sticker or drawing, which blends with the video '
+        'rather than with the layers combined with it', () {
+      expect(
+        layerMergeKindOf(sticker()..blendMode = BlendMode.screen),
+        isNull,
+      );
+      expect(
+        layerMergeKindOf(drawing()..blendMode = BlendMode.multiply),
+        isNull,
+      );
+    });
   });
 }

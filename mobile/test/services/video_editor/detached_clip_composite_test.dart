@@ -18,6 +18,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         EditorLayerImage,
         EditorVideo,
         KeyframeClockPoint,
+        LayerBlendMode,
         SegmentFit;
 
 DivineVideoClip _clip({
@@ -215,6 +216,23 @@ void main() {
       sourceOffset: sourceOffset,
       chromaKey: chromaKey,
     );
+
+    test('blends the clip onto the video below as the canvas does', () {
+      final exportItem = item(_clip());
+      exportItem.layer.blendMode = BlendMode.multiply;
+
+      final layer = buildDetachedClipVideoLayer(
+        item: exportItem,
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      expect(layer.blendMode, LayerBlendMode.multiply);
+    });
 
     test('moves a keyframed clip, turned and faded by its keyframes', () {
       final exportItem = item(_clip(), rotation: 0.3);

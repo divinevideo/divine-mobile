@@ -9618,6 +9618,40 @@ class AppLocalizationsEs extends AppLocalizations {
       'Ajustá qué tan transparente es la capa seleccionada';
 
   @override
+  String get videoEditorBlendLabel => 'Mezcla';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Mezclá la capa seleccionada con el video de abajo';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Multiplicar';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Trama';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Superponer';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Luz suave';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Oscurecer';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Aclarar';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Sumar';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Diferencia';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Máscara de forma';
 
   @override

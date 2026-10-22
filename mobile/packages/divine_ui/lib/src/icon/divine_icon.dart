@@ -135,6 +135,11 @@ enum DivineIconName {
   images('images'),
   imagesSquare('imagesSquare'),
   info('info'),
+
+  /// Two overlapping circles with their overlap filled: two pictures
+  /// combined, as the video editor's Blend action mixes a layer with the
+  /// video beneath it.
+  intersect('intersect'),
   key('key'),
   lightning('lightning'),
   lightningA('lightning_a'),

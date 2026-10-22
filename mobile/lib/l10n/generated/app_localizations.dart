@@ -16187,6 +16187,72 @@ abstract class AppLocalizations {
   /// **'Set how see-through the selected layer is'**
   String get videoEditorOpacitySemanticLabel;
 
+  /// Caption of the button in the timeline controls of a layer (a text, sticker, drawing or a clip detached onto the canvas), and title of the sheet it opens, where the layer's colors are mixed with the video beneath it in a blend mode (multiply, screen, overlay…). Translate as the short standard term image and video editors use for this feature. Keep it short — it sits under a 52dp icon in the clip controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Blend'**
+  String get videoEditorBlendLabel;
+
+  /// Accessibility label for the Blend button in the timeline controls of a layer: a text, sticker, drawing or a clip detached onto the canvas.
+  ///
+  /// In en, this message translates to:
+  /// **'Mix the selected layer with the video beneath it'**
+  String get videoEditorBlendSemanticLabel;
+
+  /// Blend mode that draws the layer over the video as it is, without mixing. Use the term image editors use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get videoEditorBlendModeNormal;
+
+  /// Blend mode that multiplies the layer's colors with the video beneath: never lighter, tints the video. Use the term image editors (Photoshop and the like) use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiply'**
+  String get videoEditorBlendModeMultiply;
+
+  /// Blend mode that brightens: a layer recorded against black only adds its light. Use the term image editors (Photoshop and the like) use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen'**
+  String get videoEditorBlendModeScreen;
+
+  /// Blend mode that adds contrast and color while keeping the video's highlights and shadows. Use the term image editors (Photoshop and the like) use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlay'**
+  String get videoEditorBlendModeOverlay;
+
+  /// A gentler overlay blend mode, like a diffuse spotlight. Use the term image editors (Photoshop and the like) use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft light'**
+  String get videoEditorBlendModeSoftLight;
+
+  /// Blend mode that keeps the darker of the layer's and the video's colors. Use the term image editors (Photoshop and the like) use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Darken'**
+  String get videoEditorBlendModeDarken;
+
+  /// Blend mode that keeps the lighter of the layer's and the video's colors. Use the term image editors (Photoshop and the like) use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Lighten'**
+  String get videoEditorBlendModeLighten;
+
+  /// Blend mode that adds the layer's colors to the video's, up to white. Use the term image and video editors use for this additive blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get videoEditorBlendModeAdd;
+
+  /// Blend mode that subtracts the darker color from the lighter one: black leaves the video as it is, white inverts it. Use the term image editors (Photoshop and the like) use for this blend mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Difference'**
+  String get videoEditorBlendModeDifference;
+
   /// Caption of the button in the timeline controls of a clip, or of a layer (text, sticker, drawing or a clip detached onto the canvas), and title of the screen it opens, where the item is shown only inside a shape (circle, rectangle, heart) or faded out through a soft straight edge. Named to sit beside "Color mask" (videoEditorChromaKeyLabel), which hides a color instead: translate "mask" the same way that key does. Keep it short — it sits under a 52dp icon.
   ///
   /// In en, this message translates to:

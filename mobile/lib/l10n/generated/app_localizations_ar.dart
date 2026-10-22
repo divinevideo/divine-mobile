@@ -9499,6 +9499,40 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => 'ضبط مدى شفافية الطبقة المحددة';
 
   @override
+  String get videoEditorBlendLabel => 'مزج';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'امزج الطبقة المحددة مع الفيديو الموجود أسفلها';
+
+  @override
+  String get videoEditorBlendModeNormal => 'عادي';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'ضرب';
+
+  @override
+  String get videoEditorBlendModeScreen => 'شاشة';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'تراكب';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'ضوء ناعم';
+
+  @override
+  String get videoEditorBlendModeDarken => 'تعتيم';
+
+  @override
+  String get videoEditorBlendModeLighten => 'تفتيح';
+
+  @override
+  String get videoEditorBlendModeAdd => 'إضافة';
+
+  @override
+  String get videoEditorBlendModeDifference => 'الفرق';
+
+  @override
   String get videoEditorShapeMaskLabel => 'قناع الشكل';
 
   @override

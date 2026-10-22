@@ -9738,6 +9738,40 @@ class AppLocalizationsRo extends AppLocalizations {
       'Setează cât de transparent e stratul selectat';
 
   @override
+  String get videoEditorBlendLabel => 'Amestec';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Amestecă stratul selectat cu videoclipul de dedesubt';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Multiplicare';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Ecran';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Suprapunere';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Lumină difuză';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Întunecare';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Luminare';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Adunare';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Diferență';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Mască de formă';
 
   @override

@@ -9437,6 +9437,40 @@ class AppLocalizationsId extends AppLocalizations {
       'Atur seberapa transparan lapisan yang dipilih';
 
   @override
+  String get videoEditorBlendLabel => 'Campuran';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Campurkan lapisan yang dipilih dengan video di bawahnya';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Kalikan';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Layar';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Tumpang tindih';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Cahaya lembut';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Gelapkan';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Terangkan';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Tambah';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Selisih';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Masking bentuk';
 
   @override

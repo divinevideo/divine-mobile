@@ -9617,6 +9617,40 @@ class AppLocalizationsEn extends AppLocalizations {
       'Set how see-through the selected layer is';
 
   @override
+  String get videoEditorBlendLabel => 'Blend';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Mix the selected layer with the video beneath it';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Multiply';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Screen';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Overlay';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Soft light';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Darken';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Lighten';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Add';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Difference';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Shape mask';
 
   @override

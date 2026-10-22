@@ -9721,6 +9721,40 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ustaw, jak bardzo przezroczysta ma być wybrana warstwa';
 
   @override
+  String get videoEditorBlendLabel => 'Mieszanie';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Zmieszaj wybraną warstwę z filmem pod nią';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Zwykły';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Mnożenie';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Ekran';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Nakładka';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Łagodne światło';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Ciemniej';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Jaśniej';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Dodaj';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Różnica';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Maska kształtu';
 
   @override

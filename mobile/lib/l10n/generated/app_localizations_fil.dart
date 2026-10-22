@@ -9599,6 +9599,40 @@ class AppLocalizationsFil extends AppLocalizations {
       'I-set kung gaano ka-transparent ang napiling layer';
 
   @override
+  String get videoEditorBlendLabel => 'Blend';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'I-blend ang napiling layer sa video sa ilalim nito';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Multiply';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Screen';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Overlay';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Soft light';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Darken';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Lighten';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Add';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Difference';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Shape mask';
 
   @override

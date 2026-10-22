@@ -43,6 +43,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.hasShapeMask = false,
     this.onOpacity,
     this.hasOpacity = false,
+    this.onBlendMode,
+    this.hasBlendMode = false,
     this.onReversed,
     this.isReversed = false,
     this.onStabilize,
@@ -202,6 +204,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the layer is already see-through somewhere, which highlights the
   /// action the way [hasChromaKey] does.
   final bool hasOpacity;
+
+  /// Opens the blend modes for a layer.
+  final VoidCallback? onBlendMode;
+
+  /// Whether the layer is already blended with the video beneath it, which
+  /// highlights the action the way [hasChromaKey] does.
+  final bool hasBlendMode;
 
   final VoidCallback? onReversed;
   final bool isReversed;
@@ -423,6 +432,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
             semanticLabel: context.l10n.videoEditorOpacitySemanticLabel,
             onPressed: onOpacity,
             type: hasOpacity ? .primary : .secondary,
+          ),
+        if (onBlendMode != null)
+          TimelineActionButton(
+            icon: .intersect,
+            label: context.l10n.videoEditorBlendLabel,
+            semanticLabel: context.l10n.videoEditorBlendSemanticLabel,
+            onPressed: onBlendMode,
+            type: hasBlendMode ? .primary : .secondary,
           ),
         if (onReversed != null)
           TimelineActionButton(

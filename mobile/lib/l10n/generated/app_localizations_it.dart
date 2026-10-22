@@ -9637,6 +9637,40 @@ class AppLocalizationsIt extends AppLocalizations {
       'Imposta quanto è trasparente il livello selezionato';
 
   @override
+  String get videoEditorBlendLabel => 'Fusione';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Fondi il livello selezionato con il video sottostante';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normale';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Moltiplica';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Scolora';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Sovrapponi';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Luce soffusa';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Scurisci';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Schiarisci';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Aggiungi';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Differenza';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Maschera forma';
 
   @override

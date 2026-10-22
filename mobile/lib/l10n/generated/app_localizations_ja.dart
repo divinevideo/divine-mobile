@@ -9063,6 +9063,39 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '選択したレイヤーの透け具合を設定';
 
   @override
+  String get videoEditorBlendLabel => '描画モード';
+
+  @override
+  String get videoEditorBlendSemanticLabel => '選択したレイヤーを下の動画と合成';
+
+  @override
+  String get videoEditorBlendModeNormal => '通常';
+
+  @override
+  String get videoEditorBlendModeMultiply => '乗算';
+
+  @override
+  String get videoEditorBlendModeScreen => 'スクリーン';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'オーバーレイ';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'ソフトライト';
+
+  @override
+  String get videoEditorBlendModeDarken => '比較（暗）';
+
+  @override
+  String get videoEditorBlendModeLighten => '比較（明）';
+
+  @override
+  String get videoEditorBlendModeAdd => '加算';
+
+  @override
+  String get videoEditorBlendModeDifference => '差の絶対値';
+
+  @override
   String get videoEditorShapeMaskLabel => 'シェイプマスク';
 
   @override

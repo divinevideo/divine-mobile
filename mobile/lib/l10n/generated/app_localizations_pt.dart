@@ -9602,6 +9602,40 @@ class AppLocalizationsPt extends AppLocalizations {
       'Ajustar a transparência da camada selecionada';
 
   @override
+  String get videoEditorBlendLabel => 'Mesclar';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Mesclar a camada selecionada com o vídeo abaixo';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Multiplicação';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Tela';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Sobrepor';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Luz suave';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Escurecer';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Clarear';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Adicionar';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Diferença';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Máscara de forma';
 
   @override

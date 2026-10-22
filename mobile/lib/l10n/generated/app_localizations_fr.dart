@@ -9671,6 +9671,40 @@ class AppLocalizationsFr extends AppLocalizations {
       'Régler la transparence du calque sélectionné';
 
   @override
+  String get videoEditorBlendLabel => 'Fusion';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Fusionner le calque sélectionné avec la vidéo en dessous';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Produit';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Superposition';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Incrustation';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Lumière tamisée';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Obscurcir';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Éclaircir';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Addition';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Différence';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Masque de forme';
 
   @override

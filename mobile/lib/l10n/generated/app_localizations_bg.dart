@@ -9611,6 +9611,40 @@ class AppLocalizationsBg extends AppLocalizations {
       'Задай колко прозрачен да е избраният слой';
 
   @override
+  String get videoEditorBlendLabel => 'Смесване';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Смеси избрания слой с видеото под него';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Нормален';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Умножение';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Екран';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Наслагване';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Мека светлина';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Затъмняване';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Изсветляване';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Добавяне';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Разлика';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Маска с форма';
 
   @override

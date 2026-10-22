@@ -6,7 +6,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' show Color, Offset, Size;
+import 'dart:ui' show BlendMode, Color, Offset, Size;
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart' show PlatformException;
@@ -42,6 +42,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         ImageLayer,
         KeyframeClockPoint,
         LayerAnimationType,
+        LayerBlendMode,
         NativeFailureDetails,
         ProVideoEditor,
         ProgressModel,
@@ -112,6 +113,27 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test('draws each layer in the blend mode the canvas shows it in', () {
+      final blended = pie.ExportedLayer(
+        layer: pie.Layer(blendMode: BlendMode.screen),
+        bytes: Uint8List.fromList(const [1, 2, 3]),
+        logicalSize: const Size(10, 20),
+      );
+
+      final exported = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [layer(), blended],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+      )!;
+
+      expect(exported.map((l) => l.blendMode), [
+        LayerBlendMode.normal,
+        LayerBlendMode.screen,
+      ]);
     });
 
     test(

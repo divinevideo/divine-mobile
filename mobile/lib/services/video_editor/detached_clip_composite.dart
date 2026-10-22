@@ -6,6 +6,7 @@ import 'dart:ui' show Size;
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart'
     show ExportLayerMapping, exportedLayerTopLeft, unrotatedLayerBox;
+import 'package:openvine/extensions/layer_blend_mode.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
@@ -213,6 +214,9 @@ VideoLayer buildDetachedClipVideoLayer({
     // composition applies the opacity after the key, as the canvas does.
     // Keyframes carry the opacity of a keyframed clip instead.
     opacity: item.opacity,
+    // Blended after the opacity, onto the track and the clips below, as the
+    // canvas blends the layer.
+    blendMode: layer.exportBlendMode,
     // The clip is placed from its video, upright, so a keyframe's turn is the
     // layer's own rather than one on top of [Layer.rotation].
     keyframes: layer.divineKeyframesForExport(

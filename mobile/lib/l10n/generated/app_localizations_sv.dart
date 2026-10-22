@@ -9523,6 +9523,40 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ställ in hur genomskinligt det valda lagret är';
 
   @override
+  String get videoEditorBlendLabel => 'Blanda';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Blanda det valda lagret med videon under';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Multiplicera';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Raster';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Täcka över';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Mjukt ljus';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Mörkare';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Ljusare';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Addera';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Differens';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Formmask';
 
   @override

@@ -9647,6 +9647,40 @@ class AppLocalizationsDe extends AppLocalizations {
       'Festlegen, wie durchsichtig die ausgewählte Ebene ist';
 
   @override
+  String get videoEditorBlendLabel => 'Mischen';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Ausgewählte Ebene mit dem Video darunter mischen';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Multiplizieren';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Negativ multiplizieren';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Ineinanderkopieren';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Weiches Licht';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Abdunkeln';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Aufhellen';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Addieren';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Differenz';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Formmaske';
 
   @override
