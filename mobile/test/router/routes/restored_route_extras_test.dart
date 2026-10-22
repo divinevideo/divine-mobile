@@ -1,19 +1,39 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/router/route_error_screen.dart';
+import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/apps_routes.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/router/widgets/followers_screen_router.dart';
+import 'package:openvine/router/widgets/following_screen_router.dart';
 import 'package:openvine/router/widgets/other_profile_screen_router.dart';
 import 'package:openvine/router/widgets/sound_detail_loader.dart';
+import 'package:openvine/screens/apps/app_detail_screen.dart';
+import 'package:openvine/screens/creator_analytics_screen.dart';
+import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/screens/inbox/message_requests/request_preview_page.dart';
+import 'package:openvine/screens/original_sound_detail_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
 
 class _FakeGoRouterState extends Fake implements GoRouterState {
@@ -301,6 +321,307 @@ void main() {
       expect(subtitleNoExtra.prefetched, isNull);
     });
   });
+
+  // A pasted link, a browser refresh or a restored session reaches a route
+  // with no extra at all, so every builder that reads extra must still open
+  // its screen from the URL alone (#3335).
+  group('routes entered by URL with no extra', () {
+    const eventId =
+        '1111111111111111111111111111111111111111111111111111111111111111';
+    const pubkeyHex =
+        '2222222222222222222222222222222222222222222222222222222222222222';
+    const conversationId =
+        '3333333333333333333333333333333333333333333333333333333333333333';
+
+    late ProviderContainer container;
+
+    setUp(() => container = ProviderContainer());
+    tearDown(() => container.dispose());
+
+    List<RouteBase> withRef(List<RouteBase> Function(Ref ref) routes) =>
+        container.read(Provider<List<RouteBase>>(routes));
+
+    Future<Widget> buildFromUrl(
+      WidgetTester tester,
+      List<RouteBase> routes,
+      String name, {
+      required String location,
+      Map<String, String> pathParameters = const {},
+    }) async {
+      final route = _routeNamed(routes, name);
+      late Widget screen;
+
+      await _buildWithContext(tester, (context) {
+        screen = route.builder!(
+          context,
+          _FakeGoRouterState(
+            location: location,
+            pathParameters: pathParameters,
+          ),
+        );
+      });
+
+      expect(
+        screen,
+        isNot(isA<RouteErrorScreen>()),
+        reason: '$name must not dead-end when extra is absent',
+      );
+      return screen;
+    }
+
+    testWidgets('builds $AppDetailScreen from the slug alone', (tester) async {
+      const slug = 'sample-app';
+      final screen = await buildFromUrl(
+        tester,
+        withRef(appsRoutes),
+        AppDetailScreen.routeName,
+        location: AppDetailScreen.pathForSlug(slug),
+        pathParameters: const {'slug': slug},
+      );
+
+      expect(
+        screen,
+        isA<AppDetailScreen>()
+            .having((s) => s.slug, 'slug', slug)
+            .having((s) => s.initialEntry, 'initialEntry', isNull),
+      );
+    });
+
+    testWidgets('builds $ConversationPage from the id alone', (tester) async {
+      final screen = await buildFromUrl(
+        tester,
+        messagingRoutes(),
+        ConversationPage.routeName,
+        location: ConversationPage.pathForId(conversationId),
+        pathParameters: const {'id': conversationId},
+      );
+
+      expect(
+        screen,
+        isA<ConversationPage>()
+            .having((s) => s.conversationId, 'conversationId', conversationId)
+            .having((s) => s.participantPubkeys, 'participantPubkeys', isEmpty)
+            .having((s) => s.subject, 'subject', isNull),
+      );
+    });
+
+    testWidgets('builds $RequestPreviewPage from the id alone', (
+      tester,
+    ) async {
+      final screen = await buildFromUrl(
+        tester,
+        messagingRoutes(),
+        RequestPreviewPage.routeName,
+        location: '${RoutePaths.messageRequests}/$conversationId',
+        pathParameters: const {'id': conversationId},
+      );
+
+      expect(
+        screen,
+        isA<RequestPreviewPage>()
+            .having((s) => s.conversationId, 'conversationId', conversationId)
+            .having((s) => s.participantPubkeys, 'participantPubkeys', isEmpty)
+            .having((s) => s.subject, 'subject', isNull),
+      );
+    });
+
+    testWidgets('builds $CuratedListFeedScreen from the list id alone', (
+      tester,
+    ) async {
+      const listId = 'weekend-picks';
+      final screen = await buildFromUrl(
+        tester,
+        withRef(listsRoutes),
+        CuratedListFeedScreen.routeName,
+        location: CuratedListFeedScreen.pathForId(listId),
+        pathParameters: const {'listId': listId},
+      );
+
+      expect(
+        screen,
+        isA<CuratedListFeedScreen>()
+            .having((s) => s.listId, 'listId', listId)
+            .having(
+              (s) => s.listName,
+              'listName',
+              lookupAppLocalizations(const Locale('en')).routeDefaultListName,
+            )
+            .having((s) => s.videoIds, 'videoIds', isNull)
+            .having((s) => s.authorPubkey, 'authorPubkey', isNull),
+      );
+    });
+
+    testWidgets('builds $VideoDetailScreen from the id alone', (tester) async {
+      final screen = await buildFromUrl(
+        tester,
+        videoRoutes(),
+        VideoDetailScreen.routeName,
+        location: VideoDetailScreen.pathForId(eventId),
+        pathParameters: const {'id': eventId},
+      );
+
+      expect(
+        screen,
+        isA<VideoDetailScreen>()
+            .having((s) => s.videoId, 'videoId', eventId)
+            .having((s) => s.initialVideo, 'initialVideo', isNull)
+            .having((s) => s.autoOpenComments, 'autoOpenComments', isFalse)
+            .having((s) => s.fallbackVideoIds, 'fallbackVideoIds', isEmpty)
+            .having((s) => s.dmReplyContext, 'dmReplyContext', isNull),
+      );
+    });
+
+    testWidgets('builds $OriginalSoundDetailScreen from the pubkey alone', (
+      tester,
+    ) async {
+      final screen = await buildFromUrl(
+        tester,
+        videoRoutes(),
+        OriginalSoundDetailScreen.routeName,
+        location: OriginalSoundDetailScreen.pathForPubkey(pubkeyHex),
+        pathParameters: const {'pubkey': pubkeyHex},
+      );
+
+      expect(
+        screen,
+        isA<OriginalSoundDetailScreen>()
+            .having((s) => s.creatorPubkey, 'creatorPubkey', pubkeyHex)
+            .having((s) => s.sourceVideo, 'sourceVideo', isNull),
+      );
+    });
+
+    testWidgets('builds $PostAnalyticsDetailScreen from the video id alone', (
+      tester,
+    ) async {
+      final screen = await buildFromUrl(
+        tester,
+        videoRoutes(),
+        PostAnalyticsDetailScreen.routeName,
+        location: PostAnalyticsDetailScreen.pathForId(eventId),
+        pathParameters: const {'videoId': eventId},
+      );
+
+      expect(
+        screen,
+        isA<PostAnalyticsDetailScreen>()
+            .having((s) => s.videoId, 'videoId', eventId)
+            .having((s) => s.performance, 'performance', isNull),
+      );
+    });
+
+    testWidgets('builds $OtherProfileScreenRouter from the npub alone', (
+      tester,
+    ) async {
+      final npub = NostrKeyUtils.encodePubKey(pubkeyHex);
+      final screen = await buildFromUrl(
+        tester,
+        profileRoutes(),
+        OtherProfileScreen.routeName,
+        location: OtherProfileScreen.pathForNpub(npub),
+        pathParameters: {'npub': npub},
+      );
+
+      expect(
+        screen,
+        isA<OtherProfileScreenRouter>()
+            .having((s) => s.npub, 'npub', npub)
+            .having((s) => s.displayNameHint, 'displayNameHint', isNull)
+            .having((s) => s.avatarUrlHint, 'avatarUrlHint', isNull),
+      );
+    });
+
+    testWidgets('builds $FollowersScreenRouter from the pubkey alone', (
+      tester,
+    ) async {
+      final screen = await buildFromUrl(
+        tester,
+        profileRoutes(),
+        FollowersScreenRouter.routeName,
+        location: FollowersScreenRouter.pathForPubkey(pubkeyHex),
+        pathParameters: const {'pubkey': pubkeyHex},
+      );
+
+      expect(
+        screen,
+        isA<FollowersScreenRouter>()
+            .having((s) => s.pubkey, 'pubkey', pubkeyHex)
+            .having((s) => s.displayName, 'displayName', isNull),
+      );
+    });
+
+    testWidgets('builds $FollowingScreenRouter from the pubkey alone', (
+      tester,
+    ) async {
+      final screen = await buildFromUrl(
+        tester,
+        profileRoutes(),
+        FollowingScreenRouter.routeName,
+        location: FollowingScreenRouter.pathForPubkey(pubkeyHex),
+        pathParameters: const {'pubkey': pubkeyHex},
+      );
+
+      expect(
+        screen,
+        isA<FollowingScreenRouter>()
+            .having((s) => s.pubkey, 'pubkey', pubkeyHex)
+            .having((s) => s.displayName, 'displayName', isNull),
+      );
+    });
+
+    testWidgets('builds $AccountStatusScreen without the publish hint', (
+      tester,
+    ) async {
+      final screen = await buildFromUrl(
+        tester,
+        withRef(settingsRoutes),
+        AccountStatusScreen.routeName,
+        location: AccountStatusScreen.path,
+      );
+
+      expect(
+        screen,
+        isA<AccountStatusScreen>().having(
+          (s) => s.publishRestrictionConfirmed,
+          'publishRestrictionConfirmed',
+          isFalse,
+        ),
+      );
+    });
+
+    testWidgets(
+      'redirects $PooledFullscreenVideoFeedScreen to its video, else home',
+      (tester) async {
+        final route = _routeNamed(
+          videoRoutes(),
+          PooledFullscreenVideoFeedScreen.routeName,
+        );
+        late Object? withVideo;
+        late Object? withoutVideo;
+
+        await _buildWithContext(tester, (context) {
+          withVideo = route.redirect!(
+            context,
+            _FakeGoRouterState(
+              location: PooledFullscreenVideoFeedScreen.pathForVideoId(
+                eventId,
+              ),
+              pathParameters: const {},
+            ),
+          );
+          withoutVideo = route.redirect!(
+            context,
+            _FakeGoRouterState(
+              location: PooledFullscreenVideoFeedScreen.path,
+              pathParameters: const {},
+            ),
+          );
+        });
+
+        expect(withVideo, VideoDetailScreen.pathForId(eventId));
+        expect(withoutVideo, VideoFeedPage.pathForIndex(0));
+      },
+    );
+  });
 }
 
 Future<void> _buildWithContext(
@@ -321,8 +642,13 @@ Future<void> _buildWithContext(
   );
 }
 
+/// The route called [name], searched at every depth of [routes].
 GoRoute _routeNamed(List<RouteBase> routes, String name) {
-  return routes.whereType<GoRoute>().singleWhere((route) => route.name == name);
+  Iterable<RouteBase> flatten(List<RouteBase> level) =>
+      level.expand((route) => [route, ...flatten(route.routes)]);
+  return flatten(
+    routes,
+  ).whereType<GoRoute>().singleWhere((route) => route.name == name);
 }
 
 extension on Widget {
