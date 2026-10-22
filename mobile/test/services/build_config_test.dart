@@ -40,6 +40,12 @@ void main() {
       expect(config.getDefault(FeatureFlag.videoReplies), isTrue);
     });
 
+    test('profile support links are enabled by default in all builds', () {
+      const config = BuildConfiguration();
+
+      expect(config.getDefault(FeatureFlag.profileMonetizationLinks), isTrue);
+    });
+
     test('should provide all flags with defaults', () {
       const config = BuildConfiguration();
 

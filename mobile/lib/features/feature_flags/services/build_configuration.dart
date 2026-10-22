@@ -39,7 +39,10 @@ class BuildConfiguration {
         // TODO(#6649): Re-promote after divine-funnelcake#691 ships.
         return const bool.fromEnvironment('FF_FEED_TUNING');
       case FeatureFlag.profileMonetizationLinks:
-        return const bool.fromEnvironment('FF_PROFILE_MONETIZATION_LINKS');
+        return const bool.fromEnvironment(
+          'FF_PROFILE_MONETIZATION_LINKS',
+          defaultValue: true,
+        );
       case FeatureFlag.communityContentWarnings:
         // Default OFF pending T&S sign-off on surfacing warnings from
         // unverified community votes (#4771).
