@@ -7,8 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -26,28 +24,21 @@ import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 
 /// Independently loaded people and video lists owned by the profile viewer.
-class ProfileListsGrid extends ConsumerWidget {
+class ProfileListsGrid extends StatelessWidget {
   const ProfileListsGrid({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final peopleEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.curatedLists),
-    );
+  Widget build(BuildContext context) {
     return ListView(
       physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: peopleEnabled
-              ? BlocSelector<PeopleListsBloc, PeopleListsState, bool>(
-                  selector: (state) =>
-                      state.enabled && state.activeOwnerPubkey != null,
-                  builder: (_, showPeople) =>
-                      _ListSections(showPeople: showPeople),
-                )
-              : const _ListSections(showPeople: false),
+          child: BlocSelector<PeopleListsBloc, PeopleListsState, bool>(
+            selector: (state) => state.activeOwnerPubkey != null,
+            builder: (_, showPeople) => _ListSections(showPeople: showPeople),
+          ),
         ),
       ],
     );
@@ -92,7 +83,7 @@ class _PeopleListsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<PeopleListsBloc, PeopleListsState>(
       builder: (context, state) {
-        if (!state.enabled || state.activeOwnerPubkey == null) {
+        if (state.activeOwnerPubkey == null) {
           return const SizedBox.shrink();
         }
         return Column(

@@ -10,7 +10,6 @@ import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
@@ -92,7 +91,7 @@ class VideoFeedPage extends ConsumerWidget {
     final followRepository = ref.watch(followRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
-    final peopleListsRepository = ref.watch(homePeopleListsRepositoryProvider);
+    final peopleListsRepository = ref.watch(peopleListsRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
     ref.watch(currentAuthStateProvider);
     final authService = ref.watch(authServiceProvider);

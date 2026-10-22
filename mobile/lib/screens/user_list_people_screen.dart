@@ -72,7 +72,7 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
   /// Deletes the list and reports only what its own operation settled to.
   ///
   /// The bloc resolves the operation as `cancelled` when it tears the request
-  /// down — an account switch, a `FeatureFlag.curatedLists` flag-off or a
+  /// down — an account switch or a
   /// repository swap — so nothing is announced and the route stays put. A
   /// teardown also clears the pending mutations, which is indistinguishable
   /// from the delete settling if read from state alone (#6504).

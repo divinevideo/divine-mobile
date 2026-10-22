@@ -12,8 +12,6 @@ import 'package:openvine/blocs/nostr_id_search/nostr_id_search_cubit.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
@@ -137,14 +135,6 @@ class _SearchResultsScope extends ConsumerWidget {
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
     final listThumbnailPolicy = ref.watch(curatedListThumbnailFilterProvider);
     final peopleListsRepository = ref.watch(peopleListsRepositoryProvider);
-    final profileListFeaturesEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
-    );
-    final curatedListsEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.curatedLists),
-    );
-    final peopleListSearchEnabled =
-        profileListFeaturesEnabled && curatedListsEnabled;
 
     // Bind discovery to the current viewer, including before their first post.
     ref.watch(currentAuthStateProvider);
@@ -159,8 +149,7 @@ class _SearchResultsScope extends ConsumerWidget {
             child: TickerMode(
               enabled: profileRepository != null,
               child: MultiBlocProvider(
-                // Recreate the search blocs when an auth-sensitive repository or flag
-                // changes so no bloc remains bound to stale dependencies or visible previews.
+                // Recreate search blocs when account-sensitive dependencies change.
                 // See `.claude/rules/state_management.md`.
                 key: ValueKey((
                   owner,
@@ -168,7 +157,6 @@ class _SearchResultsScope extends ConsumerWidget {
                   hashtagRepository,
                   curatedListRepository,
                   peopleListsRepository,
-                  peopleListSearchEnabled,
                   viewerPubkey,
                 )),
                 providers: [
@@ -223,7 +211,6 @@ class _SearchResultsScope extends ConsumerWidget {
                           child: _ListSearchPolicyScope(
                             repository: curatedListRepository,
                             peopleRepository: peopleListsRepository,
-                            peopleListSearchEnabled: peopleListSearchEnabled,
                             policy: listThumbnailPolicy,
                             controller: controller,
                             // The viewer's own lists remain discoverable before posting.
@@ -341,7 +328,6 @@ class _ListSearchPolicyScope extends StatefulWidget {
   const _ListSearchPolicyScope({
     required this.repository,
     required this.peopleRepository,
-    required this.peopleListSearchEnabled,
     required this.policy,
     required this.controller,
     required this.viewerPubkey,
@@ -350,7 +336,6 @@ class _ListSearchPolicyScope extends StatefulWidget {
 
   final CuratedListRepository repository;
   final PeopleListsRepository peopleRepository;
-  final bool peopleListSearchEnabled;
   final Object policy;
   final TextEditingController controller;
   final String? viewerPubkey;
@@ -366,7 +351,6 @@ class _ListSearchPolicyScopeState extends State<_ListSearchPolicyScope> {
   ListSearchBloc _createBloc() => ListSearchBloc(
     curatedListRepository: widget.repository,
     peopleListsRepository: widget.peopleRepository,
-    peopleListSearchEnabled: widget.peopleListSearchEnabled,
     viewerPubkey: widget.viewerPubkey,
   );
 

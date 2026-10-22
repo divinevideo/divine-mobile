@@ -21,7 +21,6 @@ class ListsDiscoveryState extends Equatable {
     this.peopleLists = const [],
     this.videoThumbnailsPending = false,
     this.peopleLoadGeneration = 0,
-    this.peopleListsEnabled = true,
     this.videoInitializationFailed = false,
   });
 
@@ -42,19 +41,15 @@ class ListsDiscoveryState extends Equatable {
   /// Identifies the people-list request whose result may update this state.
   final int peopleLoadGeneration;
 
-  /// Whether the people-list master feature is available to this gallery.
-  final bool peopleListsEnabled;
-
   /// Saved video-list recovery must succeed before video discovery can run.
   final bool videoInitializationFailed;
 
   /// Whether both columns finished without anything to show.
   bool get isEmpty =>
       videoStatus == ListsDiscoveryColumnStatus.success &&
-      (!peopleListsEnabled ||
-          peopleStatus == ListsDiscoveryColumnStatus.success) &&
+      peopleStatus == ListsDiscoveryColumnStatus.success &&
       videoLists.isEmpty &&
-      (!peopleListsEnabled || peopleLists.isEmpty);
+      peopleLists.isEmpty;
 
   ListsDiscoveryState copyWith({
     ListsDiscoveryColumnStatus? videoStatus,
@@ -63,7 +58,6 @@ class ListsDiscoveryState extends Equatable {
     List<PeopleListSearchResult>? peopleLists,
     bool? videoThumbnailsPending,
     int? peopleLoadGeneration,
-    bool? peopleListsEnabled,
     bool? videoInitializationFailed,
   }) {
     return ListsDiscoveryState(
@@ -74,7 +68,6 @@ class ListsDiscoveryState extends Equatable {
       videoThumbnailsPending:
           videoThumbnailsPending ?? this.videoThumbnailsPending,
       peopleLoadGeneration: peopleLoadGeneration ?? this.peopleLoadGeneration,
-      peopleListsEnabled: peopleListsEnabled ?? this.peopleListsEnabled,
       videoInitializationFailed:
           videoInitializationFailed ?? this.videoInitializationFailed,
     );
@@ -88,7 +81,6 @@ class ListsDiscoveryState extends Equatable {
     peopleLists,
     videoThumbnailsPending,
     peopleLoadGeneration,
-    peopleListsEnabled,
     videoInitializationFailed,
   ];
 }

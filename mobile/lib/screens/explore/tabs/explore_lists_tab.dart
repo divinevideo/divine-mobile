@@ -10,8 +10,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/features/lists_discovery/lists_discovery_screenshot_fixtures.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
@@ -61,9 +59,6 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
     final curatedRepository = ref.watch(curatedListRepositoryProvider);
     final thumbnailPolicy = ref.watch(curatedListThumbnailFilterProvider);
     final peopleRepository = ref.watch(peopleListsRepositoryProvider);
-    final peopleListsEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.curatedLists),
-    );
     final blocklistVersion = ref.watch(blocklistVersionProvider);
     final blockFilter = ref.watch(listsDiscoveryBlockFilterProvider);
     ref.watch(currentAuthStateProvider);
@@ -71,7 +66,6 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
 
     if (service == null && !curatedState.hasError) {
       return _LoadingGallery(
-        peopleListsEnabled: peopleListsEnabled,
         showCreationActions: true,
       );
     }
@@ -83,7 +77,6 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
         thumbnailPolicy,
         peopleRepository,
         viewerPubkey,
-        peopleListsEnabled,
         blocklistVersion,
         curatedState.hasError,
       )),
@@ -93,7 +86,6 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
           curatedListRepository: curatedRepository,
           peopleListsRepository: peopleRepository,
           viewerPubkey: viewerPubkey,
-          peopleListsEnabled: peopleListsEnabled,
           videoInitializationFailed: curatedState.hasError,
           blockFilter: blockFilter,
           seed: ScreenshotMode.enabled
@@ -194,13 +186,12 @@ class ExploreListsView extends StatelessWidget {
                             thumbnailsPending: state.videoThumbnailsPending,
                           ),
                         ),
-                        if (state.peopleListsEnabled)
-                          Expanded(
-                            child: _PeopleListsColumn(
-                              status: state.peopleStatus,
-                              lists: state.peopleLists,
-                            ),
+                        Expanded(
+                          child: _PeopleListsColumn(
+                            status: state.peopleStatus,
+                            lists: state.peopleLists,
                           ),
+                        ),
                       ],
                     ),
                 ],
@@ -423,11 +414,8 @@ class _LoadingColumn extends StatelessWidget {
 /// service is available to create the cubit.
 class _LoadingGallery extends StatelessWidget {
   const _LoadingGallery({
-    required this.peopleListsEnabled,
     this.showCreationActions = false,
   });
-
-  final bool peopleListsEnabled;
 
   final bool showCreationActions;
 
@@ -455,12 +443,11 @@ class _LoadingGallery extends StatelessWidget {
                         card: DivineListThumbnailSkeleton.videos(),
                       ),
                     ),
-                    if (peopleListsEnabled)
-                      const Expanded(
-                        child: _SkeletonCards(
-                          card: DivineListThumbnailSkeleton.people(),
-                        ),
+                    const Expanded(
+                      child: _SkeletonCards(
+                        card: DivineListThumbnailSkeleton.people(),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -473,25 +460,20 @@ class _LoadingGallery extends StatelessWidget {
 }
 
 /// Existing Main creation flows remain independent of discovery readiness.
-class _ExploreCreationHeader extends ConsumerWidget {
+class _ExploreCreationHeader extends StatelessWidget {
   const _ExploreCreationHeader();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final peopleEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.curatedLists),
-    );
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (peopleEnabled) ...[
-          DivineButton(
-            leadingIcon: .plus,
-            label: context.l10n.listNewPeopleList,
-            onPressed: () => context.push(CreatePeopleListPage.path),
-          ),
-          const SizedBox(height: 16),
-        ],
+        DivineButton(
+          leadingIcon: .plus,
+          label: context.l10n.listNewPeopleList,
+          onPressed: () => context.push(CreatePeopleListPage.path),
+        ),
+        const SizedBox(height: 16),
         DivineButton(
           leadingIcon: .plus,
           label: context.l10n.listNewVideoList,

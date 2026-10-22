@@ -42,11 +42,9 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
   ListSearchBloc({
     required CuratedListRepository curatedListRepository,
     required PeopleListsRepository peopleListsRepository,
-    bool peopleListSearchEnabled = false,
     String? viewerPubkey,
   }) : _curatedListRepository = curatedListRepository,
        _peopleListsRepository = peopleListsRepository,
-       _peopleListSearchEnabled = peopleListSearchEnabled,
        _viewerPubkey = viewerPubkey,
        super(const ListSearchState()) {
     on<ListSearchEvent>(
@@ -58,7 +56,6 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
 
   final CuratedListRepository _curatedListRepository;
   final PeopleListsRepository _peopleListsRepository;
-  final bool _peopleListSearchEnabled;
   final String? _viewerPubkey;
 
   bool _shouldHandle(ListSearchEvent event) =>
@@ -152,9 +149,7 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
         videoResults: retainResults ? state.videoResults : const [],
         peopleResults: retainResults ? state.peopleResults : const [],
         videoStatus: ListSearchSourceStatus.loading,
-        peopleStatus: _peopleListSearchEnabled
-            ? ListSearchSourceStatus.loading
-            : ListSearchSourceStatus.initial,
+        peopleStatus: ListSearchSourceStatus.loading,
       ),
     );
     await emit.forEach<_SearchResult>(
@@ -164,15 +159,14 @@ class ListSearchBloc extends Bloc<ListSearchEvent, ListSearchState> {
           _VideoSearchResult.new,
           people: false,
         ),
-        if (_peopleListSearchEnabled)
-          _source(
-            () => _peopleListsRepository.searchPublicLists(
-              query,
-              viewerPubkey: _viewerPubkey,
-            ),
-            _PeopleSearchResult.new,
-            people: true,
+        _source(
+          () => _peopleListsRepository.searchPublicLists(
+            query,
+            viewerPubkey: _viewerPubkey,
           ),
+          _PeopleSearchResult.new,
+          people: true,
+        ),
       ]),
       onData: (result) {
         final next = switch (result) {
