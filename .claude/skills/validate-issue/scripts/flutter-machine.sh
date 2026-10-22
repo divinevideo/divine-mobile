@@ -42,13 +42,15 @@ case "$cmd" in
   start)
     proj="${3:?project dir}"; dev="${4:?device id}"; shift 4
     mkdir -p "$run"; rm -f "$ctl" "$out" "$run/run.err" "$run/seq"; mkfifo "$ctl"
-    # A separate holder keeps a writer on the FIFO so the tool never sees EOF.
-    # (Handing the tool the FIFO read-write, `0<>ctl`, does not work on macOS:
-    # the Dart VM then never delivers stdin.)
-    nohup tail -f /dev/null > "$ctl" 2>/dev/null &
-    echo $! > "$run/holder.pid"
     ( cd "$proj" && exec nohup ${FLUTTER:-mise exec -- flutter} run --machine -d "$dev" "$@" < "$ctl" > "$out" 2> "$run/run.err" ) &
     echo $! > "$run/pid"
+    # A separate holder keeps a writer on the FIFO so the tool never sees EOF,
+    # and exits with the tool, so a run nobody stops leaves no process behind.
+    # It opens the FIFO read-write so it starts even if the tool never opens it.
+    # (Handing the tool the FIFO read-write, `0<>ctl`, does not work on macOS:
+    # the Dart VM then never delivers stdin.)
+    nohup sh -c 'while kill -0 "$1" 2>/dev/null; do sleep 2; done' holder "$(cat "$run/pid")" 1<> "$ctl" 2>/dev/null &
+    echo $! > "$run/holder.pid"
     echo "started pid $(cat "$run/pid"); next: wait $run"
     ;;
   wait)
