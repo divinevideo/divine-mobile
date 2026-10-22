@@ -369,9 +369,9 @@ class _SupporterLightboxHeadline extends StatelessWidget {
             ),
           ),
         );
-        // A name that leads the sentence gets a line of its own, as in the
-        // design; otherwise it flows inline.
-        if (template.startsWith(_nameToken)) {
+        // Give a leading name its own line only at a word boundary. Attached
+        // honorifics (for example in Japanese and Korean) stay with the name.
+        if (template.startsWith(_nameToken) && part.startsWith(RegExp(r'\s'))) {
           spans.add(const TextSpan(text: '\n'));
         }
       }

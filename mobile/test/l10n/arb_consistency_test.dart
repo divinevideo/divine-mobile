@@ -631,7 +631,6 @@ const _knownUntranslatedDebt = <String>{
   'contentPreferencesSubtitleLanguageFollowApp',
   'contentPreferencesSubtitleKeepOriginal',
   'contentPreferencesSubtitleKeepOriginalNone',
-
   // A people list whose members are all hidden from the viewer (#9895).
   'peopleListsAllMembersHiddenTitle',
   'peopleListsAllMembersHiddenSubtitle',

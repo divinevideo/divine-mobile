@@ -805,6 +805,7 @@ void main() {
         required bool isOwnProfile,
         bool isPublicSupporter = false,
         SupporterRepository? ownMembership,
+        Locale locale = const Locale('en'),
       }) async {
         await tester.pumpWidget(
           buildTestWidget(
@@ -818,6 +819,7 @@ void main() {
               isPublicSupporter: isPublicSupporter,
             ),
             supporterRepository: ownMembership,
+            locale: locale,
             // Holds the halo still so the tree can settle.
             disableAnimations: true,
           ),
@@ -936,6 +938,36 @@ void main() {
       });
 
       group('interactions', () {
+        for (final language in ['ja', 'ko', 'en']) {
+          testWidgets('keeps $language name suffixes attached in the '
+              'supporter headline', (tester) async {
+            final locale = Locale(language);
+            final localized = lookupAppLocalizations(locale);
+            await pumpHeader(
+              tester,
+              isOwnProfile: false,
+              isPublicSupporter: true,
+              locale: locale,
+            );
+            await openSupporterView(tester);
+
+            final headline = tester.widget<Text>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is Text &&
+                    widget.textSpan != null &&
+                    widget.textSpan!.toPlainText().contains(
+                      localized.supporterLightboxBadge,
+                    ),
+              ),
+            );
+            expect(
+              headline.textSpan!.toPlainText().contains('\n'),
+              language == 'en',
+            );
+          });
+        }
+
         testWidgets('keeps the halo and wings at full opacity when the '
             'supporter view closes', (tester) async {
           await tester.pumpWidget(
