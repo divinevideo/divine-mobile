@@ -269,6 +269,7 @@ void main() {
       expect(find.text(l10n.videoEditorTransformLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorOpacityLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorBlendLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorKeyframesLabel), findsOneWidget);
       // Keyframes move it, so a track can too.
       expect(find.text(l10n.videoEditorTrackLabel), findsOneWidget);
@@ -312,6 +313,8 @@ void main() {
       expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorLayerAnimationLabel), findsNothing);
       expect(find.text(l10n.videoEditorOpacityLabel), findsNothing);
+      // It draws nothing of its own to blend with the video.
+      expect(find.text(l10n.videoEditorBlendLabel), findsNothing);
       // A drifting hidden area would uncover what it hides.
       expect(find.text(l10n.videoEditorKeyframesLabel), findsNothing);
       expect(find.text(l10n.videoEditorTrackLabel), findsNothing);
@@ -431,8 +434,10 @@ void main() {
       // clip that could go back onto the timeline.
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsNothing);
       expect(find.text(l10n.videoEditorReattachLabel), findsNothing);
-      // Every layer can be made see-through, not only a detached clip.
+      // Every layer can be made see-through or blended, not only a detached
+      // clip.
       expect(find.text(l10n.videoEditorOpacityLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorBlendLabel), findsOneWidget);
     });
 
     group('keyframes', () {
@@ -591,6 +596,39 @@ void main() {
       // Same treatment the timeline gives a baked key: the effect is visible
       // from the action bar without opening the screen.
       expect(chromaKeyButton().type, TimelineActionButtonType.primary);
+    });
+
+    testWidgets('highlights the blend once the layer is blended', (
+      tester,
+    ) async {
+      const item = TimelineOverlayItem(
+        id: 'text-layer',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+      TimelineActionButton blendButton() => tester.widget<TimelineActionButton>(
+        find.byWidgetPredicate(
+          (w) =>
+              w is TimelineActionButton &&
+              w.semanticLabel == l10n.videoEditorBlendSemanticLabel,
+        ),
+      );
+      final editor = _MockProImageEditorState();
+      final mainBloc = _MockVideoEditorMainBloc();
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      when(
+        () => editor.activeLayers,
+      ).thenReturn([TextLayer(id: item.id, text: 'hi')]);
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+      expect(blendButton().type, TimelineActionButtonType.secondary);
+
+      when(() => editor.activeLayers).thenReturn([
+        TextLayer(id: item.id, text: 'hi', blendMode: BlendMode.multiply),
+      ]);
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+      expect(blendButton().type, TimelineActionButtonType.primary);
     });
 
     testWidgets('renders $VideoEditorTimelineControls for filter', (
