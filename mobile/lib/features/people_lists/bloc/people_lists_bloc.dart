@@ -29,18 +29,9 @@ typedef PeopleListsClock = DateTime Function();
 /// changes, and applies optimistic updates for user-initiated mutations
 /// before the repository returns.
 ///
-/// It depends only on the repository, an owner-pubkey stream, a repository
-/// stream, and an enabled stream — it does not import other BLoCs. Owner
-/// transitions cancel the prior subscription, clear pending mutations, and
+/// It depends only on the repository, an owner-pubkey stream, and a repository
+/// stream — it does not import other BLoCs. Owner transitions cancel the prior subscription, clear pending mutations, and
 /// start a new subscription plus an out-of-band sync.
-///
-/// ## Feature-flag lifecycle
-///
-/// The bloc is registered unconditionally above `MaterialApp.router`, so it
-/// outlives `FeatureFlag.curatedLists` going off (#6477). While the flag is
-/// off it holds no repository subscription, runs no `syncOwner`, and publishes
-/// nothing — it only keeps following the owner so that turning the flag back
-/// on wires up the account that is signed in *then* (#6494).
 ///
 /// ## Failure recovery contract
 ///
@@ -70,13 +61,6 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   /// change, so a caller that omits the stream silently reverts #6480. Pass
   /// `const Stream.empty()` when the repository genuinely cannot change.
   ///
-  /// [enabledStream] must emit whether `FeatureFlag.curatedLists` is enabled,
-  /// seeded with its current value. Required for the same reason
-  /// [repositoryStream] is: this bloc outlives the flag, so a caller that omits
-  /// the stream silently reverts #6494 and leaves a disabled feature syncing in
-  /// the background. Pass `Stream.value(true)` when the flag genuinely cannot
-  /// change.
-  ///
   /// [clock] stamps optimistic `updatedAt` values and mutation ids.
   /// Defaults to [DateTime.now] in UTC. Tests inject a fixed clock for
   /// determinism.
@@ -84,17 +68,14 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     required PeopleListsRepository repository,
     required Stream<String?> ownerPubkeyStream,
     required Stream<PeopleListsRepository> repositoryStream,
-    required Stream<bool> enabledStream,
     String? initialOwnerPubkey,
     PeopleListsClock? clock,
   }) : _repository = repository,
        _ownerPubkeyStream = ownerPubkeyStream,
        _repositoryStream = repositoryStream,
-       _enabledStream = enabledStream,
        _clock = clock ?? _defaultClock,
        super(PeopleListsState(ownerPubkey: initialOwnerPubkey)) {
     on<PeopleListsStarted>(_onStarted);
-    on<PeopleListsEnabledChanged>(_onEnabledChanged, transformer: sequential());
     on<PeopleListsRepositoryChanged>(
       _onRepositoryChanged,
       transformer: sequential(),
@@ -110,10 +91,10 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   }
 
   // Queue bookkeeping is independent of UI state. The epoch invalidates even
-  // queued writes on A -> B -> A, feature disable, or repository replacement.
+  // queued writes on A -> B -> A or repository replacement.
   int _mutationSession = 0;
 
-  /// Captures an editor's account, repository and feature lifetime.
+  /// Captures an editor's account and repository lifetime.
   ///
   /// A boundary changes the epoch even if the same owner signs in again.
   int get mutationSessionEpoch => _mutationSession;
@@ -232,12 +213,11 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   PeopleListsRepository _repository;
   final Stream<String?> _ownerPubkeyStream;
   final Stream<PeopleListsRepository> _repositoryStream;
-  final Stream<bool> _enabledStream;
   final PeopleListsClock _clock;
 
   // Completion epoch, not UI state: it increases across account changes,
-  // repository replacement, feature toggles and overlapping reads. Resetting
-  // it with screen state would let an old A read match a later A session
+  // repository replacement and overlapping reads. Resetting it with screen
+  // state would let an old A read match a later A session
   // after A -> B -> A and incorrectly complete the current read.
   int _ownerReadSession = 0;
   int _followedSyncSession = 0;
@@ -245,7 +225,6 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   StreamSubscription<String?>? _ownerSubscription;
   StreamSubscription<List<UserList>>? _listsSubscription;
   StreamSubscription<PeopleListsRepository>? _repositorySubscription;
-  StreamSubscription<bool>? _enabledSubscription;
 
   @override
   Future<void> close() async {
@@ -254,7 +233,6 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     await _ownerSubscription?.cancel();
     await _listsSubscription?.cancel();
     await _repositorySubscription?.cancel();
-    await _enabledSubscription?.cancel();
     return super.close();
   }
 
@@ -284,58 +262,10 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
       },
     );
 
-    await _enabledSubscription?.cancel();
-    _enabledSubscription = _enabledStream.listen(
-      (enabled) => addIfOpen(PeopleListsEnabledChanged(enabled: enabled)),
-      onError: (Object error, StackTrace stackTrace) {
-        addError(error, stackTrace);
-      },
-    );
-
     final currentOwner = state.ownerPubkey;
     if (currentOwner != null && currentOwner.isNotEmpty) {
       addIfOpen(PeopleListsOwnerChanged(ownerPubkey: currentOwner));
     }
-  }
-
-  /// Starts or stops all people-list work when `FeatureFlag.curatedLists`
-  /// flips.
-  ///
-  /// Turning the flag off cannot be expressed by dropping the `BlocProvider`:
-  /// a conditional entry changes the app-shell provider chain's shape and
-  /// re-inflates everything below it (#6477). So the already-constructed bloc
-  /// has to stand down on its own — otherwise its cache subscription and
-  /// `syncOwner` calls keep running for the rest of the session (#6494).
-  void _onEnabledChanged(
-    PeopleListsEnabledChanged event,
-    Emitter<PeopleListsState> emit,
-  ) {
-    if (event.enabled == state.enabled) return;
-
-    if (!event.enabled) {
-      _cancelOperations();
-      _stopWatchingLists();
-      // Drops the snapshot and any pending mutations, but keeps the owner: the
-      // owner stream is not seeded, so state is the only place a later flag-on
-      // can learn who is signed in.
-      //
-      // Dropping `pendingMutations` is also what stops a mutation still in
-      // flight from applying any result to state that has been torn down — see
-      // [_resultStillApplies].
-      emit(PeopleListsState(ownerPubkey: state.ownerPubkey, enabled: false));
-      return;
-    }
-
-    final owner = state.ownerPubkey;
-    if (owner == null || owner.isEmpty) {
-      emit(state.copyWith(enabled: true));
-      return;
-    }
-
-    emit(state.copyWith(status: PeopleListsStatus.loading, enabled: true));
-    // Re-subscribing goes through the owner bucket so [_onOwnerChanged] stays
-    // the only handler that opens a lists subscription.
-    addIfOpen(const PeopleListsOwnerChanged.rewire());
   }
 
   /// Re-points the bloc at a freshly built repository.
@@ -380,12 +310,11 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
 
   /// Closes [_listsSubscription], if any.
   ///
-  /// Called from [_onOwnerChanged] and [_onEnabledChanged], both of which are
-  /// deliberately synchronous: what would orphan a subscription is a *writer
-  /// that suspends* between reading and nulling the field, not a second writer
-  /// (#6482). Do not make either handler `async`. `cancel()` stops delivery to
-  /// the listener synchronously — its future only reports resource cleanup, so
-  /// nothing depends on awaiting it.
+  /// Called from [_onOwnerChanged], which is deliberately synchronous: a
+  /// writer that suspends between reading and nulling the field would orphan
+  /// a subscription (#6482). Do not make the handler `async`. `cancel()` stops
+  /// delivery to the listener synchronously — its future only reports resource
+  /// cleanup, so nothing depends on awaiting it.
   void _stopWatchingLists() {
     _followedSyncSession++;
     unawaited(_listsSubscription?.cancel());
@@ -420,16 +349,7 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
 
     if (newOwner == null || newOwner.isEmpty) {
       if (!event.isRewire) {
-        emit(PeopleListsState(enabled: state.enabled));
-      }
-      return;
-    }
-
-    // Flag off: keep following the owner so a later flag-on wires up whoever is
-    // signed in then, but open no subscription and run no sync.
-    if (!state.enabled) {
-      if (!event.isRewire) {
-        emit(PeopleListsState(ownerPubkey: newOwner, enabled: false));
+        emit(const PeopleListsState());
       }
       return;
     }
@@ -447,7 +367,6 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
         PeopleListsState(
           status: PeopleListsStatus.loading,
           ownerPubkey: newOwner,
-          enabled: state.enabled,
         ),
       );
     }
@@ -524,9 +443,8 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     PeopleListsRepositoryListsChanged event,
     Emitter<PeopleListsState> emit,
   ) {
-    // Ignore late emissions from a previous owner, or ones already queued when
-    // the feature was turned off.
-    if (!state.enabled || event.ownerPubkey != state.ownerPubkey) {
+    // Ignore late emissions from a previous owner.
+    if (event.ownerPubkey != state.ownerPubkey) {
       return;
     }
 
@@ -946,10 +864,9 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
   ///
   /// Mutation outcomes and rollbacks are only valid for the state that issued
   /// them. In between, the bloc may have torn that state down — an account
-  /// switch, a sign-out, or `FeatureFlag.curatedLists` going off each emit a
-  /// fresh state with an empty `pendingMutations`. Applying a result there can
-  /// write one owner's lists or mutation status onto whoever is signed in by
-  /// then (#6504).
+  /// switch or a sign-out each emit a fresh state with an empty
+  /// `pendingMutations`. Applying a result there can write one owner's lists or
+  /// mutation status onto whoever is signed in by then (#6504).
   ///
   /// The mutation lookup is what actually detects a teardown; the owner check
   /// keeps the guard honest if a future teardown ever preserves the map.
