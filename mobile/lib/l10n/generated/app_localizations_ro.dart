@@ -4397,6 +4397,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundsRecordFailed => 'Nu am putut înregistra. Încearcă din nou.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Dă-i un titlu sunetului ca să-l poți împărtăși.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Acest tip de fișier nu este acceptat. Alege un fișier audio.';
 

@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "Rekaman {dateTime}",
   "soundsRecordPermissionBody": "Izinkan akses mikrofon untuk merekam suara.",
   "soundsRecordFailed": "Gagal merekam. Coba lagi.",
+  "soundsShareTitleRequiredHint": "Beri judul pada suaramu untuk membagikannya.",
   "soundsImportUnsupportedFormat": "Jenis file itu tidak didukung. Pilih file audio.",
   "soundsImportUnreadable": "File audio itu tidak bisa dibaca.",
   "soundsImportAccountChanged": "Kamu berganti akun, jadi suara ini tidak ditambahkan.",

@@ -2716,6 +2716,10 @@
   "@soundsRecordFailed": {
     "description": "Snackbar on the Add sound screen when the microphone recorder fails to start or stop."
   },
+  "soundsShareTitleRequiredHint": "Give your sound a title to share it.",
+  "@soundsShareTitleRequiredHint": {
+    "description": "Helper text under the empty Sound title field on the Add sound screen while a recording is set to be shared publicly. Explains why the Share sound button is disabled."
+  },
   "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
   "@soundsImportUnsupportedFormat": {
     "description": "Shown when the picked file's extension is not a supported audio container."

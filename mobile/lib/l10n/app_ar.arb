@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "تسجيل {dateTime}",
   "soundsRecordPermissionBody": "يلزم السماح بالوصول إلى الميكروفون لتسجيل صوت.",
   "soundsRecordFailed": "تعذّر التسجيل. يُرجى المحاولة مرة أخرى.",
+  "soundsShareTitleRequiredHint": "يلزم إعطاء الصوت عنوانًا لمشاركته.",
   "soundsImportUnsupportedFormat": "نوع الملف هذا غير مدعوم. يُرجى اختيار ملف صوتي.",
   "soundsImportUnreadable": "تعذّرت قراءة هذا الملف الصوتي.",
   "soundsImportAccountChanged": "تم تبديل الحساب، لذا لم تتم إضافة هذا الصوت.",

@@ -4289,6 +4289,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundsRecordFailed => 'Hindi na-record. Subukan ulit.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Bigyan ng title ang sound mo para ma-share ito.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Hindi suportado ang file type na iyan. Pumili ng audio file.';
 

@@ -3995,6 +3995,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsRecordFailed => '録音できませんでした。もう一度お試しください。';
 
   @override
+  String get soundsShareTitleRequiredHint => '共有するにはサウンドにタイトルを付けてください。';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'このファイル形式には対応していません。音声ファイルを選んでください。';
 

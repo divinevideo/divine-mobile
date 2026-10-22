@@ -4247,6 +4247,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundsRecordFailed => 'تعذّر التسجيل. يُرجى المحاولة مرة أخرى.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'يلزم إعطاء الصوت عنوانًا لمشاركته.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'نوع الملف هذا غير مدعوم. يُرجى اختيار ملف صوتي.';
 

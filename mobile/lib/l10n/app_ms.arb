@@ -2092,6 +2092,7 @@
   "soundsRecordingTitle": "Rakaman {dateTime}",
   "soundsRecordPermissionBody": "Benarkan akses mikrofon untuk merakam bunyi.",
   "soundsRecordFailed": "Tidak dapat merakam. Cuba lagi.",
+  "soundsShareTitleRequiredHint": "Beri tajuk kepada bunyi anda untuk berkongsinya.",
   "soundsImportUnsupportedFormat": "Jenis fail itu tidak disokong. Pilih fail audio.",
   "soundsImportUnreadable": "Fail audio itu tidak dapat dibaca.",
   "soundsImportAccountChanged": "Anda telah menukar akaun, jadi bunyi ini tidak ditambah.",

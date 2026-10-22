@@ -3916,6 +3916,7 @@
   "soundsRecordingTitle": "Запис {dateTime}",
   "soundsRecordPermissionBody": "Разреши достъп до микрофона, за да запишеш звук.",
   "soundsRecordFailed": "Записът не успя. Опитай пак.",
+  "soundsShareTitleRequiredHint": "Дай заглавие на звука, за да го споделиш.",
   "soundsImportUnsupportedFormat": "Този тип файл не се поддържа. Избери аудиофайл.",
   "soundsImportUnreadable": "Този аудиофайл не можа да се прочете.",
   "soundsImportAccountChanged": "Акаунтът беше сменен, затова звукът не беше добавен.",

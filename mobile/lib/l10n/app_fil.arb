@@ -2914,6 +2914,7 @@
   "soundsRecordingTitle": "Recording {dateTime}",
   "soundsRecordPermissionBody": "Payagan ang access sa mikropono para makapag-record ng sound.",
   "soundsRecordFailed": "Hindi na-record. Subukan ulit.",
+  "soundsShareTitleRequiredHint": "Bigyan ng title ang sound mo para ma-share ito.",
   "soundsImportUnsupportedFormat": "Hindi suportado ang file type na iyan. Pumili ng audio file.",
   "soundsImportUnreadable": "Hindi mabasa ang audio file na iyan.",
   "soundsImportAccountChanged": "Nagpalit ka ng account, kaya hindi naidagdag ang sound na ito.",

@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "Kayıt {dateTime}",
   "soundsRecordPermissionBody": "Ses kaydetmek için mikrofon erişimine izin ver.",
   "soundsRecordFailed": "Kayıt yapılamadı. Tekrar dene.",
+  "soundsShareTitleRequiredHint": "Paylaşmak için sesine bir başlık ver.",
   "soundsImportUnsupportedFormat": "Bu dosya türü desteklenmiyor. Bir ses dosyası seç.",
   "soundsImportUnreadable": "Bu ses dosyası okunamadı.",
   "soundsImportAccountChanged": "Hesap değiştirdin, bu yüzden ses eklenmedi.",

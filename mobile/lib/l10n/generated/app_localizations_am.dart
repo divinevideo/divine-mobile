@@ -4165,6 +4165,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsRecordFailed => 'መቅዳት አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
+  String get soundsShareTitleRequiredHint => 'ለማጋራት ለድምፅዎ ርዕስ ይስጡት።';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።';
 

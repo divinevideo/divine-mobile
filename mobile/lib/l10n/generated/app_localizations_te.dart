@@ -4420,6 +4420,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రికార్డ్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'పంచుకోవడానికి మీ సౌండ్‌కు ఒక శీర్షిక ఇవ్వండి.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'ఆ ఫైల్ రకానికి మద్దతు లేదు. ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి.';
 

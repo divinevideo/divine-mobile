@@ -4386,6 +4386,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get soundsRecordFailed => 'Nie udało się nagrać. Spróbuj ponownie.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Nadaj dźwiękowi tytuł, żeby go udostępnić.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Ten typ pliku nie jest obsługiwany. Wybierz plik audio.';
 

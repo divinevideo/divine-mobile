@@ -3886,6 +3886,7 @@
   "soundsRecordingTitle": "ቅረጻ {dateTime}",
   "soundsRecordPermissionBody": "ድምፅ ለመቅዳት የማይክሮፎን መዳረሻ ይፍቀዱ።",
   "soundsRecordFailed": "መቅዳት አልተቻለም። እንደገና ይሞክሩ።",
+  "soundsShareTitleRequiredHint": "ለማጋራት ለድምፅዎ ርዕስ ይስጡት።",
   "soundsImportUnsupportedFormat": "ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።",
   "soundsImportUnreadable": "ያ የድምፅ ፋይል ሊነበብ አልቻለም።",
   "soundsImportAccountChanged": "መለያ ስለቀየሩ ይህ ድምፅ አልታከለም።",

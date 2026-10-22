@@ -4320,6 +4320,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Aufnahme hat nicht geklappt. Versuch es erneut.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Gib deinem Sound einen Titel, um ihn zu teilen.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Dieser Dateityp wird nicht unterstützt. Wähle eine Audiodatei.';
 

@@ -2092,6 +2092,7 @@
   "soundsRecordingTitle": "录音 {dateTime}",
   "soundsRecordPermissionBody": "允许访问麦克风才能录制声音。",
   "soundsRecordFailed": "录制失败。请重试。",
+  "soundsShareTitleRequiredHint": "给你的声音起个标题才能分享。",
   "soundsImportUnsupportedFormat": "不支持该文件类型。请选择音频文件。",
   "soundsImportUnreadable": "无法读取该音频文件。",
   "soundsImportAccountChanged": "你切换了账号，因此这个声音没有被添加。",

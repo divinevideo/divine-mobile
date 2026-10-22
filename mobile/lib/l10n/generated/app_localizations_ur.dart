@@ -4271,6 +4271,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundsRecordFailed => 'ریکارڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'شیئر کرنے کے لیے اپنی ساؤنڈ کو عنوان دیں۔';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔';
 

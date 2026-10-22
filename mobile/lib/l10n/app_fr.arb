@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "Enregistrement {dateTime}",
   "soundsRecordPermissionBody": "Autorise l’accès au micro pour enregistrer un son.",
   "soundsRecordFailed": "Impossible d’enregistrer. Réessaie.",
+  "soundsShareTitleRequiredHint": "Donne un titre à ton son pour le partager.",
   "soundsImportUnsupportedFormat": "Ce type de fichier n'est pas pris en charge. Choisis un fichier audio.",
   "soundsImportUnreadable": "Impossible de lire ce fichier audio.",
   "soundsImportAccountChanged": "Tu as changé de compte, donc ce son n'a pas été ajouté.",

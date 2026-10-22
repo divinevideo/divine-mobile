@@ -3981,6 +3981,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsRecordFailed => '录制失败。请重试。';
 
   @override
+  String get soundsShareTitleRequiredHint => '给你的声音起个标题才能分享。';
+
+  @override
   String get soundsImportUnsupportedFormat => '不支持该文件类型。请选择音频文件。';
 
   @override

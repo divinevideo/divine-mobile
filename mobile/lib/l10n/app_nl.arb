@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "Opname {dateTime}",
   "soundsRecordPermissionBody": "Geef toegang tot de microfoon om een sound op te nemen.",
   "soundsRecordFailed": "Opnemen is mislukt. Probeer het opnieuw.",
+  "soundsShareTitleRequiredHint": "Geef je sound een titel om hem te delen.",
   "soundsImportUnsupportedFormat": "Dit bestandstype wordt niet ondersteund. Kies een audiobestand.",
   "soundsImportUnreadable": "Dit audiobestand kon niet worden gelezen.",
   "soundsImportAccountChanged": "Je bent van account gewisseld, dus deze sound is niet toegevoegd.",

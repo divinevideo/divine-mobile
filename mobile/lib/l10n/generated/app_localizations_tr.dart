@@ -4202,6 +4202,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundsRecordFailed => 'Kayıt yapılamadı. Tekrar dene.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Paylaşmak için sesine bir başlık ver.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Bu dosya türü desteklenmiyor. Bir ses dosyası seç.';
 

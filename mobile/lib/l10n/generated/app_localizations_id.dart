@@ -4188,6 +4188,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundsRecordFailed => 'Gagal merekam. Coba lagi.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Beri judul pada suaramu untuk membagikannya.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Jenis file itu tidak didukung. Pilih file audio.';
 

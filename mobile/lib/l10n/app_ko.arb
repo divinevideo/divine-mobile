@@ -3352,6 +3352,7 @@
   "soundsRecordingTitle": "녹음 {dateTime}",
   "soundsRecordPermissionBody": "사운드를 녹음하려면 마이크 접근을 허용해 주세요.",
   "soundsRecordFailed": "녹음하지 못했어요. 다시 시도해 주세요.",
+  "soundsShareTitleRequiredHint": "공유하려면 사운드 제목을 입력해 주세요.",
   "soundsImportUnsupportedFormat": "지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.",
   "soundsImportUnreadable": "그 오디오 파일을 읽을 수 없어요.",
   "soundsImportAccountChanged": "계정을 바꿔서 이 사운드는 추가되지 않았어요.",

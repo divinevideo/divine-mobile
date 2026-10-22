@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "Înregistrare {dateTime}",
   "soundsRecordPermissionBody": "Permite accesul la microfon pentru a înregistra un sunet.",
   "soundsRecordFailed": "Nu am putut înregistra. Încearcă din nou.",
+  "soundsShareTitleRequiredHint": "Dă-i un titlu sunetului ca să-l poți împărtăși.",
   "soundsImportUnsupportedFormat": "Acest tip de fișier nu este acceptat. Alege un fișier audio.",
   "soundsImportUnreadable": "Fișierul audio nu a putut fi citit.",
   "soundsImportAccountChanged": "Ai schimbat contul, așa că sunetul nu a fost adăugat.",

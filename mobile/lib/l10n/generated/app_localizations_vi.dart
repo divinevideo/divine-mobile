@@ -4229,6 +4229,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundsRecordFailed => 'Không ghi âm được. Thử lại nhé.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Đặt tiêu đề cho âm thanh để chia sẻ.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.';
 

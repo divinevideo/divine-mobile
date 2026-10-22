@@ -480,6 +480,8 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                                   key: ValueKey(audio.id),
                                   attribution: attribution,
                                   onChanged: cubit.updateAttribution,
+                                  emptyTitleHint:
+                                      context.l10n.soundsShareTitleRequiredHint,
                                 ),
                               ),
                             )

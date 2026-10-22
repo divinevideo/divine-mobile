@@ -2092,6 +2092,7 @@
   "soundsRecordingTitle": "Bản ghi {dateTime}",
   "soundsRecordPermissionBody": "Cho phép truy cập micro để ghi âm.",
   "soundsRecordFailed": "Không ghi âm được. Thử lại nhé.",
+  "soundsShareTitleRequiredHint": "Đặt tiêu đề cho âm thanh để chia sẻ.",
   "soundsImportUnsupportedFormat": "Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.",
   "soundsImportUnreadable": "Không đọc được tệp âm thanh đó.",
   "soundsImportAccountChanged": "Bạn đã đổi tài khoản nên âm thanh này chưa được thêm.",

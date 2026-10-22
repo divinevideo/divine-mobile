@@ -4276,6 +4276,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get soundsRecordFailed => 'Opnemen is mislukt. Probeer het opnieuw.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Geef je sound een titel om hem te delen.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Dit bestandstype wordt niet ondersteund. Kies een audiobestand.';
 

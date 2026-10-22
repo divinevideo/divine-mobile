@@ -2092,6 +2092,7 @@
   "soundsRecordingTitle": "ریکارڈنگ {dateTime}",
   "soundsRecordPermissionBody": "ساؤنڈ ریکارڈ کرنے کے لیے مائکروفون تک رسائی کی اجازت دیں۔",
   "soundsRecordFailed": "ریکارڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+  "soundsShareTitleRequiredHint": "شیئر کرنے کے لیے اپنی ساؤنڈ کو عنوان دیں۔",
   "soundsImportUnsupportedFormat": "یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔",
   "soundsImportUnreadable": "وہ آڈیو فائل پڑھی نہیں جا سکی۔",
   "soundsImportAccountChanged": "آپ نے اکاؤنٹ بدل لیا، اس لیے یہ ساؤنڈ شامل نہیں ہوا۔",

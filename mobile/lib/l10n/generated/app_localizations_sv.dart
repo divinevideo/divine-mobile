@@ -4257,6 +4257,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundsRecordFailed => 'Kunde inte spela in. Försök igen.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Ge ditt ljud en titel för att dela det.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Den filtypen stöds inte. Välj en ljudfil.';
 

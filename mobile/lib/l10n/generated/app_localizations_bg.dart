@@ -4311,6 +4311,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundsRecordFailed => 'Записът не успя. Опитай пак.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Дай заглавие на звука, за да го споделиш.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Този тип файл не се поддържа. Избери аудиофайл.';
 

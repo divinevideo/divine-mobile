@@ -970,6 +970,35 @@ void main() {
         expect(File(recorder.path!).existsSync(), isFalse);
       });
 
+      testWidgets('says why sharing a recording waits for a title', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        await sharePublicly(tester);
+
+        expect(find.text(l10n.soundsShareTitleRequiredHint), findsOneWidget);
+        expect(saveButton(tester).onPressed, isNull);
+
+        await tester.enterText(
+          find.descendant(
+            of: find.byKey(const Key('audio_credit_title')),
+            matching: find.byType(TextField),
+          ),
+          'Beatbox',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.soundsShareTitleRequiredHint), findsNothing);
+        expect(saveButton(tester).onPressed, isNotNull);
+      });
+
       testWidgets('back while recording cancels it and stays', (tester) async {
         final router = await pumpView(tester);
         await tester.tap(find.byKey(const Key('add_sound_record')));

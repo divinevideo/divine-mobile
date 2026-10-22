@@ -7237,6 +7237,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t record that. Try again.'**
   String get soundsRecordFailed;
 
+  /// Helper text under the empty Sound title field on the Add sound screen while a recording is set to be shared publicly. Explains why the Share sound button is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Give your sound a title to share it.'**
+  String get soundsShareTitleRequiredHint;
+
   /// Shown when the picked file's extension is not a supported audio container.
   ///
   /// In en, this message translates to:

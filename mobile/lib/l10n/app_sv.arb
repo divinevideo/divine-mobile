@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "Inspelning {dateTime}",
   "soundsRecordPermissionBody": "Tillåt åtkomst till mikrofonen för att spela in ett ljud.",
   "soundsRecordFailed": "Kunde inte spela in. Försök igen.",
+  "soundsShareTitleRequiredHint": "Ge ditt ljud en titel för att dela det.",
   "soundsImportUnsupportedFormat": "Den filtypen stöds inte. Välj en ljudfil.",
   "soundsImportUnreadable": "Ljudfilen kunde inte läsas.",
   "soundsImportAccountChanged": "Du bytte konto, så ljudet lades inte till.",

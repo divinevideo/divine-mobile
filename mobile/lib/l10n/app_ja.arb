@@ -3806,6 +3806,7 @@
   "soundsRecordingTitle": "録音 {dateTime}",
   "soundsRecordPermissionBody": "サウンドを録音するにはマイクへのアクセスを許可してください。",
   "soundsRecordFailed": "録音できませんでした。もう一度お試しください。",
+  "soundsShareTitleRequiredHint": "共有するにはサウンドにタイトルを付けてください。",
   "soundsImportUnsupportedFormat": "このファイル形式には対応していません。音声ファイルを選んでください。",
   "soundsImportUnreadable": "この音声ファイルを読み込めませんでした。",
   "soundsImportAccountChanged": "アカウントが切り替わったため、このサウンドは追加されませんでした。",

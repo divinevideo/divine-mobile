@@ -4255,6 +4255,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundsRecordFailed => 'Tidak dapat merakam. Cuba lagi.';
 
   @override
+  String get soundsShareTitleRequiredHint =>
+      'Beri tajuk kepada bunyi anda untuk berkongsinya.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Jenis fail itu tidak disokong. Pilih fail audio.';
 

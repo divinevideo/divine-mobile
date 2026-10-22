@@ -4011,6 +4011,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsRecordFailed => '녹음하지 못했어요. 다시 시도해 주세요.';
 
   @override
+  String get soundsShareTitleRequiredHint => '공유하려면 사운드 제목을 입력해 주세요.';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       '지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.';
 
