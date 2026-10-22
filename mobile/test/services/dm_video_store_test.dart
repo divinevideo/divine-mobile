@@ -182,56 +182,6 @@ class _WriteHookFile implements File {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// A part file whose write waits for [gate], so a test can act while the
-/// store is suspended in it.
-class _GatedWriteFile implements File {
-  _GatedWriteFile(this.file, this.gate);
-
-  final File file;
-  final Future<void> Function(File) gate;
-
-  @override
-  String get path => file.path;
-
-  @override
-  Directory get parent => file.parent;
-
-  @override
-  Future<File> writeAsBytes(
-    List<int> bytes, {
-    FileMode mode = FileMode.write,
-    bool flush = false,
-  }) async {
-    await gate(this);
-    return file.writeAsBytes(bytes, mode: mode, flush: flush);
-  }
-
-  @override
-  Future<File> rename(String newPath) => file.rename(newPath);
-
-  @override
-  bool existsSync() => file.existsSync();
-
-  @override
-  Future<FileSystemEntity> delete({bool recursive = false}) =>
-      file.delete(recursive: recursive);
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-final class _GatedWrites extends IOOverrides {
-  _GatedWrites(this.gate);
-
-  final Future<void> Function(File) gate;
-
-  @override
-  File createFile(String path) {
-    final file = super.createFile(path);
-    return path.endsWith('.part') ? _GatedWriteFile(file, gate) : file;
-  }
-}
-
 final class _WriteHooks extends IOOverrides {
   _WriteHooks(this.beforeWrite, {this.waitBeforeWrite});
 
@@ -1082,14 +1032,15 @@ void main() {
 
               expect(await preview, isNull);
             },
-            _GatedWrites((part) async {
-              if (!part.path.contains('.conversation.') ||
-                  recordWriteStarted.isCompleted) {
-                return;
-              }
-              recordWriteStarted.complete();
-              await recordWritten.future;
-            }),
+            _WriteHooks(
+              (_) {},
+              waitBeforeWrite: (part) async {
+                if (part.path.contains('${message.id}.conversation.')) {
+                  recordWriteStarted.complete();
+                  await recordWritten.future;
+                }
+              },
+            ),
           );
 
           expect(keptFiles(), isEmpty);
