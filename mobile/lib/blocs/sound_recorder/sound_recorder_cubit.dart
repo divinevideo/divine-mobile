@@ -82,15 +82,23 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   String? _currentPath;
   bool _isTransitioning = false;
 
-  // Set as close() begins. isClosed only flips at super.close(), after
-  // close() has awaited the recorder's dispose, and `record` runs dispose
-  // behind the same lock as start: a start in flight returns first. Every
-  // step that resumes after an await checks this instead, so nothing it
-  // creates outlives the cleanup close() has already done.
+  // Set as close() begins; isClosed only flips at super.close(). A start in
+  // flight checks this at every step that resumes after an await and undoes
+  // whatever it opened, and close() waits for a native start (see
+  // [_nativeStart]) to finish that before it disposes the recorder.
   bool _closing = false;
   bool _startCancelled = false;
   bool _discardRequested = false;
   Future<void>? _ending;
+
+  /// The native part of a start in flight, from resolving the scratch folder
+  /// until its own cleanup has settled. close() awaits it: `record` hands its
+  /// lock to a queued dispose() as soon as the native start returns, so
+  /// without the wait that cleanup would stop a recorder that is already
+  /// disposed and report into a closed cubit. The permission check before it
+  /// is not awaited: it opens nothing, and an unanswered prompt must not hold
+  /// close() up.
+  Future<void>? _nativeStart;
 
   bool get _shouldAbortStart => _closing || _startCancelled;
 
@@ -119,7 +127,13 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
         );
         return;
       }
-      await _start();
+      final nativeStart = _start();
+      _nativeStart = nativeStart;
+      try {
+        await nativeStart;
+      } finally {
+        _nativeStart = null;
+      }
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       // A start the screen already gave up on is not a failure to show over
@@ -146,7 +160,11 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   Future<void> stop() async {
     // Losing visibility while the permission prompt/native start is pending
     // must prevent that work from opening a microphone under another screen.
-    if (state.isStarting || (_isTransitioning && state.isRecording)) {
+    if (state.isStarting) {
+      _abandonStart();
+      return;
+    }
+    if (_isTransitioning && state.isRecording) {
       _startCancelled = true;
       return;
     }
@@ -214,7 +232,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   /// Stops and deletes the recording in progress.
   Future<void> cancel() async {
     if (state.isStarting) {
-      _startCancelled = true;
+      _abandonStart();
       return;
     }
     final ending = _ending;
@@ -224,6 +242,15 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
     }
     if (!state.isRecording) return;
     return _endTake(discard: true);
+  }
+
+  /// Gives up on a start whose permission check or native start is still
+  /// pending. The screen is told at once, so it unlocks and a second Back
+  /// leaves; the pending call still finishes in the background and undoes
+  /// whatever it opened. Until it has, a new start is ignored.
+  void _abandonStart() {
+    _startCancelled = true;
+    emitIfOpen(state.copyWith(status: SoundRecorderStatus.idle));
   }
 
   /// Opens the OS settings page, where microphone access is granted after a
@@ -362,6 +389,7 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   @override
   Future<void> close() async {
     _closing = true;
+    await _nativeStart;
     final ending = _ending;
     if (ending != null) {
       _discardRequested = true;

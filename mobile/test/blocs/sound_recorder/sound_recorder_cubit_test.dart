@@ -38,6 +38,8 @@ class _FakeRecorder implements VoiceOverRecorderService {
   final _levels = StreamController<double>.broadcast();
   bool throwOnStart = false;
   bool throwOnStop = false;
+  bool disposed = false;
+  bool stoppedAfterDispose = false;
   int startCount = 0;
   int stopCount = 0;
   String? path;
@@ -89,6 +91,8 @@ class _FakeRecorder implements VoiceOverRecorderService {
 
   @override
   Future<String?> stop() => _oneAtATime(() async {
+    // The real recorder refuses this ("already been disposed").
+    if (disposed) stoppedAfterDispose = true;
     stopCount++;
     await stopGate?.future;
     if (throwOnStop) throw VoiceOverRecorderException('stop failed');
@@ -97,6 +101,7 @@ class _FakeRecorder implements VoiceOverRecorderService {
 
   @override
   Future<void> dispose() => _oneAtATime(() async {
+    disposed = true;
     await disposeGate?.future;
     await _levels.close();
     await _pauses.close();
@@ -642,6 +647,29 @@ void main() {
     // `record` runs dispose() behind the same semaphore as start(), so
     // close() cannot finish, and isClosed cannot flip, until a native start
     // in flight has returned.
+    group('back while starting', () {
+      test('settles to idle at once and never starts the recorder', () async {
+        final check = Completer<PermissionStatus>();
+        when(permissions.checkMicrophoneStatus).thenAnswer((_) => check.future);
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+        expect(cubit.state.status, SoundRecorderStatus.starting);
+
+        await cubit.cancel();
+
+        // Released before the pending permission check answers, so a second
+        // Back can leave the screen.
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+
+        check.complete(PermissionStatus.granted);
+        await starting;
+
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+        expect(recorder.startCount, 0);
+      });
+    });
+
     group('close while starting', () {
       test(
         'leaves no take behind when the native start is in flight',
@@ -658,7 +686,9 @@ void main() {
 
           final closing = cubit.close();
           recorder.startGate!.complete();
-          await Future.wait([starting, closing]);
+          // close() alone must wait out the start's cleanup.
+          await closing;
+          await starting;
           await subscription.cancel();
 
           expect(statuses, isNot(contains(SoundRecorderStatus.recording)));
@@ -667,6 +697,24 @@ void main() {
           expect(File(recorder.path!).existsSync(), isFalse);
         },
       );
+
+      test('undoes an in-flight native start before it disposes the '
+          'recorder', () async {
+        recorder.startGate = Completer<void>();
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+
+        final closing = cubit.close();
+        recorder.startGate!.complete();
+        await closing;
+
+        // record hands its lock to a queued dispose() as soon as the native
+        // start returns, so close() has to wait for the start's own stop.
+        expect(recorder.stoppedAfterDispose, isFalse);
+        expect(File(recorder.path!).existsSync(), isFalse);
+        await starting;
+      });
 
       testWidgets('arms no length timer that would stop, vibrate or reset '
           'later', (tester) async {
@@ -727,7 +775,9 @@ void main() {
         check.complete(PermissionStatus.granted);
         await pumpEventQueue();
         recorder.disposeGate!.complete();
-        await Future.wait([starting, closing]);
+        // close() alone must wait out the start's cleanup.
+        await closing;
+        await starting;
 
         expect(recorder.startCount, 0);
       });
@@ -750,7 +800,9 @@ void main() {
         prompt.complete(PermissionStatus.granted);
         await pumpEventQueue();
         recorder.disposeGate!.complete();
-        await Future.wait([starting, closing]);
+        // close() alone must wait out the start's cleanup.
+        await closing;
+        await starting;
 
         expect(recorder.startCount, 0);
       });
@@ -767,7 +819,9 @@ void main() {
         folder.complete(scratch);
         await pumpEventQueue();
         recorder.disposeGate!.complete();
-        await Future.wait([starting, closing]);
+        // close() alone must wait out the start's cleanup.
+        await closing;
+        await starting;
 
         expect(recorder.startCount, 0);
       });
